@@ -1,0 +1,6 @@
+Debug/*
+bin
+.idea
+cmake-build-debug/*
+.vs/*
+.vs

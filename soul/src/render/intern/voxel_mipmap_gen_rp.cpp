@@ -1,0 +1,31 @@
+#include "core/debug.h"
+
+#include "render/type.h"
+#include "render/intern/asset.h"
+#include "render/intern/util.h"
+
+namespace Soul {
+	void VoxelMipmapGenRP::init(RenderDatabase& db) {
+		program = RenderUtil::GLProgramCreate(RenderAsset::ShaderFile::voxel_mipmap_gen);
+	}
+
+	void VoxelMipmapGenRP::execute(RenderDatabase& db) {
+		
+		glUseProgram(program);
+
+		int mipLevel = (int)log2f(db.voxelFrustumReso + 1);
+		int voxelDstReso = db.voxelFrustumReso;
+		for (int i = 0; i < mipLevel - 1; i++) {
+			glMemoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
+			glBindImageTexture(0, db.voxelGIBuffer.lightVoxelTex, i, false, 0, GL_READ_ONLY, GL_RGBA16F);
+			glBindImageTexture(1, db.voxelGIBuffer.lightVoxelTex, i + 1, false, 0, GL_WRITE_ONLY, GL_RGBA16F);
+			voxelDstReso /= 2;
+			glDispatchCompute(voxelDstReso, voxelDstReso, voxelDstReso);
+		}
+
+	}
+
+	void VoxelMipmapGenRP::shutdown(RenderDatabase& db) {
+		glDeleteProgram(program);
+	}
+}

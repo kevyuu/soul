@@ -1,0 +1,628 @@
+#pragma once
+
+
+#include "core/type.h"
+#include "../soul_array.h"
+
+
+namespace Soul {
+
+    typedef unsigned int RenderRID;
+
+    enum TexReso {
+        TR_1 = 1,
+        TR_2 = 2,
+        TR_4 = 4,
+        TR_8 = 8,
+        TR_16 = 16,
+        TR_32 = 32,
+        TR_64 = 64,
+        TR_128 = 128,
+        TR_256 = 256,
+        TR_512 = 512,
+        TR_1024 = 1024,
+        TR_2048 = 2048,
+        TR_4096 = 4096,
+        TR_8192 = 8192
+    };
+
+    enum PixelFormat {
+        PF_RED,
+        PF_RG,
+        PF_RGB,
+        PF_RGBA,
+        PF_DEPTH_COMPONENT,
+        PF_COUNT
+    };
+
+    struct Camera {
+        Vec3f up;
+        Vec3f direction;
+        Vec3f position;
+        Mat4 projection;
+
+        uint16 viewport_width;
+        uint16 viewport_height;
+
+        union {
+            struct {
+                float fov;
+                float aspectRatio;
+                float zNear;
+                float zFar;
+            } perspective;
+
+            struct {
+                float left;
+                float right;
+                float top;
+                float bottom;
+                float zNear;
+                float zFar;
+            } ortho;
+        };
+    };
+
+    struct Vertex {
+        Vec3f pos;
+        Vec3f normal;
+        Vec2f texUV;
+        Vec3f binormal;
+        Vec3f tangent;
+    };
+
+    struct Mesh {
+        Mat4 transform;
+        uint32 vaoHandle;
+        uint32 vertexCount;
+        uint32 indexCount;
+        RenderRID materialID;
+    };
+
+    struct Material {
+        RenderRID albedoMap;
+        RenderRID normalMap;
+        RenderRID metallicMap;
+        RenderRID roughnessMap;
+        RenderRID aoMap;
+        RenderRID shaderID;
+    };
+
+    struct Environment {
+        GLuint panorama = 0;
+        GLuint cubemap = 0;
+        GLuint diffuseMap = 0;
+        GLuint specularMap = 0;
+        GLuint brdfMap = 0;
+
+        float ambientEnergy;
+        Vec3f ambientColor;
+    };
+
+    struct ShadowKey {
+        int16 quadrant;
+        int16 subdiv;
+    };
+
+    struct DirectionalLight {
+        Mat4 shadowMatrix[4];
+        Vec3f direction;
+        Vec3f color;
+        float split[3];
+        ShadowKey shadowKey;
+    };
+
+
+    // Resource spec
+    struct TextureSpec {
+        int32 width;
+        int32 height;
+        int8 mipLevel;
+        PixelFormat pixelFormat;
+        GLint minFilter;
+        GLint magFilter;
+    };
+
+    struct DirectionalLightSpec {
+        Vec3f direction;
+        Vec3f color;
+        float split[3] = { 0.1f, 0.3f, 0.6f };
+        TexReso shadowMapResolution;
+    };
+
+    struct MaterialSpec {
+        RenderRID albedoMap;
+        RenderRID normalMap;
+        RenderRID metallicMap;
+        RenderRID roughnessMap;
+        RenderRID aoMap;
+        RenderRID shaderID;
+    };
+
+    struct MeshSpec {
+        Mat4 transform;
+        Vertex* vertexes;
+        uint32* indices;
+        uint32 vertexCount;
+        uint32 indexCount;
+        RenderRID material;
+    };
+
+    struct SkyboxSpec {
+        union {
+            struct {
+                unsigned char* x_positive;
+                unsigned char* x_negative;
+                unsigned char* y_positive;
+                unsigned char* y_negative;
+                unsigned char* z_positive;
+                unsigned char* z_negative;
+            } data;
+
+            unsigned char* faces[6] = {nullptr};
+        };
+
+        int width;
+        int height;
+    };
+
+    struct EnvironmentSpec {
+        GLuint panorama;
+    };
+
+
+
+    //-------------------------------------------
+    // Private
+    //-------------------------------------------
+
+    struct RenderConstant {
+        static constexpr int SCENE_DATA_BINDING_POINT = 0;
+        static constexpr int LIGHT_DATA_BINDING_POINT = 1;
+        static constexpr int MAX_DIRECTIONAL_LIGHTS = 4;
+    };
+
+    struct ShadowAtlas {
+        static constexpr uint8 MAX_LIGHT = 64;
+        TexReso resolution;
+        uint8 subdivSqrtCount[4];
+        GLuint texHandle;
+        RenderRID slots[MAX_LIGHT];
+    };
+
+    struct SceneDataUBO {
+        Mat4 projection;
+        Mat4 view;
+    };
+
+    struct DirectionalLightUBO {
+        Mat4 shadowMatrix[4];
+        Vec3f direction;
+        float pad1;
+        Vec3f color;
+        float pad2;
+        float cascadeDepths[4];
+    };
+
+    struct LightDataUBO {
+        DirectionalLightUBO dirLights[RenderConstant::MAX_DIRECTIONAL_LIGHTS];
+        int dirLightCount;
+		float pad1;
+		float pad2;
+		float pad3;
+    };
+
+    static const GLuint s_formatMap[PF_COUNT] = {
+            GL_RED,
+            GL_RG,
+            GL_RGB,
+            GL_RGBA,
+            GL_DEPTH_COMPONENT
+    };
+
+    struct RenderDatabase;
+
+    struct RenderPass {
+        virtual void init(RenderDatabase& database) = 0;
+        virtual void execute(RenderDatabase& database) = 0;
+        virtual void shutdown(RenderDatabase& database) = 0;
+
+    };
+
+    struct ShadowMapRP: public RenderPass {
+
+        RenderRID renderTarget;
+        RenderRID shader;
+        int32 modelLoc;
+        int32 shadowMatrixLoc;
+
+        void init(RenderDatabase& database);
+        void execute(RenderDatabase& database);
+        void shutdown(RenderDatabase& database);
+    };
+
+    struct Texture2DDebugRP : public RenderPass {
+
+        RenderRID shader;
+		GLuint texDebugLoc;
+
+        void init(RenderDatabase& database);
+        void execute(RenderDatabase& database);
+        void shutdown(RenderDatabase& database);
+
+    };
+
+    struct PanoramaToCubemapRP: public RenderPass {
+
+        RenderRID renderTarget;
+        GLuint renderBuffer;
+        RenderRID shader;
+
+        GLuint projectionLoc;
+        GLuint viewLoc;
+
+        void init(RenderDatabase& database);
+        void execute(RenderDatabase& database);
+        void shutdown(RenderDatabase& database);
+    };
+
+    struct DiffuseEnvmapFilterRP: public RenderPass {
+
+        RenderRID renderTarget;
+        RenderRID renderBuffer;
+        RenderRID shader;
+
+        GLuint projectionLoc;
+        GLuint viewLoc;
+
+        void init(RenderDatabase& database);
+        void execute(RenderDatabase& database);
+        void shutdown(RenderDatabase& database);
+    };
+
+    struct GBufferGenRP: public RenderPass {
+
+        RenderRID predepthShader;
+        RenderRID gBufferShader;
+
+        GLint modelUniformLoc;
+        GLint albedoMapPositionLoc;
+        GLint normalMapPositionLoc;
+        GLint metallicMapPositionLoc;
+        GLint roughnessMapPositionLoc;
+        GLint aoMapPositionLoc;
+		GLint shadowMapLoc;
+		GLint viewPositionLoc;
+
+        GLint predepthModelUniformLoc;
+
+        void init(RenderDatabase& database);
+        void execute(RenderDatabase& database);
+        void shutdown(RenderDatabase& database);
+
+    };
+
+    struct LightingRP: public RenderPass {
+        RenderRID shader;
+
+        GLint shadowMapUniformLoc;
+        GLint renderMap1UniformLoc;
+        GLint renderMap2UniformLoc;
+        GLint renderMap3UniformLoc;
+        GLint viewPositionUniformLoc;
+
+        void init(RenderDatabase& database);
+        void execute(RenderDatabase& database);
+        void shutdown(RenderDatabase& database);
+
+    };
+
+    struct SSRTraceRP: public RenderPass {
+    	RenderRID shader;
+
+    	GLint renderMap1UniformLoc;
+    	GLint renderMap2UniformLoc;
+    	GLint renderMap3UniformLoc;
+    	GLint depthMapLoc;
+
+    	GLint screenDimensionLoc;
+    	GLint cameraPositionLoc;
+    	GLint cameraZNearLoc;
+    	GLint cameraZFarLoc;
+
+		GLint invProjectionViewLoc;
+
+    	void init(RenderDatabase& database);
+    	void execute(RenderDatabase& database);
+    	void shutdown(RenderDatabase& database);
+    };
+
+    struct SSRResolveRP: public RenderPass {
+    	RenderRID shader;
+
+    	GLint reflectionPosBufferLoc;
+    	GLint lightBufferLoc;
+    	GLint renderMap1Loc;
+    	GLint renderMap2Loc;
+    	GLint renderMap3Loc;
+		GLint renderMap4Loc;
+		GLint depthMapLoc;
+    	GLint FGMapLoc;
+		GLint voxelLightBufferLoc;
+
+    	GLint screenDimensionLoc;
+    	GLint cameraPositionLoc;
+		GLint invProjectionViewLoc;
+
+		GLint voxelFrustumResoLoc;
+		GLint voxelFrustumHalfSpanLoc;
+		GLint voxelFrustumCenterLoc;
+
+    	void init(RenderDatabase& database);
+    	void execute(RenderDatabase& database);
+    	void shutdown(RenderDatabase& database);
+    };
+
+    struct GaussianBlurRP: public RenderPass {
+    	RenderRID shaderHorizontal;
+
+    	GLint sourceTexUniformLocHorizontal;
+    	GLint targetSizePxUniformLocHorizontal;
+    	GLint lodUniformLocHorizontal;
+
+		RenderRID shaderVertical;
+
+		GLint sourceTexUniformLocVertical;
+		GLint targetSizePxUniformLocVertical;
+		GLint lodUniformLocVertical;
+
+		void init(RenderDatabase& database);
+    	void execute(RenderDatabase& database);
+    	void shutdown(RenderDatabase& database);
+    };
+
+    struct PBRSceneRP: public RenderPass {
+        RenderRID predepthShader;
+        RenderRID sceneShader;
+        RenderRID renderTarget;
+
+        GLint modelUniformLoc;
+        GLint viewPosUniformLoc;
+        GLint albedoMapPositionLoc;
+        GLint normalMapPositionLoc;
+        GLint metallicMapPositionLoc;
+        GLint roughnessMapPositionLoc;
+        GLint aoMapPositionLoc;
+
+        GLint ambientEnergyLoc;
+        GLint ambientColorLoc;
+
+        GLint predepthModelUniformLoc;
+        GLint predepthViewUniformLoc;
+        GLint predepthProjectionUniformLoc;
+
+
+        GLint shadowMapLoc;
+        GLint brdfMapLoc;
+        GLint diffuseMapLoc;
+        GLint specularMapLoc;
+
+        void init(RenderDatabase& database);
+        void execute(RenderDatabase& database);
+        void shutdown(RenderDatabase& database);
+    };
+
+    struct SkyboxRP: public RenderPass {
+        GLuint shader;
+
+        GLint projectionLoc;
+        GLint viewLoc;
+        GLint skyboxLoc;
+
+        void init(RenderDatabase& database);
+        void execute(RenderDatabase& database);
+        void shutdown(RenderDatabase& database);
+    };
+
+    struct SpecularEnvmapFilterRP: public RenderPass {
+        RenderRID renderTarget;
+        RenderRID renderBuffer;
+        RenderRID shader;
+
+        GLuint projectionLoc;
+        GLuint viewLoc;
+        GLuint roughenssLoc;
+
+        void init(RenderDatabase& database);
+        void execute(RenderDatabase& database);
+        void shutdown(RenderDatabase& database);
+    };
+
+    struct BRDFMapRP: public RenderPass {
+        RenderRID framebuffer;
+        RenderRID renderBuffer;
+        RenderRID shader;
+
+        void init(RenderDatabase& database);
+        void execute(RenderDatabase& database);
+        void shutdown(RenderDatabase& database);
+    };
+
+	struct VoxelizeRP : public RenderPass {
+		GLuint program;
+		
+		GLint projectionLoc;
+		GLint viewLoc;
+		GLint modelLoc;
+		GLint albedoMapLoc;
+		GLint normalMapLoc;
+		GLint metallicMapLoc;
+		GLint roughnessMapLoc;
+		GLint aoMapLoc;
+		GLint voxelAlbedoBufferLoc;
+		GLint voxelNormalBufferLoc;
+		GLint voxelFrustumCenterLoc;
+		GLint voxelFrustumResoLoc;
+		GLint voxelFrustumHalfSpanLoc;
+
+		void init(RenderDatabase& database);
+		void execute(RenderDatabase& database);
+		void shutdown(RenderDatabase& database);
+
+	};
+
+	struct VoxelDebugRP : public RenderPass {
+		GLuint program;
+
+		GLint voxelBufferLoc;
+		GLint voxelFrustumResoLoc;
+		GLint voxelFrustumCenterLoc;
+		GLint voxelFrustumHalfSpanLoc;
+
+		GLuint dummyVAO;
+
+		void init(RenderDatabase& database);
+		void execute(RenderDatabase& database);
+		void shutdown(RenderDatabase& database);
+	};
+
+	struct VoxelLightInjectRP : public RenderPass {
+		GLuint program;
+
+		GLint voxelFrustumCenterLoc;
+		GLint voxelFrustumHalfSpanLoc;
+		GLint voxelFrustumResoLoc;
+
+		GLint voxelAlbedoBufferLoc;
+		GLint voxelNormalBufferLoc;
+		GLint lightVoxelBufferLoc;
+		
+		void init(RenderDatabase& database);
+		void execute(RenderDatabase& database);
+		void shutdown(RenderDatabase& database);
+	};
+
+	struct VoxelMipmapGenRP : public RenderPass {
+		GLuint program;
+
+		void init(RenderDatabase& database);
+		void execute(RenderDatabase& database);
+		void shutdown(RenderDatabase& database);
+	};
+
+    struct GBuffer {
+        GLuint frameBuffer;
+
+        GLuint depthBuffer;
+
+        GLuint renderBuffer1;
+        GLuint renderBuffer2;
+        GLuint renderBuffer3;
+		GLuint renderBuffer4;
+
+    };
+
+    struct LightBuffer {
+    	GLuint frameBuffer;
+    	GLuint colorBuffer;
+    };
+
+    struct EffectBuffer {
+		struct MipChain {
+
+			struct Mipmap {
+				GLuint frameBuffer;
+				int width;
+				int height;
+			};
+
+			Array<Mipmap> mipmaps;
+			GLuint colorBuffer;
+			int numLevel;
+
+		};
+
+		MipChain lightMipChain[2];
+
+		struct SSRTraceBuffer {
+			GLuint frameBuffer;
+			GLuint traceBuffer;
+		} ssrTraceBuffer;
+
+		struct SSRResolveBuffer {
+			GLuint frameBuffer;
+			GLuint resolveBuffer;
+		} ssrResolveBuffer;
+
+		GLuint depthBuffer;
+
+    };
+
+	struct VoxelGIBuffer {
+		
+		GLuint gVoxelAlbedoTex;
+		GLuint gVoxelNormalTex;
+		GLuint gVoxelOccupancyTex;
+		GLuint lightVoxelTex;
+
+	};
+
+    struct RenderDatabase {
+
+        static constexpr int MAX_DIR_LIGHT = 4;
+
+        struct Config {
+            uint32 materialInitCapacity = 64;
+            uint32 meshInitCapacity = 64;
+        };
+
+        uint32 targetWidthPx;
+        uint32 targetHeightPx;
+
+        Array<Material> materialBuffer;
+        Array<Mesh> meshBuffer;
+        Environment environment;
+        DirectionalLight dirLights[MAX_DIR_LIGHT];
+        int dirLightCount;
+
+        ShadowAtlas shadowAtlas;
+
+        GLuint sceneDataUBOHandle;
+        SceneDataUBO sceneDataUBO;
+
+        GLuint lightDataUBOHandle;
+        LightDataUBO lightDataUBO;
+
+        Camera camera;
+
+        GBuffer gBuffer;
+        EffectBuffer effectBuffer;
+        LightBuffer lightBuffer;
+
+		uint32 voxelFrustumReso;
+		float voxelFrustumHalfSpan;
+		Vec3f voxelFrustumCenter;
+
+		VoxelGIBuffer voxelGIBuffer;
+
+        // util geometry
+        GLuint cubeVAO;
+        GLuint cubeVBO;
+
+        GLuint quadVAO;
+        GLuint quadVBO;
+
+        void init(const Config& config) {
+            materialBuffer.init(config.materialInitCapacity);
+            meshBuffer.init(config.meshInitCapacity);
+        }
+
+        void shutdown() {
+            materialBuffer.shutdown();
+            meshBuffer.shutdown();
+        }
+
+        Array<RenderPass*> renderPassList;
+    };
+
+}
