@@ -1,3 +1,14 @@
+#define M_PI 3.1415926535897932384626433832795
+
+struct PixelMaterial {
+	vec3 f0;
+	vec3 albedo;
+	vec3 normal;
+	float metallic;
+	float roughness;
+	float ao;
+};
+
 float DistributionGGX(vec3 N, vec3 H, float roughness)
 {
 	float a = roughness * roughness;
@@ -41,3 +52,33 @@ vec3 fresnelSchlickRoughness(float cosTheta, vec3 F0, float roughness)
 {
 	return F0 + (max(vec3(1.0 - roughness), F0) - F0) * pow(1.0 - cosTheta, 5.0);
 }
+
+vec3 computeDiffuseBRDF(vec3 L, vec3 V, vec3 N, PixelMaterial pixelMaterial)
+{
+	vec3 H = normalize(L + V);
+	vec3 F = fresnelSchlick(max(dot(H, V), 0.0f), pixelMaterial.f0);
+	vec3 kd = vec3(1.0f) - F;
+	kd *= 1.0f - pixelMaterial.metallic;
+	return kd * pixelMaterial.albedo / M_PI;
+}
+
+vec3 computeSpecularBRDF(vec3 L, vec3 V, vec3 N, PixelMaterial pixelMaterial)
+{
+	vec3 H = normalize((L + V) / 2.0f);
+
+	float NDF = DistributionGGX(N, H, pixelMaterial.roughness);
+	float G = GeometrySmith(N, V, L, pixelMaterial.roughness);
+	vec3 F = fresnelSchlick(max(dot(H, V), 0.0), pixelMaterial.f0);
+
+	float denominator = 4 * max(dot(N, V), 0.0) * max(dot(N, L), 0.0);
+
+	return (F * G * NDF) / max(denominator, 0.001f);
+}
+
+vec3 computeOutgoingRadiance(vec3 L, vec3 V, vec3 N, PixelMaterial pixelMaterial, vec3 radiance) {
+	vec3 specular = computeSpecularBRDF(L, V, N, pixelMaterial);
+	vec3 diffuse = computeDiffuseBRDF(L, V, N, pixelMaterial);
+
+	return (specular + diffuse) * radiance * max(dot(N, L), 0.0);
+}
+
