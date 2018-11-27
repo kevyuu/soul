@@ -632,7 +632,12 @@ namespace Soul {
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, spec.minFilter);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, spec.magFilter); 
-        glBindTexture(GL_TEXTURE_2D, 0);
+
+		float aniso = 0.0f;
+		glGetFloatv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &aniso);
+		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, aniso);
+        
+		glBindTexture(GL_TEXTURE_2D, 0);
 
 		SOUL_ASSERT(0, RenderUtil::GLIsErrorCheckPass(), "");
 
