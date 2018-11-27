@@ -173,10 +173,6 @@
     <None Include="assets\Donut.spm" />
     <None Include="assets\Dagger.spm" />
     <None Include="assets\Cube.spm" />
-    <None Include="src\shaders\shadowMap.vert" />
-    <None Include="src\shaders\shadowMap.frag" />
-    <None Include="src\shaders\shadowMapDebug.frag" />
-    <None Include="src\shaders\shadowMapDebug.vert" />
     <None Include="src\shaders\csm.frag" />
     <None Include="src\shaders\csm.geom" />
     <None Include="src\shaders\csm.vert" />
@@ -185,14 +181,12 @@
     <None Include="assets\cape_hill_4k.hdr" />
     <None Include="assets\cape_hill_8k.hdr" />
     <None Include="src\shaders\brdf_map.glsl" />
-    <None Include="src\shaders\cubemap_filter.glsl" />
     <None Include="src\shaders\diffuse_envmap_filter.glsl" />
     <None Include="src\shaders\gaussian_blur_horizontal.glsl" />
     <None Include="src\shaders\gaussian_blur_vertical.glsl" />
     <None Include="src\shaders\gbuffer_gen.glsl" />
     <None Include="src\shaders\lighting.glsl" />
     <None Include="src\shaders\panorama_to_cubemap.glsl" />
-    <None Include="src\shaders\pbr.glsl" />
     <None Include="src\shaders\predepth.glsl" />
     <None Include="src\shaders\shadow_map.glsl" />
     <None Include="src\shaders\skybox.glsl" />
@@ -203,6 +197,10 @@
     <None Include="src\shaders\voxelize.glsl" />
     <None Include="src\shaders\voxel_debug.glsl" />
     <None Include="src\shaders\voxel_light_inject.glsl" />
+    <None Include="src\shaders\math.lib.glsl" />
+    <None Include="src\shaders\brdf.lib.glsl" />
+    <None Include="src\shaders\sampling.lib.glsl" />
+    <None Include="src\shaders\light.lib.glsl" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="..\..\Sparky\Sandbox\res\Dagger\Textures\Dagger_Albedo.tga" />

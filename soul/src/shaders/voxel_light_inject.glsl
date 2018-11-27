@@ -1,29 +1,16 @@
+#ifdef LIB_SHADER
+light.lib.glsl
+#endif
+
+/**********************************************************************
+// COMPUTE_SHADER
+**********************************************************************/
 #ifdef COMPUTE_SHADER
 layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
-
-struct DirectionalLight {
-	mat4 shadowMatrix1;
-	mat4 shadowMatrix2;
-	mat4 shadowMatrix3;
-	mat4 shadowMatrix4;
-	vec3 direction;
-	float pad1;
-	vec3 color;
-	float pad2;
-	vec4 cascadeDepths;
-};
 
 struct AABB {
 	vec3 center;
 	float halfSpan;
-};
-
-layout(std140) uniform LightData{
-	DirectionalLight directionalLights[4];
-	int directionalLightCount;
-	float pad1;
-	float pad2;
-	float pad3;
 };
 
 uniform vec3 voxelFrustumCenter;
@@ -107,4 +94,4 @@ void main() {
 
 }
 
-#endif
+#endif //COMPUTE_SHADER

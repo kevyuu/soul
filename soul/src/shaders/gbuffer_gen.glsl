@@ -1,7 +1,6 @@
-
-
 #ifdef LIB_SHADER
-pbr.lib.glsl
+math.lib.glsl
+brdf.lib.glsl
 #endif
 
 
