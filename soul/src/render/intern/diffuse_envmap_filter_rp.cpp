@@ -1,11 +1,11 @@
 #include "render/type.h"
 #include "core/math.h"
-#include "util.h"
+#include "glext.h"
 #include "asset.h"
 
 namespace Soul {
     void DiffuseEnvmapFilterRP::init(RenderDatabase &database) {
-        shader = RenderUtil::GLProgramCreate(RenderAsset::ShaderFile::diffuseEnvmapFilter);
+        shader = GLExt::ProgramCreate(RenderAsset::ShaderFile::diffuseEnvmapFilter);
 
         projectionLoc = glGetUniformLocation(shader, "projection");
         viewLoc = glGetUniformLocation(shader, "view");

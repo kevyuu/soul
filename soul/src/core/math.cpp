@@ -84,6 +84,14 @@ namespace Soul {
 		lhs.z /= rhs;
 	}
 
+	bool operator==(const Vec3f& lhs, const Vec3f& rhs) {
+		return (lhs.x == rhs.x) && (lhs.y == rhs.y) && (lhs.z == rhs.z);
+	}
+
+	bool operator!=(const Vec3f& lhs, const Vec3f& rhs) {
+		return (lhs.x != rhs.x) || (lhs.y != rhs.y) || (lhs.z != rhs.z);
+	}
+
 	Vec3f cross(const Vec3f & lhs, const Vec3f & rhs)
 	{
 		Vec3f res;
@@ -109,6 +117,15 @@ namespace Soul {
 	real32 length(const Vec3f & vec)
 	{
 		return sqrt(vec.x * vec.x + vec.y * vec.y + vec.z * vec.z);
+	}
+
+	Mat4 mat4Identity() {
+		Mat4 res;
+		res.elem[0][0] = 1.0f;
+		res.elem[1][1] = 1.0f;
+		res.elem[2][2] = 1.0f;
+		res.elem[3][3] = 1.0f;
+		return res;
 	}
 
 	Mat4 mat4Scale(float scaleX, float scaleY, float scaleZ)
@@ -341,4 +358,15 @@ namespace Soul {
 		return (angle / 180) * PI;
 	}
 
+	int nextPowerOfTwo(int num) {
+		
+		num -= 1;
+		num |= (num >> 1);
+		num |= (num >> 2);
+		num |= (num >> 4);
+		num |= (num >> 8);
+		num |= (num >> 16);
+
+		return num + 1;
+	}
 }

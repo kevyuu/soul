@@ -1,12 +1,12 @@
 #include "../type.h"
-#include "util.h"
+#include "glext.h"
 #include "asset.h"
 #include "core/math.h"
 
 namespace Soul {
     void PanoramaToCubemapRP::init(RenderDatabase &database) {
 
-        shader = RenderUtil::GLProgramCreate(RenderAsset::ShaderFile::panoramaToCubemap);
+        shader = GLExt::ProgramCreate(RenderAsset::ShaderFile::panoramaToCubemap);
 
         projectionLoc = glGetUniformLocation(shader, "projection");
         viewLoc = glGetUniformLocation(shader, "view");

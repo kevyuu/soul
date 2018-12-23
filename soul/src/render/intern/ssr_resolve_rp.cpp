@@ -1,13 +1,13 @@
 #include <render/type.h>
 #include "render/type.h"
 #include "render/intern/asset.h"
-#include "render/intern/util.h"
+#include "render/intern/glext.h"
 #include "core/math.h"
 
 namespace Soul {
 
 	void SSRResolveRP::init(RenderDatabase& database) {
-		shader = RenderUtil::GLProgramCreate(RenderAsset::ShaderFile::ssrResolve);
+		shader = GLExt::ProgramCreate(RenderAsset::ShaderFile::ssrResolve);
 
 		reflectionPosBufferLoc = glGetUniformLocation(shader, "reflectionPosBuffer");
 		lightBufferLoc = glGetUniformLocation(shader, "lightBuffer");
@@ -27,7 +27,7 @@ namespace Soul {
 		voxelFrustumHalfSpanLoc = glGetUniformLocation(shader, "voxelFrustumHalfSpan");
 		voxelFrustumCenterLoc = glGetUniformLocation(shader, "voxelFrustumCenter");
 
-		RenderUtil::GLErrorCheck("SSRResolveRP::init");
+		GLExt::ErrorCheck("SSRResolveRP::init");
 	}
 
 	void SSRResolveRP::execute(RenderDatabase &db) {
@@ -103,7 +103,7 @@ namespace Soul {
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 		glUseProgram(0);
 
-		RenderUtil::GLErrorCheck("SSRResolveRP::execute");
+		GLExt::ErrorCheck("SSRResolveRP::execute");
 
 	}
 

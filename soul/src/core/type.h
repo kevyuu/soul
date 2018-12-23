@@ -2,9 +2,6 @@
 // Created by Kevin Yudi Utama on 2/8/18.
 //
 
-#ifndef SOUL_TYPE_H
-#define SOUL_TYPE_H
-
 #pragma once
 
 #include <cstdint>
@@ -59,82 +56,83 @@ typedef intptr_t smm;
 typedef b32 b32x;
 typedef u32 u32x;
 
-struct Vec2f;
-struct Vec3f;
-struct Vec4f;
+namespace Soul {
 
-struct Vec2f {
-    float x;
-    float y;
+	struct Vec2f;
+	struct Vec3f;
+	struct Vec4f;
 
-    Vec2f() : x(0), y(0) {}
-    Vec2f(float x, float y) : x(x), y(y) {}
-};
+	struct Vec2f {
+		float x;
+		float y;
 
-struct Vec3f {
-    float x;
-    float y;
-    float z;
+		Vec2f() : x(0), y(0) {}
+		Vec2f(float x, float y) : x(x), y(y) {}
+	};
 
-    Vec3f() : x(0), y(0), z(0) {}
-    Vec3f(float x, float y, float z) : x(x), y(y), z(z) {}
-};
+	struct Vec3f {
+		float x;
+		float y;
+		float z;
 
-struct Vec4f {
-    float x;
-    float y;
-    float z;
-    float w;
+		Vec3f() : x(0), y(0), z(0) {}
+		Vec3f(float x, float y, float z) : x(x), y(y), z(z) {}
+	};
 
-    Vec4f() : x(0), y(0), z(0), w(0) {}
-    Vec4f(float x, float y, float z, float w) : x(x), y(y), z(z), w(w) {}
-    Vec4f(Vec3f xyz, float w) : x(xyz.x), y(xyz.y), z(xyz.z), w(w) {}
-    Vec3f xyz() { return Vec3f(x, y, z); }
-};
+	struct Vec4f {
+		float x;
+		float y;
+		float z;
+		float w;
 
-struct Mat3 {
+		Vec4f() : x(0), y(0), z(0), w(0) {}
+		Vec4f(float x, float y, float z, float w) : x(x), y(y), z(z), w(w) {}
+		Vec4f(Vec3f xyz, float w) : x(xyz.x), y(xyz.y), z(xyz.z), w(w) {}
+		Vec3f xyz() { return Vec3f(x, y, z); }
+	};
 
-    float elem[3][3];
+	struct Mat3 {
 
-    Mat3() {
-        for (int i = 0; i < 3; i++) {
-            for (int j = 0; j < 3; j++) {
-                elem[i][j] = 0;
-            }
-        }
-    }
-};
+		float elem[3][3];
 
-struct Mat4 {
+		Mat3() {
+			for (int i = 0; i < 3; i++) {
+				for (int j = 0; j < 3; j++) {
+					elem[i][j] = 0;
+				}
+			}
+		}
+	};
 
-    union {
-        float elem[4][4];
-        float mem[16];
-    };
+	struct Mat4 {
+
+		union {
+			float elem[4][4];
+			float mem[16];
+		};
 
 
-    Mat4() {
-        for (int i = 0; i < 4; i++) {
-            for (int j = 0; j < 4; j++) {
-                elem[i][j] = 0;
-            }
-        }
-    }
-};
+		Mat4() {
+			for (int i = 0; i < 4; i++) {
+				for (int j = 0; j < 4; j++) {
+					elem[i][j] = 0;
+				}
+			}
+		}
+	};
 
-struct Quaternion {
+	struct Quaternion {
 
-    float x, y, z, w;
+		float x, y, z, w;
 
-    Quaternion() : x(0), y(0), z(0), w(0) {};
-    Quaternion(float x, float y, float z, float w) : x(x), y(y), z(z), w(w) {}
+		Quaternion() : x(0), y(0), z(0), w(0) {};
+		Quaternion(float x, float y, float z, float w) : x(x), y(y), z(z), w(w) {}
 
-};
+	};
 
-struct Transform {
-    Mat3 rotation;
-    Vec3f position;
-    Vec3f scale;
-};
-
-#endif //SOUL_TYPE_H
+	struct Transform {
+		Mat3 rotation;
+		Vec3f position;
+		Vec3f scale;
+	};
+}

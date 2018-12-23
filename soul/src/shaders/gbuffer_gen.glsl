@@ -51,10 +51,7 @@ struct Material {
 	sampler2D normalMap;
 	sampler2D metallicMap;
 	sampler2D roughnessMap;
-	sampler2D aoMap;
 };
-
-
 
 struct OmniLight {
 	vec3 position;
@@ -92,6 +89,7 @@ layout (std140) uniform LightData {
 uniform Material material;
 uniform sampler2D shadowMap;
 uniform vec3 viewPosition;
+uniform vec3 ambientFactor;
 
 in VS_OUT {
 	vec3 worldPosition;
@@ -140,11 +138,10 @@ void main() {
 	pixelMaterial.normal = normalize(vec3(texture(material.normalMap, vs_out.texCoord).rgb * 2 - 1.0f));
 	pixelMaterial.metallic = texture(material.metallicMap, vs_out.texCoord).r;
 	pixelMaterial.roughness = texture(material.roughnessMap, vs_out.texCoord).r;
-	pixelMaterial.ao = texture(material.aoMap, vs_out.texCoord).r;
 	pixelMaterial.f0 = mix(vec3(0.04f), pixelMaterial.albedo, pixelMaterial.metallic);
 
-	mat3 BTN = mat3(vs_out.worldBinormal, vs_out.worldTangent, vs_out.worldNormal);
-    vec3 worldNormal = normalize(BTN * pixelMaterial.normal);
+	mat3 TBN = mat3(vs_out.worldTangent, vs_out.worldBinormal, vs_out.worldNormal);
+    vec3 worldNormal = normalize(TBN * pixelMaterial.normal);
 	vec3 worldPosition = vs_out.worldPosition;
 	vec3 V = normalize(viewPosition - worldPosition);
 	vec3 fragViewCoord = vec4(view * vec4(worldPosition, 1.0f)).xyz;
@@ -180,9 +177,9 @@ void main() {
 		
 	}
 
-	vec3 ambient = vec3(0.0f) * pixelMaterial.albedo * pixelMaterial.ao;
+	vec3 ambient = ambientFactor * pixelMaterial.albedo;
 
-	renderTarget1 = vec4(pixelMaterial.albedo, pixelMaterial.ao);
+	renderTarget1 = vec4(pixelMaterial.albedo, 1.0f);
 	renderTarget2 = vec4(specularOutput, pixelMaterial.metallic);
     renderTarget3 = vec4(worldNormal * 0.5f + 0.5f, pixelMaterial.roughness);
 	renderTarget4 = vec4(ambient + diffuseOutput, 1.0f);

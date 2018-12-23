@@ -1,13 +1,13 @@
 #include <render/type.h>
 #include "render/type.h"
 #include "render/intern/asset.h"
-#include "render/intern/util.h"
+#include "render/intern/glext.h"
 #include "core/math.h"
 
 namespace Soul {
 
 	void SSRTraceRP::init(RenderDatabase& database) {
-		shader = RenderUtil::GLProgramCreate(RenderAsset::ShaderFile::ssrTrace);
+		shader = GLExt::ProgramCreate(RenderAsset::ShaderFile::ssrTrace);
 
 		GLuint sceneDataBlockIndex = glGetUniformBlockIndex(shader, "SceneData");
 		glUniformBlockBinding(shader, sceneDataBlockIndex, RenderConstant::SCENE_DATA_BINDING_POINT);
@@ -23,7 +23,7 @@ namespace Soul {
 
 		invProjectionViewLoc = glGetUniformLocation(shader, "invProjectionView");
 
-		SOUL_ASSERT(0, RenderUtil::GLIsErrorCheckPass(), "");
+		SOUL_ASSERT(0, GLExt::IsErrorCheckPass(), "");
 
 	}
 
@@ -69,7 +69,7 @@ namespace Soul {
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 		glUseProgram(0);
 
-		SOUL_ASSERT(0, RenderUtil::GLIsErrorCheckPass(), "");
+		SOUL_ASSERT(0, GLExt::IsErrorCheckPass(), "");
 
 	}
 

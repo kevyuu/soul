@@ -20,24 +20,34 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\..\Users\Kevin Yudi Utama\Downloads\glad\include\glad\glad.h" />
+    <ClInclude Include="src\core\array.h" />
+    <ClInclude Include="src\core\debug.h" />
     <ClInclude Include="src\core\math.h" />
     <ClInclude Include="src\core\type.h" />
+    <ClInclude Include="src\extern\dirent_portable.h" />
     <ClInclude Include="src\extern\glad.h" />
     <ClInclude Include="src\extern\imconfig.h" />
     <ClInclude Include="src\extern\imgui.h" />
+    <ClInclude Include="src\extern\imguifilesystem.h" />
     <ClInclude Include="src\extern\imgui_impl_glfw.h" />
     <ClInclude Include="src\extern\imgui_impl_opengl3.h" />
     <ClInclude Include="src\extern\imgui_internal.h" />
+    <ClInclude Include="src\extern\imstb_rectpack.h" />
+    <ClInclude Include="src\extern\imstb_textedit.h" />
+    <ClInclude Include="src\extern\imstb_truetype.h" />
+    <ClInclude Include="src\extern\stb_image.h" />
     <ClInclude Include="src\extern\stb_rect_pack.h" />
     <ClInclude Include="src\extern\stb_textedit.h" />
     <ClInclude Include="src\extern\stb_truetype.h" />
+    <ClInclude Include="src\extern\tiny_obj_loader.h" />
     <ClInclude Include="src\render\intern\asset.h" />
+    <ClInclude Include="src\render\intern\glext.h" />
     <ClInclude Include="src\render\intern\util.h" />
     <ClInclude Include="src\render\soul_render_backend.h" />
     <ClInclude Include="src\render\system.h" />
     <ClInclude Include="src\render\type.h" />
+    <ClInclude Include="src\sandbox\asset_import.h" />
     <ClInclude Include="src\soul_array.h" />
-    <ClInclude Include="src\soul_core.h" />
     <ClInclude Include="src\soul_type.h" />
     <ClInclude Include="src\render\soul_render.h" />
     <ClInclude Include="src\stb_image.h" />
@@ -47,10 +57,14 @@
     <ClCompile Include="src\core\math.cpp" />
     <ClCompile Include="src\extern\glad.c" />
     <ClCompile Include="src\extern\imgui.cpp" />
+    <ClCompile Include="src\extern\imguifilesystem.cpp" />
+    <ClCompile Include="src\extern\imgui_demo.cpp" />
     <ClCompile Include="src\extern\imgui_draw.cpp" />
     <ClCompile Include="src\extern\imgui_impl_glfw.cpp" />
     <ClCompile Include="src\extern\imgui_impl_opengl3.cpp" />
-    <ClCompile Include="src\main.cpp" />
+    <ClCompile Include="src\extern\imgui_widgets.cpp" />
+    <ClCompile Include="src\render\intern\glext.cpp" />
+    <ClCompile Include="src\sandbox\main.cpp" />
     <ClCompile Include="src\render\intern\brdf_map_rp.cpp" />
     <ClCompile Include="src\render\intern\diffuse_envmap_filter_rp.cpp" />
     <ClCompile Include="src\render\intern\gaussian_blur_rp.cpp" />
@@ -69,7 +83,6 @@
     <ClCompile Include="src\render\intern\voxelize_rp.cpp" />
     <ClCompile Include="src\render\intern\voxel_debug_rp.cpp" />
     <ClCompile Include="src\render\intern\voxel_mipmap_gen_rp.cpp" />
-    <ClCompile Include="src\soul_core.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="assets\cape_hill_4k.hdr" />
@@ -78,9 +91,12 @@
     <None Include="assets\Cube.spm" />
     <None Include="assets\Dagger.spm" />
     <None Include="assets\Donut.spm" />
+    <None Include="assets\greasy-metal-pan\quad.mtl" />
+    <None Include="assets\greasy-metal-pan\sphere-material.mtl" />
     <None Include="assets\newport_loft.hdr" />
     <None Include="assets\RoundedCube.spm" />
     <None Include="assets\Sphere.spm" />
+    <None Include="assets\sponza2\textures\sponza.mtl" />
     <None Include="assets\Teapot.spm" />
     <None Include="src\shaders\blinnphong.vs" />
     <None Include="src\shaders\brdf.lib.glsl" />
@@ -107,6 +123,7 @@
     <None Include="src\shaders\texture2d_debug.glsl" />
     <None Include="src\shaders\voxelize.glsl" />
     <None Include="src\shaders\voxel_debug.glsl" />
+    <None Include="src\shaders\voxel_mipmap_gen.glsl" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="..\..\..\Downloads\blocksrough-Unreal-Engine\blocksrough-Unreal-Engine\blocksrough_ambientocclusion.png" />

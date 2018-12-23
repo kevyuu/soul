@@ -4,7 +4,6 @@ struct PixelMaterial {
 	vec3 normal;
 	float metallic;
 	float roughness;
-	float ao;
 };
 
 float DistributionGGX(vec3 N, vec3 H, float roughness)

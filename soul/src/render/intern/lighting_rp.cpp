@@ -4,13 +4,13 @@
 
 #include "render/type.h"
 #include "render/intern/asset.h"
-#include "render/intern/util.h"
+#include "render/intern/glext.h"
 
 namespace Soul {
 
 	void LightingRP::init(RenderDatabase &database) {
 
-		shader = RenderUtil::GLProgramCreate(RenderAsset::ShaderFile::lighting);
+		shader = GLExt::ProgramCreate(RenderAsset::ShaderFile::lighting);
 		GLuint sceneDataBlockIndex = glGetUniformBlockIndex(shader, "SceneData");
 		glUniformBlockBinding(shader, sceneDataBlockIndex, RenderConstant::SCENE_DATA_BINDING_POINT);
 		GLuint lightDataBlockIndex = glGetUniformBlockIndex(shader, "LightData");
@@ -62,7 +62,7 @@ namespace Soul {
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 		glUseProgram(0);
 
-		RenderUtil::GLErrorCheck("LightingRP::execute");
+		GLExt::ErrorCheck("LightingRP::execute");
 
 	}
 

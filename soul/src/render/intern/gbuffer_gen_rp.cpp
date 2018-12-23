@@ -4,13 +4,14 @@
 
 #include "render/type.h"
 #include "render/intern/asset.h"
-#include "render/intern/util.h"
+#include "render/intern/glext.h"
+#include "core/math.h"
 
 namespace Soul {
 
     void GBufferGenRP::init(RenderDatabase& database) {
 
-        predepthShader = RenderUtil::GLProgramCreate(RenderAsset::ShaderFile::predepth);
+        predepthShader = GLExt::ProgramCreate(RenderAsset::ShaderFile::predepth);
 
         GLuint sceneDataBlockIndexPredepth = glGetUniformBlockIndex(predepthShader, "SceneData");
 
@@ -18,7 +19,7 @@ namespace Soul {
         predepthModelUniformLoc = glGetUniformLocation(predepthShader, "model");
 
 
-        gBufferShader = RenderUtil::GLProgramCreate(RenderAsset::ShaderFile::gbufferGen);
+        gBufferShader = GLExt::ProgramCreate(RenderAsset::ShaderFile::gbufferGen);
 
         GLuint sceneDataBlockIndex = glGetUniformBlockIndex(gBufferShader, "SceneData");
         glUniformBlockBinding(gBufferShader, sceneDataBlockIndex, RenderConstant::SCENE_DATA_BINDING_POINT);
@@ -30,9 +31,9 @@ namespace Soul {
         normalMapPositionLoc = glGetUniformLocation(gBufferShader, "material.normalMap");
         metallicMapPositionLoc = glGetUniformLocation(gBufferShader, "material.metallicMap");
         roughnessMapPositionLoc = glGetUniformLocation(gBufferShader, "material.roughnessMap");
-        aoMapPositionLoc = glGetUniformLocation(gBufferShader, "material.aoMap");
 		shadowMapLoc = glGetUniformLocation(gBufferShader, "shadowMap");
 		viewPositionLoc = glGetUniformLocation(gBufferShader, "viewPosition");
+		ambientFactorLoc = glGetUniformLocation(gBufferShader, "ambientFactor");
 
     }
 
@@ -75,6 +76,8 @@ namespace Soul {
         glBindTexture(GL_TEXTURE_2D, db.shadowAtlas.texHandle);
 
 		glUniform3f(viewPositionLoc, db.camera.position.x, db.camera.position.y, db.camera.position.z);
+		Vec3f ambientFactor = db.environment.ambientColor * db.environment.ambientEnergy;
+		glUniform3f(ambientFactorLoc, ambientFactor.x, ambientFactor.y, ambientFactor.z);
 
 		glViewport(0, 0, db.targetWidthPx, db.targetHeightPx);
 
@@ -101,10 +104,6 @@ namespace Soul {
             glActiveTexture(GL_TEXTURE3);
             glBindTexture(GL_TEXTURE_2D, material.roughnessMap);
 
-            glUniform1i(aoMapPositionLoc, 4);
-            glActiveTexture(GL_TEXTURE4);
-            glBindTexture(GL_TEXTURE_2D, material.aoMap);
-
             glBindVertexArray(mesh.vaoHandle);
             glDrawElements(GL_TRIANGLES, mesh.indexCount, GL_UNSIGNED_INT, 0);
         }
@@ -114,7 +113,7 @@ namespace Soul {
         glUseProgram(0);
         glDepthMask(GL_TRUE);
 
-		RenderUtil::GLErrorCheck("GBufferGenRPP::execute");
+		GLExt::ErrorCheck("GBufferGenRPP::execute");
 
     }
 

@@ -3,11 +3,11 @@
 
 #include "render/type.h"
 #include "render/intern/asset.h"
-#include "render/intern/util.h"
+#include "render/intern/glext.h"
 
 namespace Soul {
 	void VoxelizeRP::init(RenderDatabase& database) {
-		program = RenderUtil::GLProgramCreate(RenderAsset::ShaderFile::voxelize);
+		program = GLExt::ProgramCreate(RenderAsset::ShaderFile::voxelize);
 
 		projectionLoc = glGetUniformLocation(program, "projection");
 		viewLoc = glGetUniformLocation(program, "view");
@@ -16,14 +16,13 @@ namespace Soul {
 		normalMapLoc = glGetUniformLocation(program, "material.normalMap");
 		metallicMapLoc = glGetUniformLocation(program, "material.metallicMapLoc");
 		roughnessMapLoc = glGetUniformLocation(program, "material. roughnessMapLoc");
-		aoMapLoc = glGetUniformLocation(program, "material.aoMap");
 		voxelAlbedoBufferLoc = glGetUniformLocation(program, "voxelAlbedoBuffer");
 		voxelNormalBufferLoc = glGetUniformLocation(program, "voxelNormalBuffer");
 		voxelFrustumCenterLoc = glGetUniformLocation(program, "voxelFrustumCenter");
 		voxelFrustumResoLoc = glGetUniformLocation(program, "voxelFrustumReso");
 		voxelFrustumHalfSpanLoc = glGetUniformLocation(program, "voxelFrustumHalfSpan");
 
-		SOUL_ASSERT(0, RenderUtil::GLIsErrorCheckPass(), "OpenGL Error");
+		SOUL_ASSERT(0, GLExt::IsErrorCheckPass(), "OpenGL Error");
 
 	}
 
@@ -43,7 +42,7 @@ namespace Soul {
 		glUseProgram(program);
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-		SOUL_ASSERT(0, RenderUtil::GLIsErrorCheckPass(), "");
+		SOUL_ASSERT(0, GLExt::IsErrorCheckPass(), "");
 
 		Mat4 projection = mat4Ortho(
 			-db.voxelFrustumHalfSpan, db.voxelFrustumHalfSpan,
@@ -88,11 +87,7 @@ namespace Soul {
 			glActiveTexture(GL_TEXTURE3);
 			glBindTexture(GL_TEXTURE_2D, material.roughnessMap);
 
-			glUniform1i(aoMapLoc, 4);
-			glActiveTexture(GL_TEXTURE4);
-			glBindTexture(GL_TEXTURE_2D, material.aoMap);
-
-			SOUL_ASSERT(0, RenderUtil::GLIsErrorCheckPass(), "");
+			SOUL_ASSERT(0, GLExt::IsErrorCheckPass(), "");
 
 			glBindVertexArray(mesh.vaoHandle);
 			glDrawElements(GL_TRIANGLES, mesh.indexCount, GL_UNSIGNED_INT, 0);
@@ -101,7 +96,7 @@ namespace Soul {
 
 		glUseProgram(0);
 
-		SOUL_ASSERT(0, RenderUtil::GLIsErrorCheckPass(), "");
+		SOUL_ASSERT(0, GLExt::IsErrorCheckPass(), "");
 
 	}
 

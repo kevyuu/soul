@@ -4,13 +4,13 @@
 
 #include "render/type.h"
 #include "render/intern/asset.h"
-#include "render/intern/util.h"
+#include "render/intern/glext.h"
 #include "core/math.h"
 
 namespace Soul {
 
     void SpecularEnvmapFilterRP::init(RenderDatabase& database) {
-        shader = RenderUtil::GLProgramCreate(RenderAsset::ShaderFile::specularEnvmapFilter);
+        shader = GLExt::ProgramCreate(RenderAsset::ShaderFile::specularEnvmapFilter);
 
         projectionLoc = glGetUniformLocation(shader, "projection");
         viewLoc = glGetUniformLocation(shader, "view");

@@ -1,5 +1,5 @@
 #include "render/system.h"
-#include "render/intern/util.h"
+#include "render/intern/glext.h"
 #include "core/math.h"
 
 #include <cmath>
@@ -11,15 +11,9 @@ namespace Soul {
 
     void RenderSystem::init(const RenderSystem::Config &config) {
 
-        glEnable(GL_MULTISAMPLE);
-
         RenderDatabase& db = _database;
         db.targetWidthPx = config.targetWidthPx;
         db.targetHeightPx = config.targetHeightPx;
-
-		db.voxelFrustumCenter = config.voxelGIConfig.center;
-		db.voxelFrustumHalfSpan = config.voxelGIConfig.halfSpan;
-		db.voxelFrustumReso = config.voxelGIConfig.resolution;
 
         db.materialBuffer.init(config.materialPoolSize);
         db.meshBuffer.init(config.meshPoolSize);
@@ -40,68 +34,95 @@ namespace Soul {
 
         db.dirLightCount = 0;
 
-        // setup shadow atlas;
-        db.shadowAtlas.resolution = TexReso::TR_8192;
-        db.shadowAtlas.subdivSqrtCount[0] = 1;
-        db.shadowAtlas.subdivSqrtCount[1] = 1;
-        db.shadowAtlas.subdivSqrtCount[2] = 2;
-        db.shadowAtlas.subdivSqrtCount[3] = 2;
-
-        for (int i = 0; i < ShadowAtlas::MAX_LIGHT; i++) {
-            db.shadowAtlas.slots[i] = -1;
-        }
-
-        TextureSpec texSpec;
-        texSpec.height = db.shadowAtlas.resolution;
-        texSpec.width = db.shadowAtlas.resolution;
-        texSpec.mipLevel = 0;
-        texSpec.pixelFormat = PF_DEPTH_COMPONENT;
-        texSpec.minFilter = GL_LINEAR;
-        texSpec.magFilter = GL_LINEAR;
-        db.shadowAtlas.texHandle = textureCreate(texSpec, nullptr, 0);
+		shadowAtlasUpdateConfig(config.shadowAtlasConfig);
+		voxelGIUpdateConfig(config.voxelGIConfig);
 
         panoramaToCubemapRP.init(_database);
         diffuseEnvmapFilterRP.init(_database);
         specularEnvmapFilterRP.init(_database);
         brdfMapRP.init(_database);
 
-        db.environment.ambientColor = Vec3f(1.0f, 1.0f, 1.0f);
-        db.environment.ambientEnergy = 0.05f;
+		_effectBufferInit();
+        _gBufferInit();
+        _lightBufferInit();
+        _utilVAOInit();
+        _brdfMapInit();
 
-		_initEffectBuffer();
-        _initGBuffer();
-        _initLightBuffer();
-        _initUtilGeometry();
-        _initBRDFMap();
-		_initVoxelGIBuffer();
+        db.renderPassList.pushBack(new ShadowMapRP());
+        db.renderPassList.pushBack(new GBufferGenRP());
+        db.renderPassList.pushBack(new GaussianBlurRP());
 
-
-        db.renderPassList.push_back(new ShadowMapRP());
-        db.renderPassList.push_back(new GBufferGenRP());
-        db.renderPassList.push_back(new GaussianBlurRP());
-
-		db.renderPassList.push_back(new SSRTraceRP());
-		// db.renderPassList.push_back(new Texture2DDebugRP());
-		db.renderPassList.push_back(new VoxelizeRP());
-		db.renderPassList.push_back(new VoxelLightInjectRP());
-		db.renderPassList.push_back(new VoxelMipmapGenRP());
-		db.renderPassList.push_back(new SSRResolveRP());
-		db.renderPassList.push_back(new VoxelDebugRP());
+		db.renderPassList.pushBack(new SSRTraceRP());
+		db.renderPassList.pushBack(new VoxelizeRP());
+		db.renderPassList.pushBack(new VoxelLightInjectRP());
+		db.renderPassList.pushBack(new VoxelMipmapGenRP());
+		db.renderPassList.pushBack(new SSRResolveRP());
+		db.renderPassList.pushBack(new VoxelDebugRP());
 
         for (int i = 0; i < db.renderPassList.getSize(); i++) {
             db.renderPassList.get(i)->init(db);
         }
 
-		GLenum err;
-		while ((err = glGetError()) != GL_NO_ERROR) {
-			std::cout<<"init::OpenGL error: "<<err<<std::endl;
-		}
-
-		SOUL_ASSERT(0, RenderUtil::GLIsErrorCheckPass(), "");
+		SOUL_ASSERT(0, GLExt::IsErrorCheckPass(), "");
 
     }
 
-    void RenderSystem::_initGBuffer() {
+	void RenderSystem::shadowAtlasUpdateConfig(const ShadowAtlasConfig& config) {
+		RenderDatabase& db = _database;
+		db.shadowAtlas.resolution = config.resolution;
+		for (int i = 0; i < 4; i++) {
+			db.shadowAtlas.subdivSqrtCount[i] = config.subdivSqrtCount[i];
+		}
+		_shadowAtlasInit();
+
+		for (int i = 0; i < db.dirLightCount; i++) {
+			db.dirLights[i].shadowKey = _shadowAtlasGetSlot(i, db.dirLights[i].resolution);
+		}
+	}
+
+	void RenderSystem::_shadowAtlasInit() {
+		_shadowAtlasCleanup();
+
+		RenderDatabase& db = _database;
+
+		for (int i = 0; i < ShadowAtlas::MAX_LIGHT; i++) {
+			db.shadowAtlas.slots[i] = -1;
+		}
+
+		GLuint shadowAtlasTex;
+		glGenTextures(1, &shadowAtlasTex);
+		glBindTexture(GL_TEXTURE_2D, shadowAtlasTex);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, 
+			db.shadowAtlas.resolution, db.shadowAtlas.resolution, 0, 
+			GL_DEPTH_COMPONENT, GL_UNSIGNED_BYTE, nullptr);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+		db.shadowAtlas.texHandle = shadowAtlasTex;
+
+		GLuint framebuffer;
+		glGenFramebuffers(1, &framebuffer);
+		glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, db.shadowAtlas.texHandle, 0);
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+		db.shadowAtlas.framebuffer = framebuffer;
+
+		SOUL_ASSERT(0, GLExt::IsErrorCheckPass(), "");
+
+	}
+
+	void RenderSystem::_shadowAtlasCleanup() {
+		GLExt::TextureDelete(&_database.shadowAtlas.texHandle);
+		GLExt::FramebufferDelete(&_database.shadowAtlas.framebuffer);
+
+		SOUL_ASSERT(0, GLExt::IsErrorCheckPass(), "");
+	}
+
+    void RenderSystem::_gBufferInit() {
+
+		_gBufferCleanup();
+
         RenderDatabase& db = _database;
         GBuffer& gBuffer = _database.gBuffer;
 
@@ -122,7 +143,7 @@ namespace Soul {
         glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
         glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
         glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_TEXTURE_2D, gBuffer.depthBuffer, 0);
-		RenderUtil::GLErrorCheck("_initGBuffer::depthBuffer");
+		GLExt::ErrorCheck("_initGBuffer::depthBuffer");
 
         glGenTextures(1, &(gBuffer.renderBuffer1));
         glBindTexture(GL_TEXTURE_2D, gBuffer.renderBuffer1);
@@ -133,7 +154,7 @@ namespace Soul {
         glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
         glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
         glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, gBuffer.renderBuffer1, 0);
-		RenderUtil::GLErrorCheck("_initGBuffer::renderBuffer1");
+		GLExt::ErrorCheck("_initGBuffer::renderBuffer1");
 
         glGenTextures(1, &(gBuffer.renderBuffer2));
         glBindTexture(GL_TEXTURE_2D, gBuffer.renderBuffer2);
@@ -144,7 +165,7 @@ namespace Soul {
         glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
         glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
         glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT1, GL_TEXTURE_2D, gBuffer.renderBuffer2, 0);
-		RenderUtil::GLErrorCheck("_initGBuffer::renderBuffer2");
+		GLExt::ErrorCheck("_initGBuffer::renderBuffer2");
 
         glGenTextures(1, &(gBuffer.renderBuffer3));
         glBindTexture(GL_TEXTURE_2D, gBuffer.renderBuffer3);
@@ -155,7 +176,7 @@ namespace Soul {
         glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
         glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
         glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT2, GL_TEXTURE_2D, gBuffer.renderBuffer3, 0);
-		RenderUtil::GLErrorCheck("_initGBuffer::renderBuffer3");
+		GLExt::ErrorCheck("_initGBuffer::renderBuffer3");
 
 		glGenTextures(1, &(gBuffer.renderBuffer4));
 		glBindTexture(GL_TEXTURE_2D, gBuffer.renderBuffer4);
@@ -166,7 +187,7 @@ namespace Soul {
 		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT3, GL_TEXTURE_2D, gBuffer.renderBuffer4, 0);
-		RenderUtil::GLErrorCheck("_initGBuffer::renderBuffer4");
+		GLExt::ErrorCheck("_initGBuffer::renderBuffer4");
 
 		unsigned int attachments[4] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2, GL_COLOR_ATTACHMENT3 };
 
@@ -178,11 +199,26 @@ namespace Soul {
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
         glBindTexture(GL_TEXTURE_2D, 0);
 
-		SOUL_ASSERT(0, RenderUtil::GLIsErrorCheckPass(), "");
+		SOUL_ASSERT(0, GLExt::IsErrorCheckPass(), "");
 
     }
 
-    void RenderSystem::_initEffectBuffer() {
+	void RenderSystem::_gBufferCleanup() {
+		RenderDatabase& db = _database;
+
+		GLExt::FramebufferDelete( &db.gBuffer.frameBuffer);
+		GLExt::TextureDelete(&db.gBuffer.depthBuffer);
+		GLExt::TextureDelete(&db.gBuffer.renderBuffer1);
+		GLExt::TextureDelete(&db.gBuffer.renderBuffer2);
+		GLExt::TextureDelete(&db.gBuffer.renderBuffer3);
+		GLExt::TextureDelete(&db.gBuffer.renderBuffer4);
+
+		SOUL_ASSERT(0, GLExt::IsErrorCheckPass(), "GBuffer cleanup error");
+	}
+
+    void RenderSystem::_effectBufferInit() {
+		
+		_effectBufferCleanup();
 
         RenderDatabase& db = _database;
         EffectBuffer& effectBuffer = db.effectBuffer;
@@ -283,7 +319,7 @@ namespace Soul {
                 std::cout<<"Status : "<<status<<std::endl;
                 std::cout<<"Error : "<<GL_FRAMEBUFFER_COMPLETE<<" "<<GL_FRAMEBUFFER_INCOMPLETE_ATTACHMENT<<std::endl;
 
-                _database.effectBuffer.lightMipChain[i].mipmaps.push_back(mipmap);
+                _database.effectBuffer.lightMipChain[i].mipmaps.pushBack(mipmap);
                 w >>= 1;
                 h >>= 1;
         	}
@@ -300,10 +336,37 @@ namespace Soul {
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
         glBindTexture(GL_TEXTURE_2D, 0);
 
-		SOUL_ASSERT(0, RenderUtil::GLIsErrorCheckPass(), "");
+		SOUL_ASSERT(0, GLExt::IsErrorCheckPass(), "");
     }
 
-    void RenderSystem::_initLightBuffer() {
+	void RenderSystem::_effectBufferCleanup() {
+		RenderDatabase& db = _database;
+		EffectBuffer& effectBuffer = db.effectBuffer;
+
+		GLExt::TextureDelete(&effectBuffer.ssrTraceBuffer.traceBuffer);
+		GLExt::FramebufferDelete( &effectBuffer.ssrTraceBuffer.frameBuffer);
+		
+		GLExt::TextureDelete(&effectBuffer.ssrResolveBuffer.resolveBuffer);
+		GLExt::FramebufferDelete( &effectBuffer.ssrResolveBuffer.frameBuffer);
+
+		GLExt::TextureDelete(&effectBuffer.depthBuffer);
+
+		for (int i = 0; i < 2; i++) {
+			EffectBuffer::MipChain& mipChain = db.effectBuffer.lightMipChain[i];
+
+			GLExt::TextureDelete(&mipChain.colorBuffer);
+
+			for (int j = 0; j < mipChain.mipmaps.getSize(); j++) {
+				GLExt::FramebufferDelete( &mipChain.mipmaps.get(j).frameBuffer);
+			}
+		}
+
+		SOUL_ASSERT(0, GLExt::IsErrorCheckPass(), "Effect buffer cleanup error");
+	}
+
+    void RenderSystem::_lightBufferInit() {
+		_lightBufferCleanup();
+
         RenderDatabase& db = _database;
         LightBuffer& lightBuffer = db.lightBuffer;
 
@@ -326,10 +389,21 @@ namespace Soul {
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
         glBindTexture(GL_TEXTURE_2D, 0);
 
-		SOUL_ASSERT(0, RenderUtil::GLIsErrorCheckPass(), "");
+		SOUL_ASSERT(0, GLExt::IsErrorCheckPass(), "");
     }
 
-    void RenderSystem::_initBRDFMap() {
+	void RenderSystem::_lightBufferCleanup() {
+		RenderDatabase& db = _database;
+		LightBuffer& lightBuffer = db.lightBuffer;
+
+		GLExt::FramebufferDelete( &lightBuffer.frameBuffer);
+		GLExt::TextureDelete(&lightBuffer.colorBuffer);
+
+		SOUL_ASSERT(0, GLExt::IsErrorCheckPass(), "Light buffer cleanup error");
+	}
+
+    void RenderSystem::_brdfMapInit() {
+		_brdfMapCleanup();
 
         GLuint brdfMap;
         glGenTextures(1, &brdfMap);
@@ -343,10 +417,27 @@ namespace Soul {
         _database.environment.brdfMap = brdfMap;
         brdfMapRP.execute(_database);
 
-		SOUL_ASSERT(0, RenderUtil::GLIsErrorCheckPass(), "");
+		SOUL_ASSERT(0, GLExt::IsErrorCheckPass(), "");
     }
 
-	void RenderSystem::_initVoxelGIBuffer() {
+	void RenderSystem::_brdfMapCleanup() {
+
+		RenderDatabase& db = _database;
+		GLExt::TextureDelete(&db.environment.brdfMap);
+
+		SOUL_ASSERT(0, GLExt::IsErrorCheckPass(), "");
+	}
+
+	void RenderSystem::voxelGIUpdateConfig(const VoxelGIConfig& config) {
+		_database.voxelFrustumCenter = config.center;
+		_database.voxelFrustumHalfSpan = config.halfSpan;
+		_database.voxelFrustumReso = config.resolution;
+		_voxelGIBufferInit();
+	}
+
+	void RenderSystem::_voxelGIBufferInit() {
+
+		_voxelGIBufferCleanup();
 
 		int reso = _database.voxelFrustumReso;
 
@@ -383,10 +474,24 @@ namespace Soul {
 		glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 		_database.voxelGIBuffer.lightVoxelTex = lightVoxelTex;
 
-		SOUL_ASSERT(0, RenderUtil::GLIsErrorCheckPass(), "Voxel GI Buffer initialization error");
+		SOUL_ASSERT(0, GLExt::IsErrorCheckPass(), "Voxel GI Buffer initialization error");
 	}
 
-    void RenderSystem::_initUtilGeometry() {
+	void RenderSystem::_voxelGIBufferCleanup() {
+		
+		RenderDatabase& db = _database;
+		VoxelGIBuffer& voxelGIBuffer = db.voxelGIBuffer;
+
+		GLExt::TextureDelete(&voxelGIBuffer.gVoxelAlbedoTex);
+		GLExt::TextureDelete(&voxelGIBuffer.gVoxelNormalTex);
+		GLExt::TextureDelete(&voxelGIBuffer.lightVoxelTex);
+
+		SOUL_ASSERT(0, GLExt::IsErrorCheckPass(), "Voxel GI Buffer cleanup error");
+
+	}
+
+
+    void RenderSystem::_utilVAOInit() {
         float cubeVertices[] = {
                 // positions
                 -1.0f,  1.0f, -1.0f,
@@ -456,15 +561,22 @@ namespace Soul {
         glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), (void*) 0);
         glBindVertexArray(0);
 
-		GLenum err;
-		while ((err = glGetError()) != GL_NO_ERROR) {
-			std::cout<<"_initUtilGeometry::OpenGL error: "<<err<<std::endl;
-		}
+		GLExt::ErrorCheck("_initUtilGeometry");
 
     }
+	
+	void RenderSystem::_utilVAOCleanup() {
+		RenderDatabase& db = _database;
+		
+		glDeleteBuffers(1, &db.cubeVBO);
+		glDeleteVertexArrays(1, &db.cubeVAO);
+
+		glDeleteBuffers(1, &db.quadVBO);
+		glDeleteVertexArrays(1, &db.quadVAO);
+
+	}
 
     void RenderSystem::shutdown() {
-        _database.shutdown();
 
         RenderDatabase& db = _database;
 
@@ -473,30 +585,62 @@ namespace Soul {
             free(db.renderPassList.get(i));
         }
 
-        db.renderPassList.shutdown();
+		_shadowAtlasCleanup();
+		_utilVAOCleanup();
+		_brdfMapCleanup();
+		_gBufferCleanup();
+		_effectBufferCleanup();
+		_lightBufferCleanup();
+		_voxelGIBufferCleanup();
+
+		for (int i = 0; i < db.materialBuffer.getSize(); i++) {
+			GLExt::TextureDelete(&db.materialBuffer[i].albedoMap);
+			GLExt::TextureDelete(&db.materialBuffer[i].metallicMap);
+			GLExt::TextureDelete(&db.materialBuffer[i].normalMap);
+			GLExt::TextureDelete(&db.materialBuffer[i].roughnessMap);
+			GLExt::ProgramDelete(&db.materialBuffer[i].shaderID);
+		}
+
+		for (int i = 0; i < db.meshBuffer.getSize(); i++) {
+			glDeleteBuffers(1, &db.meshBuffer[i].eboHandle);
+			glDeleteBuffers(1, &db.meshBuffer[i].vboHandle);
+			glDeleteVertexArrays(1, &db.meshBuffer[i].vaoHandle);
+		}
+
+		db.materialBuffer.cleanup();
+		db.meshBuffer.cleanup();
+        db.renderPassList.cleanup();
 
         panoramaToCubemapRP.shutdown(_database);
         diffuseEnvmapFilterRP.shutdown(_database);
         specularEnvmapFilterRP.shutdown(_database);
         brdfMapRP.shutdown(_database);
+
+		glDeleteBuffers(1, &db.sceneDataUBOHandle);
+		glDeleteBuffers(1, &db.lightDataUBOHandle);
+
     }
 
-    ShadowKey RenderSystem::_getShadowAtlasSlot(RenderRID lightID, TexReso texReso) {
-        ShadowKey shadowKey = { -1, -1 };
+    ShadowKey RenderSystem::_shadowAtlasGetSlot(RenderRID lightID, int texReso) {
+        ShadowKey shadowKey = { -1, -1, -1 };
         int bestSlot = -1;
         int quadrantSize = _database.shadowAtlas.resolution / 2;
         int neededSize = texReso;
+		int currentSlotSize = quadrantSize;
         int slotIter = 0;
         for (int i = 0; i < 4; i++) {
             int subdivSize = quadrantSize / _database.shadowAtlas.subdivSqrtCount[i];
-            if (subdivSize < neededSize) {
+            if (subdivSize < neededSize || subdivSize > currentSlotSize) {
                 slotIter += _database.shadowAtlas.subdivSqrtCount[i] * _database.shadowAtlas.subdivSqrtCount[i];
                 continue;
             }
+
             for (int j = 0; j < _database.shadowAtlas.subdivSqrtCount[i] * _database.shadowAtlas.subdivSqrtCount[i]; j++) {
-                if (_database.shadowAtlas.slots[slotIter] == -1) {
+                if (_database.shadowAtlas.slots[slotIter] == -1 ) {
                     shadowKey.quadrant = i;
                     shadowKey.subdiv = j;
+					shadowKey.slot = slotIter;
+					currentSlotSize = subdivSize;
                     bestSlot = slotIter;
                 }
                 slotIter++;
@@ -506,16 +650,21 @@ namespace Soul {
         if (bestSlot == -1) return shadowKey;
 
         _database.shadowAtlas.slots[bestSlot] = lightID;
+
         return shadowKey;
     }
 
-    RenderRID RenderSystem::createDirectionalLight(const DirectionalLightSpec &spec) {
+	void RenderSystem::_shadowAtlasFreeSlot(ShadowKey shadowKey) {
+		_database.shadowAtlas.slots[shadowKey.slot] = -1;
+	}
+
+    RenderRID RenderSystem::dirLightCreate(const DirectionalLightSpec &spec) {
         RenderRID lightRID = _database.dirLightCount;
         DirectionalLight& light = _database.dirLights[_database.dirLightCount];
-
         light.direction = unit(spec.direction);
         light.color = spec.color;
-        light.shadowKey = _getShadowAtlasSlot(lightRID, spec.shadowMapResolution);
+		light.resolution = spec.shadowMapResolution;
+        light.shadowKey = _shadowAtlasGetSlot(lightRID, spec.shadowMapResolution);
         for (int i = 0; i < 3; i++) {
             light.split[i] = spec.split[i];
         }
@@ -524,26 +673,48 @@ namespace Soul {
         return lightRID;
     }
 
-    void RenderSystem::setDirLightDirection(RenderRID lightRID, Vec3f direction) {
+    void RenderSystem::dirLightSetDirection(RenderRID lightRID, Vec3f direction) {
         _database.dirLights[lightRID].direction = direction;
     }
 
-    void RenderSystem::setAmbientColor(Vec3f ambientColor) {
+	void RenderSystem::dirLightSetColor(RenderRID lightRID, Vec3f color) {
+		_database.dirLights[lightRID].color = color;
+	}
+
+	void RenderSystem::dirLightSetShadowMapResolution(RenderRID lightRID, int32 resolution) {
+
+		SOUL_ASSERT(0, resolution == nextPowerOfTwo(resolution), "");
+		DirectionalLight& dirLight = _database.dirLights[lightRID];
+
+		_shadowAtlasFreeSlot(dirLight.shadowKey);
+		dirLight.resolution = resolution;
+		dirLight.shadowKey = _shadowAtlasGetSlot(lightRID, resolution);
+
+	}
+
+	void RenderSystem::dirLightSetCascadeSplit(RenderRID lightRID, float split1, float split2, float split3)
+	{
+		DirectionalLight& dirLight = _database.dirLights[lightRID];
+		dirLight.split[0] = split1;
+		dirLight.split[1] = split2;
+		dirLight.split[2] = split3;
+	}
+
+    void RenderSystem::envSetAmbientColor(Vec3f ambientColor) {
         _database.environment.ambientColor = ambientColor;
     }
 
-    void RenderSystem::setAmbientEnergy(float ambientEnergy) {
+    void RenderSystem::envSetAmbientEnergy(float ambientEnergy) {
         _database.environment.ambientEnergy = ambientEnergy;
     }
 
-    RenderRID RenderSystem::createMaterial(const MaterialSpec& spec) {
+    RenderRID RenderSystem::materialCreate(const MaterialSpec& spec) {
         RenderRID rid = _database.materialBuffer.getSize();
-        _database.materialBuffer.push_back({
+        _database.materialBuffer.pushBack({
                 spec.albedoMap,
                 spec.normalMap,
                 spec.metallicMap,
                 spec.roughnessMap,
-                spec.aoMap,
                 spec.shaderID
         });
         return rid;
@@ -603,9 +774,11 @@ namespace Soul {
 
 
         RenderRID rid = _database.materialBuffer.getSize();
-        _database.meshBuffer.push_back({
+        _database.meshBuffer.pushBack({
                 spec.transform,
                 VAO,
+				VBO,
+				EBO,
                 spec.vertexCount,
                 spec.indexCount,
                 spec.material
@@ -639,18 +812,18 @@ namespace Soul {
         
 		glBindTexture(GL_TEXTURE_2D, 0);
 
-		SOUL_ASSERT(0, RenderUtil::GLIsErrorCheckPass(), "");
+		SOUL_ASSERT(0, GLExt::IsErrorCheckPass(), "");
 
         return textureHandle;
     }
 
-    void RenderSystem::setPanorama(RenderRID panorama) {
+    void RenderSystem::envSetPanorama(RenderRID panoramaTex) {
         if (_database.environment.cubemap != 0) {
-            glDeleteTextures(1, &_database.environment.cubemap);
+            GLExt::TextureDelete(&_database.environment.cubemap);
             _database.environment.cubemap = 0;
-            glDeleteTextures(1, &_database.environment.diffuseMap);
+            GLExt::TextureDelete(&_database.environment.diffuseMap);
             _database.environment.diffuseMap = 0;
-            glDeleteTextures(1, &_database.environment.specularMap);
+            GLExt::TextureDelete(&_database.environment.specularMap);
             _database.environment.specularMap = 0;
         }
 
@@ -667,7 +840,7 @@ namespace Soul {
         glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
         glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
         _database.environment.cubemap = skybox;
-        _database.environment.panorama = panorama;
+        _database.environment.panorama = panoramaTex;
         panoramaToCubemapRP.execute(_database);
 
         GLuint diffuseMap;
@@ -704,7 +877,7 @@ namespace Soul {
 
     }
 
-    void RenderSystem::setSkybox(const SkyboxSpec& spec) {
+    void RenderSystem::envSetSkybox(const SkyboxSpec& spec) {
         GLuint skybox;
         glGenTextures(1, &skybox);
         glBindTexture(GL_TEXTURE_CUBE_MAP, skybox);

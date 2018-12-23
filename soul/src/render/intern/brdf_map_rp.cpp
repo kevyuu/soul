@@ -4,12 +4,12 @@
 
 #include "render/type.h"
 #include "render/intern/asset.h"
-#include "render/intern/util.h"
+#include "render/intern/glext.h"
 
 namespace Soul {
     void BRDFMapRP::init(RenderDatabase &database) {
 
-        shader = RenderUtil::GLProgramCreate(RenderAsset::ShaderFile::brdfMap);
+        shader = GLExt::ProgramCreate(RenderAsset::ShaderFile::brdfMap);
 
         glGenFramebuffers(1, &framebuffer);
         glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
@@ -33,7 +33,7 @@ namespace Soul {
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
         glUseProgram(0);
 
-		RenderUtil::GLErrorCheck("BRDFMapRP::execute");
+		GLExt::ErrorCheck("BRDFMapRP::execute");
 
     }
 

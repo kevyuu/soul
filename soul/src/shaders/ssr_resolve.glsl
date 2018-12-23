@@ -166,7 +166,6 @@ void main() {
     PixelMaterial pixelMaterial;
 
     pixelMaterial.albedo = texture(renderMap1, vs_out.texCoord).rgb;
-    pixelMaterial.ao = texture(renderMap1, vs_out.texCoord).a;
     float ndcDepth = texture(depthMap, vs_out.texCoord).r * 2.0f - 1.0f;
 	vec4 worldPositionHomo = invProjectionView * vec4(vs_out.texCoord * 2.0f - 1.0f, ndcDepth, 1.0f);
 	vec3 worldPosition = (worldPositionHomo / worldPositionHomo.w).xyz;
@@ -270,7 +269,7 @@ void main() {
 		voxelFrustumMin
 	) * computeSpecularBRDF(L, V, N, pixelMaterial) * max(dot(N, L), 0.0f) / pdf;
 
-    vec3 color = directColor + diffuseIndirectColor + reflectionColor + (1 - reflectionAlpha) * specularIndirectColor;
+    vec3 color = directColor + diffuseIndirectColor + reflectionColor;
 
     color = color / (color + vec3(1.0));
     color = pow(color, vec3(1.0/2.2));

@@ -1,18 +1,18 @@
-#include "../type.h"
-#include "util.h"
+#include "render/type.h"
+#include "glext.h"
 #include "asset.h"
 #include "core/math.h"
 
 namespace Soul {
 	void GaussianBlurRP::init(RenderDatabase &database) {
 
-		shaderHorizontal = RenderUtil::GLProgramCreate(RenderAsset::ShaderFile::gaussianBlurHorizontal);
+		shaderHorizontal = GLExt::ProgramCreate(RenderAsset::ShaderFile::gaussianBlurHorizontal);
 		glUseProgram(shaderHorizontal);
 		sourceTexUniformLocHorizontal = glGetUniformLocation(shaderHorizontal, "sourceTex");
 		targetSizePxUniformLocHorizontal = glGetUniformLocation(shaderHorizontal, "targetSizePx");
 		lodUniformLocHorizontal = glGetUniformLocation(shaderHorizontal, "lod");
 
-		shaderVertical = RenderUtil::GLProgramCreate(RenderAsset::ShaderFile::gaussianBlurVertical);
+		shaderVertical = GLExt::ProgramCreate(RenderAsset::ShaderFile::gaussianBlurVertical);
 		glUseProgram(shaderVertical);
 		sourceTexUniformLocVertical = glGetUniformLocation(shaderVertical, "sourceTex");
 		targetSizePxUniformLocVertical = glGetUniformLocation(shaderVertical, "targetSizePx");
@@ -77,7 +77,7 @@ namespace Soul {
 
 		glUseProgram(0);
 
-		RenderUtil::GLErrorCheck("GaussianBlurRP::execute");
+		GLExt::ErrorCheck("GaussianBlurRP::execute");
 
 	}
 

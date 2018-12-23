@@ -1,9 +1,7 @@
 #pragma once
 
-
 #include "core/type.h"
-#include "../soul_array.h"
-
+#include "core/array.h"
 
 namespace Soul {
 
@@ -41,8 +39,8 @@ namespace Soul {
         Vec3f position;
         Mat4 projection;
 
-        uint16 viewport_width;
-        uint16 viewport_height;
+        uint16 viewportWidth;
+        uint16 viewportHeight;
 
         union {
             struct {
@@ -74,6 +72,8 @@ namespace Soul {
     struct Mesh {
         Mat4 transform;
         uint32 vaoHandle;
+		uint32 vboHandle;
+		uint32 eboHandle;
         uint32 vertexCount;
         uint32 indexCount;
         RenderRID materialID;
@@ -84,7 +84,6 @@ namespace Soul {
         RenderRID normalMap;
         RenderRID metallicMap;
         RenderRID roughnessMap;
-        RenderRID aoMap;
         RenderRID shaderID;
     };
 
@@ -102,13 +101,15 @@ namespace Soul {
     struct ShadowKey {
         int16 quadrant;
         int16 subdiv;
+		int16 slot;
     };
 
     struct DirectionalLight {
         Mat4 shadowMatrix[4];
         Vec3f direction;
         Vec3f color;
-        float split[3];
+		int32 resolution;
+		float split[3];
         ShadowKey shadowKey;
     };
 
@@ -127,7 +128,7 @@ namespace Soul {
         Vec3f direction;
         Vec3f color;
         float split[3] = { 0.1f, 0.3f, 0.6f };
-        TexReso shadowMapResolution;
+        int32 shadowMapResolution;
     };
 
     struct MaterialSpec {
@@ -135,7 +136,6 @@ namespace Soul {
         RenderRID normalMap;
         RenderRID metallicMap;
         RenderRID roughnessMap;
-        RenderRID aoMap;
         RenderRID shaderID;
     };
 
@@ -170,8 +170,6 @@ namespace Soul {
         GLuint panorama;
     };
 
-
-
     //-------------------------------------------
     // Private
     //-------------------------------------------
@@ -184,9 +182,10 @@ namespace Soul {
 
     struct ShadowAtlas {
         static constexpr uint8 MAX_LIGHT = 64;
-        TexReso resolution;
-        uint8 subdivSqrtCount[4];
+        int32 resolution;
+        int8 subdivSqrtCount[4];
         GLuint texHandle;
+		GLuint framebuffer;
         RenderRID slots[MAX_LIGHT];
     };
 
@@ -207,9 +206,7 @@ namespace Soul {
     struct LightDataUBO {
         DirectionalLightUBO dirLights[RenderConstant::MAX_DIRECTIONAL_LIGHTS];
         int dirLightCount;
-		float pad1;
-		float pad2;
-		float pad3;
+		float pad[3];
     };
 
     static const GLuint s_formatMap[PF_COUNT] = {
@@ -231,7 +228,6 @@ namespace Soul {
 
     struct ShadowMapRP: public RenderPass {
 
-        RenderRID renderTarget;
         RenderRID shader;
         int32 modelLoc;
         int32 shadowMatrixLoc;
@@ -290,9 +286,9 @@ namespace Soul {
         GLint normalMapPositionLoc;
         GLint metallicMapPositionLoc;
         GLint roughnessMapPositionLoc;
-        GLint aoMapPositionLoc;
 		GLint shadowMapLoc;
 		GLint viewPositionLoc;
+		GLint ambientFactorLoc;
 
         GLint predepthModelUniformLoc;
 
@@ -458,7 +454,7 @@ namespace Soul {
 		GLint normalMapLoc;
 		GLint metallicMapLoc;
 		GLint roughnessMapLoc;
-		GLint aoMapLoc;
+
 		GLint voxelAlbedoBufferLoc;
 		GLint voxelNormalBufferLoc;
 		GLint voxelFrustumCenterLoc;
@@ -531,13 +527,13 @@ namespace Soul {
 		struct MipChain {
 
 			struct Mipmap {
-				GLuint frameBuffer;
+				GLuint frameBuffer = 0;
 				int width;
 				int height;
 			};
 
 			Array<Mipmap> mipmaps;
-			GLuint colorBuffer;
+			GLuint colorBuffer = 0;
 			int numLevel;
 
 		};
@@ -545,25 +541,25 @@ namespace Soul {
 		MipChain lightMipChain[2];
 
 		struct SSRTraceBuffer {
-			GLuint frameBuffer;
-			GLuint traceBuffer;
+			GLuint frameBuffer = 0;
+			GLuint traceBuffer = 0;
 		} ssrTraceBuffer;
 
 		struct SSRResolveBuffer {
-			GLuint frameBuffer;
-			GLuint resolveBuffer;
+			GLuint frameBuffer = 0;
+			GLuint resolveBuffer = 0;
 		} ssrResolveBuffer;
 
-		GLuint depthBuffer;
+		GLuint depthBuffer = 0;
 
     };
 
 	struct VoxelGIBuffer {
 		
-		GLuint gVoxelAlbedoTex;
-		GLuint gVoxelNormalTex;
-		GLuint gVoxelOccupancyTex;
-		GLuint lightVoxelTex;
+		GLuint gVoxelAlbedoTex = 0;
+		GLuint gVoxelNormalTex = 0;
+		GLuint gVoxelOccupancyTex = 0;
+		GLuint lightVoxelTex = 0;
 
 	};
 
@@ -571,16 +567,12 @@ namespace Soul {
 
         static constexpr int MAX_DIR_LIGHT = 4;
 
-        struct Config {
-            uint32 materialInitCapacity = 64;
-            uint32 meshInitCapacity = 64;
-        };
-
         uint32 targetWidthPx;
         uint32 targetHeightPx;
 
         Array<Material> materialBuffer;
         Array<Mesh> meshBuffer;
+
         Environment environment;
         DirectionalLight dirLights[MAX_DIR_LIGHT];
         int dirLightCount;
@@ -611,16 +603,6 @@ namespace Soul {
 
         GLuint quadVAO;
         GLuint quadVBO;
-
-        void init(const Config& config) {
-            materialBuffer.init(config.materialInitCapacity);
-            meshBuffer.init(config.meshInitCapacity);
-        }
-
-        void shutdown() {
-            materialBuffer.shutdown();
-            meshBuffer.shutdown();
-        }
 
         Array<RenderPass*> renderPassList;
     };

@@ -15,9 +15,6 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="src\soul_core.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="src\soul_type.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -81,14 +78,41 @@
     <ClInclude Include="src\extern\glad.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="src\sandbox\asset_import.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\extern\stb_image.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\extern\tiny_obj_loader.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\extern\imstb_rectpack.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\extern\imstb_textedit.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\extern\imstb_truetype.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\extern\dirent_portable.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\extern\imguifilesystem.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\core\array.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\core\debug.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\render\intern\glext.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="src\soul_core.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\main.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="src\core\math.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -164,6 +188,21 @@
     <ClCompile Include="src\render\intern\voxel_mipmap_gen_rp.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="src\sandbox\main.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\extern\imgui_demo.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\extern\imgui_widgets.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\extern\imguifilesystem.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\render\intern\glext.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="src\shaders\blinnphong.vs" />
@@ -201,6 +240,10 @@
     <None Include="src\shaders\brdf.lib.glsl" />
     <None Include="src\shaders\sampling.lib.glsl" />
     <None Include="src\shaders\light.lib.glsl" />
+    <None Include="assets\sponza2\textures\sponza.mtl" />
+    <None Include="assets\greasy-metal-pan\sphere-material.mtl" />
+    <None Include="assets\greasy-metal-pan\quad.mtl" />
+    <None Include="src\shaders\voxel_mipmap_gen.glsl" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="..\..\Sparky\Sandbox\res\Dagger\Textures\Dagger_Albedo.tga" />

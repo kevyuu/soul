@@ -1,12 +1,12 @@
 #include "render/type.h"
-#include "render/intern/util.h"
+#include "render/intern/glext.h"
 #include "render/intern/asset.h"
 #include "core/math.h"
 
 namespace Soul {
     void SkyboxRP::init(RenderDatabase& database) {
 
-        shader = RenderUtil::GLProgramCreate(RenderAsset::ShaderFile::skybox);
+        shader = GLExt::ProgramCreate(RenderAsset::ShaderFile::skybox);
 
         projectionLoc = glGetUniformLocation(shader, "projection");
         viewLoc = glGetUniformLocation(shader, "view");

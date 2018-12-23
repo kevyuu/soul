@@ -1,12 +1,12 @@
 #pragma once
 
-#include "render/intern/util.h"
+#include "render/intern/glext.h"
 #include "render/intern/asset.h"
 
 namespace Soul {
 
 	void VoxelDebugRP::init(RenderDatabase& database) {
-		program = RenderUtil::GLProgramCreate(RenderAsset::ShaderFile::voxel_debug);
+		program = GLExt::ProgramCreate(RenderAsset::ShaderFile::voxel_debug);
 
 		GLuint sceneDataBlockIndex = glGetUniformBlockIndex(program, "SceneData");
 		glUniformBlockBinding(program, sceneDataBlockIndex, RenderConstant::SCENE_DATA_BINDING_POINT);
@@ -16,7 +16,7 @@ namespace Soul {
 		voxelFrustumCenterLoc = glGetUniformLocation(program, "voxelFrustumCenter");
 		voxelFrustumHalfSpanLoc = glGetUniformLocation(program, "voxelFrustumHalfSpan");
 
-		SOUL_ASSERT(0, RenderUtil::GLIsErrorCheckPass(), "");
+		SOUL_ASSERT(0, GLExt::IsErrorCheckPass(), "");
 
 		glGenVertexArrays(1, &dummyVAO);
 	}
@@ -46,7 +46,7 @@ namespace Soul {
 
 		int voxelReso = db.voxelFrustumReso / frac;
 		glDrawArrays(GL_POINTS, dummyVAO, voxelReso * voxelReso * voxelReso);
-		SOUL_ASSERT(0, RenderUtil::GLIsErrorCheckPass(), "");
+		SOUL_ASSERT(0, GLExt::IsErrorCheckPass(), "");
 
 		glUseProgram(0);
 		glBindVertexArray(0);

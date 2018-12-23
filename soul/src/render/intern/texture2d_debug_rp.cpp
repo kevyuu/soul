@@ -1,12 +1,12 @@
 #include "render/type.h"
 #include "render/intern/asset.h"
-#include "render/intern/util.h"
+#include "render/intern/glext.h"
 
 namespace Soul {
 
     void Texture2DDebugRP::init(RenderDatabase& database) {
 
-		shader = RenderUtil::GLProgramCreate(RenderAsset::ShaderFile::texture2dDebug);
+		shader = GLExt::ProgramCreate(RenderAsset::ShaderFile::texture2dDebug);
  
     }
 

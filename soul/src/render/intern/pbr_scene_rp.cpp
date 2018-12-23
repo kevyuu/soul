@@ -1,17 +1,17 @@
-#include "../type.h"
+#include "render/type.h"
 #include "asset.h"
-#include "util.h"
+#include "glext.h"
 
 namespace Soul {
     void PBRSceneRP::init(RenderDatabase& db) {
 
-        predepthShader = RenderUtil::GLProgramCreate(RenderAsset::ShaderFile::predepth);
+        predepthShader = GLExt::ProgramCreate(RenderAsset::ShaderFile::predepth);
         GLuint sceneDataBlockIndexPredepth = glGetUniformBlockIndex(predepthShader, "SceneData");
         glUniformBlockBinding(predepthShader, sceneDataBlockIndexPredepth, RenderConstant::SCENE_DATA_BINDING_POINT);
         predepthModelUniformLoc = glGetUniformLocation(predepthShader, "model");
 
 
-        sceneShader = RenderUtil::GLProgramCreate(RenderAsset::ShaderFile::pbr);
+        sceneShader = GLExt::ProgramCreate(RenderAsset::ShaderFile::pbr);
         GLuint sceneDataBlockIndex = glGetUniformBlockIndex(sceneShader, "SceneData");
         glUniformBlockBinding(sceneShader, sceneDataBlockIndex, RenderConstant::SCENE_DATA_BINDING_POINT);
 
@@ -24,7 +24,6 @@ namespace Soul {
         normalMapPositionLoc = glGetUniformLocation(sceneShader, "material.normalMap");
         metallicMapPositionLoc = glGetUniformLocation(sceneShader, "material.metallicMap");
         roughnessMapPositionLoc = glGetUniformLocation(sceneShader, "material.roughnessMap");
-        aoMapPositionLoc = glGetUniformLocation(sceneShader, "material.aoMap");
 
         ambientEnergyLoc = glGetUniformLocation(sceneShader, "environment.ambientEnergy");
         ambientColorLoc = glGetUniformLocation(sceneShader, "environment.ambientColor");
@@ -109,10 +108,6 @@ namespace Soul {
             glUniform1i(roughnessMapPositionLoc, 3);
             glActiveTexture(GL_TEXTURE3);
             glBindTexture(GL_TEXTURE_2D, material.roughnessMap);
-
-            glUniform1i(aoMapPositionLoc, 4);
-            glActiveTexture(GL_TEXTURE4);
-            glBindTexture(GL_TEXTURE_2D, material.aoMap);
 
             glBindVertexArray(mesh.vaoHandle);
             glDrawElements(GL_TRIANGLES, mesh.indexCount, GL_UNSIGNED_INT, 0);

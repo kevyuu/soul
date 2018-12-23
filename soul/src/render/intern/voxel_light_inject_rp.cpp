@@ -2,11 +2,11 @@
 
 #include "render/type.h"
 #include "render/intern/asset.h"
-#include "render/intern/util.h"
+#include "render/intern/glext.h"
 
 namespace Soul {
 	void VoxelLightInjectRP::init(RenderDatabase& database) {
-		program = RenderUtil::GLProgramCreate(RenderAsset::ShaderFile::voxel_light_inject);
+		program = GLExt::ProgramCreate(RenderAsset::ShaderFile::voxel_light_inject);
 
 		glUseProgram(program);
 
@@ -48,7 +48,7 @@ namespace Soul {
 
 		glDispatchCompute(db.voxelFrustumReso, db.voxelFrustumReso, db.voxelFrustumReso);
 
-		SOUL_ASSERT(0, RenderUtil::GLIsErrorCheckPass(), "");
+		SOUL_ASSERT(0, GLExt::IsErrorCheckPass(), "");
 
 	}
 

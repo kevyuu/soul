@@ -2,11 +2,11 @@
 
 #include "render/type.h"
 #include "render/intern/asset.h"
-#include "render/intern/util.h"
+#include "render/intern/glext.h"
 
 namespace Soul {
 	void VoxelMipmapGenRP::init(RenderDatabase& db) {
-		program = RenderUtil::GLProgramCreate(RenderAsset::ShaderFile::voxel_mipmap_gen);
+		program = GLExt::ProgramCreate(RenderAsset::ShaderFile::voxel_mipmap_gen);
 	}
 
 	void VoxelMipmapGenRP::execute(RenderDatabase& db) {

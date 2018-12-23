@@ -1,30 +1,28 @@
 #include "render/intern/asset.h"
 #include "render/type.h"
-#include "render/intern/util.h"
+#include "render/intern/glext.h"
 #include "core/debug.h"
 
 namespace Soul {
 
     void ShadowMapRP::init(RenderDatabase &database) {
 
-        shader = RenderUtil::GLProgramCreate(RenderAsset::ShaderFile::shadowMap);
+		SOUL_ASSERT(0, GLExt::IsErrorCheckPass());
+        shader = GLExt::ProgramCreate(RenderAsset::ShaderFile::shadowMap);
 
-        glGenFramebuffers(1, &renderTarget);
-        glBindFramebuffer(GL_FRAMEBUFFER, renderTarget);
-        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, database.shadowAtlas.texHandle, 0);
-        glBindFramebuffer(GL_FRAMEBUFFER, 0);
         modelLoc = glGetUniformLocation(shader, "model");
         shadowMatrixLoc = glGetUniformLocation(shader, "shadowMatrix");
+
+		SOUL_ASSERT(0, GLExt::IsErrorCheckPass());
 
     }
 
     void ShadowMapRP::execute(RenderDatabase &database) {
 
-
         int resolution = database.shadowAtlas.resolution;
 
         glViewport(0, 0, resolution, resolution);
-        glBindFramebuffer(GL_FRAMEBUFFER, renderTarget);
+        glBindFramebuffer(GL_FRAMEBUFFER, database.shadowAtlas.framebuffer);
         glDrawBuffer(GL_NONE);
         glReadBuffer(GL_NONE);
         glDisable(GL_CULL_FACE);
@@ -74,13 +72,12 @@ namespace Soul {
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
         glUseProgram(0);
 
-		RenderUtil::GLErrorCheck("ShadowMapRP::execute");
+		GLExt::ErrorCheck("ShadowMapRP::execute");
 
     }
 
     void ShadowMapRP::shutdown(RenderDatabase &database) {
         glDeleteProgram(shader);
-        glDeleteFramebuffers(1, &renderTarget);
     }
 
 
