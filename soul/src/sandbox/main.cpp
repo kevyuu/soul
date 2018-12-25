@@ -72,22 +72,19 @@ void SettingWindow(SceneData* sceneData) {
 		ImGui::SameLine();
 		ImGui::InputInt("Split 1", &distance[0]);
 		dirLightConfig->split[0] = distance[0] / cameraRange;
-		dirLightConfig->split[1] = 1 - dirLightConfig->split[0] - dirLightConfig->split[2];
 
 		ImGui::SliderFloat("##Split 2", &dirLightConfig->split[1], 0.0f, 1.0f);
 		distance[1] = dirLightConfig->split[1] * cameraRange;
 		ImGui::SameLine();
 		ImGui::InputInt("Split 2", &distance[1]);
 		dirLightConfig->split[1] = distance[1] / cameraRange;
-		dirLightConfig->split[2] = 1 - dirLightConfig->split[1] - dirLightConfig->split[0];
-
+		
 		ImGui::SliderFloat("##Split 3", &dirLightConfig->split[2], 0.0f, 1.0f);
 		distance[2] = dirLightConfig->split[2] * cameraRange;
 		ImGui::SameLine();
 		ImGui::InputInt("Split 3", &distance[2]);
 		dirLightConfig->split[2] = distance[2] / cameraRange;
-		dirLightConfig->split[0] = 1 - dirLightConfig->split[1] - dirLightConfig->split[2];
-
+		
 		ImGui::PopItemWidth();
 
 

@@ -1002,7 +1002,7 @@ namespace Soul {
         float cameraDepth = cameraFar - cameraNear;
 
         db.lightDataUBO.dirLightCount = db.dirLightCount;
-        for (int i = 0; i < 1; i++) {
+        for (int i = 0; i < db.dirLightCount; i++) {
             DirectionalLightUBO &lightUBO = db.lightDataUBO.dirLights[i];
             DirectionalLight &light = db.dirLights[i];
             lightUBO.color = light.color;
@@ -1019,9 +1019,7 @@ namespace Soul {
 
             lightUBO.color = db.dirLights[i].color;
             lightUBO.direction = db.dirLights[i].direction;
-            for (int j = 0; j < 4; j++) {
-                lightUBO.shadowMatrix[j] = mat4Transpose(light.shadowMatrix[j]);
-            }
+
         }
 
         glBindBuffer(GL_UNIFORM_BUFFER, db.sceneDataUBOHandle);
