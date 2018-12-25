@@ -106,14 +106,14 @@ namespace Soul {
 			glCompileShader(computeHandle);
 			glGetShaderiv(computeHandle, GL_COMPILE_STATUS, &success);
 			glGetShaderInfoLog(computeHandle, 512, NULL, infoLog);
-			SOUL_ASSERT(0, success, "Compute shader compilation failed| info = %s", infoLog);
+			SOUL_ASSERT(0, success, "Compute shader compilation failed| shaderFile = %s, info = %s", shaderFile, infoLog);
 
 			shaderHandle = glCreateProgram();
 			glAttachShader(shaderHandle, computeHandle);
 			glLinkProgram(shaderHandle);
 			glGetProgramiv(shaderHandle, GL_LINK_STATUS, &success);
 			glGetProgramInfoLog(shaderHandle, 512, NULL, infoLog);
-			SOUL_ASSERT(0, success, "Program linking failed| info = %s", infoLog);
+			SOUL_ASSERT(0, success, "Program linking failed| shaderFile = %s, info = %s", shaderFile, infoLog);
 
 			glDeleteShader(computeHandle);
 
@@ -128,7 +128,7 @@ namespace Soul {
 			glCompileShader(vertexHandle);
 			glGetShaderiv(vertexHandle, GL_COMPILE_STATUS, &success);
 			glGetShaderInfoLog(vertexHandle, 512, NULL, infoLog);
-			SOUL_ASSERT(0, success, "Vertex shader compilation failed| info = %s", infoLog);
+			SOUL_ASSERT(0, success, "Vertex shader compilation failed| shaderFile=%s, info = %s", shaderFile, infoLog);
 
 			bool isGeometryShaderExist = strstr(shaderCode, "#ifdef GEOMETRY_SHADER");
 			GLuint geometryHandle = 0;
@@ -141,7 +141,7 @@ namespace Soul {
 				glCompileShader(geometryHandle);
 				glGetShaderiv(geometryHandle, GL_COMPILE_STATUS, &success);
 				glGetShaderInfoLog(geometryHandle, 512, NULL, infoLog);
-				SOUL_ASSERT(0, success, "Geometry shader compilation failed| info = %s", infoLog);
+				SOUL_ASSERT(0, success, "Geometry shader compilation failed| shaderFile = %s, info = %s", shaderFile, infoLog);
 			}
 
 			GLuint fragmentHandle;
@@ -153,7 +153,7 @@ namespace Soul {
 			glCompileShader(fragmentHandle);
 			glGetShaderiv(fragmentHandle, GL_COMPILE_STATUS, &success);
 			glGetShaderInfoLog(fragmentHandle, 512, NULL, infoLog);
-			SOUL_ASSERT(0, success, "Fragment shader compilation failed| info = %s", infoLog);
+			SOUL_ASSERT(0, success, "Fragment shader compilation failed| shaderFile = %s, info = %s", shaderFile, infoLog);
 
 			glAttachShader(shaderHandle, vertexHandle);
 			if (isGeometryShaderExist) glAttachShader(shaderHandle, geometryHandle);
@@ -161,7 +161,7 @@ namespace Soul {
 			glLinkProgram(shaderHandle);
 			glGetProgramiv(shaderHandle, GL_LINK_STATUS, &success);
 			glGetProgramInfoLog(shaderHandle, 512, NULL, infoLog);
-			SOUL_ASSERT(0, success, "Program linking failed| info = %s", infoLog);
+			SOUL_ASSERT(0, success, "Program linking failed| shaderFile = %s, info = %s", shaderFile, infoLog);
 
 			glDeleteShader(vertexHandle);
 			if (isGeometryShaderExist) glDeleteShader(geometryHandle);
@@ -170,7 +170,7 @@ namespace Soul {
 
 		free(libSource);
 		free(shaderCode);
-		SOUL_ASSERT(0, GLExt::IsErrorCheckPass(), "GL Program Creation Failed");
+		SOUL_ASSERT(0, GLExt::IsErrorCheckPass(), "");
 		return shaderHandle;
 
 	}

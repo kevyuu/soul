@@ -95,8 +95,8 @@ namespace Soul {
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, 
 			db.shadowAtlas.resolution, db.shadowAtlas.resolution, 0, 
 			GL_DEPTH_COMPONENT, GL_UNSIGNED_BYTE, nullptr);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 		db.shadowAtlas.texHandle = shadowAtlasTex;
@@ -668,6 +668,8 @@ namespace Soul {
         for (int i = 0; i < 3; i++) {
             light.split[i] = spec.split[i];
         }
+		
+
         _database.dirLightCount++;
 
         return lightRID;
@@ -950,26 +952,19 @@ namespace Soul {
                 }
                 worldFrustumCenter *= (1.0f / 8.0f);
 
-                Vec3f min = frustumCorners[0];
-                Vec3f max = frustumCorners[0];
-                for (int k = 0; k < 8; k++) {
-                    if (min.x > frustumCorners[k].x) min.x = frustumCorners[k].x;
-                    if (min.y > frustumCorners[k].y) min.y = frustumCorners[k].y;
-                    if (min.z > frustumCorners[k].z) min.z = frustumCorners[k].z;
+				float cascadeDepth = (splitOffset[j + 1] - splitOffset[j]) * zDepth;
+				float cascadeFarDistance = zNear + splitOffset[j + 1] * zDepth;
+				float cascadeFarWidth = tan(camera.perspective.fov / 2) * 2 * cascadeFarDistance;
+				float cascadeFarHeight = cascadeFarWidth / camera.perspective.aspectRatio;
 
-                    if (max.x < frustumCorners[k].x) max.x = frustumCorners[k].x;
-                    if (max.y < frustumCorners[k].y) max.y = frustumCorners[k].y;
-                    if (max.z < frustumCorners[k].z) max.z = frustumCorners[k].z;
-                }
+				float radius = sqrt(cascadeFarWidth * cascadeFarWidth + cascadeDepth * cascadeDepth + cascadeFarHeight * cascadeFarHeight);
 
-                float radius = length(max - min) / 2.0f;
                 float texelPerUnit = splitReso / (radius * 2.0f);
                 Mat4 texelScaleLightRot = mat4Scale(texelPerUnit, texelPerUnit, texelPerUnit) * lightRot;
 
                 Vec3f lightTexelFrustumCenter = texelScaleLightRot * worldFrustumCenter;
                 lightTexelFrustumCenter.x = (float)floor(lightTexelFrustumCenter.x);
                 lightTexelFrustumCenter.y = (float)floor(lightTexelFrustumCenter.y);
-                lightTexelFrustumCenter.z = (float)floor(lightTexelFrustumCenter.z);
                 worldFrustumCenter = mat4Inverse(texelScaleLightRot) * lightTexelFrustumCenter;
 
                 int xSplit = j % 2;
