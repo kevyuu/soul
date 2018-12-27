@@ -59,10 +59,7 @@ struct OmniLight {
 };
 
 struct DirectionalLight {
-	mat4 shadowMatrix1;
-	mat4 shadowMatrix2;
-	mat4 shadowMatrix3;
-	mat4 shadowMatrix4;
+	mat4 shadowMatrix[4];
 	vec3 direction;
 	float pad1;
 	vec3 color;
@@ -155,20 +152,39 @@ void main() {
 
 		vec3 radiance = directionalLights[i].color;
 
-		vec4 cascadeDepths = directionalLights[i].cascadeDepths;
+		float cascadeSplit[5] = {
+			0,
+			directionalLights[i].cascadeDepths.x,
+			directionalLights[i].cascadeDepths.y,
+			directionalLights[i].cascadeDepths.z,
+			directionalLights[i].cascadeDepths.w
+		};
 
 		float shadowFactor = 0.0f;
 
 		float fragDepth = fragViewCoord.z * -1;
 
-		if (fragDepth < cascadeDepths.x) {
-			shadowFactor = computeShadowFactor(worldPosition, directionalLights[i].shadowMatrix1);
-		} else if (fragDepth < cascadeDepths.y) {
-			shadowFactor = computeShadowFactor(worldPosition, directionalLights[i].shadowMatrix2);
-		} else if (fragDepth < cascadeDepths.z) {
-			shadowFactor = computeShadowFactor(worldPosition, directionalLights[i].shadowMatrix3);
-		} else if (fragDepth < cascadeDepths.w) {
-			shadowFactor = computeShadowFactor(worldPosition, directionalLights[i].shadowMatrix4);
+		int cascadeIndex = -1;
+
+		for (int i = 0; i < 5; i++) {
+			if (fragDepth > cascadeSplit[i]) cascadeIndex = i;
+		}
+		
+		float cascadeBlendRange = 0.5f;
+
+		if (cascadeIndex >= 3) {
+			shadowFactor = 0;
+		}
+		if (cascadeIndex == 3) {
+			shadowFactor = computeShadowFactor(worldPosition, directionalLights[i].shadowMatrix[cascadeIndex]);
+		}
+		else {
+			float shadowFactor1 = computeShadowFactor(worldPosition, directionalLights[i].shadowMatrix[cascadeIndex]);
+			float shadowFactor2 = computeShadowFactor(worldPosition, directionalLights[i].shadowMatrix[cascadeIndex + 1]);
+
+			float cascadeDist = cascadeSplit[cascadeIndex + 1] - cascadeSplit[cascadeIndex];
+			float cascadeBlend = smoothstep(cascadeSplit[cascadeIndex] + (1 - cascadeBlendRange) * cascadeDist, cascadeSplit[cascadeIndex + 1], fragDepth);
+			shadowFactor = mix(shadowFactor1, shadowFactor2, cascadeBlend);
 		}
 
 		radiance = radiance * (1.0f - shadowFactor);
