@@ -5,4 +5,5 @@ cmake-build-debug/*
 .vs/*
 .vs
 imgui.ini
+soul/imgui.ini
 enc_temp_folder
