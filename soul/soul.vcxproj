@@ -98,6 +98,7 @@
     <None Include="assets\Sphere.spm" />
     <None Include="assets\sponza2\textures\sponza.mtl" />
     <None Include="assets\Teapot.spm" />
+    <None Include="imgui.ini" />
     <None Include="src\shaders\blinnphong.vs" />
     <None Include="src\shaders\brdf.lib.glsl" />
     <None Include="src\shaders\brdf_map.glsl" />

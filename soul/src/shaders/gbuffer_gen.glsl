@@ -87,7 +87,7 @@ layout (std140) uniform LightData {
 };
 
 uniform Material material;
-uniform sampler2D shadowMap;
+uniform sampler2DShadow shadowMap;
 uniform vec3 viewPosition;
 uniform vec3 ambientFactor;
 
@@ -106,23 +106,24 @@ layout(location = 3) out vec4 renderTarget4;
 
 float computeShadowFactor(vec3 worldPosition, mat4 shadowMatrix) {
 	if (directionalLightCount == 0) return 0;
+	
+	float bias = 0.008f;
 
 	vec4 lightSpacePosition = shadowMatrix * vec4(worldPosition, 1.0f);
+	
+	float refDepth = lightSpacePosition.z - bias;	
 	vec4 shadowCoords = lightSpacePosition / lightSpacePosition.w;
+	refDepth = refDepth / lightSpacePosition.w;
+	refDepth = refDepth * 0.5f + 0.5f;
 	shadowCoords = shadowCoords * 0.5 + 0.5;
 
-	float currentDepth = shadowCoords.z;
-
-	float bias = 0.005;
 	float shadowFactor = 1;
-
 
     float shadowFactorPCF = 0.0f;
     vec2 texelSize = 1.0f / textureSize(shadowMap, 0);
     for (int i = -2; i <= 2; i++) {
         for (int j = -2; j <= 2; j++) {
-            float sampledDepth = texture(shadowMap, shadowCoords.xy + vec2(i, j) * texelSize).r;
-            shadowFactorPCF += currentDepth - bias > sampledDepth ? 1.0 : 0.0;
+            shadowFactorPCF += textureProj(shadowMap, vec4(shadowCoords.xy + vec2(i, j) * texelSize, refDepth, 1.0f)).r;
         }
     }
     shadowFactor = shadowFactorPCF / 25;

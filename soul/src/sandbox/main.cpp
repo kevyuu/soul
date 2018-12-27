@@ -315,8 +315,8 @@ int main() {
 	sceneData.dirLightConfig.energy = 100.0f;
 	sceneData.dirLightConfig.resolution = 4096;
 	sceneData.dirLightConfig.split[0] = 0.1f;
-	sceneData.dirLightConfig.split[1] = 0.3f;
-	sceneData.dirLightConfig.split[2] = 0.6f;
+	sceneData.dirLightConfig.split[1] = 0.2f;
+	sceneData.dirLightConfig.split[2] = 0.5f;
 
 	while (!glfwWindowShouldClose(window)) {
 

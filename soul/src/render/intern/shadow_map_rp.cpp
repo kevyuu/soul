@@ -26,12 +26,17 @@ namespace Soul {
         glDrawBuffer(GL_NONE);
         glReadBuffer(GL_NONE);
         glDisable(GL_CULL_FACE);
-        glClear(GL_DEPTH_BUFFER_BIT);
-        glUseProgram(shader);
+		glDisable(GL_BLEND);
+		glDisable(GL_DITHER);
+		glDepthMask(GL_TRUE);
+		glColorMask(0, 0, 0, 0);
+		glClearDepth(1.0f);
         glClear(GL_DEPTH_BUFFER_BIT);
         glEnable(GL_DEPTH_TEST);
         glDepthFunc(GL_LESS);
         glEnable(GL_SCISSOR_TEST);
+		
+        glUseProgram(shader);
 
 
         for (int i = 0; i < database.dirLightCount; i++) {

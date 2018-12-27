@@ -92,13 +92,15 @@ namespace Soul {
 		GLuint shadowAtlasTex;
 		glGenTextures(1, &shadowAtlasTex);
 		glBindTexture(GL_TEXTURE_2D, shadowAtlasTex);
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT, 
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT24, 
 			db.shadowAtlas.resolution, db.shadowAtlas.resolution, 0, 
-			GL_DEPTH_COMPONENT, GL_UNSIGNED_BYTE, nullptr);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+			GL_DEPTH_COMPONENT, GL_UNSIGNED_INT, nullptr);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_REF_TO_TEXTURE);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_FUNC, GL_GREATER);
 		db.shadowAtlas.texHandle = shadowAtlasTex;
 
 		GLuint framebuffer;
@@ -738,6 +740,7 @@ namespace Soul {
 
     RenderRID RenderSystem::meshCreate(const Soul::MeshSpec &spec) {
 
+
         GLuint VAO, VBO, EBO;
         glGenVertexArrays(1, &VAO);
         glGenBuffers(1, &VBO);
@@ -785,6 +788,24 @@ namespace Soul {
                 spec.indexCount,
                 spec.material
         });
+
+		if (_database.meshBuffer.getSize() == 1) {
+			SOUL_ASSERT(0, spec.vertexCount > 0, "");
+			_database.sceneBound.min = spec.vertexes[0].pos;
+			_database.sceneBound.max = spec.vertexes[0].pos;
+		}
+
+		for (int i = 0; i < spec.vertexCount; i++) {
+			Vertex& vertex = spec.vertexes[i];
+			if (_database.sceneBound.min.x > vertex.pos.x) _database.sceneBound.min.x = vertex.pos.x;
+			if (_database.sceneBound.min.y > vertex.pos.y) _database.sceneBound.min.y = vertex.pos.y;
+			if (_database.sceneBound.min.z > vertex.pos.z) _database.sceneBound.min.z = vertex.pos.z;
+		
+			if (_database.sceneBound.max.x < vertex.pos.x) _database.sceneBound.max.x = vertex.pos.x;
+			if (_database.sceneBound.max.y < vertex.pos.y) _database.sceneBound.max.y = vertex.pos.y;
+			if (_database.sceneBound.max.z < vertex.pos.z) _database.sceneBound.max.z = vertex.pos.z;
+
+		}
 
         return rid;
 
@@ -981,7 +1002,28 @@ namespace Soul {
                 atlasMatrix.elem[2][2] = 1;
                 atlasMatrix.elem[3][3] = 1;
 
-                light.shadowMatrix[j] = atlasMatrix * mat4Ortho(-radius, radius, -radius, radius, -2000, 2000) *
+				Vec3f sceneBoundCorners[8] = {
+					db.sceneBound.min,
+					Vec3f(db.sceneBound.min.x, db.sceneBound.min.y, db.sceneBound.max.z),
+					Vec3f(db.sceneBound.min.x, db.sceneBound.max.y, db.sceneBound.min.z),
+					Vec3f(db.sceneBound.min.x, db.sceneBound.max.y, db.sceneBound.max.z),
+					Vec3f(db.sceneBound.max.x, db.sceneBound.min.y, db.sceneBound.min.z),
+					Vec3f(db.sceneBound.max.x, db.sceneBound.min.y, db.sceneBound.max.z),
+					Vec3f(db.sceneBound.max.x, db.sceneBound.max.y, db.sceneBound.min.z),
+					db.sceneBound.max
+				};
+
+				float shadowMapFar = dot(light.direction,(sceneBoundCorners[0] - worldFrustumCenter));
+				float shadowMapNear = shadowMapFar;
+
+				for (int i = 1; i < 8; i++) {
+					float cornerDist = dot(light.direction, sceneBoundCorners[i] - worldFrustumCenter);
+					if (cornerDist > shadowMapFar) shadowMapFar = cornerDist;
+					if (cornerDist < shadowMapNear) shadowMapNear = cornerDist;
+				}
+
+
+                light.shadowMatrix[j] = atlasMatrix * mat4Ortho(-radius, radius, -radius, radius, shadowMapNear, shadowMapFar) *
                                         mat4View(worldFrustumCenter, worldFrustumCenter + light.direction, upVec);
 
             }

@@ -563,6 +563,11 @@ namespace Soul {
 
 	};
 
+	struct AABB {
+		Vec3f min;
+		Vec3f max;
+	};
+
     struct RenderDatabase {
 
         static constexpr int MAX_DIR_LIGHT = 4;
@@ -605,6 +610,8 @@ namespace Soul {
         GLuint quadVBO;
 
         Array<RenderPass*> renderPassList;
+
+		AABB sceneBound;
     };
 
 }
