@@ -23,6 +23,7 @@ struct DirLightConfig {
 	int32 resolution;
 	float split[3];
 	float energy;
+	float bias;
 };
 
 struct SceneData {
@@ -85,13 +86,16 @@ void SettingWindow(SceneData* sceneData) {
 		ImGui::InputInt("Split 3", &distance[2]);
 		dirLightConfig->split[2] = distance[2] / cameraRange;
 		
+		ImGui::SliderFloat("##Bias", &dirLightConfig->bias, 0.0f, 1.0f);
+		ImGui::SameLine();
+		ImGui::InputFloat("Bias", &dirLightConfig->bias);
 		ImGui::PopItemWidth();
 
-
-		renderSystem->dirLightSetCascadeSplit(sceneData->sunRID, 
-			dirLightConfig->split[0], 
-			dirLightConfig->split[1], 
+		renderSystem->dirLightSetCascadeSplit(sceneData->sunRID,
+			dirLightConfig->split[0],
+			dirLightConfig->split[1],
 			dirLightConfig->split[2]);
+		renderSystem->dirLightSetBias(sceneData->sunRID, dirLightConfig->bias);
 
 	}
 
@@ -224,9 +228,8 @@ void MenuBar(SceneData* sceneData) {
 	if (action == ACTION_IMPORT_OBJ_AND_MTL) {
 		ImGui::OpenPopup("Import Obj and MTL");
 	}
-
-	
 }
+
 
 int main() {
 	if (!glfwInit())
@@ -317,6 +320,7 @@ int main() {
 	sceneData.dirLightConfig.split[0] = 0.1f;
 	sceneData.dirLightConfig.split[1] = 0.2f;
 	sceneData.dirLightConfig.split[2] = 0.5f;
+	sceneData.dirLightConfig.bias = lightSpec.bias;
 
 	while (!glfwWindowShouldClose(window)) {
 

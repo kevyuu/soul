@@ -43,6 +43,7 @@ namespace Soul {
 		void dirLightSetColor(RenderRID lightRID, Vec3f color);
 		void dirLightSetShadowMapResolution(RenderRID lightRID, int32 resolution);
 		void dirLightSetCascadeSplit(RenderRID lightRID, float split1, float split2, float split3);
+		void dirLightSetBias(RenderRID lightRID, float bias);
 
 		void voxelGIUpdateConfig(const VoxelGIConfig& config);
 		/*void voxelGIsetCenter(Vec3f center);

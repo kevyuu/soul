@@ -4,12 +4,9 @@ struct OmniLight {
 };
 
 struct DirectionalLight {
-	mat4 shadowMatrix1;
-	mat4 shadowMatrix2;
-	mat4 shadowMatrix3;
-	mat4 shadowMatrix4;
+	mat4 shadowMatrix[4];
 	vec3 direction;
-	float pad1;
+	float bias;
 	vec3 color;
 	float pad2;
 	vec4 cascadeDepths;

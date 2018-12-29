@@ -1,6 +1,7 @@
 #ifdef LIB_SHADER
 math.lib.glsl
 brdf.lib.glsl
+light.lib.glsl
 #endif
 
 
@@ -53,34 +54,9 @@ struct Material {
 	sampler2D roughnessMap;
 };
 
-struct OmniLight {
-	vec3 position;
-	vec3 color;
-};
-
-struct DirectionalLight {
-	mat4 shadowMatrix[4];
-	vec3 direction;
-	float pad1;
-	vec3 color;
-	float pad2;
-	vec4 cascadeDepths;
-};
-
-struct SpotLight {
-	vec3 position;
-	vec3 color;
-	float maxAngle;
-};
-
 layout(std140) uniform SceneData {
 	mat4 projection;
 	mat4 view;
-};
-
-layout (std140) uniform LightData {
-	DirectionalLight directionalLights[4];
-	int directionalLightCount;
 };
 
 uniform Material material;
@@ -101,11 +77,9 @@ layout(location = 1) out vec4 renderTarget2;
 layout(location = 2) out vec4 renderTarget3;
 layout(location = 3) out vec4 renderTarget4;
 
-float computeShadowFactor(vec3 worldPosition, mat4 shadowMatrix) {
+float computeShadowFactor(vec3 worldPosition, mat4 shadowMatrix, float bias) {
 	if (directionalLightCount == 0) return 0;
 	
-	float bias = 0.008f;
-
 	vec4 lightSpacePosition = shadowMatrix * vec4(worldPosition, 1.0f);
 	
 	float refDepth = lightSpacePosition.z - bias;	
@@ -170,17 +144,18 @@ void main() {
 			if (fragDepth > cascadeSplit[i]) cascadeIndex = i;
 		}
 		
-		float cascadeBlendRange = 0.5f;
+		float cascadeBlendRange = 1.0f;
+		float bias = directionalLights[i].bias;
 
 		if (cascadeIndex >= 3) {
 			shadowFactor = 0;
 		}
 		if (cascadeIndex == 3) {
-			shadowFactor = computeShadowFactor(worldPosition, directionalLights[i].shadowMatrix[cascadeIndex]);
+			shadowFactor = computeShadowFactor(worldPosition, directionalLights[i].shadowMatrix[cascadeIndex], bias);
 		}
 		else {
-			float shadowFactor1 = computeShadowFactor(worldPosition, directionalLights[i].shadowMatrix[cascadeIndex]);
-			float shadowFactor2 = computeShadowFactor(worldPosition, directionalLights[i].shadowMatrix[cascadeIndex + 1]);
+			float shadowFactor1 = computeShadowFactor(worldPosition, directionalLights[i].shadowMatrix[cascadeIndex], bias);
+			float shadowFactor2 = computeShadowFactor(worldPosition, directionalLights[i].shadowMatrix[cascadeIndex + 1], bias);
 
 			float cascadeDist = cascadeSplit[cascadeIndex + 1] - cascadeSplit[cascadeIndex];
 			float cascadeBlend = smoothstep(cascadeSplit[cascadeIndex] + (1 - cascadeBlendRange) * cascadeDist, cascadeSplit[cascadeIndex + 1], fragDepth);

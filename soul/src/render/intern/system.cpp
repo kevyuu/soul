@@ -667,6 +667,7 @@ namespace Soul {
         light.color = spec.color;
 		light.resolution = spec.shadowMapResolution;
         light.shadowKey = _shadowAtlasGetSlot(lightRID, spec.shadowMapResolution);
+		light.bias = spec.bias;
         for (int i = 0; i < 3; i++) {
             light.split[i] = spec.split[i];
         }
@@ -702,6 +703,11 @@ namespace Soul {
 		dirLight.split[0] = split1;
 		dirLight.split[1] = split2;
 		dirLight.split[2] = split3;
+	}
+
+	void RenderSystem::dirLightSetBias(RenderRID lightRID, float bias) {
+		DirectionalLight& dirLight = _database.dirLights[lightRID];
+		dirLight.bias = bias;
 	}
 
     void RenderSystem::envSetAmbientColor(Vec3f ambientColor) {
@@ -1061,6 +1067,7 @@ namespace Soul {
 
             lightUBO.color = db.dirLights[i].color;
             lightUBO.direction = db.dirLights[i].direction;
+			lightUBO.bias = db.dirLights[i].bias;
 
         }
 

@@ -111,6 +111,7 @@ namespace Soul {
 		int32 resolution;
 		float split[3];
         ShadowKey shadowKey;
+		float bias;
     };
 
 
@@ -126,9 +127,10 @@ namespace Soul {
 
     struct DirectionalLightSpec {
         Vec3f direction;
-        Vec3f color;
+		Vec3f color = { 100.0f, 100.0f, 100.0f };
         float split[3] = { 0.1f, 0.3f, 0.6f };
-        int32 shadowMapResolution;
+        int32 shadowMapResolution = 2048;
+		float bias = 0.05f;;
     };
 
     struct MaterialSpec {
@@ -197,7 +199,7 @@ namespace Soul {
     struct DirectionalLightUBO {
         Mat4 shadowMatrix[4];
         Vec3f direction;
-        float pad1;
+		float bias;
         Vec3f color;
         float pad2;
         float cascadeDepths[4];
