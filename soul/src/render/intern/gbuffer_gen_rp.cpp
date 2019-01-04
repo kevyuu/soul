@@ -43,6 +43,10 @@ namespace Soul {
 
         glBindFramebuffer(GL_FRAMEBUFFER, db.gBuffer.frameBuffer);
 
+		glEnable(GL_CULL_FACE);
+		glCullFace(GL_BACK);
+		glFrontFace(GL_CCW);
+
         glUseProgram(predepthShader);
         glDisable(GL_BLEND);
         glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
@@ -79,6 +83,7 @@ namespace Soul {
 		Vec3f ambientFactor = db.environment.ambientColor * db.environment.ambientEnergy;
 		glUniform3f(ambientFactorLoc, ambientFactor.x, ambientFactor.y, ambientFactor.z);
 
+
 		glViewport(0, 0, db.targetWidthPx, db.targetHeightPx);
 
         for (int i = 0; i < db.meshBuffer.getSize(); i++) {
@@ -108,6 +113,7 @@ namespace Soul {
             glDrawElements(GL_TRIANGLES, mesh.indexCount, GL_UNSIGNED_INT, 0);
         }
 
+		glDisable(GL_CULL_FACE);
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
         glBindVertexArray(0);
         glUseProgram(0);
