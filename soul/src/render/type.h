@@ -449,8 +449,9 @@ namespace Soul {
 	struct VoxelizeRP : public RenderPass {
 		GLuint program;
 		
-		GLint projectionLoc;
-		GLint viewLoc;
+		GLint projectionViewLoc[3];
+		GLint inverseProjectionViewLoc[3];
+
 		GLint modelLoc;
 		GLint albedoMapLoc;
 		GLint normalMapLoc;

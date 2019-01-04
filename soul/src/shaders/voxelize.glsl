@@ -13,25 +13,19 @@ layout(location = 2) in vec2 aTexCoord;
 layout(location = 3) in vec3 aBinormal;
 layout(location = 4) in vec3 aTangent;
 
-uniform mat4 projection;
-uniform mat4 view;
 uniform mat4 model;
 
 out VS_OUT{
 	vec3 worldPosition;
 	vec3 worldNormal;
-	vec3 worldTangent;
-	vec3 worldBinormal;
 	vec2 texCoord;
 } vs_out;
 
 void main() {
-	gl_Position = projection * view * model * vec4(aPos, 1.0f);
+	gl_Position = model * vec4(aPos, 1.0f);
 	vs_out.worldPosition = vec3((model * vec4(aPos, 1.0f)).xyz);
 	mat3 rotMat = mat3(transpose(inverse(model)));
 	vs_out.worldNormal = rotMat * aNormal;
-	vs_out.worldTangent = rotMat * aTangent;
-	vs_out.worldBinormal = rotMat * aBinormal;
 	vs_out.texCoord = aTexCoord;
 }
 #endif //VERTEX SHADER
@@ -46,20 +40,22 @@ layout(triangle_strip, max_vertices = 3) out;
 in VS_OUT{
 	vec3 worldPosition;
 	vec3 worldNormal;
-	vec3 worldTangent;
-	vec3 worldBinormal;
 	vec2 texCoord;
 } vs_out[];
 
 out GS_OUT{
-	vec3 worldPosition;
+	vec3 ndcPosition;
 	vec3 worldNormal;
-	vec3 worldTangent;
-	vec3 worldBinormal;
 	vec2 texCoord;
+	vec4 triangleAABB; // xy component for min.xy, and zw for max.xy
+	vec3 voxelIdx;
 } gs_out;
 
+uniform vec3 voxelFrustumCenter;
+uniform float voxelFrustumHalfSpan;
 uniform int voxelFrustumReso;
+uniform mat4 projectionView[3];
+uniform mat4 inverseProjectionView[3];
 
 void main() {
 	
@@ -69,45 +65,111 @@ void main() {
 
 	vec3 faceNormal = normalize(cross(side10, side21));
 
-	vec3 outVertex[3] = vec3[3](
-		gl_in[0].gl_Position, 
-		gl_in[1].gl_Position, 
-		gl_in[2].gl_Position);
-	
+	// swizzle xyz component according the dominant axis.
+	// the dominant axis should be on z axis (the projection axis)
 	float absNormalX = abs(faceNormal.x);
 	float absNormalY = abs(faceNormal.y);
 	float absNormalZ = abs(faceNormal.z);
 
+	int dominantAxis = 2;
 	if (absNormalX >= absNormalY && absNormalX >= absNormalZ) {
-		for (int i = 0; i < 3; i++) {
-			outVertex[i] = outVertex[i].zyx;
-		}
+		dominantAxis = 0;
 	}
 	else if (absNormalY >= absNormalX && absNormalY >= absNormalZ) {
-		for (int i = 0; i < 3; i++) {
-			outVertex[i] = outVertex[i].xzy;
-		}
+		dominantAxis = 1;
 	}
 
-	side10 = outVertex[0] - outVertex[1];
-	side21 = outVertex[1] - outVertex[2];
-	side02 = outVertex[2] - outVertex[0];
+	vec4 outVertex[3] = vec4[3](
+		projectionView[dominantAxis] * vec4(vs_out[0].worldPosition, 1.0f),
+		projectionView[dominantAxis] * vec4(vs_out[1].worldPosition, 1.0f),
+		projectionView[dominantAxis] * vec4(vs_out[2].worldPosition, 1.0f));
 
-	float voxelPxSize = 1 / float(voxelFrustumReso);
-	outVertex[0] += normalize(side10 - side02) * voxelPxSize;
-	outVertex[1] += normalize(side21 - side10) * voxelPxSize;
-	outVertex[2] += normalize(side02 - side21) * voxelPxSize;
+	vec2 texCoord[3];
+	for (int i = 0; i < 3; i++) {
+		texCoord[i] = vs_out[i].texCoord;
+	}
+
+	vec2 halfVoxelPxSize = vec2(1.0f / float(voxelFrustumReso));
+
+	vec4 triangleAABB;
+	triangleAABB.xy = outVertex[0].xy;
+	triangleAABB.zw = outVertex[0].xy;
+	for (int i = 1; i < 3; i++) {
+		triangleAABB.xy = min(triangleAABB.xy, outVertex[i].xy);
+		triangleAABB.zw = max(triangleAABB.zw, outVertex[i].xy);
+	}
+	triangleAABB.xy -= halfVoxelPxSize;
+	triangleAABB.zw += halfVoxelPxSize;
+
+	// Calculate the plane of the triangle in the form of ax + by + cz + w = 0. xyz is the normal, w is the offset. 
+	vec4 trianglePlane;
+	trianglePlane.xyz = cross(outVertex[1].xyz - outVertex[0].xyz, outVertex[2].xyz - outVertex[0].xyz);
+	trianglePlane.w = -dot(trianglePlane.xyz, outVertex[0].xyz);
+
+	// change winding, otherwise there are artifacts for the back faces.
+	if (dot(trianglePlane.xyz, vec3(0.0, 0.0, 1.0)) < 0.0)
+	{
+		vec4 vertexTemp = outVertex[2];
+		vec2 texCoordTemp = texCoord[2];
+
+		outVertex[2] = outVertex[1];
+		texCoord[2] = texCoord[1];
+
+		outVertex[1] = vertexTemp;
+		texCoord[1] = texCoordTemp;
+	}
+
+	if (trianglePlane.z == 0.0f) return;
+	
+	// The following code is an implementation of a conservative rasterization algorithm 
+	// describe in https://developer.nvidia.com/gpugems/GPUGems2/gpugems2_chapter42.html
+	// Refer to the second algorithm in the article.
+	// TODO: Compare the performance with the first algorithm
+	vec3 plane[3];
+	plane[0] = cross(outVertex[0].xyw - outVertex[2].xyw, outVertex[2].xyw);
+	plane[1] = cross(outVertex[1].xyw - outVertex[0].xyw, outVertex[0].xyw);
+	plane[2] = cross(outVertex[2].xyw - outVertex[1].xyw, outVertex[1].xyw);
+
+	plane[0].z -= dot(halfVoxelPxSize, abs(plane[0].xy));
+	plane[1].z -= dot(halfVoxelPxSize, abs(plane[1].xy));
+	plane[2].z -= dot(halfVoxelPxSize, abs(plane[2].xy));
+
+	vec3 intersection[3];
+	intersection[0] = cross(plane[0], plane[1]);
+	intersection[1] = cross(plane[1], plane[2]);
+	intersection[2] = cross(plane[2], plane[0]);
+
+	outVertex[0].xy = intersection[0].xy / intersection[0].z;
+	outVertex[1].xy = intersection[1].xy / intersection[1].z;
+	outVertex[2].xy = intersection[2].xy / intersection[2].z;
+	
+	// Get the z value using the plane equation:
+	// z = -(ax + by + w) / c;
+	outVertex[0].z = -(trianglePlane.x * outVertex[0].x + trianglePlane.y * outVertex[0].y + trianglePlane.w) / trianglePlane.z;
+	outVertex[1].z = -(trianglePlane.x * outVertex[1].x + trianglePlane.y * outVertex[1].y + trianglePlane.w) / trianglePlane.z;
+	outVertex[2].z = -(trianglePlane.x * outVertex[2].x + trianglePlane.y * outVertex[2].y + trianglePlane.w) / trianglePlane.z;
+
+	outVertex[0].w = 1.0f;
+	outVertex[1].w = 1.0f;
+	outVertex[2].w = 1.0f;
+
+	vec3 voxelMin = voxelFrustumCenter - vec3(voxelFrustumHalfSpan);
 
 	for (int i = 0; i < 3; i++) {
-		gl_Position = vec4(outVertex[i], 1.0f);
-		gs_out.worldPosition = vs_out[i].worldPosition;
+		gl_Position = outVertex[i];
+
+		vec4 worldPosition = inverseProjectionView[dominantAxis] * outVertex[i];
+		worldPosition /= worldPosition.w;
+
+		gs_out.ndcPosition = outVertex[i].xyz;
+		gs_out.voxelIdx = vec3((worldPosition.xyz - voxelMin) / (2 * voxelFrustumHalfSpan) * voxelFrustumReso);
 		gs_out.worldNormal = vs_out[i].worldNormal;
-		gs_out.worldTangent = vs_out[i].worldTangent;
-		gs_out.worldBinormal = vs_out[i].worldBinormal;
-		gs_out.texCoord = vs_out[i].texCoord;
+		gs_out.texCoord = texCoord[i];
+		gs_out.triangleAABB = triangleAABB;
 		EmitVertex();
 	}
 	EndPrimitive();
+
 }
 
 #endif // GEOMETRY_SHADER
@@ -125,12 +187,13 @@ struct Material {
 };
 
 in GS_OUT{
-	vec3 worldPosition;
+	vec3 ndcPosition;
 	vec3 worldNormal;
-	vec3 worldTangent;
-	vec3 worldBinormal;
 	vec2 texCoord;
+	vec4 triangleAABB; // xy component for min.xy, and zw for max.xy
+	vec3 voxelIdx;
 } gs_out;
+
 
 layout(r32ui) uniform volatile coherent uimage3D voxelAlbedoBuffer;
 layout(r32ui) uniform volatile coherent uimage3D voxelNormalBuffer;
@@ -154,7 +217,11 @@ uint convVec4ToRGBA8(vec4 val) {
 }
 void imageAtomicRGBA8Avg(layout(r32ui) volatile coherent uimage3D imgUI, ivec3 coords, vec4 val) {
 	
-	if (coords.x > 255 || coords.y > 255 || coords.z > 255) {
+	int bound = voxelFrustumReso - 1;
+	if (coords.x > bound || coords.y > bound || coords.z > bound) {
+		return;
+	}
+	if (coords.x < 0 || coords.y < 0 || coords.z < 0) {
 		return;
 	}
 	
@@ -175,8 +242,13 @@ void imageAtomicRGBA8Avg(layout(r32ui) volatile coherent uimage3D imgUI, ivec3 c
 
 void main() {
 
+	if (any(lessThan(gs_out.ndcPosition.xy, gs_out.triangleAABB.xy)) || 
+		any(greaterThan(gs_out.ndcPosition.xy, gs_out.triangleAABB.zw))) {
+		discard;
+	}
+
 	vec3 voxelMin = voxelFrustumCenter - vec3(voxelFrustumHalfSpan);
-	ivec3 voxelIdx = ivec3((gs_out.worldPosition - voxelMin) / (2 * voxelFrustumHalfSpan / voxelFrustumReso));
+	ivec3 voxelIdx = ivec3(gs_out.voxelIdx);
 	vec3 albedo = pow(texture(material.albedoMap, gs_out.texCoord).rgb, vec3(2.2));
 	vec3 normal = gs_out.worldNormal;
 

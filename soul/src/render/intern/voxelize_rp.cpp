@@ -9,8 +9,14 @@ namespace Soul {
 	void VoxelizeRP::init(RenderDatabase& database) {
 		program = GLExt::ProgramCreate(RenderAsset::ShaderFile::voxelize);
 
-		projectionLoc = glGetUniformLocation(program, "projection");
-		viewLoc = glGetUniformLocation(program, "view");
+		projectionViewLoc[0] = glGetUniformLocation(program, "projectionView[0]");
+		projectionViewLoc[1] = glGetUniformLocation(program, "projectionView[1]");
+		projectionViewLoc[2] = glGetUniformLocation(program, "projectionView[2]");
+
+		inverseProjectionViewLoc[0] = glGetUniformLocation(program, "inverseProjectionView[0]");
+		inverseProjectionViewLoc[1] = glGetUniformLocation(program, "inverseProjectionView[1]");
+		inverseProjectionViewLoc[2] = glGetUniformLocation(program, "inverseProjectionView[2]");
+
 		modelLoc = glGetUniformLocation(program, "model");
 		albedoMapLoc = glGetUniformLocation(program, "material.albedoMap");
 		normalMapLoc = glGetUniformLocation(program, "material.normalMap");
@@ -48,9 +54,30 @@ namespace Soul {
 			-db.voxelFrustumHalfSpan, db.voxelFrustumHalfSpan,
 			-db.voxelFrustumHalfSpan, db.voxelFrustumHalfSpan,
 			-db.voxelFrustumHalfSpan, db.voxelFrustumHalfSpan);
-		glUniformMatrix4fv(projectionLoc, 1, GL_TRUE, (GLfloat*) projection.elem);
-		Mat4 view = mat4View(db.voxelFrustumCenter, db.voxelFrustumCenter + Vec3f(0, 0, 1.0f), Vec3f(0, 1.0f, 0.0f));
-		glUniformMatrix4fv(viewLoc, 1, GL_TRUE, (GLfloat*)view.elem);
+		
+		Mat4 view[3];
+		view[0] = mat4View(db.voxelFrustumCenter, db.voxelFrustumCenter + Vec3f(1.0f, 0.0f, 0.0f), Vec3f(0.0f, 1.0f, 0.0f));
+		view[1] = mat4View(db.voxelFrustumCenter, db.voxelFrustumCenter + Vec3f(0.0f, 1.0f, 0.0f), Vec3f(0.0f, 0.0f, -1.0f));
+		view[2] = mat4View(db.voxelFrustumCenter, db.voxelFrustumCenter + Vec3f(0.0f, 0.0f, 1.0f), Vec3f(0.0f, 1.0f, 0.0f));
+		
+		Mat4 projectionView[3];
+		for (int i = 0; i < 3; i++) {
+			projectionView[i] = projection * view[i];
+		}
+
+		Mat4 inverseProjectionView[3];
+		for (int i = 0; i < 3; i++) {
+			inverseProjectionView[i] = mat4Inverse(projectionView[i]);
+		}
+
+		for (int i = 0; i < 3; i++) {
+			glUniformMatrix4fv(projectionViewLoc[i], 1, GL_TRUE, (GLfloat*)projectionView[i].elem);
+		}
+
+		for (int i = 0; i < 3; i++) {
+			glUniformMatrix4fv(inverseProjectionViewLoc[i], 1, GL_TRUE, (GLfloat*)inverseProjectionView[i].elem);
+		}
+
 		glUniform3fv(voxelFrustumCenterLoc, 1, (GLfloat*)&db.voxelFrustumCenter);
 		glUniform1i(voxelFrustumResoLoc, db.voxelFrustumReso);
 		glUniform1f(voxelFrustumHalfSpanLoc, db.voxelFrustumHalfSpan);
