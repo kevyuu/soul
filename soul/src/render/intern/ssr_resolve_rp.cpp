@@ -26,6 +26,9 @@ namespace Soul {
 		voxelFrustumResoLoc = glGetUniformLocation(shader, "voxelFrustumReso");
 		voxelFrustumHalfSpanLoc = glGetUniformLocation(shader, "voxelFrustumHalfSpan");
 		voxelFrustumCenterLoc = glGetUniformLocation(shader, "voxelFrustumCenter");
+		voxelBiasLoc = glGetUniformLocation(shader, "voxelBias");
+		voxelDiffuseMultiplierLoc = glGetUniformLocation(shader, "voxelDiffuseMultiplier");
+		voxelSpecularMultiplierLoc = glGetUniformLocation(shader, "voxelSpecularMultiplier");
 
 		GLExt::ErrorCheck("SSRResolveRP::init");
 	}
@@ -78,10 +81,12 @@ namespace Soul {
 		glUniform3f(cameraPositionLoc, db.camera.position.x,
 					db.camera.position.y, db.camera.position.z);
 
-		glUniform1i(voxelFrustumResoLoc, db.voxelFrustumReso);
-		glUniform1f(voxelFrustumHalfSpanLoc, db.voxelFrustumHalfSpan);
-		glUniform3fv(voxelFrustumCenterLoc, 1, (GLfloat*)&db.voxelFrustumCenter);
-
+		glUniform1i(voxelFrustumResoLoc, db.voxelGIConfig.resolution);
+		glUniform1f(voxelFrustumHalfSpanLoc, db.voxelGIConfig.halfSpan);
+		glUniform3fv(voxelFrustumCenterLoc, 1, (GLfloat*)&db.voxelGIConfig.center);
+		glUniform1f(voxelBiasLoc, db.voxelGIConfig.bias);
+		glUniform1f(voxelDiffuseMultiplierLoc, db.voxelGIConfig.diffuseMultiplier);
+		glUniform1f(voxelSpecularMultiplierLoc, db.voxelGIConfig.specularMultiplier);
 
 		Mat4 viewMat = mat4View(db.camera.position, db.camera.position +
 			db.camera.direction, db.camera.up);

@@ -115,6 +115,9 @@ void SettingWindow(SceneData* sceneData) {
 		ImGui::SliderFloat3("Center", (float*)&sceneData->renderConfig.voxelGIConfig.center, 0.0f, 1.0f);
 		ImGui::InputFloat("Half Span", &sceneData->renderConfig.voxelGIConfig.halfSpan);
 		ImGui::InputInt("Resolution", (int*) &sceneData->renderConfig.voxelGIConfig.resolution);
+		ImGui::InputFloat("Bias", (float*)&sceneData->renderConfig.voxelGIConfig.bias);
+		ImGui::InputFloat("Diffuse multiplier", (float*)&sceneData->renderConfig.voxelGIConfig.diffuseMultiplier);
+		ImGui::InputFloat("Specular multiplier", (float*)&sceneData->renderConfig.voxelGIConfig.specularMultiplier);
 
 		if (ImGui::Button("Update")) {
 			renderSystem->voxelGIUpdateConfig(sceneData->renderConfig.voxelGIConfig);

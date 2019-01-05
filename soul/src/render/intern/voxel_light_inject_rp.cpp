@@ -26,14 +26,15 @@ namespace Soul {
 	void VoxelLightInjectRP::execute(RenderDatabase& db) {
 
 
-
 		glMemoryBarrier(GL_TEXTURE_FETCH_BARRIER_BIT | GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
 
 		glUseProgram(program);
 
-		glUniform1i(voxelFrustumResoLoc, db.voxelFrustumReso);
-		glUniform3fv(voxelFrustumCenterLoc, 1, (GLfloat*)&db.voxelFrustumCenter);
-		glUniform1f(voxelFrustumHalfSpanLoc, db.voxelFrustumHalfSpan);
+		int voxelFrustumReso = db.voxelGIConfig.resolution;
+
+		glUniform1i(voxelFrustumResoLoc, voxelFrustumReso);
+		glUniform3fv(voxelFrustumCenterLoc, 1, (GLfloat*)&db.voxelGIConfig.center);
+		glUniform1f(voxelFrustumHalfSpanLoc, db.voxelGIConfig.halfSpan);
 
 		glUniform1i(voxelAlbedoBufferLoc, 0);
 		glActiveTexture(GL_TEXTURE0);
@@ -46,7 +47,7 @@ namespace Soul {
 		glUniform1i(lightVoxelBufferLoc, 1);
 		glBindImageTexture(1, db.voxelGIBuffer.lightVoxelTex, 0, false, 0, GL_WRITE_ONLY, GL_RGBA16F);
 
-		glDispatchCompute(db.voxelFrustumReso, db.voxelFrustumReso, db.voxelFrustumReso);
+		glDispatchCompute(voxelFrustumReso, voxelFrustumReso, voxelFrustumReso);
 
 		SOUL_ASSERT(0, GLExt::IsErrorCheckPass(), "");
 

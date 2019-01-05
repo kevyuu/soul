@@ -35,16 +35,16 @@ namespace Soul {
 		int frac = (int)pow(2, mipLevel);
 		glBindImageTexture(0, db.voxelGIBuffer.lightVoxelTex, mipLevel, true, 0, GL_READ_ONLY, GL_RGBA16F);
 
-		glUniform1i(voxelFrustumResoLoc, db.voxelFrustumReso / frac);
-		glUniform3fv(voxelFrustumCenterLoc, 1, (GLfloat*)&db.voxelFrustumCenter);
-		glUniform1f(voxelFrustumHalfSpanLoc, db.voxelFrustumHalfSpan);
+		glUniform1i(voxelFrustumResoLoc, db.voxelGIConfig.resolution / frac);
+		glUniform3fv(voxelFrustumCenterLoc, 1, (GLfloat*)&db.voxelGIConfig.center);
+		glUniform1f(voxelFrustumHalfSpanLoc, db.voxelGIConfig.halfSpan);
 
 		glBindVertexArray(dummyVAO);
 		glClear(GL_DEPTH_BUFFER_BIT);
 		glEnable(GL_DEPTH_TEST);
 		glEnable(GL_BLEND);
 
-		int voxelReso = db.voxelFrustumReso / frac;
+		int voxelReso = db.voxelGIConfig.resolution / frac;
 		glDrawArrays(GL_POINTS, dummyVAO, voxelReso * voxelReso * voxelReso);
 		SOUL_ASSERT(0, GLExt::IsErrorCheckPass(), "");
 

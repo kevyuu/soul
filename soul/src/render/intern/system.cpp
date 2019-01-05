@@ -432,9 +432,7 @@ namespace Soul {
 	}
 
 	void RenderSystem::voxelGIUpdateConfig(const VoxelGIConfig& config) {
-		_database.voxelFrustumCenter = config.center;
-		_database.voxelFrustumHalfSpan = config.halfSpan;
-		_database.voxelFrustumReso = config.resolution;
+		_database.voxelGIConfig = config;
 		_voxelGIBufferInit();
 	}
 
@@ -442,7 +440,7 @@ namespace Soul {
 
 		_voxelGIBufferCleanup();
 
-		int reso = _database.voxelFrustumReso;
+		int reso = _database.voxelGIConfig.resolution;
 
 		GLuint voxelAlbedoTex;
 		glGenTextures(1, &voxelAlbedoTex);

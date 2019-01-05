@@ -46,6 +46,9 @@ uniform mat4 invProjectionView;
 uniform int voxelFrustumReso;
 uniform float voxelFrustumHalfSpan;
 uniform vec3 voxelFrustumCenter;
+uniform float voxelBias;
+uniform float voxelDiffuseMultiplier;
+uniform float voxelSpecularMultiplier;
 
 in VS_OUT {
 	vec2 texCoord;
@@ -58,7 +61,7 @@ vec3 voxelConeTrace(sampler3D voxelLightBuffer,
 	float voxelSize, 
 	vec3 voxelFrustumMax, 
 	vec3 voxelFrustumMin) {
-	vec3 startPos = position + direction * voxelSize;
+	vec3 startPos = position + direction * voxelBias * voxelSize;
 
 	vec3 color = vec3(0.0f);
 	float alpha = 0.0f;
@@ -246,7 +249,7 @@ void main() {
 
 	vec3 kD = 1.0f - F;
 
-	vec3 diffuseIndirectColor = kD * voxelCalculateDiffuseIrradiance(
+	vec3 diffuseIndirectColor = voxelDiffuseMultiplier * kD * voxelCalculateDiffuseIrradiance(
 		voxelLightBuffer,
 		worldPosition,
 		N,
@@ -258,8 +261,8 @@ void main() {
 	vec3 L = normalize(getSpecularDominantDir(N, reflect(-V, N), pixelMaterial.roughness));
 	L = reflect(-V, N);
 	vec3 H = normalize((L + V) / 2.0f);
-	float pdf = 1.5f * DistributionGGX(N, H, pixelMaterial.roughness) * max(dot(N, H), 0.0f);
-	vec3 specularIndirectColor = voxelConeTrace(
+	float pdf = DistributionGGX(N, H, pixelMaterial.roughness) * max(dot(N, H), 0.0f);
+	vec3 specularIndirectColor = voxelSpecularMultiplier * voxelConeTrace(
 		voxelLightBuffer,
 		worldPosition,
 		L,
@@ -269,7 +272,7 @@ void main() {
 		voxelFrustumMin
 	) * computeSpecularBRDF(L, V, N, pixelMaterial) * max(dot(N, L), 0.0f) / pdf;
 
-    vec3 color = directColor + diffuseIndirectColor + reflectionColor;
+    vec3 color = directColor + diffuseIndirectColor + reflectionColor * reflectionAlpha + (1 - reflectionAlpha) * specularIndirectColor;
 
     color = color / (color + vec3(1.0));
     color = pow(color, vec3(1.0/2.2));

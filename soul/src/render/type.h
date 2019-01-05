@@ -33,6 +33,15 @@ namespace Soul {
         PF_COUNT
     };
 
+	struct VoxelGIConfig {
+		Vec3f center = { 0.0f, 0.0f, 0.0f };
+		real32 bias = 1.5f;
+		real32 diffuseMultiplier = 1.0f;
+		real32 specularMultiplier = 1.0f;
+		real32 halfSpan = 100;
+		uint32 resolution = 64;
+	};
+
     struct Camera {
         Vec3f up;
         Vec3f direction;
@@ -355,6 +364,9 @@ namespace Soul {
 		GLint voxelFrustumResoLoc;
 		GLint voxelFrustumHalfSpanLoc;
 		GLint voxelFrustumCenterLoc;
+		GLint voxelBiasLoc;
+		GLint voxelDiffuseMultiplierLoc;
+		GLint voxelSpecularMultiplierLoc;
 
     	void init(RenderDatabase& database);
     	void execute(RenderDatabase& database);
@@ -599,10 +611,7 @@ namespace Soul {
         EffectBuffer effectBuffer;
         LightBuffer lightBuffer;
 
-		uint32 voxelFrustumReso;
-		float voxelFrustumHalfSpan;
-		Vec3f voxelFrustumCenter;
-
+		VoxelGIConfig voxelGIConfig;
 		VoxelGIBuffer voxelGIBuffer;
 
         // util geometry

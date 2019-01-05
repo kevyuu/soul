@@ -5,11 +5,7 @@ namespace Soul {
 
     struct RenderSystem {
 
-		struct VoxelGIConfig {
-			Vec3f center;
-			real32 halfSpan = 100;
-			uint32 resolution = 64;
-		};
+		
 
 		struct ShadowAtlasConfig {
 			int32 resolution;

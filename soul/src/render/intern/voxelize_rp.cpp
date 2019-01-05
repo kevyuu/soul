@@ -50,15 +50,18 @@ namespace Soul {
 
 		SOUL_ASSERT(0, GLExt::IsErrorCheckPass(), "");
 
+		float voxelFrustumHalfSpan = db.voxelGIConfig.halfSpan;
+		Vec3f voxelFrustumCenter = db.voxelGIConfig.center;
+
 		Mat4 projection = mat4Ortho(
-			-db.voxelFrustumHalfSpan, db.voxelFrustumHalfSpan,
-			-db.voxelFrustumHalfSpan, db.voxelFrustumHalfSpan,
-			-db.voxelFrustumHalfSpan, db.voxelFrustumHalfSpan);
+			-voxelFrustumHalfSpan, voxelFrustumHalfSpan,
+			-voxelFrustumHalfSpan, voxelFrustumHalfSpan,
+			-voxelFrustumHalfSpan, voxelFrustumHalfSpan);
 		
 		Mat4 view[3];
-		view[0] = mat4View(db.voxelFrustumCenter, db.voxelFrustumCenter + Vec3f(1.0f, 0.0f, 0.0f), Vec3f(0.0f, 1.0f, 0.0f));
-		view[1] = mat4View(db.voxelFrustumCenter, db.voxelFrustumCenter + Vec3f(0.0f, 1.0f, 0.0f), Vec3f(0.0f, 0.0f, -1.0f));
-		view[2] = mat4View(db.voxelFrustumCenter, db.voxelFrustumCenter + Vec3f(0.0f, 0.0f, 1.0f), Vec3f(0.0f, 1.0f, 0.0f));
+		view[0] = mat4View(voxelFrustumCenter, voxelFrustumCenter + Vec3f(1.0f, 0.0f, 0.0f), Vec3f(0.0f, 1.0f, 0.0f));
+		view[1] = mat4View(voxelFrustumCenter, voxelFrustumCenter + Vec3f(0.0f, 1.0f, 0.0f), Vec3f(0.0f, 0.0f, -1.0f));
+		view[2] = mat4View(voxelFrustumCenter, voxelFrustumCenter + Vec3f(0.0f, 0.0f, 1.0f), Vec3f(0.0f, 1.0f, 0.0f));
 		
 		Mat4 projectionView[3];
 		for (int i = 0; i < 3; i++) {
@@ -78,9 +81,11 @@ namespace Soul {
 			glUniformMatrix4fv(inverseProjectionViewLoc[i], 1, GL_TRUE, (GLfloat*)inverseProjectionView[i].elem);
 		}
 
-		glUniform3fv(voxelFrustumCenterLoc, 1, (GLfloat*)&db.voxelFrustumCenter);
-		glUniform1i(voxelFrustumResoLoc, db.voxelFrustumReso);
-		glUniform1f(voxelFrustumHalfSpanLoc, db.voxelFrustumHalfSpan);
+		int voxelFrustumReso = db.voxelGIConfig.resolution;
+		
+		glUniform3fv(voxelFrustumCenterLoc, 1, (GLfloat*)&db.voxelGIConfig.center);
+		glUniform1i(voxelFrustumResoLoc, voxelFrustumReso);
+		glUniform1f(voxelFrustumHalfSpanLoc, db.voxelGIConfig.halfSpan);
 
 		glUniform1i(voxelAlbedoBufferLoc, 6);
 		glBindImageTexture(6, db.voxelGIBuffer.gVoxelAlbedoTex, 0, true, 0, GL_READ_WRITE, GL_R32UI);
@@ -88,7 +93,7 @@ namespace Soul {
 		glUniform1i(voxelNormalBufferLoc, 7);
 		glBindImageTexture(7, db.voxelGIBuffer.gVoxelNormalTex, 0, true, 0, GL_READ_WRITE, GL_R32UI);
 
-		glViewport(0, 0, db.voxelFrustumReso, db.voxelFrustumReso);
+		glViewport(0, 0, voxelFrustumReso, voxelFrustumReso);
 		glDisable(GL_DEPTH_TEST);
 
 		for (int i = 0; i < db.meshBuffer.getSize(); i++) {
