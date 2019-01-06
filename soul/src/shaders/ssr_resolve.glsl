@@ -222,7 +222,7 @@ void main() {
 
         float sampleRoughness = texture(renderMap3, sampleUV).a;
 
-        float pdf = DistributionGGX(N, H, sampleRoughness) * max(dot(N, H), 0.0f);
+        float pdf = DistributionGGX(N, H, sampleRoughness) * max(dot(N, H), 1e-8);
         vec3 weight = computeSpecularBRDF(L, V, N, pixelMaterial) * max(dot(N, L), 0.0f) / pdf;
         reflectionColor += radiance * weight;
         weightSum += weight;
@@ -261,7 +261,7 @@ void main() {
 	vec3 L = normalize(getSpecularDominantDir(N, reflect(-V, N), pixelMaterial.roughness));
 	L = reflect(-V, N);
 	vec3 H = normalize((L + V) / 2.0f);
-	float pdf = DistributionGGX(N, H, pixelMaterial.roughness) * max(dot(N, H), 0.0f);
+	float pdf = DistributionGGX(N, H, pixelMaterial.roughness) * max(dot(N, H), 1e-8);
 	vec3 specularIndirectColor = voxelSpecularMultiplier * voxelConeTrace(
 		voxelLightBuffer,
 		worldPosition,
