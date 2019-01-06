@@ -38,6 +38,7 @@ namespace Soul {
     }
 
     void GBufferGenRP::execute(RenderDatabase &db) {
+		SOUL_PROFILE_RANGE_PUSH(__FUNCTION__);
 
         Camera& camera = db.camera;
 
@@ -121,6 +122,7 @@ namespace Soul {
 
 		GLExt::ErrorCheck("GBufferGenRPP::execute");
 
+		SOUL_PROFILE_RANGE_POP();
     }
 
     void GBufferGenRP::shutdown(RenderDatabase &database) {

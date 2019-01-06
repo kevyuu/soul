@@ -22,6 +22,8 @@ namespace Soul {
 	}
 
 	void GaussianBlurRP::execute(RenderDatabase& database) {
+		SOUL_PROFILE_RANGE_PUSH(__FUNCTION__);
+
 		RenderDatabase& db = database;
 
 		glBindFramebuffer(GL_READ_FRAMEBUFFER, database.gBuffer.frameBuffer);
@@ -79,6 +81,7 @@ namespace Soul {
 
 		GLExt::ErrorCheck("GaussianBlurRP::execute");
 
+		SOUL_PROFILE_RANGE_POP();
 	}
 
 	void GaussianBlurRP::shutdown(Soul::RenderDatabase &database) {

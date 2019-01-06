@@ -7,6 +7,7 @@
 namespace Soul {
 
 	void SSRResolveRP::init(RenderDatabase& database) {
+
 		shader = GLExt::ProgramCreate(RenderAsset::ShaderFile::ssrResolve);
 
 		reflectionPosBufferLoc = glGetUniformLocation(shader, "reflectionPosBuffer");
@@ -34,6 +35,8 @@ namespace Soul {
 	}
 
 	void SSRResolveRP::execute(RenderDatabase &db) {
+
+		SOUL_PROFILE_RANGE_PUSH(__FUNCTION__);
 
 		glMemoryBarrier(GL_TEXTURE_FETCH_BARRIER_BIT | GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
 
@@ -110,6 +113,7 @@ namespace Soul {
 
 		GLExt::ErrorCheck("SSRResolveRP::execute");
 
+		SOUL_PROFILE_RANGE_POP();
 	}
 
 	void SSRResolveRP::shutdown(RenderDatabase &database) {

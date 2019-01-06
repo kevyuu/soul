@@ -10,7 +10,8 @@ namespace Soul {
 	}
 
 	void VoxelMipmapGenRP::execute(RenderDatabase& db) {
-		
+		SOUL_PROFILE_RANGE_PUSH(__FUNCTION__);
+
 		glUseProgram(program);
 
 		int mipLevel = (int)log2f(db.voxelGIConfig.resolution + 1);
@@ -23,6 +24,7 @@ namespace Soul {
 			glDispatchCompute(voxelDstReso, voxelDstReso, voxelDstReso);
 		}
 
+		SOUL_PROFILE_RANGE_POP();
 	}
 
 	void VoxelMipmapGenRP::shutdown(RenderDatabase& db) {

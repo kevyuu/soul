@@ -12,6 +12,8 @@ namespace Soul {
 
     void Texture2DDebugRP::execute(RenderDatabase& database) {
 
+		SOUL_PROFILE_RANGE_PUSH(__FUNCTION__);
+
         Camera& camera = database.camera;
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
         float fracSize = 1.0f / 4;
@@ -27,6 +29,8 @@ namespace Soul {
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
         glBindVertexArray(0);
         glUseProgram(0);
+
+		SOUL_PROFILE_RANGE_POP();
     }
 
     void Texture2DDebugRP::shutdown(RenderDatabase &database) {

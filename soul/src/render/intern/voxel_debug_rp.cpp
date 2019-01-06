@@ -23,6 +23,8 @@ namespace Soul {
 
 	void VoxelDebugRP::execute(RenderDatabase& db) {
 
+		SOUL_PROFILE_RANGE_PUSH(__FUNCTION__);
+
 		glMemoryBarrier(GL_TEXTURE_FETCH_BARRIER_BIT | GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
 
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -51,6 +53,7 @@ namespace Soul {
 		glUseProgram(0);
 		glBindVertexArray(0);
 
+		SOUL_PROFILE_RANGE_POP();
 	}
 
 	void VoxelDebugRP::shutdown(RenderDatabase& database) {

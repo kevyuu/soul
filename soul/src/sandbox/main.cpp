@@ -326,6 +326,8 @@ int main() {
 	sceneData.dirLightConfig.bias = lightSpec.bias;
 
 	while (!glfwWindowShouldClose(window)) {
+		
+		SOUL_PROFILE_RANGE_PUSH("Frame");
 
 		glfwPollEvents();
 
@@ -409,6 +411,8 @@ int main() {
 		ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
 		glfwSwapBuffers(window);
+
+		SOUL_PROFILE_RANGE_POP();
 	}
 
 	renderSystem.shutdown();

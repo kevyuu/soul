@@ -16,6 +16,8 @@ namespace Soul {
 
     void SkyboxRP::execute(RenderDatabase& database) {
 
+		SOUL_PROFILE_RANGE_PUSH(__FUNCTION__);
+
         glUseProgram(shader);
 
         glUniform1i(skyboxLoc, 0);
@@ -33,6 +35,8 @@ namespace Soul {
         glBindVertexArray(0);
 
         glUseProgram(0);
+
+		SOUL_PROFILE_RANGE_POP();
     }
 
     void SkyboxRP::shutdown(RenderDatabase& database) {

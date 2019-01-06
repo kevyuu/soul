@@ -34,6 +34,7 @@ namespace Soul {
 
 	void VoxelizeRP::execute(RenderDatabase& db) {
 
+		SOUL_PROFILE_RANGE_PUSH(__FUNCTION__);
 
 		float data[4] = { 0.0f, 0.0f, 0.0f, 0.0f};
 
@@ -130,6 +131,7 @@ namespace Soul {
 
 		SOUL_ASSERT(0, GLExt::IsErrorCheckPass(), "");
 
+		SOUL_PROFILE_RANGE_POP();
 	}
 
 	void VoxelizeRP::shutdown(RenderDatabase& database) {

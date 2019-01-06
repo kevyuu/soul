@@ -21,6 +21,8 @@ namespace Soul {
     }
 
     void BRDFMapRP::execute(RenderDatabase& database) {
+		SOUL_PROFILE_RANGE_PUSH(__FUNCTION__);
+
         glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
         glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, database.environment.brdfMap, 0);
 
@@ -35,6 +37,7 @@ namespace Soul {
 
 		GLExt::ErrorCheck("BRDFMapRP::execute");
 
+		SOUL_PROFILE_RANGE_POP();
     }
 
     void BRDFMapRP::shutdown(RenderDatabase &database) {

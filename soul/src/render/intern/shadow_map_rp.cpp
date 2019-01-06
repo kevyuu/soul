@@ -18,6 +18,7 @@ namespace Soul {
     }
 
     void ShadowMapRP::execute(RenderDatabase &database) {
+		SOUL_PROFILE_RANGE_PUSH(__FUNCTION__);
 
         int resolution = database.shadowAtlas.resolution;
 
@@ -78,7 +79,8 @@ namespace Soul {
         glUseProgram(0);
 
 		GLExt::ErrorCheck("ShadowMapRP::execute");
-
+		
+		SOUL_PROFILE_RANGE_POP();
     }
 
     void ShadowMapRP::shutdown(RenderDatabase &database) {

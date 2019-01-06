@@ -22,6 +22,8 @@ namespace Soul {
 
     void DiffuseEnvmapFilterRP::execute(RenderDatabase& database) {
 
+		SOUL_PROFILE_RANGE_PUSH(__FUNCTION__);
+
         static const Mat4 projection = mat4Perspective(PI / 2, 1, 0.1, 10.0);
         static const Mat4 captureViews[] = {
                 mat4View(Vec3f(0, 0, 0), Vec3f(1.0f, 0.0f, 0.0f), Vec3f(0.0f, -1.0f, 0.0f)),
@@ -53,6 +55,7 @@ namespace Soul {
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
         glBindVertexArray(0);
 
+		SOUL_PROFILE_RANGE_POP();
     }
 
     void DiffuseEnvmapFilterRP::shutdown(RenderDatabase& database) {

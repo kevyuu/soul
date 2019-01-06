@@ -25,6 +25,7 @@ namespace Soul {
 
 	void VoxelLightInjectRP::execute(RenderDatabase& db) {
 
+		SOUL_PROFILE_RANGE_PUSH(__FUNCTION__);
 
 		glMemoryBarrier(GL_TEXTURE_FETCH_BARRIER_BIT | GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
 
@@ -51,6 +52,7 @@ namespace Soul {
 
 		SOUL_ASSERT(0, GLExt::IsErrorCheckPass(), "");
 
+		SOUL_PROFILE_RANGE_POP();
 	}
 
 	void VoxelLightInjectRP::shutdown(RenderDatabase& database) {

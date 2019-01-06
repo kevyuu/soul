@@ -29,6 +29,8 @@ namespace Soul {
 
 	void SSRTraceRP::execute(RenderDatabase &db) {
 
+		SOUL_PROFILE_RANGE_PUSH(__FUNCTION__);
+
 		glBindFramebuffer(GL_FRAMEBUFFER, db.effectBuffer.ssrTraceBuffer.frameBuffer);
 		glUseProgram(shader);
 
@@ -71,6 +73,7 @@ namespace Soul {
 
 		SOUL_ASSERT(0, GLExt::IsErrorCheckPass(), "");
 
+		SOUL_PROFILE_RANGE_POP();
 	}
 
 	void SSRTraceRP::shutdown(RenderDatabase &database) {
