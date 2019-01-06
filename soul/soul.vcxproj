@@ -64,6 +64,7 @@
     <ClCompile Include="src\extern\imgui_impl_opengl3.cpp" />
     <ClCompile Include="src\extern\imgui_widgets.cpp" />
     <ClCompile Include="src\render\intern\glext.cpp" />
+    <ClCompile Include="src\render\intern\velocity_buffer_gen_rp.cpp" />
     <ClCompile Include="src\sandbox\main.cpp" />
     <ClCompile Include="src\render\intern\brdf_map_rp.cpp" />
     <ClCompile Include="src\render\intern\diffuse_envmap_filter_rp.cpp" />
@@ -113,6 +114,7 @@
     <None Include="src\shaders\lighting.glsl" />
     <None Include="src\shaders\math.lib.glsl" />
     <None Include="src\shaders\sampling.lib.glsl" />
+    <None Include="src\shaders\velocity_buffer_gen.glsl" />
     <None Include="src\shaders\voxel_light_inject.glsl" />
     <None Include="src\shaders\panorama_to_cubemap.glsl" />
     <None Include="src\shaders\predepth.glsl" />

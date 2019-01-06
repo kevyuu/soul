@@ -33,6 +33,8 @@ uniform sampler2D texDebug;
 
 void main() 
 {
-	FragColor = vec4(texture(texDebug, vs_out.texCoord).rgb, 1.0f);
+	vec2 velocity = texture(texDebug, vs_out.texCoord).rg * 2.0f - vec2(1.0f);
+
+	FragColor = vec4(velocity * 1.0f, 0.0f, 1.0f);
 }
 #endif // FRAGMENT_SHADER

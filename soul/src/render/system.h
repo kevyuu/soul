@@ -89,6 +89,9 @@ namespace Soul {
 		void _voxelGIBufferInit();
 		void _voxelGIBufferCleanup();
 
+		void _velocityBufferInit();
+		void _velocityBufferCleanup();
+
         ShadowKey _shadowAtlasGetSlot(RenderRID lightID, int texReso);
 
     };

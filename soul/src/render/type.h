@@ -521,6 +521,18 @@ namespace Soul {
 		void shutdown(RenderDatabase& database);
 	};
 
+	struct VelocityBufferGenRP : public RenderPass {
+		GLuint program;
+
+		GLint depthMapLoc;
+		GLint invCurProjectionViewLoc;
+		GLint prevProjectionViewLoc;
+
+		void init(RenderDatabase& database);
+		void execute(RenderDatabase& database);
+		void shutdown(RenderDatabase& database);
+	};
+
     struct GBuffer {
         GLuint frameBuffer;
 
@@ -569,6 +581,11 @@ namespace Soul {
 
     };
 
+	struct VelocityBuffer {
+		GLuint tex;
+		GLuint frameBuffer;
+	};
+
 	struct VoxelGIBuffer {
 		
 		GLuint gVoxelAlbedoTex = 0;
@@ -606,10 +623,12 @@ namespace Soul {
         LightDataUBO lightDataUBO;
 
         Camera camera;
+		Camera prevCamera;
 
         GBuffer gBuffer;
         EffectBuffer effectBuffer;
         LightBuffer lightBuffer;
+		VelocityBuffer velocityBuffer;
 
 		VoxelGIConfig voxelGIConfig;
 		VoxelGIBuffer voxelGIBuffer;

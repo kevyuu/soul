@@ -203,6 +203,9 @@
     <ClCompile Include="src\render\intern\glext.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="src\render\intern\velocity_buffer_gen_rp.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="src\shaders\blinnphong.vs" />
@@ -245,6 +248,7 @@
     <None Include="assets\greasy-metal-pan\quad.mtl" />
     <None Include="src\shaders\voxel_mipmap_gen.glsl" />
     <None Include="imgui.ini" />
+    <None Include="src\shaders\velocity_buffer_gen.glsl" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="..\..\Sparky\Sandbox\res\Dagger\Textures\Dagger_Albedo.tga" />

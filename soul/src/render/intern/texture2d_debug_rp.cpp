@@ -21,7 +21,7 @@ namespace Soul {
         glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
         glUseProgram(shader);
         glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, database.gBuffer.renderBuffer3);
+        glBindTexture(GL_TEXTURE_2D, database.velocityBuffer.tex);
 		glBindVertexArray(database.quadVAO);
 		glDisable(GL_DEPTH_TEST);
 		glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);

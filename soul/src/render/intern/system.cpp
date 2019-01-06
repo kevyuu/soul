@@ -47,18 +47,19 @@ namespace Soul {
         _lightBufferInit();
         _utilVAOInit();
         _brdfMapInit();
+		_velocityBufferInit();
 
         db.renderPassList.pushBack(new ShadowMapRP());
         db.renderPassList.pushBack(new GBufferGenRP());
         db.renderPassList.pushBack(new GaussianBlurRP());
-
+		db.renderPassList.pushBack(new VelocityBufferGenRP());
 		db.renderPassList.pushBack(new SSRTraceRP());
 		db.renderPassList.pushBack(new VoxelizeRP());
 		db.renderPassList.pushBack(new VoxelLightInjectRP());
 		db.renderPassList.pushBack(new VoxelMipmapGenRP());
 		db.renderPassList.pushBack(new SSRResolveRP());
-		db.renderPassList.pushBack(new VoxelDebugRP());
-		// db.renderPassList.pushBack(new Texture2DDebugRP());
+		// db.renderPassList.pushBack(new VoxelDebugRP());
+		db.renderPassList.pushBack(new Texture2DDebugRP());
 
         for (int i = 0; i < db.renderPassList.getSize(); i++) {
             db.renderPassList.get(i)->init(db);
@@ -491,6 +492,32 @@ namespace Soul {
 
 	}
 
+	void RenderSystem::_velocityBufferInit() {
+
+		_velocityBufferCleanup();
+
+		VelocityBuffer& velocityBuffer = _database.velocityBuffer;
+		int targetWidth = _database.targetWidthPx;
+		int targetHeight = _database.targetHeightPx;
+
+		glGenFramebuffers(1, &(velocityBuffer.frameBuffer));
+		glBindFramebuffer(GL_FRAMEBUFFER, velocityBuffer.frameBuffer);
+
+		glGenTextures(1, &(velocityBuffer.tex));
+		glBindTexture(GL_TEXTURE_2D, velocityBuffer.tex);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RG, targetWidth, targetHeight, 0, GL_RG, GL_FLOAT, 0);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, velocityBuffer.tex, 0);
+
+	}
+
+	void RenderSystem::_velocityBufferCleanup() {
+		GLExt::TextureDelete(&_database.velocityBuffer.tex);
+		GLExt::FramebufferDelete(&_database.velocityBuffer.frameBuffer);
+	}
 
     void RenderSystem::_utilVAOInit() {
         float cubeVertices[] = {
@@ -741,6 +768,8 @@ namespace Soul {
         while ((err = glGetError()) != GL_NO_ERROR) {
         	std::cout<<"Render::OpenGL error: "<<err<<std::endl;
         }
+
+		_database.prevCamera = camera;
     }
 
     RenderRID RenderSystem::meshCreate(const Soul::MeshSpec &spec) {

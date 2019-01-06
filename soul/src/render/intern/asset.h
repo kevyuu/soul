@@ -18,6 +18,7 @@ namespace Soul {
         namespace ShaderFile {
 
             constexpr const char* shadowMap = SHADER_FILE_PATH("shadow_map.glsl");
+			constexpr const char* velocityBufferGen = SHADER_FILE_PATH("velocity_buffer_gen.glsl");
             constexpr const char* pbr = SHADER_FILE_PATH("pbr.glsl");
             constexpr const char* panoramaToCubemap = SHADER_FILE_PATH("panorama_to_cubemap.glsl");
             constexpr const char* diffuseEnvmapFilter = SHADER_FILE_PATH("diffuse_envmap_filter.glsl");
