@@ -28,6 +28,7 @@ namespace Soul {
         DiffuseEnvmapFilterRP diffuseEnvmapFilterRP;
         SpecularEnvmapFilterRP specularEnvmapFilterRP;
         BRDFMapRP brdfMapRP;
+		VoxelizeRP voxelizeRP;
 
         void init(const Config& config);
         void shutdown();
@@ -41,6 +42,7 @@ namespace Soul {
 		void dirLightSetCascadeSplit(RenderRID lightRID, float split1, float split2, float split3);
 		void dirLightSetBias(RenderRID lightRID, float bias);
 
+		void voxelGIVoxelize();
 		void voxelGIUpdateConfig(const VoxelGIConfig& config);
 		/*void voxelGIsetCenter(Vec3f center);
 		void voxelGIsetHalfSpan(float haflSpan);

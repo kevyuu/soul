@@ -41,6 +41,7 @@ namespace Soul {
         diffuseEnvmapFilterRP.init(_database);
         specularEnvmapFilterRP.init(_database);
         brdfMapRP.init(_database);
+		voxelizeRP.init(_database);
 
 		_effectBufferInit();
         _gBufferInit();
@@ -52,14 +53,10 @@ namespace Soul {
         db.renderPassList.pushBack(new ShadowMapRP());
         db.renderPassList.pushBack(new GBufferGenRP());
         db.renderPassList.pushBack(new GaussianBlurRP());
-		db.renderPassList.pushBack(new VelocityBufferGenRP());
 		db.renderPassList.pushBack(new SSRTraceRP());
-		db.renderPassList.pushBack(new VoxelizeRP());
 		db.renderPassList.pushBack(new VoxelLightInjectRP());
 		db.renderPassList.pushBack(new VoxelMipmapGenRP());
 		db.renderPassList.pushBack(new SSRResolveRP());
-		// db.renderPassList.pushBack(new VoxelDebugRP());
-		db.renderPassList.pushBack(new Texture2DDebugRP());
 
         for (int i = 0; i < db.renderPassList.getSize(); i++) {
             db.renderPassList.get(i)->init(db);
@@ -432,6 +429,10 @@ namespace Soul {
 		SOUL_ASSERT(0, GLExt::IsErrorCheckPass(), "");
 	}
 
+	void RenderSystem::voxelGIVoxelize() {
+		voxelizeRP.execute(_database);
+	}
+
 	void RenderSystem::voxelGIUpdateConfig(const VoxelGIConfig& config) {
 		_database.voxelGIConfig = config;
 		_voxelGIBufferInit();
@@ -643,6 +644,7 @@ namespace Soul {
         diffuseEnvmapFilterRP.shutdown(_database);
         specularEnvmapFilterRP.shutdown(_database);
         brdfMapRP.shutdown(_database);
+		voxelizeRP.shutdown(_database);
 
 		glDeleteBuffers(1, &db.sceneDataUBOHandle);
 		glDeleteBuffers(1, &db.lightDataUBOHandle);

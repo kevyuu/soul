@@ -121,6 +121,7 @@ void SettingWindow(SceneData* sceneData) {
 
 		if (ImGui::Button("Update")) {
 			renderSystem->voxelGIUpdateConfig(sceneData->renderConfig.voxelGIConfig);
+			renderSystem->voxelGIVoxelize();
 		}
 	}
 
@@ -190,6 +191,7 @@ void MenuBar(SceneData* sceneData) {
 			renderSystem->init(sceneData->renderConfig);
 
 			ImportObjMtlAssets(renderSystem, sceneData->objFilePath, sceneData->mtlDirPath);
+			renderSystem->voxelGIVoxelize();
 
 			Soul::DirectionalLightSpec dirLightSpec;
 			dirLightSpec.direction = sceneData->dirLightConfig.dir;
@@ -309,6 +311,7 @@ int main() {
 	strcpy(sceneData.objFilePath, "C:/Dev/soul/soul/assets/sponza2/sponza.obj");
 	strcpy(sceneData.mtlDirPath, "C:/Dev/soul/soul/assets/sponza2/textures/");
 	ImportObjMtlAssets(&renderSystem, sceneData.objFilePath, sceneData.mtlDirPath);
+	renderSystem.voxelGIVoxelize();
 
 	Soul::DirectionalLightSpec lightSpec;
 	lightSpec.direction = Soul::Vec3f(0.03f, -1.0f, 0.35f);
