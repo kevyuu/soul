@@ -89,7 +89,6 @@ void main() {
     float invWStart = 1 / ndcRayStart.w;
     ndcRayStart *= invWStart;
     vec2 halfScreenDimension = screenDimension * 0.5f;
-    vec2 invHalfScreenDimension = 1 / halfScreenDimension;
     vec2 screenRayStart = ndcRayStart.xy * halfScreenDimension + halfScreenDimension;
     vec4 ndcRayEnd = projection * vec4(viewRayEnd, 1.0f);
     float invWEnd = 1 / ndcRayEnd.w;
