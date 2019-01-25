@@ -13,17 +13,16 @@ namespace Soul {
 
         predepthShader = GLExt::ProgramCreate(RenderAsset::ShaderFile::predepth);
 
-        GLuint sceneDataBlockIndexPredepth = glGetUniformBlockIndex(predepthShader, "SceneData");
+        GLuint sceneDataBlockIndexPredepth = glGetUniformBlockIndex(predepthShader, RenderConstant::CAMERA_DATA_NAME);
+        glUniformBlockBinding(predepthShader, sceneDataBlockIndexPredepth, RenderConstant::CAMERA_DATA_BINDING_POINT);
 
-        glUniformBlockBinding(predepthShader, sceneDataBlockIndexPredepth, RenderConstant::SCENE_DATA_BINDING_POINT);
         predepthModelUniformLoc = glGetUniformLocation(predepthShader, "model");
-
 
         gBufferShader = GLExt::ProgramCreate(RenderAsset::ShaderFile::gbufferGen);
 
-        GLuint sceneDataBlockIndex = glGetUniformBlockIndex(gBufferShader, "SceneData");
-        glUniformBlockBinding(gBufferShader, sceneDataBlockIndex, RenderConstant::SCENE_DATA_BINDING_POINT);
-		GLuint lightDataBlockIndex = glGetUniformBlockIndex(gBufferShader, "LightData");
+        GLuint sceneDataBlockIndex = glGetUniformBlockIndex(gBufferShader, RenderConstant::CAMERA_DATA_NAME);
+        glUniformBlockBinding(gBufferShader, sceneDataBlockIndex, RenderConstant::CAMERA_DATA_BINDING_POINT);
+		GLuint lightDataBlockIndex = glGetUniformBlockIndex(gBufferShader, RenderConstant::LIGHT_DATA_NAME);
 		glUniformBlockBinding(gBufferShader, lightDataBlockIndex, RenderConstant::LIGHT_DATA_BINDING_POINT);
 
         modelUniformLoc = glGetUniformLocation(gBufferShader, "model");
@@ -126,8 +125,8 @@ namespace Soul {
     }
 
     void GBufferGenRP::shutdown(RenderDatabase &database) {
-        glDeleteProgram(gBufferShader);
-        glDeleteProgram(predepthShader);
+		GLExt::ProgramDelete(&gBufferShader);
+		GLExt::ProgramDelete(&predepthShader);
     }
 
 }

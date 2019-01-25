@@ -9,19 +9,17 @@ namespace Soul {
 	void SSRTraceRP::init(RenderDatabase& database) {
 		shader = GLExt::ProgramCreate(RenderAsset::ShaderFile::ssrTrace);
 
-		GLuint sceneDataBlockIndex = glGetUniformBlockIndex(shader, "SceneData");
-		glUniformBlockBinding(shader, sceneDataBlockIndex, RenderConstant::SCENE_DATA_BINDING_POINT);
+		GLuint sceneDataBlockIndex = glGetUniformBlockIndex(shader, RenderConstant::CAMERA_DATA_NAME);
+		glUniformBlockBinding(shader, sceneDataBlockIndex, RenderConstant::CAMERA_DATA_BINDING_POINT);
 
 		renderMap1UniformLoc = glGetUniformLocation(shader, "renderMap1");
 		renderMap2UniformLoc = glGetUniformLocation(shader, "renderMap2");
 		renderMap3UniformLoc = glGetUniformLocation(shader, "renderMap3");
 		depthMapLoc = glGetUniformLocation(shader, "depthMap");
 		screenDimensionLoc = glGetUniformLocation(shader, "screenDimension");
-		cameraPositionLoc = glGetUniformLocation(shader, "cameraPosition");
+
 		cameraZNearLoc = glGetUniformLocation(shader, "cameraZNear");
 		cameraZFarLoc = glGetUniformLocation(shader, "cameraZFar");
-
-		invProjectionViewLoc = glGetUniformLocation(shader, "invProjectionView");
 
 		SOUL_ASSERT(0, GLExt::IsErrorCheckPass(), "");
 
@@ -52,16 +50,9 @@ namespace Soul {
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_MODE, GL_NONE);
 
 		glUniform2f(screenDimensionLoc, db.targetWidthPx, db.targetHeightPx);
-		glUniform3f(cameraPositionLoc, db.camera.position.x, db.camera.position.y, db.camera.position.z);
 		glUniform1f(cameraZNearLoc, db.camera.perspective.zNear);
 		glUniform1f(cameraZFarLoc, db.camera.perspective.zFar);
 		
-		Mat4 viewMat = mat4View(db.camera.position, db.camera.position +
-			db.camera.direction, db.camera.up);
-		Mat4 projectionViewMat = db.camera.projection * viewMat;
-		Mat4 invProjectionViewMat = mat4Inverse(projectionViewMat);
-		glUniformMatrix4fv(invProjectionViewLoc, 1, GL_TRUE, (const GLfloat*)invProjectionViewMat.elem);
-
 		glViewport(0, 0, db.targetWidthPx, db.targetHeightPx);
 		glBindVertexArray(db.quadVAO);
 		glClear(GL_COLOR_BUFFER_BIT);

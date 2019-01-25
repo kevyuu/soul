@@ -11,9 +11,9 @@ namespace Soul {
 	void LightingRP::init(RenderDatabase &database) {
 
 		shader = GLExt::ProgramCreate(RenderAsset::ShaderFile::lighting);
-		GLuint sceneDataBlockIndex = glGetUniformBlockIndex(shader, "SceneData");
-		glUniformBlockBinding(shader, sceneDataBlockIndex, RenderConstant::SCENE_DATA_BINDING_POINT);
-		GLuint lightDataBlockIndex = glGetUniformBlockIndex(shader, "LightData");
+		GLuint sceneDataBlockIndex = glGetUniformBlockIndex(shader, RenderConstant::CAMERA_DATA_NAME);
+		glUniformBlockBinding(shader, sceneDataBlockIndex, RenderConstant::CAMERA_DATA_BINDING_POINT);
+		GLuint lightDataBlockIndex = glGetUniformBlockIndex(shader, RenderConstant::LIGHT_DATA_NAME);
 		glUniformBlockBinding(shader, lightDataBlockIndex, RenderConstant::LIGHT_DATA_BINDING_POINT);
 
 		glUseProgram(shader);

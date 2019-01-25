@@ -24,8 +24,8 @@ namespace Soul {
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_CUBE_MAP, database.environment.cubemap);
 
-        glUniformMatrix4fv(viewLoc, 1, GL_FALSE, (const GLfloat*) database.sceneDataUBO.view.elem);
-        glUniformMatrix4fv(projectionLoc, 1, GL_FALSE, (const GLfloat*) database.sceneDataUBO.projection.elem);
+        glUniformMatrix4fv(viewLoc, 1, GL_FALSE, (const GLfloat*) database.cameraDataUBO.view.elem);
+        glUniformMatrix4fv(projectionLoc, 1, GL_FALSE, (const GLfloat*) database.cameraDataUBO.projection.elem);
 
         glEnable(GL_DEPTH_TEST);
         glDepthFunc(GL_LEQUAL);

@@ -10,7 +10,7 @@ namespace Soul {
 
 		glUseProgram(program);
 
-		GLuint lightDataBlockIndex = glGetUniformBlockIndex(program, "LightData");
+		GLuint lightDataBlockIndex = glGetUniformBlockIndex(program, RenderConstant::LIGHT_DATA_NAME);
 		glUniformBlockBinding(program, lightDataBlockIndex, RenderConstant::LIGHT_DATA_BINDING_POINT);
 
 		voxelFrustumCenterLoc = glGetUniformLocation(program, "voxelFrustumCenter");

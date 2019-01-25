@@ -8,8 +8,8 @@ namespace Soul {
 	void VoxelDebugRP::init(RenderDatabase& database) {
 		program = GLExt::ProgramCreate(RenderAsset::ShaderFile::voxel_debug);
 
-		GLuint sceneDataBlockIndex = glGetUniformBlockIndex(program, "SceneData");
-		glUniformBlockBinding(program, sceneDataBlockIndex, RenderConstant::SCENE_DATA_BINDING_POINT);
+		GLuint sceneDataBlockIndex = glGetUniformBlockIndex(program, RenderConstant::CAMERA_DATA_NAME);
+		glUniformBlockBinding(program, sceneDataBlockIndex, RenderConstant::CAMERA_DATA_BINDING_POINT);
 
 		voxelBufferLoc = glGetUniformLocation(program, "voxelBuffer");
 		voxelFrustumResoLoc = glGetUniformLocation(program, "voxelFrustumReso");

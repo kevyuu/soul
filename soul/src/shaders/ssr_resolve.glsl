@@ -2,6 +2,7 @@
 math.lib.glsl
 brdf.lib.glsl
 sampling.lib.glsl
+camera.lib.glsl
 #endif
 
 /**********************************************************************
@@ -41,7 +42,6 @@ uniform sampler3D voxelLightBuffer;
 
 uniform vec2 screenDimension;
 uniform vec3 cameraPosition;
-uniform mat4 invProjectionView;
 
 uniform int voxelFrustumReso;
 uniform float voxelFrustumHalfSpan;
@@ -78,7 +78,7 @@ vec3 voxelConeTrace(sampler3D voxelLightBuffer,
 		samplePos += radius * direction;
 	}
 	
-	return color + (1 - alpha) * vec3(0.01, 0.01, 0.04);
+	return color + (1 - alpha) * vec3(0.529f, 0.808f, 0.922f) * 0.1f;
 
 }
 
@@ -149,10 +149,13 @@ float cone_cosine(float r)
 	/* Using phong gloss
 	 * roughness = sqrt(2/(gloss+2)) */
 	float gloss = -2 + 2 / (r * r);
+	
 	/* Drobot 2014 in GPUPro5 */
 	// return cos(2.0 * sqrt(2.0 / (gloss + 2)));
+
 	/* Uludag 2014 in GPUPro5 */
 	// return pow(0.244, 1 / (gloss + 1));
+	
 	/* Jimenez 2016 in Practical Realtime Strategies for Accurate Indirect Occlusion*/
 	return exp2(-3.32193 * r * r);
 }
@@ -170,7 +173,7 @@ void main() {
 
     pixelMaterial.albedo = texture(renderMap1, vs_out.texCoord).rgb;
     float ndcDepth = texture(depthMap, vs_out.texCoord).r * 2.0f - 1.0f;
-	vec4 worldPositionHomo = invProjectionView * vec4(vs_out.texCoord * 2.0f - 1.0f, ndcDepth, 1.0f);
+	vec4 worldPositionHomo = camera_getInvProjectionViewMat() * vec4(vs_out.texCoord * 2.0f - 1.0f, ndcDepth, 1.0f);
 	vec3 worldPosition = (worldPositionHomo / worldPositionHomo.w).xyz;
     pixelMaterial.metallic = texture(renderMap2, vs_out.texCoord).a;
     vec3 N = texture(renderMap3, vs_out.texCoord).rgb * 2.0f - 1.0f;
@@ -183,7 +186,7 @@ void main() {
 	vec3 diffuseAmbientOutput = texture(renderMap4, vs_out.texCoord).rgb;
 	vec3 directColor = specularOutput + diffuseAmbientOutput;
 
-    vec3 V = normalize(cameraPosition - worldPosition);
+	vec3 V = normalize(camera_getPosition() - worldPosition);
 
     vec3 reflectionColor = vec3(0);
     vec3 weightSum = vec3(0);
@@ -194,6 +197,8 @@ void main() {
 	float cone_tan = sqrt(1 - cone_cos * cone_cos) / cone_cos;
 	cone_tan *= mix(clamp(dot(N, -V) * 2.0, 0.0f, 1.0f), 1.0, pixelMaterial.roughness); /* Elongation fit */
 
+	int numValidSample = 0;
+
     for (int i = 0; i < 4; i++) {
 
         vec2 sampleUV = sampleOffsets[i] / screenDimension + vs_out.texCoord;
@@ -203,6 +208,8 @@ void main() {
         if (sampleReflectionPos.xy == vec2(0, 0)) {
             continue;
         }
+
+		numValidSample += 1;
 
         float circleRadius = cone_tan * length(sampleReflectionPos - vs_out.texCoord);
         float mip = max(log2(circleRadius * max(screenDimension.x, screenDimension.y)), 0);
@@ -239,9 +246,11 @@ void main() {
 	float reflectionAlpha = 0.0f;
     if (weightSum != vec3(0)) {
        reflectionColor = reflectionColor * FG * clamp(1.0f - (dCoords.x + dCoords.y), 0.0f, 1.0f) / weightSum;
-       reflectionColor = max(reflectionColor, vec3(0));
+	   reflectionColor = max(reflectionColor, vec3(0));
 	   reflectionAlpha = clamp(1.0f - (dCoords.x + dCoords.y), 0.0f, 1.0f);
     }
+
+	reflectionAlpha = numValidSample == 4 ? reflectionAlpha : 0.0f;
 
 	vec3 voxelFrustumMax = voxelFrustumCenter + vec3(voxelFrustumHalfSpan);
 	vec3 voxelFrustumMin = voxelFrustumCenter - vec3(voxelFrustumHalfSpan);
@@ -259,7 +268,7 @@ void main() {
 	) * pixelMaterial.albedo / M_PI;
 
 	vec3 L = normalize(getSpecularDominantDir(N, reflect(-V, N), pixelMaterial.roughness));
-	L = reflect(-V, N);
+
 	vec3 H = normalize((L + V) / 2.0f);
 	float pdf = DistributionGGX(N, H, pixelMaterial.roughness) * max(dot(N, H), 1e-8);
 	vec3 specularIndirectColor = voxelSpecularMultiplier * voxelConeTrace(
@@ -272,7 +281,7 @@ void main() {
 		voxelFrustumMin
 	) * computeSpecularBRDF(L, V, N, pixelMaterial) * max(dot(N, L), 0.0f) / pdf;
 
-    vec3 color = directColor + diffuseIndirectColor + reflectionColor * reflectionAlpha + (1 - reflectionAlpha) * specularIndirectColor;
+    vec3 color = directColor + diffuseIndirectColor  + reflectionColor * reflectionAlpha + (1 - reflectionAlpha) * specularIndirectColor;
 
     color = color / (color + vec3(1.0));
     color = pow(color, vec3(1.0/2.2));

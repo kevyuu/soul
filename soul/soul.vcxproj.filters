@@ -249,6 +249,7 @@
     <None Include="src\shaders\voxel_mipmap_gen.glsl" />
     <None Include="imgui.ini" />
     <None Include="src\shaders\velocity_buffer_gen.glsl" />
+    <None Include="src\shaders\camera.lib.glsl" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="..\..\Sparky\Sandbox\res\Dagger\Textures\Dagger_Albedo.tga" />

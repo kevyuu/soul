@@ -6,16 +6,16 @@ namespace Soul {
     void PBRSceneRP::init(RenderDatabase& db) {
 
         predepthShader = GLExt::ProgramCreate(RenderAsset::ShaderFile::predepth);
-        GLuint sceneDataBlockIndexPredepth = glGetUniformBlockIndex(predepthShader, "SceneData");
-        glUniformBlockBinding(predepthShader, sceneDataBlockIndexPredepth, RenderConstant::SCENE_DATA_BINDING_POINT);
+        GLuint sceneDataBlockIndexPredepth = glGetUniformBlockIndex(predepthShader, "CameraData");
+        glUniformBlockBinding(predepthShader, sceneDataBlockIndexPredepth, RenderConstant::CAMERA_DATA_BINDING_POINT);
         predepthModelUniformLoc = glGetUniformLocation(predepthShader, "model");
 
 
         sceneShader = GLExt::ProgramCreate(RenderAsset::ShaderFile::pbr);
-        GLuint sceneDataBlockIndex = glGetUniformBlockIndex(sceneShader, "SceneData");
-        glUniformBlockBinding(sceneShader, sceneDataBlockIndex, RenderConstant::SCENE_DATA_BINDING_POINT);
+        GLuint sceneDataBlockIndex = glGetUniformBlockIndex(sceneShader, RenderConstant::CAMERA_DATA_NAME);
+        glUniformBlockBinding(sceneShader, sceneDataBlockIndex, RenderConstant::CAMERA_DATA_BINDING_POINT);
 
-        GLuint lightDataBlockIndex = glGetUniformBlockIndex(sceneShader, "LightData");
+        GLuint lightDataBlockIndex = glGetUniformBlockIndex(sceneShader, RenderConstant::LIGHT_DATA_NAME);
         glUniformBlockBinding(sceneShader, lightDataBlockIndex, RenderConstant::LIGHT_DATA_BINDING_POINT);
 
         modelUniformLoc = glGetUniformLocation(sceneShader, "model");

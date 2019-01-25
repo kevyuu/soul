@@ -2,6 +2,7 @@
 math.lib.glsl
 brdf.lib.glsl
 light.lib.glsl
+camera.lib.glsl
 #endif
 
 
@@ -16,11 +17,6 @@ layout (location = 2) in vec2 aTexCoord;
 layout (location = 3) in vec3 aBinormal;
 layout (location = 4) in vec3 aTangent;
 
-layout(std140) uniform SceneData {
-	mat4 projection;
-	mat4 view;
-};
-
 uniform mat4 model;
 
 out VS_OUT {
@@ -32,7 +28,7 @@ out VS_OUT {
 } vs_out;
 
 void main() {
-	gl_Position = projection * view * model * vec4(aPos, 1.0f);
+	gl_Position = camera_getProjectionViewMat() * model * vec4(aPos, 1.0f);
 	vs_out.worldPosition = vec3((model * vec4(aPos, 1.0f)).xyz);
 	mat3 rotMat = mat3(transpose(inverse(model)));
 	vs_out.worldNormal = rotMat * aNormal;
@@ -52,11 +48,6 @@ struct Material {
 	sampler2D normalMap;
 	sampler2D metallicMap;
 	sampler2D roughnessMap;
-};
-
-layout(std140) uniform SceneData {
-	mat4 projection;
-	mat4 view;
 };
 
 uniform Material material;
@@ -116,7 +107,7 @@ void main() {
     vec3 worldNormal = normalize(TBN * pixelMaterial.normal);
 	vec3 worldPosition = vs_out.worldPosition;
 	vec3 V = normalize(viewPosition - worldPosition);
-	vec3 fragViewCoord = vec4(view * vec4(worldPosition, 1.0f)).xyz;
+	vec3 fragViewCoord = vec4(camera_getViewMat() * vec4(worldPosition, 1.0f)).xyz;
 	
 	vec3 specularOutput = vec3(0.0f);
 	vec3 diffuseOutput = vec3(0.0f);

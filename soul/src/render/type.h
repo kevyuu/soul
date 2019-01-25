@@ -186,8 +186,11 @@ namespace Soul {
     //-------------------------------------------
 
     struct RenderConstant {
-        static constexpr int SCENE_DATA_BINDING_POINT = 0;
+        static constexpr int CAMERA_DATA_BINDING_POINT = 0;
+		static constexpr char CAMERA_DATA_NAME[] = "CameraData";
         static constexpr int LIGHT_DATA_BINDING_POINT = 1;
+		static constexpr char LIGHT_DATA_NAME[] = "LightData";
+
         static constexpr int MAX_DIRECTIONAL_LIGHTS = 4;
     };
 
@@ -200,9 +203,17 @@ namespace Soul {
         RenderRID slots[MAX_LIGHT];
     };
 
-    struct SceneDataUBO {
+    struct CameraDataUBO {
         Mat4 projection;
         Mat4 view;
+		Mat4 projectionView;
+		Mat4 invProjectionView;
+
+		Mat4 prevProjection;
+		Mat4 prevView;
+		Mat4 prevProjectionView;
+
+		Vec3f position;
     };
 
     struct DirectionalLightUBO {
@@ -265,8 +276,8 @@ namespace Soul {
         GLuint renderBuffer;
         RenderRID shader;
 
-        GLuint projectionLoc;
-        GLuint viewLoc;
+		GLuint projectionLoc;
+		GLuint viewLoc;
 
         void init(RenderDatabase& database);
         void execute(RenderDatabase& database);
@@ -333,11 +344,10 @@ namespace Soul {
     	GLint depthMapLoc;
 
     	GLint screenDimensionLoc;
-    	GLint cameraPositionLoc;
+
     	GLint cameraZNearLoc;
     	GLint cameraZFarLoc;
 
-		GLint invProjectionViewLoc;
 
     	void init(RenderDatabase& database);
     	void execute(RenderDatabase& database);
@@ -358,8 +368,6 @@ namespace Soul {
 		GLint voxelLightBufferLoc;
 
     	GLint screenDimensionLoc;
-    	GLint cameraPositionLoc;
-		GLint invProjectionViewLoc;
 
 		GLint voxelFrustumResoLoc;
 		GLint voxelFrustumHalfSpanLoc;
@@ -618,8 +626,8 @@ namespace Soul {
 
         ShadowAtlas shadowAtlas;
 
-        GLuint sceneDataUBOHandle;
-        SceneDataUBO sceneDataUBO;
+        GLuint cameraDataUBOHandle;
+        CameraDataUBO cameraDataUBO;
 
         GLuint lightDataUBOHandle;
         LightDataUBO lightDataUBO;

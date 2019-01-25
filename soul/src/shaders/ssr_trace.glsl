@@ -1,6 +1,7 @@
 #ifdef LIB_SHADER
 math.lib.glsl
 sampling.lib.glsl
+camera.lib.glsl
 #endif
 
 /**********************************************************************
@@ -34,16 +35,8 @@ uniform sampler2D depthMap;
 
 uniform vec2 screenDimension;
 
-uniform vec3 cameraPosition;
 uniform float cameraZNear;
 uniform float cameraZFar;
-
-uniform mat4 invProjectionView;
-
-layout(std140) uniform SceneData {
-	mat4 projection;
-	mat4 view;
-};
 
 in VS_OUT {
 	vec2 texCoord;
@@ -58,12 +51,12 @@ float ndcDepthToViewZ(float ndcDepth) {
 void main() {
 
 	float ndcDepth = texture(depthMap, vs_out.texCoord).r * 2.0f - 1.0f;
-	vec4 worldPositionHomo = invProjectionView * vec4(vs_out.texCoord * 2.0f - 1.0f, ndcDepth, 1.0f);
+	vec4 worldPositionHomo = camera_getInvProjectionViewMat() * vec4(vs_out.texCoord * 2.0f - 1.0f, ndcDepth, 1.0f);
 	vec3 worldPosition = (worldPositionHomo / worldPositionHomo.w).xyz;
 	vec3 N = texture(renderMap3, vs_out.texCoord).rgb * 2.0f - 1.0f;
 	float roughness = texture(renderMap3, vs_out.texCoord).a;
-
-	vec3 V = normalize(cameraPosition - worldPosition);
+	
+	vec3 V = normalize(camera_getPosition() - worldPosition);
 
 	uint columnIdx = uint(floor(vs_out.texCoord.x / screenDimension.x));
 	uint rowIdx = uint(floor(vs_out.texCoord.y / screenDimension.y));
@@ -74,23 +67,26 @@ void main() {
     vec2 rand = Hammersley(pixelIdx, pixelCount);
     rand.x = mix(rand.x, 1.0f, 0.4f);
     vec3 H = ImportanceSampleGGX(rand, N, roughness);
-    vec3 viewRayDir = mat3(view) * normalize(2.0 * dot(V, H) * H - V);
+	if (roughness < 0.04f) {
+		H = N;
+	}
+    vec3 viewRayDir = camera_getViewRotMat() * normalize(2.0 * dot(V, H) * H - V);
 
     if (viewRayDir.z >= 0) {
         reflectionPos = vec2(0.0f, 0.0f);
         return;
     }
 
-    vec4 viewRayStart = view * vec4(worldPosition, 1.0);
+    vec4 viewRayStart = camera_getViewMat() * vec4(worldPosition, 1.0);
     float viewRayLength = (viewRayStart.z + viewRayDir.z * cameraZFar) > - cameraZNear ? (-cameraZNear - viewRayStart.z) / viewRayDir.z : cameraZFar;
     vec3 viewRayEnd = viewRayStart.xyz + viewRayDir * viewRayLength;
 
-    vec4 ndcRayStart = projection * viewRayStart;
+    vec4 ndcRayStart = camera_getProjectionMat() * viewRayStart;
     float invWStart = 1 / ndcRayStart.w;
     ndcRayStart *= invWStart;
     vec2 halfScreenDimension = screenDimension * 0.5f;
     vec2 screenRayStart = ndcRayStart.xy * halfScreenDimension + halfScreenDimension;
-    vec4 ndcRayEnd = projection * vec4(viewRayEnd, 1.0f);
+    vec4 ndcRayEnd = camera_getProjectionMat() * vec4(viewRayEnd, 1.0f);
     float invWEnd = 1 / ndcRayEnd.w;
     ndcRayEnd *= invWEnd;
     vec2 screenRayEnd = ndcRayEnd.xy * halfScreenDimension + halfScreenDimension;
@@ -143,7 +139,7 @@ void main() {
                 sceneViewZ = ndcDepthToViewZ(ndcDepth);
             }
 
-            reflectionPos = sceneViewZ - curViewRayZ > 2.4f ? vec2(0.0f, 0.0f) : uv;
+            reflectionPos = uv;
             break;
         }
     }

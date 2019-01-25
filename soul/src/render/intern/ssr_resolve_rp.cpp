@@ -10,6 +10,9 @@ namespace Soul {
 
 		shader = GLExt::ProgramCreate(RenderAsset::ShaderFile::ssrResolve);
 
+		GLuint sceneDataBlockIndexPredepth = glGetUniformBlockIndex(shader, RenderConstant::CAMERA_DATA_NAME);
+		glUniformBlockBinding(shader, sceneDataBlockIndexPredepth, RenderConstant::CAMERA_DATA_BINDING_POINT);
+
 		reflectionPosBufferLoc = glGetUniformLocation(shader, "reflectionPosBuffer");
 		lightBufferLoc = glGetUniformLocation(shader, "lightBuffer");
 		renderMap1Loc = glGetUniformLocation(shader, "renderMap1");
@@ -21,8 +24,6 @@ namespace Soul {
 		voxelLightBufferLoc = glGetUniformLocation(shader, "voxelLightBuffer");
 
 		screenDimensionLoc = glGetUniformLocation(shader, "screenDimension");
-		cameraPositionLoc = glGetUniformLocation(shader, "cameraPosition");
-		invProjectionViewLoc = glGetUniformLocation(shader, "invProjectionView");
 
 		voxelFrustumResoLoc = glGetUniformLocation(shader, "voxelFrustumReso");
 		voxelFrustumHalfSpanLoc = glGetUniformLocation(shader, "voxelFrustumHalfSpan");
@@ -81,8 +82,6 @@ namespace Soul {
 		glBindTexture(GL_TEXTURE_3D, db.voxelGIBuffer.lightVoxelTex);
 
 		glUniform2f(screenDimensionLoc, db.targetWidthPx, db.targetHeightPx);
-		glUniform3f(cameraPositionLoc, db.camera.position.x,
-					db.camera.position.y, db.camera.position.z);
 
 		glUniform1i(voxelFrustumResoLoc, db.voxelGIConfig.resolution);
 		glUniform1f(voxelFrustumHalfSpanLoc, db.voxelGIConfig.halfSpan);
@@ -90,12 +89,6 @@ namespace Soul {
 		glUniform1f(voxelBiasLoc, db.voxelGIConfig.bias);
 		glUniform1f(voxelDiffuseMultiplierLoc, db.voxelGIConfig.diffuseMultiplier);
 		glUniform1f(voxelSpecularMultiplierLoc, db.voxelGIConfig.specularMultiplier);
-
-		Mat4 viewMat = mat4View(db.camera.position, db.camera.position +
-			db.camera.direction, db.camera.up);
-		Mat4 projectionViewMat = db.camera.projection * viewMat;
-		Mat4 invProjectionViewMat = mat4Inverse(projectionViewMat);
-		glUniformMatrix4fv(invProjectionViewLoc, 1, GL_TRUE, (const GLfloat*)invProjectionViewMat.elem);
 
 		glViewport(0, 0, db.targetWidthPx, db.targetHeightPx);
 		glBindVertexArray(db.quadVAO);

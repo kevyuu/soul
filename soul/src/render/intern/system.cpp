@@ -22,10 +22,10 @@ namespace Soul {
         db.renderPassList.init(8);
 
         // setup scene ubo
-        glGenBuffers(1, &db.sceneDataUBOHandle);
-        glBindBuffer(GL_UNIFORM_BUFFER, db.sceneDataUBOHandle);
-        glBufferData(GL_UNIFORM_BUFFER, sizeof(SceneDataUBO), NULL, GL_DYNAMIC_DRAW);
-        glBindBufferBase(GL_UNIFORM_BUFFER, RenderConstant::SCENE_DATA_BINDING_POINT, db.sceneDataUBOHandle);
+        glGenBuffers(1, &db.cameraDataUBOHandle);
+        glBindBuffer(GL_UNIFORM_BUFFER, db.cameraDataUBOHandle);
+        glBufferData(GL_UNIFORM_BUFFER, sizeof(CameraDataUBO), NULL, GL_DYNAMIC_DRAW);
+        glBindBufferBase(GL_UNIFORM_BUFFER, RenderConstant::CAMERA_DATA_BINDING_POINT, db.cameraDataUBOHandle);
 
         // setup light ubo
         glGenBuffers(1, &db.lightDataUBOHandle);
@@ -648,7 +648,7 @@ namespace Soul {
         brdfMapRP.shutdown(_database);
 		voxelizeRP.shutdown(_database);
 
-		glDeleteBuffers(1, &db.sceneDataUBOHandle);
+		glDeleteBuffers(1, &db.cameraDataUBOHandle);
 		glDeleteBuffers(1, &db.lightDataUBOHandle);
 
     }
@@ -1073,10 +1073,16 @@ namespace Soul {
 
         RenderDatabase &db = _database;
 
-        db.sceneDataUBO.projection = mat4Transpose(db.camera.projection);
+        db.cameraDataUBO.projection = mat4Transpose(db.camera.projection);
         Mat4 viewMat = mat4View(db.camera.position, db.camera.position +
                                                     db.camera.direction, db.camera.up);
-        db.sceneDataUBO.view = mat4Transpose(viewMat);
+        db.cameraDataUBO.view = mat4Transpose(viewMat);
+		Mat4 projectionView = db.camera.projection * viewMat;
+		db.cameraDataUBO.projectionView = mat4Transpose(projectionView);
+		Mat4 invProjectionView = mat4Inverse(projectionView);
+		db.cameraDataUBO.invProjectionView = mat4Transpose(invProjectionView);
+
+		db.cameraDataUBO.position = db.camera.position;
 
         float cameraFar = db.camera.perspective.zFar;
         float cameraNear = db.camera.perspective.zNear;
@@ -1104,8 +1110,8 @@ namespace Soul {
 
         }
 
-        glBindBuffer(GL_UNIFORM_BUFFER, db.sceneDataUBOHandle);
-        glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(SceneDataUBO), &db.sceneDataUBO);
+        glBindBuffer(GL_UNIFORM_BUFFER, db.cameraDataUBOHandle);
+        glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(CameraDataUBO), &db.cameraDataUBO);
 
         glBindBuffer(GL_UNIFORM_BUFFER, db.lightDataUBOHandle);
         glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(LightDataUBO), &db.lightDataUBO);
