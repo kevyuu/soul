@@ -25,7 +25,7 @@ void main() {
 **********************************************************************/
 #ifdef FRAGMENT_SHADER
 
-#define MAX_STEP 128
+#define MAX_STEP 32
 
 uniform sampler2D renderMap1;
 uniform sampler2D renderMap2;
@@ -98,7 +98,7 @@ void main() {
     vec2 screenRayStep = normalize(screenRayDelta);
     screenRayStep = screenRayStep / max(abs(screenRayStep.x), abs(screenRayStep.y));
 
-    screenRayStep *= 20;
+    screenRayStep *= 64;
 
     float fracStep = length(screenRayStep) / length(screenRayDelta);
     float invWStep = (invWEnd - invWStart) * fracStep;
