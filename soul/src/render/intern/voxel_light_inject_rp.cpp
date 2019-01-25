@@ -48,7 +48,11 @@ namespace Soul {
 		glUniform1i(lightVoxelBufferLoc, 1);
 		glBindImageTexture(1, db.voxelGIBuffer.lightVoxelTex, 0, false, 0, GL_WRITE_ONLY, GL_RGBA16F);
 
-		glDispatchCompute(voxelFrustumReso, voxelFrustumReso, voxelFrustumReso);
+		SOUL_PROFILE_RANGE_PUSH("dispatchCompute()");
+		SOUL_LOG(SOUL_LOG_VERBOSE_INFO, "voxelFrustumReso = %d", voxelFrustumReso);
+		glDispatchCompute(voxelFrustumReso / 8, voxelFrustumReso / 8, voxelFrustumReso / 8);
+		SOUL_PROFILE_RANGE_POP();
+
 
 		SOUL_ASSERT(0, GLExt::IsErrorCheckPass(), "");
 

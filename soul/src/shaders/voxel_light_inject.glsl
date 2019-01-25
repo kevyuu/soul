@@ -6,7 +6,7 @@ light.lib.glsl
 // COMPUTE_SHADER
 **********************************************************************/
 #ifdef COMPUTE_SHADER
-layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
+layout(local_size_x = 8, local_size_y = 8, local_size_z = 8) in;
 
 struct AABB {
 	vec3 center;
@@ -40,13 +40,12 @@ float calculateDirLightVisibility(
 	vec3 frustumMax = voxelFrustumAABB.center + vec3(voxelFrustumAABB.halfSpan);
 	vec3 frustumMin = voxelFrustumAABB.center - vec3(voxelFrustumAABB.halfSpan);
 
-	float dst = 3.0f * voxelSize;
+	float dst = 2.0f * voxelSize;
 	vec3 samplePos = position + direction * dst * -1.0f;
 
 	float occupancy = 0.0f;
 	while (all(lessThanEqual(samplePos, frustumMax)) && all(greaterThanEqual(samplePos, frustumMin))) {
 		ivec3 voxelIdx = worldToVoxelIdx(samplePos, frustumMin, voxelSize);
-		vec3 voxelUV = vec3(voxelIdx) / vec3(voxelFrustumReso);
 		float alpha = texelFetch(voxelAlbedoBuffer, voxelIdx, 0).a > 0.0f ? 1.0f : 0.0f;
 		if (alpha == 1.0f) return 0.0f;
 
@@ -59,7 +58,8 @@ float calculateDirLightVisibility(
 }
 
 void main() {
-	ivec3 voxelIdx = ivec3(gl_WorkGroupID.xyz);
+	
+	ivec3 voxelIdx = ivec3(gl_GlobalInvocationID.xyz);
 	vec3 voxelUV = voxelIdx / vec3(gl_NumWorkGroups);
 	vec4 albedo = texelFetch(voxelAlbedoBuffer, voxelIdx, 0);
 	vec4 normal = normalize(texelFetch(voxelNormalBuffer, voxelIdx, 0) * 2.0f - 1.0f);
