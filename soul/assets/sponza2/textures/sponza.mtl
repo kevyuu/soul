@@ -150,11 +150,60 @@ newmtl floor
 	Kd 0.5880 0.5880 0.5880
 	Ks 0.0000 0.0000 0.0000
 	Ke 0.0000 0.0000 0.0000
+	map_Pm Titanium-Scuffed_metallic.png
+	map_Kd Titanium-Scuffed_basecolor.png
+	norm Titanium-Scuffed_normal.png
+	bump Titanium-Scuffed_normal.png
+	map_Pr Titanium-Scuffed_roughness.png
+
+newmtl scuffed_titanium
+	map_Pm Titanium-Scuffed_metallic.png
+	map_Kd Titanium-Scuffed_basecolor.png
+	norm Titanium-Scuffed_normal.png
+	bump Titanium-Scuffed_normal.png
+	map_Pr Titanium-Scuffed_roughness.png
+	
+newmtl mahogany
 	map_Pm Dielectric_metallic.tga
-	map_Kd Sponza_Floor_diffuse.tga
-	norm Sponza_Floor_normal.tga
-	bump Sponza_Floor_normal.tga
-	map_Pr Sponza_Floor_roughness.tga
+	map_Kd mahogfloor_basecolor.png
+	norm mahogfloor_normal.png
+	bump mahogfloor_normal.png
+	map_Pr mahogfloor_roughness.png
+
+newmtl darktiles
+	map_Pm darktiles1_metallic.png
+	map_Kd darktiles1_basecolor.png
+	norm darktiles1_normal-DX.png
+	bump darktiles1_normal-DX.png
+	map_Pr darktiles1_roughness.png
+
+newmtl blue_bathroom_tile
+	map_Pm bathroomtile2-metalness.png
+	map_Kd bathroomtile2-basecolor.png
+	norm bathroomtile2-normal-dx.png
+	bump bathroomtile2-normal-dx.png
+	map_Pr bathroomtile2-roughness.png
+
+newmtl waterwornstone1
+	map_Pm waterwornstone1_Metallic.png
+	map_Kd waterwornstone1_Base_Color.png
+	norm waterwornstone1_Normal.png
+	bump waterwornstone1_Normal.png
+	map_Pr waterwornstone1_Roughness.png
+
+newmtl pockedconcrete1
+	map_Pm Dielectric_metallic.tga
+	map_Kd pockedconcrete1-albedo.png
+	norm pockedconcrete1-normal.png
+	bump pockedconcrete1-normal.png
+	map_Pr pockedconcrete1-roughness.png
+
+newmtl oakfloor
+	map_Pm Dielectric_metallic.tga
+	map_Kd oakfloor_basecolor.png
+	norm oakfloor_normal.png
+	bump oakfloor_normal.png
+	map_Pr oakfloor_roughness.png
 
 newmtl column_c
 	Ns 10.0000
