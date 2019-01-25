@@ -604,6 +604,8 @@ namespace Soul {
 
         static constexpr int MAX_DIR_LIGHT = 4;
 
+		uint32 frameIdx;
+
         uint32 targetWidthPx;
         uint32 targetHeightPx;
 

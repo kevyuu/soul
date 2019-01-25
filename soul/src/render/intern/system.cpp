@@ -12,6 +12,8 @@ namespace Soul {
     void RenderSystem::init(const RenderSystem::Config &config) {
 
         RenderDatabase& db = _database;
+		db.frameIdx = 0;
+
         db.targetWidthPx = config.targetWidthPx;
         db.targetHeightPx = config.targetHeightPx;
 
@@ -759,6 +761,7 @@ namespace Soul {
     }
 
     void RenderSystem::render(const Camera& camera) {
+		_database.frameIdx++;
         _database.camera = camera;
         _updateShadowMatrix();
         _flushUBO();
