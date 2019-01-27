@@ -32,12 +32,22 @@ namespace Soul {
         glBindBuffer(GL_UNIFORM_BUFFER, db.lightDataUBOHandle);
         glBufferData(GL_UNIFORM_BUFFER, sizeof(LightDataUBO), NULL, GL_DYNAMIC_DRAW);
         glBindBufferBase(GL_UNIFORM_BUFFER, RenderConstant::LIGHT_DATA_BINDING_POINT, db.lightDataUBOHandle);
-        glBindBuffer(GL_UNIFORM_BUFFER, 0);
+        
+		// setup voxel gi ubo
+		glGenBuffers(1, &db.voxelGIDataUBOHandle);
+		glBindBuffer(GL_UNIFORM_BUFFER, db.voxelGIDataUBOHandle);
+		glBufferData(GL_UNIFORM_BUFFER, sizeof(VoxelGIDataUBO), NULL, GL_DYNAMIC_DRAW);
+		glBindBufferBase(GL_UNIFORM_BUFFER, RenderConstant::VOXEL_GI_DATA_BINDING_POINT, db.voxelGIDataUBOHandle);
+
+		glBindBuffer(GL_UNIFORM_BUFFER, 0);
+
 
         db.dirLightCount = 0;
 
 		shadowAtlasUpdateConfig(config.shadowAtlasConfig);
 		voxelGIUpdateConfig(config.voxelGIConfig);
+
+		_flushUBO();
 
         panoramaToCubemapRP.init(_database);
         diffuseEnvmapFilterRP.init(_database);
@@ -59,6 +69,7 @@ namespace Soul {
 		db.renderPassList.pushBack(new VoxelLightInjectRP());
 		db.renderPassList.pushBack(new VoxelMipmapGenRP());
 		db.renderPassList.pushBack(new SSRResolveRP());
+		db.renderPassList.pushBack(new VoxelDebugRP());
 
         for (int i = 0; i < db.renderPassList.getSize(); i++) {
             db.renderPassList.get(i)->init(db);
@@ -437,6 +448,7 @@ namespace Soul {
 
 	void RenderSystem::voxelGIUpdateConfig(const VoxelGIConfig& config) {
 		_database.voxelGIConfig = config;
+		_flushVoxelGIUBO();
 		_voxelGIBufferInit();
 	}
 
@@ -1115,6 +1127,21 @@ namespace Soul {
 
         glBindBuffer(GL_UNIFORM_BUFFER, db.lightDataUBOHandle);
         glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(LightDataUBO), &db.lightDataUBO);
+
+		_flushVoxelGIUBO();
     }
 
+	void RenderSystem::_flushVoxelGIUBO() {
+		RenderDatabase& db = _database;
+
+		db.voxelGIDataUBO.frustumCenter = db.voxelGIConfig.center;
+		db.voxelGIDataUBO.resolution = db.voxelGIConfig.resolution;
+		db.voxelGIDataUBO.bias = db.voxelGIConfig.bias;
+		db.voxelGIDataUBO.frustumHalfSpan = db.voxelGIConfig.halfSpan;
+		db.voxelGIDataUBO.diffuseMultiplier = db.voxelGIConfig.diffuseMultiplier;
+		db.voxelGIDataUBO.specularMultiplier = db.voxelGIConfig.specularMultiplier;
+
+		glBindBuffer(GL_UNIFORM_BUFFER, db.voxelGIDataUBOHandle);
+		glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(VoxelGIDataUBO), &db.voxelGIDataUBO);
+	}
 }

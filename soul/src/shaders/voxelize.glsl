@@ -1,5 +1,6 @@
 #ifdef LIB_SHADER
 math.lib.glsl
+voxel_gi.lib.glsl
 #endif
 
 /**********************************************************************
@@ -51,14 +52,13 @@ out GS_OUT{
 	vec3 voxelIdx;
 } gs_out;
 
-uniform vec3 voxelFrustumCenter;
-uniform float voxelFrustumHalfSpan;
-uniform int voxelFrustumReso;
 uniform mat4 projectionView[3];
 uniform mat4 inverseProjectionView[3];
 
 void main() {
 	
+	voxel_gi_init();
+
 	vec3 side10 = (gl_in[0].gl_Position - gl_in[1].gl_Position).xyz;
 	vec3 side21 = (gl_in[1].gl_Position - gl_in[2].gl_Position).xyz;
 	vec3 side02 = (gl_in[2].gl_Position - gl_in[0].gl_Position).xyz;
@@ -89,7 +89,7 @@ void main() {
 		texCoord[i] = vs_out[i].texCoord;
 	}
 
-	vec2 halfVoxelPxSize = vec2(1.0f / float(voxelFrustumReso));
+	vec2 halfVoxelPxSize = vec2(1.0f / float(voxel_gi_getResolution()));
 
 	vec4 triangleAABB;
 	triangleAABB.xy = outVertex[0].xy;
@@ -153,16 +153,13 @@ void main() {
 	outVertex[1].w = 1.0f;
 	outVertex[2].w = 1.0f;
 
-	vec3 voxelMin = voxelFrustumCenter - vec3(voxelFrustumHalfSpan);
-
 	for (int i = 0; i < 3; i++) {
 		gl_Position = outVertex[i];
 
 		vec4 worldPosition = inverseProjectionView[dominantAxis] * outVertex[i];
 		worldPosition /= worldPosition.w;
-
 		gs_out.ndcPosition = outVertex[i].xyz;
-		gs_out.voxelIdx = vec3((worldPosition.xyz - voxelMin) / (2 * voxelFrustumHalfSpan) * voxelFrustumReso);
+		gs_out.voxelIdx = voxel_gi_getTexCoord(worldPosition.xyz) * voxel_gi_getResolution();
 		gs_out.worldNormal = vs_out[i].worldNormal;
 		gs_out.texCoord = texCoord[i];
 		gs_out.triangleAABB = triangleAABB;
@@ -197,9 +194,6 @@ in GS_OUT{
 
 layout(r32ui) uniform volatile coherent uimage3D voxelAlbedoBuffer;
 layout(r32ui) uniform volatile coherent uimage3D voxelNormalBuffer;
-uniform vec3 voxelFrustumCenter;
-uniform int voxelFrustumReso;
-uniform float voxelFrustumHalfSpan;
 uniform Material material;
 
 vec4 convRGBA8ToVec4(uint val) {
@@ -217,7 +211,7 @@ uint convVec4ToRGBA8(vec4 val) {
 }
 void imageAtomicRGBA8Avg(layout(r32ui) volatile coherent uimage3D imgUI, ivec3 coords, vec4 val) {
 	
-	int bound = voxelFrustumReso - 1;
+	int bound = voxel_gi_getResolution() - 1;
 	if (coords.x > bound || coords.y > bound || coords.z > bound) {
 		return;
 	}
@@ -241,13 +235,14 @@ void imageAtomicRGBA8Avg(layout(r32ui) volatile coherent uimage3D imgUI, ivec3 c
 }
 
 void main() {
+	
+	voxel_gi_init();
 
 	if (any(lessThan(gs_out.ndcPosition.xy, gs_out.triangleAABB.xy)) || 
 		any(greaterThan(gs_out.ndcPosition.xy, gs_out.triangleAABB.zw))) {
 		discard;
 	}
 
-	vec3 voxelMin = voxelFrustumCenter - vec3(voxelFrustumHalfSpan);
 	ivec3 voxelIdx = ivec3(gs_out.voxelIdx);
 	vec3 albedo = pow(texture(material.albedoMap, gs_out.texCoord).rgb, vec3(2.2));
 	vec3 normal = gs_out.worldNormal;

@@ -186,11 +186,17 @@ namespace Soul {
     //-------------------------------------------
 
     struct RenderConstant {
-        static constexpr int CAMERA_DATA_BINDING_POINT = 0;
+        
+		static constexpr int CAMERA_DATA_BINDING_POINT = 0;
 		static constexpr char CAMERA_DATA_NAME[] = "CameraData";
-        static constexpr int LIGHT_DATA_BINDING_POINT = 1;
+
+		static constexpr int LIGHT_DATA_BINDING_POINT = 1;
 		static constexpr char LIGHT_DATA_NAME[] = "LightData";
 
+		static constexpr int VOXEL_GI_DATA_BINDING_POINT = 2;
+		static constexpr char VOXEL_GI_DATA_NAME[] = "VoxelGIData";
+
+		
         static constexpr int MAX_DIRECTIONAL_LIGHTS = 4;
     };
 
@@ -230,6 +236,15 @@ namespace Soul {
         int dirLightCount;
 		float pad[3];
     };
+
+	struct VoxelGIDataUBO {
+		Vec3f frustumCenter;
+		int resolution;
+		float frustumHalfSpan;
+		float bias;
+		float diffuseMultiplier;
+		float specularMultiplier;
+	};
 
     static const GLuint s_formatMap[PF_COUNT] = {
             GL_RED,
@@ -369,13 +384,6 @@ namespace Soul {
 
     	GLint screenDimensionLoc;
 
-		GLint voxelFrustumResoLoc;
-		GLint voxelFrustumHalfSpanLoc;
-		GLint voxelFrustumCenterLoc;
-		GLint voxelBiasLoc;
-		GLint voxelDiffuseMultiplierLoc;
-		GLint voxelSpecularMultiplierLoc;
-
     	void init(RenderDatabase& database);
     	void execute(RenderDatabase& database);
     	void shutdown(RenderDatabase& database);
@@ -480,9 +488,6 @@ namespace Soul {
 
 		GLint voxelAlbedoBufferLoc;
 		GLint voxelNormalBufferLoc;
-		GLint voxelFrustumCenterLoc;
-		GLint voxelFrustumResoLoc;
-		GLint voxelFrustumHalfSpanLoc;
 
 		void init(RenderDatabase& database);
 		void execute(RenderDatabase& database);
@@ -494,9 +499,6 @@ namespace Soul {
 		GLuint program;
 
 		GLint voxelBufferLoc;
-		GLint voxelFrustumResoLoc;
-		GLint voxelFrustumCenterLoc;
-		GLint voxelFrustumHalfSpanLoc;
 
 		GLuint dummyVAO;
 
@@ -507,10 +509,6 @@ namespace Soul {
 
 	struct VoxelLightInjectRP : public RenderPass {
 		GLuint program;
-
-		GLint voxelFrustumCenterLoc;
-		GLint voxelFrustumHalfSpanLoc;
-		GLint voxelFrustumResoLoc;
 
 		GLint voxelAlbedoBufferLoc;
 		GLint voxelNormalBufferLoc;
@@ -631,6 +629,9 @@ namespace Soul {
 
         GLuint lightDataUBOHandle;
         LightDataUBO lightDataUBO;
+
+		GLuint voxelGIDataUBOHandle;
+		VoxelGIDataUBO voxelGIDataUBO;
 
         Camera camera;
 		Camera prevCamera;

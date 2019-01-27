@@ -6,15 +6,15 @@
 namespace Soul {
 
 	void VoxelDebugRP::init(RenderDatabase& database) {
+
 		program = GLExt::ProgramCreate(RenderAsset::ShaderFile::voxel_debug);
 
 		GLuint sceneDataBlockIndex = glGetUniformBlockIndex(program, RenderConstant::CAMERA_DATA_NAME);
 		glUniformBlockBinding(program, sceneDataBlockIndex, RenderConstant::CAMERA_DATA_BINDING_POINT);
 
+		GLExt::UBOBind(program, RenderConstant::VOXEL_GI_DATA_NAME, RenderConstant::VOXEL_GI_DATA_BINDING_POINT);
+
 		voxelBufferLoc = glGetUniformLocation(program, "voxelBuffer");
-		voxelFrustumResoLoc = glGetUniformLocation(program, "voxelFrustumReso");
-		voxelFrustumCenterLoc = glGetUniformLocation(program, "voxelFrustumCenter");
-		voxelFrustumHalfSpanLoc = glGetUniformLocation(program, "voxelFrustumHalfSpan");
 
 		SOUL_ASSERT(0, GLExt::IsErrorCheckPass(), "");
 
@@ -36,10 +36,6 @@ namespace Soul {
 		int mipLevel = 0;
 		int frac = (int)pow(2, mipLevel);
 		glBindImageTexture(0, db.voxelGIBuffer.lightVoxelTex, mipLevel, true, 0, GL_READ_ONLY, GL_RGBA16F);
-
-		glUniform1i(voxelFrustumResoLoc, db.voxelGIConfig.resolution / frac);
-		glUniform3fv(voxelFrustumCenterLoc, 1, (GLfloat*)&db.voxelGIConfig.center);
-		glUniform1f(voxelFrustumHalfSpanLoc, db.voxelGIConfig.halfSpan);
 
 		glBindVertexArray(dummyVAO);
 		glClear(GL_DEPTH_BUFFER_BIT);

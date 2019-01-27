@@ -9,6 +9,8 @@ namespace Soul {
 	void VoxelizeRP::init(RenderDatabase& database) {
 		program = GLExt::ProgramCreate(RenderAsset::ShaderFile::voxelize);
 
+		GLExt::UBOBind(program, RenderConstant::VOXEL_GI_DATA_NAME, RenderConstant::VOXEL_GI_DATA_BINDING_POINT);
+
 		projectionViewLoc[0] = glGetUniformLocation(program, "projectionView[0]");
 		projectionViewLoc[1] = glGetUniformLocation(program, "projectionView[1]");
 		projectionViewLoc[2] = glGetUniformLocation(program, "projectionView[2]");
@@ -24,9 +26,6 @@ namespace Soul {
 		roughnessMapLoc = glGetUniformLocation(program, "material. roughnessMapLoc");
 		voxelAlbedoBufferLoc = glGetUniformLocation(program, "voxelAlbedoBuffer");
 		voxelNormalBufferLoc = glGetUniformLocation(program, "voxelNormalBuffer");
-		voxelFrustumCenterLoc = glGetUniformLocation(program, "voxelFrustumCenter");
-		voxelFrustumResoLoc = glGetUniformLocation(program, "voxelFrustumReso");
-		voxelFrustumHalfSpanLoc = glGetUniformLocation(program, "voxelFrustumHalfSpan");
 
 		SOUL_ASSERT(0, GLExt::IsErrorCheckPass(), "OpenGL Error");
 
@@ -83,10 +82,6 @@ namespace Soul {
 		}
 
 		int voxelFrustumReso = db.voxelGIConfig.resolution;
-		
-		glUniform3fv(voxelFrustumCenterLoc, 1, (GLfloat*)&db.voxelGIConfig.center);
-		glUniform1i(voxelFrustumResoLoc, voxelFrustumReso);
-		glUniform1f(voxelFrustumHalfSpanLoc, db.voxelGIConfig.halfSpan);
 
 		glUniform1i(voxelAlbedoBufferLoc, 6);
 		glBindImageTexture(6, db.voxelGIBuffer.gVoxelAlbedoTex, 0, true, 0, GL_READ_WRITE, GL_R32UI);

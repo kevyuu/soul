@@ -13,6 +13,8 @@ namespace Soul {
 		GLuint sceneDataBlockIndexPredepth = glGetUniformBlockIndex(shader, RenderConstant::CAMERA_DATA_NAME);
 		glUniformBlockBinding(shader, sceneDataBlockIndexPredepth, RenderConstant::CAMERA_DATA_BINDING_POINT);
 
+		GLExt::UBOBind(shader, RenderConstant::VOXEL_GI_DATA_NAME, RenderConstant::VOXEL_GI_DATA_BINDING_POINT);
+
 		reflectionPosBufferLoc = glGetUniformLocation(shader, "reflectionPosBuffer");
 		lightBufferLoc = glGetUniformLocation(shader, "lightBuffer");
 		renderMap1Loc = glGetUniformLocation(shader, "renderMap1");
@@ -24,13 +26,6 @@ namespace Soul {
 		voxelLightBufferLoc = glGetUniformLocation(shader, "voxelLightBuffer");
 
 		screenDimensionLoc = glGetUniformLocation(shader, "screenDimension");
-
-		voxelFrustumResoLoc = glGetUniformLocation(shader, "voxelFrustumReso");
-		voxelFrustumHalfSpanLoc = glGetUniformLocation(shader, "voxelFrustumHalfSpan");
-		voxelFrustumCenterLoc = glGetUniformLocation(shader, "voxelFrustumCenter");
-		voxelBiasLoc = glGetUniformLocation(shader, "voxelBias");
-		voxelDiffuseMultiplierLoc = glGetUniformLocation(shader, "voxelDiffuseMultiplier");
-		voxelSpecularMultiplierLoc = glGetUniformLocation(shader, "voxelSpecularMultiplier");
 
 		GLExt::ErrorCheck("SSRResolveRP::init");
 	}
@@ -82,13 +77,6 @@ namespace Soul {
 		glBindTexture(GL_TEXTURE_3D, db.voxelGIBuffer.lightVoxelTex);
 
 		glUniform2f(screenDimensionLoc, db.targetWidthPx, db.targetHeightPx);
-
-		glUniform1i(voxelFrustumResoLoc, db.voxelGIConfig.resolution);
-		glUniform1f(voxelFrustumHalfSpanLoc, db.voxelGIConfig.halfSpan);
-		glUniform3fv(voxelFrustumCenterLoc, 1, (GLfloat*)&db.voxelGIConfig.center);
-		glUniform1f(voxelBiasLoc, db.voxelGIConfig.bias);
-		glUniform1f(voxelDiffuseMultiplierLoc, db.voxelGIConfig.diffuseMultiplier);
-		glUniform1f(voxelSpecularMultiplierLoc, db.voxelGIConfig.specularMultiplier);
 
 		glViewport(0, 0, db.targetWidthPx, db.targetHeightPx);
 		glBindVertexArray(db.quadVAO);

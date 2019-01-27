@@ -13,9 +13,8 @@ namespace Soul {
 		GLuint lightDataBlockIndex = glGetUniformBlockIndex(program, RenderConstant::LIGHT_DATA_NAME);
 		glUniformBlockBinding(program, lightDataBlockIndex, RenderConstant::LIGHT_DATA_BINDING_POINT);
 
-		voxelFrustumCenterLoc = glGetUniformLocation(program, "voxelFrustumCenter");
-		voxelFrustumHalfSpanLoc = glGetUniformLocation(program, "voxelFrustumHalfSpan");
-		voxelFrustumResoLoc = glGetUniformLocation(program, "voxelFrustumReso");
+		GLExt::UBOBind(program, RenderConstant::VOXEL_GI_DATA_NAME, RenderConstant::VOXEL_GI_DATA_BINDING_POINT);
+
 		voxelAlbedoBufferLoc = glGetUniformLocation(program, "voxelAlbedoBuffer");
 		voxelNormalBufferLoc = glGetUniformLocation(program, "voxelNormalBuffer");
 		lightVoxelBufferLoc = glGetUniformLocation(program, "lightVoxelBuffer");
@@ -32,10 +31,6 @@ namespace Soul {
 		glUseProgram(program);
 
 		int voxelFrustumReso = db.voxelGIConfig.resolution;
-
-		glUniform1i(voxelFrustumResoLoc, voxelFrustumReso);
-		glUniform3fv(voxelFrustumCenterLoc, 1, (GLfloat*)&db.voxelGIConfig.center);
-		glUniform1f(voxelFrustumHalfSpanLoc, db.voxelGIConfig.halfSpan);
 
 		glUniform1i(voxelAlbedoBufferLoc, 0);
 		glActiveTexture(GL_TEXTURE0);

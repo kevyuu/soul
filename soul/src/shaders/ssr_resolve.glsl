@@ -3,6 +3,7 @@ math.lib.glsl
 brdf.lib.glsl
 sampling.lib.glsl
 camera.lib.glsl
+voxel_gi.lib.glsl
 #endif
 
 /**********************************************************************
@@ -38,17 +39,11 @@ uniform sampler2D renderMap3;
 uniform sampler2D renderMap4;
 uniform sampler2D depthMap;
 uniform sampler2D FGMap;
+
 uniform sampler3D voxelLightBuffer;
 
 uniform vec2 screenDimension;
 uniform vec3 cameraPosition;
-
-uniform int voxelFrustumReso;
-uniform float voxelFrustumHalfSpan;
-uniform vec3 voxelFrustumCenter;
-uniform float voxelBias;
-uniform float voxelDiffuseMultiplier;
-uniform float voxelSpecularMultiplier;
 
 in VS_OUT {
 	vec2 texCoord;
@@ -56,86 +51,6 @@ in VS_OUT {
 
 out vec3 reflection;
 
-vec3 voxelConeTrace(sampler3D voxelLightBuffer, 
-	vec3 position, vec3 direction, float coneTangent,
-	float voxelSize, 
-	vec3 voxelFrustumMax, 
-	vec3 voxelFrustumMin) {
-	vec3 startPos = position + direction * voxelBias * voxelSize;
-
-	vec3 color = vec3(0.0f);
-	float alpha = 0.0f;
-	vec3 samplePos = startPos;
-	while (all(lessThanEqual(samplePos, voxelFrustumMax)) && all(greaterThanEqual(samplePos, voxelFrustumMin)) && alpha < 0.99f) {
-		float radius = max(voxelSize / 2, coneTangent * length(samplePos - position));
-		float mip = min(log2(2 * radius / voxelSize), 7);
-
-		vec3 samplePosUVW = (samplePos - voxelFrustumMin) / (voxelFrustumMax - voxelFrustumMin);
-		vec4 sampleColor = textureLod(voxelLightBuffer, samplePosUVW, mip);
-		color += (1 - alpha) * sampleColor.rgb;
-		alpha += (1 - alpha) * sampleColor.a;
-
-		samplePos += radius * direction;
-	}
-	
-	return color + (1 - alpha) * vec3(0.529f, 0.808f, 0.922f) * 0.1f;
-
-}
-
-const vec3 diffuseConeDirections[] =
-{
-	vec3(0.0f, 1.0f, 0.0f),
-	vec3(0.0f, 0.5f, 0.866025f),
-	vec3(0.823639f, 0.5f, 0.267617f),
-	vec3(0.509037f, 0.5f, -0.7006629f),
-	vec3(-0.50937f, 0.5f, -0.7006629f),
-	vec3(-0.823639f, 0.5f, 0.267617f)
-};
-
-const float diffuseConeWeights[] =
-{
-	M_PI / 4.0f,
-	3.0f * M_PI / 20.0f,
-	3.0f * M_PI / 20.0f,
-	3.0f * M_PI / 20.0f,
-	3.0f * M_PI / 20.0f,
-	3.0f * M_PI / 20.0f,
-};
-
-vec3 voxelCalculateDiffuseIrradiance(sampler3D voxelLightBuffer,
-	vec3 position,
-	vec3 normal,
-	float voxelSize,
-	vec3 voxelFrustumMax,
-	vec3 voxelFrustumMin) {
-
-	vec3 ref = vec3(0.0f, 1.0f, 0.0f);
-
-	if (abs(dot(normal, ref)) == 1.0f) {
-		ref = vec3(0.0f, 0.0f, 1.0f);
-	}
-
-	vec3 tangent = cross(normal, ref);
-	vec3 bitangent = cross(normal, tangent);
-		
-	mat3 rotationMat = mat3(tangent, normal, bitangent);
-
-	vec3 color = vec3(0.0f);
-	for (int i = 0; i < 6; i++) {
-		vec3 L = normalize(rotationMat * diffuseConeDirections[i]);
-		color += voxelConeTrace(voxelLightBuffer,
-			position + normal * voxelSize,
-			L,
-			0.57735f,
-			voxelSize,
-			voxelFrustumMax,
-			voxelFrustumMin) * max(dot(normal, L), 0.0f) ;
-	}
-
-	color *= 2 * M_PI / 6;
-
-	return color;
-}
 vec3 getSpecularDominantDir(vec3 N, vec3 R, float roughness)
 {
 	float smoothness = clamp(1 - roughness, 0.0f, 1.0f);
@@ -161,6 +76,8 @@ float cone_cosine(float r)
 }
 
 void main() {
+
+	voxel_gi_init();
 
     const vec2[4] sampleOffsets = vec2[](
         vec2(0, 0),
@@ -252,34 +169,24 @@ void main() {
 
 	reflectionAlpha = numValidSample == 4 ? reflectionAlpha : 0.0f;
 
-	vec3 voxelFrustumMax = voxelFrustumCenter + vec3(voxelFrustumHalfSpan);
-	vec3 voxelFrustumMin = voxelFrustumCenter - vec3(voxelFrustumHalfSpan);
-	float voxelSize = 2 * voxelFrustumHalfSpan / float(voxelFrustumReso);
-
 	vec3 kD = 1.0f - F;
 
-	vec3 diffuseIndirectColor = voxelDiffuseMultiplier * kD * voxelCalculateDiffuseIrradiance(
+	vec3 diffuseIndirectColor = voxel_gi_getDiffuseMultiplier() * kD * voxel_gi_diffuseConeTrace(
 		voxelLightBuffer,
 		worldPosition,
-		N,
-		voxelSize,
-		voxelFrustumMax,
-		voxelFrustumMin
+		N
 	) * pixelMaterial.albedo / M_PI;
 
 	vec3 L = normalize(getSpecularDominantDir(N, reflect(-V, N), pixelMaterial.roughness));
 
 	vec3 H = normalize((L + V) / 2.0f);
 	float pdf = DistributionGGX(N, H, pixelMaterial.roughness) * max(dot(N, H), 1e-8);
-	vec3 specularIndirectColor = voxelSpecularMultiplier * voxelConeTrace(
+	vec3 specularIndirectColor = voxel_gi_getSpecularMultiplier() * voxel_gi_coneTrace(
 		voxelLightBuffer,
 		worldPosition,
 		L,
-		cone_tan,
-		voxelSize,
-		voxelFrustumMax,
-		voxelFrustumMin
-	) * computeSpecularBRDF(L, V, N, pixelMaterial) * max(dot(N, L), 0.0f) / pdf;
+		cone_tan
+	).xyz * computeSpecularBRDF(L, V, N, pixelMaterial) * max(dot(N, L), 0.0f) / pdf;
 
     vec3 color = directColor + diffuseIndirectColor  + reflectionColor * reflectionAlpha + (1 - reflectionAlpha) * specularIndirectColor;
 

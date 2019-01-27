@@ -1,5 +1,7 @@
 #ifdef LIB_SHADER
 math.lib.glsl
+camera.lib.glsl
+voxel_gi.lib.glsl
 #endif
 
 /**********************************************************************
@@ -7,10 +9,11 @@ math.lib.glsl
 **********************************************************************/
 #ifdef VERTEX_SHADER
 
-uniform int voxelFrustumReso;
-
 void main() {
 
+	voxel_gi_init();
+
+	int voxelFrustumReso = voxel_gi_getResolution();
 	int voxelFrustumResoSqr = voxelFrustumReso * voxelFrustumReso;
 
 	vec3 voxelIdx = vec3(
@@ -32,27 +35,21 @@ layout(points) in;
 layout(triangle_strip, max_vertices = 24) out;
 
 layout(binding=0, rgba16f) uniform readonly image3D voxelBuffer;
-uniform int voxelFrustumReso;
-uniform vec3 voxelFrustumCenter;
-uniform float voxelFrustumHalfSpan;
-
-layout(std140) uniform SceneData{
-	mat4 projection;
-	mat4 view;
-};
 
 out GS_OUT{
 	vec4 color;
 } gs_out;
 
 void main() {
+	
+	voxel_gi_init();
 
 	vec4 color = imageLoad(voxelBuffer, ivec3(gl_in[0].gl_Position.xyz));
 	if (color.a == 0.0f) return;
 	
-	vec3 voxelFrustumMin = voxelFrustumCenter - vec3(voxelFrustumHalfSpan);
-	float voxelSize = float(2 * voxelFrustumHalfSpan) / float(voxelFrustumReso);
-	
+	vec3 voxelFrustumMin = voxel_gi_getFrustumMin();
+	float voxelSize = voxel_gi_getVoxelSize();
+
 	const vec4 cubeVertices[8] = vec4[8]
 	(
 		vec4(0.5f, 0.5f, 0.5f, 0.0f),
@@ -81,7 +78,7 @@ void main() {
 	for (int i = 0; i < 6; i++) {
 		for (int j = 0; j < 4; j++) {
 			vec4 vertexOut = vec4(voxelCenter, 1.0f) + cubeVertices[cubeIndices[i * 4 + j]] * voxelSize;
-			gl_Position = projection * view * vertexOut;
+			gl_Position = camera_getProjectionViewMat() * vertexOut;
 			EmitVertex();
 		}
 		EndPrimitive();

@@ -38,6 +38,8 @@ namespace Soul {
 
 		void FramebufferDelete(GLuint* framebufferHandle);
 
+		void UBOBind(GLuint shader, const char* uboName, const int bindPoint);
+
     }
 }
 

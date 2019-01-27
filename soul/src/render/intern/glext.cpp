@@ -189,4 +189,9 @@ namespace Soul {
 		glDeleteFramebuffers(1, framebufferHandle);
 		*framebufferHandle = 0;
 	}
+
+	void GLExt::UBOBind(GLuint shader, const char* name, const int bindPoint) {
+		GLuint uboIndex = glGetUniformBlockIndex(shader, name);
+		glUniformBlockBinding(shader, uboIndex, bindPoint);
+	}
 }

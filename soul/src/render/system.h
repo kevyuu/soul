@@ -5,8 +5,6 @@ namespace Soul {
 
     struct RenderSystem {
 
-		
-
 		struct ShadowAtlasConfig {
 			int32 resolution;
 			int8 subdivSqrtCount[4] = { 1, 2, 4, 8 };
@@ -72,6 +70,7 @@ namespace Soul {
 
         void _updateShadowMatrix();
         void _flushUBO();
+		void _flushVoxelGIUBO();
         
 		void _utilVAOInit();
 		void _utilVAOCleanup();
