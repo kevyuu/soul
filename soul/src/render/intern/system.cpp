@@ -761,16 +761,49 @@ namespace Soul {
     }
 
     RenderRID RenderSystem::materialCreate(const MaterialSpec& spec) {
-        RenderRID rid = _database.materialBuffer.getSize();
+        
+		RenderRID rid = _database.materialBuffer.getSize();
         _database.materialBuffer.pushBack({
+
                 spec.albedoMap,
                 spec.normalMap,
                 spec.metallicMap,
                 spec.roughnessMap,
+
+				spec.useAlbedoTex,
+				spec.useNormalTex,
+				spec.useMetallicTex,
+				spec.useRoughnessTex,
+
+				spec.albedo,
+				spec.metallic,
+				spec.roughness,
+
                 spec.shaderID
         });
         return rid;
-    }
+    
+	}
+
+	void RenderSystem::materialUpdate(RenderRID rid, const MaterialSpec& spec) {
+		_database.materialBuffer[rid] = {
+			spec.albedoMap,
+			spec.normalMap,
+			spec.metallicMap,
+			spec.roughnessMap,
+
+			spec.useAlbedoTex,
+			spec.useNormalTex,
+			spec.useMetallicTex,
+			spec.useRoughnessTex,
+
+			spec.albedo,
+			spec.metallic,
+			spec.roughness,
+
+			spec.shaderID
+		};
+	}
 
     void RenderSystem::render(const Camera& camera) {
 		_database.frameIdx++;
@@ -790,7 +823,6 @@ namespace Soul {
     }
 
     RenderRID RenderSystem::meshCreate(const Soul::MeshSpec &spec) {
-
 
         GLuint VAO, VBO, EBO;
         glGenVertexArrays(1, &VAO);
@@ -829,7 +861,7 @@ namespace Soul {
         glBindVertexArray(0);
 
 
-        RenderRID rid = _database.materialBuffer.getSize();
+        RenderRID rid = _database.meshBuffer.getSize();
         _database.meshBuffer.pushBack({
                 spec.transform,
                 VAO,
@@ -861,6 +893,12 @@ namespace Soul {
         return rid;
 
     }
+
+	void RenderSystem::meshSetTransform(RenderRID rid, Vec3f position, Vec3f scale) {
+		
+		_database.meshBuffer[rid].transform = mat4Translate(position) * mat4Scale(scale);
+	
+	}
 
     RenderRID RenderSystem::textureCreate(const TextureSpec &spec, unsigned char *data, int dataChannelCount) {
         RenderRID textureHandle;
@@ -1032,7 +1070,7 @@ namespace Soul {
 				float radius = sqrt(cascadeFarWidth * cascadeFarWidth + cascadeDepth * cascadeDepth + cascadeFarHeight * cascadeFarHeight);
 
                 float texelPerUnit = splitReso / (radius * 2.0f);
-                Mat4 texelScaleLightRot = mat4Scale(texelPerUnit, texelPerUnit, texelPerUnit) * lightRot;
+                Mat4 texelScaleLightRot = mat4Scale(Soul::Vec3f(texelPerUnit, texelPerUnit, texelPerUnit)) * lightRot;
 
                 Vec3f lightTexelFrustumCenter = texelScaleLightRot * worldFrustumCenter;
                 lightTexelFrustumCenter.x = (float)floor(lightTexelFrustumCenter.x);

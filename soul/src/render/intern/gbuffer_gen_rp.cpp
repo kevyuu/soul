@@ -26,10 +26,21 @@ namespace Soul {
 		glUniformBlockBinding(gBufferShader, lightDataBlockIndex, RenderConstant::LIGHT_DATA_BINDING_POINT);
 
         modelUniformLoc = glGetUniformLocation(gBufferShader, "model");
-        albedoMapPositionLoc = glGetUniformLocation(gBufferShader, "material.albedoMap");
-        normalMapPositionLoc = glGetUniformLocation(gBufferShader, "material.normalMap");
-        metallicMapPositionLoc = glGetUniformLocation(gBufferShader, "material.metallicMap");
-        roughnessMapPositionLoc = glGetUniformLocation(gBufferShader, "material.roughnessMap");
+        
+		albedoMapLoc = glGetUniformLocation(gBufferShader, "material.albedoMap");
+        normalMapLoc = glGetUniformLocation(gBufferShader, "material.normalMap");
+        metallicMapLoc = glGetUniformLocation(gBufferShader, "material.metallicMap");
+        roughnessMapLoc = glGetUniformLocation(gBufferShader, "material.roughnessMap");
+
+		useAlbedoTexLoc = glGetUniformLocation(gBufferShader, "material.useAlbedoTex");
+		useNormalTexLoc = glGetUniformLocation(gBufferShader, "material.useNormalTex");
+		useMetallicTexLoc = glGetUniformLocation(gBufferShader, "material.useMetallicTex");
+		useRoughnessTexLoc = glGetUniformLocation(gBufferShader, "material.useRoughnessTex");
+
+		albedoLoc = glGetUniformLocation(gBufferShader, "material.albedo");
+		metallicLoc = glGetUniformLocation(gBufferShader, "material.metallic");
+		roughnessLoc = glGetUniformLocation(gBufferShader, "material.roughness");
+
 		shadowMapLoc = glGetUniformLocation(gBufferShader, "shadowMap");
 		viewPositionLoc = glGetUniformLocation(gBufferShader, "viewPosition");
 		ambientFactorLoc = glGetUniformLocation(gBufferShader, "ambientFactor");
@@ -93,24 +104,34 @@ namespace Soul {
 
             glUniformMatrix4fv(modelUniformLoc, 1, GL_TRUE, (const GLfloat*) mesh.transform.elem);
 
-            glUniform1i(albedoMapPositionLoc, 0);
+            glUniform1i(albedoMapLoc, 0);
             glActiveTexture(GL_TEXTURE0);
             glBindTexture(GL_TEXTURE_2D, material.albedoMap);
 
-            glUniform1i(normalMapPositionLoc, 1);
+            glUniform1i(normalMapLoc, 1);
             glActiveTexture(GL_TEXTURE1);
             glBindTexture(GL_TEXTURE_2D, material.normalMap);
 
-            glUniform1i(metallicMapPositionLoc, 2);
+            glUniform1i(metallicMapLoc, 2);
             glActiveTexture(GL_TEXTURE2);
             glBindTexture(GL_TEXTURE_2D, material.metallicMap);
 
-            glUniform1i(roughnessMapPositionLoc, 3);
+            glUniform1i(roughnessMapLoc, 3);
             glActiveTexture(GL_TEXTURE3);
             glBindTexture(GL_TEXTURE_2D, material.roughnessMap);
 
+			glUniform1i(useAlbedoTexLoc, material.useAlbedoTex);
+			glUniform1i(useNormalTexLoc, material.useNormalTex);
+			glUniform1i(useRoughnessTexLoc, material.useRoughnessTex);
+			glUniform1i(useMetallicTexLoc, material.useMetallicTex);
+
+			glUniform3f(albedoLoc, material.albedo.x, material.albedo.y, material.albedo.z);
+			glUniform1f(roughnessLoc, material.roughness);
+			glUniform1f(metallicLoc, material.metallic);
+
             glBindVertexArray(mesh.vaoHandle);
             glDrawElements(GL_TRIANGLES, mesh.indexCount, GL_UNSIGNED_INT, 0);
+
         }
 
 		glDisable(GL_CULL_FACE);

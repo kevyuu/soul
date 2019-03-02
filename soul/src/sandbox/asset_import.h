@@ -12,6 +12,7 @@
 #include "core/type.h"
 #include "core/debug.h"
 #include "core/math.h"
+#include "sandbox/type.h"
 
 #include <cassert>
 #include <cstdio>
@@ -128,11 +129,12 @@ void _UseMTLCallback(void* userData, const char* name, int materialIdx) {
 	callbackData->materialStartIndexes.pushBack(callbackData->indexCountBuffer.getSize());
 }
 
-
-
-void ImportObjMtlAssets(Soul::RenderSystem* renderSystem, 
+void ImportObjMtlAssets(
+	SceneData* sceneData, 
 	const char* objFilePath, 
 	const char* assetDir) {
+	
+	Soul::RenderSystem* renderSystem = &sceneData->renderSystem;
 
 	std::ifstream ifs(objFilePath);
 	SOUL_ASSERT(0, !ifs.fail(), "Failed to load .obj file|objFilePath = %s", objFilePath);
@@ -179,8 +181,8 @@ void ImportObjMtlAssets(Soul::RenderSystem* renderSystem,
 
 	int baseIndex = 0;
 
-	Soul::Array<Soul::RenderRID> texRIDMapping;
-	texRIDMapping.init(callbackData.materials.size());
+	Soul::Array<Soul::RenderRID> texIDMapping;
+	texIDMapping.init(callbackData.materials.size());
 	for (int i = 0; i < callbackData.materials.size(); i++) {
 		
 		tinyobj::material_t material = callbackData.materials[i];
@@ -190,46 +192,100 @@ void ImportObjMtlAssets(Soul::RenderSystem* renderSystem,
 		std::string roughnessFilename = std::string(assetDir) + material.roughness_texname;
 		std::string normalFilename = std::string(assetDir) + material.normal_texname;
 
+		UITexture sceneMetallicTexture;
+		strcpy(sceneMetallicTexture.name, material.metallic_texname.c_str());
+
 		Soul::TextureSpec texSpec;
 		texSpec.pixelFormat = Soul::PF_RGBA;
 		texSpec.minFilter = GL_LINEAR_MIPMAP_LINEAR;
 		texSpec.magFilter = GL_LINEAR;
 		int numChannel;
 
+		uint32 albedoTexID = 0;
+		UITexture sceneAlbedoTex;
+		strcpy(sceneAlbedoTex.name, material.diffuse_texname.c_str());
 		unsigned char* albedoRaw = stbi_load(albedoFilename.c_str(),
 			&texSpec.width, &texSpec.height, &numChannel, 0);
 		SOUL_ASSERT(0, albedoRaw != nullptr, "Albedo file does not exist| filepath = %s", albedoFilename);
-		Soul::RenderRID albedoID = renderSystem->textureCreate(texSpec, albedoRaw, numChannel);
+		sceneAlbedoTex.rid = renderSystem->textureCreate(texSpec, albedoRaw, numChannel);
+		sceneData->textures.pushBack(sceneAlbedoTex);
+		albedoTexID = sceneData->textures.getSize() - 1;
 		stbi_image_free(albedoRaw);
 
+		uint32 metallicTexID = 0;
+		UITexture sceneMetallicTex;
+		strcpy(sceneMetallicTex.name, material.metallic_texname.c_str());
 		unsigned char* metallicRaw = stbi_load(metallicFilename.c_str(),
 			&texSpec.width, &texSpec.height, &numChannel, 0);
 		SOUL_ASSERT(0, metallicRaw != nullptr, "Metallic file does not exist| filepath = %s", metallicFilename);
-		Soul::RenderRID metallicID = renderSystem->textureCreate(texSpec, metallicRaw, numChannel);
+		sceneMetallicTex.rid = renderSystem->textureCreate(texSpec, metallicRaw, numChannel);
+		sceneData->textures.pushBack(sceneMetallicTex);
+		metallicTexID = sceneData->textures.getSize() - 1;
 		stbi_image_free(metallicRaw);
 
+		uint32 roughnessTexID = 0;
+		UITexture sceneRoughnessTex;
+		strcpy(sceneRoughnessTex.name, material.roughness_texname.c_str());
 		unsigned char* roughnessRaw = stbi_load(roughnessFilename.c_str(),
 			&texSpec.width, &texSpec.height, &numChannel, 0);
 		SOUL_ASSERT(0, roughnessRaw != nullptr, "Roughness file does not exist| filepath = %s", roughnessFilename);
-		Soul::RenderRID roughnessID = renderSystem->textureCreate(texSpec, roughnessRaw, numChannel);
+		sceneRoughnessTex.rid = renderSystem->textureCreate(texSpec, roughnessRaw, numChannel);
+		sceneData->textures.pushBack(sceneRoughnessTex);
+		roughnessTexID = sceneData->textures.getSize() - 1;
 		stbi_image_free(roughnessRaw);
 
+
+		uint32 normalTexID = 0;
+		UITexture sceneNormalTex;
+		strcpy(sceneNormalTex.name, material.normal_texname.c_str());
 		unsigned char* normalRaw = stbi_load(normalFilename.c_str(),
 			&texSpec.width, &texSpec.height, &numChannel, 0);
 		SOUL_ASSERT(0, normalRaw != nullptr, "Normal file does not exist| filepath = %s", normalFilename);
-		Soul::RenderRID normalID = renderSystem->textureCreate(texSpec, normalRaw, numChannel);
+		sceneNormalTex.rid = renderSystem->textureCreate(texSpec, normalRaw, numChannel);
+		sceneData->textures.pushBack(sceneNormalTex);
+		normalTexID = sceneData->textures.getSize() - 1;
 		stbi_image_free(normalRaw);
 
 		Soul::MaterialSpec materialSpec = {
-			albedoID,
-			normalID,
-			metallicID,
-			roughnessID,
+			sceneData->textures[albedoTexID].rid,
+			sceneData->textures[normalTexID].rid,
+			sceneData->textures[metallicTexID].rid,
+			sceneData->textures[roughnessTexID].rid,
+
+			true,
+			true,
+			true,
+			true,
+
+			Soul::Vec3f(0.0f, 0.0f, 0.0f),
+			0.0f, 
+			0.0f,
+
 			0,
 		};
-		Soul::RenderRID materialRID = renderSystem->materialCreate(materialSpec);
 
-		texRIDMapping[i] = materialRID;
+		Soul::RenderRID materialRID = renderSystem->materialCreate(materialSpec);
+		
+		UIMaterial sceneMaterial = { 0 };
+		strcpy(sceneMaterial.name, material.name.c_str());
+
+		sceneMaterial.rid = materialRID;
+
+		sceneMaterial.albedoTexID = albedoTexID;
+		sceneMaterial.useAlbedoTex = true;
+		
+		sceneMaterial.normalTexID = normalTexID;
+		sceneMaterial.useNormalTex = true;
+		
+		sceneMaterial.metallicTexID = metallicTexID;
+		sceneMaterial.useMetallicTex = true;
+
+		sceneMaterial.roughnessTexID = roughnessTexID;
+		sceneMaterial.useRoughnessTex = true;
+
+		sceneData->materials.pushBack(sceneMaterial);
+
+		texIDMapping[i] = sceneData->materials.getSize() - 1;
 	}
 
 	for (int i = 0; i < callbackData.materialIndexes.getSize(); i++) {
@@ -319,7 +375,8 @@ void ImportObjMtlAssets(Soul::RenderSystem* renderSystem,
 			vertexes.buffer[j].binormal = Soul::unit(vertexes.buffer[j].binormal);
 		}
 
-		Soul::RenderRID materialRID = texRIDMapping[materialIndex];
+		uint32 materialID = texIDMapping[materialIndex];
+		Soul::RenderRID materialRID = sceneData->materials[materialID].rid;
 		Soul::MeshSpec meshSpec = {
 				Soul::mat4Identity(),
 				vertexes.buffer,
@@ -328,7 +385,15 @@ void ImportObjMtlAssets(Soul::RenderSystem* renderSystem,
 				indexes.getSize(),
 				materialRID
 		};
-		renderSystem->meshCreate(meshSpec);
+		Soul::RenderRID meshRID = renderSystem->meshCreate(meshSpec);
+
+		UIMesh sceneMesh = { 0 };
+		strcpy(sceneMesh.name, "object");
+		sceneMesh.rid = meshRID;
+		sceneMesh.materialID = materialID;
+		sceneMesh.scale = Soul::Vec3f(1.0f, 1.0f, 1.0f);
+		sceneMesh.position = Soul::Vec3f(0.0f, 0.0f, 0.0f);
+		sceneData->meshes.pushBack(sceneMesh);
 
 		vertexes.cleanup();
 		indexes.cleanup();

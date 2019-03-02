@@ -89,10 +89,21 @@ namespace Soul {
     };
 
     struct Material {
+
         RenderRID albedoMap;
         RenderRID normalMap;
         RenderRID metallicMap;
         RenderRID roughnessMap;
+
+		bool useAlbedoTex;
+		bool useNormalTex;
+		bool useMetallicTex;
+		bool useRoughnessTex;
+
+		Vec3f albedo;
+		float metallic;
+		float roughness;
+
         RenderRID shaderID;
     };
 
@@ -147,6 +158,16 @@ namespace Soul {
         RenderRID normalMap;
         RenderRID metallicMap;
         RenderRID roughnessMap;
+
+		bool useAlbedoTex;
+		bool useNormalTex;
+		bool useMetallicTex;
+		bool useRoughnessTex;
+
+		Vec3f albedo;
+		float metallic;
+		float roughness;
+
         RenderRID shaderID;
     };
 
@@ -319,10 +340,21 @@ namespace Soul {
         RenderRID gBufferShader;
 
         GLint modelUniformLoc;
-        GLint albedoMapPositionLoc;
-        GLint normalMapPositionLoc;
-        GLint metallicMapPositionLoc;
-        GLint roughnessMapPositionLoc;
+
+        GLint albedoMapLoc;
+        GLint normalMapLoc;
+        GLint metallicMapLoc;
+        GLint roughnessMapLoc;
+		
+		GLint useAlbedoTexLoc;
+		GLint useNormalTexLoc;
+		GLint useMetallicTexLoc;
+		GLint useRoughnessTexLoc;
+
+		GLint albedoLoc;
+		GLint metallicLoc;
+		GLint roughnessLoc;
+		
 		GLint shadowMapLoc;
 		GLint viewPositionLoc;
 		GLint ambientFactorLoc;

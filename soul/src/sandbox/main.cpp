@@ -4,6 +4,7 @@
 #include "render/system.h"
 #include "render/intern/glext.h"
 #include "asset_import.h"
+#include "sandbox/type.h"
 
 #include "extern/imgui.h"
 #include "extern/imgui_impl_glfw.h"
@@ -17,28 +18,6 @@
 #include <chrono>
 #include <thread>
 
-struct DirLightConfig {
-	Soul::Vec3f dir;
-	Soul::Vec3f color;
-	int32 resolution;
-	float split[3];
-	float energy;
-	float bias;
-};
-
-struct SceneData {
-
-	Soul::RenderSystem renderSystem;
-	Soul::RenderSystem::Config renderConfig;
-	DirLightConfig dirLightConfig;
-
-	Soul::Camera camera;
-	Soul::RenderRID sunRID;
-
-	char objFilePath[1000];
-	char mtlDirPath[1000];
-
-};
 
 void SettingWindow(SceneData* sceneData) {
 
@@ -187,17 +166,9 @@ void MenuBar(SceneData* sceneData) {
 		}
 
 		if (ImGui::Button("OK", ImVec2(120, 0))) {
-			renderSystem->shutdown();
-			renderSystem->init(sceneData->renderConfig);
 
-			ImportObjMtlAssets(renderSystem, sceneData->objFilePath, sceneData->mtlDirPath);
+			ImportObjMtlAssets(sceneData, sceneData->objFilePath, sceneData->mtlDirPath);
 			renderSystem->voxelGIVoxelize();
-
-			Soul::DirectionalLightSpec dirLightSpec;
-			dirLightSpec.direction = sceneData->dirLightConfig.dir;
-			dirLightSpec.color = sceneData->dirLightConfig.color * sceneData->dirLightConfig.energy;
-			dirLightSpec.shadowMapResolution = Soul::TR_4096;
-			renderSystem->dirLightCreate(dirLightSpec);
 
 			ImGui::CloseCurrentPopup(); 
 		}
@@ -235,8 +206,80 @@ void MenuBar(SceneData* sceneData) {
 	}
 }
 
+void MaterialWindow(SceneData* sceneData) {
+	ImGui::Begin("Material list");
+
+	Soul::Array<UIMaterial>& materials = sceneData->materials;
+	Soul::Array<UITexture>& textures = sceneData->textures;
+	Soul::RenderSystem& renderSystem = sceneData->renderSystem;
+	
+	for (int i = 1; i < materials.getSize(); i++) {
+		UIMaterial& material = materials[i];
+		if (ImGui::CollapsingHeader(material.name)) {
+			ImGui::Checkbox("Use albedo texture", &(material.useAlbedoTex));
+			ImGui::Checkbox("Use normal texture", &(material.useNormalTex));
+			ImGui::Checkbox("Use metalic texture", &(material.useMetallicTex));
+			ImGui::Checkbox("Use roughness texture", &(material.useRoughnessTex));
+			ImGui::InputFloat3("Albedo color", (float*) &material.albedo);
+			ImGui::SliderFloat("Metallic", &material.metallic, 0.0f, 1.0f);
+			ImGui::SliderFloat("Roughness", &material.roughness, 0.0f, 1.0f);
+
+			Soul::MaterialSpec spec = {
+				textures[material.albedoTexID].rid,
+				textures[material.normalTexID].rid,
+				textures[material.metallicTexID].rid,
+				textures[material.roughnessTexID].rid,
+
+				material.useAlbedoTex,
+				material.useNormalTex,
+				material.useMetallicTex,
+				material.useRoughnessTex,
+
+				material.albedo,
+				material.metallic,
+				material.roughness,
+
+				0
+			};
+
+			renderSystem.materialUpdate(material.rid, spec);
+
+		}
+	}
+
+	ImGui::End();
+}
+
+void MeshWindow(SceneData* sceneData) {
+	ImGui::Begin("Mesh List");
+	Soul::Array<UIMesh>& meshes = sceneData->meshes;
+
+	for (int i = 1; i < meshes.getSize(); i++) {
+		UIMesh& mesh = meshes[i];
+		char title[1024];
+		sprintf(title, "Object %d : %s", i, mesh.name);
+		if (ImGui::CollapsingHeader(title)) {
+
+			ImGui::InputText("Name", mesh.name, 512);
+			
+			ImGui::Text("RID : %d", mesh.rid);
+
+			ImGui::InputFloat3("Position", (float*)&mesh.position);
+			ImGui::InputFloat3("Scale", (float*)&mesh.scale);
+			
+			sceneData->renderSystem.meshSetTransform(mesh.rid, mesh.position, mesh.scale);
+
+		}
+	}
+
+	ImGui::End();
+}
+
+
 
 int main() {
+
+
 	if (!glfwInit())
 		return -1;
 
@@ -280,6 +323,12 @@ int main() {
 	Soul::RenderSystem& renderSystem = sceneData.renderSystem;
 	Soul::RenderSystem::Config& renderConfig = sceneData.renderConfig;
 	Soul::Camera& camera = sceneData.camera;
+	sceneData.textures.init(10000);
+	sceneData.textures.pushBack({ 0 });
+	sceneData.materials.init(10000);
+	sceneData.materials.pushBack({ 0 });
+	sceneData.meshes.init(10000);
+	sceneData.meshes.pushBack({ 0 });
 
 	int resWidth, resHeight;
 	glfwGetFramebufferSize(window, (int*)&resWidth, &resHeight);
@@ -307,11 +356,6 @@ int main() {
 		camera.perspective.aspectRatio,
 		camera.perspective.zNear,
 		camera.perspective.zFar);
-
-	strcpy(sceneData.objFilePath, "C:/Dev/soul/soul/assets/sponza2/sponza.obj");
-	strcpy(sceneData.mtlDirPath, "C:/Dev/soul/soul/assets/sponza2/textures/");
-	ImportObjMtlAssets(&renderSystem, sceneData.objFilePath, sceneData.mtlDirPath);
-	renderSystem.voxelGIVoxelize();
 
 	Soul::DirectionalLightSpec lightSpec;
 	lightSpec.direction = Soul::Vec3f(0.03f, -1.0f, 0.35f);
@@ -397,6 +441,8 @@ int main() {
 
 		MenuBar(&sceneData);
 		SettingWindow(&sceneData);
+		MaterialWindow(&sceneData);
+		MeshWindow(&sceneData);
 
 		ImGui::Begin("Demo Scene Metric");
 		ImGui::Text("Application average %.3f ms/frame (%.1f FPS)",

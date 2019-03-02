@@ -128,12 +128,12 @@ namespace Soul {
 		return res;
 	}
 
-	Mat4 mat4Scale(float scaleX, float scaleY, float scaleZ)
+	Mat4 mat4Scale(Vec3f scale)
 	{
 		Mat4 res;
-		res.elem[0][0] = scaleX;
-		res.elem[1][1] = scaleY;
-		res.elem[2][2] = scaleZ;
+		res.elem[0][0] = scale.x;
+		res.elem[1][1] = scale.y;
+		res.elem[2][2] = scale.z;
 		res.elem[3][3] = 1;
 		return res;
 	}
@@ -368,5 +368,43 @@ namespace Soul {
 		num |= (num >> 16);
 
 		return num + 1;
+	}
+
+	uint32 hashMurmur32(const char* key, uint32 keyLength) {
+		uint32 h = 0;
+		if (keyLength > 3) {
+			const uint32* key_x4 = (const uint32*)key;
+			size_t i = keyLength >> 2;
+			do {
+				uint32 k = *key_x4++;
+				k *= 0xcc9e2d51;
+				k = (k << 15) | (k >> 17);
+				k *= 0x1b873593;
+				h ^= k;
+				h = (h << 13) | (h >> 19);
+				h = (h * 5) + 0xe6546b64;
+			} while (--i);
+			key = (const char*)key_x4;
+		}
+		if (keyLength & 3) {
+			uint32 i = keyLength & 3;
+			uint32 k = 0;
+			key = &key[i - 1];
+			do {
+				k <<= 8;
+				k |= *key--;
+			} while (--i);
+			k *= 0xcc9e2d51;
+			k = (k << 15) | (k >> 17);
+			k *= 0x1b873593;
+			h ^= k;
+		}
+		h ^= keyLength;
+		h ^= h >> 16;
+		h *= 0x85ebca6b;
+		h ^= h >> 13;
+		h *= 0xc2b2ae35;
+		h ^= h >> 16;
+		return h;
 	}
 }

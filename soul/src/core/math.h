@@ -29,7 +29,7 @@ namespace Soul {
 	real32 length(const Vec3f& vec);
 
 	Mat4 mat4Identity();
-	Mat4 mat4Scale(float scaleX, float scaleY, float scaleZ);
+	Mat4 mat4Scale(Vec3f scale);
 	Mat4 mat4Translate(Vec3f position);
 	Mat4 mat4Rotate(Vec3f axis, real32 angle);
 	Mat4 mat4View(Vec3f position, Vec3f target, Vec3f up);
@@ -49,6 +49,8 @@ namespace Soul {
 	real32 radians(real32 angle);
 
 	int nextPowerOfTwo(int num);
+
+	uint32 hashMurmur32(const char* key, uint32 keyLength);
 
 	
 };

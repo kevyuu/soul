@@ -54,8 +54,10 @@ namespace Soul {
 		void envSetSkybox(const SkyboxSpec& spec);
 
         RenderRID materialCreate(const MaterialSpec& spec);
+		void materialUpdate(RenderRID rid, const MaterialSpec& spec);
 
         RenderRID meshCreate(const MeshSpec& spec);
+		void meshSetTransform(RenderRID rid, Vec3f position, Vec3f scale);
 
         void render(const Camera& camera);
 

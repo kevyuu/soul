@@ -22,6 +22,7 @@
     <ClInclude Include="..\..\..\Users\Kevin Yudi Utama\Downloads\glad\include\glad\glad.h" />
     <ClInclude Include="src\core\array.h" />
     <ClInclude Include="src\core\debug.h" />
+    <ClInclude Include="src\core\hash_map.h" />
     <ClInclude Include="src\core\math.h" />
     <ClInclude Include="src\core\type.h" />
     <ClInclude Include="src\extern\dirent_portable.h" />
@@ -35,10 +36,13 @@
     <ClInclude Include="src\extern\imstb_rectpack.h" />
     <ClInclude Include="src\extern\imstb_textedit.h" />
     <ClInclude Include="src\extern\imstb_truetype.h" />
+    <ClInclude Include="src\extern\json.hpp" />
     <ClInclude Include="src\extern\stb_image.h" />
+    <ClInclude Include="src\extern\stb_image_write.h" />
     <ClInclude Include="src\extern\stb_rect_pack.h" />
     <ClInclude Include="src\extern\stb_textedit.h" />
     <ClInclude Include="src\extern\stb_truetype.h" />
+    <ClInclude Include="src\extern\tiny_gltf.h" />
     <ClInclude Include="src\extern\tiny_obj_loader.h" />
     <ClInclude Include="src\render\intern\asset.h" />
     <ClInclude Include="src\render\intern\glext.h" />
@@ -47,6 +51,7 @@
     <ClInclude Include="src\render\system.h" />
     <ClInclude Include="src\render\type.h" />
     <ClInclude Include="src\sandbox\asset_import.h" />
+    <ClInclude Include="src\sandbox\type.h" />
     <ClInclude Include="src\soul_array.h" />
     <ClInclude Include="src\soul_type.h" />
     <ClInclude Include="src\render\soul_render.h" />
@@ -54,6 +59,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\core\debug.cpp" />
+    <ClCompile Include="src\core\hash_map.cpp" />
     <ClCompile Include="src\core\math.cpp" />
     <ClCompile Include="src\extern\glad.c" />
     <ClCompile Include="src\extern\imgui.cpp" />
