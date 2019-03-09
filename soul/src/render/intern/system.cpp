@@ -641,7 +641,6 @@ namespace Soul {
 			GLExt::TextureDelete(&db.materialBuffer[i].metallicMap);
 			GLExt::TextureDelete(&db.materialBuffer[i].normalMap);
 			GLExt::TextureDelete(&db.materialBuffer[i].roughnessMap);
-			GLExt::ProgramDelete(&db.materialBuffer[i].shaderID);
 		}
 
 		for (int i = 0; i < db.meshBuffer.getSize(); i++) {
@@ -763,26 +762,54 @@ namespace Soul {
     RenderRID RenderSystem::materialCreate(const MaterialSpec& spec) {
         
 		RenderRID rid = _database.materialBuffer.getSize();
-        _database.materialBuffer.pushBack({
 
-                spec.albedoMap,
-                spec.normalMap,
-                spec.metallicMap,
-                spec.roughnessMap,
-
-				spec.useAlbedoTex,
-				spec.useNormalTex,
-				spec.useMetallicTex,
-				spec.useRoughnessTex,
+		_database.materialBuffer.pushBack({
+				spec.albedoMap,
+				spec.normalMap,
+				spec.metallicMap,
+				spec.roughnessMap,
 
 				spec.albedo,
 				spec.metallic,
 				spec.roughness,
-
-                spec.shaderID
+				0
         });
-        return rid;
-    
+
+		_materialUpdateFlag(rid, spec);
+
+        return rid;    
+	}
+
+	void RenderSystem::materialSetMetallicTextureChannel(RenderRID rid, TextureChannel textureChannel) {
+
+		SOUL_ASSERT(0, textureChannel >= TextureChannel_RED && textureChannel <= TextureChannel_ALPHA, "Invalid texture channel");
+
+		uint32 flags = _database.materialBuffer[rid].flags;
+
+		for (int i = 0; i < 4; i++) {
+			flags &= ~(MaterialFlag_METALLIC_CHANNEL_RED << i);
+		}
+
+		flags |= (MaterialFlag_METALLIC_CHANNEL_RED << textureChannel);
+
+		_database.materialBuffer[rid].flags = flags;
+
+	}
+
+	void RenderSystem::materialSetRoughnessTextureChannel(RenderRID rid, TextureChannel textureChannel) {
+
+		SOUL_ASSERT(0, textureChannel >= TextureChannel_RED && textureChannel <= TextureChannel_ALPHA, "Invavlid texture channel");
+
+		uint32 flags = _database.materialBuffer[rid].flags;
+
+		for (int i = 0; i < 4; i++) {
+			flags &= ~(MaterialFlag_ROUGHNESS_CHANNEL_RED << i);
+		}
+
+		flags |= (MaterialFlag_ROUGHNESS_CHANNEL_RED << textureChannel);
+
+		_database.materialBuffer[rid].flags = flags;
+
 	}
 
 	void RenderSystem::materialUpdate(RenderRID rid, const MaterialSpec& spec) {
@@ -792,17 +819,30 @@ namespace Soul {
 			spec.metallicMap,
 			spec.roughnessMap,
 
-			spec.useAlbedoTex,
-			spec.useNormalTex,
-			spec.useMetallicTex,
-			spec.useRoughnessTex,
-
 			spec.albedo,
 			spec.metallic,
 			spec.roughness,
 
-			spec.shaderID
+			0
 		};
+
+		_materialUpdateFlag(rid, spec);
+	}
+
+	void RenderSystem::_materialUpdateFlag(RenderRID rid, const MaterialSpec& spec) {
+
+		//TODO: do a version without all this branching
+		int flags = 0;
+		if (spec.useAlbedoTex) flags |= MaterialFlag_USE_ALBEDO_TEX;
+		if (spec.useNormalTex) flags |= MaterialFlag_USE_NORMAL_TEX;
+		if (spec.useMetallicTex) flags |= MaterialFlag_USE_METALLIC_TEX;
+		if (spec.useRoughnessTex) flags |= MaterialFlag_USE_ROUGHNESS_TEX;
+
+		_database.materialBuffer[rid].flags = flags;
+
+		materialSetMetallicTextureChannel(rid, spec.metallicChannel);
+		materialSetRoughnessTextureChannel(rid, spec.roughnessChannel);
+
 	}
 
     void RenderSystem::render(const Camera& camera) {
@@ -894,9 +934,9 @@ namespace Soul {
 
     }
 
-	void RenderSystem::meshSetTransform(RenderRID rid, Vec3f position, Vec3f scale) {
+	void RenderSystem::meshSetTransform(RenderRID rid, Vec3f position, Vec3f scale, Vec4f rotation) {
 		
-		_database.meshBuffer[rid].transform = mat4Translate(position) * mat4Scale(scale);
+		_database.meshBuffer[rid].transform = mat4Translate(position) * mat4Scale(scale) * mat4Rotate(rotation.xyz(), rotation.w);
 	
 	}
 

@@ -1,10 +1,13 @@
 #pragma once
 
 #define TINYOBJLOADER_IMPLEMENTATION
+#define TINYGLTF_IMPLEMENTATION
 #define STB_IMAGE_IMPLEMENTATION
+#define STB_IMAGE_WRITE_IMPLEMENTATION
 
 #include "extern/tiny_obj_loader.h"
 #include "extern/stb_image.h"
+#include "extern/tiny_gltf.h"
 
 #include "render/system.h"
 #include "render/type.h"
@@ -222,6 +225,7 @@ void ImportObjMtlAssets(
 		sceneData->textures.pushBack(sceneMetallicTex);
 		metallicTexID = sceneData->textures.getSize() - 1;
 		stbi_image_free(metallicRaw);
+		
 
 		uint32 roughnessTexID = 0;
 		UITexture sceneRoughnessTex;
@@ -261,8 +265,10 @@ void ImportObjMtlAssets(
 			0.0f, 
 			0.0f,
 
-			0,
-		};
+			Soul::TextureChannel_RED,
+			Soul::TextureChannel_RED
+		
+};
 
 		Soul::RenderRID materialRID = renderSystem->materialCreate(materialSpec);
 		
@@ -290,7 +296,6 @@ void ImportObjMtlAssets(
 
 	for (int i = 0; i < callbackData.materialIndexes.getSize(); i++) {
 
-
 		int start = callbackData.materialStartIndexes.get(i);
 		int end = i == callbackData.materialIndexes.getSize() - 1 ? callbackData.indexCountBuffer.getSize() - 1 : callbackData.materialStartIndexes.get(i + 1) - 1;
 		int materialIndex = callbackData.materialIndexes[i];
@@ -309,6 +314,7 @@ void ImportObjMtlAssets(
 		indexes.init(100000);
 		
 		for (int j = start; j <= end; j++) {
+
 			SOUL_ASSERT(0, j < callbackData.indexCountBuffer.getSize(), "");
 			int baseVertex = vertexes.getSize();
 			int indexCount = callbackData.indexCountBuffer[j];
@@ -393,6 +399,7 @@ void ImportObjMtlAssets(
 		sceneMesh.materialID = materialID;
 		sceneMesh.scale = Soul::Vec3f(1.0f, 1.0f, 1.0f);
 		sceneMesh.position = Soul::Vec3f(0.0f, 0.0f, 0.0f);
+		sceneMesh.rotation = Soul::Vec4f(0.0f, 1.0f, 0.0f, 0.0f);
 		sceneData->meshes.pushBack(sceneMesh);
 
 		vertexes.cleanup();
@@ -407,5 +414,236 @@ void ImportObjMtlAssets(
 	callbackData.indexBuffer.cleanup();
 	callbackData.materialIndexes.cleanup();
 	callbackData.materialStartIndexes.cleanup();
+
+}
+
+bool ImportGLTFAssets(SceneData* sceneData, const char* gltfPath) {
+
+	printf("GLTF Path : %s", gltfPath);
+	
+	tinygltf::Model model;
+	tinygltf::TinyGLTF loader;
+	std::string err;
+	std::string warn;
+	bool ret = loader.LoadASCIIFromFile(&model, &err, &warn, gltfPath);
+
+	if (!warn.empty()) {
+		SOUL_LOG_WARN("ImportGLTFAssets | %s", warn.c_str());
+	}
+
+	if (!err.empty()) {
+		SOUL_LOG_ERROR("ImportGLTFAssets | %s", err.c_str());
+		return false;
+	}
+
+	if (!ret) {
+		SOUL_LOG_ERROR("ImportGLTFAssets | failed");
+		return false;
+	}
+
+	Soul::RenderSystem& renderSystem = sceneData->renderSystem;
+
+	//Load Textures
+	for (int i = 0; i < model.textures.size(); i++) {
+		const tinygltf::Texture& texture = model.textures[i];
+		const tinygltf::Image& image = model.images[texture.source];
+
+		Soul::TextureSpec texSpec;
+		texSpec.pixelFormat = Soul::PF_RGBA;
+		texSpec.minFilter = GL_LINEAR_MIPMAP_LINEAR;
+		texSpec.magFilter = GL_LINEAR;
+		texSpec.width = image.width;
+		texSpec.height = image.height;
+		Soul::RenderRID textureRID = renderSystem.textureCreate(texSpec, (unsigned char*)&image.image[0], image.component);
+
+		UITexture uiTexture = { 0 };
+		strcpy(uiTexture.name, texture.name.c_str());
+		uiTexture.rid = textureRID;
+		sceneData->textures.pushBack(uiTexture);
+	
+	}
+
+	//Load Material
+	for (int i = 0; i < model.materials.size(); i++) {
+		UIMaterial uiMaterial = { 0 };
+		const tinygltf::Material material = model.materials[i];
+
+		if (material.values.count("baseColorFactor") != 0) {
+			const tinygltf::ColorValue& colorValue = material.values.at("baseColorFactor").ColorFactor();
+			uiMaterial.albedo = {
+				(float)colorValue[0],
+				(float)colorValue[1],
+				(float)colorValue[2]
+			};
+		}
+
+		if (material.values.count("baseColorTexture") != 0) {
+			int texID = material.values.at("baseColorTexture").TextureIndex();
+			uiMaterial.albedoTexID = texID + 1;
+			uiMaterial.useAlbedoTex = true;
+		}
+
+		if (material.values.count("metallicFactor") != 0) {
+			uiMaterial.metallic = material.values.at("metallicFactor").Factor();
+		}
+
+		if (material.values.count("roughnessFactor") != 0) {
+			uiMaterial.roughness = material.values.at("roughnessFactor").Factor();
+		}
+
+		if (material.values.count("metallicRoughnessTexture") != 0) {
+			int texID = material.values.at("metallicRoughnessTexture").TextureIndex();
+
+			uiMaterial.metallicTexID = texID + 1;
+			uiMaterial.metallicTextureChannel = Soul::TextureChannel_RED;
+			uiMaterial.useMetallicTex = true;
+
+			uiMaterial.roughnessTexID = texID + 1;
+			uiMaterial.roughnessTextureChannel = Soul::TextureChannel_GREEN;
+			uiMaterial.useRoughnessTex = true;
+		}
+
+		if (material.additionalValues.count("normalTexture")) {
+			int texID = material.additionalValues.at("normalTexture").TextureIndex();
+
+			uiMaterial.normalTexID = texID + 1;
+			uiMaterial.useNormalTex = true;
+
+		}
+
+		SOUL_ASSERT(0, strlen(material.name.c_str()) <= 512, "Material name is too long | material.name = %s", material.name.c_str());
+		strcpy(uiMaterial.name, material.name.c_str());
+
+		uiMaterial.rid = renderSystem.materialCreate({
+			sceneData->textures[uiMaterial.albedoTexID].rid,
+			sceneData->textures[uiMaterial.normalTexID].rid,
+			sceneData->textures[uiMaterial.metallicTexID].rid,
+			sceneData->textures[uiMaterial.roughnessTexID].rid,
+
+			uiMaterial.useAlbedoTex,
+			uiMaterial.useNormalTex,
+			uiMaterial.useMetallicTex,
+			uiMaterial.useAlbedoTex,
+
+			Soul::Vec3f(0.0f, 0.0f, 0.0f),
+			uiMaterial.metallic,
+			uiMaterial.roughness,
+
+			Soul::TextureChannel_RED,
+			Soul::TextureChannel_GREEN
+		});
+
+		sceneData->materials.pushBack(uiMaterial);
+	}
+
+	
+
+	// Load Mesh
+	for (int i = 0; i < model.meshes.size(); i++) {
+
+		Soul::Array<Soul::Vertex> vertexes;
+		vertexes.init(100000);
+		Soul::Array<uint32> indexes;
+		indexes.init(100000);
+		
+		const tinygltf::Mesh& mesh = model.meshes[i];
+		SOUL_ASSERT(0, mesh.primitives.size() == 1, "Mesh with multiple number of primitive is not supported yet | mesh name = %s", mesh.name.c_str());
+		
+		const tinygltf::Primitive& primitive = mesh.primitives[0];
+
+		const tinygltf::Accessor& positionAccessor = model.accessors[primitive.attributes.at("POSITION")];
+		const tinygltf::Accessor& normalAccessor = model.accessors[primitive.attributes.at("NORMAL")];
+		const tinygltf::Accessor& tangentAccessor = model.accessors[primitive.attributes.at("TANGENT")];
+		const tinygltf::Accessor& texCoord0Accessor = model.accessors[primitive.attributes.at("TEXCOORD_0")];
+		const tinygltf::Accessor& indexAccessor = model.accessors[primitive.indices];
+
+		SOUL_ASSERT(0, positionAccessor.count == normalAccessor.count, "");
+		SOUL_ASSERT(0, tangentAccessor.count == texCoord0Accessor.count, "");
+		SOUL_ASSERT(0, positionAccessor.count == tangentAccessor.count, "");
+
+		SOUL_ASSERT(0, positionAccessor.componentType == TINYGLTF_COMPONENT_TYPE_FLOAT, "Component type %d for position is not supported yet. | mesh name = %s.", positionAccessor.componentType, mesh.name.c_str());
+		SOUL_ASSERT(0, positionAccessor.type == TINYGLTF_TYPE_VEC3, "Type %d for position is not supported yet. | mesh name = %s.", positionAccessor.type, mesh.name.c_str());
+		const tinygltf::BufferView& positionBufferView = model.bufferViews[positionAccessor.bufferView];
+		int positionOffset = positionAccessor.byteOffset + positionBufferView.byteOffset;
+		int positionByteStride = positionAccessor.ByteStride(positionBufferView);
+		unsigned char* positionBuffer = &model.buffers[positionBufferView.buffer].data[positionOffset];
+
+		SOUL_ASSERT(0, normalAccessor.componentType == TINYGLTF_COMPONENT_TYPE_FLOAT, "Component type %d for normal is not supported yet. | mesh name = %s.", normalAccessor.componentType, mesh.name.c_str());
+		SOUL_ASSERT(0, normalAccessor.type == TINYGLTF_TYPE_VEC3, "Type %d for normal is not supported yet. | mesh name = %s.", normalAccessor.type, mesh.name.c_str());
+		const tinygltf::BufferView& normalBufferView = model.bufferViews[normalAccessor.bufferView];
+		int normalOffset = normalAccessor.byteOffset + normalBufferView.byteOffset;
+		int normalByteStride = normalAccessor.ByteStride(normalBufferView);
+		unsigned char* normalBuffer = &model.buffers[normalBufferView.buffer].data[normalOffset];
+
+		SOUL_ASSERT(0, tangentAccessor.componentType == TINYGLTF_COMPONENT_TYPE_FLOAT, "Component type %d for tangent is not supported yet. | mesh name = %s.", tangentAccessor.componentType, mesh.name.c_str());
+		SOUL_ASSERT(0, tangentAccessor.type == TINYGLTF_TYPE_VEC4, "Type %d for tangent is not supported yet. | mesh name = %s.", tangentAccessor.type, mesh.name.c_str());
+		const tinygltf::BufferView& tangentBufferView = model.bufferViews[tangentAccessor.bufferView];
+		int tangentOffset = tangentAccessor.byteOffset + tangentBufferView.byteOffset;
+		int tangentByteStride = tangentAccessor.ByteStride(tangentBufferView);
+		unsigned char* tangentBuffer = &model.buffers[tangentBufferView.buffer].data[tangentOffset];
+
+		SOUL_ASSERT(0, texCoord0Accessor.componentType == TINYGLTF_COMPONENT_TYPE_FLOAT, "Component type %d for texCoord0 is not supported yet. | mesh name = %s.", texCoord0Accessor.componentType, mesh.name.c_str());
+		SOUL_ASSERT(0, texCoord0Accessor.type == TINYGLTF_TYPE_VEC2, "Type %d for texCoord0 is not supported yet. | mesh name = %s.", texCoord0Accessor.type, mesh.name.c_str());
+		const tinygltf::BufferView& texCoord0BufferView = model.bufferViews[texCoord0Accessor.bufferView];
+		int texCoord0Offset = texCoord0Accessor.byteOffset + texCoord0BufferView.byteOffset;
+		int texCoord0ByteStride = texCoord0Accessor.ByteStride(texCoord0BufferView);
+		unsigned char* texCoord0Buffer = &model.buffers[texCoord0BufferView.buffer].data[texCoord0Offset];
+
+		for (int i = 0; i < positionAccessor.count; i++) {
+
+			Soul::Vec3f position = *(Soul::Vec3f*)&positionBuffer[positionByteStride * i];
+			Soul::Vec3f normal = *(Soul::Vec3f*)&normalBuffer[normalByteStride * i];
+			Soul::Vec4f tangent = *(Soul::Vec4f*)&tangentBuffer[tangentByteStride * i];
+			Soul::Vec2f texCoord0 = *(Soul::Vec2f*)&texCoord0Buffer[texCoord0ByteStride * i];
+
+			vertexes.pushBack({
+				position,
+				normal,
+				texCoord0,
+				Soul::cross(normal, tangent.xyz()),
+				tangent.xyz()
+			});
+
+		}
+
+		SOUL_ASSERT(0, indexAccessor.componentType == TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT, "Component type %d for index is not supported. | mesh name = %s.", indexAccessor.componentType, mesh.name.c_str());
+		SOUL_ASSERT(0, indexAccessor.type == TINYGLTF_TYPE_SCALAR, "Type %d for index is not supported. | mesh name = %s.", indexAccessor.type, mesh.name.c_str());
+		const tinygltf::BufferView& indexBufferView = model.bufferViews[indexAccessor.bufferView];
+		int indexOffset = indexAccessor.byteOffset + indexBufferView.byteOffset;
+		int indexByteStride = indexAccessor.ByteStride(indexBufferView);
+		unsigned char* indexBuffer = &model.buffers[indexBufferView.buffer].data[indexOffset];
+		
+		for (int i = 0; i < indexAccessor.count; ++i) {
+			uint32 index = *(uint32*)&indexBuffer[indexByteStride * i];
+			indexes.pushBack(index);
+		}
+
+		Soul::RenderRID meshRID = renderSystem.meshCreate({
+			Soul::mat4Identity(),
+			vertexes.buffer,
+			indexes.buffer,
+			(uint32) vertexes.getSize(),
+			(uint32) indexes.getSize(),
+			sceneData->materials[primitive.material + 1].rid
+		});
+
+		UIMesh uiMesh;
+		strcpy(uiMesh.name, mesh.name.c_str());
+		uiMesh.rid = meshRID;
+		uiMesh.scale = Soul::Vec3f(1.0f, 1.0f, 1.0f);
+		uiMesh.position = Soul::Vec3f(0.0f, 0.0f, 0.0f);
+		uiMesh.rotation = Soul::Vec4f(0.0f, 1.0f, 0.0f, 0.0f);
+		uiMesh.materialID = primitive.material + 1;
+
+		sceneData->meshes.pushBack(uiMesh);
+
+		vertexes.cleanup();
+		indexes.cleanup();
+
+	}
+
+
+
+	return true;
 
 }

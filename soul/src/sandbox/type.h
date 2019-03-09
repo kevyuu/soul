@@ -39,6 +39,9 @@ struct UIMaterial {
 	bool useNormalTex;
 	bool useMetallicTex;
 	bool useRoughnessTex;
+
+	Soul::TextureChannel metallicTextureChannel;
+	Soul::TextureChannel roughnessTextureChannel;
 };
 
 struct UIMesh {
@@ -64,12 +67,11 @@ struct SceneData {
 	Soul::RenderRID sunRID;
 
 	Soul::Array<UITexture> textures;
-	
 	Soul::Array<UIMaterial> materials;
-
 	Soul::Array<UIMesh> meshes;
 
 	char objFilePath[1000];
 	char mtlDirPath[1000];
+	char gltfFilePath[1000];
 
 };

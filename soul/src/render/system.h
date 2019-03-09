@@ -55,9 +55,12 @@ namespace Soul {
 
         RenderRID materialCreate(const MaterialSpec& spec);
 		void materialUpdate(RenderRID rid, const MaterialSpec& spec);
+		void materialSetMetallicTextureChannel(RenderRID rid, TextureChannel textureChannel);
+		void materialSetRoughnessTextureChannel(RenderRID rid, TextureChannel textureChannel);
+		void _materialUpdateFlag(RenderRID rid, const MaterialSpec& spec);
 
         RenderRID meshCreate(const MeshSpec& spec);
-		void meshSetTransform(RenderRID rid, Vec3f position, Vec3f scale);
+		void meshSetTransform(RenderRID rid, Vec3f position, Vec3f scale, Vec4f rotation);
 
         void render(const Camera& camera);
 

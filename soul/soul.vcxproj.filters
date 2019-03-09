@@ -269,6 +269,9 @@
     <None Include="src\shaders\velocity_buffer_gen.glsl" />
     <None Include="src\shaders\camera.lib.glsl" />
     <None Include="src\shaders\voxel_gi.lib.glsl" />
+    <None Include="..\..\..\Users\Kevin Yudi Utama\Downloads\hazard_suit\scene.bin">
+      <Filter>Resource Files</Filter>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <Image Include="..\..\Sparky\Sandbox\res\Dagger\Textures\Dagger_Albedo.tga" />

@@ -88,6 +88,23 @@ namespace Soul {
         RenderRID materialID;
     };
 
+	enum MaterialFlag {
+		MaterialFlag_USE_ALBEDO_TEX = (1UL << 0),
+		MaterialFlag_USE_NORMAL_TEX = (1UL << 1),
+		MaterialFlag_USE_METALLIC_TEX = (1UL << 2),
+		MaterialFlag_USE_ROUGHNESS_TEX = (1UL << 3),
+
+		MaterialFlag_METALLIC_CHANNEL_RED = (1UL << 8),
+		MaterialFlag_METALLIC_CHANNEL_GREEN = (1UL << 9),
+		MaterialFlag_METALLIC_CHANNEL_BLUE = (1UL << 10),
+		MaterialFlag_METALLIC_CHANNEL_ALPHA = (1UL << 11),
+
+		MaterialFlag_ROUGHNESS_CHANNEL_RED = (1UL << 12),
+		MaterialFlag_ROUGHNESS_CHANNEL_GREEN = (1UL << 13),
+		MaterialFlag_ROUGHNESS_CHANNEL_BLUE = (1UL << 14),
+		MaterialFlag_ROUGHNESS_CHANNEL_ALPHA = (1UL << 15)
+	};
+
     struct Material {
 
         RenderRID albedoMap;
@@ -95,17 +112,12 @@ namespace Soul {
         RenderRID metallicMap;
         RenderRID roughnessMap;
 
-		bool useAlbedoTex;
-		bool useNormalTex;
-		bool useMetallicTex;
-		bool useRoughnessTex;
-
 		Vec3f albedo;
 		float metallic;
 		float roughness;
+		uint32 flags;
 
-        RenderRID shaderID;
-    };
+	};
 
     struct Environment {
         GLuint panorama = 0;
@@ -134,6 +146,13 @@ namespace Soul {
 		float bias;
     };
 
+	enum TextureChannel {
+		TextureChannel_RED,
+		TextureChannel_GREEN,
+		TextureChannel_BLUE,
+		TextureChannel_ALPHA,
+		TC_COUNT
+	};
 
     // Resource spec
     struct TextureSpec {
@@ -168,7 +187,8 @@ namespace Soul {
 		float metallic;
 		float roughness;
 
-        RenderRID shaderID;
+		TextureChannel metallicChannel;
+		TextureChannel roughnessChannel;
     };
 
     struct MeshSpec {
@@ -345,12 +365,9 @@ namespace Soul {
         GLint normalMapLoc;
         GLint metallicMapLoc;
         GLint roughnessMapLoc;
-		
-		GLint useAlbedoTexLoc;
-		GLint useNormalTexLoc;
-		GLint useMetallicTexLoc;
-		GLint useRoughnessTexLoc;
 
+		GLint materialFlagsLoc;
+		
 		GLint albedoLoc;
 		GLint metallicLoc;
 		GLint roughnessLoc;

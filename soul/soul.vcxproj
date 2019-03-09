@@ -92,6 +92,7 @@
     <ClCompile Include="src\render\intern\voxel_mipmap_gen_rp.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="..\..\..\Users\Kevin Yudi Utama\Downloads\hazard_suit\scene.bin" />
     <None Include="assets\cape_hill_4k.hdr" />
     <None Include="assets\cape_hill_8k.hdr" />
     <None Include="assets\charleston_sunset.hdr" />

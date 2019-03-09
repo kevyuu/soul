@@ -1,3 +1,31 @@
+#define MaterialFlag_USE_ALBEDO_TEX (1u << 0)
+#define MaterialFlag_USE_NORMAL_TEX (1u << 1)
+#define MaterialFlag_USE_METALLIC_TEX (1u << 2)
+#define MaterialFlag_USE_ROUGHNESS_TEX (1u << 3)
+
+#define MaterialFlag_METALLIC_CHANNEL_RED (1u << 8)
+#define MaterialFlag_METALLIC_CHANNEL_GREEN (1u << 9)
+#define MaterialFlag_METALLIC_CHANNEL_BLUE (1u << 10)
+#define MaterialFlag_METALLIC_CHANNEL_ALPHA (1u << 11)
+
+#define MaterialFlag_ROUGHNESS_CHANNEL_RED (1u << 12)
+#define MaterialFlag_ROUGHNESS_CHANNEL_GREEN (1u << 13)
+#define MaterialFlag_ROUGHNESS_CHANNEL_BLUE (1u << 14)
+#define MaterialFlag_ROUGHNESS_CHANNEL_ALPHA (1u << 15)
+
+struct Material {
+	sampler2D albedoMap;
+	sampler2D normalMap;
+	sampler2D metallicMap;
+	sampler2D roughnessMap;
+
+	vec3 albedo;
+	float metallic;
+	float roughness;
+
+	uint flags;
+};
+
 struct PixelMaterial {
 	vec3 f0;
 	vec3 albedo;
@@ -5,6 +33,54 @@ struct PixelMaterial {
 	float metallic;
 	float roughness;
 };
+
+bool bitTest(uint flags, uint mask) {
+	return ((flags & mask) == mask);
+}
+
+PixelMaterial pixelMaterialCreate(Material material, vec2 texCoord) {
+
+	PixelMaterial pixelMaterial;
+	
+	if (bitTest(material.flags, MaterialFlag_USE_ALBEDO_TEX)) {
+		pixelMaterial.albedo = pow(texture(material.albedoMap, texCoord).rgb, vec3(2.2));
+	}
+	else {
+		pixelMaterial.albedo = material.albedo;
+	}
+
+	if (bitTest(material.flags, MaterialFlag_USE_NORMAL_TEX)) {
+		pixelMaterial.normal = normalize(vec3(texture(material.normalMap, texCoord).rgb * 2 - 1.0f));
+	}
+	else {
+		pixelMaterial.normal = vec3(0, 0, 1.0f);
+	}
+
+	if (bitTest(material.flags, MaterialFlag_USE_METALLIC_TEX)) {
+		if (bitTest(material.flags, MaterialFlag_METALLIC_CHANNEL_RED)) pixelMaterial.metallic = texture(material.metallicMap, texCoord).r;
+		if (bitTest(material.flags, MaterialFlag_METALLIC_CHANNEL_GREEN)) pixelMaterial.metallic = texture(material.metallicMap, texCoord).g;
+		if (bitTest(material.flags, MaterialFlag_METALLIC_CHANNEL_BLUE)) pixelMaterial.metallic = texture(material.metallicMap, texCoord).b;
+		if (bitTest(material.flags, MaterialFlag_METALLIC_CHANNEL_ALPHA)) pixelMaterial.metallic = texture(material.metallicMap, texCoord).a;
+	}
+	else {
+		pixelMaterial.metallic = material.metallic;
+	}
+
+	if (bitTest(material.flags, MaterialFlag_USE_ROUGHNESS_TEX)) {
+		if (bitTest(material.flags, MaterialFlag_ROUGHNESS_CHANNEL_RED)) pixelMaterial.roughness = texture(material.roughnessMap, texCoord).r;
+		if (bitTest(material.flags, MaterialFlag_ROUGHNESS_CHANNEL_GREEN)) pixelMaterial.roughness = texture(material.roughnessMap, texCoord).g;
+		if (bitTest(material.flags, MaterialFlag_ROUGHNESS_CHANNEL_BLUE)) pixelMaterial.roughness = texture(material.roughnessMap, texCoord).b;
+		if (bitTest(material.flags, MaterialFlag_ROUGHNESS_CHANNEL_ALPHA)) pixelMaterial.roughness = texture(material.roughnessMap, texCoord).a;
+	}
+	else {
+		pixelMaterial.roughness = material.roughness;
+	}
+
+	pixelMaterial.f0 = mix(vec3(0.04f), pixelMaterial.albedo, pixelMaterial.metallic);
+
+	return pixelMaterial;
+
+}
 
 float DistributionGGX(vec3 N, vec3 H, float roughness)
 {

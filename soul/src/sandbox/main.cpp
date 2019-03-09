@@ -17,6 +17,7 @@
 #include <string>
 #include <chrono>
 #include <thread>
+#include <map>
 
 
 void SettingWindow(SceneData* sceneData) {
@@ -87,13 +88,15 @@ void SettingWindow(SceneData* sceneData) {
 		ImGui::InputFloat("Ambient energy", &energy);
 		renderSystem->envSetAmbientEnergy(energy);
 
+
+
 	}
 
 	if (ImGui::CollapsingHeader("Voxel GI")) {
 
 		ImGui::SliderFloat3("Center", (float*)&sceneData->renderConfig.voxelGIConfig.center, 0.0f, 1.0f);
 		ImGui::InputFloat("Half Span", &sceneData->renderConfig.voxelGIConfig.halfSpan);
-		ImGui::InputInt("Resolution", (int*) &sceneData->renderConfig.voxelGIConfig.resolution);
+		ImGui::InputInt("Resolution", (int*)&sceneData->renderConfig.voxelGIConfig.resolution);
 		ImGui::InputFloat("Voxel Bias", (float*)&sceneData->renderConfig.voxelGIConfig.bias);
 		ImGui::InputFloat("Diffuse multiplier", (float*)&sceneData->renderConfig.voxelGIConfig.diffuseMultiplier);
 		ImGui::InputFloat("Specular multiplier", (float*)&sceneData->renderConfig.voxelGIConfig.specularMultiplier);
@@ -107,7 +110,7 @@ void SettingWindow(SceneData* sceneData) {
 	if (ImGui::CollapsingHeader("Shadow Atlas Config")) {
 
 		Soul::RenderSystem::ShadowAtlasConfig& shadowAtlasConfig = sceneData->renderConfig.shadowAtlasConfig;
-		
+
 		ImGui::InputInt("Resolution", &shadowAtlasConfig.resolution);
 		shadowAtlasConfig.resolution = Soul::nextPowerOfTwo(shadowAtlasConfig.resolution);
 
@@ -145,8 +148,8 @@ void MenuBar(SceneData* sceneData) {
 		const bool browseObjFile = ImGui::Button("Browse##obj");
 		ImGui::SameLine();
 		ImGui::InputText("Obj File", sceneData->objFilePath, 1000);
-		static ImGuiFs::Dialog dlg;                                                     // one per dialog (and must be static)
-		const char* objChosenPath = dlg.chooseFileDialog(browseObjFile);             // see other dialog types and the full list of arguments for advanced usage
+		static ImGuiFs::Dialog dlg;
+		const char* objChosenPath = dlg.chooseFileDialog(browseObjFile);
 		if (strlen(objChosenPath) > 0) {
 			SOUL_ASSERT(0, strlen(objChosenPath) < 999, "File path too long");
 			strcpy(sceneData->objFilePath, objChosenPath);
@@ -170,7 +173,7 @@ void MenuBar(SceneData* sceneData) {
 			ImportObjMtlAssets(sceneData, sceneData->objFilePath, sceneData->mtlDirPath);
 			renderSystem->voxelGIVoxelize();
 
-			ImGui::CloseCurrentPopup(); 
+			ImGui::CloseCurrentPopup();
 		}
 		ImGui::SetItemDefaultFocus();
 		ImGui::SameLine();
@@ -179,9 +182,35 @@ void MenuBar(SceneData* sceneData) {
 		ImGui::EndPopup();
 	}
 
+	if (ImGui::BeginPopupModal("Import GLTF", NULL, ImGuiWindowFlags_AlwaysAutoResize)) {
+		const bool browseGLTFFile = ImGui::Button("Browse##gltf");
+		ImGui::SameLine();
+		ImGui::InputText("GLTF File", sceneData->gltfFilePath, 1000);
+		static ImGuiFs::Dialog dlg;
+		const char* gltfChosenPath = dlg.chooseFileDialog(browseGLTFFile);
+		if (strlen(gltfChosenPath) > 0) {
+			SOUL_ASSERT(0, strlen(gltfChosenPath) < 999, "File path too long");
+			strcpy(sceneData->gltfFilePath, gltfChosenPath);
+		}
+
+		if (ImGui::Button("OK", ImVec2(120, 0))) {
+
+			ImportGLTFAssets(sceneData, sceneData->gltfFilePath);
+			renderSystem->voxelGIVoxelize();
+
+			ImGui::CloseCurrentPopup();
+		}
+		ImGui::SetItemDefaultFocus();
+		ImGui::SameLine();
+		if (ImGui::Button("Cancel", ImVec2(120, 0))) { ImGui::CloseCurrentPopup(); }
+		ImGui::EndPopup();
+
+	}
+
 	enum ACTION {
 		ACTION_NONE,
-		ACTION_IMPORT_OBJ_AND_MTL
+		ACTION_IMPORT_OBJ_AND_MTL,
+		ACTION_IMPORT_GLTF
 	};
 
 	ACTION action = ACTION_NONE;
@@ -194,6 +223,9 @@ void MenuBar(SceneData* sceneData) {
 				if (ImGui::MenuItem("Import Obj and MTL")) {
 					action = ACTION_IMPORT_OBJ_AND_MTL;
 				}
+				else if (ImGui::MenuItem("Import GLTF")) {
+					action = ACTION_IMPORT_GLTF;
+				}
 				ImGui::EndMenu();
 			}
 			ImGui::EndMenu();
@@ -203,6 +235,9 @@ void MenuBar(SceneData* sceneData) {
 
 	if (action == ACTION_IMPORT_OBJ_AND_MTL) {
 		ImGui::OpenPopup("Import Obj and MTL");
+	}
+	else if (action == ACTION_IMPORT_GLTF) {
+		ImGui::OpenPopup("Import GLTF");
 	}
 }
 
@@ -216,6 +251,7 @@ void MaterialWindow(SceneData* sceneData) {
 	for (int i = 1; i < materials.getSize(); i++) {
 		UIMaterial& material = materials[i];
 		if (ImGui::CollapsingHeader(material.name)) {
+			
 			ImGui::Checkbox("Use albedo texture", &(material.useAlbedoTex));
 			ImGui::Checkbox("Use normal texture", &(material.useNormalTex));
 			ImGui::Checkbox("Use metalic texture", &(material.useMetallicTex));
@@ -223,6 +259,11 @@ void MaterialWindow(SceneData* sceneData) {
 			ImGui::InputFloat3("Albedo color", (float*) &material.albedo);
 			ImGui::SliderFloat("Metallic", &material.metallic, 0.0f, 1.0f);
 			ImGui::SliderFloat("Roughness", &material.roughness, 0.0f, 1.0f);
+
+			const char* textureChannels[] = { "Red", "Green", "Blue", "Alpha" };
+			
+			ImGui::Combo("Metallic Texture Channel", (int*)&material.metallicTextureChannel, textureChannels, IM_ARRAYSIZE(textureChannels));
+			ImGui::Combo("Roughness Texture Channel", (int*)&material.roughnessTextureChannel, textureChannels, IM_ARRAYSIZE(textureChannels));
 
 			Soul::MaterialSpec spec = {
 				textures[material.albedoTexID].rid,
@@ -239,7 +280,8 @@ void MaterialWindow(SceneData* sceneData) {
 				material.metallic,
 				material.roughness,
 
-				0
+				material.metallicTextureChannel,
+				material.roughnessTextureChannel
 			};
 
 			renderSystem.materialUpdate(material.rid, spec);
@@ -261,13 +303,13 @@ void MeshWindow(SceneData* sceneData) {
 		if (ImGui::CollapsingHeader(title)) {
 
 			ImGui::InputText("Name", mesh.name, 512);
-			
 			ImGui::Text("RID : %d", mesh.rid);
 
 			ImGui::InputFloat3("Position", (float*)&mesh.position);
 			ImGui::InputFloat3("Scale", (float*)&mesh.scale);
-			
-			sceneData->renderSystem.meshSetTransform(mesh.rid, mesh.position, mesh.scale);
+			ImGui::InputFloat4("Rotation", (float*)&mesh.rotation);
+
+			sceneData->renderSystem.meshSetTransform(mesh.rid, mesh.position, mesh.scale, mesh.rotation);
 
 		}
 	}
@@ -330,6 +372,7 @@ int main() {
 	sceneData.meshes.init(10000);
 	sceneData.meshes.pushBack({ 0 });
 
+	
 	int resWidth, resHeight;
 	glfwGetFramebufferSize(window, (int*)&resWidth, &resHeight);
 	renderConfig.targetWidthPx = resWidth;
@@ -343,7 +386,7 @@ int main() {
 	renderConfig.shadowAtlasConfig.subdivSqrtCount[2] = 2;
 	renderConfig.shadowAtlasConfig.subdivSqrtCount[3] = 2;
 
-	renderSystem.init(renderConfig);
+	renderSystem.init(renderConfig);	
 
 	camera.position = Soul::Vec3f(0.0f, 0.0f, 0.0f);
 	camera.direction = Soul::Vec3f(0.0f, 0.0f, 1.0f);

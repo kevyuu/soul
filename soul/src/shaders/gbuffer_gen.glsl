@@ -5,7 +5,6 @@ light.lib.glsl
 camera.lib.glsl
 #endif
 
-
 /**********************************************************************
 // VERTEX_SHADER
 **********************************************************************/
@@ -42,24 +41,6 @@ void main() {
 // FRAGMENT_SHADER
 **********************************************************************/
 #ifdef FRAGMENT_SHADER
-
-struct Material {
-	
-	sampler2D albedoMap;
-	sampler2D normalMap;
-	sampler2D metallicMap;
-	sampler2D roughnessMap;
-
-	bool useAlbedoTex;
-	bool useNormalTex;
-	bool useMetallicTex;
-	bool useRoughnessTex;
-
-	vec3 albedo;
-	float metallic;
-	float roughness;
-
-};
 
 uniform Material material;
 uniform sampler2DShadow shadowMap;
@@ -106,38 +87,8 @@ float computeShadowFactor(vec3 worldPosition, mat4 shadowMatrix, float bias) {
 
 void main() {
 
-	PixelMaterial pixelMaterial;
-
-	if (material.useAlbedoTex) {
-		pixelMaterial.albedo = pow(texture(material.albedoMap, vs_out.texCoord).rgb, vec3(2.2));
-	}
-	else {
-		pixelMaterial.albedo = material.albedo;
-	}
-
-	if (material.useNormalTex) {
-		pixelMaterial.normal = normalize(vec3(texture(material.normalMap, vs_out.texCoord).rgb * 2 - 1.0f));
-	}
-	else {
-		pixelMaterial.normal = vec3(0, 0, 1.0f);
-	}
-
-	if (material.useMetallicTex) {
-		pixelMaterial.metallic = texture(material.metallicMap, vs_out.texCoord).r;
-	}
-	else {
-		pixelMaterial.metallic = material.metallic;
-	}
-
-	if (material.useRoughnessTex) {
-		pixelMaterial.roughness = texture(material.roughnessMap, vs_out.texCoord).r;
-	}
-	else {
-		pixelMaterial.roughness = material.roughness;
-	}
-
-	pixelMaterial.f0 = mix(vec3(0.04f), pixelMaterial.albedo, pixelMaterial.metallic);
-
+	PixelMaterial pixelMaterial = pixelMaterialCreate(material, vs_out.texCoord);
+	
 	mat3 TBN = mat3(vs_out.worldTangent, vs_out.worldBinormal, vs_out.worldNormal);
     vec3 worldNormal = normalize(TBN * pixelMaterial.normal);
 	vec3 worldPosition = vs_out.worldPosition;

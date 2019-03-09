@@ -32,10 +32,7 @@ namespace Soul {
         metallicMapLoc = glGetUniformLocation(gBufferShader, "material.metallicMap");
         roughnessMapLoc = glGetUniformLocation(gBufferShader, "material.roughnessMap");
 
-		useAlbedoTexLoc = glGetUniformLocation(gBufferShader, "material.useAlbedoTex");
-		useNormalTexLoc = glGetUniformLocation(gBufferShader, "material.useNormalTex");
-		useMetallicTexLoc = glGetUniformLocation(gBufferShader, "material.useMetallicTex");
-		useRoughnessTexLoc = glGetUniformLocation(gBufferShader, "material.useRoughnessTex");
+		materialFlagsLoc = glGetUniformLocation(gBufferShader, "material.flags");
 
 		albedoLoc = glGetUniformLocation(gBufferShader, "material.albedo");
 		metallicLoc = glGetUniformLocation(gBufferShader, "material.metallic");
@@ -97,6 +94,8 @@ namespace Soul {
 
 		glViewport(0, 0, db.targetWidthPx, db.targetHeightPx);
 
+		
+
         for (int i = 0; i < db.meshBuffer.getSize(); i++) {
 
             const Mesh& mesh = db.meshBuffer.get(i);
@@ -120,10 +119,7 @@ namespace Soul {
             glActiveTexture(GL_TEXTURE3);
             glBindTexture(GL_TEXTURE_2D, material.roughnessMap);
 
-			glUniform1i(useAlbedoTexLoc, material.useAlbedoTex);
-			glUniform1i(useNormalTexLoc, material.useNormalTex);
-			glUniform1i(useRoughnessTexLoc, material.useRoughnessTex);
-			glUniform1i(useMetallicTexLoc, material.useMetallicTex);
+			glUniform1ui(materialFlagsLoc, material.flags);
 
 			glUniform3f(albedoLoc, material.albedo.x, material.albedo.y, material.albedo.z);
 			glUniform1f(roughnessLoc, material.roughness);
