@@ -149,7 +149,7 @@ float voxel_gi_occlusionRayTrace(
 }
 
 
-vec3 voxel_gi_diffuseConeTrace(
+vec4 voxel_gi_diffuseConeTrace(
 	sampler3D voxelTex,
 	vec3 position,
 	vec3 normal) {
@@ -165,14 +165,15 @@ vec3 voxel_gi_diffuseConeTrace(
 
 	mat3 rotationMat = mat3(tangent, normal, bitangent);
 
-	vec3 color = vec3(0.0f);
+	vec4 color = vec4(0.0f);
 	for (int i = 0; i < _VOXEL_GI_DIFFUSE_SAMPLE; i++) {
 		vec3 L = normalize(rotationMat * _VOXEL_GI_DIFFUSE_CONE_DIRECTIONS[i]);
 		vec4 diffuseColor = voxel_gi_coneTrace(voxelTex, position, L, _VOXEL_GI_DIFFUSE_CONE_TANGENT);
-		color += diffuseColor.xyz;
+		color += diffuseColor;
 	}
 
-	color *= 2 * M_PI / 6.0f;
+	color.xyz *= 2 * M_PI;
+	color /= 6.0f;
 
 	return color;
 

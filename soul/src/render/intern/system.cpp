@@ -69,6 +69,7 @@ namespace Soul {
 		db.renderPassList.pushBack(new VoxelLightInjectRP());
 		db.renderPassList.pushBack(new VoxelMipmapGenRP());
 		db.renderPassList.pushBack(new SSRResolveRP());
+		db.renderPassList.pushBack(new SkyboxRP());
 		db.renderPassList.pushBack(new VoxelDebugRP());
 
         for (int i = 0; i < db.renderPassList.getSize(); i++) {
@@ -78,6 +79,12 @@ namespace Soul {
 		SOUL_ASSERT(0, GLExt::IsErrorCheckPass(), "");
 
     }
+
+	void RenderSystem::shaderReload() {
+		for (int i = 0; i < _database.renderPassList.getSize(); i++) {
+			_database.renderPassList[i]->init(_database);
+		}
+	}
 
 	void RenderSystem::shadowAtlasUpdateConfig(const ShadowAtlasConfig& config) {
 		RenderDatabase& db = _database;
@@ -768,6 +775,7 @@ namespace Soul {
 				spec.normalMap,
 				spec.metallicMap,
 				spec.roughnessMap,
+				spec.aoMap,
 
 				spec.albedo,
 				spec.metallic,
@@ -812,12 +820,27 @@ namespace Soul {
 
 	}
 
+	void RenderSystem::materialSetAOTextureChannel(RenderRID rid, TextureChannel textureChannel) {
+		SOUL_ASSERT(0, textureChannel >= TextureChannel_RED && textureChannel <= TextureChannel_ALPHA, "Invavlid texture channel");
+
+		uint32 flags = _database.materialBuffer[rid].flags;
+
+		for (int i = 0; i < 4; i++) {
+			flags &= ~(MaterialFlag_AO_CHANNEL_RED << i);
+		}
+
+		flags |= (MaterialFlag_AO_CHANNEL_RED << textureChannel);
+
+		_database.materialBuffer[rid].flags = flags;
+	}
+
 	void RenderSystem::materialUpdate(RenderRID rid, const MaterialSpec& spec) {
 		_database.materialBuffer[rid] = {
 			spec.albedoMap,
 			spec.normalMap,
 			spec.metallicMap,
 			spec.roughnessMap,
+			spec.aoMap,
 
 			spec.albedo,
 			spec.metallic,
@@ -837,12 +860,13 @@ namespace Soul {
 		if (spec.useNormalTex) flags |= MaterialFlag_USE_NORMAL_TEX;
 		if (spec.useMetallicTex) flags |= MaterialFlag_USE_METALLIC_TEX;
 		if (spec.useRoughnessTex) flags |= MaterialFlag_USE_ROUGHNESS_TEX;
+		if (spec.useAOTex) flags |= MaterialFlag_USE_AO_TEX;
 
 		_database.materialBuffer[rid].flags = flags;
 
 		materialSetMetallicTextureChannel(rid, spec.metallicChannel);
 		materialSetRoughnessTextureChannel(rid, spec.roughnessChannel);
-
+		materialSetAOTextureChannel(rid, spec.aoChannel);
 	}
 
     void RenderSystem::render(const Camera& camera) {
@@ -970,13 +994,11 @@ namespace Soul {
     }
 
     void RenderSystem::envSetPanorama(RenderRID panoramaTex) {
+		
         if (_database.environment.cubemap != 0) {
             GLExt::TextureDelete(&_database.environment.cubemap);
-            _database.environment.cubemap = 0;
             GLExt::TextureDelete(&_database.environment.diffuseMap);
-            _database.environment.diffuseMap = 0;
             GLExt::TextureDelete(&_database.environment.specularMap);
-            _database.environment.specularMap = 0;
         }
 
         GLuint skybox;

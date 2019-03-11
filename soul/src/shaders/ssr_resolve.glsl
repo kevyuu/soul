@@ -28,8 +28,6 @@ void main() {
 **********************************************************************/
 #ifdef FRAGMENT_SHADER
 
-#define MAX_STEP 64
-
 uniform sampler2D reflectionPosBuffer;
 uniform sampler2D lightBuffer;
 
@@ -41,6 +39,9 @@ uniform sampler2D depthMap;
 uniform sampler2D FGMap;
 
 uniform sampler3D voxelLightBuffer;
+
+uniform samplerCube diffuseEnvTex;
+uniform samplerCube specularEnvTex;
 
 uniform vec2 screenDimension;
 uniform vec3 cameraPosition;
@@ -75,6 +76,16 @@ float cone_cosine(float r)
 	return exp2(-3.32193 * r * r);
 }
 
+vec3 ACESFilm(vec3 x)
+{
+	float a = 2.51f;
+	float b = 0.03f;
+	float c = 2.43f;
+	float d = 0.59f;
+	float e = 0.14f;
+	return clamp((x*(a*x + b)) / (x*(c*x + d) + e), 0.0f, 1.0f);
+}
+
 void main() {
 
 	voxel_gi_init();
@@ -94,14 +105,16 @@ void main() {
 	vec3 worldPosition = (worldPositionHomo / worldPositionHomo.w).xyz;
     pixelMaterial.metallic = texture(renderMap2, vs_out.texCoord).a;
     vec3 N = texture(renderMap3, vs_out.texCoord).rgb * 2.0f - 1.0f;
+	N = normalize(N);
     pixelMaterial.roughness = texture(renderMap3, vs_out.texCoord).a;
     vec3 F0 = vec3(0.04);
     F0 = mix(F0, pixelMaterial.albedo, pixelMaterial.metallic);
     pixelMaterial.f0 = F0;
+	pixelMaterial.ao = texture(renderMap4, vs_out.texCoord).a;
 
 	vec3 specularOutput = texture(renderMap2, vs_out.texCoord).rgb;
 	vec3 diffuseAmbientOutput = texture(renderMap4, vs_out.texCoord).rgb;
-	vec3 directColor = specularOutput + diffuseAmbientOutput;
+	vec3 directColor = specularOutput + diffuseAmbientOutput * pixelMaterial.ao;
 
 	vec3 V = normalize(camera_getPosition() - worldPosition);
 
@@ -170,29 +183,36 @@ void main() {
 	reflectionAlpha = numValidSample == 4 ? reflectionAlpha : 0.0f;
 
 	vec3 kD = 1.0f - F;
+	kD *= 1.0 - pixelMaterial.metallic;
 
-	vec3 diffuseIndirectColor = voxel_gi_getDiffuseMultiplier() * kD * voxel_gi_diffuseConeTrace(
-		voxelLightBuffer,
-		worldPosition,
-		N
-	) * pixelMaterial.albedo / M_PI;
+	vec3 diffuseEnv = kD * texture(diffuseEnvTex, N).rgb * pixelMaterial.albedo;
+
+	vec4 diffuseVoxelTrace = voxel_gi_diffuseConeTrace(voxelLightBuffer, worldPosition, N);
+	vec3 diffuseVoxelColor = voxel_gi_getDiffuseMultiplier() * kD * diffuseVoxelTrace.rgb * pixelMaterial.albedo / M_PI;
+	vec3 diffuseIndirectColor = diffuseVoxelColor + (1 - diffuseVoxelTrace.a) * diffuseEnv;
 
 	vec3 L = normalize(getSpecularDominantDir(N, reflect(-V, N), pixelMaterial.roughness));
-
 	vec3 H = normalize((L + V) / 2.0f);
-	float pdf = DistributionGGX(N, H, pixelMaterial.roughness) * max(dot(N, H), 1e-8);
-	vec3 specularIndirectColor = voxel_gi_getSpecularMultiplier() * voxel_gi_coneTrace(
+	float pdf = DistributionGGX(N, H, pixelMaterial.roughness) * max(dot(N, H), 0);
+
+	const float MAX_SPECULAR_ENV_LOD = 4;
+	vec3 specularEnv = textureLod(specularEnvTex, L, pixelMaterial.roughness * MAX_SPECULAR_ENV_LOD).rgb * FG;
+
+	vec4 specularVoxel = voxel_gi_coneTrace(
 		voxelLightBuffer,
 		worldPosition,
 		L,
 		cone_tan
-	).xyz * computeSpecularBRDF(L, V, N, pixelMaterial) * max(dot(N, L), 0.0f) / pdf;
+	);
+	
+	vec3 specularIndirectColor = voxel_gi_getSpecularMultiplier() * specularVoxel.xyz * computeSpecularBRDF(L, V, N, pixelMaterial) * max(dot(N, L), 0) / max(pdf, 1e-8);
+	specularIndirectColor += ((1 - specularVoxel.a) * specularEnv);
+	
+	vec3 color = directColor + (diffuseIndirectColor + specularIndirectColor) * pixelMaterial.ao;
 
-    vec3 color = directColor + diffuseIndirectColor  + reflectionColor * reflectionAlpha + (1 - reflectionAlpha) * specularIndirectColor;
+	color = ACESFilm(color);
+	color = pow(color, vec3(1.0f / 2.2));
 
-    color = color / (color + vec3(1.0));
-    color = pow(color, vec3(1.0/2.2));
-
-    reflection = color;
+	reflection = color;
 }
 #endif // FRAGMENT_SHADER

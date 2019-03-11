@@ -99,6 +99,8 @@
     <None Include="assets\Cube.spm" />
     <None Include="assets\Dagger.spm" />
     <None Include="assets\Donut.spm" />
+    <None Include="assets\gold\quad.mtl" />
+    <None Include="assets\gold\sphere-material.mtl" />
     <None Include="assets\greasy-metal-pan\quad.mtl" />
     <None Include="assets\greasy-metal-pan\sphere-material.mtl" />
     <None Include="assets\newport_loft.hdr" />

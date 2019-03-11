@@ -31,6 +31,8 @@ namespace Soul {
         void init(const Config& config);
         void shutdown();
 
+		void shaderReload();
+
         RenderRID textureCreate(const TextureSpec& spec, unsigned char* data, int dataChannelCount);
 
         RenderRID dirLightCreate(const DirectionalLightSpec& spec);
@@ -57,6 +59,7 @@ namespace Soul {
 		void materialUpdate(RenderRID rid, const MaterialSpec& spec);
 		void materialSetMetallicTextureChannel(RenderRID rid, TextureChannel textureChannel);
 		void materialSetRoughnessTextureChannel(RenderRID rid, TextureChannel textureChannel);
+		void materialSetAOTextureChannel(RenderRID rid, TextureChannel textureChannel);
 		void _materialUpdateFlag(RenderRID rid, const MaterialSpec& spec);
 
         RenderRID meshCreate(const MeshSpec& spec);

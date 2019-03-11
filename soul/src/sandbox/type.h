@@ -30,6 +30,7 @@ struct UIMaterial {
 	uint32 normalTexID;
 	uint32 metallicTexID;
 	uint32 roughnessTexID;
+	uint32 aoTexID;
 	
 	Soul::Vec3f albedo;
 	float metallic;
@@ -39,9 +40,11 @@ struct UIMaterial {
 	bool useNormalTex;
 	bool useMetallicTex;
 	bool useRoughnessTex;
+	bool useAOTex;
 
 	Soul::TextureChannel metallicTextureChannel;
 	Soul::TextureChannel roughnessTextureChannel;
+	Soul::TextureChannel aoTextureChannel;
 };
 
 struct UIMesh {

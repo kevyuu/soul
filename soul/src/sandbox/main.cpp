@@ -80,6 +80,7 @@ void SettingWindow(SceneData* sceneData) {
 	}
 
 	if (ImGui::CollapsingHeader("Environment")) {
+
 		static Soul::Vec3f color = Soul::Vec3f(1.0f, 1.0f, 1.0f);
 		ImGui::SliderFloat3("Ambient color", (float*)&color, 0.0f, 1.0f);
 		renderSystem->envSetAmbientColor(color);
@@ -88,7 +89,33 @@ void SettingWindow(SceneData* sceneData) {
 		ImGui::InputFloat("Ambient energy", &energy);
 		renderSystem->envSetAmbientEnergy(energy);
 
+		const bool uploadPanorama = ImGui::Button("Upload panorama");
+		static ImGuiFs::Dialog mtlDialog;
+		const char* panoramaChosenPath = mtlDialog.chooseFileDialog(uploadPanorama);
+		if (strlen(panoramaChosenPath) > 0) {
+			int panoramaPathLen = strlen(panoramaChosenPath);
+			SOUL_ASSERT(0, panoramaPathLen < 999, "File path too long");
+			strcpy(sceneData->mtlDirPath, panoramaChosenPath);
+			sceneData->mtlDirPath[panoramaPathLen] = '\0';
 
+			stbi_set_flip_vertically_on_load(true);
+			int width, height, nrComponents;
+			float *data = stbi_loadf("C:/Dev/soul/soul/assets/syferfontein_0d_clear_16k.hdr", &width, &height, &nrComponents, 0);
+
+			GLuint hdrTexture;
+			glGenTextures(1, &hdrTexture);
+			glBindTexture(GL_TEXTURE_2D, hdrTexture);
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, width, height, 0, GL_RGB, GL_FLOAT, data);
+
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+			renderSystem->envSetPanorama(hdrTexture);
+
+			stbi_image_free(data);
+		}
 
 	}
 
@@ -134,6 +161,10 @@ void SettingWindow(SceneData* sceneData) {
 			renderSystem->shadowAtlasUpdateConfig(shadowAtlasConfig);
 		}
 
+	}
+
+	if (ImGui::Button("Reload shader")) {
+		renderSystem->shaderReload();
 	}
 
 	ImGui::End();
@@ -256,6 +287,7 @@ void MaterialWindow(SceneData* sceneData) {
 			ImGui::Checkbox("Use normal texture", &(material.useNormalTex));
 			ImGui::Checkbox("Use metalic texture", &(material.useMetallicTex));
 			ImGui::Checkbox("Use roughness texture", &(material.useRoughnessTex));
+			ImGui::Checkbox("Use ao texture", &(material.useAOTex));
 			ImGui::InputFloat3("Albedo color", (float*) &material.albedo);
 			ImGui::SliderFloat("Metallic", &material.metallic, 0.0f, 1.0f);
 			ImGui::SliderFloat("Roughness", &material.roughness, 0.0f, 1.0f);
@@ -264,24 +296,27 @@ void MaterialWindow(SceneData* sceneData) {
 			
 			ImGui::Combo("Metallic Texture Channel", (int*)&material.metallicTextureChannel, textureChannels, IM_ARRAYSIZE(textureChannels));
 			ImGui::Combo("Roughness Texture Channel", (int*)&material.roughnessTextureChannel, textureChannels, IM_ARRAYSIZE(textureChannels));
-
+			ImGui::Combo("AO Texture Channel", (int*)&material.aoTextureChannel, textureChannels, IM_ARRAYSIZE(textureChannels));
 			Soul::MaterialSpec spec = {
 				textures[material.albedoTexID].rid,
 				textures[material.normalTexID].rid,
 				textures[material.metallicTexID].rid,
 				textures[material.roughnessTexID].rid,
+				textures[material.aoTexID].rid,
 
 				material.useAlbedoTex,
 				material.useNormalTex,
 				material.useMetallicTex,
 				material.useRoughnessTex,
+				material.useAOTex,
 
 				material.albedo,
 				material.metallic,
 				material.roughness,
 
 				material.metallicTextureChannel,
-				material.roughnessTextureChannel
+				material.roughnessTextureChannel,
+				material.aoTextureChannel
 			};
 
 			renderSystem.materialUpdate(material.rid, spec);

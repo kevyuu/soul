@@ -255,18 +255,21 @@ void ImportObjMtlAssets(
 			sceneData->textures[normalTexID].rid,
 			sceneData->textures[metallicTexID].rid,
 			sceneData->textures[roughnessTexID].rid,
+			0,
 
 			true,
 			true,
 			true,
 			true,
+			false,
 
 			Soul::Vec3f(0.0f, 0.0f, 0.0f),
 			0.0f, 
 			0.0f,
 
 			Soul::TextureChannel_RED,
-			Soul::TextureChannel_RED
+			Soul::TextureChannel_RED,
+			Soul::TextureChannel_RED,
 		
 };
 
@@ -511,6 +514,12 @@ bool ImportGLTFAssets(SceneData* sceneData, const char* gltfPath) {
 
 		}
 
+		if (material.additionalValues.count("occlusionTexture")) {
+			int texID = material.additionalValues.at("occlusionTexture").TextureIndex();
+			uiMaterial.aoTexID = texID + 1;
+			uiMaterial.useAOTex = true;
+		}
+
 		SOUL_ASSERT(0, strlen(material.name.c_str()) <= 512, "Material name is too long | material.name = %s", material.name.c_str());
 		strcpy(uiMaterial.name, material.name.c_str());
 
@@ -519,18 +528,21 @@ bool ImportGLTFAssets(SceneData* sceneData, const char* gltfPath) {
 			sceneData->textures[uiMaterial.normalTexID].rid,
 			sceneData->textures[uiMaterial.metallicTexID].rid,
 			sceneData->textures[uiMaterial.roughnessTexID].rid,
+			sceneData->textures[uiMaterial.aoTexID].rid,
 
 			uiMaterial.useAlbedoTex,
 			uiMaterial.useNormalTex,
 			uiMaterial.useMetallicTex,
-			uiMaterial.useAlbedoTex,
+			uiMaterial.useRoughnessTex,
+			uiMaterial.useAOTex,
 
 			Soul::Vec3f(0.0f, 0.0f, 0.0f),
 			uiMaterial.metallic,
 			uiMaterial.roughness,
 
-			Soul::TextureChannel_RED,
-			Soul::TextureChannel_GREEN
+			Soul::TextureChannel_BLUE,
+			Soul::TextureChannel_GREEN,
+			Soul::TextureChannel_RED
 		});
 
 		sceneData->materials.pushBack(uiMaterial);

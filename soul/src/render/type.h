@@ -93,6 +93,7 @@ namespace Soul {
 		MaterialFlag_USE_NORMAL_TEX = (1UL << 1),
 		MaterialFlag_USE_METALLIC_TEX = (1UL << 2),
 		MaterialFlag_USE_ROUGHNESS_TEX = (1UL << 3),
+		MaterialFlag_USE_AO_TEX = (1UL << 4),
 
 		MaterialFlag_METALLIC_CHANNEL_RED = (1UL << 8),
 		MaterialFlag_METALLIC_CHANNEL_GREEN = (1UL << 9),
@@ -102,7 +103,12 @@ namespace Soul {
 		MaterialFlag_ROUGHNESS_CHANNEL_RED = (1UL << 12),
 		MaterialFlag_ROUGHNESS_CHANNEL_GREEN = (1UL << 13),
 		MaterialFlag_ROUGHNESS_CHANNEL_BLUE = (1UL << 14),
-		MaterialFlag_ROUGHNESS_CHANNEL_ALPHA = (1UL << 15)
+		MaterialFlag_ROUGHNESS_CHANNEL_ALPHA = (1UL << 15),
+
+		MaterialFlag_AO_CHANNEL_RED = (1UL << 16),
+		MaterialFlag_AO_CHANNEL_GREEN = (1UL << 17),
+		MaterialFlag_AO_CHANNEL_BLUE = (1UL << 18),
+		MaterialFlag_AO_CHANNEL_ALPHA = (1UL << 19)
 	};
 
     struct Material {
@@ -111,6 +117,7 @@ namespace Soul {
         RenderRID normalMap;
         RenderRID metallicMap;
         RenderRID roughnessMap;
+		RenderRID aoMap;
 
 		Vec3f albedo;
 		float metallic;
@@ -128,6 +135,7 @@ namespace Soul {
 
         float ambientEnergy;
         Vec3f ambientColor;
+		bool useSkybox = false;
     };
 
     struct ShadowKey {
@@ -177,11 +185,13 @@ namespace Soul {
         RenderRID normalMap;
         RenderRID metallicMap;
         RenderRID roughnessMap;
+		RenderRID aoMap;
 
 		bool useAlbedoTex;
 		bool useNormalTex;
 		bool useMetallicTex;
 		bool useRoughnessTex;
+		bool useAOTex;
 
 		Vec3f albedo;
 		float metallic;
@@ -189,6 +199,7 @@ namespace Soul {
 
 		TextureChannel metallicChannel;
 		TextureChannel roughnessChannel;
+		TextureChannel aoChannel;
     };
 
     struct MeshSpec {
@@ -365,6 +376,7 @@ namespace Soul {
         GLint normalMapLoc;
         GLint metallicMapLoc;
         GLint roughnessMapLoc;
+		GLint aoMapLoc;
 
 		GLint materialFlagsLoc;
 		
@@ -373,6 +385,7 @@ namespace Soul {
 		GLint roughnessLoc;
 		
 		GLint shadowMapLoc;
+
 		GLint viewPositionLoc;
 		GLint ambientFactorLoc;
 
@@ -430,6 +443,9 @@ namespace Soul {
 		GLint depthMapLoc;
     	GLint FGMapLoc;
 		GLint voxelLightBufferLoc;
+
+		GLint diffuseEnvTexLoc;
+		GLint specularEnvTexLoc;
 
     	GLint screenDimensionLoc;
 

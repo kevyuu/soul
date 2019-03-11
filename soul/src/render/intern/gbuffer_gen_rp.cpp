@@ -31,6 +31,7 @@ namespace Soul {
         normalMapLoc = glGetUniformLocation(gBufferShader, "material.normalMap");
         metallicMapLoc = glGetUniformLocation(gBufferShader, "material.metallicMap");
         roughnessMapLoc = glGetUniformLocation(gBufferShader, "material.roughnessMap");
+		aoMapLoc = glGetUniformLocation(gBufferShader, "material.aoMap");
 
 		materialFlagsLoc = glGetUniformLocation(gBufferShader, "material.flags");
 
@@ -118,6 +119,10 @@ namespace Soul {
             glUniform1i(roughnessMapLoc, 3);
             glActiveTexture(GL_TEXTURE3);
             glBindTexture(GL_TEXTURE_2D, material.roughnessMap);
+
+			glUniform1i(aoMapLoc, 4);
+			glActiveTexture(GL_TEXTURE4);
+			glBindTexture(GL_TEXTURE_2D, material.aoMap);
 
 			glUniform1ui(materialFlagsLoc, material.flags);
 

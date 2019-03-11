@@ -17,9 +17,11 @@ namespace Soul {
     void SkyboxRP::execute(RenderDatabase& database) {
 
 		SOUL_PROFILE_RANGE_PUSH(__FUNCTION__);
+		
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
         glUseProgram(shader);
-
+		
         glUniform1i(skyboxLoc, 0);
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_CUBE_MAP, database.environment.cubemap);

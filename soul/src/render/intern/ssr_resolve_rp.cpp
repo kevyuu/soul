@@ -27,6 +27,9 @@ namespace Soul {
 
 		screenDimensionLoc = glGetUniformLocation(shader, "screenDimension");
 
+		diffuseEnvTexLoc = glGetUniformLocation(shader, "diffuseEnvTex");
+		specularEnvTexLoc = glGetUniformLocation(shader, "specularEnvTex");
+
 		GLExt::ErrorCheck("SSRResolveRP::init");
 	}
 
@@ -76,6 +79,14 @@ namespace Soul {
 		glActiveTexture(GL_TEXTURE8);
 		glBindTexture(GL_TEXTURE_3D, db.voxelGIBuffer.lightVoxelTex);
 
+		glUniform1i(diffuseEnvTexLoc, 9);
+		glActiveTexture(GL_TEXTURE9);
+		glBindTexture(GL_TEXTURE_CUBE_MAP, db.environment.diffuseMap);
+
+		glUniform1i(specularEnvTexLoc, 10);
+		glActiveTexture(GL_TEXTURE10);
+		glBindTexture(GL_TEXTURE_CUBE_MAP, db.environment.specularMap);
+
 		glUniform2f(screenDimensionLoc, db.targetWidthPx, db.targetHeightPx);
 
 		glViewport(0, 0, db.targetWidthPx, db.targetHeightPx);
@@ -87,7 +98,9 @@ namespace Soul {
 		glBindFramebuffer(GL_READ_FRAMEBUFFER, db.lightBuffer.frameBuffer);
 		glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
 		glBlitFramebuffer(0, 0, db.targetWidthPx, db.targetHeightPx, 0, 0, db.targetWidthPx, db.targetHeightPx, GL_COLOR_BUFFER_BIT, GL_NEAREST);
-		
+		glBindFramebuffer(GL_READ_FRAMEBUFFER, db.gBuffer.frameBuffer);
+		glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+		glBlitFramebuffer(0, 0, db.targetWidthPx, db.targetHeightPx, 0, 0, db.targetWidthPx, db.targetHeightPx, GL_DEPTH_BUFFER_BIT, GL_NEAREST);
 
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 		glUseProgram(0);

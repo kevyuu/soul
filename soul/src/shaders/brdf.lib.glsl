@@ -2,6 +2,7 @@
 #define MaterialFlag_USE_NORMAL_TEX (1u << 1)
 #define MaterialFlag_USE_METALLIC_TEX (1u << 2)
 #define MaterialFlag_USE_ROUGHNESS_TEX (1u << 3)
+#define MaterialFlag_USE_AO_TEX (1u << 4)
 
 #define MaterialFlag_METALLIC_CHANNEL_RED (1u << 8)
 #define MaterialFlag_METALLIC_CHANNEL_GREEN (1u << 9)
@@ -13,11 +14,17 @@
 #define MaterialFlag_ROUGHNESS_CHANNEL_BLUE (1u << 14)
 #define MaterialFlag_ROUGHNESS_CHANNEL_ALPHA (1u << 15)
 
+#define MaterialFlag_AO_CHANNEL_RED (1u << 16)
+#define MaterialFlag_AO_CHANNEL_GREEN (1u << 17)
+#define MaterialFlag_AO_CHANNEL_BLUE (1u << 18)
+#define MaterialFlag_AO_CHANNEL_ALPHA (1u << 19)
+
 struct Material {
 	sampler2D albedoMap;
 	sampler2D normalMap;
 	sampler2D metallicMap;
 	sampler2D roughnessMap;
+	sampler2D aoMap;
 
 	vec3 albedo;
 	float metallic;
@@ -32,6 +39,7 @@ struct PixelMaterial {
 	vec3 normal;
 	float metallic;
 	float roughness;
+	float ao;
 };
 
 bool bitTest(uint flags, uint mask) {
@@ -76,6 +84,18 @@ PixelMaterial pixelMaterialCreate(Material material, vec2 texCoord) {
 		pixelMaterial.roughness = material.roughness;
 	}
 
+	pixelMaterial.roughness = max(pixelMaterial.roughness, 1e-4);
+
+	if (bitTest(material.flags, MaterialFlag_USE_AO_TEX)) {
+		if (bitTest(material.flags, MaterialFlag_AO_CHANNEL_RED)) pixelMaterial.ao = texture(material.aoMap, texCoord).r;
+		if (bitTest(material.flags, MaterialFlag_AO_CHANNEL_GREEN)) pixelMaterial.ao = texture(material.aoMap, texCoord).g;
+		if (bitTest(material.flags, MaterialFlag_AO_CHANNEL_BLUE)) pixelMaterial.ao = texture(material.aoMap, texCoord).b;
+		if (bitTest(material.flags, MaterialFlag_AO_CHANNEL_ALPHA)) pixelMaterial.ao = texture(material.aoMap, texCoord).a;
+	}
+	else {
+		pixelMaterial.ao = 1;
+	}
+
 	pixelMaterial.f0 = mix(vec3(0.04f), pixelMaterial.albedo, pixelMaterial.metallic);
 
 	return pixelMaterial;
@@ -86,12 +106,13 @@ float DistributionGGX(vec3 N, vec3 H, float roughness)
 {
 	float a = roughness * roughness;
 	float a2 = a * a;
-	float NdotH = max(dot(N, H), 0.0);
+	float NdotH = max(dot(N, H), 1e-8);
 	float NdotH2 = NdotH * NdotH;
 
 	float num = a2;
 	float denom = (NdotH2 * (a2 - 1.0) + 1.0);
 	denom = 3.14 * denom * denom;
+	denom = max(denom, 1e-8);
 
 	return num / denom;
 }
