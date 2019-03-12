@@ -2,153 +2,155 @@
 // Created by Kevin Yudi Utama on 29/8/18.
 //
 
-#include "render/type.h"
+#include "render/data.h"
 #include "render/intern/asset.h"
 #include "render/intern/glext.h"
 #include "core/math.h"
 
 namespace Soul {
+	namespace Render {
 
-    void GBufferGenRP::init(RenderDatabase& database) {
+		void GBufferGenRP::init(Database& database) {
 
-        predepthShader = GLExt::ProgramCreate(RenderAsset::ShaderFile::predepth);
+			predepthShader = GLExt::ProgramCreate(RenderAsset::ShaderFile::predepth);
 
-        GLuint sceneDataBlockIndexPredepth = glGetUniformBlockIndex(predepthShader, RenderConstant::CAMERA_DATA_NAME);
-        glUniformBlockBinding(predepthShader, sceneDataBlockIndexPredepth, RenderConstant::CAMERA_DATA_BINDING_POINT);
+			GLuint sceneDataBlockIndexPredepth = glGetUniformBlockIndex(predepthShader, Constant::CAMERA_DATA_NAME);
+			glUniformBlockBinding(predepthShader, sceneDataBlockIndexPredepth, Constant::CAMERA_DATA_BINDING_POINT);
 
-        predepthModelUniformLoc = glGetUniformLocation(predepthShader, "model");
+			predepthModelUniformLoc = glGetUniformLocation(predepthShader, "model");
 
-        gBufferShader = GLExt::ProgramCreate(RenderAsset::ShaderFile::gbufferGen);
+			gBufferShader = GLExt::ProgramCreate(RenderAsset::ShaderFile::gbufferGen);
 
-        GLuint sceneDataBlockIndex = glGetUniformBlockIndex(gBufferShader, RenderConstant::CAMERA_DATA_NAME);
-        glUniformBlockBinding(gBufferShader, sceneDataBlockIndex, RenderConstant::CAMERA_DATA_BINDING_POINT);
-		GLuint lightDataBlockIndex = glGetUniformBlockIndex(gBufferShader, RenderConstant::LIGHT_DATA_NAME);
-		glUniformBlockBinding(gBufferShader, lightDataBlockIndex, RenderConstant::LIGHT_DATA_BINDING_POINT);
+			GLuint sceneDataBlockIndex = glGetUniformBlockIndex(gBufferShader, Constant::CAMERA_DATA_NAME);
+			glUniformBlockBinding(gBufferShader, sceneDataBlockIndex, Constant::CAMERA_DATA_BINDING_POINT);
+			GLuint lightDataBlockIndex = glGetUniformBlockIndex(gBufferShader, Constant::LIGHT_DATA_NAME);
+			glUniformBlockBinding(gBufferShader, lightDataBlockIndex, Constant::LIGHT_DATA_BINDING_POINT);
 
-        modelUniformLoc = glGetUniformLocation(gBufferShader, "model");
-        
-		albedoMapLoc = glGetUniformLocation(gBufferShader, "material.albedoMap");
-        normalMapLoc = glGetUniformLocation(gBufferShader, "material.normalMap");
-        metallicMapLoc = glGetUniformLocation(gBufferShader, "material.metallicMap");
-        roughnessMapLoc = glGetUniformLocation(gBufferShader, "material.roughnessMap");
-		aoMapLoc = glGetUniformLocation(gBufferShader, "material.aoMap");
+			modelUniformLoc = glGetUniformLocation(gBufferShader, "model");
 
-		materialFlagsLoc = glGetUniformLocation(gBufferShader, "material.flags");
+			albedoMapLoc = glGetUniformLocation(gBufferShader, "material.albedoMap");
+			normalMapLoc = glGetUniformLocation(gBufferShader, "material.normalMap");
+			metallicMapLoc = glGetUniformLocation(gBufferShader, "material.metallicMap");
+			roughnessMapLoc = glGetUniformLocation(gBufferShader, "material.roughnessMap");
+			aoMapLoc = glGetUniformLocation(gBufferShader, "material.aoMap");
 
-		albedoLoc = glGetUniformLocation(gBufferShader, "material.albedo");
-		metallicLoc = glGetUniformLocation(gBufferShader, "material.metallic");
-		roughnessLoc = glGetUniformLocation(gBufferShader, "material.roughness");
+			materialFlagsLoc = glGetUniformLocation(gBufferShader, "material.flags");
 
-		shadowMapLoc = glGetUniformLocation(gBufferShader, "shadowMap");
-		viewPositionLoc = glGetUniformLocation(gBufferShader, "viewPosition");
-		ambientFactorLoc = glGetUniformLocation(gBufferShader, "ambientFactor");
+			albedoLoc = glGetUniformLocation(gBufferShader, "material.albedo");
+			metallicLoc = glGetUniformLocation(gBufferShader, "material.metallic");
+			roughnessLoc = glGetUniformLocation(gBufferShader, "material.roughness");
 
-    }
+			shadowMapLoc = glGetUniformLocation(gBufferShader, "shadowMap");
+			viewPositionLoc = glGetUniformLocation(gBufferShader, "viewPosition");
+			ambientFactorLoc = glGetUniformLocation(gBufferShader, "ambientFactor");
 
-    void GBufferGenRP::execute(RenderDatabase &db) {
-		SOUL_PROFILE_RANGE_PUSH(__FUNCTION__);
+		}
 
-        Camera& camera = db.camera;
+		void GBufferGenRP::execute(Database &db) {
+			SOUL_PROFILE_RANGE_PUSH(__FUNCTION__);
 
-        glBindFramebuffer(GL_FRAMEBUFFER, db.gBuffer.frameBuffer);
+			Camera& camera = db.camera;
 
-		glEnable(GL_CULL_FACE);
-		glCullFace(GL_BACK);
-		glFrontFace(GL_CCW);
+			glBindFramebuffer(GL_FRAMEBUFFER, db.gBuffer.frameBuffer);
 
-        glUseProgram(predepthShader);
-        glDisable(GL_BLEND);
-        glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
-        glDepthMask(GL_TRUE);
-		glClearDepth(1.0f);
-		glClear(GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
-        glEnable(GL_DEPTH_TEST);
-        glDepthFunc(GL_LEQUAL);
-        glDrawBuffers(0, NULL);
+			glEnable(GL_CULL_FACE);
+			glCullFace(GL_BACK);
+			glFrontFace(GL_CCW);
 
-		glViewport(0, 0, db.targetWidthPx, db.targetHeightPx);
-		for (int i = 0; i < db.meshBuffer.getSize(); i++) {
-            const Mesh& mesh = db.meshBuffer.get(i);
-            glUniformMatrix4fv(predepthModelUniformLoc, 1, GL_TRUE, (const GLfloat*) mesh.transform.elem);
-            glBindVertexArray(mesh.vaoHandle);
-            glDrawElements(GL_TRIANGLES, mesh.indexCount, GL_UNSIGNED_INT, 0);
-        }
+			glUseProgram(predepthShader);
+			glDisable(GL_BLEND);
+			glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
+			glDepthMask(GL_TRUE);
+			glClearDepth(1.0f);
+			glClear(GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+			glEnable(GL_DEPTH_TEST);
+			glDepthFunc(GL_LEQUAL);
+			glDrawBuffers(0, NULL);
 
-        unsigned int attachments[4] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2, GL_COLOR_ATTACHMENT3 };
-        glDrawBuffers(4, attachments);
+			glViewport(0, 0, db.targetWidthPx, db.targetHeightPx);
+			for (int i = 0; i < db.meshBuffer.getSize(); i++) {
+				const Mesh& mesh = db.meshBuffer.get(i);
+				glUniformMatrix4fv(predepthModelUniformLoc, 1, GL_TRUE, (const GLfloat*)mesh.transform.elem);
+				glBindVertexArray(mesh.vaoHandle);
+				glDrawElements(GL_TRIANGLES, mesh.indexCount, GL_UNSIGNED_INT, 0);
+			}
 
-        glUseProgram(gBufferShader);
-        glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
-		glEnable(GL_DEPTH_TEST);
-        glDepthMask(GL_FALSE);
-        glClear(GL_COLOR_BUFFER_BIT);
-        glDepthFunc(GL_LEQUAL);
+			unsigned int attachments[4] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2, GL_COLOR_ATTACHMENT3 };
+			glDrawBuffers(4, attachments);
 
-        glUniform1i(shadowMapLoc, 5);
-        glActiveTexture(GL_TEXTURE5);
-        glBindTexture(GL_TEXTURE_2D, db.shadowAtlas.texHandle);
+			glUseProgram(gBufferShader);
+			glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
+			glEnable(GL_DEPTH_TEST);
+			glDepthMask(GL_FALSE);
+			glClear(GL_COLOR_BUFFER_BIT);
+			glDepthFunc(GL_LEQUAL);
 
-		glUniform3f(viewPositionLoc, db.camera.position.x, db.camera.position.y, db.camera.position.z);
-		Vec3f ambientFactor = db.environment.ambientColor * db.environment.ambientEnergy;
-		glUniform3f(ambientFactorLoc, ambientFactor.x, ambientFactor.y, ambientFactor.z);
+			glUniform1i(shadowMapLoc, 5);
+			glActiveTexture(GL_TEXTURE5);
+			glBindTexture(GL_TEXTURE_2D, db.shadowAtlas.texHandle);
+
+			glUniform3f(viewPositionLoc, db.camera.position.x, db.camera.position.y, db.camera.position.z);
+			Vec3f ambientFactor = db.environment.ambientColor * db.environment.ambientEnergy;
+			glUniform3f(ambientFactorLoc, ambientFactor.x, ambientFactor.y, ambientFactor.z);
 
 
-		glViewport(0, 0, db.targetWidthPx, db.targetHeightPx);
+			glViewport(0, 0, db.targetWidthPx, db.targetHeightPx);
 
-		
 
-        for (int i = 0; i < db.meshBuffer.getSize(); i++) {
 
-            const Mesh& mesh = db.meshBuffer.get(i);
-            const Material& material = db.materialBuffer.get(mesh.materialID);
+			for (int i = 0; i < db.meshBuffer.getSize(); i++) {
 
-            glUniformMatrix4fv(modelUniformLoc, 1, GL_TRUE, (const GLfloat*) mesh.transform.elem);
+				const Mesh& mesh = db.meshBuffer.get(i);
+				const Material& material = db.materialBuffer.get(mesh.materialID);
 
-            glUniform1i(albedoMapLoc, 0);
-            glActiveTexture(GL_TEXTURE0);
-            glBindTexture(GL_TEXTURE_2D, material.albedoMap);
+				glUniformMatrix4fv(modelUniformLoc, 1, GL_TRUE, (const GLfloat*)mesh.transform.elem);
 
-            glUniform1i(normalMapLoc, 1);
-            glActiveTexture(GL_TEXTURE1);
-            glBindTexture(GL_TEXTURE_2D, material.normalMap);
+				glUniform1i(albedoMapLoc, 0);
+				glActiveTexture(GL_TEXTURE0);
+				glBindTexture(GL_TEXTURE_2D, material.albedoMap);
 
-            glUniform1i(metallicMapLoc, 2);
-            glActiveTexture(GL_TEXTURE2);
-            glBindTexture(GL_TEXTURE_2D, material.metallicMap);
+				glUniform1i(normalMapLoc, 1);
+				glActiveTexture(GL_TEXTURE1);
+				glBindTexture(GL_TEXTURE_2D, material.normalMap);
 
-            glUniform1i(roughnessMapLoc, 3);
-            glActiveTexture(GL_TEXTURE3);
-            glBindTexture(GL_TEXTURE_2D, material.roughnessMap);
+				glUniform1i(metallicMapLoc, 2);
+				glActiveTexture(GL_TEXTURE2);
+				glBindTexture(GL_TEXTURE_2D, material.metallicMap);
 
-			glUniform1i(aoMapLoc, 4);
-			glActiveTexture(GL_TEXTURE4);
-			glBindTexture(GL_TEXTURE_2D, material.aoMap);
+				glUniform1i(roughnessMapLoc, 3);
+				glActiveTexture(GL_TEXTURE3);
+				glBindTexture(GL_TEXTURE_2D, material.roughnessMap);
 
-			glUniform1ui(materialFlagsLoc, material.flags);
+				glUniform1i(aoMapLoc, 4);
+				glActiveTexture(GL_TEXTURE4);
+				glBindTexture(GL_TEXTURE_2D, material.aoMap);
 
-			glUniform3f(albedoLoc, material.albedo.x, material.albedo.y, material.albedo.z);
-			glUniform1f(roughnessLoc, material.roughness);
-			glUniform1f(metallicLoc, material.metallic);
+				glUniform1ui(materialFlagsLoc, material.flags);
 
-            glBindVertexArray(mesh.vaoHandle);
-            glDrawElements(GL_TRIANGLES, mesh.indexCount, GL_UNSIGNED_INT, 0);
+				glUniform3f(albedoLoc, material.albedo.x, material.albedo.y, material.albedo.z);
+				glUniform1f(roughnessLoc, material.roughness);
+				glUniform1f(metallicLoc, material.metallic);
 
-        }
+				glBindVertexArray(mesh.vaoHandle);
+				glDrawElements(GL_TRIANGLES, mesh.indexCount, GL_UNSIGNED_INT, 0);
 
-		glDisable(GL_CULL_FACE);
-        glBindFramebuffer(GL_FRAMEBUFFER, 0);
-        glBindVertexArray(0);
-        glUseProgram(0);
-        glDepthMask(GL_TRUE);
+			}
 
-		GLExt::ErrorCheck("GBufferGenRPP::execute");
+			glDisable(GL_CULL_FACE);
+			glBindFramebuffer(GL_FRAMEBUFFER, 0);
+			glBindVertexArray(0);
+			glUseProgram(0);
+			glDepthMask(GL_TRUE);
 
-		SOUL_PROFILE_RANGE_POP();
-    }
+			GLExt::ErrorCheck("GBufferGenRPP::execute");
 
-    void GBufferGenRP::shutdown(RenderDatabase &database) {
-		GLExt::ProgramDelete(&gBufferShader);
-		GLExt::ProgramDelete(&predepthShader);
-    }
+			SOUL_PROFILE_RANGE_POP();
+		}
 
+		void GBufferGenRP::shutdown(Database &database) {
+			GLExt::ProgramDelete(&gBufferShader);
+			GLExt::ProgramDelete(&predepthShader);
+		}
+
+	}
 }

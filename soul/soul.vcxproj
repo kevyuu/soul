@@ -49,7 +49,7 @@
     <ClInclude Include="src\render\intern\util.h" />
     <ClInclude Include="src\render\soul_render_backend.h" />
     <ClInclude Include="src\render\system.h" />
-    <ClInclude Include="src\render\type.h" />
+    <ClInclude Include="src\render\data.h" />
     <ClInclude Include="src\sandbox\asset_import.h" />
     <ClInclude Include="src\sandbox\type.h" />
     <ClInclude Include="src\soul_array.h" />

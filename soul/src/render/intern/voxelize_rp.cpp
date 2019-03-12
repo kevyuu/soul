@@ -1,135 +1,137 @@
 #include "core/debug.h"
 #include "core/math.h"
 
-#include "render/type.h"
+#include "render/data.h"
 #include "render/intern/asset.h"
 #include "render/intern/glext.h"
 
 namespace Soul {
-	void VoxelizeRP::init(RenderDatabase& database) {
-		program = GLExt::ProgramCreate(RenderAsset::ShaderFile::voxelize);
+	namespace Render {
+		void VoxelizeRP::init(Database& database) {
+			program = GLExt::ProgramCreate(RenderAsset::ShaderFile::voxelize);
 
-		GLExt::UBOBind(program, RenderConstant::VOXEL_GI_DATA_NAME, RenderConstant::VOXEL_GI_DATA_BINDING_POINT);
+			GLExt::UBOBind(program, Constant::VOXEL_GI_DATA_NAME, Constant::VOXEL_GI_DATA_BINDING_POINT);
 
-		projectionViewLoc[0] = glGetUniformLocation(program, "projectionView[0]");
-		projectionViewLoc[1] = glGetUniformLocation(program, "projectionView[1]");
-		projectionViewLoc[2] = glGetUniformLocation(program, "projectionView[2]");
+			projectionViewLoc[0] = glGetUniformLocation(program, "projectionView[0]");
+			projectionViewLoc[1] = glGetUniformLocation(program, "projectionView[1]");
+			projectionViewLoc[2] = glGetUniformLocation(program, "projectionView[2]");
 
-		inverseProjectionViewLoc[0] = glGetUniformLocation(program, "inverseProjectionView[0]");
-		inverseProjectionViewLoc[1] = glGetUniformLocation(program, "inverseProjectionView[1]");
-		inverseProjectionViewLoc[2] = glGetUniformLocation(program, "inverseProjectionView[2]");
+			inverseProjectionViewLoc[0] = glGetUniformLocation(program, "inverseProjectionView[0]");
+			inverseProjectionViewLoc[1] = glGetUniformLocation(program, "inverseProjectionView[1]");
+			inverseProjectionViewLoc[2] = glGetUniformLocation(program, "inverseProjectionView[2]");
 
-		modelLoc = glGetUniformLocation(program, "model");
-		albedoMapLoc = glGetUniformLocation(program, "material.albedoMap");
-		normalMapLoc = glGetUniformLocation(program, "material.normalMap");
-		metallicMapLoc = glGetUniformLocation(program, "material.metallicMapLoc");
-		roughnessMapLoc = glGetUniformLocation(program, "material. roughnessMapLoc");
-		voxelAlbedoBufferLoc = glGetUniformLocation(program, "voxelAlbedoBuffer");
-		voxelNormalBufferLoc = glGetUniformLocation(program, "voxelNormalBuffer");
+			modelLoc = glGetUniformLocation(program, "model");
+			albedoMapLoc = glGetUniformLocation(program, "material.albedoMap");
+			normalMapLoc = glGetUniformLocation(program, "material.normalMap");
+			metallicMapLoc = glGetUniformLocation(program, "material.metallicMapLoc");
+			roughnessMapLoc = glGetUniformLocation(program, "material. roughnessMapLoc");
+			voxelAlbedoBufferLoc = glGetUniformLocation(program, "voxelAlbedoBuffer");
+			voxelNormalBufferLoc = glGetUniformLocation(program, "voxelNormalBuffer");
 
-		SOUL_ASSERT(0, GLExt::IsErrorCheckPass(), "OpenGL Error");
+			SOUL_ASSERT(0, GLExt::IsErrorCheckPass(), "OpenGL Error");
 
-	}
-
-	void VoxelizeRP::execute(RenderDatabase& db) {
-
-		SOUL_PROFILE_RANGE_PUSH(__FUNCTION__);
-
-		float data[4] = { 0.0f, 0.0f, 0.0f, 0.0f};
-
-		glMemoryBarrier(GL_TEXTURE_FETCH_BARRIER_BIT | GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
-
-		glClearTexImage(db.voxelGIBuffer.lightVoxelTex, 0, GL_RGBA, GL_FLOAT, data);
-		glClearTexImage(db.voxelGIBuffer.gVoxelAlbedoTex, 0, GL_RGBA, GL_FLOAT, data);
-		glClearTexImage(db.voxelGIBuffer.gVoxelNormalTex, 0, GL_RGBA, GL_FLOAT, data);
-
-		glMemoryBarrier(GL_TEXTURE_FETCH_BARRIER_BIT | GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
-
-		glUseProgram(program);
-		glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
-		SOUL_ASSERT(0, GLExt::IsErrorCheckPass(), "");
-
-		float voxelFrustumHalfSpan = db.voxelGIConfig.halfSpan;
-		Vec3f voxelFrustumCenter = db.voxelGIConfig.center;
-
-		Mat4 projection = mat4Ortho(
-			-voxelFrustumHalfSpan, voxelFrustumHalfSpan,
-			-voxelFrustumHalfSpan, voxelFrustumHalfSpan,
-			-voxelFrustumHalfSpan, voxelFrustumHalfSpan);
-		
-		Mat4 view[3];
-		view[0] = mat4View(voxelFrustumCenter, voxelFrustumCenter + Vec3f(1.0f, 0.0f, 0.0f), Vec3f(0.0f, 1.0f, 0.0f));
-		view[1] = mat4View(voxelFrustumCenter, voxelFrustumCenter + Vec3f(0.0f, 1.0f, 0.0f), Vec3f(0.0f, 0.0f, -1.0f));
-		view[2] = mat4View(voxelFrustumCenter, voxelFrustumCenter + Vec3f(0.0f, 0.0f, 1.0f), Vec3f(0.0f, 1.0f, 0.0f));
-		
-		Mat4 projectionView[3];
-		for (int i = 0; i < 3; i++) {
-			projectionView[i] = projection * view[i];
 		}
 
-		Mat4 inverseProjectionView[3];
-		for (int i = 0; i < 3; i++) {
-			inverseProjectionView[i] = mat4Inverse(projectionView[i]);
-		}
+		void VoxelizeRP::execute(Database& db) {
 
-		for (int i = 0; i < 3; i++) {
-			glUniformMatrix4fv(projectionViewLoc[i], 1, GL_TRUE, (GLfloat*)projectionView[i].elem);
-		}
+			SOUL_PROFILE_RANGE_PUSH(__FUNCTION__);
 
-		for (int i = 0; i < 3; i++) {
-			glUniformMatrix4fv(inverseProjectionViewLoc[i], 1, GL_TRUE, (GLfloat*)inverseProjectionView[i].elem);
-		}
+			float data[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
 
-		int voxelFrustumReso = db.voxelGIConfig.resolution;
+			glMemoryBarrier(GL_TEXTURE_FETCH_BARRIER_BIT | GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
 
-		glUniform1i(voxelAlbedoBufferLoc, 6);
-		glBindImageTexture(6, db.voxelGIBuffer.gVoxelAlbedoTex, 0, true, 0, GL_READ_WRITE, GL_R32UI);
+			glClearTexImage(db.voxelGIBuffer.lightVoxelTex, 0, GL_RGBA, GL_FLOAT, data);
+			glClearTexImage(db.voxelGIBuffer.gVoxelAlbedoTex, 0, GL_RGBA, GL_FLOAT, data);
+			glClearTexImage(db.voxelGIBuffer.gVoxelNormalTex, 0, GL_RGBA, GL_FLOAT, data);
 
-		glUniform1i(voxelNormalBufferLoc, 7);
-		glBindImageTexture(7, db.voxelGIBuffer.gVoxelNormalTex, 0, true, 0, GL_READ_WRITE, GL_R32UI);
+			glMemoryBarrier(GL_TEXTURE_FETCH_BARRIER_BIT | GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
 
-		glViewport(0, 0, voxelFrustumReso, voxelFrustumReso);
-		glDisable(GL_DEPTH_TEST);
-
-		for (int i = 0; i < db.meshBuffer.getSize(); i++) {
-
-			const Mesh& mesh = db.meshBuffer.get(i);
-			const Material& material = db.materialBuffer.get(mesh.materialID);
-
-			glUniformMatrix4fv(modelLoc, 1, GL_TRUE, (const GLfloat*)mesh.transform.elem);
-
-			glUniform1i(albedoMapLoc, 0);
-			glActiveTexture(GL_TEXTURE0);
-			glBindTexture(GL_TEXTURE_2D, material.albedoMap);
-
-			glUniform1i(normalMapLoc, 1);
-			glActiveTexture(GL_TEXTURE1);
-			glBindTexture(GL_TEXTURE_2D, material.normalMap);
-
-			glUniform1i(metallicMapLoc, 2);
-			glActiveTexture(GL_TEXTURE2);
-			glBindTexture(GL_TEXTURE_2D, material.metallicMap);
-
-			glUniform1i(roughnessMapLoc, 3);
-			glActiveTexture(GL_TEXTURE3);
-			glBindTexture(GL_TEXTURE_2D, material.roughnessMap);
+			glUseProgram(program);
+			glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
 			SOUL_ASSERT(0, GLExt::IsErrorCheckPass(), "");
 
-			glBindVertexArray(mesh.vaoHandle);
-			glDrawElements(GL_TRIANGLES, mesh.indexCount, GL_UNSIGNED_INT, 0);
-			
+			float voxelFrustumHalfSpan = db.voxelGIConfig.halfSpan;
+			Vec3f voxelFrustumCenter = db.voxelGIConfig.center;
+
+			Mat4 projection = mat4Ortho(
+				-voxelFrustumHalfSpan, voxelFrustumHalfSpan,
+				-voxelFrustumHalfSpan, voxelFrustumHalfSpan,
+				-voxelFrustumHalfSpan, voxelFrustumHalfSpan);
+
+			Mat4 view[3];
+			view[0] = mat4View(voxelFrustumCenter, voxelFrustumCenter + Vec3f(1.0f, 0.0f, 0.0f), Vec3f(0.0f, 1.0f, 0.0f));
+			view[1] = mat4View(voxelFrustumCenter, voxelFrustumCenter + Vec3f(0.0f, 1.0f, 0.0f), Vec3f(0.0f, 0.0f, -1.0f));
+			view[2] = mat4View(voxelFrustumCenter, voxelFrustumCenter + Vec3f(0.0f, 0.0f, 1.0f), Vec3f(0.0f, 1.0f, 0.0f));
+
+			Mat4 projectionView[3];
+			for (int i = 0; i < 3; i++) {
+				projectionView[i] = projection * view[i];
+			}
+
+			Mat4 inverseProjectionView[3];
+			for (int i = 0; i < 3; i++) {
+				inverseProjectionView[i] = mat4Inverse(projectionView[i]);
+			}
+
+			for (int i = 0; i < 3; i++) {
+				glUniformMatrix4fv(projectionViewLoc[i], 1, GL_TRUE, (GLfloat*)projectionView[i].elem);
+			}
+
+			for (int i = 0; i < 3; i++) {
+				glUniformMatrix4fv(inverseProjectionViewLoc[i], 1, GL_TRUE, (GLfloat*)inverseProjectionView[i].elem);
+			}
+
+			int voxelFrustumReso = db.voxelGIConfig.resolution;
+
+			glUniform1i(voxelAlbedoBufferLoc, 6);
+			glBindImageTexture(6, db.voxelGIBuffer.gVoxelAlbedoTex, 0, true, 0, GL_READ_WRITE, GL_R32UI);
+
+			glUniform1i(voxelNormalBufferLoc, 7);
+			glBindImageTexture(7, db.voxelGIBuffer.gVoxelNormalTex, 0, true, 0, GL_READ_WRITE, GL_R32UI);
+
+			glViewport(0, 0, voxelFrustumReso, voxelFrustumReso);
+			glDisable(GL_DEPTH_TEST);
+
+			for (int i = 0; i < db.meshBuffer.getSize(); i++) {
+
+				const Mesh& mesh = db.meshBuffer.get(i);
+				const Material& material = db.materialBuffer.get(mesh.materialID);
+
+				glUniformMatrix4fv(modelLoc, 1, GL_TRUE, (const GLfloat*)mesh.transform.elem);
+
+				glUniform1i(albedoMapLoc, 0);
+				glActiveTexture(GL_TEXTURE0);
+				glBindTexture(GL_TEXTURE_2D, material.albedoMap);
+
+				glUniform1i(normalMapLoc, 1);
+				glActiveTexture(GL_TEXTURE1);
+				glBindTexture(GL_TEXTURE_2D, material.normalMap);
+
+				glUniform1i(metallicMapLoc, 2);
+				glActiveTexture(GL_TEXTURE2);
+				glBindTexture(GL_TEXTURE_2D, material.metallicMap);
+
+				glUniform1i(roughnessMapLoc, 3);
+				glActiveTexture(GL_TEXTURE3);
+				glBindTexture(GL_TEXTURE_2D, material.roughnessMap);
+
+				SOUL_ASSERT(0, GLExt::IsErrorCheckPass(), "");
+
+				glBindVertexArray(mesh.vaoHandle);
+				glDrawElements(GL_TRIANGLES, mesh.indexCount, GL_UNSIGNED_INT, 0);
+
+			}
+
+			glUseProgram(0);
+
+			SOUL_ASSERT(0, GLExt::IsErrorCheckPass(), "");
+
+			SOUL_PROFILE_RANGE_POP();
 		}
 
-		glUseProgram(0);
-
-		SOUL_ASSERT(0, GLExt::IsErrorCheckPass(), "");
-
-		SOUL_PROFILE_RANGE_POP();
-	}
-
-	void VoxelizeRP::shutdown(RenderDatabase& database) {
-		glDeleteProgram(0);
+		void VoxelizeRP::shutdown(Database& database) {
+			glDeleteProgram(0);
+		}
 	}
 }

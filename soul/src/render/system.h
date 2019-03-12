@@ -1,46 +1,46 @@
 #pragma once
-#include "render/type.h"
+#include "render/data.h"
 
-namespace Soul {
+namespace Soul { namespace Render {
 
-    struct RenderSystem {
+	struct System {
 
 		struct ShadowAtlasConfig {
 			int32 resolution;
 			int8 subdivSqrtCount[4] = { 1, 2, 4, 8 };
 		};
 
-        struct Config {
-            int32 materialPoolSize = 128;
-            int32 meshPoolSize = 128;
-            int32 shadowAtlasRes;
-            int32 targetWidthPx = 1920;
-            int32 targetHeightPx = 1080;
+		struct Config {
+			int32 materialPoolSize = 128;
+			int32 meshPoolSize = 128;
+			int32 shadowAtlasRes;
+			int32 targetWidthPx = 1920;
+			int32 targetHeightPx = 1080;
 			int8 subdivSqrtCount[4] = { 1, 2, 4, 8 };
 
 			VoxelGIConfig voxelGIConfig;
 			ShadowAtlasConfig shadowAtlasConfig;
-        };
+		};
 
-        PanoramaToCubemapRP panoramaToCubemapRP;
-        DiffuseEnvmapFilterRP diffuseEnvmapFilterRP;
-        SpecularEnvmapFilterRP specularEnvmapFilterRP;
-        BRDFMapRP brdfMapRP;
+		PanoramaToCubemapRP panoramaToCubemapRP;
+		DiffuseEnvmapFilterRP diffuseEnvmapFilterRP;
+		SpecularEnvmapFilterRP specularEnvmapFilterRP;
+		BRDFMapRP brdfMapRP;
 		VoxelizeRP voxelizeRP;
 
-        void init(const Config& config);
-        void shutdown();
+		void init(const Config& config);
+		void shutdown();
 
 		void shaderReload();
 
-        RenderRID textureCreate(const TextureSpec& spec, unsigned char* data, int dataChannelCount);
+		RID textureCreate(const TexSpec& spec, unsigned char* data, int dataChannelCount);
 
-        RenderRID dirLightCreate(const DirectionalLightSpec& spec);
-        void dirLightSetDirection(RenderRID lightRID, Vec3f direction);
-		void dirLightSetColor(RenderRID lightRID, Vec3f color);
-		void dirLightSetShadowMapResolution(RenderRID lightRID, int32 resolution);
-		void dirLightSetCascadeSplit(RenderRID lightRID, float split1, float split2, float split3);
-		void dirLightSetBias(RenderRID lightRID, float bias);
+		RID dirLightCreate(const DirectionalLightSpec& spec);
+		void dirLightSetDirection(RID lightRID, Vec3f direction);
+		void dirLightSetColor(RID lightRID, Vec3f color);
+		void dirLightSetShadowMapResolution(RID lightRID, int32 resolution);
+		void dirLightSetCascadeSplit(RID lightRID, float split1, float split2, float split3);
+		void dirLightSetBias(RID lightRID, float bias);
 
 		void voxelGIVoxelize();
 		void voxelGIUpdateConfig(const VoxelGIConfig& config);
@@ -50,40 +50,40 @@ namespace Soul {
 
 		void shadowAtlasUpdateConfig(const ShadowAtlasConfig& config);
 
-        void envSetAmbientEnergy(float ambientEnergy);
-        void envSetAmbientColor(Vec3f ambientColor);
-		void envSetPanorama(RenderRID panoramaTex);
+		void envSetAmbientEnergy(float ambientEnergy);
+		void envSetAmbientColor(Vec3f ambientColor);
+		void envSetPanorama(RID panoramaTex);
 		void envSetSkybox(const SkyboxSpec& spec);
 
-        RenderRID materialCreate(const MaterialSpec& spec);
-		void materialUpdate(RenderRID rid, const MaterialSpec& spec);
-		void materialSetMetallicTextureChannel(RenderRID rid, TextureChannel textureChannel);
-		void materialSetRoughnessTextureChannel(RenderRID rid, TextureChannel textureChannel);
-		void materialSetAOTextureChannel(RenderRID rid, TextureChannel textureChannel);
-		void _materialUpdateFlag(RenderRID rid, const MaterialSpec& spec);
+		RID materialCreate(const MaterialSpec& spec);
+		void materialUpdate(RID rid, const MaterialSpec& spec);
+		void materialSetMetallicTextureChannel(RID rid, TexChannel textureChannel);
+		void materialSetRoughnessTextureChannel(RID rid, TexChannel textureChannel);
+		void materialSetAOTextureChannel(RID rid, TexChannel textureChannel);
+		void _materialUpdateFlag(RID rid, const MaterialSpec& spec);
 
-        RenderRID meshCreate(const MeshSpec& spec);
-		void meshSetTransform(RenderRID rid, Vec3f position, Vec3f scale, Vec4f rotation);
+		RID meshCreate(const MeshSpec& spec);
+		void meshSetTransform(RID rid, Vec3f position, Vec3f scale, Vec4f rotation);
 
-        void render(const Camera& camera);
+		void render(const Camera& camera);
 
-        //-------------------------------------------
-        // private
-        //-------------------------------------------
-        RenderDatabase _database;
+		//-------------------------------------------
+		// private
+		//-------------------------------------------
+		Database _database;
 
 		void _shadowAtlasInit();
 		void _shadowAtlasCleanup();
 		void _shadowAtlasFreeSlot(ShadowKey shadowKey);
 
-        void _updateShadowMatrix();
-        void _flushUBO();
+		void _updateShadowMatrix();
+		void _flushUBO();
 		void _flushVoxelGIUBO();
-        
+
 		void _utilVAOInit();
 		void _utilVAOCleanup();
 
-        void _brdfMapInit();
+		void _brdfMapInit();
 		void _brdfMapCleanup();
 
 		void _gBufferInit();
@@ -101,7 +101,8 @@ namespace Soul {
 		void _velocityBufferInit();
 		void _velocityBufferCleanup();
 
-        ShadowKey _shadowAtlasGetSlot(RenderRID lightID, int texReso);
+		ShadowKey _shadowAtlasGetSlot(RID lightID, int texReso);
 
-    };
-}
+	};
+
+}}

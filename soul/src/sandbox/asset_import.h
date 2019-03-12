@@ -10,7 +10,7 @@
 #include "extern/tiny_gltf.h"
 
 #include "render/system.h"
-#include "render/type.h"
+#include "render/data.h"
 #include "core/array.h"
 #include "core/type.h"
 #include "core/debug.h"
@@ -137,7 +137,7 @@ void ImportObjMtlAssets(
 	const char* objFilePath, 
 	const char* assetDir) {
 	
-	Soul::RenderSystem* renderSystem = &sceneData->renderSystem;
+	Soul::Render::System* renderSystem = &sceneData->renderSystem;
 
 	std::ifstream ifs(objFilePath);
 	SOUL_ASSERT(0, !ifs.fail(), "Failed to load .obj file|objFilePath = %s", objFilePath);
@@ -184,7 +184,7 @@ void ImportObjMtlAssets(
 
 	int baseIndex = 0;
 
-	Soul::Array<Soul::RenderRID> texIDMapping;
+	Soul::Array<Soul::Render::RID> texIDMapping;
 	texIDMapping.init(callbackData.materials.size());
 	for (int i = 0; i < callbackData.materials.size(); i++) {
 		
@@ -198,8 +198,8 @@ void ImportObjMtlAssets(
 		UITexture sceneMetallicTexture;
 		strcpy(sceneMetallicTexture.name, material.metallic_texname.c_str());
 
-		Soul::TextureSpec texSpec;
-		texSpec.pixelFormat = Soul::PF_RGBA;
+		Soul::Render::TexSpec texSpec;
+		texSpec.pixelFormat = Soul::Render::PF_RGBA;
 		texSpec.minFilter = GL_LINEAR_MIPMAP_LINEAR;
 		texSpec.magFilter = GL_LINEAR;
 		int numChannel;
@@ -250,7 +250,7 @@ void ImportObjMtlAssets(
 		normalTexID = sceneData->textures.getSize() - 1;
 		stbi_image_free(normalRaw);
 
-		Soul::MaterialSpec materialSpec = {
+		Soul::Render::MaterialSpec materialSpec = {
 			sceneData->textures[albedoTexID].rid,
 			sceneData->textures[normalTexID].rid,
 			sceneData->textures[metallicTexID].rid,
@@ -267,13 +267,13 @@ void ImportObjMtlAssets(
 			0.0f, 
 			0.0f,
 
-			Soul::TextureChannel_RED,
-			Soul::TextureChannel_RED,
-			Soul::TextureChannel_RED,
+			Soul::Render::TextureChannel_RED,
+			Soul::Render::TextureChannel_RED,
+			Soul::Render::TextureChannel_RED,
 		
 };
 
-		Soul::RenderRID materialRID = renderSystem->materialCreate(materialSpec);
+		Soul::Render::RID materialRID = renderSystem->materialCreate(materialSpec);
 		
 		UIMaterial sceneMaterial = { 0 };
 		strcpy(sceneMaterial.name, material.name.c_str());
@@ -311,7 +311,7 @@ void ImportObjMtlAssets(
 			continue;
 		}
 		
-		Soul::Array<Soul::Vertex> vertexes;
+		Soul::Array<Soul::Render::Vertex> vertexes;
 		vertexes.init(100000);
 		Soul::Array<uint32> indexes;
 		indexes.init(100000);
@@ -351,9 +351,9 @@ void ImportObjMtlAssets(
 		}
 
 		for (int j = 0; j < indexes.getSize(); j+=3) {
-			Soul::Vertex& vertex1 = vertexes.buffer[indexes.get(j)];
-			Soul::Vertex& vertex2 = vertexes.buffer[indexes.get(j + 1)];
-			Soul::Vertex& vertex3 = vertexes.buffer[indexes.get(j + 2)];
+			Soul::Render::Vertex& vertex1 = vertexes.buffer[indexes.get(j)];
+			Soul::Render::Vertex& vertex2 = vertexes.buffer[indexes.get(j + 1)];
+			Soul::Render::Vertex& vertex3 = vertexes.buffer[indexes.get(j + 2)];
 
 			Soul::Vec3f edge1 = vertex2.pos - vertex1.pos;
 			Soul::Vec3f edge2 = vertex3.pos - vertex1.pos;
@@ -385,8 +385,8 @@ void ImportObjMtlAssets(
 		}
 
 		uint32 materialID = texIDMapping[materialIndex];
-		Soul::RenderRID materialRID = sceneData->materials[materialID].rid;
-		Soul::MeshSpec meshSpec = {
+		Soul::Render::RID materialRID = sceneData->materials[materialID].rid;
+		Soul::Render::MeshSpec meshSpec = {
 				Soul::mat4Identity(),
 				vertexes.buffer,
 				indexes.buffer,
@@ -394,7 +394,7 @@ void ImportObjMtlAssets(
 				indexes.getSize(),
 				materialRID
 		};
-		Soul::RenderRID meshRID = renderSystem->meshCreate(meshSpec);
+		Soul::Render::RID meshRID = renderSystem->meshCreate(meshSpec);
 
 		UIMesh sceneMesh = { 0 };
 		strcpy(sceneMesh.name, "object");
@@ -444,20 +444,20 @@ bool ImportGLTFAssets(SceneData* sceneData, const char* gltfPath) {
 		return false;
 	}
 
-	Soul::RenderSystem& renderSystem = sceneData->renderSystem;
+	Soul::Render::System& renderSystem = sceneData->renderSystem;
 
 	//Load Textures
 	for (int i = 0; i < model.textures.size(); i++) {
 		const tinygltf::Texture& texture = model.textures[i];
 		const tinygltf::Image& image = model.images[texture.source];
 
-		Soul::TextureSpec texSpec;
-		texSpec.pixelFormat = Soul::PF_RGBA;
+		Soul::Render::TexSpec texSpec;
+		texSpec.pixelFormat = Soul::Render::PF_RGBA;
 		texSpec.minFilter = GL_LINEAR_MIPMAP_LINEAR;
 		texSpec.magFilter = GL_LINEAR;
 		texSpec.width = image.width;
 		texSpec.height = image.height;
-		Soul::RenderRID textureRID = renderSystem.textureCreate(texSpec, (unsigned char*)&image.image[0], image.component);
+		Soul::Render::RID textureRID = renderSystem.textureCreate(texSpec, (unsigned char*)&image.image[0], image.component);
 
 		UITexture uiTexture = { 0 };
 		strcpy(uiTexture.name, texture.name.c_str());
@@ -498,11 +498,11 @@ bool ImportGLTFAssets(SceneData* sceneData, const char* gltfPath) {
 			int texID = material.values.at("metallicRoughnessTexture").TextureIndex();
 
 			uiMaterial.metallicTexID = texID + 1;
-			uiMaterial.metallicTextureChannel = Soul::TextureChannel_RED;
+			uiMaterial.metallicTextureChannel = Soul::Render::TextureChannel_RED;
 			uiMaterial.useMetallicTex = true;
 
 			uiMaterial.roughnessTexID = texID + 1;
-			uiMaterial.roughnessTextureChannel = Soul::TextureChannel_GREEN;
+			uiMaterial.roughnessTextureChannel = Soul::Render::TextureChannel_GREEN;
 			uiMaterial.useRoughnessTex = true;
 		}
 
@@ -540,9 +540,9 @@ bool ImportGLTFAssets(SceneData* sceneData, const char* gltfPath) {
 			uiMaterial.metallic,
 			uiMaterial.roughness,
 
-			Soul::TextureChannel_BLUE,
-			Soul::TextureChannel_GREEN,
-			Soul::TextureChannel_RED
+			Soul::Render::TextureChannel_BLUE,
+			Soul::Render::TextureChannel_GREEN,
+			Soul::Render::TextureChannel_RED
 		});
 
 		sceneData->materials.pushBack(uiMaterial);
@@ -553,7 +553,7 @@ bool ImportGLTFAssets(SceneData* sceneData, const char* gltfPath) {
 	// Load Mesh
 	for (int i = 0; i < model.meshes.size(); i++) {
 
-		Soul::Array<Soul::Vertex> vertexes;
+		Soul::Array<Soul::Render::Vertex> vertexes;
 		vertexes.init(100000);
 		Soul::Array<uint32> indexes;
 		indexes.init(100000);
@@ -630,7 +630,7 @@ bool ImportGLTFAssets(SceneData* sceneData, const char* gltfPath) {
 			indexes.pushBack(index);
 		}
 
-		Soul::RenderRID meshRID = renderSystem.meshCreate({
+		Soul::Render::RID meshRID = renderSystem.meshCreate({
 			Soul::mat4Identity(),
 			vertexes.buffer,
 			indexes.buffer,

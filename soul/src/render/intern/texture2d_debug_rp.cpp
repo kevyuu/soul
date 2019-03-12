@@ -1,41 +1,43 @@
-#include "render/type.h"
+#include "render/data.h"
 #include "render/intern/asset.h"
 #include "render/intern/glext.h"
 
 namespace Soul {
+	namespace Render {
 
-    void Texture2DDebugRP::init(RenderDatabase& database) {
+		void Texture2DDebugRP::init(Database& database) {
 
-		shader = GLExt::ProgramCreate(RenderAsset::ShaderFile::texture2dDebug);
- 
-    }
+			shader = GLExt::ProgramCreate(RenderAsset::ShaderFile::texture2dDebug);
 
-    void Texture2DDebugRP::execute(RenderDatabase& database) {
+		}
 
-		SOUL_PROFILE_RANGE_PUSH(__FUNCTION__);
+		void Texture2DDebugRP::execute(Database& database) {
 
-        Camera& camera = database.camera;
-        glBindFramebuffer(GL_FRAMEBUFFER, 0);
-        float fracSize = 1.0f / 4;
-        glViewport(0, 0, database.targetWidthPx * fracSize, database.targetHeightPx * fracSize);
-        glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-        glUseProgram(shader);
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, database.velocityBuffer.tex);
-		glBindVertexArray(database.quadVAO);
-		glDisable(GL_DEPTH_TEST);
-		glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+			SOUL_PROFILE_RANGE_PUSH(__FUNCTION__);
 
-		glBindFramebuffer(GL_FRAMEBUFFER, 0);
-        glBindVertexArray(0);
-        glUseProgram(0);
+			Camera& camera = database.camera;
+			glBindFramebuffer(GL_FRAMEBUFFER, 0);
+			float fracSize = 1.0f / 4;
+			glViewport(0, 0, database.targetWidthPx * fracSize, database.targetHeightPx * fracSize);
+			glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+			glUseProgram(shader);
+			glActiveTexture(GL_TEXTURE0);
+			glBindTexture(GL_TEXTURE_2D, database.velocityBuffer.tex);
+			glBindVertexArray(database.quadVAO);
+			glDisable(GL_DEPTH_TEST);
+			glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 
-		SOUL_PROFILE_RANGE_POP();
-    }
+			glBindFramebuffer(GL_FRAMEBUFFER, 0);
+			glBindVertexArray(0);
+			glUseProgram(0);
 
-    void Texture2DDebugRP::shutdown(RenderDatabase &database) {
-        glDeleteProgram(shader);
-    }
+			SOUL_PROFILE_RANGE_POP();
+		}
+
+		void Texture2DDebugRP::shutdown(Database &database) {
+			glDeleteProgram(shader);
+		}
 
 
+	}
 }

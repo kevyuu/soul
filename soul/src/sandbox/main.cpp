@@ -1,6 +1,6 @@
 #include "core/type.h"
 #include "core/math.h"
-#include "render/type.h"
+#include "render/data.h"
 #include "render/system.h"
 #include "render/intern/glext.h"
 #include "asset_import.h"
@@ -22,7 +22,7 @@
 
 void SettingWindow(SceneData* sceneData) {
 
-	Soul::RenderSystem *renderSystem = &sceneData->renderSystem;
+	Soul::Render::System *renderSystem = &sceneData->renderSystem;
 
 	ImGui::Begin("Setting Window");
 	
@@ -42,7 +42,7 @@ void SettingWindow(SceneData* sceneData) {
 		dirLightConfig->resolution = Soul::nextPowerOfTwo(dirLightConfig->resolution);
 		renderSystem->dirLightSetShadowMapResolution(sceneData->sunRID, dirLightConfig->resolution);
 
-		Soul::Camera& camera = sceneData->camera;
+		Soul::Render::Camera& camera = sceneData->camera;
 		float cameraRange = camera.perspective.zFar - camera.perspective.zNear;
 		int distance[3];
 
@@ -136,7 +136,7 @@ void SettingWindow(SceneData* sceneData) {
 
 	if (ImGui::CollapsingHeader("Shadow Atlas Config")) {
 
-		Soul::RenderSystem::ShadowAtlasConfig& shadowAtlasConfig = sceneData->renderConfig.shadowAtlasConfig;
+		Soul::Render::System::ShadowAtlasConfig& shadowAtlasConfig = sceneData->renderConfig.shadowAtlasConfig;
 
 		ImGui::InputInt("Resolution", &shadowAtlasConfig.resolution);
 		shadowAtlasConfig.resolution = Soul::nextPowerOfTwo(shadowAtlasConfig.resolution);
@@ -172,7 +172,7 @@ void SettingWindow(SceneData* sceneData) {
 
 void MenuBar(SceneData* sceneData) {
 
-	Soul::RenderSystem* renderSystem = &sceneData->renderSystem;
+	Soul::Render::System* renderSystem = &sceneData->renderSystem;
 
 	if (ImGui::BeginPopupModal("Import Obj and MTL", NULL, ImGuiWindowFlags_AlwaysAutoResize))
 	{
@@ -277,7 +277,7 @@ void MaterialWindow(SceneData* sceneData) {
 
 	Soul::Array<UIMaterial>& materials = sceneData->materials;
 	Soul::Array<UITexture>& textures = sceneData->textures;
-	Soul::RenderSystem& renderSystem = sceneData->renderSystem;
+	Soul::Render::System& renderSystem = sceneData->renderSystem;
 	
 	for (int i = 1; i < materials.getSize(); i++) {
 		UIMaterial& material = materials[i];
@@ -297,7 +297,7 @@ void MaterialWindow(SceneData* sceneData) {
 			ImGui::Combo("Metallic Texture Channel", (int*)&material.metallicTextureChannel, textureChannels, IM_ARRAYSIZE(textureChannels));
 			ImGui::Combo("Roughness Texture Channel", (int*)&material.roughnessTextureChannel, textureChannels, IM_ARRAYSIZE(textureChannels));
 			ImGui::Combo("AO Texture Channel", (int*)&material.aoTextureChannel, textureChannels, IM_ARRAYSIZE(textureChannels));
-			Soul::MaterialSpec spec = {
+			Soul::Render::MaterialSpec spec = {
 				textures[material.albedoTexID].rid,
 				textures[material.normalTexID].rid,
 				textures[material.metallicTexID].rid,
@@ -397,9 +397,9 @@ int main() {
 	ImGui::StyleColorsDark();
 
 	SceneData sceneData;
-	Soul::RenderSystem& renderSystem = sceneData.renderSystem;
-	Soul::RenderSystem::Config& renderConfig = sceneData.renderConfig;
-	Soul::Camera& camera = sceneData.camera;
+	Soul::Render::System& renderSystem = sceneData.renderSystem;
+	Soul::Render::System::Config& renderConfig = sceneData.renderConfig;
+	Soul::Render::Camera& camera = sceneData.camera;
 	sceneData.textures.init(10000);
 	sceneData.textures.pushBack({ 0 });
 	sceneData.materials.init(10000);
@@ -435,10 +435,10 @@ int main() {
 		camera.perspective.zNear,
 		camera.perspective.zFar);
 
-	Soul::DirectionalLightSpec lightSpec;
+	Soul::Render::DirectionalLightSpec lightSpec;
 	lightSpec.direction = Soul::Vec3f(0.03f, -1.0f, 0.35f);
 	lightSpec.color = Soul::Vec3f(1.0f, 1.0f, 1.0f) * 100.0f;
-	lightSpec.shadowMapResolution = Soul::TR_4096;
+	lightSpec.shadowMapResolution = Soul::Render::TR_4096;
 	sceneData.sunRID = renderSystem.dirLightCreate(lightSpec);
 
 	sceneData.dirLightConfig.dir = lightSpec.direction;

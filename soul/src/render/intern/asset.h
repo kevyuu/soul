@@ -8,7 +8,7 @@
 #define SHADER_DIR "C:/Dev/soul/soul/src/shaders/"
 #define SHADER_FILE_PATH(filename) SHADER_DIR filename
 
-#include "render/type.h"
+#include "render/data.h"
 #include <cstdio>
 #include <cstdlib>
 

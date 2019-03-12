@@ -2,7 +2,7 @@
 
 #include "core/hash_map.h"
 
-#include "render/type.h"
+#include "render/data.h"
 #include "render/system.h"
 
 struct DirLightConfig {
@@ -17,14 +17,14 @@ struct DirLightConfig {
 struct UITexture {
 	
 	char name[512];
-	Soul::RenderRID rid;
+	Soul::Render::RID rid;
 
 };
 
 struct UIMaterial {
 	
 	char name[512];
-	Soul::RenderRID rid;
+	Soul::Render::RID rid;
 
 	uint32 albedoTexID;
 	uint32 normalTexID;
@@ -42,15 +42,15 @@ struct UIMaterial {
 	bool useRoughnessTex;
 	bool useAOTex;
 
-	Soul::TextureChannel metallicTextureChannel;
-	Soul::TextureChannel roughnessTextureChannel;
-	Soul::TextureChannel aoTextureChannel;
+	Soul::Render::TexChannel metallicTextureChannel;
+	Soul::Render::TexChannel roughnessTextureChannel;
+	Soul::Render::TexChannel aoTextureChannel;
 };
 
 struct UIMesh {
 	
 	char name[512];
-	Soul::RenderRID rid;
+	Soul::Render::RID rid;
 
 	Soul::Vec3f scale;
 	Soul::Vec3f position;
@@ -62,12 +62,12 @@ struct UIMesh {
 
 struct SceneData {
 
-	Soul::RenderSystem renderSystem;
-	Soul::RenderSystem::Config renderConfig;
+	Soul::Render::System renderSystem;
+	Soul::Render::System::Config renderConfig;
 	DirLightConfig dirLightConfig;
 
-	Soul::Camera camera;
-	Soul::RenderRID sunRID;
+	Soul::Render::Camera camera;
+	Soul::Render::RID sunRID;
 
 	Soul::Array<UITexture> textures;
 	Soul::Array<UIMaterial> materials;
