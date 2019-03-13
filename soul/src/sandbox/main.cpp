@@ -438,7 +438,7 @@ int main() {
 	Soul::Render::DirectionalLightSpec lightSpec;
 	lightSpec.direction = Soul::Vec3f(0.03f, -1.0f, 0.35f);
 	lightSpec.color = Soul::Vec3f(1.0f, 1.0f, 1.0f) * 100.0f;
-	lightSpec.shadowMapResolution = Soul::Render::TR_4096;
+	lightSpec.shadowMapResolution = Soul::Render::TexReso_4096;
 	sceneData.sunRID = renderSystem.dirLightCreate(lightSpec);
 
 	sceneData.dirLightConfig.dir = lightSpec.direction;

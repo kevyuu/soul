@@ -7,32 +7,6 @@ namespace Soul {namespace Render {
 
 	typedef unsigned int RID;
 
-	enum TexReso {
-		TR_1 = 1,
-		TR_2 = 2,
-		TR_4 = 4,
-		TR_8 = 8,
-		TR_16 = 16,
-		TR_32 = 32,
-		TR_64 = 64,
-		TR_128 = 128,
-		TR_256 = 256,
-		TR_512 = 512,
-		TR_1024 = 1024,
-		TR_2048 = 2048,
-		TR_4096 = 4096,
-		TR_8192 = 8192
-	};
-
-	enum PixelFormat {
-		PF_RED,
-		PF_RG,
-		PF_RGB,
-		PF_RGBA,
-		PF_DEPTH_COMPONENT,
-		PF_COUNT
-	};
-
 	struct VoxelGIConfig {
 		Vec3f center = { 0.0f, 0.0f, 0.0f };
 		real32 bias = 1.5f;
@@ -154,23 +128,111 @@ namespace Soul {namespace Render {
 		float bias;
 	};
 
+	// Resource spec
+
 	enum TexChannel {
-		TextureChannel_RED,
-		TextureChannel_GREEN,
-		TextureChannel_BLUE,
-		TextureChannel_ALPHA,
-		TC_COUNT
+
+		TexChannel_RED,
+		TexChannel_GREEN,
+		TexChannel_BLUE,
+		TexChannel_ALPHA,
+
+		TexChannel_COUNT
+
 	};
 
-	// Resource spec
+	enum TexFilter {
+
+		TexFilter_NEAREST,
+		TexFilter_LINEAR,
+		TexFilter_NEAREST_MIPMAP_NEAREST,
+		TexFilter_LINEAR_MIPMAP_NEAREST,
+		TexFilter_NEAREST_MIPMAP_LINEAR,
+		TexFilter_LINEAR_MIPMAP_LINEAR,
+
+		TexFilter_COUNT
+	};
+
+	static constexpr GLuint _GL_FILTER_MAP[TexFilter_COUNT] = {
+		GL_NEAREST,
+		GL_LINEAR,
+		GL_NEAREST_MIPMAP_NEAREST,
+		GL_LINEAR_MIPMAP_NEAREST,
+		GL_NEAREST_MIPMAP_LINEAR,
+		GL_LINEAR_MIPMAP_LINEAR
+	};
+
+	enum TexWrap {
+
+		TexWrap_CLAMP_TO_EDGE,
+		TexWrap_MIRRORED_REPEAT,
+		TexWrap_REPEAT,
+
+		TexWrap_COUNT
+	};
+
+	static constexpr GLuint _GL_WRAP_MAP[TexWrap_COUNT] = {
+		GL_CLAMP_TO_EDGE,
+		GL_MIRRORED_REPEAT,
+		GL_REPEAT
+	};
+
+	enum TexReso {
+
+		TexReso_1 = 1,
+		TexReso_2 = 2,
+		TexReso_4 = 4,
+		TexReso_8 = 8,
+		TexReso_16 = 16,
+		TexReso_32 = 32,
+		TexReso_64 = 64,
+		TexReso_128 = 128,
+		TexReso_256 = 256,
+		TexReso_512 = 512,
+		TexReso_1024 = 1024,
+		TexReso_2048 = 2048,
+		TexReso_4096 = 4096,
+		TexReso_8192 = 8192
+
+	};
+
+	enum PixelFormat {
+
+		PixelFormat_RED,
+		PixelFormat_RG,
+		PixelFormat_RGB,
+		PixelFormat_RGBA,
+		PixelFormat_DEPTH_COMPONENT,
+		
+		PixelFormat_COUNT
+
+	};
+
+	static constexpr GLuint _GL_PIXEL_FORMAT_MAP[PixelFormat_COUNT] = {
+		GL_RED,
+		GL_RG,
+		GL_RGB,
+		GL_RGBA,
+		GL_DEPTH_COMPONENT,
+	};
+
 	struct TexSpec {
+
 		int32 width;
 		int32 height;
-		int8 mipLevel;
+		uint8 mipLevel;
+		
 		PixelFormat pixelFormat;
-		GLint minFilter;
-		GLint magFilter;
+		
+		TexFilter filterMin;
+		TexFilter filterMag;
+
+		TexWrap wrapS;
+		TexWrap wrapT;
+
 	};
+
+	
 
 	struct DirectionalLightSpec {
 		Vec3f direction;
@@ -298,7 +360,7 @@ namespace Soul {namespace Render {
 		float specularMultiplier;
 	};
 
-	static const GLuint s_formatMap[PF_COUNT] = {
+	static const GLuint s_formatMap[PixelFormat_COUNT] = {
 			GL_RED,
 			GL_RG,
 			GL_RGB,

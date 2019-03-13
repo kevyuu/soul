@@ -11,7 +11,7 @@ namespace Soul { namespace Render {
 
     void System::init(const System::Config &config) {
 
-        Database& db = _database;
+        Database& db = _db;
 		db.frameIdx = 0;
 
         db.targetWidthPx = config.targetWidthPx;
@@ -49,11 +49,11 @@ namespace Soul { namespace Render {
 
 		_flushUBO();
 
-        panoramaToCubemapRP.init(_database);
-        diffuseEnvmapFilterRP.init(_database);
-        specularEnvmapFilterRP.init(_database);
-        brdfMapRP.init(_database);
-		voxelizeRP.init(_database);
+        panoramaToCubemapRP.init(_db);
+        diffuseEnvmapFilterRP.init(_db);
+        specularEnvmapFilterRP.init(_db);
+        brdfMapRP.init(_db);
+		voxelizeRP.init(_db);
 
 		_effectBufferInit();
         _gBufferInit();
@@ -81,13 +81,13 @@ namespace Soul { namespace Render {
     }
 
 	void System::shaderReload() {
-		for (int i = 0; i < _database.renderPassList.getSize(); i++) {
-			_database.renderPassList[i]->init(_database);
+		for (int i = 0; i < _db.renderPassList.getSize(); i++) {
+			_db.renderPassList[i]->init(_db);
 		}
 	}
 
 	void System::shadowAtlasUpdateConfig(const ShadowAtlasConfig& config) {
-		Database& db = _database;
+		Database& db = _db;
 		db.shadowAtlas.resolution = config.resolution;
 		for (int i = 0; i < 4; i++) {
 			db.shadowAtlas.subdivSqrtCount[i] = config.subdivSqrtCount[i];
@@ -102,7 +102,7 @@ namespace Soul { namespace Render {
 	void System::_shadowAtlasInit() {
 		_shadowAtlasCleanup();
 
-		Database& db = _database;
+		Database& db = _db;
 
 		for (int i = 0; i < ShadowAtlas::MAX_LIGHT; i++) {
 			db.shadowAtlas.slots[i] = -1;
@@ -134,8 +134,8 @@ namespace Soul { namespace Render {
 	}
 
 	void System::_shadowAtlasCleanup() {
-		GLExt::TextureDelete(&_database.shadowAtlas.texHandle);
-		GLExt::FramebufferDelete(&_database.shadowAtlas.framebuffer);
+		GLExt::TextureDelete(&_db.shadowAtlas.texHandle);
+		GLExt::FramebufferDelete(&_db.shadowAtlas.framebuffer);
 
 		SOUL_ASSERT(0, GLExt::IsErrorCheckPass(), "");
 	}
@@ -144,8 +144,8 @@ namespace Soul { namespace Render {
 
 		_gBufferCleanup();
 
-        Database& db = _database;
-        GBuffer& gBuffer = _database.gBuffer;
+        Database& db = _db;
+        GBuffer& gBuffer = _db.gBuffer;
 
         GLsizei targetWidth =  db.targetWidthPx;
         GLsizei targetHeight = db.targetHeightPx;
@@ -225,7 +225,7 @@ namespace Soul { namespace Render {
     }
 
 	void System::_gBufferCleanup() {
-		Database& db = _database;
+		Database& db = _db;
 
 		GLExt::FramebufferDelete( &db.gBuffer.frameBuffer);
 		GLExt::TextureDelete(&db.gBuffer.depthBuffer);
@@ -241,7 +241,7 @@ namespace Soul { namespace Render {
 		
 		_effectBufferCleanup();
 
-        Database& db = _database;
+        Database& db = _db;
         EffectBuffer& effectBuffer = db.effectBuffer;
 
         GLsizei targetWidth = db.targetWidthPx;
@@ -303,8 +303,8 @@ namespace Soul { namespace Render {
         }
 
         for (int i = 0; i < 2; i++) {
-        	int w = _database.targetWidthPx;
-        	int h = _database.targetHeightPx;
+        	int w = _db.targetWidthPx;
+        	int h = _db.targetHeightPx;
 
         	if (i == 1) {
         	    w >>= 1;
@@ -313,11 +313,11 @@ namespace Soul { namespace Render {
 
         	int level = (int) (fmin(log(w + 1) , log(h + 1)) / log(2));
 
-        	_database.effectBuffer.lightMipChain[i].numLevel = level;
-        	_database.effectBuffer.lightMipChain[i].mipmaps.init(level);
+        	_db.effectBuffer.lightMipChain[i].numLevel = level;
+        	_db.effectBuffer.lightMipChain[i].mipmaps.init(level);
 
-        	glGenTextures(1, &_database.effectBuffer.lightMipChain[i].colorBuffer);
-        	glBindTexture(GL_TEXTURE_2D, _database.effectBuffer.lightMipChain[i].colorBuffer);
+        	glGenTextures(1, &_db.effectBuffer.lightMipChain[i].colorBuffer);
+        	glBindTexture(GL_TEXTURE_2D, _db.effectBuffer.lightMipChain[i].colorBuffer);
 
         	for (int j = 0; j < level; j++) {
                 EffectBuffer::MipChain::Mipmap mipmap;
@@ -331,7 +331,7 @@ namespace Soul { namespace Render {
                 glFramebufferTexture2D(GL_FRAMEBUFFER,
                                        GL_COLOR_ATTACHMENT0,
                                        GL_TEXTURE_2D,
-                                       _database.effectBuffer.lightMipChain[i].colorBuffer,
+                                       _db.effectBuffer.lightMipChain[i].colorBuffer,
                                        j);
 				glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_TEXTURE_2D, effectBuffer.depthBuffer, 0);
 
@@ -340,7 +340,7 @@ namespace Soul { namespace Render {
                 std::cout<<"Status : "<<status<<std::endl;
                 std::cout<<"Error : "<<GL_FRAMEBUFFER_COMPLETE<<" "<<GL_FRAMEBUFFER_INCOMPLETE_ATTACHMENT<<std::endl;
 
-                _database.effectBuffer.lightMipChain[i].mipmaps.pushBack(mipmap);
+                _db.effectBuffer.lightMipChain[i].mipmaps.pushBack(mipmap);
                 w >>= 1;
                 h >>= 1;
         	}
@@ -361,7 +361,7 @@ namespace Soul { namespace Render {
     }
 
 	void System::_effectBufferCleanup() {
-		Database& db = _database;
+		Database& db = _db;
 		EffectBuffer& effectBuffer = db.effectBuffer;
 
 		GLExt::TextureDelete(&effectBuffer.ssrTraceBuffer.traceBuffer);
@@ -388,7 +388,7 @@ namespace Soul { namespace Render {
     void System::_lightBufferInit() {
 		_lightBufferCleanup();
 
-        Database& db = _database;
+        Database& db = _db;
         LightBuffer& lightBuffer = db.lightBuffer;
 
         GLsizei targetWidth = db.targetWidthPx;
@@ -414,7 +414,7 @@ namespace Soul { namespace Render {
     }
 
 	void System::_lightBufferCleanup() {
-		Database& db = _database;
+		Database& db = _db;
 		LightBuffer& lightBuffer = db.lightBuffer;
 
 		GLExt::FramebufferDelete( &lightBuffer.frameBuffer);
@@ -435,26 +435,26 @@ namespace Soul { namespace Render {
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
         glBindTexture(GL_TEXTURE_2D, 0);
-        _database.environment.brdfMap = brdfMap;
-        brdfMapRP.execute(_database);
+        _db.environment.brdfMap = brdfMap;
+        brdfMapRP.execute(_db);
 
 		SOUL_ASSERT(0, GLExt::IsErrorCheckPass(), "");
     }
 
 	void System::_brdfMapCleanup() {
 
-		Database& db = _database;
+		Database& db = _db;
 		GLExt::TextureDelete(&db.environment.brdfMap);
 
 		SOUL_ASSERT(0, GLExt::IsErrorCheckPass(), "");
 	}
 
 	void System::voxelGIVoxelize() {
-		voxelizeRP.execute(_database);
+		voxelizeRP.execute(_db);
 	}
 
 	void System::voxelGIUpdateConfig(const VoxelGIConfig& config) {
-		_database.voxelGIConfig = config;
+		_db.voxelGIConfig = config;
 		_flushVoxelGIUBO();
 		_voxelGIBufferInit();
 	}
@@ -463,7 +463,7 @@ namespace Soul { namespace Render {
 
 		_voxelGIBufferCleanup();
 
-		int reso = _database.voxelGIConfig.resolution;
+		int reso = _db.voxelGIConfig.resolution;
 
 		GLuint voxelAlbedoTex;
 		glGenTextures(1, &voxelAlbedoTex);
@@ -474,7 +474,7 @@ namespace Soul { namespace Render {
 		glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
 		glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
 		glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-		_database.voxelGIBuffer.gVoxelAlbedoTex = voxelAlbedoTex;
+		_db.voxelGIBuffer.gVoxelAlbedoTex = voxelAlbedoTex;
 
 		GLuint voxelNormalTex;
 		glGenTextures(1, &voxelNormalTex);
@@ -485,7 +485,7 @@ namespace Soul { namespace Render {
 		glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
 		glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
 		glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-		_database.voxelGIBuffer.gVoxelNormalTex = voxelNormalTex;
+		_db.voxelGIBuffer.gVoxelNormalTex = voxelNormalTex;
 
 		GLuint lightVoxelTex;
 		glGenTextures(1, &lightVoxelTex);
@@ -496,14 +496,14 @@ namespace Soul { namespace Render {
 		glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
 		glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
 		glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-		_database.voxelGIBuffer.lightVoxelTex = lightVoxelTex;
+		_db.voxelGIBuffer.lightVoxelTex = lightVoxelTex;
 
 		SOUL_ASSERT(0, GLExt::IsErrorCheckPass(), "Voxel GI Buffer initialization error");
 	}
 
 	void System::_voxelGIBufferCleanup() {
 		
-		Database& db = _database;
+		Database& db = _db;
 		VoxelGIBuffer& voxelGIBuffer = db.voxelGIBuffer;
 
 		GLExt::TextureDelete(&voxelGIBuffer.gVoxelAlbedoTex);
@@ -518,9 +518,9 @@ namespace Soul { namespace Render {
 
 		_velocityBufferCleanup();
 
-		VelocityBuffer& velocityBuffer = _database.velocityBuffer;
-		int targetWidth = _database.targetWidthPx;
-		int targetHeight = _database.targetHeightPx;
+		VelocityBuffer& velocityBuffer = _db.velocityBuffer;
+		int targetWidth = _db.targetWidthPx;
+		int targetHeight = _db.targetHeightPx;
 
 		glGenFramebuffers(1, &(velocityBuffer.frameBuffer));
 		glBindFramebuffer(GL_FRAMEBUFFER, velocityBuffer.frameBuffer);
@@ -537,8 +537,8 @@ namespace Soul { namespace Render {
 	}
 
 	void System::_velocityBufferCleanup() {
-		GLExt::TextureDelete(&_database.velocityBuffer.tex);
-		GLExt::FramebufferDelete(&_database.velocityBuffer.frameBuffer);
+		GLExt::TextureDelete(&_db.velocityBuffer.tex);
+		GLExt::FramebufferDelete(&_db.velocityBuffer.frameBuffer);
 	}
 
     void System::_utilVAOInit() {
@@ -587,10 +587,10 @@ namespace Soul { namespace Render {
                 1.0f, -1.0f,  1.0f
         };
 
-        glGenVertexArrays(1, &_database.cubeVAO);
-        glGenBuffers(1, &_database.cubeVBO);
-        glBindVertexArray(_database.cubeVAO);
-        glBindBuffer(GL_ARRAY_BUFFER, _database.cubeVBO);
+        glGenVertexArrays(1, &_db.cubeVAO);
+        glGenBuffers(1, &_db.cubeVBO);
+        glBindVertexArray(_db.cubeVAO);
+        glBindBuffer(GL_ARRAY_BUFFER, _db.cubeVBO);
         glBufferData(GL_ARRAY_BUFFER, sizeof(cubeVertices), &cubeVertices, GL_STATIC_DRAW);
         glEnableVertexAttribArray(0);
         glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*) 0);
@@ -602,10 +602,10 @@ namespace Soul { namespace Render {
             1.0f, 1.0f
         };
 
-        glGenVertexArrays(1, &_database.quadVAO);
-        glGenBuffers(1, &_database.quadVBO);
-        glBindVertexArray(_database.quadVAO);
-        glBindBuffer(GL_ARRAY_BUFFER, _database.quadVBO);
+        glGenVertexArrays(1, &_db.quadVAO);
+        glGenBuffers(1, &_db.quadVBO);
+        glBindVertexArray(_db.quadVAO);
+        glBindBuffer(GL_ARRAY_BUFFER, _db.quadVBO);
         glBufferData(GL_ARRAY_BUFFER, sizeof(quadVertices), &quadVertices, GL_STATIC_DRAW);
         glEnableVertexAttribArray(0);
         glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), (void*) 0);
@@ -616,7 +616,7 @@ namespace Soul { namespace Render {
     }
 	
 	void System::_utilVAOCleanup() {
-		Database& db = _database;
+		Database& db = _db;
 		
 		glDeleteBuffers(1, &db.cubeVBO);
 		glDeleteVertexArrays(1, &db.cubeVAO);
@@ -628,7 +628,7 @@ namespace Soul { namespace Render {
 
     void System::shutdown() {
 
-        Database& db = _database;
+        Database& db = _db;
 
         for (int i = 0; i < db.renderPassList.getSize(); i++) {
             db.renderPassList.get(i)->shutdown(db);
@@ -660,11 +660,11 @@ namespace Soul { namespace Render {
 		db.meshBuffer.cleanup();
         db.renderPassList.cleanup();
 
-        panoramaToCubemapRP.shutdown(_database);
-        diffuseEnvmapFilterRP.shutdown(_database);
-        specularEnvmapFilterRP.shutdown(_database);
-        brdfMapRP.shutdown(_database);
-		voxelizeRP.shutdown(_database);
+        panoramaToCubemapRP.shutdown(_db);
+        diffuseEnvmapFilterRP.shutdown(_db);
+        specularEnvmapFilterRP.shutdown(_db);
+        brdfMapRP.shutdown(_db);
+		voxelizeRP.shutdown(_db);
 
 		glDeleteBuffers(1, &db.cameraDataUBOHandle);
 		glDeleteBuffers(1, &db.lightDataUBOHandle);
@@ -674,19 +674,19 @@ namespace Soul { namespace Render {
     ShadowKey System::_shadowAtlasGetSlot(RID lightID, int texReso) {
         ShadowKey shadowKey = { -1, -1, -1 };
         int bestSlot = -1;
-        int quadrantSize = _database.shadowAtlas.resolution / 2;
+        int quadrantSize = _db.shadowAtlas.resolution / 2;
         int neededSize = texReso;
 		int currentSlotSize = quadrantSize;
         int slotIter = 0;
         for (int i = 0; i < 4; i++) {
-            int subdivSize = quadrantSize / _database.shadowAtlas.subdivSqrtCount[i];
+            int subdivSize = quadrantSize / _db.shadowAtlas.subdivSqrtCount[i];
             if (subdivSize < neededSize || subdivSize > currentSlotSize) {
-                slotIter += _database.shadowAtlas.subdivSqrtCount[i] * _database.shadowAtlas.subdivSqrtCount[i];
+                slotIter += _db.shadowAtlas.subdivSqrtCount[i] * _db.shadowAtlas.subdivSqrtCount[i];
                 continue;
             }
 
-            for (int j = 0; j < _database.shadowAtlas.subdivSqrtCount[i] * _database.shadowAtlas.subdivSqrtCount[i]; j++) {
-                if (_database.shadowAtlas.slots[slotIter] == -1 ) {
+            for (int j = 0; j < _db.shadowAtlas.subdivSqrtCount[i] * _db.shadowAtlas.subdivSqrtCount[i]; j++) {
+                if (_db.shadowAtlas.slots[slotIter] == -1 ) {
                     shadowKey.quadrant = i;
                     shadowKey.subdiv = j;
 					shadowKey.slot = slotIter;
@@ -699,18 +699,18 @@ namespace Soul { namespace Render {
 
         if (bestSlot == -1) return shadowKey;
 
-        _database.shadowAtlas.slots[bestSlot] = lightID;
+        _db.shadowAtlas.slots[bestSlot] = lightID;
 
         return shadowKey;
     }
 
 	void System::_shadowAtlasFreeSlot(ShadowKey shadowKey) {
-		_database.shadowAtlas.slots[shadowKey.slot] = -1;
+		_db.shadowAtlas.slots[shadowKey.slot] = -1;
 	}
 
     RID System::dirLightCreate(const DirectionalLightSpec &spec) {
-        RID lightRID = _database.dirLightCount;
-        DirectionalLight& light = _database.dirLights[_database.dirLightCount];
+        RID lightRID = _db.dirLightCount;
+        DirectionalLight& light = _db.dirLights[_db.dirLightCount];
         light.direction = unit(spec.direction);
         light.color = spec.color;
 		light.resolution = spec.shadowMapResolution;
@@ -721,23 +721,23 @@ namespace Soul { namespace Render {
         }
 		
 
-        _database.dirLightCount++;
+        _db.dirLightCount++;
 
         return lightRID;
     }
 
     void System::dirLightSetDirection(RID lightRID, Vec3f direction) {
-        _database.dirLights[lightRID].direction = direction;
+        _db.dirLights[lightRID].direction = direction;
     }
 
 	void System::dirLightSetColor(RID lightRID, Vec3f color) {
-		_database.dirLights[lightRID].color = color;
+		_db.dirLights[lightRID].color = color;
 	}
 
 	void System::dirLightSetShadowMapResolution(RID lightRID, int32 resolution) {
 
 		SOUL_ASSERT(0, resolution == nextPowerOfTwo(resolution), "");
-		DirectionalLight& dirLight = _database.dirLights[lightRID];
+		DirectionalLight& dirLight = _db.dirLights[lightRID];
 
 		_shadowAtlasFreeSlot(dirLight.shadowKey);
 		dirLight.resolution = resolution;
@@ -747,30 +747,30 @@ namespace Soul { namespace Render {
 
 	void System::dirLightSetCascadeSplit(RID lightRID, float split1, float split2, float split3)
 	{
-		DirectionalLight& dirLight = _database.dirLights[lightRID];
+		DirectionalLight& dirLight = _db.dirLights[lightRID];
 		dirLight.split[0] = split1;
 		dirLight.split[1] = split2;
 		dirLight.split[2] = split3;
 	}
 
 	void System::dirLightSetBias(RID lightRID, float bias) {
-		DirectionalLight& dirLight = _database.dirLights[lightRID];
+		DirectionalLight& dirLight = _db.dirLights[lightRID];
 		dirLight.bias = bias;
 	}
 
     void System::envSetAmbientColor(Vec3f ambientColor) {
-        _database.environment.ambientColor = ambientColor;
+        _db.environment.ambientColor = ambientColor;
     }
 
     void System::envSetAmbientEnergy(float ambientEnergy) {
-        _database.environment.ambientEnergy = ambientEnergy;
+        _db.environment.ambientEnergy = ambientEnergy;
     }
 
     RID System::materialCreate(const MaterialSpec& spec) {
         
-		RID rid = _database.materialBuffer.getSize();
+		RID rid = _db.materialBuffer.getSize();
 
-		_database.materialBuffer.pushBack({
+		_db.materialBuffer.pushBack({
 				spec.albedoMap,
 				spec.normalMap,
 				spec.metallicMap,
@@ -790,9 +790,9 @@ namespace Soul { namespace Render {
 
 	void System::materialSetMetallicTextureChannel(RID rid, TexChannel textureChannel) {
 
-		SOUL_ASSERT(0, textureChannel >= TextureChannel_RED && textureChannel <= TextureChannel_ALPHA, "Invalid texture channel");
+		SOUL_ASSERT(0, textureChannel >= TexChannel_RED && textureChannel <= TexChannel_ALPHA, "Invalid texture channel");
 
-		uint32 flags = _database.materialBuffer[rid].flags;
+		uint32 flags = _db.materialBuffer[rid].flags;
 
 		for (int i = 0; i < 4; i++) {
 			flags &= ~(MaterialFlag_METALLIC_CHANNEL_RED << i);
@@ -800,15 +800,15 @@ namespace Soul { namespace Render {
 
 		flags |= (MaterialFlag_METALLIC_CHANNEL_RED << textureChannel);
 
-		_database.materialBuffer[rid].flags = flags;
+		_db.materialBuffer[rid].flags = flags;
 
 	}
 
 	void System::materialSetRoughnessTextureChannel(RID rid, TexChannel textureChannel) {
 
-		SOUL_ASSERT(0, textureChannel >= TextureChannel_RED && textureChannel <= TextureChannel_ALPHA, "Invavlid texture channel");
+		SOUL_ASSERT(0, textureChannel >= TexChannel_RED && textureChannel <= TexChannel_ALPHA, "Invavlid texture channel");
 
-		uint32 flags = _database.materialBuffer[rid].flags;
+		uint32 flags = _db.materialBuffer[rid].flags;
 
 		for (int i = 0; i < 4; i++) {
 			flags &= ~(MaterialFlag_ROUGHNESS_CHANNEL_RED << i);
@@ -816,14 +816,14 @@ namespace Soul { namespace Render {
 
 		flags |= (MaterialFlag_ROUGHNESS_CHANNEL_RED << textureChannel);
 
-		_database.materialBuffer[rid].flags = flags;
+		_db.materialBuffer[rid].flags = flags;
 
 	}
 
 	void System::materialSetAOTextureChannel(RID rid, TexChannel textureChannel) {
-		SOUL_ASSERT(0, textureChannel >= TextureChannel_RED && textureChannel <= TextureChannel_ALPHA, "Invavlid texture channel");
+		SOUL_ASSERT(0, textureChannel >= TexChannel_RED && textureChannel <= TexChannel_ALPHA, "Invavlid texture channel");
 
-		uint32 flags = _database.materialBuffer[rid].flags;
+		uint32 flags = _db.materialBuffer[rid].flags;
 
 		for (int i = 0; i < 4; i++) {
 			flags &= ~(MaterialFlag_AO_CHANNEL_RED << i);
@@ -831,11 +831,11 @@ namespace Soul { namespace Render {
 
 		flags |= (MaterialFlag_AO_CHANNEL_RED << textureChannel);
 
-		_database.materialBuffer[rid].flags = flags;
+		_db.materialBuffer[rid].flags = flags;
 	}
 
 	void System::materialUpdate(RID rid, const MaterialSpec& spec) {
-		_database.materialBuffer[rid] = {
+		_db.materialBuffer[rid] = {
 			spec.albedoMap,
 			spec.normalMap,
 			spec.metallicMap,
@@ -862,7 +862,7 @@ namespace Soul { namespace Render {
 		if (spec.useRoughnessTex) flags |= MaterialFlag_USE_ROUGHNESS_TEX;
 		if (spec.useAOTex) flags |= MaterialFlag_USE_AO_TEX;
 
-		_database.materialBuffer[rid].flags = flags;
+		_db.materialBuffer[rid].flags = flags;
 
 		materialSetMetallicTextureChannel(rid, spec.metallicChannel);
 		materialSetRoughnessTextureChannel(rid, spec.roughnessChannel);
@@ -870,20 +870,20 @@ namespace Soul { namespace Render {
 	}
 
     void System::render(const Camera& camera) {
-		_database.frameIdx++;
-        _database.camera = camera;
+		_db.frameIdx++;
+        _db.camera = camera;
         _updateShadowMatrix();
         _flushUBO();
 
-        for (int i = 0; i < _database.renderPassList.getSize(); i++) {
-            _database.renderPassList.get(i)->execute(_database);
+        for (int i = 0; i < _db.renderPassList.getSize(); i++) {
+            _db.renderPassList.get(i)->execute(_db);
         }
         GLenum err;
         while ((err = glGetError()) != GL_NO_ERROR) {
         	std::cout<<"Render::OpenGL error: "<<err<<std::endl;
         }
 
-		_database.prevCamera = camera;
+		_db.prevCamera = camera;
     }
 
     RID System::meshCreate(const MeshSpec &spec) {
@@ -925,8 +925,8 @@ namespace Soul { namespace Render {
         glBindVertexArray(0);
 
 
-        RID rid = _database.meshBuffer.getSize();
-        _database.meshBuffer.pushBack({
+        RID rid = _db.meshBuffer.getSize();
+        _db.meshBuffer.pushBack({
                 spec.transform,
                 VAO,
 				VBO,
@@ -936,21 +936,21 @@ namespace Soul { namespace Render {
                 spec.material
         });
 
-		if (_database.meshBuffer.getSize() == 1) {
+		if (_db.meshBuffer.getSize() == 1) {
 			SOUL_ASSERT(0, spec.vertexCount > 0, "");
-			_database.sceneBound.min = spec.vertexes[0].pos;
-			_database.sceneBound.max = spec.vertexes[0].pos;
+			_db.sceneBound.min = spec.vertexes[0].pos;
+			_db.sceneBound.max = spec.vertexes[0].pos;
 		}
 
 		for (int i = 0; i < spec.vertexCount; i++) {
 			Vertex& vertex = spec.vertexes[i];
-			if (_database.sceneBound.min.x > vertex.pos.x) _database.sceneBound.min.x = vertex.pos.x;
-			if (_database.sceneBound.min.y > vertex.pos.y) _database.sceneBound.min.y = vertex.pos.y;
-			if (_database.sceneBound.min.z > vertex.pos.z) _database.sceneBound.min.z = vertex.pos.z;
+			if (_db.sceneBound.min.x > vertex.pos.x) _db.sceneBound.min.x = vertex.pos.x;
+			if (_db.sceneBound.min.y > vertex.pos.y) _db.sceneBound.min.y = vertex.pos.y;
+			if (_db.sceneBound.min.z > vertex.pos.z) _db.sceneBound.min.z = vertex.pos.z;
 		
-			if (_database.sceneBound.max.x < vertex.pos.x) _database.sceneBound.max.x = vertex.pos.x;
-			if (_database.sceneBound.max.y < vertex.pos.y) _database.sceneBound.max.y = vertex.pos.y;
-			if (_database.sceneBound.max.z < vertex.pos.z) _database.sceneBound.max.z = vertex.pos.z;
+			if (_db.sceneBound.max.x < vertex.pos.x) _db.sceneBound.max.x = vertex.pos.x;
+			if (_db.sceneBound.max.y < vertex.pos.y) _db.sceneBound.max.y = vertex.pos.y;
+			if (_db.sceneBound.max.z < vertex.pos.z) _db.sceneBound.max.z = vertex.pos.z;
 
 		}
 
@@ -960,27 +960,34 @@ namespace Soul { namespace Render {
 
 	void System::meshSetTransform(RID rid, Vec3f position, Vec3f scale, Vec4f rotation) {
 		
-		_database.meshBuffer[rid].transform = mat4Translate(position) * mat4Scale(scale) * mat4Rotate(rotation.xyz(), rotation.w);
+		_db.meshBuffer[rid].transform = mat4Translate(position) * mat4Scale(scale) * mat4Rotate(rotation.xyz(), rotation.w);
 	
 	}
 
     RID System::textureCreate(const TexSpec &spec, unsigned char *data, int dataChannelCount) {
+
+		SOUL_ASSERT(0, dataChannelCount != 0, "Data channel count must not be zero.", "");
+
         RID textureHandle;
         glGenTextures(1, &textureHandle);
         glBindTexture(GL_TEXTURE_2D, textureHandle);
-        static const GLuint format[5] = {
-                GL_DEPTH_COMPONENT,
+        
+		static const GLuint NUM_CHANNEL_TO_FORMAT[5] = {
+                0,
                 GL_RED,
                 GL_RG,
                 GL_RGB,
                 GL_RGBA
         };
-        glTexImage2D(GL_TEXTURE_2D, 0, s_formatMap[spec.pixelFormat], spec.width, spec.height, 0, format[dataChannelCount], GL_UNSIGNED_BYTE, data);
+
+        glTexImage2D(GL_TEXTURE_2D, 0, _GL_PIXEL_FORMAT_MAP[spec.pixelFormat], spec.width, spec.height, 0, NUM_CHANNEL_TO_FORMAT[dataChannelCount], GL_UNSIGNED_BYTE, data);
+		
 		glGenerateMipmap(GL_TEXTURE_2D);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, spec.minFilter);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, spec.magFilter); 
+
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, _GL_WRAP_MAP[spec.wrapS]);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, _GL_WRAP_MAP[spec.wrapT]);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, _GL_FILTER_MAP[spec.filterMin]);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, _GL_FILTER_MAP[spec.filterMag]); 
 
 		float aniso = 0.0f;
 		glGetFloatv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &aniso);
@@ -995,10 +1002,10 @@ namespace Soul { namespace Render {
 
     void System::envSetPanorama(RID panoramaTex) {
 		
-        if (_database.environment.cubemap != 0) {
-            GLExt::TextureDelete(&_database.environment.cubemap);
-            GLExt::TextureDelete(&_database.environment.diffuseMap);
-            GLExt::TextureDelete(&_database.environment.specularMap);
+        if (_db.environment.cubemap != 0) {
+            GLExt::TextureDelete(&_db.environment.cubemap);
+            GLExt::TextureDelete(&_db.environment.diffuseMap);
+            GLExt::TextureDelete(&_db.environment.specularMap);
         }
 
         GLuint skybox;
@@ -1013,9 +1020,9 @@ namespace Soul { namespace Render {
         glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
         glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
         glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-        _database.environment.cubemap = skybox;
-        _database.environment.panorama = panoramaTex;
-        panoramaToCubemapRP.execute(_database);
+        _db.environment.cubemap = skybox;
+        _db.environment.panorama = panoramaTex;
+        panoramaToCubemapRP.execute(_db);
 
         GLuint diffuseMap;
         glGenTextures(1, &diffuseMap);
@@ -1029,8 +1036,8 @@ namespace Soul { namespace Render {
         glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
         glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
         glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-        _database.environment.diffuseMap = diffuseMap;
-        diffuseEnvmapFilterRP.execute(_database);
+        _db.environment.diffuseMap = diffuseMap;
+        diffuseEnvmapFilterRP.execute(_db);
 
         GLuint specularMap;
         glGenTextures(1, &specularMap);
@@ -1046,8 +1053,8 @@ namespace Soul { namespace Render {
         glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
         glGenerateMipmap(GL_TEXTURE_CUBE_MAP);
 
-        _database.environment.specularMap = specularMap;
-        specularEnvmapFilterRP.execute(_database);
+        _db.environment.specularMap = specularMap;
+        specularEnvmapFilterRP.execute(_db);
 
     }
 
@@ -1065,11 +1072,11 @@ namespace Soul { namespace Render {
         glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
         glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
         glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
-        _database.environment.cubemap = skybox;
+        _db.environment.cubemap = skybox;
     }
 
     void System::_updateShadowMatrix() {
-        Database& db = _database;
+        Database& db = _db;
         Camera& camera = db.camera;
 
         Mat4 viewMat = mat4View(camera.position, camera.position + camera.direction, camera.up);
@@ -1183,7 +1190,7 @@ namespace Soul { namespace Render {
 
     void System::_flushUBO() {
 
-        Database &db = _database;
+        Database &db = _db;
 
         db.cameraDataUBO.projection = mat4Transpose(db.camera.projection);
         Mat4 viewMat = mat4View(db.camera.position, db.camera.position +
@@ -1232,7 +1239,7 @@ namespace Soul { namespace Render {
     }
 
 	void System::_flushVoxelGIUBO() {
-		Database& db = _database;
+		Database& db = _db;
 
 		db.voxelGIDataUBO.frustumCenter = db.voxelGIConfig.center;
 		db.voxelGIDataUBO.resolution = db.voxelGIConfig.resolution;

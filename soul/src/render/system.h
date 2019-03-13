@@ -70,7 +70,7 @@ namespace Soul { namespace Render {
 		//-------------------------------------------
 		// private
 		//-------------------------------------------
-		Database _database;
+		Database _db;
 
 		void _shadowAtlasInit();
 		void _shadowAtlasCleanup();

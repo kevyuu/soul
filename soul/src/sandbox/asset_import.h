@@ -199,9 +199,11 @@ void ImportObjMtlAssets(
 		strcpy(sceneMetallicTexture.name, material.metallic_texname.c_str());
 
 		Soul::Render::TexSpec texSpec;
-		texSpec.pixelFormat = Soul::Render::PF_RGBA;
-		texSpec.minFilter = GL_LINEAR_MIPMAP_LINEAR;
-		texSpec.magFilter = GL_LINEAR;
+		texSpec.pixelFormat = Soul::Render::PixelFormat_RGBA;
+		texSpec.filterMin = Soul::Render::TexFilter_LINEAR_MIPMAP_LINEAR;
+		texSpec.filterMag = Soul::Render::TexFilter_LINEAR;
+		texSpec.wrapS = Soul::Render::TexWrap_REPEAT;
+		texSpec.wrapT = Soul::Render::TexWrap_REPEAT;
 		int numChannel;
 
 		uint32 albedoTexID = 0;
@@ -267,9 +269,9 @@ void ImportObjMtlAssets(
 			0.0f, 
 			0.0f,
 
-			Soul::Render::TextureChannel_RED,
-			Soul::Render::TextureChannel_RED,
-			Soul::Render::TextureChannel_RED,
+			Soul::Render::TexChannel_RED,
+			Soul::Render::TexChannel_RED,
+			Soul::Render::TexChannel_RED,
 		
 };
 
@@ -452,11 +454,16 @@ bool ImportGLTFAssets(SceneData* sceneData, const char* gltfPath) {
 		const tinygltf::Image& image = model.images[texture.source];
 
 		Soul::Render::TexSpec texSpec;
-		texSpec.pixelFormat = Soul::Render::PF_RGBA;
-		texSpec.minFilter = GL_LINEAR_MIPMAP_LINEAR;
-		texSpec.magFilter = GL_LINEAR;
+		
+		texSpec.pixelFormat = Soul::Render::PixelFormat_RGBA;
+		texSpec.filterMin = Soul::Render::TexFilter_LINEAR_MIPMAP_LINEAR;
+		texSpec.filterMag = Soul::Render::TexFilter_LINEAR;
+		texSpec.wrapS = Soul::Render::TexWrap_REPEAT;
+		texSpec.wrapT = Soul::Render::TexWrap_REPEAT;
+
 		texSpec.width = image.width;
 		texSpec.height = image.height;
+		
 		Soul::Render::RID textureRID = renderSystem.textureCreate(texSpec, (unsigned char*)&image.image[0], image.component);
 
 		UITexture uiTexture = { 0 };
@@ -498,11 +505,11 @@ bool ImportGLTFAssets(SceneData* sceneData, const char* gltfPath) {
 			int texID = material.values.at("metallicRoughnessTexture").TextureIndex();
 
 			uiMaterial.metallicTexID = texID + 1;
-			uiMaterial.metallicTextureChannel = Soul::Render::TextureChannel_RED;
+			uiMaterial.metallicTextureChannel = Soul::Render::TexChannel_RED;
 			uiMaterial.useMetallicTex = true;
 
 			uiMaterial.roughnessTexID = texID + 1;
-			uiMaterial.roughnessTextureChannel = Soul::Render::TextureChannel_GREEN;
+			uiMaterial.roughnessTextureChannel = Soul::Render::TexChannel_GREEN;
 			uiMaterial.useRoughnessTex = true;
 		}
 
@@ -540,9 +547,9 @@ bool ImportGLTFAssets(SceneData* sceneData, const char* gltfPath) {
 			uiMaterial.metallic,
 			uiMaterial.roughness,
 
-			Soul::Render::TextureChannel_BLUE,
-			Soul::Render::TextureChannel_GREEN,
-			Soul::Render::TextureChannel_RED
+			Soul::Render::TexChannel_BLUE,
+			Soul::Render::TexChannel_GREEN,
+			Soul::Render::TexChannel_RED
 		});
 
 		sceneData->materials.pushBack(uiMaterial);
