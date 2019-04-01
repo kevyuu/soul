@@ -7,11 +7,11 @@ namespace Soul {
 	namespace Render {
 		void SkyboxRP::init(Database& database) {
 
-			shader = GLExt::ProgramCreate(RenderAsset::ShaderFile::skybox);
+			program = GLExt::ProgramCreate(RenderAsset::ShaderFile::skybox);
 
-			projectionLoc = glGetUniformLocation(shader, "projection");
-			viewLoc = glGetUniformLocation(shader, "view");
-			skyboxLoc = glGetUniformLocation(shader, "skybox");
+			projectionLoc = glGetUniformLocation(program, "projection");
+			viewLoc = glGetUniformLocation(program, "view");
+			skyboxLoc = glGetUniformLocation(program, "skybox");
 
 		}
 
@@ -21,7 +21,7 @@ namespace Soul {
 
 			glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-			glUseProgram(shader);
+			glUseProgram(program);
 
 			glUniform1i(skyboxLoc, 0);
 			glActiveTexture(GL_TEXTURE0);
@@ -43,7 +43,7 @@ namespace Soul {
 		}
 
 		void SkyboxRP::shutdown(Database& database) {
-			glDeleteProgram(shader);
+			glDeleteProgram(program);
 		}
 	}
 }

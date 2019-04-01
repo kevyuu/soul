@@ -14,6 +14,7 @@ namespace Soul {
 
 			static char* _LoadFile(const char* filepath) {
 				FILE *f = fopen(filepath, "rb");
+				SOUL_ASSERT(0, f != nullptr, "Failed to open file = %s", filepath);
 				fseek(f, 0, SEEK_END);
 				long fsize = ftell(f);
 				fseek(f, 0, SEEK_SET);

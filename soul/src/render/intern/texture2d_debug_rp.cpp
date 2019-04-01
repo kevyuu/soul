@@ -7,7 +7,7 @@ namespace Soul {
 
 		void Texture2DDebugRP::init(Database& database) {
 
-			shader = GLExt::ProgramCreate(RenderAsset::ShaderFile::texture2dDebug);
+			program = GLExt::ProgramCreate(RenderAsset::ShaderFile::texture2dDebug);
 
 		}
 
@@ -20,7 +20,7 @@ namespace Soul {
 			float fracSize = 1.0f / 4;
 			glViewport(0, 0, database.targetWidthPx * fracSize, database.targetHeightPx * fracSize);
 			glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-			glUseProgram(shader);
+			glUseProgram(program);
 			glActiveTexture(GL_TEXTURE0);
 			glBindTexture(GL_TEXTURE_2D, database.velocityBuffer.tex);
 			glBindVertexArray(database.quadVAO);
@@ -35,7 +35,7 @@ namespace Soul {
 		}
 
 		void Texture2DDebugRP::shutdown(Database &database) {
-			glDeleteProgram(shader);
+			glDeleteProgram(program);
 		}
 
 

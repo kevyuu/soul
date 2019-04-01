@@ -15,6 +15,9 @@
 #ifndef IMGUI_FILESYSTEM_H_
 #define IMGUI_FILESYSTEM_H_
 
+// TODO(kevyuu): check why we need to include it here
+#include <Windows.h>
+
 // USAGE EXAMPLE:
 /*
 #include "imguifilesystem.h"                                                    // imguifilesystem.cpp must be compiled

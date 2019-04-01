@@ -11,20 +11,20 @@ namespace Soul {
 
 		void LightingRP::init(Database &database) {
 
-			shader = GLExt::ProgramCreate(RenderAsset::ShaderFile::lighting);
-			GLuint sceneDataBlockIndex = glGetUniformBlockIndex(shader, Constant::CAMERA_DATA_NAME);
-			glUniformBlockBinding(shader, sceneDataBlockIndex, Constant::CAMERA_DATA_BINDING_POINT);
-			GLuint lightDataBlockIndex = glGetUniformBlockIndex(shader, Constant::LIGHT_DATA_NAME);
-			glUniformBlockBinding(shader, lightDataBlockIndex, Constant::LIGHT_DATA_BINDING_POINT);
+			program = GLExt::ProgramCreate(RenderAsset::ShaderFile::lighting);
+			GLuint sceneDataBlockIndex = glGetUniformBlockIndex(program, Constant::CAMERA_DATA_NAME);
+			glUniformBlockBinding(program, sceneDataBlockIndex, Constant::CAMERA_DATA_BINDING_POINT);
+			GLuint lightDataBlockIndex = glGetUniformBlockIndex(program, Constant::LIGHT_DATA_NAME);
+			glUniformBlockBinding(program, lightDataBlockIndex, Constant::LIGHT_DATA_BINDING_POINT);
 
-			glUseProgram(shader);
+			glUseProgram(program);
 
-			shadowMapUniformLoc = glGetUniformLocation(shader, "shadowMap");
-			renderMap1UniformLoc = glGetUniformLocation(shader, "renderMap1");
-			renderMap2UniformLoc = glGetUniformLocation(shader, "renderMap2");
-			renderMap3UniformLoc = glGetUniformLocation(shader, "renderMap3");
+			shadowMapUniformLoc = glGetUniformLocation(program, "shadowMap");
+			renderMap1UniformLoc = glGetUniformLocation(program, "renderMap1");
+			renderMap2UniformLoc = glGetUniformLocation(program, "renderMap2");
+			renderMap3UniformLoc = glGetUniformLocation(program, "renderMap3");
 
-			viewPositionUniformLoc = glGetUniformLocation(shader, "viewPosition");
+			viewPositionUniformLoc = glGetUniformLocation(program, "viewPosition");
 
 			glUseProgram(0);
 
@@ -33,7 +33,7 @@ namespace Soul {
 		void LightingRP::execute(Database& database) {
 
 			glBindFramebuffer(GL_FRAMEBUFFER, database.lightBuffer.frameBuffer);
-			glUseProgram(shader);
+			glUseProgram(program);
 
 			glUniform1i(shadowMapUniformLoc, 0);
 			glActiveTexture(GL_TEXTURE0);
@@ -69,7 +69,7 @@ namespace Soul {
 
 		void LightingRP::shutdown(Database &database) {
 
-			glDeleteProgram(shader);
+			glDeleteProgram(program);
 
 		}
 	}

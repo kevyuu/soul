@@ -6,10 +6,10 @@
 namespace Soul {
 	namespace Render {
 		void DiffuseEnvmapFilterRP::init(Database &database) {
-			shader = GLExt::ProgramCreate(RenderAsset::ShaderFile::diffuseEnvmapFilter);
+			program = GLExt::ProgramCreate(RenderAsset::ShaderFile::diffuseEnvmapFilter);
 
-			projectionLoc = glGetUniformLocation(shader, "projection");
-			viewLoc = glGetUniformLocation(shader, "view");
+			projectionLoc = glGetUniformLocation(program, "projection");
+			viewLoc = glGetUniformLocation(program, "view");
 
 			glGenFramebuffers(1, &renderTarget);
 			glBindFramebuffer(GL_FRAMEBUFFER, renderTarget);
@@ -36,7 +36,7 @@ namespace Soul {
 			};
 
 			glBindFramebuffer(GL_FRAMEBUFFER, renderTarget);
-			glUseProgram(shader);
+			glUseProgram(program);
 			glBindVertexArray(database.cubeVAO);
 			glViewport(0, 0, 512, 512);
 			glActiveTexture(GL_TEXTURE0);
@@ -60,7 +60,7 @@ namespace Soul {
 		}
 
 		void DiffuseEnvmapFilterRP::shutdown(Database& database) {
-			glDeleteProgram(shader);
+			glDeleteProgram(program);
 		}
 	}
 }

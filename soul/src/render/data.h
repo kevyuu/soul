@@ -2,10 +2,17 @@
 
 #include "core/type.h"
 #include "core/array.h"
+#include "core/pool_array.h"
 
 namespace Soul {namespace Render {
+	
+	// public constant
+	static constexpr int MAX_DIR_LIGHT = 4;
 
-	typedef unsigned int RID;
+	typedef PoolID MeshRID;
+	typedef PoolID DirLightRID;
+	typedef GLuint TextureRID;
+	typedef uint32 MaterialRID;
 
 	struct VoxelGIConfig {
 		Vec3f center = { 0.0f, 0.0f, 0.0f };
@@ -16,11 +23,18 @@ namespace Soul {namespace Render {
 		uint32 resolution = 64;
 	};
 
+	struct ShadowAtlasConfig {
+		int32 resolution;
+		int8 subdivSqrtCount[4] = { 1, 2, 4, 8 };
+	};
+
 	struct Camera {
 		Vec3f up;
 		Vec3f direction;
 		Vec3f position;
+
 		Mat4 projection;
+		Mat4 view;
 
 		uint16 viewportWidth;
 		uint16 viewportHeight;
@@ -42,6 +56,7 @@ namespace Soul {namespace Render {
 				float zFar;
 			} ortho;
 		};
+
 	};
 
 	struct Vertex {
@@ -59,7 +74,7 @@ namespace Soul {namespace Render {
 		uint32 eboHandle;
 		uint32 vertexCount;
 		uint32 indexCount;
-		RID materialID;
+		MaterialRID materialID;
 	};
 
 	enum MaterialFlag {
@@ -87,11 +102,11 @@ namespace Soul {namespace Render {
 
 	struct Material {
 
-		RID albedoMap;
-		RID normalMap;
-		RID metallicMap;
-		RID roughnessMap;
-		RID aoMap;
+		GLuint albedoMap;
+		GLuint normalMap;
+		GLuint metallicMap;
+		GLuint roughnessMap;
+		GLuint aoMap;
 
 		Vec3f albedo;
 		float metallic;
@@ -118,7 +133,7 @@ namespace Soul {namespace Render {
 		int16 slot;
 	};
 
-	struct DirectionalLight {
+	struct DirLight {
 		Mat4 shadowMatrix[4];
 		Vec3f direction;
 		Vec3f color;
@@ -235,7 +250,7 @@ namespace Soul {namespace Render {
 	
 
 	struct DirectionalLightSpec {
-		Vec3f direction;
+		Vec3f direction = Vec3f(0.0f, -1.0f, 0.0f);
 		Vec3f color = { 100.0f, 100.0f, 100.0f };
 		float split[3] = { 0.1f, 0.3f, 0.6f };
 		int32 shadowMapResolution = 2048;
@@ -243,11 +258,11 @@ namespace Soul {namespace Render {
 	};
 
 	struct MaterialSpec {
-		RID albedoMap;
-		RID normalMap;
-		RID metallicMap;
-		RID roughnessMap;
-		RID aoMap;
+		TextureRID albedoMap;
+		TextureRID normalMap;
+		TextureRID metallicMap;
+		TextureRID roughnessMap;
+		TextureRID aoMap;
 
 		bool useAlbedoTex;
 		bool useNormalTex;
@@ -270,7 +285,7 @@ namespace Soul {namespace Render {
 		uint32* indices;
 		uint32 vertexCount;
 		uint32 indexCount;
-		RID material;
+		MaterialRID material;
 	};
 
 	struct SkyboxSpec {
@@ -310,8 +325,6 @@ namespace Soul {namespace Render {
 		static constexpr int VOXEL_GI_DATA_BINDING_POINT = 2;
 		static constexpr char VOXEL_GI_DATA_NAME[] = "VoxelGIData";
 
-
-		static constexpr int MAX_DIRECTIONAL_LIGHTS = 4;
 	};
 
 	struct ShadowAtlas {
@@ -320,7 +333,7 @@ namespace Soul {namespace Render {
 		int8 subdivSqrtCount[4];
 		GLuint texHandle;
 		GLuint framebuffer;
-		RID slots[MAX_LIGHT];
+		MaterialRID slots[MAX_LIGHT];
 	};
 
 	struct CameraDataUBO {
@@ -346,7 +359,7 @@ namespace Soul {namespace Render {
 	};
 
 	struct LightDataUBO {
-		DirectionalLightUBO dirLights[Constant::MAX_DIRECTIONAL_LIGHTS];
+		DirectionalLightUBO dirLights[MAX_DIR_LIGHT];
 		int dirLightCount;
 		float pad[3];
 	};
@@ -379,7 +392,7 @@ namespace Soul {namespace Render {
 
 	struct ShadowMapRP : public RenderPass {
 
-		RID shader;
+		GLuint program;
 		int32 modelLoc;
 		int32 shadowMatrixLoc;
 
@@ -390,7 +403,7 @@ namespace Soul {namespace Render {
 
 	struct Texture2DDebugRP : public RenderPass {
 
-		RID shader;
+		GLuint program;
 		GLuint texDebugLoc;
 
 		void init(Database& database);
@@ -401,9 +414,9 @@ namespace Soul {namespace Render {
 
 	struct PanoramaToCubemapRP : public RenderPass {
 
-		RID renderTarget;
+		GLuint renderTarget;
 		GLuint renderBuffer;
-		RID shader;
+		GLuint program;
 
 		GLuint projectionLoc;
 		GLuint viewLoc;
@@ -415,9 +428,9 @@ namespace Soul {namespace Render {
 
 	struct DiffuseEnvmapFilterRP : public RenderPass {
 
-		RID renderTarget;
-		RID renderBuffer;
-		RID shader;
+		GLuint renderTarget;
+		GLuint renderBuffer;
+		GLuint program;
 
 		GLuint projectionLoc;
 		GLuint viewLoc;
@@ -429,8 +442,8 @@ namespace Soul {namespace Render {
 
 	struct GBufferGenRP : public RenderPass {
 
-		RID predepthShader;
-		RID gBufferShader;
+		GLuint predepthProgram;
+		GLuint gBufferGenProgram;
 
 		GLint modelUniformLoc;
 
@@ -460,7 +473,7 @@ namespace Soul {namespace Render {
 	};
 
 	struct LightingRP : public RenderPass {
-		RID shader;
+		GLuint program;
 
 		GLint shadowMapUniformLoc;
 		GLint renderMap1UniformLoc;
@@ -475,7 +488,7 @@ namespace Soul {namespace Render {
 	};
 
 	struct SSRTraceRP : public RenderPass {
-		RID shader;
+		GLuint program;
 
 		GLint renderMap1UniformLoc;
 		GLint renderMap2UniformLoc;
@@ -494,7 +507,7 @@ namespace Soul {namespace Render {
 	};
 
 	struct SSRResolveRP : public RenderPass {
-		RID shader;
+		GLuint program;
 
 		GLint reflectionPosBufferLoc;
 		GLint lightBufferLoc;
@@ -517,13 +530,13 @@ namespace Soul {namespace Render {
 	};
 
 	struct GaussianBlurRP : public RenderPass {
-		RID shaderHorizontal;
+		GLuint horizontalProgram;
 
 		GLint sourceTexUniformLocHorizontal;
 		GLint targetSizePxUniformLocHorizontal;
 		GLint lodUniformLocHorizontal;
 
-		RID shaderVertical;
+		GLuint verticalProgram;
 
 		GLint sourceTexUniformLocVertical;
 		GLint targetSizePxUniformLocVertical;
@@ -534,39 +547,8 @@ namespace Soul {namespace Render {
 		void shutdown(Database& database);
 	};
 
-	struct PBRSceneRP : public RenderPass {
-		RID predepthShader;
-		RID sceneShader;
-		RID renderTarget;
-
-		GLint modelUniformLoc;
-		GLint viewPosUniformLoc;
-		GLint albedoMapPositionLoc;
-		GLint normalMapPositionLoc;
-		GLint metallicMapPositionLoc;
-		GLint roughnessMapPositionLoc;
-		GLint aoMapPositionLoc;
-
-		GLint ambientEnergyLoc;
-		GLint ambientColorLoc;
-
-		GLint predepthModelUniformLoc;
-		GLint predepthViewUniformLoc;
-		GLint predepthProjectionUniformLoc;
-
-
-		GLint shadowMapLoc;
-		GLint brdfMapLoc;
-		GLint diffuseMapLoc;
-		GLint specularMapLoc;
-
-		void init(Database& database);
-		void execute(Database& database);
-		void shutdown(Database& database);
-	};
-
 	struct SkyboxRP : public RenderPass {
-		GLuint shader;
+		GLuint program;
 
 		GLint projectionLoc;
 		GLint viewLoc;
@@ -578,9 +560,9 @@ namespace Soul {namespace Render {
 	};
 
 	struct SpecularEnvmapFilterRP : public RenderPass {
-		RID renderTarget;
-		RID renderBuffer;
-		RID shader;
+		GLuint renderTarget;
+		GLuint renderBuffer;
+		GLuint shader;
 
 		GLuint projectionLoc;
 		GLuint viewLoc;
@@ -592,9 +574,9 @@ namespace Soul {namespace Render {
 	};
 
 	struct BRDFMapRP : public RenderPass {
-		RID framebuffer;
-		RID renderBuffer;
-		RID shader;
+		GLuint framebuffer;
+		GLuint renderBuffer;
+		GLuint program;
 
 		void init(Database& database);
 		void execute(Database& database);
@@ -666,6 +648,17 @@ namespace Soul {namespace Render {
 		void shutdown(Database& database);
 	};
 
+	struct WireframeRP : public RenderPass {
+		GLuint program;
+
+		GLint modelUniformLoc;
+
+		void init(Database& database);
+		void execute(Database& database);
+		void shutdown(Database& database);
+
+	};
+
 	struct GBuffer {
 		GLuint frameBuffer;
 
@@ -728,14 +721,7 @@ namespace Soul {namespace Render {
 
 	};
 
-	struct AABB {
-		Vec3f min;
-		Vec3f max;
-	};
-
 	struct Database {
-
-		static constexpr int MAX_DIR_LIGHT = 4;
 
 		uint32 frameIdx;
 
@@ -743,12 +729,19 @@ namespace Soul {namespace Render {
 		uint32 targetHeightPx;
 
 		Array<Material> materialBuffer;
+
+		PoolArray<uint32> meshIndexes;
+		Array<MeshRID> meshRIDs;
 		Array<Mesh> meshBuffer;
 
-		Environment environment;
-		DirectionalLight dirLights[MAX_DIR_LIGHT];
+		PoolArray<uint32> dirLightIndexes;
+		DirLightRID dirLightRIDs[MAX_DIR_LIGHT];
+		DirLight dirLights[MAX_DIR_LIGHT];
 		int dirLightCount;
 
+		
+		Environment environment;
+			
 		ShadowAtlas shadowAtlas;
 
 		GLuint cameraDataUBOHandle;
@@ -779,6 +772,7 @@ namespace Soul {namespace Render {
 		GLuint quadVBO;
 
 		Array<RenderPass*> renderPassList;
+		Array<Mesh*> wireframeMeshes;
 
 		AABB sceneBound;
 	};

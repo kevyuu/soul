@@ -6,17 +6,17 @@
 namespace Soul {namespace Render {
 		void GaussianBlurRP::init(Database &database) {
 
-			shaderHorizontal = GLExt::ProgramCreate(RenderAsset::ShaderFile::gaussianBlurHorizontal);
-			glUseProgram(shaderHorizontal);
-			sourceTexUniformLocHorizontal = glGetUniformLocation(shaderHorizontal, "sourceTex");
-			targetSizePxUniformLocHorizontal = glGetUniformLocation(shaderHorizontal, "targetSizePx");
-			lodUniformLocHorizontal = glGetUniformLocation(shaderHorizontal, "lod");
+			horizontalProgram = GLExt::ProgramCreate(RenderAsset::ShaderFile::gaussianBlurHorizontal);
+			glUseProgram(horizontalProgram);
+			sourceTexUniformLocHorizontal = glGetUniformLocation(horizontalProgram, "sourceTex");
+			targetSizePxUniformLocHorizontal = glGetUniformLocation(horizontalProgram, "targetSizePx");
+			lodUniformLocHorizontal = glGetUniformLocation(horizontalProgram, "lod");
 
-			shaderVertical = GLExt::ProgramCreate(RenderAsset::ShaderFile::gaussianBlurVertical);
-			glUseProgram(shaderVertical);
-			sourceTexUniformLocVertical = glGetUniformLocation(shaderVertical, "sourceTex");
-			targetSizePxUniformLocVertical = glGetUniformLocation(shaderVertical, "targetSizePx");
-			lodUniformLocVertical = glGetUniformLocation(shaderVertical, "lod");
+			verticalProgram = GLExt::ProgramCreate(RenderAsset::ShaderFile::gaussianBlurVertical);
+			glUseProgram(verticalProgram);
+			sourceTexUniformLocVertical = glGetUniformLocation(verticalProgram, "sourceTex");
+			targetSizePxUniformLocVertical = glGetUniformLocation(verticalProgram, "targetSizePx");
+			lodUniformLocVertical = glGetUniformLocation(verticalProgram, "lod");
 
 			glUseProgram(0);
 		}
@@ -46,7 +46,7 @@ namespace Soul {namespace Render {
 					(int)targetSize.y);
 
 				// Horizontal Blur Pass
-				glUseProgram(shaderHorizontal);
+				glUseProgram(horizontalProgram);
 				glBindFramebuffer(GL_FRAMEBUFFER, db.effectBuffer.lightMipChain[1].mipmaps.get(i).frameBuffer);
 				glUniform1i(sourceTexUniformLocHorizontal, 0);
 				glActiveTexture(GL_TEXTURE0);
@@ -61,7 +61,7 @@ namespace Soul {namespace Render {
 				glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 
 				// Vertical Blur Pass
-				glUseProgram(shaderVertical);
+				glUseProgram(verticalProgram);
 				glBindFramebuffer(GL_FRAMEBUFFER, db.effectBuffer.lightMipChain[0].mipmaps.get(i + 1).frameBuffer);
 				glUniform1i(sourceTexUniformLocVertical, 0);
 				glActiveTexture(GL_TEXTURE0);
@@ -85,7 +85,7 @@ namespace Soul {namespace Render {
 		}
 
 		void GaussianBlurRP::shutdown(Database &database) {
-			glDeleteProgram(shaderHorizontal);
-			glDeleteProgram(shaderVertical);
+			glDeleteProgram(horizontalProgram);
+			glDeleteProgram(verticalProgram);
 		}
 }}

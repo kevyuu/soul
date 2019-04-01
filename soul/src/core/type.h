@@ -10,8 +10,6 @@
 #include <cfloat>
 
 #include "extern/glad.h"
-#include <GLFW/glfw3.h>
-
 typedef int8_t int8;
 typedef int16_t int16;
 typedef int32_t int32;
@@ -88,7 +86,19 @@ namespace Soul {
 		Vec4f() : x(0), y(0), z(0), w(0) {}
 		Vec4f(float x, float y, float z, float w) : x(x), y(y), z(z), w(w) {}
 		Vec4f(Vec3f xyz, float w) : x(xyz.x), y(xyz.y), z(xyz.z), w(w) {}
-		Vec3f xyz() { return Vec3f(x, y, z); }
+		Vec3f xyz() const { return Vec3f(x, y, z); }
+	};
+
+	struct Quaternion {
+		float x;
+		float y;
+		float z;
+		float w;
+
+		Quaternion() : x(0), y(0), z(0), w(1) {}
+		Quaternion(float x, float y, float z, float w) : x(x), y(y), z(z), w(w) {}
+		Quaternion(Vec3f xyz, float w) : x(xyz.x), y(xyz.y), z(xyz.z), w(w) {}
+		Vec3f xyz() const { return Vec3f(x, y, z); }
 	};
 
 	struct Mat3 {
@@ -121,18 +131,14 @@ namespace Soul {
 		}
 	};
 
-	struct Quaternion {
-
-		float x, y, z, w;
-
-		Quaternion() : x(0), y(0), z(0), w(0) {};
-		Quaternion(float x, float y, float z, float w) : x(x), y(y), z(z), w(w) {}
-
-	};
-
 	struct Transform {
-		Mat3 rotation;
 		Vec3f position;
 		Vec3f scale;
+		Quaternion rotation;
+	};
+
+	struct AABB {
+		Vec3f min;
+		Vec3f max;
 	};
 }

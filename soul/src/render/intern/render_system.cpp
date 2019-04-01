@@ -1,5 +1,7 @@
 #include "render/system.h"
 #include "render/intern/glext.h"
+
+#include "core/debug.h"
 #include "core/math.h"
 
 #include <cmath>
@@ -17,9 +19,18 @@ namespace Soul { namespace Render {
         db.targetWidthPx = config.targetWidthPx;
         db.targetHeightPx = config.targetHeightPx;
 
-        db.materialBuffer.init(config.materialPoolSize);
-        db.meshBuffer.init(config.meshPoolSize);
-        db.renderPassList.init(8);
+        db.materialBuffer.reserve(config.materialPoolSize);
+		
+		db.meshIndexes.reserve(config.meshPoolSize);
+		db.meshRIDs.reserve(config.meshPoolSize);
+        db.meshBuffer.reserve(config.meshPoolSize);
+
+		db.dirLightIndexes.reserve(MAX_DIR_LIGHT);
+		db.dirLightCount = 0;
+
+		db.wireframeMeshes.reserve(100);
+
+        db.renderPassList.reserve(8);
 
         // setup scene ubo
         glGenBuffers(1, &db.cameraDataUBOHandle);
@@ -41,9 +52,6 @@ namespace Soul { namespace Render {
 
 		glBindBuffer(GL_UNIFORM_BUFFER, 0);
 
-
-        db.dirLightCount = 0;
-
 		shadowAtlasUpdateConfig(config.shadowAtlasConfig);
 		voxelGIUpdateConfig(config.voxelGIConfig);
 
@@ -62,17 +70,18 @@ namespace Soul { namespace Render {
         _brdfMapInit();
 		_velocityBufferInit();
 
-        db.renderPassList.pushBack(new ShadowMapRP());
-        db.renderPassList.pushBack(new GBufferGenRP());
-        db.renderPassList.pushBack(new GaussianBlurRP());
-		db.renderPassList.pushBack(new SSRTraceRP());
-		db.renderPassList.pushBack(new VoxelLightInjectRP());
-		db.renderPassList.pushBack(new VoxelMipmapGenRP());
-		db.renderPassList.pushBack(new SSRResolveRP());
-		db.renderPassList.pushBack(new SkyboxRP());
-		db.renderPassList.pushBack(new VoxelDebugRP());
+        db.renderPassList.add(new ShadowMapRP());
+        db.renderPassList.add(new GBufferGenRP());
+        db.renderPassList.add(new GaussianBlurRP());
+		db.renderPassList.add(new SSRTraceRP());
+		db.renderPassList.add(new VoxelLightInjectRP());
+		db.renderPassList.add(new VoxelMipmapGenRP());
+		db.renderPassList.add(new SSRResolveRP());
+		db.renderPassList.add(new SkyboxRP());
+		db.renderPassList.add(new VoxelDebugRP());
+		db.renderPassList.add(new WireframeRP());
 
-        for (int i = 0; i < db.renderPassList.getSize(); i++) {
+        for (int i = 0; i < db.renderPassList.count(); i++) {
             db.renderPassList.get(i)->init(db);
         }
 
@@ -81,7 +90,7 @@ namespace Soul { namespace Render {
     }
 
 	void System::shaderReload() {
-		for (int i = 0; i < _db.renderPassList.getSize(); i++) {
+		for (int i = 0; i < _db.renderPassList.count(); i++) {
 			_db.renderPassList[i]->init(_db);
 		}
 	}
@@ -314,7 +323,7 @@ namespace Soul { namespace Render {
         	int level = (int) (fmin(log(w + 1) , log(h + 1)) / log(2));
 
         	_db.effectBuffer.lightMipChain[i].numLevel = level;
-        	_db.effectBuffer.lightMipChain[i].mipmaps.init(level);
+        	_db.effectBuffer.lightMipChain[i].mipmaps.reserve(level);
 
         	glGenTextures(1, &_db.effectBuffer.lightMipChain[i].colorBuffer);
         	glBindTexture(GL_TEXTURE_2D, _db.effectBuffer.lightMipChain[i].colorBuffer);
@@ -340,7 +349,7 @@ namespace Soul { namespace Render {
                 std::cout<<"Status : "<<status<<std::endl;
                 std::cout<<"Error : "<<GL_FRAMEBUFFER_COMPLETE<<" "<<GL_FRAMEBUFFER_INCOMPLETE_ATTACHMENT<<std::endl;
 
-                _db.effectBuffer.lightMipChain[i].mipmaps.pushBack(mipmap);
+                _db.effectBuffer.lightMipChain[i].mipmaps.add(mipmap);
                 w >>= 1;
                 h >>= 1;
         	}
@@ -377,10 +386,13 @@ namespace Soul { namespace Render {
 
 			GLExt::TextureDelete(&mipChain.colorBuffer);
 
-			for (int j = 0; j < mipChain.mipmaps.getSize(); j++) {
+			for (int j = 0; j < mipChain.mipmaps.count(); j++) {
 				GLExt::FramebufferDelete( &mipChain.mipmaps.get(j).frameBuffer);
 			}
 		}
+
+		db.effectBuffer.lightMipChain[0].mipmaps.cleanup();
+		db.effectBuffer.lightMipChain[1].mipmaps.cleanup();
 
 		SOUL_ASSERT(0, GLExt::IsErrorCheckPass(), "Effect buffer cleanup error");
 	}
@@ -630,7 +642,7 @@ namespace Soul { namespace Render {
 
         Database& db = _db;
 
-        for (int i = 0; i < db.renderPassList.getSize(); i++) {
+        for (int i = 0; i < db.renderPassList.count(); i++) {
             db.renderPassList.get(i)->shutdown(db);
             free(db.renderPassList.get(i));
         }
@@ -643,22 +655,31 @@ namespace Soul { namespace Render {
 		_lightBufferCleanup();
 		_voxelGIBufferCleanup();
 
-		for (int i = 0; i < db.materialBuffer.getSize(); i++) {
+		for (int i = 0; i < db.materialBuffer.count(); i++) {
 			GLExt::TextureDelete(&db.materialBuffer[i].albedoMap);
 			GLExt::TextureDelete(&db.materialBuffer[i].metallicMap);
 			GLExt::TextureDelete(&db.materialBuffer[i].normalMap);
 			GLExt::TextureDelete(&db.materialBuffer[i].roughnessMap);
 		}
 
-		for (int i = 0; i < db.meshBuffer.getSize(); i++) {
+		for (int i = 0; i < db.meshBuffer.count(); i++) {
 			glDeleteBuffers(1, &db.meshBuffer[i].eboHandle);
 			glDeleteBuffers(1, &db.meshBuffer[i].vboHandle);
 			glDeleteVertexArrays(1, &db.meshBuffer[i].vaoHandle);
 		}
 
 		db.materialBuffer.cleanup();
+
+		db.meshIndexes.cleanup();
+		db.meshRIDs.cleanup();
 		db.meshBuffer.cleanup();
-        db.renderPassList.cleanup();
+        
+		db.dirLightIndexes.cleanup();
+		db.dirLightCount = 0;
+		
+		db.wireframeMeshes.cleanup();
+
+		db.renderPassList.cleanup();
 
         panoramaToCubemapRP.shutdown(_db);
         diffuseEnvmapFilterRP.shutdown(_db);
@@ -671,7 +692,7 @@ namespace Soul { namespace Render {
 
     }
 
-    ShadowKey System::_shadowAtlasGetSlot(RID lightID, int texReso) {
+    ShadowKey System::_shadowAtlasGetSlot(uint32 lightID, int texReso) {
         ShadowKey shadowKey = { -1, -1, -1 };
         int bestSlot = -1;
         int quadrantSize = _db.shadowAtlas.resolution / 2;
@@ -708,54 +729,76 @@ namespace Soul { namespace Render {
 		_db.shadowAtlas.slots[shadowKey.slot] = -1;
 	}
 
-    RID System::dirLightCreate(const DirectionalLightSpec &spec) {
-        RID lightRID = _db.dirLightCount;
-        DirectionalLight& light = _db.dirLights[_db.dirLightCount];
+    MaterialRID System::dirLightCreate(const DirectionalLightSpec &spec) {
+		
+		uint32 dirLightIndex = _db.dirLightCount;
+		
+		DirLightRID lightRID = _db.dirLightIndexes.add(dirLightIndex);
+		_db.dirLightIndexes.add(dirLightIndex);
+		_db.dirLightRIDs[dirLightIndex] = lightRID;
+
+        DirLight& light = _db.dirLights[dirLightIndex];
+
         light.direction = unit(spec.direction);
         light.color = spec.color;
 		light.resolution = spec.shadowMapResolution;
         light.shadowKey = _shadowAtlasGetSlot(lightRID, spec.shadowMapResolution);
 		light.bias = spec.bias;
-        for (int i = 0; i < 3; i++) {
+        
+		for (int i = 0; i < 3; i++) {
             light.split[i] = spec.split[i];
         }
-		
 
         _db.dirLightCount++;
 
         return lightRID;
     }
 
-    void System::dirLightSetDirection(RID lightRID, Vec3f direction) {
-        _db.dirLights[lightRID].direction = direction;
+	void System::dirLightDestroy(DirLightRID lightRID) {
+		uint32 dirLightIndex = _db.dirLightIndexes[lightRID];
+		_db.dirLightRIDs[dirLightIndex] = _db.dirLightRIDs[_db.dirLightCount - 1];
+		_db.dirLights[dirLightIndex] = _db.dirLights[_db.dirLightCount - 1];
+		_db.dirLightIndexes[_db.dirLightRIDs[dirLightIndex]] = dirLightIndex;
+		_db.dirLightCount--;
+	}
+
+	DirLight* System::dirLightPtr(DirLightRID lightRID) {
+		uint32 dirLightIndex = _db.dirLightIndexes[lightRID];
+		return _db.dirLights + dirLightIndex;
+	}
+
+    void System::dirLightSetDirection(DirLightRID lightRID, Vec3f direction) {
+		DirLight* dirLight = dirLightPtr(lightRID);
+		dirLight->direction = direction;
     }
 
-	void System::dirLightSetColor(RID lightRID, Vec3f color) {
-		_db.dirLights[lightRID].color = color;
+	void System::dirLightSetColor(DirLightRID lightRID, Vec3f color) {
+		DirLight* dirLight = dirLightPtr(lightRID);
+		dirLight->color = color;
 	}
 
-	void System::dirLightSetShadowMapResolution(RID lightRID, int32 resolution) {
+	void System::dirLightSetShadowMapResolution(DirLightRID lightRID, int32 resolution) {
 
 		SOUL_ASSERT(0, resolution == nextPowerOfTwo(resolution), "");
-		DirectionalLight& dirLight = _db.dirLights[lightRID];
+		DirLight* dirLight = dirLightPtr(lightRID);
 
-		_shadowAtlasFreeSlot(dirLight.shadowKey);
-		dirLight.resolution = resolution;
-		dirLight.shadowKey = _shadowAtlasGetSlot(lightRID, resolution);
+		_shadowAtlasFreeSlot(dirLight->shadowKey);
+		dirLight->resolution = resolution;
+		dirLight->shadowKey = _shadowAtlasGetSlot(lightRID, resolution);
 
 	}
 
-	void System::dirLightSetCascadeSplit(RID lightRID, float split1, float split2, float split3)
+	void System::dirLightSetCascadeSplit(DirLightRID lightRID, float split1, float split2, float split3)
 	{
-		DirectionalLight& dirLight = _db.dirLights[lightRID];
-		dirLight.split[0] = split1;
-		dirLight.split[1] = split2;
-		dirLight.split[2] = split3;
+		DirLight* dirLight = dirLightPtr(lightRID);
+		dirLight->split[0] = split1;
+		dirLight->split[1] = split2;
+		dirLight->split[2] = split3;
 	}
 
-	void System::dirLightSetBias(RID lightRID, float bias) {
-		DirectionalLight& dirLight = _db.dirLights[lightRID];
-		dirLight.bias = bias;
+	void System::dirLightSetBias(DirLightRID lightRID, float bias) {
+		DirLight* dirLight = dirLightPtr(lightRID);
+		dirLight->bias = bias;
 	}
 
     void System::envSetAmbientColor(Vec3f ambientColor) {
@@ -766,11 +809,11 @@ namespace Soul { namespace Render {
         _db.environment.ambientEnergy = ambientEnergy;
     }
 
-    RID System::materialCreate(const MaterialSpec& spec) {
+    MaterialRID System::materialCreate(const MaterialSpec& spec) {
         
-		RID rid = _db.materialBuffer.getSize();
+		MaterialRID rid = _db.materialBuffer.count();
 
-		_db.materialBuffer.pushBack({
+		_db.materialBuffer.add({
 				spec.albedoMap,
 				spec.normalMap,
 				spec.metallicMap,
@@ -788,7 +831,7 @@ namespace Soul { namespace Render {
         return rid;    
 	}
 
-	void System::materialSetMetallicTextureChannel(RID rid, TexChannel textureChannel) {
+	void System::materialSetMetallicTextureChannel(MaterialRID rid, TexChannel textureChannel) {
 
 		SOUL_ASSERT(0, textureChannel >= TexChannel_RED && textureChannel <= TexChannel_ALPHA, "Invalid texture channel");
 
@@ -804,7 +847,7 @@ namespace Soul { namespace Render {
 
 	}
 
-	void System::materialSetRoughnessTextureChannel(RID rid, TexChannel textureChannel) {
+	void System::materialSetRoughnessTextureChannel(MaterialRID rid, TexChannel textureChannel) {
 
 		SOUL_ASSERT(0, textureChannel >= TexChannel_RED && textureChannel <= TexChannel_ALPHA, "Invavlid texture channel");
 
@@ -820,7 +863,7 @@ namespace Soul { namespace Render {
 
 	}
 
-	void System::materialSetAOTextureChannel(RID rid, TexChannel textureChannel) {
+	void System::materialSetAOTextureChannel(MaterialRID rid, TexChannel textureChannel) {
 		SOUL_ASSERT(0, textureChannel >= TexChannel_RED && textureChannel <= TexChannel_ALPHA, "Invavlid texture channel");
 
 		uint32 flags = _db.materialBuffer[rid].flags;
@@ -834,7 +877,7 @@ namespace Soul { namespace Render {
 		_db.materialBuffer[rid].flags = flags;
 	}
 
-	void System::materialUpdate(RID rid, const MaterialSpec& spec) {
+	void System::materialUpdate(MaterialRID rid, const MaterialSpec& spec) {
 		_db.materialBuffer[rid] = {
 			spec.albedoMap,
 			spec.normalMap,
@@ -852,7 +895,7 @@ namespace Soul { namespace Render {
 		_materialUpdateFlag(rid, spec);
 	}
 
-	void System::_materialUpdateFlag(RID rid, const MaterialSpec& spec) {
+	void System::_materialUpdateFlag(MaterialRID rid, const MaterialSpec& spec) {
 
 		//TODO: do a version without all this branching
 		int flags = 0;
@@ -869,13 +912,17 @@ namespace Soul { namespace Render {
 		materialSetAOTextureChannel(rid, spec.aoChannel);
 	}
 
+	void System::wireframePush(MeshRID meshRID) {
+		_db.wireframeMeshes.add(meshPtr(meshRID));
+	}
+
     void System::render(const Camera& camera) {
 		_db.frameIdx++;
         _db.camera = camera;
         _updateShadowMatrix();
         _flushUBO();
 
-        for (int i = 0; i < _db.renderPassList.getSize(); i++) {
+        for (int i = 0; i < _db.renderPassList.count(); i++) {
             _db.renderPassList.get(i)->execute(_db);
         }
         GLenum err;
@@ -884,9 +931,10 @@ namespace Soul { namespace Render {
         }
 
 		_db.prevCamera = camera;
+		_db.wireframeMeshes.resize(0);
     }
 
-    RID System::meshCreate(const MeshSpec &spec) {
+    MeshRID System::meshCreate(const MeshSpec &spec) {
 
         GLuint VAO, VBO, EBO;
         glGenVertexArrays(1, &VAO);
@@ -924,9 +972,8 @@ namespace Soul { namespace Render {
 
         glBindVertexArray(0);
 
-
-        RID rid = _db.meshBuffer.getSize();
-        _db.meshBuffer.pushBack({
+        uint32 meshIndex = _db.meshBuffer.count();
+        _db.meshBuffer.add({
                 spec.transform,
                 VAO,
 				VBO,
@@ -936,39 +983,65 @@ namespace Soul { namespace Render {
                 spec.material
         });
 
-		if (_db.meshBuffer.getSize() == 1) {
+		MeshRID rid = _db.meshIndexes.add(meshIndex);
+
+		_db.meshRIDs.add(rid);
+
+		if (_db.meshBuffer.count() == 1) {
 			SOUL_ASSERT(0, spec.vertexCount > 0, "");
-			_db.sceneBound.min = spec.vertexes[0].pos;
-			_db.sceneBound.max = spec.vertexes[0].pos;
+			_db.sceneBound.min = spec.transform * spec.vertexes[0].pos;
+			_db.sceneBound.max = spec.transform * spec.vertexes[0].pos;
 		}
 
 		for (int i = 0; i < spec.vertexCount; i++) {
 			Vertex& vertex = spec.vertexes[i];
-			if (_db.sceneBound.min.x > vertex.pos.x) _db.sceneBound.min.x = vertex.pos.x;
-			if (_db.sceneBound.min.y > vertex.pos.y) _db.sceneBound.min.y = vertex.pos.y;
-			if (_db.sceneBound.min.z > vertex.pos.z) _db.sceneBound.min.z = vertex.pos.z;
+			Vec3f worldPos = spec.transform * vertex.pos;
+			if (_db.sceneBound.min.x > worldPos.x) _db.sceneBound.min.x = worldPos.x;
+			if (_db.sceneBound.min.y > worldPos.y) _db.sceneBound.min.y = worldPos.y;
+			if (_db.sceneBound.min.z > worldPos.z) _db.sceneBound.min.z = worldPos.z;
 		
-			if (_db.sceneBound.max.x < vertex.pos.x) _db.sceneBound.max.x = vertex.pos.x;
-			if (_db.sceneBound.max.y < vertex.pos.y) _db.sceneBound.max.y = vertex.pos.y;
-			if (_db.sceneBound.max.z < vertex.pos.z) _db.sceneBound.max.z = vertex.pos.z;
+			if (_db.sceneBound.max.x < worldPos.x) _db.sceneBound.max.x = worldPos.x;
+			if (_db.sceneBound.max.y < worldPos.y) _db.sceneBound.max.y = worldPos.y;
+			if (_db.sceneBound.max.z < worldPos.z) _db.sceneBound.max.z = worldPos.z;
 
 		}
-
         return rid;
-
     }
 
-	void System::meshSetTransform(RID rid, Vec3f position, Vec3f scale, Vec4f rotation) {
+	void System::meshDestroy(MeshRID rid) {
+		uint32 meshIndex = _db.meshIndexes[rid];
+
+		_db.meshBuffer[meshIndex] = _db.meshBuffer.back();
+		_db.meshBuffer.pop();
 		
-		_db.meshBuffer[rid].transform = mat4Translate(position) * mat4Scale(scale) * mat4Rotate(rotation.xyz(), rotation.w);
-	
+		_db.meshRIDs[meshIndex] = _db.meshRIDs.back();
+		_db.meshRIDs.pop();
+
+		_db.meshIndexes[_db.meshRIDs[meshIndex]] = meshIndex;
+		
+		_db.meshIndexes.remove(rid);
 	}
 
-    RID System::textureCreate(const TexSpec &spec, unsigned char *data, int dataChannelCount) {
+	Mesh* System::meshPtr(MeshRID rid) {
+		uint32 meshIndex = _db.meshIndexes[rid];
+		return _db.meshBuffer.ptr(meshIndex);
+	}
+
+	void System::meshSetTransform(MeshRID rid, const Transform& transform) {
+		Mesh* mesh = meshPtr(rid);
+		mesh->transform = mat4Transform(transform);
+	}
+
+	void System::meshSetTransform(MeshRID rid, const Mat4& transform) {
+		Mesh* mesh = meshPtr(rid);
+		mesh->transform = transform;
+	}
+
+    TextureRID System::textureCreate(const TexSpec &spec, unsigned char *data, int dataChannelCount) {
 
 		SOUL_ASSERT(0, dataChannelCount != 0, "Data channel count must not be zero.", "");
 
-        RID textureHandle;
+        TextureRID textureHandle;
         glGenTextures(1, &textureHandle);
         glBindTexture(GL_TEXTURE_2D, textureHandle);
         
@@ -1000,11 +1073,29 @@ namespace Soul { namespace Render {
         return textureHandle;
     }
 
-    void System::envSetPanorama(RID panoramaTex) {
+    void System::envSetPanorama(const float* data, int width, int height) {
+
+		if (_db.environment.panorama != 0) {
+			GLExt::TextureDelete(&_db.environment.panorama);
+		}
+
+		GLuint panoramaTex;
+		glGenTextures(1, &panoramaTex);
+		glBindTexture(GL_TEXTURE_2D, panoramaTex);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, width, height, 0, GL_RGB, GL_FLOAT, data);
+
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 		
         if (_db.environment.cubemap != 0) {
             GLExt::TextureDelete(&_db.environment.cubemap);
+
+			SOUL_ASSERT(0, _db.environment.diffuseMap != 0, "Environment diffusemap is not zero when cubemap texture is zero.");
             GLExt::TextureDelete(&_db.environment.diffuseMap);
+
+			SOUL_ASSERT(0, _db.environment.specularMap != 0, "Environment specularmap is not zero when cubemap texture is zero.");
             GLExt::TextureDelete(&_db.environment.specularMap);
         }
 
@@ -1091,7 +1182,7 @@ namespace Soul { namespace Render {
 
         for (int i = 0; i < db.dirLightCount; i++) {
 
-            DirectionalLight& light = db.dirLights[i];
+            DirLight& light = db.dirLights[i];
             Mat4 lightRot = mat4View(Vec3f(0, 0, 0), light.direction, upVec);
 
             float splitOffset[5] = { 0, light.split[0], light.split[1], light.split[2], 1 };
@@ -1210,7 +1301,7 @@ namespace Soul { namespace Render {
         db.lightDataUBO.dirLightCount = db.dirLightCount;
         for (int i = 0; i < db.dirLightCount; i++) {
             DirectionalLightUBO &lightUBO = db.lightDataUBO.dirLights[i];
-            DirectionalLight &light = db.dirLights[i];
+            DirLight &light = db.dirLights[i];
             lightUBO.color = light.color;
             lightUBO.direction = light.direction;
 

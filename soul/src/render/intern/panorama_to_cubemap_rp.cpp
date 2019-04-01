@@ -7,10 +7,10 @@ namespace Soul {
 	namespace Render {
 		void PanoramaToCubemapRP::init(Database &database) {
 
-			shader = GLExt::ProgramCreate(RenderAsset::ShaderFile::panoramaToCubemap);
+			program = GLExt::ProgramCreate(RenderAsset::ShaderFile::panoramaToCubemap);
 
-			projectionLoc = glGetUniformLocation(shader, "projection");
-			viewLoc = glGetUniformLocation(shader, "view");
+			projectionLoc = glGetUniformLocation(program, "projection");
+			viewLoc = glGetUniformLocation(program, "view");
 
 			glGenFramebuffers(1, &renderTarget);
 			glBindFramebuffer(GL_FRAMEBUFFER, renderTarget);
@@ -38,7 +38,7 @@ namespace Soul {
 
 			glBindFramebuffer(GL_FRAMEBUFFER, renderTarget);
 			glBindVertexArray(database.cubeVAO);
-			glUseProgram(shader);
+			glUseProgram(program);
 			glViewport(0, 0, 512, 512);
 			glActiveTexture(GL_TEXTURE0);
 			glBindTexture(GL_TEXTURE_2D, database.environment.panorama);
@@ -62,7 +62,7 @@ namespace Soul {
 		}
 
 		void PanoramaToCubemapRP::shutdown(Database &database) {
-			glDeleteProgram(shader);
+			glDeleteProgram(program);
 			glDeleteFramebuffers(1, &renderTarget);
 		}
 

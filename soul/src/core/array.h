@@ -1,59 +1,92 @@
 #pragma once
 
+#include "core/debug.h"
 #include <cstdlib>
 
 namespace Soul {
 	template <typename T>
-	class Array
+	struct Array
 	{
-	public:
 
 		Array() {
-			capacity = 0;
-			count = 0;
+			_buffer = nullptr;
+			_capacity = 0;
+			_count = 0;
 		}
 
-		void init(int capacity) {
-			this->capacity = capacity;
-			buffer = (T*)malloc(sizeof(T) * capacity);
-			count = 0;
+		~Array() {
+			SOUL_ASSERT(0, _capacity == 0);
+			SOUL_ASSERT(0, _count == 0);
+			SOUL_ASSERT(0, _buffer == 0);
+		}
+
+		void reserve(int capacity) {
+			T* oldBuffer = _buffer;
+			_buffer = (T*)malloc(capacity * sizeof(T));
+			if (oldBuffer != nullptr) {
+				memcpy(_buffer, oldBuffer, _capacity * sizeof(T));
+				free(oldBuffer);
+			}
+			_capacity = capacity;
+		}
+
+		void resize(int size) {
+			if (size > _capacity) {
+				reserve(size);
+			}
+			_count = size;
 		}
 
 		void cleanup() {
-			free(buffer);
+			free(_buffer);
+			_buffer = nullptr;
+			_capacity = 0;
+			_count = 0;
 		}
 
-		void pushBack(const T& item) {
+		void add(const T& item) {
 
-			if (count == capacity) {
-				T* oldBuffer = buffer;
-				buffer = (T*)malloc(sizeof(T) * 2 * capacity);
-				memcpy(buffer, oldBuffer, sizeof(T) * capacity);
+			if (_count == _capacity) {
+				T* oldBuffer = _buffer;
+				_buffer = (T*)malloc(sizeof(T) * 2 * _capacity);
+				memcpy(_buffer, oldBuffer, sizeof(T) * _capacity);
 				free(oldBuffer);
-				capacity *= 2;
+				_capacity *= 2;
 			}
 
-			buffer[count] = item;
-			count++;
+			_buffer[_count] = item;
+			_count++;
+		}
+
+		T& back() {
+			return _buffer[_count - 1];
+		}
+
+		void pop() {
+			SOUL_ASSERT(0, _count != 0, "Cannot pop an empty array.");
+			_count--;
+		}
+
+		T* ptr(int idx) {
+			return &_buffer[idx];
 		}
 
 		T& operator[](int idx) {
-			return buffer[idx];
+			return _buffer[idx];
 		}
 
 		T& get(int idx) const {
-			return buffer[idx];
+			return _buffer[idx];
 		}
 
-		int getSize() const {
-			return count;
+		int count() const {
+			return _count;
 		}
 
-		T* buffer;
+		T* _buffer;
 
-	private:
-		int count;
-		int capacity;
+		int _count;
+		int _capacity;
 	};
 
 }

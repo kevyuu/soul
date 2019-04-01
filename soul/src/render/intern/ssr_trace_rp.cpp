@@ -7,19 +7,19 @@
 namespace Soul {namespace Render {
 
 		void SSRTraceRP::init(Database& database) {
-			shader = GLExt::ProgramCreate(RenderAsset::ShaderFile::ssrTrace);
+			program = GLExt::ProgramCreate(RenderAsset::ShaderFile::ssrTrace);
 
-			GLuint sceneDataBlockIndex = glGetUniformBlockIndex(shader, Constant::CAMERA_DATA_NAME);
-			glUniformBlockBinding(shader, sceneDataBlockIndex, Constant::CAMERA_DATA_BINDING_POINT);
+			GLuint sceneDataBlockIndex = glGetUniformBlockIndex(program, Constant::CAMERA_DATA_NAME);
+			glUniformBlockBinding(program, sceneDataBlockIndex, Constant::CAMERA_DATA_BINDING_POINT);
 
-			renderMap1UniformLoc = glGetUniformLocation(shader, "renderMap1");
-			renderMap2UniformLoc = glGetUniformLocation(shader, "renderMap2");
-			renderMap3UniformLoc = glGetUniformLocation(shader, "renderMap3");
-			depthMapLoc = glGetUniformLocation(shader, "depthMap");
-			screenDimensionLoc = glGetUniformLocation(shader, "screenDimension");
+			renderMap1UniformLoc = glGetUniformLocation(program, "renderMap1");
+			renderMap2UniformLoc = glGetUniformLocation(program, "renderMap2");
+			renderMap3UniformLoc = glGetUniformLocation(program, "renderMap3");
+			depthMapLoc = glGetUniformLocation(program, "depthMap");
+			screenDimensionLoc = glGetUniformLocation(program, "screenDimension");
 
-			cameraZNearLoc = glGetUniformLocation(shader, "cameraZNear");
-			cameraZFarLoc = glGetUniformLocation(shader, "cameraZFar");
+			cameraZNearLoc = glGetUniformLocation(program, "cameraZNear");
+			cameraZFarLoc = glGetUniformLocation(program, "cameraZFar");
 
 			SOUL_ASSERT(0, GLExt::IsErrorCheckPass(), "");
 
@@ -30,7 +30,7 @@ namespace Soul {namespace Render {
 			SOUL_PROFILE_RANGE_PUSH(__FUNCTION__);
 
 			glBindFramebuffer(GL_FRAMEBUFFER, db.effectBuffer.ssrTraceBuffer.frameBuffer);
-			glUseProgram(shader);
+			glUseProgram(program);
 
 			glUniform1i(renderMap1UniformLoc, 0);
 			glActiveTexture(GL_TEXTURE0);
@@ -68,7 +68,7 @@ namespace Soul {namespace Render {
 		}
 
 		void SSRTraceRP::shutdown(Database &database) {
-			glDeleteProgram(shader);
+			glDeleteProgram(program);
 		}
 
 }}
