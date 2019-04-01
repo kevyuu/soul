@@ -69,13 +69,7 @@
     <ClInclude Include="src\render\system.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\..\Users\Kevin Yudi Utama\Downloads\glad\include\glad\glad.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="src\extern\glad.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="src\sandbox\asset_import.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\extern\stb_image.h">
@@ -111,9 +105,6 @@
     <ClInclude Include="src\core\hash_map.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\sandbox\type.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="src\extern\json.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -124,6 +115,42 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\render\data.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\editor\system.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\editor\data.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\sandbox\asset_import.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\sandbox\type.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\world\data.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\Users\Kevin Yudi Utama\Downloads\glad\include\glad\glad.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\core\pool_array.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\editor\intern\entity.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\editor\intern\action.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\extern\ImGuizmo.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\extern\imgui_pie.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\extern\icon\IconsIonicons.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -161,9 +188,6 @@
     <ClCompile Include="src\render\intern\panorama_to_cubemap_rp.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\render\intern\pbr_scene_rp.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="src\render\intern\shadow_map_rp.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -177,9 +201,6 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\render\intern\ssr_trace_rp.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="src\render\intern\system.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\render\intern\texture2d_debug_rp.cpp">
@@ -203,9 +224,6 @@
     <ClCompile Include="src\render\intern\voxel_mipmap_gen_rp.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\sandbox\main.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="src\extern\imgui_demo.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -222,6 +240,45 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\core\hash_map.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\editor\main.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\editor\intern\editor_system.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\render\intern\render_system.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\editor\intern\widget\entity_detail_panel.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\editor\intern\widget\entity_list_panel.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\editor\intern\widget\widget_menu_bar.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\editor\intern\action.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\editor\intern\entity.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\extern\ImGuizmo.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\editor\intern\widget\manipulator.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\extern\imgui_pie.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\editor\intern\widget\render_config_panel.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\render\intern\wireframe_rp.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -265,43 +322,21 @@
     <None Include="assets\greasy-metal-pan\sphere-material.mtl" />
     <None Include="assets\greasy-metal-pan\quad.mtl" />
     <None Include="src\shaders\voxel_mipmap_gen.glsl" />
-    <None Include="imgui.ini" />
     <None Include="src\shaders\velocity_buffer_gen.glsl" />
     <None Include="src\shaders\camera.lib.glsl" />
     <None Include="src\shaders\voxel_gi.lib.glsl" />
+    <None Include="assets\gold\quad.mtl" />
+    <None Include="assets\gold\sphere-material.mtl" />
     <None Include="..\..\..\Users\Kevin Yudi Utama\Downloads\hazard_suit\scene.bin">
       <Filter>Resource Files</Filter>
     </None>
-    <None Include="assets\gold\quad.mtl" />
-    <None Include="assets\gold\sphere-material.mtl" />
+    <None Include="src\shaders\wireframe.glsl" />
   </ItemGroup>
   <ItemGroup>
-    <Image Include="..\..\Sparky\Sandbox\res\Dagger\Textures\Dagger_Albedo.tga" />
-    <Image Include="..\..\Sparky\Sandbox\res\Dagger\Textures\Dagger_Gloss.tga" />
-    <Image Include="..\..\Sparky\Sandbox\res\Dagger\Textures\Dagger_Normals.tga" />
-    <Image Include="..\..\Sparky\Sandbox\res\Dagger\Textures\Dagger_Specular.tga" />
     <Image Include="assets\Dagger_Albedo.tga" />
     <Image Include="assets\Dagger_Gloss.tga" />
     <Image Include="assets\Dagger_Normals.tga" />
     <Image Include="assets\Dagger_Specular.tga" />
-    <Image Include="..\..\..\Downloads\blocksrough-Unreal-Engine\blocksrough-Unreal-Engine\blocksrough_ambientocclusion.png">
-      <Filter>Resource Files</Filter>
-    </Image>
-    <Image Include="..\..\..\Downloads\blocksrough-Unreal-Engine\blocksrough-Unreal-Engine\blocksrough_basecolor.png">
-      <Filter>Resource Files</Filter>
-    </Image>
-    <Image Include="..\..\..\Downloads\blocksrough-Unreal-Engine\blocksrough-Unreal-Engine\blocksrough_height.png">
-      <Filter>Resource Files</Filter>
-    </Image>
-    <Image Include="..\..\..\Downloads\blocksrough-Unreal-Engine\blocksrough-Unreal-Engine\blocksrough_metallic.png">
-      <Filter>Resource Files</Filter>
-    </Image>
-    <Image Include="..\..\..\Downloads\blocksrough-Unreal-Engine\blocksrough-Unreal-Engine\blocksrough_normal.png">
-      <Filter>Resource Files</Filter>
-    </Image>
-    <Image Include="..\..\..\Downloads\blocksrough-Unreal-Engine\blocksrough-Unreal-Engine\blocksrough_roughness.png">
-      <Filter>Resource Files</Filter>
-    </Image>
     <Image Include="assets\blocksrough_roughness.png">
       <Filter>Resource Files</Filter>
     </Image>

@@ -12,37 +12,37 @@ namespace Soul {
 
 		void GBufferGenRP::init(Database& database) {
 
-			predepthShader = GLExt::ProgramCreate(RenderAsset::ShaderFile::predepth);
+			predepthProgram = GLExt::ProgramCreate(RenderAsset::ShaderFile::predepth);
 
-			GLuint sceneDataBlockIndexPredepth = glGetUniformBlockIndex(predepthShader, Constant::CAMERA_DATA_NAME);
-			glUniformBlockBinding(predepthShader, sceneDataBlockIndexPredepth, Constant::CAMERA_DATA_BINDING_POINT);
+			GLuint sceneDataBlockIndexPredepth = glGetUniformBlockIndex(predepthProgram, Constant::CAMERA_DATA_NAME);
+			glUniformBlockBinding(predepthProgram, sceneDataBlockIndexPredepth, Constant::CAMERA_DATA_BINDING_POINT);
 
-			predepthModelUniformLoc = glGetUniformLocation(predepthShader, "model");
+			predepthModelUniformLoc = glGetUniformLocation(predepthProgram, "model");
 
-			gBufferShader = GLExt::ProgramCreate(RenderAsset::ShaderFile::gbufferGen);
+			gBufferGenProgram = GLExt::ProgramCreate(RenderAsset::ShaderFile::gbufferGen);
 
-			GLuint sceneDataBlockIndex = glGetUniformBlockIndex(gBufferShader, Constant::CAMERA_DATA_NAME);
-			glUniformBlockBinding(gBufferShader, sceneDataBlockIndex, Constant::CAMERA_DATA_BINDING_POINT);
-			GLuint lightDataBlockIndex = glGetUniformBlockIndex(gBufferShader, Constant::LIGHT_DATA_NAME);
-			glUniformBlockBinding(gBufferShader, lightDataBlockIndex, Constant::LIGHT_DATA_BINDING_POINT);
+			GLuint sceneDataBlockIndex = glGetUniformBlockIndex(gBufferGenProgram, Constant::CAMERA_DATA_NAME);
+			glUniformBlockBinding(gBufferGenProgram, sceneDataBlockIndex, Constant::CAMERA_DATA_BINDING_POINT);
+			GLuint lightDataBlockIndex = glGetUniformBlockIndex(gBufferGenProgram, Constant::LIGHT_DATA_NAME);
+			glUniformBlockBinding(gBufferGenProgram, lightDataBlockIndex, Constant::LIGHT_DATA_BINDING_POINT);
 
-			modelUniformLoc = glGetUniformLocation(gBufferShader, "model");
+			modelUniformLoc = glGetUniformLocation(gBufferGenProgram, "model");
 
-			albedoMapLoc = glGetUniformLocation(gBufferShader, "material.albedoMap");
-			normalMapLoc = glGetUniformLocation(gBufferShader, "material.normalMap");
-			metallicMapLoc = glGetUniformLocation(gBufferShader, "material.metallicMap");
-			roughnessMapLoc = glGetUniformLocation(gBufferShader, "material.roughnessMap");
-			aoMapLoc = glGetUniformLocation(gBufferShader, "material.aoMap");
+			albedoMapLoc = glGetUniformLocation(gBufferGenProgram, "material.albedoMap");
+			normalMapLoc = glGetUniformLocation(gBufferGenProgram, "material.normalMap");
+			metallicMapLoc = glGetUniformLocation(gBufferGenProgram, "material.metallicMap");
+			roughnessMapLoc = glGetUniformLocation(gBufferGenProgram, "material.roughnessMap");
+			aoMapLoc = glGetUniformLocation(gBufferGenProgram, "material.aoMap");
 
-			materialFlagsLoc = glGetUniformLocation(gBufferShader, "material.flags");
+			materialFlagsLoc = glGetUniformLocation(gBufferGenProgram, "material.flags");
 
-			albedoLoc = glGetUniformLocation(gBufferShader, "material.albedo");
-			metallicLoc = glGetUniformLocation(gBufferShader, "material.metallic");
-			roughnessLoc = glGetUniformLocation(gBufferShader, "material.roughness");
+			albedoLoc = glGetUniformLocation(gBufferGenProgram, "material.albedo");
+			metallicLoc = glGetUniformLocation(gBufferGenProgram, "material.metallic");
+			roughnessLoc = glGetUniformLocation(gBufferGenProgram, "material.roughness");
 
-			shadowMapLoc = glGetUniformLocation(gBufferShader, "shadowMap");
-			viewPositionLoc = glGetUniformLocation(gBufferShader, "viewPosition");
-			ambientFactorLoc = glGetUniformLocation(gBufferShader, "ambientFactor");
+			shadowMapLoc = glGetUniformLocation(gBufferGenProgram, "shadowMap");
+			viewPositionLoc = glGetUniformLocation(gBufferGenProgram, "viewPosition");
+			ambientFactorLoc = glGetUniformLocation(gBufferGenProgram, "ambientFactor");
 
 		}
 
@@ -57,7 +57,7 @@ namespace Soul {
 			glCullFace(GL_BACK);
 			glFrontFace(GL_CCW);
 
-			glUseProgram(predepthShader);
+			glUseProgram(predepthProgram);
 			glDisable(GL_BLEND);
 			glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
 			glDepthMask(GL_TRUE);
@@ -68,7 +68,7 @@ namespace Soul {
 			glDrawBuffers(0, NULL);
 
 			glViewport(0, 0, db.targetWidthPx, db.targetHeightPx);
-			for (int i = 0; i < db.meshBuffer.getSize(); i++) {
+			for (int i = 0; i < db.meshBuffer.count(); i++) {
 				const Mesh& mesh = db.meshBuffer.get(i);
 				glUniformMatrix4fv(predepthModelUniformLoc, 1, GL_TRUE, (const GLfloat*)mesh.transform.elem);
 				glBindVertexArray(mesh.vaoHandle);
@@ -78,7 +78,7 @@ namespace Soul {
 			unsigned int attachments[4] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1, GL_COLOR_ATTACHMENT2, GL_COLOR_ATTACHMENT3 };
 			glDrawBuffers(4, attachments);
 
-			glUseProgram(gBufferShader);
+			glUseProgram(gBufferGenProgram);
 			glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
 			glEnable(GL_DEPTH_TEST);
 			glDepthMask(GL_FALSE);
@@ -98,10 +98,10 @@ namespace Soul {
 
 
 
-			for (int i = 0; i < db.meshBuffer.getSize(); i++) {
+			for (int i = 0; i < db.meshBuffer.count(); i++) {
 
-				const Mesh& mesh = db.meshBuffer.get(i);
-				const Material& material = db.materialBuffer.get(mesh.materialID);
+				const Mesh& mesh = db.meshBuffer[i];
+				const Material& material = db.materialBuffer[mesh.materialID];
 
 				glUniformMatrix4fv(modelUniformLoc, 1, GL_TRUE, (const GLfloat*)mesh.transform.elem);
 
@@ -148,8 +148,8 @@ namespace Soul {
 		}
 
 		void GBufferGenRP::shutdown(Database &database) {
-			GLExt::ProgramDelete(&gBufferShader);
-			GLExt::ProgramDelete(&predepthShader);
+			GLExt::ProgramDelete(&gBufferGenProgram);
+			GLExt::ProgramDelete(&predepthProgram);
 		}
 
 	}

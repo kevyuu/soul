@@ -5,7 +5,7 @@
 #ifndef SOUL_RENDER_INTERN_ASSET_H
 #define SOUL_RENDER_INTERN_ASSET_H
 
-#define SHADER_DIR "C:/Dev/soul/soul/src/shaders/"
+#define SHADER_DIR "src/shaders/"
 #define SHADER_FILE_PATH(filename) SHADER_DIR filename
 
 #include "render/data.h"
@@ -37,6 +37,7 @@ namespace Soul {
 			constexpr const char* voxel_debug = SHADER_FILE_PATH("voxel_debug.glsl");
 			constexpr const char* voxel_light_inject = SHADER_FILE_PATH("voxel_light_inject.glsl");
 			constexpr const char* voxel_mipmap_gen = SHADER_FILE_PATH("voxel_mipmap_gen.glsl");
+			constexpr const char* wireframe = SHADER_FILE_PATH("wireframe.glsl");
         };
 
     }

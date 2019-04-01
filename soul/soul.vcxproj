@@ -24,15 +24,23 @@
     <ClInclude Include="src\core\debug.h" />
     <ClInclude Include="src\core\hash_map.h" />
     <ClInclude Include="src\core\math.h" />
+    <ClInclude Include="src\core\pool_array.h" />
     <ClInclude Include="src\core\type.h" />
+    <ClInclude Include="src\editor\data.h" />
+    <ClInclude Include="src\editor\intern\entity.h" />
+    <ClInclude Include="src\editor\intern\action.h" />
+    <ClInclude Include="src\editor\system.h" />
     <ClInclude Include="src\extern\dirent_portable.h" />
     <ClInclude Include="src\extern\glad.h" />
+    <ClInclude Include="src\extern\icon\IconsIonicons.h" />
     <ClInclude Include="src\extern\imconfig.h" />
     <ClInclude Include="src\extern\imgui.h" />
     <ClInclude Include="src\extern\imguifilesystem.h" />
+    <ClInclude Include="src\extern\ImGuizmo.h" />
     <ClInclude Include="src\extern\imgui_impl_glfw.h" />
     <ClInclude Include="src\extern\imgui_impl_opengl3.h" />
     <ClInclude Include="src\extern\imgui_internal.h" />
+    <ClInclude Include="src\extern\imgui_pie.h" />
     <ClInclude Include="src\extern\imstb_rectpack.h" />
     <ClInclude Include="src\extern\imstb_textedit.h" />
     <ClInclude Include="src\extern\imstb_truetype.h" />
@@ -56,22 +64,33 @@
     <ClInclude Include="src\soul_type.h" />
     <ClInclude Include="src\render\soul_render.h" />
     <ClInclude Include="src\stb_image.h" />
+    <ClInclude Include="src\world\data.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\core\debug.cpp" />
     <ClCompile Include="src\core\hash_map.cpp" />
     <ClCompile Include="src\core\math.cpp" />
+    <ClCompile Include="src\editor\intern\editor_system.cpp" />
+    <ClCompile Include="src\editor\intern\action.cpp" />
+    <ClCompile Include="src\editor\intern\entity.cpp" />
+    <ClCompile Include="src\editor\intern\widget\entity_detail_panel.cpp" />
+    <ClCompile Include="src\editor\intern\widget\entity_list_panel.cpp" />
+    <ClCompile Include="src\editor\intern\widget\manipulator.cpp" />
+    <ClCompile Include="src\editor\intern\widget\render_config_panel.cpp" />
+    <ClCompile Include="src\editor\intern\widget\widget_menu_bar.cpp" />
     <ClCompile Include="src\extern\glad.c" />
     <ClCompile Include="src\extern\imgui.cpp" />
     <ClCompile Include="src\extern\imguifilesystem.cpp" />
+    <ClCompile Include="src\extern\ImGuizmo.cpp" />
     <ClCompile Include="src\extern\imgui_demo.cpp" />
     <ClCompile Include="src\extern\imgui_draw.cpp" />
     <ClCompile Include="src\extern\imgui_impl_glfw.cpp" />
     <ClCompile Include="src\extern\imgui_impl_opengl3.cpp" />
+    <ClCompile Include="src\extern\imgui_pie.cpp" />
     <ClCompile Include="src\extern\imgui_widgets.cpp" />
     <ClCompile Include="src\render\intern\glext.cpp" />
     <ClCompile Include="src\render\intern\velocity_buffer_gen_rp.cpp" />
-    <ClCompile Include="src\sandbox\main.cpp" />
+    <ClCompile Include="src\editor\main.cpp" />
     <ClCompile Include="src\render\intern\brdf_map_rp.cpp" />
     <ClCompile Include="src\render\intern\diffuse_envmap_filter_rp.cpp" />
     <ClCompile Include="src\render\intern\gaussian_blur_rp.cpp" />
@@ -79,17 +98,17 @@
     <ClCompile Include="src\render\intern\lighting_rp.cpp" />
     <ClCompile Include="src\render\intern\voxel_light_inject_rp.cpp" />
     <ClCompile Include="src\render\intern\panorama_to_cubemap_rp.cpp" />
-    <ClCompile Include="src\render\intern\pbr_scene_rp.cpp" />
     <ClCompile Include="src\render\intern\shadow_map_rp.cpp" />
     <ClCompile Include="src\render\intern\texture2d_debug_rp.cpp" />
     <ClCompile Include="src\render\intern\skybox_rp.cpp" />
     <ClCompile Include="src\render\intern\specular_envmap_filter.cpp" />
     <ClCompile Include="src\render\intern\ssr_resolve_rp.cpp" />
     <ClCompile Include="src\render\intern\ssr_trace_rp.cpp" />
-    <ClCompile Include="src\render\intern\system.cpp" />
+    <ClCompile Include="src\render\intern\render_system.cpp" />
     <ClCompile Include="src\render\intern\voxelize_rp.cpp" />
     <ClCompile Include="src\render\intern\voxel_debug_rp.cpp" />
     <ClCompile Include="src\render\intern\voxel_mipmap_gen_rp.cpp" />
+    <ClCompile Include="src\render\intern\wireframe_rp.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\..\Users\Kevin Yudi Utama\Downloads\hazard_suit\scene.bin" />
@@ -108,10 +127,14 @@
     <None Include="assets\Sphere.spm" />
     <None Include="assets\sponza2\textures\sponza.mtl" />
     <None Include="assets\Teapot.spm" />
-    <None Include="imgui.ini" />
     <None Include="src\shaders\blinnphong.vs" />
     <None Include="src\shaders\brdf.lib.glsl" />
-    <None Include="src\shaders\brdf_map.glsl" />
+    <None Include="src\shaders\brdf_map.glsl">
+      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</DeploymentContent>
+      <DeploymentContent Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</DeploymentContent>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</ExcludedFromBuild>
+    </None>
     <None Include="src\shaders\csm.frag" />
     <None Include="src\shaders\csm.geom" />
     <None Include="src\shaders\csm.vert" />
@@ -138,18 +161,9 @@
     <None Include="src\shaders\voxelize.glsl" />
     <None Include="src\shaders\voxel_debug.glsl" />
     <None Include="src\shaders\voxel_mipmap_gen.glsl" />
+    <None Include="src\shaders\wireframe.glsl" />
   </ItemGroup>
   <ItemGroup>
-    <Image Include="..\..\..\Downloads\blocksrough-Unreal-Engine\blocksrough-Unreal-Engine\blocksrough_ambientocclusion.png" />
-    <Image Include="..\..\..\Downloads\blocksrough-Unreal-Engine\blocksrough-Unreal-Engine\blocksrough_basecolor.png" />
-    <Image Include="..\..\..\Downloads\blocksrough-Unreal-Engine\blocksrough-Unreal-Engine\blocksrough_height.png" />
-    <Image Include="..\..\..\Downloads\blocksrough-Unreal-Engine\blocksrough-Unreal-Engine\blocksrough_metallic.png" />
-    <Image Include="..\..\..\Downloads\blocksrough-Unreal-Engine\blocksrough-Unreal-Engine\blocksrough_normal.png" />
-    <Image Include="..\..\..\Downloads\blocksrough-Unreal-Engine\blocksrough-Unreal-Engine\blocksrough_roughness.png" />
-    <Image Include="..\..\Sparky\Sandbox\res\Dagger\Textures\Dagger_Albedo.tga" />
-    <Image Include="..\..\Sparky\Sandbox\res\Dagger\Textures\Dagger_Gloss.tga" />
-    <Image Include="..\..\Sparky\Sandbox\res\Dagger\Textures\Dagger_Normals.tga" />
-    <Image Include="..\..\Sparky\Sandbox\res\Dagger\Textures\Dagger_Specular.tga" />
     <Image Include="assets\back.jpg" />
     <Image Include="assets\blocksrough_ambientocclusion.png" />
     <Image Include="assets\blocksrough_basecolor.png" />
@@ -281,7 +295,7 @@
       <AdditionalDependencies>glfw3.lib;user32.lib;gdi32.lib;shell32.lib;opengl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Lib>
     <Link>
-      <AdditionalDependencies>nvToolsExt64_1.lib;glfw3.lib;opengl32.lib;d3d11.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>glfw3.lib;opengl32.lib;d3d11.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>$(NVTOOLSEXT_PATH)\lib\$(Platform);C:\Users\kevin\Dev\soul\dependencies\GLFW\lib-vc2015;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>

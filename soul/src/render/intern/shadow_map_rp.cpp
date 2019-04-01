@@ -9,10 +9,10 @@ namespace Soul {
 		void ShadowMapRP::init(Database &database) {
 
 			SOUL_ASSERT(0, GLExt::IsErrorCheckPass());
-			shader = GLExt::ProgramCreate(RenderAsset::ShaderFile::shadowMap);
+			program = GLExt::ProgramCreate(RenderAsset::ShaderFile::shadowMap);
 
-			modelLoc = glGetUniformLocation(shader, "model");
-			shadowMatrixLoc = glGetUniformLocation(shader, "shadowMatrix");
+			modelLoc = glGetUniformLocation(program, "model");
+			shadowMatrixLoc = glGetUniformLocation(program, "shadowMatrix");
 
 			SOUL_ASSERT(0, GLExt::IsErrorCheckPass());
 
@@ -38,11 +38,11 @@ namespace Soul {
 			glDepthFunc(GL_LESS);
 			glEnable(GL_SCISSOR_TEST);
 
-			glUseProgram(shader);
+			glUseProgram(program);
 
 
 			for (int i = 0; i < database.dirLightCount; i++) {
-				const DirectionalLight& light = database.dirLights[i];
+				const DirLight& light = database.dirLights[i];
 				int quadrant = light.shadowKey.quadrant;
 				int subdiv = light.shadowKey.subdiv;
 				int subdivCount = database.shadowAtlas.subdivSqrtCount[quadrant] * database.shadowAtlas.subdivSqrtCount[quadrant];
@@ -63,7 +63,7 @@ namespace Soul {
 					float bottomSplitViewport = bottomSubdivViewport + (ySplit * splitReso);
 					float leftSplitViewport = leftSubdivViewport + (xSplit * splitReso);
 
-					for (int k = 0; k < database.meshBuffer.getSize(); k++) {
+					for (int k = 0; k < database.meshBuffer.count(); k++) {
 						const Mesh& mesh = database.meshBuffer.get(k);
 						glUniformMatrix4fv(modelLoc, 1, GL_TRUE, (const GLfloat*)mesh.transform.elem);
 						glUniformMatrix4fv(shadowMatrixLoc, 1, GL_TRUE, (const GLfloat*)light.shadowMatrix[j].elem);
@@ -85,7 +85,7 @@ namespace Soul {
 		}
 
 		void ShadowMapRP::shutdown(Database &database) {
-			glDeleteProgram(shader);
+			glDeleteProgram(program);
 		}
 
 	}

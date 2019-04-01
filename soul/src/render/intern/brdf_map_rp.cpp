@@ -9,7 +9,7 @@
 namespace Soul {namespace Render {
 		void BRDFMapRP::init(Database &database) {
 
-			shader = GLExt::ProgramCreate(RenderAsset::ShaderFile::brdfMap);
+			program = GLExt::ProgramCreate(RenderAsset::ShaderFile::brdfMap);
 
 			glGenFramebuffers(1, &framebuffer);
 			glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
@@ -26,7 +26,7 @@ namespace Soul {namespace Render {
 			glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
 			glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, database.environment.brdfMap, 0);
 
-			glUseProgram(shader);
+			glUseProgram(program);
 
 			glViewport(0, 0, 512, 512);
 			glBindVertexArray(database.quadVAO);
@@ -42,6 +42,6 @@ namespace Soul {namespace Render {
 
 		void BRDFMapRP::shutdown(Database &database) {
 			glDeleteFramebuffers(1, &framebuffer);
-			glDeleteProgram(shader);
+			glDeleteProgram(program);
 		}
 }}

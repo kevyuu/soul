@@ -9,27 +9,27 @@ namespace Soul {
 
 		void SSRResolveRP::init(Database& database) {
 
-			shader = GLExt::ProgramCreate(RenderAsset::ShaderFile::ssrResolve);
+			program = GLExt::ProgramCreate(RenderAsset::ShaderFile::ssrResolve);
 
-			GLuint sceneDataBlockIndexPredepth = glGetUniformBlockIndex(shader, Constant::CAMERA_DATA_NAME);
-			glUniformBlockBinding(shader, sceneDataBlockIndexPredepth, Constant::CAMERA_DATA_BINDING_POINT);
+			GLuint sceneDataBlockIndexPredepth = glGetUniformBlockIndex(program, Constant::CAMERA_DATA_NAME);
+			glUniformBlockBinding(program, sceneDataBlockIndexPredepth, Constant::CAMERA_DATA_BINDING_POINT);
 
-			GLExt::UBOBind(shader, Constant::VOXEL_GI_DATA_NAME, Constant::VOXEL_GI_DATA_BINDING_POINT);
+			GLExt::UBOBind(program, Constant::VOXEL_GI_DATA_NAME, Constant::VOXEL_GI_DATA_BINDING_POINT);
 
-			reflectionPosBufferLoc = glGetUniformLocation(shader, "reflectionPosBuffer");
-			lightBufferLoc = glGetUniformLocation(shader, "lightBuffer");
-			renderMap1Loc = glGetUniformLocation(shader, "renderMap1");
-			renderMap2Loc = glGetUniformLocation(shader, "renderMap2");
-			renderMap3Loc = glGetUniformLocation(shader, "renderMap3");
-			renderMap4Loc = glGetUniformLocation(shader, "renderMap4");
-			depthMapLoc = glGetUniformLocation(shader, "depthMap");
-			FGMapLoc = glGetUniformLocation(shader, "FGMap");
-			voxelLightBufferLoc = glGetUniformLocation(shader, "voxelLightBuffer");
+			reflectionPosBufferLoc = glGetUniformLocation(program, "reflectionPosBuffer");
+			lightBufferLoc = glGetUniformLocation(program, "lightBuffer");
+			renderMap1Loc = glGetUniformLocation(program, "renderMap1");
+			renderMap2Loc = glGetUniformLocation(program, "renderMap2");
+			renderMap3Loc = glGetUniformLocation(program, "renderMap3");
+			renderMap4Loc = glGetUniformLocation(program, "renderMap4");
+			depthMapLoc = glGetUniformLocation(program, "depthMap");
+			FGMapLoc = glGetUniformLocation(program, "FGMap");
+			voxelLightBufferLoc = glGetUniformLocation(program, "voxelLightBuffer");
 
-			screenDimensionLoc = glGetUniformLocation(shader, "screenDimension");
+			screenDimensionLoc = glGetUniformLocation(program, "screenDimension");
 
-			diffuseEnvTexLoc = glGetUniformLocation(shader, "diffuseEnvTex");
-			specularEnvTexLoc = glGetUniformLocation(shader, "specularEnvTex");
+			diffuseEnvTexLoc = glGetUniformLocation(program, "diffuseEnvTex");
+			specularEnvTexLoc = glGetUniformLocation(program, "specularEnvTex");
 
 			GLExt::ErrorCheck("SSRResolveRP::init");
 		}
@@ -41,7 +41,7 @@ namespace Soul {
 			glMemoryBarrier(GL_TEXTURE_FETCH_BARRIER_BIT | GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
 
 			glBindFramebuffer(GL_FRAMEBUFFER, db.lightBuffer.frameBuffer);
-			glUseProgram(shader);
+			glUseProgram(program);
 
 			glUniform1i(reflectionPosBufferLoc, 0);
 			glActiveTexture(GL_TEXTURE0);
@@ -112,7 +112,7 @@ namespace Soul {
 		}
 
 		void SSRResolveRP::shutdown(Database &database) {
-			glDeleteProgram(shader);
+			glDeleteProgram(program);
 		}
 	}
 }

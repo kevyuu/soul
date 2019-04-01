@@ -22,7 +22,7 @@ namespace Soul {
 
 		GLuint GLExt::ProgramCreate(const char* shaderFile) {
 
-			SOUL_LOG(SOUL_LOG_VERBOSE_INFO, "GLProgramCreate| shader = %s", shaderFile);
+			SOUL_LOG(SOUL_LOG_VERBOSE_INFO, "GLProgramCreate| program = %s", shaderFile);
 
 			char* shaderCode = nullptr;
 			if (shaderFile) shaderCode = _LoadFile(shaderFile);
@@ -33,7 +33,7 @@ namespace Soul {
 			const char* LIB_SHADER_HEADER = "#ifdef LIB_SHADER";
 			char* parseLibIter = strstr(shaderCode, LIB_SHADER_HEADER);
 			Array<char*> libSources;
-			libSources.init(4);
+			libSources.reserve(4);
 
 			char libFilePath[100];
 			strcpy(libFilePath, SHADER_DIR);
@@ -70,19 +70,19 @@ namespace Soul {
 					SOUL_LOG(SOUL_LOG_VERBOSE_INFO, "libFilePath: %s", libFilePath);
 
 
-					libSources.pushBack(_LoadFile(libFilePath));
+					libSources.add(_LoadFile(libFilePath));
 					*parseLibIter = prevChar;
 				}
 			}
 
 			int libSourceLength = 0;
-			for (int i = 0; i < libSources.getSize(); i++) {
+			for (int i = 0; i < libSources.count(); i++) {
 				libSourceLength += strlen(libSources.get(i));
 			}
 
 			char* libSource = (char*)malloc(libSourceLength + 1);
 			char* libSourceIter = libSource;
-			for (int i = 0; i < libSources.getSize(); i++) {
+			for (int i = 0; i < libSources.count(); i++) {
 				strcpy(libSourceIter, libSources.get(i));
 				libSourceIter += strlen(libSources.get(i));
 				free(libSources.get(i));
@@ -107,7 +107,7 @@ namespace Soul {
 				glCompileShader(computeHandle);
 				glGetShaderiv(computeHandle, GL_COMPILE_STATUS, &success);
 				glGetShaderInfoLog(computeHandle, 512, NULL, infoLog);
-				SOUL_ASSERT(0, success, "Compute shader compilation failed| shaderFile = %s, info = %s", shaderFile, infoLog);
+				SOUL_ASSERT(0, success, "Compute program compilation failed| shaderFile = %s, info = %s", shaderFile, infoLog);
 
 				shaderHandle = glCreateProgram();
 				glAttachShader(shaderHandle, computeHandle);
@@ -129,7 +129,7 @@ namespace Soul {
 				glCompileShader(vertexHandle);
 				glGetShaderiv(vertexHandle, GL_COMPILE_STATUS, &success);
 				glGetShaderInfoLog(vertexHandle, 512, NULL, infoLog);
-				SOUL_ASSERT(0, success, "Vertex shader compilation failed| shaderFile=%s, info = %s", shaderFile, infoLog);
+				SOUL_ASSERT(0, success, "Vertex program compilation failed| shaderFile=%s, info = %s", shaderFile, infoLog);
 
 				bool isGeometryShaderExist = strstr(shaderCode, "#ifdef GEOMETRY_SHADER");
 				GLuint geometryHandle = 0;
@@ -142,7 +142,7 @@ namespace Soul {
 					glCompileShader(geometryHandle);
 					glGetShaderiv(geometryHandle, GL_COMPILE_STATUS, &success);
 					glGetShaderInfoLog(geometryHandle, 512, NULL, infoLog);
-					SOUL_ASSERT(0, success, "Geometry shader compilation failed| shaderFile = %s, info = %s", shaderFile, infoLog);
+					SOUL_ASSERT(0, success, "Geometry program compilation failed| shaderFile = %s, info = %s", shaderFile, infoLog);
 				}
 
 				GLuint fragmentHandle;
@@ -154,7 +154,7 @@ namespace Soul {
 				glCompileShader(fragmentHandle);
 				glGetShaderiv(fragmentHandle, GL_COMPILE_STATUS, &success);
 				glGetShaderInfoLog(fragmentHandle, 512, NULL, infoLog);
-				SOUL_ASSERT(0, success, "Fragment shader compilation failed| shaderFile = %s, info = %s", shaderFile, infoLog);
+				SOUL_ASSERT(0, success, "Fragment program compilation failed| shaderFile = %s, info = %s", shaderFile, infoLog);
 
 				glAttachShader(shaderHandle, vertexHandle);
 				if (isGeometryShaderExist) glAttachShader(shaderHandle, geometryHandle);

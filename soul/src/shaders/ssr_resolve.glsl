@@ -86,6 +86,11 @@ vec3 ACESFilm(vec3 x)
 	return clamp((x*(a*x + b)) / (x*(c*x + d) + e), 0.0f, 1.0f);
 }
 
+vec3 Reindhardt(vec3 x)
+{
+	return x / (x + vec3(1.0, 1.0, 1.0f));
+}
+
 void main() {
 
 	voxel_gi_init();
@@ -210,7 +215,7 @@ void main() {
 	
 	vec3 color = directColor + (diffuseIndirectColor + specularIndirectColor) * pixelMaterial.ao;
 
-	color = ACESFilm(color);
+	color = Reindhardt(color);
 	color = pow(color, vec3(1.0f / 2.2));
 
 	reflection = color;

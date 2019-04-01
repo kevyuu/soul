@@ -1,7 +1,7 @@
 #pragma once
 
 #define SOUL_DEVELOPMENT
-#define SOUL_PROFILE_BACKEND_NSIGHT
+#define SOUL_PROFILE_BACKEND_NONE
 
 #ifdef _MSC_VER
 #define SOUL_DEBUG_BREAK() __debugbreak()
