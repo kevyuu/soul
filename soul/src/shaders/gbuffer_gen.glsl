@@ -85,6 +85,7 @@ float computeShadowFactor(vec3 worldPosition, mat4 shadowMatrix, float bias) {
     return shadowFactor;
 }
 
+
 void main() {
 
 	PixelMaterial pixelMaterial = pixelMaterialCreate(material, vs_out.texCoord);
@@ -142,6 +143,20 @@ void main() {
 		radiance = radiance * (1.0f - shadowFactor);
 
 		specularOutput += computeSpecularBRDF(L, V, worldNormal, pixelMaterial) * radiance *  max(dot(worldNormal, L), 0.0f);
+		diffuseOutput += computeDiffuseBRDF(L, V, worldNormal, pixelMaterial) * radiance * max(dot(worldNormal, L), 0.0f);
+	}
+
+	for (int i = 0; i < spotLightCount; i++)
+	{
+		vec3 posToLight = worldPosition - spotLights[i].position;
+		vec3 L = normalize(-posToLight);
+		
+		float shadowFactor = computeShadowFactor(worldPosition, spotLights[i].shadowMatrix, spotLights[i].bias);
+		float distanceAttenuation = light_getDistanceAttenuation(posToLight, 1.0f / spotLights[i].maxDistance);
+		float angleAttenuation = light_getAngleAttenuation(L, spotLights[i].direction, spotLights[i].cosOuter, spotLights[i].cosInner);
+		vec3 radiance = spotLights[i].color * distanceAttenuation * angleAttenuation * (1.0f - shadowFactor);
+
+		specularOutput += computeSpecularBRDF(L, V, worldNormal, pixelMaterial) * radiance * max(dot(worldNormal, L), 0.0f);
 		diffuseOutput += computeDiffuseBRDF(L, V, worldNormal, pixelMaterial) * radiance * max(dot(worldNormal, L), 0.0f);
 		
 	}

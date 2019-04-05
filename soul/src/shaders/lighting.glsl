@@ -93,30 +93,54 @@ void main() {
 	fragColor = vec4(0, 0, 0, 0);
 	vec3 Lo = vec3(0);
 
+	vec3 specularOutput = vec3(0.0f);
+	vec3 diffuseOutput = vec3(0.0f);
+
 	for (int i = 0; i < directionalLightCount; i++) {
-		vec3 L = directionalLights[i].direction * -1;
-		vec3 H = normalize(L + V);
+		vec3 L = normalize(directionalLights[i].direction * -1);
+
 		vec3 radiance = directionalLights[i].color;
 
-		vec4 cascadeDepths = directionalLights[i].cascadeDepths;
+		float cascadeSplit[5] = {
+			0,
+			directionalLights[i].cascadeDepths.x,
+			directionalLights[i].cascadeDepths.y,
+			directionalLights[i].cascadeDepths.z,
+			directionalLights[i].cascadeDepths.w
+		};
 
 		float shadowFactor = 0.0f;
 
 		float fragDepth = fragViewCoord.z * -1;
 
-		if (fragDepth < cascadeDepths.x) {
-			shadowFactor = computeShadowFactor(worldPosition, directionalLights[i].shadowMatrix1);
-		} else if (fragDepth < cascadeDepths.y) {
-			shadowFactor = computeShadowFactor(worldPosition, directionalLights[i].shadowMatrix2);
-		} else if (fragDepth < cascadeDepths.z) {
-			shadowFactor = computeShadowFactor(worldPosition, directionalLights[i].shadowMatrix3);
-		} else if (fragDepth < cascadeDepths.w) {
-			shadowFactor = computeShadowFactor(worldPosition, directionalLights[i].shadowMatrix4);
+		int cascadeIndex = -1;
+
+		for (int i = 0; i < 5; i++) {
+			if (fragDepth > cascadeSplit[i]) cascadeIndex = i;
+		}
+
+		float cascadeBlendRange = 1.0f;
+		float bias = directionalLights[i].bias;
+
+		if (cascadeIndex >= 3) {
+			shadowFactor = 0;
+		}
+		if (cascadeIndex == 3) {
+			shadowFactor = computeShadowFactor(worldPosition, directionalLights[i].shadowMatrix[cascadeIndex], bias);
+		}
+		else {
+			float shadowFactor1 = computeShadowFactor(worldPosition, directionalLights[i].shadowMatrix[cascadeIndex], bias);
+			float shadowFactor2 = computeShadowFactor(worldPosition, directionalLights[i].shadowMatrix[cascadeIndex + 1], bias);
+
+			float cascadeDist = cascadeSplit[cascadeIndex + 1] - cascadeSplit[cascadeIndex];
+			float cascadeBlend = smoothstep(cascadeSplit[cascadeIndex] + (1 - cascadeBlendRange) * cascadeDist, cascadeSplit[cascadeIndex + 1], fragDepth);
+			shadowFactor = mix(shadowFactor1, shadowFactor2, cascadeBlend);
 		}
 
 		radiance = radiance * (1.0f - shadowFactor);
-		Lo += computeOutgoingRadiance(L, V, N, pixelMaterial, radiance);
 
+		specularOutput += computeSpecularBRDF(L, V, worldNormal, pixelMaterial) * radiance *  max(dot(worldNormal, L), 0.0f);
+		diffuseOutput += computeDiffuseBRDF(L, V, worldNormal, pixelMaterial) * radiance * max(dot(worldNormal, L), 0.0f);
 	}
 
     vec3 ambient = vec3(0.06f) * pixelMaterial.albedo * pixelMaterial.ao;

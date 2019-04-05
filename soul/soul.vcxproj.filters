@@ -153,6 +153,12 @@
     <ClInclude Include="src\extern\icon\IconsIonicons.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="src\core\packed_array.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\extern\icon\IconsMaterialDesign.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\core\math.cpp">

@@ -93,7 +93,7 @@ namespace Soul {
 			glViewport(0, 0, voxelFrustumReso, voxelFrustumReso);
 			glDisable(GL_DEPTH_TEST);
 
-			for (int i = 0; i < db.meshBuffer.count(); i++) {
+			for (int i = 0; i < db.meshBuffer.size(); i++) {
 
 				const Mesh& mesh = db.meshBuffer.get(i);
 				const Material& material = db.materialBuffer.get(mesh.materialID);

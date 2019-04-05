@@ -13,49 +13,49 @@ namespace Soul {
 
 		PoolArray() {
 			_capacity = 0;
-			_count = 0;
+			_size = 0;
 			_freelist = 0;
 			_buffer = nullptr;
 		}
 
 		~PoolArray() {
 			SOUL_ASSERT(0, _capacity == 0, "Pool array capacity is not zero. You might forget to call cleanup()");
-			SOUL_ASSERT(0, _count == 0, "Pool array count is not zero. You might forget to call cleanup()");
+			SOUL_ASSERT(0, _size == 0, "Pool array size is not zero. You might forget to call cleanup()");
 			SOUL_ASSERT(0, _buffer == nullptr, "Pool array buffer is not nullptr. You might forget to call cleanup()");
 		}
 
 		inline void reserve(uint32 capacity) {
 			Unit* oldBuffer = _buffer;
-			_buffer = (Unit*) malloc(capacity * sizeof(Unit));
+			_buffer = (Unit*) malloc(capacity * sizeof(*_buffer));
 			if (oldBuffer != nullptr) {
-				memcpy(_buffer, oldBuffer, _capacity * sizeof(Unit));
+				memcpy(_buffer, oldBuffer, _capacity * sizeof(*_buffer));
 				free(oldBuffer);
 			}
-			for (int i = _count; i < capacity; i++) {
+			for (int i = _size; i < capacity; i++) {
 				_buffer[i].next = i + 1;
 			}
-			_freelist = _count;
+			_freelist = _size;
 			_capacity = capacity;
 		}
 
 		inline PoolID add(const T& datum) {
-			if (_count == _capacity) {
+			if (_size == _capacity) {
 				reserve(_capacity * 2 + 1);
 			}
 			PoolID id = _freelist;
 			_freelist = _buffer[_freelist].next;
 			_buffer[id].datum = datum;
-			_count++;
+			_size++;
 			return id;
 		}
 
 		inline void remove(PoolID id) {
-			_count--;
+			_size--;
 			_buffer[id].next = _freelist;
 			_freelist = id;
 		}
 
-		T& operator[](PoolID id) {
+		inline T& operator[](PoolID id) {
 			SOUL_ASSERT(0, id < _capacity, "Pool Array access violation");
 			return _buffer[id].datum;
 		}
@@ -65,18 +65,29 @@ namespace Soul {
 			return _buffer[id].datum;
 		}
 
-		T* ptr(PoolID id) const {
+		inline T* ptr(PoolID id) const {
 			SOUL_ASSERT(0, id < _capacity, "Pool Array access violation");
 			return &(_buffer[id].datum);
 		}
 
-		uint32 count() const {
-			return _count;
+		inline uint32 size() const {
+			return _size;
 		}
 
-		inline void cleanup() {
+		inline void clear()
+		{
+			_size = 0;
+			_freelist = 0;
+			for (int i = 0; i < _capacity; i++)
+			{
+				_buffer[i].next = i + 1;
+			}
+		}
+
+		inline void cleanup() 
+		{
 			_capacity = 0;
-			_count = 0;
+			_size = 0;
 			free(_buffer);
 			_buffer = nullptr;
 		}
@@ -88,7 +99,7 @@ namespace Soul {
 
 		Unit* _buffer;
 		uint32 _capacity;
-		uint32 _count;
+		uint32 _size;
 		uint32 _freelist;
 
 	};

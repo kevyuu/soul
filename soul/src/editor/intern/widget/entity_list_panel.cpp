@@ -7,6 +7,7 @@
 
 #include "extern/imgui.h"
 #include "extern/icon/IconsIonicons.h"
+#include "extern/icon/IconsMaterialDesign.h"
 
 #include <cstdio>
 
@@ -31,6 +32,10 @@ namespace Soul {
 				}
 				case EntityType_DIRLIGHT: {
 					logo = ICON_II_ANDROID_SUNNY;
+					break;
+				}
+				case EntityType_SPOTLIGHT: {
+					logo = ICON_MD_HIGHLIGHT;
 					break;
 				}
 			}
@@ -85,18 +90,28 @@ namespace Soul {
 					defaultTransform.scale = Vec3f(1.0f, 1.0f, 1.0f);
 					defaultTransform.rotation = quaternionIdentity();
 
+					Entity* selectedEntity = EntityPtr(&db->world, db->selectedEntity);
+					GroupEntity* parent = db->selectedEntity.type == EntityType_GROUP ? (GroupEntity*)selectedEntity : selectedEntity->parent;
+
 					if (ImGui::MenuItem(ICON_II_ANDROID_SUNNY " Directional Light")) {
-						if (db->world.dirLightEntities.count() == Render::MAX_DIR_LIGHT + 1) {
+						if (db->world.dirLightEntities.size() == Render::MAX_DIR_LIGHT + 1) 
+						{
 							openPopup = OPEN_POPUP_CREATE_DIRLIGHT_FAIL;
 						}
 						else {
-							Entity* selectedEntity = EntityPtr(&db->world, db->selectedEntity);
-							GroupEntity* parent = db->selectedEntity.type == EntityType_GROUP ? (GroupEntity*)selectedEntity : selectedEntity->parent;
-
-							DirLightEntityCreate(&db->world, (GroupEntity*) EntityPtr(&db->world, db->world.rootEntityID), "Directional Light", defaultTransform, Render::DirectionalLightSpec());
+							DirLightEntityCreate(&db->world, parent, "Directional Light", defaultTransform, Render::DirectionalLightSpec());
 						}
-
-						
+					}
+					if (ImGui::MenuItem(ICON_MD_HIGHLIGHT " Spotlight"))
+					{
+						if (db->world.spotLightEntities.size() == Render::MAX_SPOT_LIGHT + 1)
+						{
+							// open popup to tell error
+						}
+						else
+						{
+							SpotLightEntityCreate(&db->world, parent, "Spotlight", defaultTransform, Render::SpotLightSpec());
+						}
 					}
 					if (ImGui::MenuItem(ICON_II_CUBE " Mesh")) {
 

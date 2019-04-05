@@ -33,7 +33,7 @@ namespace Soul {
 			glDepthFunc(GL_ALWAYS);
 			glUseProgram(program);
 
-			for (int i = 0; i < db.wireframeMeshes.count(); i++) {
+			for (int i = 0; i < db.wireframeMeshes.size(); i++) {
 				const Mesh* mesh = db.wireframeMeshes[i];
 				const Material& material = db.materialBuffer[mesh->materialID];
 

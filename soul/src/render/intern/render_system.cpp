@@ -78,10 +78,10 @@ namespace Soul { namespace Render {
 		db.renderPassList.add(new VoxelMipmapGenRP());
 		db.renderPassList.add(new SSRResolveRP());
 		db.renderPassList.add(new SkyboxRP());
-		db.renderPassList.add(new VoxelDebugRP());
+		db.renderPassList.add(new Texture2DDebugRP());
 		db.renderPassList.add(new WireframeRP());
 
-        for (int i = 0; i < db.renderPassList.count(); i++) {
+        for (int i = 0; i < db.renderPassList.size(); i++) {
             db.renderPassList.get(i)->init(db);
         }
 
@@ -90,64 +90,12 @@ namespace Soul { namespace Render {
     }
 
 	void System::shaderReload() {
-		for (int i = 0; i < _db.renderPassList.count(); i++) {
+		for (int i = 0; i < _db.renderPassList.size(); i++) {
 			_db.renderPassList[i]->init(_db);
 		}
 	}
 
-	void System::shadowAtlasUpdateConfig(const ShadowAtlasConfig& config) {
-		Database& db = _db;
-		db.shadowAtlas.resolution = config.resolution;
-		for (int i = 0; i < 4; i++) {
-			db.shadowAtlas.subdivSqrtCount[i] = config.subdivSqrtCount[i];
-		}
-		_shadowAtlasInit();
-
-		for (int i = 0; i < db.dirLightCount; i++) {
-			db.dirLights[i].shadowKey = _shadowAtlasGetSlot(i, db.dirLights[i].resolution);
-		}
-	}
-
-	void System::_shadowAtlasInit() {
-		_shadowAtlasCleanup();
-
-		Database& db = _db;
-
-		for (int i = 0; i < ShadowAtlas::MAX_LIGHT; i++) {
-			db.shadowAtlas.slots[i] = -1;
-		}
-
-		GLuint shadowAtlasTex;
-		glGenTextures(1, &shadowAtlasTex);
-		glBindTexture(GL_TEXTURE_2D, shadowAtlasTex);
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT24, 
-			db.shadowAtlas.resolution, db.shadowAtlas.resolution, 0, 
-			GL_DEPTH_COMPONENT, GL_UNSIGNED_INT, nullptr);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_REF_TO_TEXTURE);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_FUNC, GL_GREATER);
-		db.shadowAtlas.texHandle = shadowAtlasTex;
-
-		GLuint framebuffer;
-		glGenFramebuffers(1, &framebuffer);
-		glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
-		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, db.shadowAtlas.texHandle, 0);
-		glBindFramebuffer(GL_FRAMEBUFFER, 0);
-		db.shadowAtlas.framebuffer = framebuffer;
-
-		SOUL_ASSERT(0, GLExt::IsErrorCheckPass(), "");
-
-	}
-
-	void System::_shadowAtlasCleanup() {
-		GLExt::TextureDelete(&_db.shadowAtlas.texHandle);
-		GLExt::FramebufferDelete(&_db.shadowAtlas.framebuffer);
-
-		SOUL_ASSERT(0, GLExt::IsErrorCheckPass(), "");
-	}
+	
 
     void System::_gBufferInit() {
 
@@ -386,7 +334,7 @@ namespace Soul { namespace Render {
 
 			GLExt::TextureDelete(&mipChain.colorBuffer);
 
-			for (int j = 0; j < mipChain.mipmaps.count(); j++) {
+			for (int j = 0; j < mipChain.mipmaps.size(); j++) {
 				GLExt::FramebufferDelete( &mipChain.mipmaps.get(j).frameBuffer);
 			}
 		}
@@ -642,7 +590,7 @@ namespace Soul { namespace Render {
 
         Database& db = _db;
 
-        for (int i = 0; i < db.renderPassList.count(); i++) {
+        for (int i = 0; i < db.renderPassList.size(); i++) {
             db.renderPassList.get(i)->shutdown(db);
             free(db.renderPassList.get(i));
         }
@@ -655,14 +603,14 @@ namespace Soul { namespace Render {
 		_lightBufferCleanup();
 		_voxelGIBufferCleanup();
 
-		for (int i = 0; i < db.materialBuffer.count(); i++) {
+		for (int i = 0; i < db.materialBuffer.size(); i++) {
 			GLExt::TextureDelete(&db.materialBuffer[i].albedoMap);
 			GLExt::TextureDelete(&db.materialBuffer[i].metallicMap);
 			GLExt::TextureDelete(&db.materialBuffer[i].normalMap);
 			GLExt::TextureDelete(&db.materialBuffer[i].roughnessMap);
 		}
 
-		for (int i = 0; i < db.meshBuffer.count(); i++) {
+		for (int i = 0; i < db.meshBuffer.size(); i++) {
 			glDeleteBuffers(1, &db.meshBuffer[i].eboHandle);
 			glDeleteBuffers(1, &db.meshBuffer[i].vboHandle);
 			glDeleteVertexArrays(1, &db.meshBuffer[i].vaoHandle);
@@ -676,6 +624,8 @@ namespace Soul { namespace Render {
         
 		db.dirLightIndexes.cleanup();
 		db.dirLightCount = 0;
+
+		db.spotLights.cleanup();
 		
 		db.wireframeMeshes.cleanup();
 
@@ -692,41 +642,95 @@ namespace Soul { namespace Render {
 
     }
 
-    ShadowKey System::_shadowAtlasGetSlot(uint32 lightID, int texReso) {
-        ShadowKey shadowKey = { -1, -1, -1 };
-        int bestSlot = -1;
-        int quadrantSize = _db.shadowAtlas.resolution / 2;
-        int neededSize = texReso;
-		int currentSlotSize = quadrantSize;
-        int slotIter = 0;
-        for (int i = 0; i < 4; i++) {
-            int subdivSize = quadrantSize / _db.shadowAtlas.subdivSqrtCount[i];
-            if (subdivSize < neededSize || subdivSize > currentSlotSize) {
-                slotIter += _db.shadowAtlas.subdivSqrtCount[i] * _db.shadowAtlas.subdivSqrtCount[i];
-                continue;
-            }
+	void System::_shadowAtlasInit() {
+		_shadowAtlasCleanup();
 
-            for (int j = 0; j < _db.shadowAtlas.subdivSqrtCount[i] * _db.shadowAtlas.subdivSqrtCount[i]; j++) {
-                if (_db.shadowAtlas.slots[slotIter] == -1 ) {
-                    shadowKey.quadrant = i;
-                    shadowKey.subdiv = j;
+		Database& db = _db;
+
+		GLuint shadowAtlasTex;
+		glGenTextures(1, &shadowAtlasTex);
+		glBindTexture(GL_TEXTURE_2D, shadowAtlasTex);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT24,
+			db.shadowAtlas.resolution, db.shadowAtlas.resolution, 0,
+			GL_DEPTH_COMPONENT, GL_UNSIGNED_INT, nullptr);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_REF_TO_TEXTURE);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_COMPARE_FUNC, GL_GREATER);
+		db.shadowAtlas.texHandle = shadowAtlasTex;
+
+		GLuint framebuffer;
+		glGenFramebuffers(1, &framebuffer);
+		glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, db.shadowAtlas.texHandle, 0);
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+		db.shadowAtlas.framebuffer = framebuffer;
+
+		SOUL_ASSERT(0, GLExt::IsErrorCheckPass(), "");
+	}
+
+	void System::_shadowAtlasCleanup() {
+
+		GLExt::TextureDelete(&_db.shadowAtlas.texHandle);
+		GLExt::FramebufferDelete(&_db.shadowAtlas.framebuffer);
+		SOUL_ASSERT(0, GLExt::IsErrorCheckPass(), "");
+
+		for (int i = 0; i < ShadowAtlas::MAX_LIGHT; i++) {
+			_db.shadowAtlas.slots[i] = false;
+		}
+		
+	}
+
+	ShadowKey System::_shadowAtlasGetSlot(int texReso) {
+		ShadowKey shadowKey = { -1, -1, -1 };
+		int bestSlot = -1;
+		int quadrantSize = _db.shadowAtlas.resolution / 2;
+		int neededSize = texReso;
+		int currentSlotSize = quadrantSize;
+		int slotIter = 0;
+		for (int i = 0; i < 4; i++) {
+			int subdivSize = quadrantSize / _db.shadowAtlas.subdivSqrtCount[i];
+			if (subdivSize < neededSize || subdivSize > currentSlotSize) {
+				slotIter += _db.shadowAtlas.subdivSqrtCount[i] * _db.shadowAtlas.subdivSqrtCount[i];
+				continue;
+			}
+
+			for (int j = 0; j < _db.shadowAtlas.subdivSqrtCount[i] * _db.shadowAtlas.subdivSqrtCount[i]; j++) {
+				if (_db.shadowAtlas.slots[slotIter] == false) {
+					shadowKey.quadrant = i;
+					shadowKey.subdiv = j;
 					shadowKey.slot = slotIter;
 					currentSlotSize = subdivSize;
-                    bestSlot = slotIter;
-                }
-                slotIter++;
-            }
-        }
+					bestSlot = slotIter;
+				}
+				slotIter++;
+			}
+		}
 
-        if (bestSlot == -1) return shadowKey;
+		if (bestSlot == -1) return shadowKey;
 
-        _db.shadowAtlas.slots[bestSlot] = lightID;
+		_db.shadowAtlas.slots[bestSlot] = true;
 
-        return shadowKey;
-    }
+		return shadowKey;
+	}
 
 	void System::_shadowAtlasFreeSlot(ShadowKey shadowKey) {
-		_db.shadowAtlas.slots[shadowKey.slot] = -1;
+		_db.shadowAtlas.slots[shadowKey.slot] = false;
+	}
+
+	void System::shadowAtlasUpdateConfig(const ShadowAtlasConfig& config) {
+		Database& db = _db;
+		db.shadowAtlas.resolution = config.resolution;
+		for (int i = 0; i < 4; i++) {
+			db.shadowAtlas.subdivSqrtCount[i] = config.subdivSqrtCount[i];
+		}
+		_shadowAtlasInit();
+
+		for (int i = 0; i < db.dirLightCount; i++) {
+			db.dirLights[i].shadowKey = _shadowAtlasGetSlot(db.dirLights[i].resolution);
+		}
 	}
 
     MaterialRID System::dirLightCreate(const DirectionalLightSpec &spec) {
@@ -742,7 +746,7 @@ namespace Soul { namespace Render {
         light.direction = unit(spec.direction);
         light.color = spec.color;
 		light.resolution = spec.shadowMapResolution;
-        light.shadowKey = _shadowAtlasGetSlot(lightRID, spec.shadowMapResolution);
+        light.shadowKey = _shadowAtlasGetSlot(spec.shadowMapResolution);
 		light.bias = spec.bias;
         
 		for (int i = 0; i < 3; i++) {
@@ -755,11 +759,14 @@ namespace Soul { namespace Render {
     }
 
 	void System::dirLightDestroy(DirLightRID lightRID) {
-		uint32 dirLightIndex = _db.dirLightIndexes[lightRID];
-		_db.dirLightRIDs[dirLightIndex] = _db.dirLightRIDs[_db.dirLightCount - 1];
+		
+    	uint32 dirLightIndex = _db.dirLightIndexes[lightRID];
+		_shadowAtlasFreeSlot(_db.dirLights[dirLightIndex].shadowKey);
+    	_db.dirLightRIDs[dirLightIndex] = _db.dirLightRIDs[_db.dirLightCount - 1];
 		_db.dirLights[dirLightIndex] = _db.dirLights[_db.dirLightCount - 1];
 		_db.dirLightIndexes[_db.dirLightRIDs[dirLightIndex]] = dirLightIndex;
 		_db.dirLightCount--;
+
 	}
 
 	DirLight* System::dirLightPtr(DirLightRID lightRID) {
@@ -784,7 +791,7 @@ namespace Soul { namespace Render {
 
 		_shadowAtlasFreeSlot(dirLight->shadowKey);
 		dirLight->resolution = resolution;
-		dirLight->shadowKey = _shadowAtlasGetSlot(lightRID, resolution);
+		dirLight->shadowKey = _shadowAtlasGetSlot(resolution);
 
 	}
 
@@ -801,6 +808,75 @@ namespace Soul { namespace Render {
 		dirLight->bias = bias;
 	}
 
+	SpotLightRID System::spotLightCreate(const SpotLightSpec& spec)
+    {
+		SpotLightRID rid = _db.spotLights.add({});
+		SpotLight& spotLight = _db.spotLights[rid];
+		spotLight.position = spec.position;
+		spotLight.direction = spec.direction;
+		spotLight.bias = spec.bias;
+		spotLight.color = spec.color;
+		spotLight.cosOuter = cosf(spec.angleOuter);
+		spotLight.cosInner = cosf(spec.angleInner);
+		spotLight.shadowKey = _shadowAtlasGetSlot(spec.shadowMapResolution);
+		spotLight.maxDistance = spec.maxDistance;
+		return rid;
+    }
+
+	void System::spotLightDestroy(SpotLightRID rid)
+    {
+		_shadowAtlasFreeSlot(_db.spotLights[rid].shadowKey);
+		_db.spotLights.remove(rid);
+    }
+
+	SpotLight* System::spotLightPtr(SpotLightRID spotLightRID)
+    {
+		return _db.spotLights.ptr(spotLightRID);
+    }
+
+	void System::spotLightSetPosition(SpotLightRID spotLightRID, Vec3f position)
+    {
+		SpotLight* spotLight = spotLightPtr(spotLightRID);
+		spotLight->position = position;
+    }
+
+	void System::spotLightSetDirection(SpotLightRID spotLightRID, Vec3f direction)
+    {
+		SpotLight* spotLight = spotLightPtr(spotLightRID);
+		spotLight->direction = direction;
+    }
+
+    void System::spotLightSetAngleInner(SpotLightRID spotLightRID, float angle)
+    {
+		SpotLight* spotLight = spotLightPtr(spotLightRID);
+		spotLight->cosInner = cosf(angle);
+    }
+
+    void System::spotLightSetAngleOuter(SpotLightRID spotLightRID, float angle)
+    {
+		SpotLight* spotLight = spotLightPtr(spotLightRID);
+		spotLight->angleOuter = angle;
+		spotLight->cosOuter = cosf(angle);
+    }
+
+    void System::spotLightSetMaxDistance(SpotLightRID spotLightRID, float maxDistance)
+    {
+		SpotLight* spotLight = spotLightPtr(spotLightRID);
+		spotLight->maxDistance = maxDistance;
+    }
+
+    void System::spotLightSetColor(SpotLightRID spotLightRID, Vec3f color)
+    {
+		SpotLight* spotLight = spotLightPtr(spotLightRID);
+		spotLight->color = color;
+    }
+
+    void System::spotLightSetBias(SpotLightRID spotLightRID, float bias)
+    {
+		SpotLight* spotLight = spotLightPtr(spotLightRID);
+		spotLight->bias = bias;
+    }
+
     void System::envSetAmbientColor(Vec3f ambientColor) {
         _db.environment.ambientColor = ambientColor;
     }
@@ -811,7 +887,7 @@ namespace Soul { namespace Render {
 
     MaterialRID System::materialCreate(const MaterialSpec& spec) {
         
-		MaterialRID rid = _db.materialBuffer.count();
+		MaterialRID rid = _db.materialBuffer.size();
 
 		_db.materialBuffer.add({
 				spec.albedoMap,
@@ -919,10 +995,11 @@ namespace Soul { namespace Render {
     void System::render(const Camera& camera) {
 		_db.frameIdx++;
         _db.camera = camera;
-        _updateShadowMatrix();
+        _dirLightUpdateShadowMatrix();
+		_spotLightUpdateShadowMatrix();
         _flushUBO();
 
-        for (int i = 0; i < _db.renderPassList.count(); i++) {
+        for (int i = 0; i < _db.renderPassList.size(); i++) {
             _db.renderPassList.get(i)->execute(_db);
         }
         GLenum err;
@@ -972,7 +1049,7 @@ namespace Soul { namespace Render {
 
         glBindVertexArray(0);
 
-        uint32 meshIndex = _db.meshBuffer.count();
+        uint32 meshIndex = _db.meshBuffer.size();
         _db.meshBuffer.add({
                 spec.transform,
                 VAO,
@@ -987,7 +1064,7 @@ namespace Soul { namespace Render {
 
 		_db.meshRIDs.add(rid);
 
-		if (_db.meshBuffer.count() == 1) {
+		if (_db.meshBuffer.size() == 1) {
 			SOUL_ASSERT(0, spec.vertexCount > 0, "");
 			_db.sceneBound.min = spec.transform * spec.vertexes[0].pos;
 			_db.sceneBound.max = spec.transform * spec.vertexes[0].pos;
@@ -1039,7 +1116,7 @@ namespace Soul { namespace Render {
 
     TextureRID System::textureCreate(const TexSpec &spec, unsigned char *data, int dataChannelCount) {
 
-		SOUL_ASSERT(0, dataChannelCount != 0, "Data channel count must not be zero.", "");
+		SOUL_ASSERT(0, dataChannelCount != 0, "Data channel size must not be zero.", "");
 
         TextureRID textureHandle;
         glGenTextures(1, &textureHandle);
@@ -1166,7 +1243,7 @@ namespace Soul { namespace Render {
         _db.environment.cubemap = skybox;
     }
 
-    void System::_updateShadowMatrix() {
+    void System::_dirLightUpdateShadowMatrix() {
         Database& db = _db;
         Camera& camera = db.camera;
 
@@ -1272,21 +1349,64 @@ namespace Soul { namespace Render {
 				}
 
 
-                light.shadowMatrix[j] = atlasMatrix * mat4Ortho(-radius, radius, -radius, radius, shadowMapNear, shadowMapFar) *
+                light.shadowMatrixes[j] = atlasMatrix * mat4Ortho(-radius, radius, -radius, radius, shadowMapNear, shadowMapFar) *
                                         mat4View(worldFrustumCenter, worldFrustumCenter + light.direction, upVec);
 
             }
         }
     }
 
+    void System::_spotLightUpdateShadowMatrix()
+    {
+		for (int i = 0; i < _db.spotLights.size(); i++)
+		{
+			SpotLight& light = _db.spotLights[i];
+			
+			int quadrant = light.shadowKey.quadrant;
+			int subdiv = light.shadowKey.subdiv;
+			int subdivCount = _db.shadowAtlas.subdivSqrtCount[quadrant] * _db.shadowAtlas.subdivSqrtCount[quadrant];
+			int atlasReso = _db.shadowAtlas.resolution;
+			int subdivReso = atlasReso / (2 * _db.shadowAtlas.subdivSqrtCount[quadrant]);
+			int xSubdiv = subdiv % _db.shadowAtlas.subdivSqrtCount[quadrant];
+			int ySubdiv = subdiv / _db.shadowAtlas.subdivSqrtCount[quadrant];
+			float subdivUVWidth = (float)(subdivReso * 2) / atlasReso;
+			float bottomSubdivUV = -1 + (quadrant / 2) * 1 + ySubdiv * subdivUVWidth;
+			float leftSubdivUV = -1 + (quadrant % 2) * 1 + xSubdiv * subdivUVWidth;
+
+			Mat4 atlasMatrix;
+			atlasMatrix.elem[0][0] = subdivUVWidth / 2;
+			atlasMatrix.elem[0][3] = leftSubdivUV + (subdivUVWidth * 0.5f);
+			atlasMatrix.elem[1][1] = subdivUVWidth / 2;
+			atlasMatrix.elem[1][3] = bottomSubdivUV + (subdivUVWidth * 0.5f);
+			atlasMatrix.elem[2][2] = 1;
+			atlasMatrix.elem[3][3] = 1;
+
+			Vec3f up = light.direction == Vec3f(0.0f, 0.0f, 1.0f) ? Vec3f(1.0f, 0.0f, 0.0f) : Vec3f(0.0f, 0.0f, 1.0f);
+
+			light.shadowMatrix =
+				atlasMatrix *
+				mat4Perspective(light.angleOuter * 2, 1, 0.001f, light.maxDistance) *
+				mat4View(light.position, light.position + light.direction, up);
+
+		}
+    }
+
     void System::_flushUBO() {
 
-        Database &db = _db;
+		_flushCameraUBO();
+		_flushLightUBO();
+		_flushVoxelGIUBO();
+    }
 
-        db.cameraDataUBO.projection = mat4Transpose(db.camera.projection);
-        Mat4 viewMat = mat4View(db.camera.position, db.camera.position +
-                                                    db.camera.direction, db.camera.up);
-        db.cameraDataUBO.view = mat4Transpose(viewMat);
+	void System::_flushCameraUBO()
+    {
+		Database &db = _db;
+
+		// flush camera UBO
+		db.cameraDataUBO.projection = mat4Transpose(db.camera.projection);
+		Mat4 viewMat = mat4View(db.camera.position, db.camera.position +
+			db.camera.direction, db.camera.up);
+		db.cameraDataUBO.view = mat4Transpose(viewMat);
 		Mat4 projectionView = db.camera.projection * viewMat;
 		db.cameraDataUBO.projectionView = mat4Transpose(projectionView);
 		Mat4 invProjectionView = mat4Inverse(projectionView);
@@ -1294,39 +1414,68 @@ namespace Soul { namespace Render {
 
 		db.cameraDataUBO.position = db.camera.position;
 
-        float cameraFar = db.camera.perspective.zFar;
-        float cameraNear = db.camera.perspective.zNear;
-        float cameraDepth = cameraFar - cameraNear;
+		
 
-        db.lightDataUBO.dirLightCount = db.dirLightCount;
-        for (int i = 0; i < db.dirLightCount; i++) {
-            DirectionalLightUBO &lightUBO = db.lightDataUBO.dirLights[i];
-            DirLight &light = db.dirLights[i];
-            lightUBO.color = light.color;
-            lightUBO.direction = light.direction;
+		glBindBuffer(GL_UNIFORM_BUFFER, db.cameraDataUBOHandle);
+		glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(CameraDataUBO), &db.cameraDataUBO);
+    }
 
-            for (int j = 0; j < 4; j++) {
-                lightUBO.shadowMatrix[j] = mat4Transpose(light.shadowMatrix[j]);
-            }
+	void System::_flushLightUBO()
+    {
+		Database &db = _db;
+		float cameraFar = db.camera.perspective.zFar;
+		float cameraNear = db.camera.perspective.zNear;
+		float cameraDepth = cameraFar - cameraNear;
 
-            for (int j = 0; j < 3; j++) {
-                lightUBO.cascadeDepths[j] = cameraNear + (cameraDepth * light.split[j]);
-            }
-            lightUBO.cascadeDepths[3] = cameraFar;
+		// Flush directional light ubo
+		db.lightDataUBO.dirLightCount = db.dirLightCount;
+		for (int i = 0; i < db.dirLightCount; i++) {
+			DirectionalLightUBO &lightUBO = db.lightDataUBO.dirLights[i];
+			DirLight &light = db.dirLights[i];
+			lightUBO.color = light.color;
+			lightUBO.direction = light.direction;
 
-            lightUBO.color = db.dirLights[i].color;
-            lightUBO.direction = db.dirLights[i].direction;
+			for (int j = 0; j < 4; j++) {
+				lightUBO.shadowMatrixes[j] = mat4Transpose(light.shadowMatrixes[j]);
+			}
+
+			for (int j = 0; j < 3; j++) {
+				lightUBO.cascadeDepths[j] = cameraNear + (cameraDepth * light.split[j]);
+			}
+			lightUBO.cascadeDepths[3] = cameraFar;
+
+			lightUBO.color = db.dirLights[i].color;
+			lightUBO.direction = db.dirLights[i].direction;
 			lightUBO.bias = db.dirLights[i].bias;
 
-        }
+		}
 
-        glBindBuffer(GL_UNIFORM_BUFFER, db.cameraDataUBOHandle);
-        glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(CameraDataUBO), &db.cameraDataUBO);
+		GLExt::ErrorCheck("ShadowMapRP::execute");
 
-        glBindBuffer(GL_UNIFORM_BUFFER, db.lightDataUBOHandle);
-        glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(LightDataUBO), &db.lightDataUBO);
+		// Flush spot light
+		db.lightDataUBO.spotLightCount = db.spotLights.size();
+		int i = 0;
+		for (auto it = db.spotLights.begin(); it != db.spotLights.end(); it.next())
+		{
+			SpotLight& spotLight = db.spotLights.iter(it);
+			SpotLightUBO& spotLightUBO = db.lightDataUBO.spotLights[i];
 
-		_flushVoxelGIUBO();
+			spotLightUBO.position = spotLight.position;
+			spotLightUBO.color = spotLight.color;
+			spotLightUBO.bias = spotLight.bias;
+			spotLightUBO.direction = spotLight.direction;
+			spotLightUBO.cosOuter = spotLight.cosOuter;
+			spotLightUBO.cosInner = spotLight.cosInner;
+			spotLightUBO.maxDistance = spotLight.maxDistance;
+			spotLightUBO.shadowMatrix = mat4Transpose(spotLight.shadowMatrix);
+
+			i++;
+		}
+
+		glBindBuffer(GL_UNIFORM_BUFFER, db.lightDataUBOHandle);
+		GLExt::ErrorCheck("Bind light ubo");
+		glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(LightDataUBO), &db.lightDataUBO);
+		GLExt::ErrorCheck("Sub light ubo");
     }
 
 	void System::_flushVoxelGIUBO() {
