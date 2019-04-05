@@ -13,6 +13,7 @@
 #include "extern/ImGuizmo.h"
 #include "extern/imgui_pie.h"
 #include "extern/icon/IconsIonicons.h"
+#include "extern/icon/IconsMaterialDesign.h"
 
 #include "editor/intern/entity.h"
 
@@ -111,6 +112,9 @@ namespace Soul {
 			ImFontConfig icons_config; icons_config.MergeMode = true; icons_config.PixelSnapH = true;
 			io.Fonts->AddFontFromFileTTF("assets/ionicons.ttf", 16.0f, &icons_config, icons_ranges);
 
+			static const ImWchar materialDesignIconRanges[] = { ICON_MIN_MD, ICON_MAX_MD, 0 };
+			io.Fonts->AddFontFromFileTTF("assets/materialdesign.ttf", 16.0f, &icons_config, materialDesignIconRanges);
+
 		}
 
 		void System::init()
@@ -186,11 +190,12 @@ namespace Soul {
 			rootEntity->localTransform = transformIdentity();
 			rootEntity->worldTransform = transformIdentity();
 			
-			_db.world.meshEntities.reserve(3000);
+			_db.world.meshEntities.reserve(10000);
 			_db.world.meshEntities.add({});
 
-			_db.world.dirLightEntities.reserve(6);
-			_db.world.dirLightEntities.add({});
+			_db.world.dirLightEntities.reserve(Render::MAX_DIR_LIGHT);
+
+			_db.world.spotLightEntities.reserve(Render::MAX_SPOT_LIGHT);
 
 			_db.world.materials.reserve(1000);
 			_db.world.materials.add({});
@@ -251,6 +256,7 @@ namespace Soul {
 			_db.world.groupEntities.cleanup();
 			_db.world.meshEntities.cleanup();
 			_db.world.dirLightEntities.cleanup();
+			_db.world.spotLightEntities.cleanup();
 			_db.world.materials.cleanup();
 			_db.world.textures.cleanup();
 

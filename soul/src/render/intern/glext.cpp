@@ -76,13 +76,13 @@ namespace Soul {
 			}
 
 			int libSourceLength = 0;
-			for (int i = 0; i < libSources.count(); i++) {
+			for (int i = 0; i < libSources.size(); i++) {
 				libSourceLength += strlen(libSources.get(i));
 			}
 
 			char* libSource = (char*)malloc(libSourceLength + 1);
 			char* libSourceIter = libSource;
-			for (int i = 0; i < libSources.count(); i++) {
+			for (int i = 0; i < libSources.size(); i++) {
 				strcpy(libSourceIter, libSources.get(i));
 				libSourceIter += strlen(libSources.get(i));
 				free(libSources.get(i));

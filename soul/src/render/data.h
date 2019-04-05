@@ -3,16 +3,19 @@
 #include "core/type.h"
 #include "core/array.h"
 #include "core/pool_array.h"
+#include "core/packed_array.h"
 
 namespace Soul {namespace Render {
 	
 	// public constant
 	static constexpr int MAX_DIR_LIGHT = 4;
+	static constexpr int MAX_SPOT_LIGHT = 100;
 
 	typedef PoolID MeshRID;
 	typedef PoolID DirLightRID;
 	typedef GLuint TextureRID;
 	typedef uint32 MaterialRID;
+	typedef PackedID SpotLightRID;
 
 	struct VoxelGIConfig {
 		Vec3f center = { 0.0f, 0.0f, 0.0f };
@@ -134,13 +137,27 @@ namespace Soul {namespace Render {
 	};
 
 	struct DirLight {
-		Mat4 shadowMatrix[4];
+		Mat4 shadowMatrixes[4];
 		Vec3f direction;
 		Vec3f color;
 		int32 resolution;
 		float split[3];
 		ShadowKey shadowKey;
 		float bias;
+	};
+
+	struct SpotLight
+	{
+		Mat4 shadowMatrix;
+		Vec3f position;
+		float bias;
+		Vec3f direction;
+		float angleOuter;
+		float cosOuter;
+		Vec3f color;
+		float cosInner;
+		ShadowKey shadowKey;
+		float maxDistance;
 	};
 
 	// Resource spec
@@ -247,14 +264,25 @@ namespace Soul {namespace Render {
 
 	};
 
-	
-
 	struct DirectionalLightSpec {
 		Vec3f direction = Vec3f(0.0f, -1.0f, 0.0f);
-		Vec3f color = { 100.0f, 100.0f, 100.0f };
+		Vec3f color = { 10.0f, 10.0f, 10.0f };
 		float split[3] = { 0.1f, 0.3f, 0.6f };
 		int32 shadowMapResolution = 2048;
-		float bias = 0.05f;;
+		float bias = 0.05f;
+	};
+
+	struct SpotLightSpec
+	{
+		Vec3f position = Vec3f(0.0f, 0.0f, 0.0f);
+		Vec3f direction = Vec3f(0.0f, -1.0f, 0.0f);
+		Vec3f color = {10.0f, 10.0f, 10.0f};
+		uint32 shadowMapResolution = TexReso_256;
+		float bias = 0.05f;
+		float angleInner = 0.3f; // in radian
+		float angleOuter = 0.5f; // in radian
+		float maxDistance = 2.0f; // in meter
+
 	};
 
 	struct MaterialSpec {
@@ -333,7 +361,9 @@ namespace Soul {namespace Render {
 		int8 subdivSqrtCount[4];
 		GLuint texHandle;
 		GLuint framebuffer;
-		MaterialRID slots[MAX_LIGHT];
+
+		// TODO(kevyuu): Implement BitSet data structure and use it instead of bool
+		bool slots[MAX_LIGHT];
 	};
 
 	struct CameraDataUBO {
@@ -347,10 +377,11 @@ namespace Soul {namespace Render {
 		Mat4 prevProjectionView;
 
 		Vec3f position;
+		float pad;
 	};
 
 	struct DirectionalLightUBO {
-		Mat4 shadowMatrix[4];
+		Mat4 shadowMatrixes[4];
 		Vec3f direction;
 		float bias;
 		Vec3f color;
@@ -358,10 +389,29 @@ namespace Soul {namespace Render {
 		float cascadeDepths[4];
 	};
 
+	struct SpotLightUBO
+	{
+		Mat4 shadowMatrix;
+		Vec3f position;
+		float cosInner;
+		Vec3f direction;
+		float cosOuter;
+		Vec3f color;
+		float maxDistance;
+		Vec3f pad;
+		float bias;
+	};
+
 	struct LightDataUBO {
+		
 		DirectionalLightUBO dirLights[MAX_DIR_LIGHT];
+		Vec3f pad1;
 		int dirLightCount;
-		float pad[3];
+		
+		SpotLightUBO spotLights[MAX_SPOT_LIGHT];
+		Vec3f pad2;
+		int spotLightCount;
+
 	};
 
 	struct VoxelGIDataUBO {
@@ -739,6 +789,7 @@ namespace Soul {namespace Render {
 		DirLight dirLights[MAX_DIR_LIGHT];
 		int dirLightCount;
 
+		PackedArray<SpotLight> spotLights;
 		
 		Environment environment;
 			

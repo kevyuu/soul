@@ -24,6 +24,7 @@
     <ClInclude Include="src\core\debug.h" />
     <ClInclude Include="src\core\hash_map.h" />
     <ClInclude Include="src\core\math.h" />
+    <ClInclude Include="src\core\packed_array.h" />
     <ClInclude Include="src\core\pool_array.h" />
     <ClInclude Include="src\core\type.h" />
     <ClInclude Include="src\editor\data.h" />
@@ -33,6 +34,7 @@
     <ClInclude Include="src\extern\dirent_portable.h" />
     <ClInclude Include="src\extern\glad.h" />
     <ClInclude Include="src\extern\icon\IconsIonicons.h" />
+    <ClInclude Include="src\extern\icon\IconsMaterialDesign.h" />
     <ClInclude Include="src\extern\imconfig.h" />
     <ClInclude Include="src\extern\imgui.h" />
     <ClInclude Include="src\extern\imguifilesystem.h" />

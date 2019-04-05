@@ -21,31 +21,36 @@ namespace Soul {
 				return;
 			}
 
+			Entity* entity = EntityPtr(&db->world, selectedEntityID);
+
+			ImGui::InputText("Name",	entity->name, sizeof(entity->name));
+
+			Transform localTransform =entity->localTransform;
+			ImGui::Text("Local Transform");
+			ImGui::InputFloat3("Position##local", (float*)&localTransform.position);
+			ImGui::InputFloat3("Scale##local", (float*)&localTransform.scale);
+			ImGui::InputFloat4("Rotation##local", (float*)&localTransform.rotation);
+			if (localTransform != entity->localTransform) {
+				EntitySetLocalTransform(&db->world, entity, localTransform);
+			}
+
+			Transform worldTransform = entity->worldTransform;
+			ImGui::Text("World Transform");
+			ImGui::InputFloat3("Position##world", (float*)&worldTransform.position);
+			ImGui::InputFloat3("Scale##world", (float*)&worldTransform.scale);
+			ImGui::InputFloat4("Rotation##world", (float*)&worldTransform.rotation);
+			if (worldTransform != entity->worldTransform) {
+				EntitySetWorldTransform(&db->world, entity, worldTransform);
+			}
+
+			ImGui::Separator();
+
+			Render::System& renderSystem = db->world.renderSystem;
+
 			switch (selectedEntityID.type) {
 			case EntityType_MESH: {
-					MeshEntity& meshEntity = db->world.meshEntities[selectedEntityID.index];
+					MeshEntity& meshEntity = *(MeshEntity*)entity;
 
-					ImGui::InputText("Name", meshEntity.name, sizeof(meshEntity.name));
-					
-					Transform localTransform = meshEntity.localTransform;
-					ImGui::Text("Local Transform");
-					ImGui::InputFloat3("Position##local", (float*)&localTransform.position);
-					ImGui::InputFloat3("Scale##local", (float*)&localTransform.scale);
-					ImGui::InputFloat4("Rotation##local", (float*)&localTransform.rotation);
-					if (localTransform != meshEntity.localTransform) {
-						MeshEntitySetLocalTransform(&db->world, &meshEntity, localTransform);
-					}
-
-					Transform worldTransform = meshEntity.worldTransform;
-					ImGui::Text("World Transform");
-					ImGui::InputFloat3("Position##world", (float*)&worldTransform.position);
-					ImGui::InputFloat3("Scale##world", (float*)&worldTransform.scale);
-					ImGui::InputFloat4("Rotation##world", (float*)&worldTransform.rotation);
-					if (worldTransform != meshEntity.worldTransform) {
-						MeshEntitySetWorldTransform(&db->world, &meshEntity, worldTransform);
-					}
-
-					ImGui::Separator();
 					Material& material = db->world.materials[meshEntity.materialID];
 					ImGui::Text("Material");
 					ImGui::Text("Name : %d", material.name);
@@ -96,77 +101,60 @@ namespace Soul {
 					break;
 			}
 			case EntityType_GROUP: {
-					GroupEntity& groupEntity = db->world.groupEntities[selectedEntityID.index];
-					ImGui::InputText("Name", groupEntity.name, sizeof(groupEntity.name));
-
-					Transform localTransform = groupEntity.localTransform;
-					ImGui::Text("Local Transform");
-					ImGui::InputFloat3("Position##local", (float*)&localTransform.position);
-					ImGui::InputFloat3("Scale##local", (float*)&localTransform.scale);
-					ImGui::InputFloat4("Rotation##local", (float*)&localTransform.rotation);
-					if (localTransform != groupEntity.localTransform) {
-						GroupEntitySetLocalTransform(&db->world, &groupEntity, localTransform);
-					}
-
-					Transform worldTransform = groupEntity.worldTransform;
-					ImGui::Text("World Transform");
-					ImGui::InputFloat3("Position##world", (float*)&worldTransform.position);
-					ImGui::InputFloat3("Scale##world", (float*)&worldTransform.scale);
-					ImGui::InputFloat4("Rotation##world", (float*)&worldTransform.rotation);
-					if (worldTransform != groupEntity.worldTransform) {
-						GroupEntitySetWorldTransform(&db->world, &groupEntity, worldTransform);
-					}
-
+					// do nothing
 					break;
 			}
 			case EntityType_DIRLIGHT: {
-					DirLightEntity& dirLightEntity = db->world.dirLightEntities[selectedEntityID.index];
+				DirLightEntity& dirLightEntity = *(DirLightEntity*)entity;
 
-					ImGui::InputText("Name", dirLightEntity.name, sizeof(dirLightEntity.name));
+				Vec3f direction = dirLightEntity.spec.direction;
+				ImGui::InputFloat3("Direction", (float*)&direction);
+				if (direction != dirLightEntity.spec.direction) {
+					DirLightEntitySetDirection(&db->world, &dirLightEntity, direction);
+				}
 
-					Transform localTransform = dirLightEntity.localTransform;
-					ImGui::Text("Local Transform");
-					ImGui::InputFloat3("Position##local", (float*)&localTransform.position);
-					ImGui::InputFloat3("Scale##local", (float*)&localTransform.scale);
-					ImGui::InputFloat4("Rotation##local", (float*)&localTransform.rotation);
-					if (localTransform != dirLightEntity.localTransform) {
-						DirLightEntitySetLocalTransform(&db->world, &dirLightEntity, localTransform);
-					}
+				ImGui::InputFloat3("Color", (float*)&dirLightEntity.spec.color);
+				db->world.renderSystem.dirLightSetColor(dirLightEntity.rid, dirLightEntity.spec.color);
 
-					Transform worldTransform = dirLightEntity.worldTransform;
-					ImGui::Text("World Transform");
-					ImGui::InputFloat3("Position##world", (float*)&worldTransform.position);
-					ImGui::InputFloat3("Scale##world", (float*)&worldTransform.scale);
-					ImGui::InputFloat4("Rotation##world", (float*)&worldTransform.rotation);
-					if (worldTransform != dirLightEntity.worldTransform) {
-						DirLightEntitySetWorldTransform(&db->world, &dirLightEntity, worldTransform);
-					}
+				ImGui::InputFloat("Bias", &dirLightEntity.spec.bias);
+				db->world.renderSystem.dirLightSetBias(dirLightEntity.rid, dirLightEntity.spec.bias);
 
-					ImGui::Separator();
-					Vec3f direction = dirLightEntity.spec.direction;
-					ImGui::InputFloat3("Direction", (float*)&direction);
-					if (direction != dirLightEntity.spec.direction) {
-						DirLightEntitySetDirection(&db->world, &dirLightEntity, direction);
-					}
+				ImGui::InputFloat3("Cascade split", (float*)&dirLightEntity.spec.split);
+				float* split = dirLightEntity.spec.split;
+				db->world.renderSystem.dirLightSetCascadeSplit(dirLightEntity.rid, split[0], split[1], split[2]);
 
-					ImGui::InputFloat3("Color", (float*) &dirLightEntity.spec.color);
-					db->world.renderSystem.dirLightSetColor(dirLightEntity.lightRID, dirLightEntity.spec.color);
-					
-					ImGui::InputFloat("Bias", &dirLightEntity.spec.bias);
-					db->world.renderSystem.dirLightSetBias(dirLightEntity.lightRID, dirLightEntity.spec.bias);
+				ImGui::Text("Shadow Map Resolution");
+				ImGui::InputInt("##ShadowMapResolution", &dirLightEntity.spec.shadowMapResolution);
+				if (ImGui::Button("Update")) {
+					db->world.renderSystem.dirLightSetShadowMapResolution(dirLightEntity.rid, dirLightEntity.spec.shadowMapResolution);
+				}
 
-					ImGui::InputFloat3("Cascade split", (float*) &dirLightEntity.spec.split);
-					float* split = dirLightEntity.spec.split;
-					db->world.renderSystem.dirLightSetCascadeSplit(dirLightEntity.lightRID, split[0], split[1], split[2]);
-					
-					ImGui::Text("Shadow Map Resolution");
-					ImGui::InputInt("##ShadowMapResolution", &dirLightEntity.spec.shadowMapResolution);
-					if (ImGui::Button("Update")) {
-						db->world.renderSystem.dirLightSetShadowMapResolution(dirLightEntity.lightRID, dirLightEntity.spec.shadowMapResolution);
-					}
+				break;
+			}
+			case EntityType_SPOTLIGHT:{
+				SpotLightEntity* spotLightEntity = (SpotLightEntity*)entity;
+				Render::SpotLightRID rid = spotLightEntity->rid;
 
-					break;
+				Vec3f direction = spotLightEntity->spec.direction;
+				ImGui::InputFloat3("Direction", (float*)&direction);
+				SpotLightEntitySetDirection(&db->world, spotLightEntity, direction);
 
+				ImGui::InputFloat3("Color", (float*)&spotLightEntity->spec.color);
+				renderSystem.spotLightSetColor(rid, spotLightEntity->spec.color);
+
+				ImGui::InputFloat("Bias", &spotLightEntity->spec.bias);
+				renderSystem.spotLightSetBias(rid, spotLightEntity->spec.bias);
+
+				ImGui::SliderAngle("Inner angle", &spotLightEntity->spec.angleInner);
+				renderSystem.spotLightSetAngleInner(rid, spotLightEntity->spec.angleInner);
+
+				ImGui::SliderAngle("Outer angle", &spotLightEntity->spec.angleOuter);
+				renderSystem.spotLightSetAngleOuter(rid, spotLightEntity->spec.angleOuter);
+
+				ImGui::InputFloat("Max Distance", &spotLightEntity->spec.maxDistance);
+				renderSystem.spotLightSetMaxDistance(rid, spotLightEntity->spec.maxDistance);
+
+				break;
 			}
 			default:
 				SOUL_ASSERT(0, false, "Invalid entity type | Entity type = %d", selectedEntityID.type);

@@ -357,8 +357,8 @@ namespace Soul {
 					mat4Transform(meshEntity->worldTransform),
 					vertexes._buffer,
 					indexes._buffer,
-					(uint32)vertexes.count(),
-					(uint32)indexes.count(),
+					(uint32)vertexes.size(),
+					(uint32)indexes.size(),
 					materials[materialIDs[primitive.material]].rid
 				});
 				meshEntity->materialID = materialIDs[primitive.material];

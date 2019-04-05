@@ -63,6 +63,17 @@ namespace Soul { namespace Render {
 		void dirLightSetCascadeSplit(DirLightRID lightRID, float split1, float split2, float split3);
 		void dirLightSetBias(DirLightRID lightRID, float bias);
 
+		SpotLightRID spotLightCreate(const SpotLightSpec& spec);
+		void spotLightDestroy(SpotLightRID spotLightRID);
+		SpotLight* spotLightPtr(SpotLightRID spotLightRID);
+		void spotLightSetPosition(SpotLightRID spotLightRID, Vec3f position);
+		void spotLightSetDirection(SpotLightRID spotLightRID, Vec3f direction);
+		void spotLightSetAngleInner(SpotLightRID spotLightRID, float angle); // angle in radian
+		void spotLightSetAngleOuter(SpotLightRID spotLightRID, float angle); // angle in radian
+		void spotLightSetMaxDistance(SpotLightRID spotLightRID, float maxDistance);
+		void spotLightSetColor(SpotLightRID spotLightRID, Vec3f color);
+		void spotLightSetBias(SpotLightRID, float bias);
+
 		void wireframePush(MeshRID meshRID);
 
 		void render(const Camera& camera);
@@ -74,10 +85,15 @@ namespace Soul { namespace Render {
 
 		void _shadowAtlasInit();
 		void _shadowAtlasCleanup();
+		ShadowKey _shadowAtlasGetSlot(int texReso);
 		void _shadowAtlasFreeSlot(ShadowKey shadowKey);
 
-		void _updateShadowMatrix();
+		void _dirLightUpdateShadowMatrix();
+		void _spotLightUpdateShadowMatrix();
+
 		void _flushUBO();
+		void _flushCameraUBO();
+		void _flushLightUBO();
 		void _flushVoxelGIUBO();
 
 		void _utilVAOInit();
@@ -100,8 +116,6 @@ namespace Soul { namespace Render {
 
 		void _velocityBufferInit();
 		void _velocityBufferCleanup();
-
-		ShadowKey _shadowAtlasGetSlot(uint32 lightID, int texReso);
 
 	};
 

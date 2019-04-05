@@ -21,6 +21,7 @@ namespace Soul {
 			EntityType_GROUP,
 			EntityType_MESH,
 			EntityType_DIRLIGHT,
+			EntityType_SPOTLIGHT,
 
 			EntityType_Count
 		};
@@ -60,16 +61,13 @@ namespace Soul {
 
 		struct DirLightEntity : Entity {
 			Render::DirectionalLightSpec spec;
-			Render::MaterialRID lightRID;
+			Render::DirLightRID rid;
 		};
 
-		struct PointLightEntity : Entity {
-			Render::MaterialRID lightRID;
-			float radius;
-		};
-
-		struct SpotLightEntity : Entity {
-			Render::MaterialRID lightRID;		
+		struct SpotLightEntity : Entity
+		{
+			Render::SpotLightSpec spec;
+			Render::SpotLightRID rid;
 		};
 
 		struct MeshEntity : Entity {
@@ -127,6 +125,7 @@ namespace Soul {
 			PoolArray<GroupEntity> groupEntities;
 			PoolArray<MeshEntity> meshEntities;
 			PoolArray<DirLightEntity> dirLightEntities;
+			PoolArray<SpotLightEntity> spotLightEntities;
 
 			PoolArray<Material> materials;
 			PoolArray<Texture> textures;

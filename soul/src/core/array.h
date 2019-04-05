@@ -4,19 +4,19 @@
 #include <cstdlib>
 
 namespace Soul {
+
 	template <typename T>
 	struct Array
 	{
-
 		Array() {
 			_buffer = nullptr;
 			_capacity = 0;
-			_count = 0;
+			_size = 0;
 		}
 
 		~Array() {
 			SOUL_ASSERT(0, _capacity == 0);
-			SOUL_ASSERT(0, _count == 0);
+			SOUL_ASSERT(0, _size == 0);
 			SOUL_ASSERT(0, _buffer == 0);
 		}
 
@@ -34,19 +34,19 @@ namespace Soul {
 			if (size > _capacity) {
 				reserve(size);
 			}
-			_count = size;
+			_size = size;
 		}
 
 		void cleanup() {
 			free(_buffer);
 			_buffer = nullptr;
 			_capacity = 0;
-			_count = 0;
+			_size = 0;
 		}
 
 		void add(const T& item) {
 
-			if (_count == _capacity) {
+			if (_size == _capacity) {
 				T* oldBuffer = _buffer;
 				_buffer = (T*)malloc(sizeof(T) * 2 * _capacity);
 				memcpy(_buffer, oldBuffer, sizeof(T) * _capacity);
@@ -54,17 +54,17 @@ namespace Soul {
 				_capacity *= 2;
 			}
 
-			_buffer[_count] = item;
-			_count++;
+			_buffer[_size] = item;
+			_size++;
 		}
 
 		T& back() {
-			return _buffer[_count - 1];
+			return _buffer[_size - 1];
 		}
 
 		void pop() {
-			SOUL_ASSERT(0, _count != 0, "Cannot pop an empty array.");
-			_count--;
+			SOUL_ASSERT(0, _size != 0, "Cannot pop an empty array.");
+			_size--;
 		}
 
 		T* ptr(int idx) {
@@ -79,13 +79,13 @@ namespace Soul {
 			return _buffer[idx];
 		}
 
-		int count() const {
-			return _count;
+		int size() const {
+			return _size;
 		}
 
 		T* _buffer;
 
-		int _count;
+		int _size;
 		int _capacity;
 	};
 

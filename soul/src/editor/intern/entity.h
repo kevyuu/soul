@@ -31,6 +31,11 @@ namespace Soul {
 			void DirLightEntitySetDirection(World* world, DirLightEntity* dirLightEntity, const Vec3f& direction);
 			void DirLightEntitySetLocalTransform(World* world, DirLightEntity* dirLightEntity, const Transform& worldTransform);
 			void DirLightEntitySetWorldTransform(World* world, DirLightEntity* dirLightEntity, const Transform& localTransform);
-		
+
+			EntityID SpotLightEntityCreate(World* world, GroupEntity* parent, const char* name, Transform& localTransform, const Render::SpotLightSpec& spec);
+			void SpotLightEntityDelete(World* world, SpotLightEntity* spotLightEntity);
+			void SpotLightEntitySetDirection(World* world, SpotLightEntity* spotLightEntity, const Vec3f& direction);
+			void SpotLightEntitySetLocalTransform(World* world, SpotLightEntity* spotLightEntity, const Transform& worldTransform);
+			void SpotLightEntitySetWorldTransform(World* world, SpotLightEntity* spotLightEntity, const Transform& localTransform);
 	}
 }

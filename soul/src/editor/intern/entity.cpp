@@ -17,6 +17,8 @@ namespace Soul {
 				return world->groupEntities.ptr(entityID.index);
 			case EntityType_DIRLIGHT:
 				return world->dirLightEntities.ptr(entityID.index);
+			case EntityType_SPOTLIGHT:
+				return world->spotLightEntities.ptr(entityID.index);
 			default:
 				SOUL_ASSERT(0, false, "Entity type is not valid, entity type = %d", entityID.type);
 			}
@@ -38,6 +40,9 @@ namespace Soul {
 			case EntityType_DIRLIGHT:
 				entityID.index = world->dirLightEntities.add(DirLightEntity());
 				entity = world->dirLightEntities.ptr(entityID.index);
+			case EntityType_SPOTLIGHT:
+				entityID.index = world->spotLightEntities.add(SpotLightEntity());
+				entity = world->spotLightEntities.ptr(entityID.index);
 			default:
 				SOUL_ASSERT(0, false, "Entity type is not valid, entity type = %d", entityType);
 			}
@@ -79,6 +84,9 @@ namespace Soul {
 			case EntityType_DIRLIGHT:
 				DirLightEntityDelete(world, (DirLightEntity*)entity);
 				break;
+			case EntityType_SPOTLIGHT:
+				SpotLightEntityDelete(world, (SpotLightEntity*)entity);
+				break;
 			default:
 				SOUL_ASSERT(0, false, "Entity type is invalid. Entity type = %d", entity->entityID.type);
 			}
@@ -94,6 +102,9 @@ namespace Soul {
 				break;
 			case EntityType_DIRLIGHT:
 				DirLightEntitySetLocalTransform(world, (DirLightEntity*)entity, localTransform);
+				break;
+			case EntityType_SPOTLIGHT:
+				SpotLightEntitySetLocalTransform(world, (SpotLightEntity*)entity, localTransform);
 				break;
 			default:
 				SOUL_ASSERT(0, false, "Entity type is invalid | Entity type = %d", entity->entityID.type);
@@ -112,10 +123,29 @@ namespace Soul {
 			case EntityType_DIRLIGHT:
 				DirLightEntitySetWorldTransform(world, (DirLightEntity*)entity, worldTransform);
 				break;
+			case EntityType_SPOTLIGHT:
+				SpotLightEntitySetWorldTransform(world, (SpotLightEntity*)entity, worldTransform);
+				break;
 			default:
 				SOUL_ASSERT(0, false, "Entity type is invalid | Entity type = %d", entity->entityID.type);
 				break;
 			}
+		}
+
+		void _CommonEntityCreate(GroupEntity* parent, EntityID entityID, const char* name, Entity* entity)
+		{
+			Entity* next = parent->first;
+			if (next != nullptr) {
+				next->prev = entity;
+			}
+
+			entity->entityID = entityID;
+			entity->next = next;
+			entity->prev = nullptr;
+			entity->parent = parent;
+			parent->first = entity;
+			SOUL_ASSERT(0, strlen(name) <= Entity::MAX_NAME_LENGTH, "Entity name exceed max length. Name = %s", name);
+			strcpy(entity->name, name);
 		}
 
 		void _CommonEntityDelete(Entity* entity) {
@@ -191,24 +221,15 @@ namespace Soul {
 		EntityID DirLightEntityCreate(World* world, GroupEntity* parent, const char* name, Transform& localTransform, const Render::DirectionalLightSpec& spec) {
 			EntityID entityID;
 			entityID.type = EntityType_DIRLIGHT;
-			Render::MaterialRID lightRID = world->renderSystem.dirLightCreate(spec);
+			Render::SpotLightRID lightRID = world->renderSystem.dirLightCreate(spec);
 			DirLightEntity dirLightEntity;
 			dirLightEntity.spec = spec;
-			dirLightEntity.lightRID = lightRID;
+			dirLightEntity.rid = lightRID;
 			entityID.index = world->dirLightEntities.add(dirLightEntity);
 
 			Entity* entity = (Entity*)world->dirLightEntities.ptr(entityID.index);
 
-			Entity* next = parent->first;
-			if (next != nullptr) {
-				next->prev = entity;
-			}
-
-			entity->entityID = entityID;
-			entity->next = next;
-			entity->prev = nullptr;
-			entity->parent = parent;
-			parent->first = entity;
+			_CommonEntityCreate(parent, entityID, name, entity);
 
 			entity->worldTransform = entity->parent->worldTransform * localTransform;
 			entity->worldTransform = parent->worldTransform * localTransform;
@@ -216,15 +237,12 @@ namespace Soul {
 			Mat4 localMat4 = mat4Inverse(mat4Transform(entity->parent->worldTransform)) * mat4Transform(entity->worldTransform);
 			entity->localTransform = transformMat4(localMat4);
 
-			SOUL_ASSERT(0, strlen(name) <= Entity::MAX_NAME_LENGTH, "Entity name exceed max length. Name = %s", name);
-			strcpy(entity->name, name);
-
 			return entityID;
 		}
 
 		void DirLightEntityDelete(World* world, DirLightEntity* dirLightEntity) {
 			_CommonEntityDelete((Entity*)dirLightEntity);
-			world->renderSystem.dirLightDestroy(dirLightEntity->lightRID);
+			world->renderSystem.dirLightDestroy(dirLightEntity->rid);
 			world->dirLightEntities.remove(dirLightEntity->entityID.index);
 		}
 
@@ -238,14 +256,67 @@ namespace Soul {
 			_CommonEntitySetLocalTransform((Entity*)dirLightEntity, localTransform);
 			Vec3f direction = mat4Quaternion(dirLightEntity->worldTransform.rotation) * Vec3f(0.0f, 0.0f, 1.0f);
 			dirLightEntity->spec.direction = direction;
-			world->renderSystem.dirLightSetDirection(dirLightEntity->lightRID, direction);
+			world->renderSystem.dirLightSetDirection(dirLightEntity->rid, direction);
 		}
 
 		void DirLightEntitySetWorldTransform(World* world, DirLightEntity* dirLightEntity, const Transform& worldTransform) {
 			_CommonEntitySetWorldTransform((Entity*)dirLightEntity, worldTransform);
 			Vec3f direction = mat4Quaternion(dirLightEntity->worldTransform.rotation) * Vec3f(0.0f, 0.0f, 1.0f);
 			dirLightEntity->spec.direction = direction;
-			world->renderSystem.dirLightSetDirection(dirLightEntity->lightRID, direction);
+			world->renderSystem.dirLightSetDirection(dirLightEntity->rid, direction);
+		}
+
+		EntityID SpotLightEntityCreate(World* world, GroupEntity* parent, const char* name, Transform& localTransform, const Render::SpotLightSpec& spec)
+		{
+			EntityID entityID;
+			entityID.type = EntityType_SPOTLIGHT;
+			Render::SpotLightRID lightRID = world->renderSystem.spotLightCreate(spec);
+
+			entityID.index = world->spotLightEntities.add({});
+			SpotLightEntity& spotLightEntity = world->spotLightEntities[entityID.index];
+			spotLightEntity.spec = spec;
+			spotLightEntity.rid = lightRID;
+
+			Entity* entity = (Entity*)&spotLightEntity;
+			_CommonEntityCreate(parent, entityID, name, entity);
+
+			entity->worldTransform = entity->parent->worldTransform * localTransform;
+			entity->worldTransform = parent->worldTransform * localTransform;
+			entity->worldTransform.position = spec.position;
+			entity->worldTransform.rotation = quaternionFromVec3f(Vec3f(0.0f, 0.0f, 1.0f), spec.direction);
+			Mat4 localMat4 = mat4Inverse(mat4Transform(entity->parent->worldTransform)) * mat4Transform(entity->worldTransform);
+			entity->localTransform = transformMat4(localMat4);
+
+			return entityID;
+		}
+
+		void SpotLightEntityDelete(World* world, SpotLightEntity* spotLightEntity)
+		{
+			_CommonEntityDelete((Entity*)spotLightEntity);
+			world->renderSystem.spotLightDestroy(spotLightEntity->rid);
+			world->spotLightEntities.remove(spotLightEntity->entityID.index);
+		}
+
+		void SpotLightEntitySetDirection(World* world, SpotLightEntity* spotLightEntity, const Vec3f& direction) {
+			Transform transform = spotLightEntity->worldTransform;
+			transform.rotation = quaternionFromVec3f(Vec3f(0.0f, 0.0f, 1.0f), direction);
+			SpotLightEntitySetWorldTransform(world, spotLightEntity, transform);
+		}
+
+		void SpotLightEntitySetLocalTransform(World* world, SpotLightEntity* spotLightEntity, const Transform& localTransform) {
+			_CommonEntitySetLocalTransform((Entity*)spotLightEntity, localTransform);
+			Vec3f direction = mat4Quaternion(spotLightEntity->worldTransform.rotation) * Vec3f(0.0f, 0.0f, 1.0f);
+			spotLightEntity->spec.direction = direction;
+			world->renderSystem.spotLightSetPosition(spotLightEntity->rid, spotLightEntity->worldTransform.position);
+			world->renderSystem.spotLightSetDirection(spotLightEntity->rid, direction);
+		}
+
+		void SpotLightEntitySetWorldTransform(World* world, SpotLightEntity* spotLightEntity, const Transform& worldTransform) {
+			_CommonEntitySetWorldTransform((Entity*)spotLightEntity, worldTransform);
+			Vec3f direction = mat4Quaternion(spotLightEntity->worldTransform.rotation) * Vec3f(0.0f, 0.0f, 1.0f);
+			spotLightEntity->spec.direction = direction;
+			world->renderSystem.spotLightSetPosition(spotLightEntity->rid, spotLightEntity->worldTransform.position);
+			world->renderSystem.spotLightSetDirection(spotLightEntity->rid, direction);
 		}
 	
 	}

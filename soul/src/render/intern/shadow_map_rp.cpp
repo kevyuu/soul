@@ -63,10 +63,10 @@ namespace Soul {
 					float bottomSplitViewport = bottomSubdivViewport + (ySplit * splitReso);
 					float leftSplitViewport = leftSubdivViewport + (xSplit * splitReso);
 
-					for (int k = 0; k < database.meshBuffer.count(); k++) {
+					for (int k = 0; k < database.meshBuffer.size(); k++) {
 						const Mesh& mesh = database.meshBuffer.get(k);
 						glUniformMatrix4fv(modelLoc, 1, GL_TRUE, (const GLfloat*)mesh.transform.elem);
-						glUniformMatrix4fv(shadowMatrixLoc, 1, GL_TRUE, (const GLfloat*)light.shadowMatrix[j].elem);
+						glUniformMatrix4fv(shadowMatrixLoc, 1, GL_TRUE, (const GLfloat*)light.shadowMatrixes[j].elem);
 						glBindVertexArray(mesh.vaoHandle);
 						glScissor(leftSplitViewport, bottomSplitViewport, splitReso, splitReso);
 						glDrawElements(GL_TRIANGLES, mesh.indexCount, GL_UNSIGNED_INT, 0);
@@ -75,6 +75,33 @@ namespace Soul {
 			}
 
 			glDisable(GL_SCISSOR_TEST);
+
+			for (int i = 0; i < database.spotLights.size(); i++)
+			{
+				const SpotLight& light = database.spotLights[i];
+				int quadrant = light.shadowKey.quadrant;
+				int subdiv = light.shadowKey.subdiv;
+				int subdivCount = database.shadowAtlas.subdivSqrtCount[quadrant] * database.shadowAtlas.subdivSqrtCount[quadrant];
+				int atlasReso = database.shadowAtlas.resolution;
+				int subdivReso = atlasReso / (2 * database.shadowAtlas.subdivSqrtCount[quadrant]);
+				int xSubdiv = subdiv % database.shadowAtlas.subdivSqrtCount[quadrant];
+				int ySubdiv = subdiv / database.shadowAtlas.subdivSqrtCount[quadrant];
+
+				float bottomSubdivViewport = (quadrant / 2) * 0.5f * atlasReso + ySubdiv * subdivReso;
+				float leftSubdivViewport = (quadrant % 2) * 0.5f * atlasReso + xSubdiv * subdivReso;
+
+				for (int j = 0; j < database.meshBuffer.size(); j++)
+				{
+					const Mesh& mesh = database.meshBuffer[j];
+					glUniformMatrix4fv(modelLoc, 1, GL_TRUE, (const GLfloat*)mesh.transform.elem);
+					glUniformMatrix4fv(shadowMatrixLoc, 1, GL_TRUE, (const GLfloat*)light.shadowMatrix.elem);
+					glBindVertexArray(mesh.vaoHandle);
+					// glScissor(leftSubdivViewport, bottomSubdivViewport, subdivReso, subdivReso);
+					glDrawElements(GL_TRIANGLES, mesh.indexCount, GL_UNSIGNED_INT, 0);
+				}
+			}
+
+
 			glBindVertexArray(0);
 			glBindFramebuffer(GL_FRAMEBUFFER, 0);
 			glUseProgram(0);

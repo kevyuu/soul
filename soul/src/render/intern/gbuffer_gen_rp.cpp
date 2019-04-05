@@ -68,7 +68,7 @@ namespace Soul {
 			glDrawBuffers(0, NULL);
 
 			glViewport(0, 0, db.targetWidthPx, db.targetHeightPx);
-			for (int i = 0; i < db.meshBuffer.count(); i++) {
+			for (int i = 0; i < db.meshBuffer.size(); i++) {
 				const Mesh& mesh = db.meshBuffer.get(i);
 				glUniformMatrix4fv(predepthModelUniformLoc, 1, GL_TRUE, (const GLfloat*)mesh.transform.elem);
 				glBindVertexArray(mesh.vaoHandle);
@@ -98,7 +98,7 @@ namespace Soul {
 
 
 
-			for (int i = 0; i < db.meshBuffer.count(); i++) {
+			for (int i = 0; i < db.meshBuffer.size(); i++) {
 
 				const Mesh& mesh = db.meshBuffer[i];
 				const Material& material = db.materialBuffer[mesh.materialID];
