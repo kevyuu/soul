@@ -624,6 +624,8 @@ namespace Soul { namespace Render {
         
 		db.dirLightIndexes.cleanup();
 		db.dirLightCount = 0;
+		
+		db.pointLights.cleanup();
 
 		db.spotLights.cleanup();
 		
@@ -806,6 +808,50 @@ namespace Soul { namespace Render {
 	void System::dirLightSetBias(DirLightRID lightRID, float bias) {
 		DirLight* dirLight = dirLightPtr(lightRID);
 		dirLight->bias = bias;
+	}
+
+	PointLightRID System::pointLightCreate(const PointLightSpec & spec)
+	{
+		PointLightRID rid = _db.pointLights.add({});
+		PointLight& pointLight = _db.pointLights[rid];
+		pointLight.position = spec.position;
+		pointLight.bias = spec.bias;
+		pointLight.color = spec.color;
+		pointLight.maxDistance = spec.maxDistance;
+		return rid;
+	}
+
+	void System::pointLightDestroy(PointLightRID lightRID)
+	{
+		_db.pointLights.remove(lightRID);
+	}
+
+	PointLight * System::pointLightPtr(PointLightRID lightRID)
+	{
+		return &_db.pointLights[lightRID];
+	}
+
+	void System::pointLightSetPosition(PointLightRID lightRID, Vec3f position) {
+		PointLight* pointLight = pointLightPtr(lightRID);
+		pointLight->position = position;
+	}
+
+	void System::pointLightSetMaxDistance(PointLightRID lightRID, float maxDistance)
+	{
+		PointLight* pointLight = pointLightPtr(lightRID);
+		pointLight->maxDistance = maxDistance;
+	}
+
+	void System::pointLightSetColor(PointLightRID lightRID, Vec3f color)
+	{
+		PointLight* pointLight = pointLightPtr(lightRID);
+		pointLight->color = color;
+	}
+
+	void System::pointLightSetBias(PointLightRID lightRID, float bias)
+	{
+		PointLight* pointLight = pointLightPtr(lightRID);
+		pointLight->bias = bias;
 	}
 
 	SpotLightRID System::spotLightCreate(const SpotLightSpec& spec)
@@ -1450,7 +1496,21 @@ namespace Soul { namespace Render {
 
 		}
 
-		GLExt::ErrorCheck("ShadowMapRP::execute");
+		// Flush point light
+		db.lightDataUBO.pointLightCount = db.pointLights.size();
+		for (int i = 0; i < db.pointLights.size(); i++)
+		{
+			PointLightUBO &pointLightUBO = db.lightDataUBO.pointLights[i];
+			PointLight& pointLight = db.pointLights[i];
+			pointLightUBO.position = pointLight.position;
+			pointLightUBO.bias = pointLight.bias;
+			pointLightUBO.color = pointLight.color;
+			pointLightUBO.maxDistance = pointLight.maxDistance;
+			for (int i = 0; i < 6; i++)
+			{
+				pointLightUBO.shadowMatrixes[i] = mat4Transpose(pointLight.shadowMatrixes[i]);
+			}
+		}
 
 		// Flush spot light
 		db.lightDataUBO.spotLightCount = db.spotLights.size();

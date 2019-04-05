@@ -1,4 +1,5 @@
 #define MAX_DIR_LIGHT 4
+#define MAX_POINT_LIGHT 100
 #define MAX_SPOT_LIGHT 100
 
 struct OmniLight {
@@ -13,6 +14,15 @@ struct DirectionalLight {
 	vec3 color;
 	float pad1;
 	vec4 cascadeDepths;
+};
+
+struct PointLight
+{
+	mat4 shadowMatrixes[6];
+	vec3 position;
+	float bias;
+	vec3 color;
+	float maxDistance;
 };
 
 struct SpotLight {
@@ -34,8 +44,12 @@ layout(std140) uniform LightData{
 	vec3 pad1;
 	int directionalLightCount;
 
-	SpotLight spotLights[MAX_SPOT_LIGHT];
+	PointLight pointLights[MAX_POINT_LIGHT];
 	vec3 pad2;
+	int pointLightCount;
+
+	SpotLight spotLights[MAX_SPOT_LIGHT];
+	vec3 pad3;
 	int spotLightCount;
 
 };

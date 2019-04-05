@@ -195,6 +195,8 @@ namespace Soul {
 
 			_db.world.dirLightEntities.reserve(Render::MAX_DIR_LIGHT);
 
+			_db.world.pointLightEntities.reserve(Render::MAX_POINT_LIGHT);
+
 			_db.world.spotLightEntities.reserve(Render::MAX_SPOT_LIGHT);
 
 			_db.world.materials.reserve(1000);
@@ -202,7 +204,6 @@ namespace Soul {
 
 			_db.world.textures.reserve(1000);
 			_db.world.textures.add({});
-
 
 			// Initialize render system
 			int resWidth, resHeight;
@@ -256,6 +257,7 @@ namespace Soul {
 			_db.world.groupEntities.cleanup();
 			_db.world.meshEntities.cleanup();
 			_db.world.dirLightEntities.cleanup();
+			_db.world.pointLightEntities.cleanup();
 			_db.world.spotLightEntities.cleanup();
 			_db.world.materials.cleanup();
 			_db.world.textures.cleanup();

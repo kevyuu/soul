@@ -144,6 +144,20 @@ void main() {
 
 		specularOutput += computeSpecularBRDF(L, V, worldNormal, pixelMaterial) * radiance *  max(dot(worldNormal, L), 0.0f);
 		diffuseOutput += computeDiffuseBRDF(L, V, worldNormal, pixelMaterial) * radiance * max(dot(worldNormal, L), 0.0f);
+
+	}
+
+	for (int i = 0; i < pointLightCount; i++)
+	{
+		vec3 posToLight = worldPosition - pointLights[i].position;
+		vec3 L = normalize(-posToLight);
+
+		float distanceAttenuation = light_getDistanceAttenuation(posToLight, 1.0f / pointLights[i].maxDistance);
+		vec3 radiance = pointLights[i].color * distanceAttenuation;
+
+		specularOutput += computeSpecularBRDF(L, V, worldNormal, pixelMaterial) * radiance * max(dot(worldNormal, L), 0.0f);
+		diffuseOutput += computeDiffuseBRDF(L, V, worldNormal, pixelMaterial) * radiance * max(dot(worldNormal, L), 0.0f);
+
 	}
 
 	for (int i = 0; i < spotLightCount; i++)

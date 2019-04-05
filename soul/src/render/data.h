@@ -9,13 +9,15 @@ namespace Soul {namespace Render {
 	
 	// public constant
 	static constexpr int MAX_DIR_LIGHT = 4;
+	static constexpr int MAX_POINT_LIGHT = 100;
 	static constexpr int MAX_SPOT_LIGHT = 100;
 
 	typedef PoolID MeshRID;
 	typedef PoolID DirLightRID;
+	typedef PackedID PointLightRID;
+	typedef PackedID SpotLightRID;
 	typedef GLuint TextureRID;
 	typedef uint32 MaterialRID;
-	typedef PackedID SpotLightRID;
 
 	struct VoxelGIConfig {
 		Vec3f center = { 0.0f, 0.0f, 0.0f };
@@ -146,6 +148,15 @@ namespace Soul {namespace Render {
 		float bias;
 	};
 
+	struct PointLight {
+		Mat4 shadowMatrixes[6];
+		ShadowKey shadowKeys[6];
+		Vec3f position;
+		float bias;
+		Vec3f color;
+		float maxDistance;
+	};
+
 	struct SpotLight
 	{
 		Mat4 shadowMatrix;
@@ -268,8 +279,17 @@ namespace Soul {namespace Render {
 		Vec3f direction = Vec3f(0.0f, -1.0f, 0.0f);
 		Vec3f color = { 10.0f, 10.0f, 10.0f };
 		float split[3] = { 0.1f, 0.3f, 0.6f };
-		int32 shadowMapResolution = 2048;
-		float bias = 0.05f;
+		int32 shadowMapResolution = TexReso_2048;
+		float bias = 0.001f;
+	};
+
+	struct PointLightSpec 
+	{
+		Vec3f position = Vec3f(0.0f, 0.0f, 0.0f);
+		float bias = 0.001f;
+		Vec3f color = { 10.0f, 10.0f, 10.0f };
+		float maxDistance = 10;
+		int32 shadowMapResolution = TexReso_2048;
 	};
 
 	struct SpotLightSpec
@@ -389,6 +409,15 @@ namespace Soul {namespace Render {
 		float cascadeDepths[4];
 	};
 
+	struct PointLightUBO
+	{
+		Mat4 shadowMatrixes[6];
+		Vec3f position;
+		float bias;
+		Vec3f color;
+		float maxDistance;
+	};
+
 	struct SpotLightUBO
 	{
 		Mat4 shadowMatrix;
@@ -407,9 +436,13 @@ namespace Soul {namespace Render {
 		DirectionalLightUBO dirLights[MAX_DIR_LIGHT];
 		Vec3f pad1;
 		int dirLightCount;
+
+		PointLightUBO pointLights[MAX_POINT_LIGHT];
+		Vec3f pad2;
+		int pointLightCount;
 		
 		SpotLightUBO spotLights[MAX_SPOT_LIGHT];
-		Vec3f pad2;
+		Vec3f pad3;
 		int spotLightCount;
 
 	};
@@ -789,6 +822,7 @@ namespace Soul {namespace Render {
 		DirLight dirLights[MAX_DIR_LIGHT];
 		int dirLightCount;
 
+		PackedArray<PointLight> pointLights;
 		PackedArray<SpotLight> spotLights;
 		
 		Environment environment;
