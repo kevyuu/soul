@@ -96,13 +96,6 @@ namespace Soul {
 			glDisable(GL_DEPTH_TEST);
 			glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 
-			glBindFramebuffer(GL_READ_FRAMEBUFFER, db.lightBuffer.frameBuffer);
-			glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
-			glBlitFramebuffer(0, 0, db.targetWidthPx, db.targetHeightPx, 0, 0, db.targetWidthPx, db.targetHeightPx, GL_COLOR_BUFFER_BIT, GL_NEAREST);
-			glBindFramebuffer(GL_READ_FRAMEBUFFER, db.gBuffer.frameBuffer);
-			glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
-			glBlitFramebuffer(0, 0, db.targetWidthPx, db.targetHeightPx, 0, 0, db.targetWidthPx, db.targetHeightPx, GL_DEPTH_BUFFER_BIT, GL_NEAREST);
-
 			glBindFramebuffer(GL_FRAMEBUFFER, 0);
 			glUseProgram(0);
 

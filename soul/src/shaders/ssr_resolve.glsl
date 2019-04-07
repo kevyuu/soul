@@ -210,13 +210,12 @@ void main() {
 		cone_tan
 	);
 	
-	vec3 specularIndirectColor = voxel_gi_getSpecularMultiplier() * specularVoxel.xyz * computeSpecularBRDF(L, V, N, pixelMaterial) * max(dot(N, L), 0) / max(pdf, 1e-8);
-	specularIndirectColor += ((1 - specularVoxel.a) * specularEnv);
+	vec3 specularIndirectColor = reflectionColor + (1 - reflectionAlpha) * voxel_gi_getSpecularMultiplier() * specularVoxel.xyz * computeSpecularBRDF(L, V, N, pixelMaterial) * max(dot(N, L), 0) / max(pdf, 1e-8);
+	float specularIndirectAlpha = reflectionAlpha + (1 - reflectionAlpha) * specularVoxel.a;
+	specularIndirectColor += ((1 - specularIndirectAlpha) * specularEnv);
+	
 	
 	vec3 color = directColor + (diffuseIndirectColor + specularIndirectColor) * pixelMaterial.ao;
-
-	color = Reindhardt(color);
-	color = pow(color, vec3(1.0f / 2.2));
 
 	reflection = color;
 }

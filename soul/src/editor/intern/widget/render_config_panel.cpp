@@ -81,6 +81,22 @@ namespace Soul {
 
 			}
 
+			if (ImGui::CollapsingHeader("Post Process"))
+			{
+				if (ImGui::CollapsingHeader("Glow"))
+				{
+					ImGui::InputFloat("Threshold", &renderConfig.postProcessConfig.glowConfig.threshold);
+					ImGui::InputFloat("Intensity", &renderConfig.postProcessConfig.glowConfig.intensity);
+					for (int i = 0; i < sizeof(renderConfig.postProcessConfig.glowConfig.useLevel); i++)
+					{
+						char label[12];
+						sprintf(label, "Use level %d", i);
+						ImGui::Checkbox(label, &renderConfig.postProcessConfig.glowConfig.useLevel[i]);
+					}
+					db->world.renderSystem.postProcessUpdateGlow(renderConfig.postProcessConfig.glowConfig);
+				}
+			}
+
 			ImGui::End();
 
 		}

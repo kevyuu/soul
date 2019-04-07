@@ -72,11 +72,14 @@ namespace Soul { namespace Render {
 
         db.renderPassList.add(new ShadowMapRP());
         db.renderPassList.add(new GBufferGenRP());
-        db.renderPassList.add(new GaussianBlurRP());
+        db.renderPassList.add(new GaussianBlurRP(_db.gBuffer.frameBuffer, GL_COLOR_ATTACHMENT3));
 		db.renderPassList.add(new SSRTraceRP());
 		db.renderPassList.add(new VoxelLightInjectRP());
 		db.renderPassList.add(new VoxelMipmapGenRP());
 		db.renderPassList.add(new SSRResolveRP());
+		db.renderPassList.add(new GlowExtractRP());
+		db.renderPassList.add(new GaussianBlurRP(_db.effectBuffer.lightMipChain[0].mipmaps[0].frameBuffer, GL_COLOR_ATTACHMENT0));
+		db.renderPassList.add(new GlowBlendRP());
 		db.renderPassList.add(new SkyboxRP());
 		db.renderPassList.add(new Texture2DDebugRP());
 		db.renderPassList.add(new WireframeRP());
@@ -212,7 +215,22 @@ namespace Soul { namespace Render {
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+		// Initialize post process buffer
+		glGenFramebuffers(1, &(effectBuffer.postProcessBuffer.frameBuffer));
+		glBindFramebuffer(GL_FRAMEBUFFER, effectBuffer.postProcessBuffer.frameBuffer);
+
+		glGenTextures(1, &(effectBuffer.postProcessBuffer.colorBuffer));
+		glBindTexture(GL_TEXTURE_2D, effectBuffer.postProcessBuffer.colorBuffer);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16, targetWidth, targetHeight, 0, GL_RGB, GL_FLOAT, 0);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+		glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, effectBuffer.postProcessBuffer.colorBuffer, 0);
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_TEXTURE_2D, effectBuffer.depthBuffer, 0);
 		
+		// Initialize ssr trace buffer
         glGenFramebuffers(1, &(effectBuffer.ssrTraceBuffer.frameBuffer));
         glBindFramebuffer(GL_FRAMEBUFFER, effectBuffer.ssrTraceBuffer.frameBuffer);
 
@@ -235,6 +253,7 @@ namespace Soul { namespace Render {
 			std::cout<<"_initEffectBuffer::OpenGL error: "<<err<<std::endl;
 		}
 
+		// Initialize resolve buffer
         glGenFramebuffers(1, &(db.effectBuffer.ssrResolveBuffer.frameBuffer));
         glBindFramebuffer(GL_FRAMEBUFFER, db.effectBuffer.ssrResolveBuffer.frameBuffer);
 
@@ -321,6 +340,9 @@ namespace Soul { namespace Render {
 		Database& db = _db;
 		EffectBuffer& effectBuffer = db.effectBuffer;
 
+		GLExt::TextureDelete(&effectBuffer.postProcessBuffer.colorBuffer);
+		GLExt::FramebufferDelete(&effectBuffer.postProcessBuffer.frameBuffer);
+
 		GLExt::TextureDelete(&effectBuffer.ssrTraceBuffer.traceBuffer);
 		GLExt::FramebufferDelete( &effectBuffer.ssrTraceBuffer.frameBuffer);
 		
@@ -359,7 +381,7 @@ namespace Soul { namespace Render {
 
         glGenTextures(1, &(lightBuffer.colorBuffer));
         glBindTexture(GL_TEXTURE_2D, lightBuffer.colorBuffer);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, targetWidth, targetHeight, 0, GL_RGB, GL_FLOAT, 0);
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, targetWidth, targetHeight, 0, GL_RGB, GL_FLOAT, 0);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
         glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
@@ -931,6 +953,11 @@ namespace Soul { namespace Render {
 		SpotLight* spotLight = spotLightPtr(spotLightRID);
 		spotLight->bias = bias;
     }
+
+	void System::postProcessUpdateGlow(const GlowConfig & config)
+	{
+		_db.postProcessConfig.glowConfig = config;
+	}
 
     void System::envSetAmbientColor(Vec3f ambientColor) {
         _db.environment.ambientColor = ambientColor;

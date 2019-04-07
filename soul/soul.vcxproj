@@ -91,6 +91,8 @@
     <ClCompile Include="src\extern\imgui_pie.cpp" />
     <ClCompile Include="src\extern\imgui_widgets.cpp" />
     <ClCompile Include="src\render\intern\glext.cpp" />
+    <ClCompile Include="src\render\intern\glow_blend_rp.cpp" />
+    <ClCompile Include="src\render\intern\glow_extract_rp.cpp" />
     <ClCompile Include="src\render\intern\velocity_buffer_gen_rp.cpp" />
     <ClCompile Include="src\editor\main.cpp" />
     <ClCompile Include="src\render\intern\brdf_map_rp.cpp" />
@@ -144,6 +146,8 @@
     <None Include="src\shaders\gaussian_blur_horizontal.glsl" />
     <None Include="src\shaders\gaussian_blur_vertical.glsl" />
     <None Include="src\shaders\gbuffer_gen.glsl" />
+    <None Include="src\shaders\glow_blend.glsl" />
+    <None Include="src\shaders\glow_extract.glsl" />
     <None Include="src\shaders\light.lib.glsl" />
     <None Include="src\shaders\lighting.glsl" />
     <None Include="src\shaders\math.lib.glsl" />

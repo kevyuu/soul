@@ -96,8 +96,6 @@ namespace Soul {
 
 			glViewport(0, 0, db.targetWidthPx, db.targetHeightPx);
 
-
-
 			for (int i = 0; i < db.meshBuffer.size(); i++) {
 
 				const Mesh& mesh = db.meshBuffer[i];

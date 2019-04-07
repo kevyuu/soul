@@ -122,6 +122,7 @@ namespace Soul {
 			} envConfig;
 			Render::VoxelGIConfig voxelGIConfig;
 			Render::ShadowAtlasConfig shadowAtlasConfig;
+			Render::PostProcessConfig postProcessConfig;
 		};
 
 		struct World {

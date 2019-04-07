@@ -82,6 +82,8 @@ namespace Soul { namespace Render {
 		void spotLightSetColor(SpotLightRID spotLightRID, Vec3f color);
 		void spotLightSetBias(SpotLightRID, float bias);
 
+		void postProcessUpdateGlow(const GlowConfig& config);
+
 		void wireframePush(MeshRID meshRID);
 
 		void render(const Camera& camera);

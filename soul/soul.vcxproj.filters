@@ -287,6 +287,12 @@
     <ClCompile Include="src\render\intern\wireframe_rp.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="src\render\intern\glow_extract_rp.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\render\intern\glow_blend_rp.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <None Include="src\shaders\blinnphong.vs" />
@@ -337,6 +343,8 @@
       <Filter>Resource Files</Filter>
     </None>
     <None Include="src\shaders\wireframe.glsl" />
+    <None Include="src\shaders\glow_extract.glsl" />
+    <None Include="src\shaders\glow_blend.glsl" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="assets\Dagger_Albedo.tga" />

@@ -37,6 +37,8 @@ namespace Soul {
 			constexpr const char* voxel_debug = SHADER_FILE_PATH("voxel_debug.glsl");
 			constexpr const char* voxel_light_inject = SHADER_FILE_PATH("voxel_light_inject.glsl");
 			constexpr const char* voxel_mipmap_gen = SHADER_FILE_PATH("voxel_mipmap_gen.glsl");
+			constexpr const char* glow_extract = SHADER_FILE_PATH("glow_extract.glsl");
+			constexpr const char* glow_blend = SHADER_FILE_PATH("glow_blend.glsl");
 			constexpr const char* wireframe = SHADER_FILE_PATH("wireframe.glsl");
         };
 

@@ -30,7 +30,17 @@ namespace Soul {namespace Render {
 
 	struct ShadowAtlasConfig {
 		int32 resolution;
-		int8 subdivSqrtCount[4] = { 1, 2, 4, 8 };
+		int8 subdivSqrtCount[4] = { 1, 2, 8, 8 };
+	};
+
+	struct GlowConfig {
+		float threshold = 1.0f;
+		float intensity = 1.0f;
+		bool useLevel[8] = { false };
+	};
+
+	struct PostProcessConfig {
+		GlowConfig glowConfig;
 	};
 
 	struct Camera {
@@ -299,7 +309,7 @@ namespace Soul {namespace Render {
 		float bias = 0.001f;
 		Vec3f color = { 10.0f, 10.0f, 10.0f };
 		float maxDistance = 10;
-		int32 shadowMapResolution = TexReso_2048;
+		int32 shadowMapResolution = TexReso_256;
 	};
 
 	struct SpotLightSpec
@@ -393,7 +403,7 @@ namespace Soul {namespace Render {
 		GLuint framebuffer;
 
 		// TODO(kevyuu): Implement BitSet data structure and use it instead of bool
-		bool slots[MAX_LIGHT];
+		bool slots[1000];
 	};
 
 	struct CameraDataUBO {
@@ -623,6 +633,12 @@ namespace Soul {namespace Render {
 	};
 
 	struct GaussianBlurRP : public RenderPass {
+
+		GaussianBlurRP(GLuint frameBufferSource, GLuint colorAttachmentSource);
+
+		GLuint frameBufferSource;
+		GLuint colorAttachmentSource;
+
 		GLuint horizontalProgram;
 
 		GLint sourceTexUniformLocHorizontal;
@@ -741,6 +757,34 @@ namespace Soul {namespace Render {
 		void shutdown(Database& database);
 	};
 
+	struct GlowExtractRP : public RenderPass {
+
+		GLuint program;
+
+		GLint lightBufferLoc;
+		GLint thresholdLoc;
+
+		void init(Database& database);
+		void execute(Database& database);
+		void shutdown(Database& database);
+
+	};
+
+	struct GlowBlendRP : public RenderPass {
+
+		GLuint program;
+
+		GLint lightBufferLoc;
+		GLint glowBufferLoc;
+		GLint glowIntensityLoc;
+		GLint glowMaskLoc;
+
+		void init(Database& database);
+		void execute(Database& database);
+		void shutdown(Database& database);
+
+	};
+
 	struct WireframeRP : public RenderPass {
 		GLuint program;
 
@@ -795,6 +839,11 @@ namespace Soul {namespace Render {
 			GLuint frameBuffer = 0;
 			GLuint resolveBuffer = 0;
 		} ssrResolveBuffer;
+
+		struct PostProcessBuffer {
+			GLuint frameBuffer = 0;
+			GLuint colorBuffer = 0;
+		} postProcessBuffer;
 
 		GLuint depthBuffer = 0;
 
@@ -858,6 +907,8 @@ namespace Soul {namespace Render {
 
 		VoxelGIConfig voxelGIConfig;
 		VoxelGIBuffer voxelGIBuffer;
+
+		PostProcessConfig postProcessConfig;
 
 		// util geometry
 		GLuint cubeVAO;

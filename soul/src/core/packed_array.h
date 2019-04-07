@@ -90,7 +90,7 @@ namespace Soul
 		inline T* ptr(PackedID id)
 		{
 			uint32 internalIndex = _internalIndexes[id];
-			return &_buffer[0];
+			return &_buffer[internalIndex];
 		}
 
 		inline uint32 size() const 

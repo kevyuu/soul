@@ -217,9 +217,9 @@ namespace Soul {
 			renderConfig.voxelGIConfig.resolution = 128;
 			renderConfig.shadowAtlasConfig.resolution = Render::TexReso_8192;
 			renderConfig.shadowAtlasConfig.subdivSqrtCount[0] = 1;
-			renderConfig.shadowAtlasConfig.subdivSqrtCount[1] = 1;
-			renderConfig.shadowAtlasConfig.subdivSqrtCount[2] = 2;
-			renderConfig.shadowAtlasConfig.subdivSqrtCount[3] = 2;
+			renderConfig.shadowAtlasConfig.subdivSqrtCount[1] = 2;
+			renderConfig.shadowAtlasConfig.subdivSqrtCount[2] = 8;
+			renderConfig.shadowAtlasConfig.subdivSqrtCount[3] = 8;
 			_db.world.renderSystem.init(renderConfig);
 
 			_db.world.renderConfig.voxelGIConfig = renderConfig.voxelGIConfig;

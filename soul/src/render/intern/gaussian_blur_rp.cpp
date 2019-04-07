@@ -4,6 +4,12 @@
 #include "core/math.h"
 
 namespace Soul {namespace Render {
+		
+		GaussianBlurRP::GaussianBlurRP(GLuint frameBufferSource, GLuint colorAttachmentSource) {
+			this->frameBufferSource = frameBufferSource;
+			this->colorAttachmentSource = colorAttachmentSource;
+		}
+
 		void GaussianBlurRP::init(Database &database) {
 
 			horizontalProgram = GLExt::ProgramCreate(RenderAsset::ShaderFile::gaussianBlurHorizontal);
@@ -26,9 +32,9 @@ namespace Soul {namespace Render {
 
 			Database& db = database;
 
-			glBindFramebuffer(GL_READ_FRAMEBUFFER, database.gBuffer.frameBuffer);
-			glReadBuffer(GL_COLOR_ATTACHMENT3);
-			glBindFramebuffer(GL_DRAW_FRAMEBUFFER, database.effectBuffer.lightMipChain[0].mipmaps.get(0).frameBuffer);
+			glBindFramebuffer(GL_READ_FRAMEBUFFER, frameBufferSource);
+			glReadBuffer(colorAttachmentSource);
+			glBindFramebuffer(GL_DRAW_FRAMEBUFFER, database.effectBuffer.lightMipChain[0].mipmaps[0].frameBuffer);
 			glBlitFramebuffer(0, 0,
 				database.targetWidthPx, database.targetHeightPx,
 				0, 0,
