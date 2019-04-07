@@ -19,6 +19,8 @@ namespace Soul {
 				return world->dirLightEntities.ptr(entityID.index);
 			case EntityType_SPOTLIGHT:
 				return world->spotLightEntities.ptr(entityID.index);
+			case EntityType_POINTLIGHT:
+				return world->pointLightEntities.ptr(entityID.index);
 			default:
 				SOUL_ASSERT(0, false, "Entity type is not valid, entity type = %d", entityID.type);
 			}
@@ -47,7 +49,7 @@ namespace Soul {
 				SOUL_ASSERT(0, false, "Entity type is not valid, entity type = %d", entityType);
 			}
 
-			GroupEntity* parent = (GroupEntity*) EntityPtr(world, parentID);
+			GroupEntity* parent = (GroupEntity*)EntityPtr(world, parentID);
 			Entity* next = parent->first;
 			if (next != nullptr) {
 				next->prev = entity;
@@ -106,6 +108,9 @@ namespace Soul {
 			case EntityType_SPOTLIGHT:
 				SpotLightEntitySetLocalTransform(world, (SpotLightEntity*)entity, localTransform);
 				break;
+			case EntityType_POINTLIGHT:
+				PointLightEntitySetWorldTransform(world, (PointLightEntity*)entity, localTransform);
+				break;
 			default:
 				SOUL_ASSERT(0, false, "Entity type is invalid | Entity type = %d", entity->entityID.type);
 				break;
@@ -125,6 +130,9 @@ namespace Soul {
 				break;
 			case EntityType_SPOTLIGHT:
 				SpotLightEntitySetWorldTransform(world, (SpotLightEntity*)entity, worldTransform);
+				break;
+			case EntityType_POINTLIGHT:
+				PointLightEntitySetWorldTransform(world, (PointLightEntity*)entity, worldTransform);
 				break;
 			default:
 				SOUL_ASSERT(0, false, "Entity type is invalid | Entity type = %d", entity->entityID.type);
@@ -317,6 +325,50 @@ namespace Soul {
 			spotLightEntity->spec.direction = direction;
 			world->renderSystem.spotLightSetPosition(spotLightEntity->rid, spotLightEntity->worldTransform.position);
 			world->renderSystem.spotLightSetDirection(spotLightEntity->rid, direction);
+		}
+
+		EntityID PointLightEntityCreate(World* world, GroupEntity* parent, const char* name, Transform& localTransform, const Render::PointLightSpec& spec)
+		{
+			EntityID entityID;
+			entityID.type = EntityType_POINTLIGHT;
+			Render::PointLightRID lightRID = world->renderSystem.pointLightCreate(spec);
+
+			entityID.index = world->pointLightEntities.add({});
+			PointLightEntity& pointLightEntity = world->pointLightEntities[entityID.index];
+			pointLightEntity.spec = spec;
+			pointLightEntity.rid = lightRID;
+
+			Entity* entity = (Entity*)&pointLightEntity;
+			_CommonEntityCreate(parent, entityID, name, entity);
+
+			entity->worldTransform = entity->parent->worldTransform * localTransform;
+			entity->worldTransform = parent->worldTransform * localTransform;
+			entity->worldTransform.position = spec.position;
+			Mat4 localMat4 = mat4Inverse(mat4Transform(entity->parent->worldTransform)) * mat4Transform(entity->worldTransform);
+			entity->localTransform = transformMat4(localMat4);
+
+			return entityID;
+		}
+
+		void PointLightEntityDelete(World* world, PointLightEntity* pointLightEntity)
+		{
+			_CommonEntityDelete((Entity*)pointLightEntity);
+			world->renderSystem.pointLightDestroy(pointLightEntity->rid);
+			world->pointLightEntities.remove(pointLightEntity->entityID.index);
+		}
+
+		void PointLightEntitySetLocalTransform(World* world, PointLightEntity* pointLightEntity, const Transform& localTransform)
+		{
+			_CommonEntitySetLocalTransform((Entity*)pointLightEntity, localTransform);
+			pointLightEntity->spec.position = pointLightEntity->worldTransform.position;
+			world->renderSystem.pointLightSetPosition(pointLightEntity->rid, pointLightEntity->worldTransform.position);
+		}
+
+		void PointLightEntitySetWorldTransform(World* world, PointLightEntity* pointLightEntity, const Transform& worldTransform)
+		{
+			_CommonEntitySetWorldTransform((Entity*)pointLightEntity, worldTransform);
+			pointLightEntity->spec.position = worldTransform.position;
+			world->renderSystem.pointLightSetPosition(pointLightEntity->rid, pointLightEntity->worldTransform.position);
 		}
 	
 	}

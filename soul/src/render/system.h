@@ -63,6 +63,14 @@ namespace Soul { namespace Render {
 		void dirLightSetCascadeSplit(DirLightRID lightRID, float split1, float split2, float split3);
 		void dirLightSetBias(DirLightRID lightRID, float bias);
 
+		PointLightRID pointLightCreate(const PointLightSpec& spec);
+		void pointLightDestroy(PointLightRID lightRID);
+		PointLight* pointLightPtr(PointLightRID lightRID);
+		void pointLightSetPosition(PointLightRID lightRID, Vec3f position);
+		void pointLightSetMaxDistance(PointLightRID lightRID, float maxDistance);
+		void pointLightSetColor(PointLightRID lightRID, Vec3f color);
+		void pointLightSetBias(PointLightRID lightRID, float bias);
+
 		SpotLightRID spotLightCreate(const SpotLightSpec& spec);
 		void spotLightDestroy(SpotLightRID spotLightRID);
 		SpotLight* spotLightPtr(SpotLightRID spotLightRID);
@@ -89,6 +97,7 @@ namespace Soul { namespace Render {
 		void _shadowAtlasFreeSlot(ShadowKey shadowKey);
 
 		void _dirLightUpdateShadowMatrix();
+		void _pointLightUpdateShadowMatrix();
 		void _spotLightUpdateShadowMatrix();
 
 		void _flushUBO();

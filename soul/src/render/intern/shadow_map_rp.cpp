@@ -18,6 +18,21 @@ namespace Soul {
 
 		}
 
+		static void _calculateViewport(const ShadowAtlas& shadowAtlas, const ShadowKey& shadowKey, int* viewportLeft, int* viewportBottom, int* viewportWidth)
+		{
+			int quadrant = shadowKey.quadrant;
+			int subdiv = shadowKey.subdiv;
+			int subdivCount = shadowAtlas.subdivSqrtCount[quadrant] * shadowAtlas.subdivSqrtCount[quadrant];
+			int atlasReso = shadowAtlas.resolution;
+			int subdivReso = atlasReso / (2 * shadowAtlas.subdivSqrtCount[quadrant]);
+			int xSubdiv = subdiv % shadowAtlas.subdivSqrtCount[quadrant];
+			int ySubdiv = subdiv / shadowAtlas.subdivSqrtCount[quadrant];
+
+			*viewportBottom = (quadrant / 2) * 0.5f * atlasReso + ySubdiv * subdivReso;
+			*viewportLeft = (quadrant % 2) * 0.5f * atlasReso + xSubdiv * subdivReso;
+			*viewportWidth = subdivReso;
+		}
+
 		void ShadowMapRP::execute(Database &database) {
 			SOUL_PROFILE_RANGE_PUSH(__FUNCTION__);
 
@@ -40,6 +55,7 @@ namespace Soul {
 
 			glUseProgram(program);
 
+			
 
 			for (int i = 0; i < database.dirLightCount; i++) {
 				const DirLight& light = database.dirLights[i];
@@ -74,21 +90,31 @@ namespace Soul {
 				}
 			}
 
-			glDisable(GL_SCISSOR_TEST);
-
-			for (int i = 0; i < database.spotLights.size(); i++)
+			for (auto iterator = database.pointLights.begin(); iterator != database.pointLights.end(); iterator.next())
 			{
-				const SpotLight& light = database.spotLights[i];
-				int quadrant = light.shadowKey.quadrant;
-				int subdiv = light.shadowKey.subdiv;
-				int subdivCount = database.shadowAtlas.subdivSqrtCount[quadrant] * database.shadowAtlas.subdivSqrtCount[quadrant];
-				int atlasReso = database.shadowAtlas.resolution;
-				int subdivReso = atlasReso / (2 * database.shadowAtlas.subdivSqrtCount[quadrant]);
-				int xSubdiv = subdiv % database.shadowAtlas.subdivSqrtCount[quadrant];
-				int ySubdiv = subdiv / database.shadowAtlas.subdivSqrtCount[quadrant];
+				const PointLight& light = database.pointLights.iter(iterator);
+				for (int i = 0; i < 6; i++)
+				{
+					int viewportBottom, viewportLeft, viewportWidth;
+					_calculateViewport(database.shadowAtlas, light.shadowKeys[i], &viewportLeft, &viewportBottom, &viewportWidth);
+					for (int j = 0; j < database.meshBuffer.size(); j++)
+					{
+						const Mesh& mesh = database.meshBuffer[j];
+						glUniformMatrix4fv(modelLoc, 1, GL_TRUE, (const GLfloat*)mesh.transform.elem);
+						glUniformMatrix4fv(shadowMatrixLoc, 1, GL_TRUE, (const GLfloat*)light.shadowMatrixes[i].elem);
+						glBindVertexArray(mesh.vaoHandle);
+						glScissor(viewportLeft, viewportBottom, viewportWidth, viewportWidth);
+						glDrawElements(GL_TRIANGLES, mesh.indexCount, GL_UNSIGNED_INT, 0);
+					}
+				}
 
-				float bottomSubdivViewport = (quadrant / 2) * 0.5f * atlasReso + ySubdiv * subdivReso;
-				float leftSubdivViewport = (quadrant % 2) * 0.5f * atlasReso + xSubdiv * subdivReso;
+			}
+
+			for (auto iterator = database.spotLights.begin(); iterator != database.spotLights.end(); iterator.next())
+			{
+				const SpotLight& light = database.spotLights.iter(iterator);
+				int viewportBottom, viewportLeft, viewportWidth;
+				_calculateViewport(database.shadowAtlas, light.shadowKey, &viewportLeft, &viewportBottom, &viewportWidth);
 
 				for (int j = 0; j < database.meshBuffer.size(); j++)
 				{
@@ -96,12 +122,12 @@ namespace Soul {
 					glUniformMatrix4fv(modelLoc, 1, GL_TRUE, (const GLfloat*)mesh.transform.elem);
 					glUniformMatrix4fv(shadowMatrixLoc, 1, GL_TRUE, (const GLfloat*)light.shadowMatrix.elem);
 					glBindVertexArray(mesh.vaoHandle);
-					// glScissor(leftSubdivViewport, bottomSubdivViewport, subdivReso, subdivReso);
+					glScissor(viewportLeft, viewportBottom, viewportWidth, viewportWidth);
 					glDrawElements(GL_TRIANGLES, mesh.indexCount, GL_UNSIGNED_INT, 0);
 				}
 			}
 
-
+			glDisable(GL_SCISSOR_TEST);
 			glBindVertexArray(0);
 			glBindFramebuffer(GL_FRAMEBUFFER, 0);
 			glUseProgram(0);

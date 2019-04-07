@@ -34,6 +34,10 @@ namespace Soul {
 					logo = ICON_II_ANDROID_SUNNY;
 					break;
 				}
+				case EntityType_POINTLIGHT: {
+					logo = ICON_II_LIGHTBULB;
+					break;
+				}
 				case EntityType_SPOTLIGHT: {
 					logo = ICON_MD_HIGHLIGHT;
 					break;
@@ -100,6 +104,17 @@ namespace Soul {
 						}
 						else {
 							DirLightEntityCreate(&db->world, parent, "Directional Light", defaultTransform, Render::DirectionalLightSpec());
+						}
+					}
+					if (ImGui::MenuItem(" " ICON_II_LIGHTBULB " Pointlight"))
+					{
+						if (db->world.pointLightEntities.size() == Render::MAX_POINT_LIGHT + 1)
+						{
+							// open popup to tell error
+						}
+						else
+						{
+							PointLightEntityCreate(&db->world, parent, "Pointlight", defaultTransform, Render::PointLightSpec());
 						}
 					}
 					if (ImGui::MenuItem(ICON_MD_HIGHLIGHT " Spotlight"))

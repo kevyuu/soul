@@ -52,6 +52,7 @@ PixelMaterial pixelMaterialCreate(Material material, vec2 texCoord) {
 	
 	if (bitTest(material.flags, MaterialFlag_USE_ALBEDO_TEX)) {
 		pixelMaterial.albedo = pow(texture(material.albedoMap, texCoord).rgb, vec3(2.2));
+		pixelMaterial.albedo *= material.albedo;
 	}
 	else {
 		pixelMaterial.albedo = material.albedo;
@@ -69,6 +70,7 @@ PixelMaterial pixelMaterialCreate(Material material, vec2 texCoord) {
 		if (bitTest(material.flags, MaterialFlag_METALLIC_CHANNEL_GREEN)) pixelMaterial.metallic = texture(material.metallicMap, texCoord).g;
 		if (bitTest(material.flags, MaterialFlag_METALLIC_CHANNEL_BLUE)) pixelMaterial.metallic = texture(material.metallicMap, texCoord).b;
 		if (bitTest(material.flags, MaterialFlag_METALLIC_CHANNEL_ALPHA)) pixelMaterial.metallic = texture(material.metallicMap, texCoord).a;
+		pixelMaterial.metallic *= material.metallic;
 	}
 	else {
 		pixelMaterial.metallic = material.metallic;
@@ -79,6 +81,7 @@ PixelMaterial pixelMaterialCreate(Material material, vec2 texCoord) {
 		if (bitTest(material.flags, MaterialFlag_ROUGHNESS_CHANNEL_GREEN)) pixelMaterial.roughness = texture(material.roughnessMap, texCoord).g;
 		if (bitTest(material.flags, MaterialFlag_ROUGHNESS_CHANNEL_BLUE)) pixelMaterial.roughness = texture(material.roughnessMap, texCoord).b;
 		if (bitTest(material.flags, MaterialFlag_ROUGHNESS_CHANNEL_ALPHA)) pixelMaterial.roughness = texture(material.roughnessMap, texCoord).a;
+		pixelMaterial.roughness *= material.roughness;
 	}
 	else {
 		pixelMaterial.roughness = material.roughness;

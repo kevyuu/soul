@@ -624,6 +624,8 @@ namespace Soul { namespace Render {
         
 		db.dirLightIndexes.cleanup();
 		db.dirLightCount = 0;
+		
+		db.pointLights.cleanup();
 
 		db.spotLights.cleanup();
 		
@@ -806,6 +808,59 @@ namespace Soul { namespace Render {
 	void System::dirLightSetBias(DirLightRID lightRID, float bias) {
 		DirLight* dirLight = dirLightPtr(lightRID);
 		dirLight->bias = bias;
+	}
+
+	PointLightRID System::pointLightCreate(const PointLightSpec & spec)
+	{
+		PointLightRID rid = _db.pointLights.add({});
+		PointLight& pointLight = _db.pointLights[rid];
+		pointLight.position = spec.position;
+		pointLight.bias = spec.bias;
+		pointLight.color = spec.color;
+		pointLight.maxDistance = spec.maxDistance;
+		for (int i = 0; i < 6; i++)
+		{
+			pointLight.shadowKeys[i] = _shadowAtlasGetSlot(spec.shadowMapResolution);
+		}
+		return rid;
+	}
+
+	void System::pointLightDestroy(PointLightRID lightRID)
+	{
+		PointLight* light = pointLightPtr(lightRID);
+		for (int i = 0; i < 6; i++)
+		{
+			_shadowAtlasFreeSlot(light->shadowKeys[i]);
+		}
+		_db.pointLights.remove(lightRID);
+	}
+
+	PointLight * System::pointLightPtr(PointLightRID lightRID)
+	{
+		return &_db.pointLights[lightRID];
+	}
+
+	void System::pointLightSetPosition(PointLightRID lightRID, Vec3f position) {
+		PointLight* pointLight = pointLightPtr(lightRID);
+		pointLight->position = position;
+	}
+
+	void System::pointLightSetMaxDistance(PointLightRID lightRID, float maxDistance)
+	{
+		PointLight* pointLight = pointLightPtr(lightRID);
+		pointLight->maxDistance = maxDistance;
+	}
+
+	void System::pointLightSetColor(PointLightRID lightRID, Vec3f color)
+	{
+		PointLight* pointLight = pointLightPtr(lightRID);
+		pointLight->color = color;
+	}
+
+	void System::pointLightSetBias(PointLightRID lightRID, float bias)
+	{
+		PointLight* pointLight = pointLightPtr(lightRID);
+		pointLight->bias = bias;
 	}
 
 	SpotLightRID System::spotLightCreate(const SpotLightSpec& spec)
@@ -996,6 +1051,7 @@ namespace Soul { namespace Render {
 		_db.frameIdx++;
         _db.camera = camera;
         _dirLightUpdateShadowMatrix();
+		_pointLightUpdateShadowMatrix();
 		_spotLightUpdateShadowMatrix();
         _flushUBO();
 
@@ -1356,32 +1412,55 @@ namespace Soul { namespace Render {
         }
     }
 
+	static Mat4 _getAtlasMatrix(const ShadowAtlas& shadowAtlas, const ShadowKey& shadowKey)
+	{
+		int quadrant = shadowKey.quadrant;
+		int subdiv = shadowKey.subdiv;
+		int subdivCount = shadowAtlas.subdivSqrtCount[quadrant] * shadowAtlas.subdivSqrtCount[quadrant];
+		int atlasReso = shadowAtlas.resolution;
+		int subdivReso = atlasReso / (2 * shadowAtlas.subdivSqrtCount[quadrant]);
+		int xSubdiv = subdiv % shadowAtlas.subdivSqrtCount[quadrant];
+		int ySubdiv = subdiv / shadowAtlas.subdivSqrtCount[quadrant];
+		float subdivUVWidth = (float)(subdivReso * 2) / atlasReso;
+		float bottomSubdivUV = -1 + (quadrant / 2) * 1 + ySubdiv * subdivUVWidth;
+		float leftSubdivUV = -1 + (quadrant % 2) * 1 + xSubdiv * subdivUVWidth;
+
+		Mat4 atlasMatrix;
+		atlasMatrix.elem[0][0] = subdivUVWidth / 2;
+		atlasMatrix.elem[0][3] = leftSubdivUV + (subdivUVWidth * 0.5f);
+		atlasMatrix.elem[1][1] = subdivUVWidth / 2;
+		atlasMatrix.elem[1][3] = bottomSubdivUV + (subdivUVWidth * 0.5f);
+		atlasMatrix.elem[2][2] = 1;
+		atlasMatrix.elem[3][3] = 1;
+		
+		return atlasMatrix;
+
+	}
+
+	void System::_pointLightUpdateShadowMatrix()
+	{
+		for (auto iterator = _db.pointLights.begin(); iterator != _db.pointLights.end(); iterator.next())
+		{
+			PointLight& light = _db.pointLights.iter(iterator);
+			for (int i = 0; i < 6; i++)
+			{
+				Mat4 atlasMatrix = _getAtlasMatrix(_db.shadowAtlas, light.shadowKeys[i]);
+				light.shadowMatrixes[i] = 
+					atlasMatrix *
+					mat4Perspective(PI / 2, 1, 0.0001f, light.maxDistance) *
+					mat4View(light.position, light.position + light.DIRECTION[i], light.DIRECTION[(i + 1) % 6]);
+			}
+		}
+	}
+
     void System::_spotLightUpdateShadowMatrix()
     {
-		for (int i = 0; i < _db.spotLights.size(); i++)
+		for (auto iterator = _db.spotLights.begin(); iterator != _db.spotLights.end(); iterator.next())
 		{
-			SpotLight& light = _db.spotLights[i];
-			
-			int quadrant = light.shadowKey.quadrant;
-			int subdiv = light.shadowKey.subdiv;
-			int subdivCount = _db.shadowAtlas.subdivSqrtCount[quadrant] * _db.shadowAtlas.subdivSqrtCount[quadrant];
-			int atlasReso = _db.shadowAtlas.resolution;
-			int subdivReso = atlasReso / (2 * _db.shadowAtlas.subdivSqrtCount[quadrant]);
-			int xSubdiv = subdiv % _db.shadowAtlas.subdivSqrtCount[quadrant];
-			int ySubdiv = subdiv / _db.shadowAtlas.subdivSqrtCount[quadrant];
-			float subdivUVWidth = (float)(subdivReso * 2) / atlasReso;
-			float bottomSubdivUV = -1 + (quadrant / 2) * 1 + ySubdiv * subdivUVWidth;
-			float leftSubdivUV = -1 + (quadrant % 2) * 1 + xSubdiv * subdivUVWidth;
+			SpotLight& light = _db.spotLights.iter(iterator);
 
-			Mat4 atlasMatrix;
-			atlasMatrix.elem[0][0] = subdivUVWidth / 2;
-			atlasMatrix.elem[0][3] = leftSubdivUV + (subdivUVWidth * 0.5f);
-			atlasMatrix.elem[1][1] = subdivUVWidth / 2;
-			atlasMatrix.elem[1][3] = bottomSubdivUV + (subdivUVWidth * 0.5f);
-			atlasMatrix.elem[2][2] = 1;
-			atlasMatrix.elem[3][3] = 1;
-
-			Vec3f up = light.direction == Vec3f(0.0f, 0.0f, 1.0f) ? Vec3f(1.0f, 0.0f, 0.0f) : Vec3f(0.0f, 0.0f, 1.0f);
+			Mat4 atlasMatrix = _getAtlasMatrix(_db.shadowAtlas, light.shadowKey);
+			Vec3f up = cross(light.direction, Vec3f(0.0f, 0.0f, 1.0f)) == Vec3f(0.0f, 0.0f, 0.0f) ? Vec3f(1.0f, 0.0f, 0.0f) : Vec3f(0.0f, 0.0f, 1.0f);
 
 			light.shadowMatrix =
 				atlasMatrix *
@@ -1450,12 +1529,27 @@ namespace Soul { namespace Render {
 
 		}
 
-		GLExt::ErrorCheck("ShadowMapRP::execute");
+		// Flush point light
+		db.lightDataUBO.pointLightCount = db.pointLights.size();
+		int i = 0;
+		for (auto iterator = _db.pointLights.begin(); iterator != _db.pointLights.end(); iterator.next(), i++)
+		{
+			PointLightUBO &pointLightUBO = db.lightDataUBO.pointLights[i];
+			PointLight& pointLight = db.pointLights.iter(iterator);
+			pointLightUBO.position = pointLight.position;
+			pointLightUBO.bias = pointLight.bias;
+			pointLightUBO.color = pointLight.color;
+			pointLightUBO.maxDistance = pointLight.maxDistance;
+			for (int j = 0; j < 6; j++)
+			{
+				pointLightUBO.shadowMatrixes[j] = mat4Transpose(pointLight.shadowMatrixes[j]);
+			}
+		}
 
 		// Flush spot light
 		db.lightDataUBO.spotLightCount = db.spotLights.size();
-		int i = 0;
-		for (auto it = db.spotLights.begin(); it != db.spotLights.end(); it.next())
+		i = 0;
+		for (auto it = db.spotLights.begin(); it != db.spotLights.end(); it.next(), i++)
 		{
 			SpotLight& spotLight = db.spotLights.iter(it);
 			SpotLightUBO& spotLightUBO = db.lightDataUBO.spotLights[i];
@@ -1468,8 +1562,6 @@ namespace Soul { namespace Render {
 			spotLightUBO.cosInner = spotLight.cosInner;
 			spotLightUBO.maxDistance = spotLight.maxDistance;
 			spotLightUBO.shadowMatrix = mat4Transpose(spotLight.shadowMatrix);
-
-			i++;
 		}
 
 		glBindBuffer(GL_UNIFORM_BUFFER, db.lightDataUBOHandle);

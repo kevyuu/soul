@@ -144,6 +144,47 @@ void main() {
 
 		specularOutput += computeSpecularBRDF(L, V, worldNormal, pixelMaterial) * radiance *  max(dot(worldNormal, L), 0.0f);
 		diffuseOutput += computeDiffuseBRDF(L, V, worldNormal, pixelMaterial) * radiance * max(dot(worldNormal, L), 0.0f);
+
+	}
+
+	for (int i = 0; i < pointLightCount; i++)
+	{
+		vec3 posToLight = worldPosition - pointLights[i].position;
+		vec3 L = normalize(-posToLight);
+
+		// calculate shadow map faces to use
+		// TODO: Can we optimize it? by removing branch?
+		int shadowIndex;
+		float absX = abs(L.x);
+		float absY = abs(L.y);
+		float absZ = abs(L.z);
+		if (absX > absY && absX > absZ) {
+			if (L.x < 0.0f) {
+				shadowIndex = 3;	
+			} else {
+				shadowIndex = 0;
+			}
+		} else if (absY > absX && absY > absZ) {
+			if (L.y < 0.0f) {
+				shadowIndex = 4;
+			} else {
+				shadowIndex = 1;
+			}
+		} else {
+			if (L.z < 0.0f) {
+				shadowIndex = 5;
+			} else {
+				shadowIndex = 2;
+			}
+		}
+
+		float shadowFactor = computeShadowFactor(worldPosition, pointLights[i].shadowMatrixes[shadowIndex], pointLights[i].bias);
+		float distanceAttenuation = light_getDistanceAttenuation(posToLight, 1.0f / pointLights[i].maxDistance);
+		vec3 radiance = pointLights[i].color * distanceAttenuation * (1 - shadowFactor);
+
+		specularOutput += computeSpecularBRDF(L, V, worldNormal, pixelMaterial) * radiance * max(dot(worldNormal, L), 0.0f);
+		diffuseOutput += computeDiffuseBRDF(L, V, worldNormal, pixelMaterial) * radiance * max(dot(worldNormal, L), 0.0f);
+
 	}
 
 	for (int i = 0; i < spotLightCount; i++)

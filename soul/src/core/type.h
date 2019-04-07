@@ -73,8 +73,8 @@ namespace Soul {
 		float y;
 		float z;
 
-		Vec3f() : x(0), y(0), z(0) {}
-		Vec3f(float x, float y, float z) : x(x), y(y), z(z) {}
+		constexpr Vec3f() : x(0), y(0), z(0) {}
+		constexpr Vec3f(float x, float y, float z) : x(x), y(y), z(z) {}
 	};
 
 	struct Vec4f {

@@ -131,6 +131,21 @@ namespace Soul {
 
 				break;
 			}
+			case EntityType_POINTLIGHT: {
+				PointLightEntity* pointLightEntity = (PointLightEntity*)entity;
+				Render::PointLightRID rid = pointLightEntity->rid;
+
+				ImGui::InputFloat("Bias", &pointLightEntity->spec.bias);
+				renderSystem.pointLightSetBias(rid, pointLightEntity->spec.bias);
+
+				ImGui::InputFloat3("Color", (float*)&pointLightEntity->spec.color);
+				renderSystem.pointLightSetColor(rid, pointLightEntity->spec.color);
+
+				ImGui::InputFloat("Max Distance", &pointLightEntity->spec.maxDistance);
+				renderSystem.pointLightSetMaxDistance(rid, pointLightEntity->spec.maxDistance);
+
+				break;
+			}
 			case EntityType_SPOTLIGHT:{
 				SpotLightEntity* spotLightEntity = (SpotLightEntity*)entity;
 				Render::SpotLightRID rid = spotLightEntity->rid;
