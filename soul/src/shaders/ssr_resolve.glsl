@@ -54,7 +54,7 @@ out vec3 reflection;
 
 vec3 getSpecularDominantDir(vec3 N, vec3 R, float roughness)
 {
-	float smoothness = clamp(1 - roughness, 0.0f, 1.0f);
+	float smoothness = clamp(1 - roughness * roughness, 0.0f, 1.0f);
 	float lerpFactor = smoothness * (sqrt(smoothness) + roughness);
 	// The result is not normalized as we fetch in a cubemap
 	return mix(N, R, lerpFactor);
@@ -210,6 +210,8 @@ void main() {
 		cone_tan
 	);
 	
+	reflectionColor = vec3(0.0f, 0.0f, 0.0f);
+	reflectionAlpha = 0.0f;
 	vec3 specularIndirectColor = reflectionColor + (1 - reflectionAlpha) * voxel_gi_getSpecularMultiplier() * specularVoxel.xyz * computeSpecularBRDF(L, V, N, pixelMaterial) * max(dot(N, L), 0) / max(pdf, 1e-8);
 	float specularIndirectAlpha = reflectionAlpha + (1 - reflectionAlpha) * specularVoxel.a;
 	specularIndirectColor += ((1 - specularIndirectAlpha) * specularEnv);

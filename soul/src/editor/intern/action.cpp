@@ -92,9 +92,15 @@ namespace Soul {
 				if (material.values.count("metallicFactor") != 0) {
 					editorMaterial.metallic = material.values.at("metallicFactor").Factor();
 				}
+				else {
+					editorMaterial.metallic = 0.0f;
+				}
 
 				if (material.values.count("roughnessFactor") != 0) {
 					editorMaterial.roughness = material.values.at("roughnessFactor").Factor();
+				}
+				else {
+					editorMaterial.roughness = 0.0f;
 				}
 
 				if (material.values.count("metallicRoughnessTexture") != 0) {
@@ -124,6 +130,24 @@ namespace Soul {
 					editorMaterial.aoTextureChannel = Render::TexChannel_RED;
 				}
 
+				if (material.additionalValues.count("emissiveTexture")) {
+					int texID = material.additionalValues.at("emissiveTexture").TextureIndex();
+					editorMaterial.emissiveTexID = textureIDs[texID];
+					editorMaterial.useEmissiveTex = true;
+				}
+
+				if (material.additionalValues.count("emissiveFactor")) {
+					const tinygltf::ColorValue& colorValue = material.additionalValues.at("emissiveFactor").ColorFactor();
+					editorMaterial.emissive = {
+						(float)colorValue[0],
+						(float)colorValue[1],
+						(float)colorValue[2]
+					};
+				}
+				else {
+					editorMaterial.emissive = Vec3f(0.0f, 0.0f, 0.0f);
+				}
+
 				SOUL_ASSERT(0, strlen(material.name.c_str()) <= 512, "Material name is too long | material.name = %s", material.name.c_str());
 				strcpy(editorMaterial.name, material.name.c_str());
 
@@ -135,16 +159,19 @@ namespace Soul {
 					textures[editorMaterial.metallicTexID].rid,
 					textures[editorMaterial.roughnessTexID].rid,
 					textures[editorMaterial.aoTexID].rid,
+					textures[editorMaterial.emissiveTexID].rid,
 
 					editorMaterial.useAlbedoTex,
 					editorMaterial.useNormalTex,
 					editorMaterial.useMetallicTex,
 					editorMaterial.useRoughnessTex,
 					editorMaterial.useAOTex,
+					editorMaterial.useEmissiveTex,
 
 					editorMaterial.albedo,
 					editorMaterial.metallic,
 					editorMaterial.roughness,
+					editorMaterial.emissive,
 
 					editorMaterial.metallicTextureChannel,
 					editorMaterial.roughnessTextureChannel,

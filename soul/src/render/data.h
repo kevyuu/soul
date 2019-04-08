@@ -98,6 +98,7 @@ namespace Soul {namespace Render {
 		MaterialFlag_USE_METALLIC_TEX = (1UL << 2),
 		MaterialFlag_USE_ROUGHNESS_TEX = (1UL << 3),
 		MaterialFlag_USE_AO_TEX = (1UL << 4),
+		MaterialFlag_USE_EMISSIVE_TEX = (1UL << 5),
 
 		MaterialFlag_METALLIC_CHANNEL_RED = (1UL << 8),
 		MaterialFlag_METALLIC_CHANNEL_GREEN = (1UL << 9),
@@ -122,10 +123,12 @@ namespace Soul {namespace Render {
 		GLuint metallicMap;
 		GLuint roughnessMap;
 		GLuint aoMap;
+		GLuint emissiveMap;
 
 		Vec3f albedo;
 		float metallic;
 		float roughness;
+		Vec3f emissive;
 		uint32 flags;
 
 	};
@@ -331,16 +334,19 @@ namespace Soul {namespace Render {
 		TextureRID metallicMap;
 		TextureRID roughnessMap;
 		TextureRID aoMap;
+		TextureRID emissiveMap;
 
 		bool useAlbedoTex;
 		bool useNormalTex;
 		bool useMetallicTex;
 		bool useRoughnessTex;
 		bool useAOTex;
+		bool useEmissiveTex;
 
 		Vec3f albedo;
 		float metallic;
 		float roughness;
+		Vec3f emissive;
 
 		TexChannel metallicChannel;
 		TexChannel roughnessChannel;
@@ -555,12 +561,14 @@ namespace Soul {namespace Render {
 		GLint metallicMapLoc;
 		GLint roughnessMapLoc;
 		GLint aoMapLoc;
+		GLint emissiveMapLoc;
 
 		GLint materialFlagsLoc;
 
 		GLint albedoLoc;
 		GLint metallicLoc;
 		GLint roughnessLoc;
+		GLint emissiveLoc;
 
 		GLint shadowMapLoc;
 
@@ -703,9 +711,18 @@ namespace Soul {namespace Render {
 		GLint normalMapLoc;
 		GLint metallicMapLoc;
 		GLint roughnessMapLoc;
+		GLint emissiveMapLoc;
+		GLint aoMapLoc;
+		GLint materialFlagsLoc;
+
+		GLint albedoLoc;
+		GLint metallicLoc;
+		GLint roughnessLoc;
+		GLint emissiveLoc;
 
 		GLint voxelAlbedoBufferLoc;
 		GLint voxelNormalBufferLoc;
+		GLint voxelEmissiveBufferLoc;
 
 		void init(Database& database);
 		void execute(Database& database);
@@ -730,6 +747,7 @@ namespace Soul {namespace Render {
 
 		GLint voxelAlbedoBufferLoc;
 		GLint voxelNormalBufferLoc;
+		GLint voxelEmissiveBufferLoc;
 		GLint lightVoxelBufferLoc;
 
 		void init(Database& database);
@@ -858,6 +876,7 @@ namespace Soul {namespace Render {
 
 		GLuint gVoxelAlbedoTex = 0;
 		GLuint gVoxelNormalTex = 0;
+		GLuint gVoxelEmissiveTex = 0;
 		GLuint gVoxelOccupancyTex = 0;
 		GLuint lightVoxelTex = 0;
 

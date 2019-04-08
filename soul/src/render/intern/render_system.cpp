@@ -81,7 +81,7 @@ namespace Soul { namespace Render {
 		db.renderPassList.add(new GaussianBlurRP(_db.effectBuffer.lightMipChain[0].mipmaps[0].frameBuffer, GL_COLOR_ATTACHMENT0));
 		db.renderPassList.add(new GlowBlendRP());
 		db.renderPassList.add(new SkyboxRP());
-		db.renderPassList.add(new Texture2DDebugRP());
+		db.renderPassList.add(new VoxelDebugRP());
 		db.renderPassList.add(new WireframeRP());
 
         for (int i = 0; i < db.renderPassList.size(); i++) {
@@ -468,6 +468,17 @@ namespace Soul { namespace Render {
 		glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
 		glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 		_db.voxelGIBuffer.gVoxelNormalTex = voxelNormalTex;
+
+		GLuint voxelEmissiveTex;
+		glGenTextures(1, &voxelEmissiveTex);
+		glBindTexture(GL_TEXTURE_3D, voxelEmissiveTex);
+		glTexStorage3D(GL_TEXTURE_3D, (int)1, GL_RGBA8, reso, reso, reso);
+		glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+		glTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		_db.voxelGIBuffer.gVoxelEmissiveTex = voxelEmissiveTex;
 
 		GLuint lightVoxelTex;
 		glGenTextures(1, &lightVoxelTex);
@@ -977,10 +988,12 @@ namespace Soul { namespace Render {
 				spec.metallicMap,
 				spec.roughnessMap,
 				spec.aoMap,
+				spec.emissiveMap,
 
 				spec.albedo,
 				spec.metallic,
 				spec.roughness,
+				spec.emissive,
 				0
         });
 
@@ -1042,10 +1055,12 @@ namespace Soul { namespace Render {
 			spec.metallicMap,
 			spec.roughnessMap,
 			spec.aoMap,
+			spec.emissiveMap,
 
 			spec.albedo,
 			spec.metallic,
 			spec.roughness,
+			spec.emissive,
 
 			0
 		};
@@ -1062,6 +1077,7 @@ namespace Soul { namespace Render {
 		if (spec.useMetallicTex) flags |= MaterialFlag_USE_METALLIC_TEX;
 		if (spec.useRoughnessTex) flags |= MaterialFlag_USE_ROUGHNESS_TEX;
 		if (spec.useAOTex) flags |= MaterialFlag_USE_AO_TEX;
+		if (spec.useEmissiveTex) flags |= MaterialFlag_USE_EMISSIVE_TEX;
 
 		_db.materialBuffer[rid].flags = flags;
 
@@ -1081,6 +1097,11 @@ namespace Soul { namespace Render {
 		_pointLightUpdateShadowMatrix();
 		_spotLightUpdateShadowMatrix();
         _flushUBO();
+
+		if (_db.frameIdx % 2 == 0)
+		{
+			voxelGIVoxelize();
+		}
 
         for (int i = 0; i < _db.renderPassList.size(); i++) {
             _db.renderPassList.get(i)->execute(_db);

@@ -12,6 +12,8 @@ layout(local_size_x = 8, local_size_y = 8, local_size_z = 8) in;
 
 uniform sampler3D voxelAlbedoBuffer;
 uniform sampler3D voxelNormalBuffer;
+uniform sampler3D voxelEmissiveBuffer;
+
 layout(rgba16f) uniform writeonly image3D lightVoxelBuffer;
 
 
@@ -22,6 +24,7 @@ void main() {
 	ivec3 voxelIdx = ivec3(gl_GlobalInvocationID.xyz);
 	vec4 albedo = texelFetch(voxelAlbedoBuffer, voxelIdx, 0);
 	vec4 normal = normalize(texelFetch(voxelNormalBuffer, voxelIdx, 0) * 2.0f - 1.0f);
+	vec4 emissive = texelFetch(voxelEmissiveBuffer, voxelIdx, 0);
 
 	if (albedo.a == 0.0f) {
 		imageStore(lightVoxelBuffer, ivec3(gl_WorkGroupID.xyz), vec4(0.0f));
@@ -40,7 +43,7 @@ void main() {
 
 		float NdotL = dot(normal.xyz, L);
 		NdotL = max(NdotL, 0.0f);
-		imageStore(lightVoxelBuffer, voxelIdx, vec4(visibility * albedo.rgb * directionalLights[i].color * NdotL, 1.0f));
+		imageStore(lightVoxelBuffer, voxelIdx, vec4(visibility * albedo.rgb * directionalLights[i].color * NdotL + emissive.rgb * 10.0f, 1.0f));
 	}
 
 }

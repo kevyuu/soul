@@ -57,10 +57,13 @@ namespace Soul {
 					ImGui::InputFloat3("Albedo", (float*)&material.albedo);
 					ImGui::SliderFloat("Metallic", (float*)&material.metallic, 0.0f, 1.0f);
 					ImGui::SliderFloat("Roughness", (float*)&material.roughness, 0.0f, 1.0f);
+					ImGui::InputFloat3("Emissive", (float*)&material.emissive, 0.0f, 1.0f);
+
 					ImGui::Checkbox("Use albedo tex", &material.useAlbedoTex);
 					ImGui::Checkbox("Use metallic tex", &material.useMetallicTex);
 					ImGui::Checkbox("Use roughness tex", &material.useRoughnessTex);
 					ImGui::Checkbox("Use ao tex", &material.useAOTex);
+					ImGui::Checkbox("Use emissive tex", &material.useEmissiveTex);
 
 					const char* textureChannels[Render::TexChannel_COUNT];
 					textureChannels[Render::TexChannel_RED] = "Red";
@@ -80,16 +83,19 @@ namespace Soul {
 						textures[material.metallicTexID].rid,
 						textures[material.roughnessTexID].rid,
 						textures[material.aoTexID].rid,
+						textures[material.emissiveTexID].rid,
 
 						material.useAlbedoTex,
 						material.useNormalTex,
 						material.useMetallicTex,
 						material.useRoughnessTex,
 						material.useAOTex,
+						material.useEmissiveTex,
 
 						material.albedo,
 						material.metallic,
 						material.roughness,
+						material.emissive,
 
 						material.metallicTextureChannel,
 						material.roughnessTextureChannel,

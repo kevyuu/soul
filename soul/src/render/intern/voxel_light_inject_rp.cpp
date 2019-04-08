@@ -18,6 +18,7 @@ namespace Soul {
 
 			voxelAlbedoBufferLoc = glGetUniformLocation(program, "voxelAlbedoBuffer");
 			voxelNormalBufferLoc = glGetUniformLocation(program, "voxelNormalBuffer");
+			voxelEmissiveBufferLoc = glGetUniformLocation(program, "voxelEmissiveBuffer");
 			lightVoxelBufferLoc = glGetUniformLocation(program, "lightVoxelBuffer");
 
 			glUseProgram(0);
@@ -41,8 +42,12 @@ namespace Soul {
 			glActiveTexture(GL_TEXTURE1);
 			glBindTexture(GL_TEXTURE_3D, db.voxelGIBuffer.gVoxelNormalTex);
 
-			glUniform1i(lightVoxelBufferLoc, 2);
-			glBindImageTexture(2, db.voxelGIBuffer.lightVoxelTex, 0, false, 0, GL_WRITE_ONLY, GL_RGBA16F);
+			glUniform1i(voxelEmissiveBufferLoc, 2);
+			glActiveTexture(GL_TEXTURE2);
+			glBindTexture(GL_TEXTURE_3D, db.voxelGIBuffer.gVoxelEmissiveTex);
+
+			glUniform1i(lightVoxelBufferLoc, 3);
+			glBindImageTexture(3, db.voxelGIBuffer.lightVoxelTex, 0, false, 0, GL_WRITE_ONLY, GL_RGBA16F);
 
 			SOUL_PROFILE_RANGE_PUSH("dispatchCompute()");
 			glDispatchCompute(voxelFrustumReso / 8, voxelFrustumReso / 8, voxelFrustumReso / 8);

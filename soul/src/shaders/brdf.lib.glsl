@@ -3,6 +3,7 @@
 #define MaterialFlag_USE_METALLIC_TEX (1u << 2)
 #define MaterialFlag_USE_ROUGHNESS_TEX (1u << 3)
 #define MaterialFlag_USE_AO_TEX (1u << 4)
+#define MaterialFlag_USE_EMISSIVE_TEX (1u << 5)
 
 #define MaterialFlag_METALLIC_CHANNEL_RED (1u << 8)
 #define MaterialFlag_METALLIC_CHANNEL_GREEN (1u << 9)
@@ -25,10 +26,12 @@ struct Material {
 	sampler2D metallicMap;
 	sampler2D roughnessMap;
 	sampler2D aoMap;
+	sampler2D emissiveMap;
 
 	vec3 albedo;
 	float metallic;
 	float roughness;
+	vec3 emissive;
 
 	uint flags;
 };
@@ -40,6 +43,7 @@ struct PixelMaterial {
 	float metallic;
 	float roughness;
 	float ao;
+	vec3 emissive;
 };
 
 bool bitTest(uint flags, uint mask) {
@@ -97,6 +101,14 @@ PixelMaterial pixelMaterialCreate(Material material, vec2 texCoord) {
 	}
 	else {
 		pixelMaterial.ao = 1;
+	}
+
+	if (bitTest(material.flags, MaterialFlag_USE_EMISSIVE_TEX)) {
+		pixelMaterial.emissive = texture(material.emissiveMap, texCoord).rgb;
+		pixelMaterial.emissive *= material.emissive;
+	}
+	else {
+		pixelMaterial.emissive = material.emissive;
 	}
 
 	pixelMaterial.f0 = mix(vec3(0.04f), pixelMaterial.albedo, pixelMaterial.metallic);

@@ -21,12 +21,24 @@ namespace Soul {
 			inverseProjectionViewLoc[2] = glGetUniformLocation(program, "inverseProjectionView[2]");
 
 			modelLoc = glGetUniformLocation(program, "model");
+
 			albedoMapLoc = glGetUniformLocation(program, "material.albedoMap");
 			normalMapLoc = glGetUniformLocation(program, "material.normalMap");
-			metallicMapLoc = glGetUniformLocation(program, "material.metallicMapLoc");
-			roughnessMapLoc = glGetUniformLocation(program, "material. roughnessMapLoc");
+			metallicMapLoc = glGetUniformLocation(program, "material.metallicMap");
+			roughnessMapLoc = glGetUniformLocation(program, "material.roughnessMap");
+			aoMapLoc = glGetUniformLocation(program, "material.aoMap");
+			emissiveMapLoc = glGetUniformLocation(program, "material.emissiveMap");
+
+			materialFlagsLoc = glGetUniformLocation(program, "material.flags");
+
+			albedoLoc = glGetUniformLocation(program, "material.albedo");
+			metallicLoc = glGetUniformLocation(program, "material.metallic");
+			roughnessLoc = glGetUniformLocation(program, "material.roughness");
+			emissiveLoc = glGetUniformLocation(program, "material.emissive");
+			
 			voxelAlbedoBufferLoc = glGetUniformLocation(program, "voxelAlbedoBuffer");
 			voxelNormalBufferLoc = glGetUniformLocation(program, "voxelNormalBuffer");
+			voxelEmissiveBufferLoc = glGetUniformLocation(program, "voxelEmissiveBuffer");
 
 			SOUL_ASSERT(0, GLExt::IsErrorCheckPass(), "OpenGL Error");
 
@@ -84,11 +96,18 @@ namespace Soul {
 
 			int voxelFrustumReso = db.voxelGIConfig.resolution;
 
-			glUniform1i(voxelAlbedoBufferLoc, 6);
-			glBindImageTexture(6, db.voxelGIBuffer.gVoxelAlbedoTex, 0, true, 0, GL_READ_WRITE, GL_R32UI);
+			glUniform1i(voxelAlbedoBufferLoc, 3);
+			glBindImageTexture(3, db.voxelGIBuffer.gVoxelAlbedoTex, 0, true, 0, GL_READ_WRITE, GL_R32UI);
 
-			glUniform1i(voxelNormalBufferLoc, 7);
-			glBindImageTexture(7, db.voxelGIBuffer.gVoxelNormalTex, 0, true, 0, GL_READ_WRITE, GL_R32UI);
+			glUniform1i(voxelEmissiveBufferLoc, 4);
+			glBindImageTexture(4, db.voxelGIBuffer.gVoxelEmissiveTex, 0, true, 0, GL_READ_WRITE, GL_R32UI);
+
+			SOUL_ASSERT(0, GLExt::IsErrorCheckPass(), "");
+
+			glUniform1i(voxelNormalBufferLoc, 5);
+			glBindImageTexture(5, db.voxelGIBuffer.gVoxelNormalTex, 0, true, 0, GL_READ_WRITE, GL_R32UI);
+
+			SOUL_ASSERT(0, GLExt::IsErrorCheckPass(), "");
 
 			glViewport(0, 0, voxelFrustumReso, voxelFrustumReso);
 			glDisable(GL_DEPTH_TEST);
@@ -108,13 +127,17 @@ namespace Soul {
 				glActiveTexture(GL_TEXTURE1);
 				glBindTexture(GL_TEXTURE_2D, material.normalMap);
 
-				glUniform1i(metallicMapLoc, 2);
+				glUniform1i(emissiveMapLoc, 2);
 				glActiveTexture(GL_TEXTURE2);
-				glBindTexture(GL_TEXTURE_2D, material.metallicMap);
+				glBindTexture(GL_TEXTURE_2D, material.emissiveMap);
 
-				glUniform1i(roughnessMapLoc, 3);
-				glActiveTexture(GL_TEXTURE3);
-				glBindTexture(GL_TEXTURE_2D, material.roughnessMap);
+				glUniform1ui(materialFlagsLoc, material.flags);
+
+				glUniform3f(albedoLoc, material.albedo.x, material.albedo.y, material.albedo.z);
+				glUniform3f(emissiveLoc, material.emissive.x, material.emissive.y, material.emissive.z);
+				glUniform1f(roughnessLoc, material.roughness);
+				glUniform1f(metallicLoc, material.metallic);
+
 
 				SOUL_ASSERT(0, GLExt::IsErrorCheckPass(), "");
 
@@ -126,6 +149,7 @@ namespace Soul {
 			glUseProgram(0);
 
 			SOUL_ASSERT(0, GLExt::IsErrorCheckPass(), "");
+			glMemoryBarrier(GL_TEXTURE_FETCH_BARRIER_BIT | GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
 
 			SOUL_PROFILE_RANGE_POP();
 		}

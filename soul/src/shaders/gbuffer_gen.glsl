@@ -207,7 +207,7 @@ void main() {
 	renderTarget1 = vec4(pixelMaterial.albedo, 1.0f);
 	renderTarget2 = vec4(specularOutput, pixelMaterial.metallic);
     renderTarget3 = vec4(worldNormal * 0.5f + 0.5f, pixelMaterial.roughness);
-	renderTarget4 = vec4(ambient + diffuseOutput, pixelMaterial.ao);
+	renderTarget4 = vec4(ambient + diffuseOutput + (pixelMaterial.emissive * 5.0f), pixelMaterial.ao);
 
 }
 #endif // FRAGMENT_SHADER

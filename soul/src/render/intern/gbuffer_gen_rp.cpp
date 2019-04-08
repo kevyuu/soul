@@ -33,12 +33,14 @@ namespace Soul {
 			metallicMapLoc = glGetUniformLocation(gBufferGenProgram, "material.metallicMap");
 			roughnessMapLoc = glGetUniformLocation(gBufferGenProgram, "material.roughnessMap");
 			aoMapLoc = glGetUniformLocation(gBufferGenProgram, "material.aoMap");
+			emissiveMapLoc = glGetUniformLocation(gBufferGenProgram, "material.emissiveMap");
 
 			materialFlagsLoc = glGetUniformLocation(gBufferGenProgram, "material.flags");
 
 			albedoLoc = glGetUniformLocation(gBufferGenProgram, "material.albedo");
 			metallicLoc = glGetUniformLocation(gBufferGenProgram, "material.metallic");
 			roughnessLoc = glGetUniformLocation(gBufferGenProgram, "material.roughness");
+			emissiveLoc = glGetUniformLocation(gBufferGenProgram, "material.emissive");
 
 			shadowMapLoc = glGetUniformLocation(gBufferGenProgram, "shadowMap");
 			viewPositionLoc = glGetUniformLocation(gBufferGenProgram, "viewPosition");
@@ -85,8 +87,8 @@ namespace Soul {
 			glClear(GL_COLOR_BUFFER_BIT);
 			glDepthFunc(GL_LEQUAL);
 
-			glUniform1i(shadowMapLoc, 5);
-			glActiveTexture(GL_TEXTURE5);
+			glUniform1i(shadowMapLoc, 6);
+			glActiveTexture(GL_TEXTURE6);
 			glBindTexture(GL_TEXTURE_2D, db.shadowAtlas.texHandle);
 
 			glUniform3f(viewPositionLoc, db.camera.position.x, db.camera.position.y, db.camera.position.z);
@@ -123,9 +125,14 @@ namespace Soul {
 				glActiveTexture(GL_TEXTURE4);
 				glBindTexture(GL_TEXTURE_2D, material.aoMap);
 
+				glUniform1i(emissiveMapLoc, 5);
+				glActiveTexture(GL_TEXTURE5);
+				glBindTexture(GL_TEXTURE_2D, material.emissiveMap);
+
 				glUniform1ui(materialFlagsLoc, material.flags);
 
 				glUniform3f(albedoLoc, material.albedo.x, material.albedo.y, material.albedo.z);
+				glUniform3f(emissiveLoc, material.emissive.x, material.emissive.y, material.emissive.z);
 				glUniform1f(roughnessLoc, material.roughness);
 				glUniform1f(metallicLoc, material.metallic);
 

@@ -90,16 +90,19 @@ namespace Soul {
 			uint32 metallicTexID;
 			uint32 roughnessTexID;
 			uint32 aoTexID;
+			uint32 emissiveTexID;
 
-			Soul::Vec3f albedo;
+			Vec3f albedo;
 			float metallic;
 			float roughness;
+			Vec3f emissive;
 
 			bool useAlbedoTex;
 			bool useNormalTex;
 			bool useMetallicTex;
 			bool useRoughnessTex;
 			bool useAOTex;
+			bool useEmissiveTex;
 
 			Soul::Render::TexChannel metallicTextureChannel;
 			Soul::Render::TexChannel roughnessTextureChannel;

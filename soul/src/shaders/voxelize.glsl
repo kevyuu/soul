@@ -1,6 +1,7 @@
 #ifdef LIB_SHADER
 math.lib.glsl
 voxel_gi.lib.glsl
+brdf.lib.glsl
 #endif
 
 /**********************************************************************
@@ -176,13 +177,6 @@ void main() {
 **********************************************************************/
 #ifdef FRAGMENT_SHADER
 
-struct Material {
-	sampler2D albedoMap;
-	sampler2D normalMap;
-	sampler2D metallicMap;
-	sampler2D roughnessMap;
-};
-
 in GS_OUT{
 	vec3 ndcPosition;
 	vec3 worldNormal;
@@ -194,6 +188,8 @@ in GS_OUT{
 
 layout(r32ui) uniform volatile coherent uimage3D voxelAlbedoBuffer;
 layout(r32ui) uniform volatile coherent uimage3D voxelNormalBuffer;
+layout(r32ui) uniform volatile coherent uimage3D voxelEmissiveBuffer;
+
 uniform Material material;
 
 vec4 convRGBA8ToVec4(uint val) {
@@ -244,11 +240,10 @@ void main() {
 	}
 
 	ivec3 voxelIdx = ivec3(gs_out.voxelIdx);
-	vec3 albedo = pow(texture(material.albedoMap, gs_out.texCoord).rgb, vec3(2.2));
-	vec3 normal = gs_out.worldNormal;
+	PixelMaterial pixelMaterial = pixelMaterialCreate(material, gs_out.texCoord);
 
-	imageAtomicRGBA8Avg(voxelAlbedoBuffer, voxelIdx, vec4(albedo, 1.0f));
-	imageAtomicRGBA8Avg(voxelNormalBuffer, voxelIdx, vec4(normal * 0.5f + 0.5f, 1.0f));
-
+	imageAtomicRGBA8Avg(voxelAlbedoBuffer, voxelIdx, vec4(pixelMaterial.albedo, 1.0f));
+	imageAtomicRGBA8Avg(voxelNormalBuffer, voxelIdx, vec4(gs_out.worldNormal * 0.5f + 0.5f, 1.0f));
+	imageAtomicRGBA8Avg(voxelEmissiveBuffer, voxelIdx, vec4(pixelMaterial.emissive, 1.0f));
 }
 #endif // FRAGMENT_SHADER
