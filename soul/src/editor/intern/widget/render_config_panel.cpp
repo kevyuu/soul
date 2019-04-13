@@ -74,14 +74,26 @@ namespace Soul {
 				ImGui::InputFloat3("Ambient Color", (float*)&renderConfig.envConfig.ambientColor);
 				ImGui::InputFloat("Ambient Energy", (float*)&renderConfig.envConfig.ambientEnergy);
 				ImGui::InputFloat("Emissive Scale", (float*)&renderConfig.envConfig.emissiveScale);
-				ImGui::InputFloat("Exposure", (float*)&renderConfig.envConfig.exposure);
 				
 				db->world.renderSystem.envSetAmbientColor(renderConfig.envConfig.ambientColor);
 				db->world.renderSystem.envSetAmbientEnergy(renderConfig.envConfig.ambientEnergy);
 				db->world.renderSystem.envSetEmissiveScale(renderConfig.envConfig.emissiveScale);
-				db->world.renderSystem.envSetExposure(renderConfig.envConfig.exposure);
-				
 
+			}
+
+			if (ImGui::CollapsingHeader("Camera Setting"))
+			{
+				Render::Camera& camera = db->world.camera;
+				ImGui::InputFloat("Camera Z Near", &db->world.camera.perspective.zNear);
+				ImGui::InputFloat("Camera Z Far", &db->world.camera.perspective.zFar);
+				ImGui::Checkbox("Exposure from Camera Setting", &camera.exposureFromSetting);
+				if (db->world.camera.exposureFromSetting) {
+					ImGui::InputFloat("Aperture", &camera.aperture);
+					ImGui::InputFloat("Shutter Speed", &camera.shutterSpeed);
+					ImGui::InputFloat("Sensitivity", &camera.sensitivity);
+					camera.updateExposure();
+				}
+				ImGui::InputFloat("Exposure", &camera.exposure);
 			}
 
 			if (ImGui::CollapsingHeader("Post Process"))

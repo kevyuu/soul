@@ -28,7 +28,6 @@ uniform sampler2D lightBuffer;
 uniform sampler2D glowBuffer;
 uniform float glowIntensity;
 uniform uint glowMask;
-uniform float exposure;
 
 in VS_OUT {
 	vec2 texCoord;
@@ -101,9 +100,9 @@ void main() {
 		glow += texture(glowBuffer, vs_out.texCoord, 8).rgb;
 	}
 
-	color = color * exposure + (glow * glowIntensity * exposure);
+	color += (glow * glowIntensity);
 	
-	color = Reindhardt(color);
+	color = Filmic(color);
 	color = pow(color, vec3(1.0f / 2.2f));
 	
 	fragColor = color;

@@ -9,6 +9,7 @@ layout(std140) uniform CameraData{
 	mat4 _camera_prevProjectionView;
 
 	vec3 _camera_cameraPosition;
+	float _camera_exposure;
 
 };
 
@@ -36,5 +37,8 @@ vec3 camera_getPosition() {
 	return _camera_cameraPosition;
 }
 
+float camera_getExposure() {
+	return _camera_exposure;
+}
 
 

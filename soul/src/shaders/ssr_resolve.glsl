@@ -197,7 +197,6 @@ void main() {
 	vec3 diffuseIndirectColor = diffuseVoxelColor + (1 - diffuseVoxelTrace.a) * diffuseEnv;
 
 	vec3 L = normalize(getSpecularDominantDir(N, reflect(-V, N), pixelMaterial.roughness));
-	L = reflect (-V, N);
 	vec3 H = normalize((L + V) / 2.0f);
 	float pdf = DistributionGGX(N, H, pixelMaterial.roughness) * max(dot(N, H), 0);
 
@@ -215,7 +214,7 @@ void main() {
 	reflectionAlpha = 0.0f;
 	vec3 specularIndirectColor = reflectionColor + (1 - reflectionAlpha) * voxel_gi_getSpecularMultiplier() * specularVoxel.xyz * computeSpecularBRDF(L, V, N, pixelMaterial) * max(dot(N, L), 0) / max(pdf, 1e-8);
 	float specularIndirectAlpha = reflectionAlpha + (1 - reflectionAlpha) * specularVoxel.a;
-	specularIndirectColor += ((1 - specularIndirectAlpha) * specularEnv);
+	specularIndirectColor += ((1 - specularIndirectAlpha) * specularEnv * camera_getExposure());
 	
 	
 	vec3 color = directColor + (diffuseIndirectColor + specularIndirectColor) * pixelMaterial.ao;

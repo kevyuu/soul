@@ -818,6 +818,11 @@ namespace Soul { namespace Render {
 		dirLight->color = color;
 	}
 
+	void System::dirLightSetIlluminance(DirLightRID lightRID, float illuminance) {
+		DirLight* dirLight = dirLightPtr(lightRID);
+		dirLight->illuminance = illuminance;
+	}
+
 	void System::dirLightSetShadowMapResolution(DirLightRID lightRID, int32 resolution) {
 
 		SOUL_ASSERT(0, resolution == nextPowerOfTwo(resolution), "");
@@ -1095,7 +1100,10 @@ namespace Soul { namespace Render {
 
     void System::render(const Camera& camera) {
 		_db.frameIdx++;
-        _db.camera = camera;
+        
+		_db.camera = camera;
+		_db.camera.updateExposure();
+
         _dirLightUpdateShadowMatrix();
 		_pointLightUpdateShadowMatrix();
 		_spotLightUpdateShadowMatrix();
@@ -1350,11 +1358,6 @@ namespace Soul { namespace Render {
         _db.environment.cubemap = skybox;
     }
 
-	void System::envSetExposure(float exposure)
-	{
-		_db.environment.exposure = exposure;
-	}
-
     void System::_dirLightUpdateShadowMatrix() {
         Database& db = _db;
         Camera& camera = db.camera;
@@ -1546,13 +1549,12 @@ namespace Soul { namespace Render {
 		db.cameraDataUBO.projectionView = mat4Transpose(projectionView);
 		Mat4 invProjectionView = mat4Inverse(projectionView);
 		db.cameraDataUBO.invProjectionView = mat4Transpose(invProjectionView);
-
 		db.cameraDataUBO.position = db.camera.position;
-
-		
+		db.cameraDataUBO.exposure = db.camera.exposure;
 
 		glBindBuffer(GL_UNIFORM_BUFFER, db.cameraDataUBOHandle);
 		glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(CameraDataUBO), &db.cameraDataUBO);
+
     }
 
 	void System::_flushLightUBO()
@@ -1565,7 +1567,7 @@ namespace Soul { namespace Render {
 		// Flush directional light ubo
 		db.lightDataUBO.dirLightCount = db.dirLightCount;
 		for (int i = 0; i < db.dirLightCount; i++) {
-			DirectionalLightUBO &lightUBO = db.lightDataUBO.dirLights[i];
+			DirLightUBO &lightUBO = db.lightDataUBO.dirLights[i];
 			DirLight &light = db.dirLights[i];
 			lightUBO.color = light.color;
 			lightUBO.direction = light.direction;
@@ -1582,6 +1584,7 @@ namespace Soul { namespace Render {
 			lightUBO.color = db.dirLights[i].color;
 			lightUBO.direction = db.dirLights[i].direction;
 			lightUBO.bias = db.dirLights[i].bias;
+			lightUBO.preExposedIlluminance = db.dirLights[i].illuminance * db.camera.exposure;
 
 		}
 

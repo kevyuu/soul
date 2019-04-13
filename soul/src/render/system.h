@@ -41,7 +41,6 @@ namespace Soul { namespace Render {
 		void envSetEmissiveScale(float emissiveScale);
 		void envSetPanorama(const float* data, int width, int height);
 		void envSetSkybox(const SkyboxSpec& spec);
-		void envSetExposure(float exposure);
 
 		MaterialRID materialCreate(const MaterialSpec& spec);
 		void materialUpdate(MaterialRID rid, const MaterialSpec& spec);
@@ -61,6 +60,7 @@ namespace Soul { namespace Render {
 		DirLight* dirLightPtr(DirLightRID lightRID);
 		void dirLightSetDirection(DirLightRID lightRID, Vec3f direction);
 		void dirLightSetColor(DirLightRID lightRID, Vec3f color);
+		void dirLightSetIlluminance(DirLightRID lightRID, float illuminance);
 		void dirLightSetShadowMapResolution(DirLightRID lightRID, int32 resolution);
 		void dirLightSetCascadeSplit(DirLightRID lightRID, float split1, float split2, float split3);
 		void dirLightSetBias(DirLightRID lightRID, float bias);

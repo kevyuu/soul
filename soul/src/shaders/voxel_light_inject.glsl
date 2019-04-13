@@ -44,7 +44,7 @@ void main() {
 
 		float NdotL = dot(normal.xyz, L);
 		NdotL = max(NdotL, 0.0f);
-		luminance += visibility * albedo.rgb * directionalLights[i].color * NdotL;
+		luminance += visibility * albedo.rgb * directionalLights[i].color * directionalLights[i].preExposedIlluminance * NdotL;
 	}
 	luminance += emissive.rgb * emissiveScale;
 	imageStore(lightVoxelBuffer, voxelIdx, vec4(luminance, 1.0f));

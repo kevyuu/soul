@@ -122,6 +122,9 @@ namespace Soul {
 				ImGui::InputFloat3("Color", (float*)&dirLightEntity.spec.color);
 				db->world.renderSystem.dirLightSetColor(dirLightEntity.rid, dirLightEntity.spec.color);
 
+				ImGui::InputFloat("Illuminance", &dirLightEntity.spec.illuminance);
+				db->world.renderSystem.dirLightSetIlluminance(dirLightEntity.rid, dirLightEntity.spec.illuminance);
+
 				ImGui::InputFloat("Bias", &dirLightEntity.spec.bias);
 				db->world.renderSystem.dirLightSetBias(dirLightEntity.rid, dirLightEntity.spec.bias);
 

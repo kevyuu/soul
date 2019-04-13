@@ -54,6 +54,13 @@ namespace Soul {namespace Render {
 		uint16 viewportWidth;
 		uint16 viewportHeight;
 
+		float aperture = 1.0f;
+		float shutterSpeed = 1.0f;
+		float sensitivity = 1.0f;
+		float exposure = 1.0f;
+
+		bool exposureFromSetting = false;
+
 		union {
 			struct {
 				float fov;
@@ -71,6 +78,13 @@ namespace Soul {namespace Render {
 				float zFar;
 			} ortho;
 		};
+
+		void updateExposure() {
+			if (exposureFromSetting) {
+				float ev100 = log2((aperture * aperture) / shutterSpeed * 100.0 / sensitivity);
+				exposure = 1.0f / (pow(2.0f, ev100) * 1.2f);
+			}
+		}
 
 	};
 
@@ -156,6 +170,7 @@ namespace Soul {namespace Render {
 	struct DirLight {
 		Mat4 shadowMatrixes[4];
 		Vec3f direction;
+		float illuminance; // in lux;
 		Vec3f color;
 		int32 resolution;
 		float split[3];
@@ -302,7 +317,8 @@ namespace Soul {namespace Render {
 
 	struct DirectionalLightSpec {
 		Vec3f direction = Vec3f(0.0f, -1.0f, 0.0f);
-		Vec3f color = { 10.0f, 10.0f, 10.0f };
+		Vec3f color = { 1.0f, 1.0f, 1.0f };
+		float illuminance = 100000; // in lx;
 		float split[3] = { 0.1f, 0.3f, 0.6f };
 		int32 shadowMapResolution = TexReso_2048;
 		float bias = 0.001f;
@@ -425,15 +441,15 @@ namespace Soul {namespace Render {
 		Mat4 prevProjectionView;
 
 		Vec3f position;
-		float pad;
+		float exposure;
 	};
 
-	struct DirectionalLightUBO {
+	struct DirLightUBO {
 		Mat4 shadowMatrixes[4];
 		Vec3f direction;
 		float bias;
 		Vec3f color;
-		float pad2;
+		float preExposedIlluminance;
 		float cascadeDepths[4];
 	};
 
@@ -461,7 +477,7 @@ namespace Soul {namespace Render {
 
 	struct LightDataUBO {
 		
-		DirectionalLightUBO dirLights[MAX_DIR_LIGHT];
+		DirLightUBO dirLights[MAX_DIR_LIGHT];
 		Vec3f pad1;
 		int dirLightCount;
 
@@ -802,7 +818,6 @@ namespace Soul {namespace Render {
 		GLint glowBufferLoc;
 		GLint glowIntensityLoc;
 		GLint glowMaskLoc;
-		GLint exposureLoc;
 
 		void init(Database& database);
 		void execute(Database& database);

@@ -103,7 +103,7 @@ void main() {
 	for (int i = 0; i < directionalLightCount; i++) {
 		vec3 L = normalize(directionalLights[i].direction * -1);
 
-		vec3 radiance = directionalLights[i].color;
+		vec3 illuminance = directionalLights[i].color * directionalLights[i].preExposedIlluminance;
 
 		float cascadeSplit[5] = {
 			0,
@@ -141,10 +141,10 @@ void main() {
 			shadowFactor = mix(shadowFactor1, shadowFactor2, cascadeBlend);
 		}
 
-		radiance = radiance * (1.0f - shadowFactor);
+		illuminance = illuminance * (1.0f - shadowFactor);
 
-		specularOutput += computeSpecularBRDF(L, V, worldNormal, pixelMaterial) * radiance *  max(dot(worldNormal, L), 0.0f);
-		diffuseOutput += computeDiffuseBRDF(L, V, worldNormal, pixelMaterial) * radiance * max(dot(worldNormal, L), 0.0f);
+		specularOutput += computeSpecularBRDF(L, V, worldNormal, pixelMaterial) * illuminance *  max(dot(worldNormal, L), 0.0f);
+		diffuseOutput += computeDiffuseBRDF(L, V, worldNormal, pixelMaterial) * illuminance * max(dot(worldNormal, L), 0.0f);
 
 	}
 

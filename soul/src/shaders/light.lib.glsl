@@ -12,7 +12,7 @@ struct DirectionalLight {
 	vec3 direction;
 	float bias;
 	vec3 color;
-	float pad1;
+	float preExposedIlluminance;
 	vec4 cascadeDepths;
 };
 
