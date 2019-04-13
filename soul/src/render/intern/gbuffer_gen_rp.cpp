@@ -45,6 +45,7 @@ namespace Soul {
 			shadowMapLoc = glGetUniformLocation(gBufferGenProgram, "shadowMap");
 			viewPositionLoc = glGetUniformLocation(gBufferGenProgram, "viewPosition");
 			ambientFactorLoc = glGetUniformLocation(gBufferGenProgram, "ambientFactor");
+			emissiveScaleLoc = glGetUniformLocation(gBufferGenProgram, "emissiveScale");
 
 		}
 
@@ -94,6 +95,7 @@ namespace Soul {
 			glUniform3f(viewPositionLoc, db.camera.position.x, db.camera.position.y, db.camera.position.z);
 			Vec3f ambientFactor = db.environment.ambientColor * db.environment.ambientEnergy;
 			glUniform3f(ambientFactorLoc, ambientFactor.x, ambientFactor.y, ambientFactor.z);
+			glUniform1f(emissiveScaleLoc, db.environment.emissiveScale);
 
 
 			glViewport(0, 0, db.targetWidthPx, db.targetHeightPx);

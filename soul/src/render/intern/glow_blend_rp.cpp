@@ -18,6 +18,7 @@ namespace Soul {
 			glowBufferLoc = glGetUniformLocation(program, "glowBuffer");
 			glowIntensityLoc = glGetUniformLocation(program, "glowIntensity");
 			glowMaskLoc = glGetUniformLocation(program, "glowMask");
+			exposureLoc = glGetUniformLocation(program, "exposure");
 
 		}
 
@@ -52,6 +53,7 @@ namespace Soul {
 
 			glUniform1f(glowIntensityLoc, db.postProcessConfig.glowConfig.intensity);
 			glUniform1ui(glowMaskLoc, _buildGlowMask(db.postProcessConfig.glowConfig));
+			glUniform1f(exposureLoc, db.environment.exposure);
 
 			glViewport(0, 0, db.targetWidthPx, db.targetHeightPx);
 			glBindVertexArray(db.quadVAO);

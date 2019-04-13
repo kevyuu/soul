@@ -197,6 +197,7 @@ void main() {
 	vec3 diffuseIndirectColor = diffuseVoxelColor + (1 - diffuseVoxelTrace.a) * diffuseEnv;
 
 	vec3 L = normalize(getSpecularDominantDir(N, reflect(-V, N), pixelMaterial.roughness));
+	L = reflect (-V, N);
 	vec3 H = normalize((L + V) / 2.0f);
 	float pdf = DistributionGGX(N, H, pixelMaterial.roughness) * max(dot(N, H), 0);
 

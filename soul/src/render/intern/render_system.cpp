@@ -81,7 +81,6 @@ namespace Soul { namespace Render {
 		db.renderPassList.add(new GaussianBlurRP(_db.effectBuffer.lightMipChain[0].mipmaps[0].frameBuffer, GL_COLOR_ATTACHMENT0));
 		db.renderPassList.add(new GlowBlendRP());
 		db.renderPassList.add(new SkyboxRP());
-		db.renderPassList.add(new VoxelDebugRP());
 		db.renderPassList.add(new WireframeRP());
 
         for (int i = 0; i < db.renderPassList.size(); i++) {
@@ -978,6 +977,10 @@ namespace Soul { namespace Render {
         _db.environment.ambientEnergy = ambientEnergy;
     }
 
+	void System::envSetEmissiveScale(float emissiveScale) {
+		_db.environment.emissiveScale = emissiveScale;
+	}
+
     MaterialRID System::materialCreate(const MaterialSpec& spec) {
         
 		MaterialRID rid = _db.materialBuffer.size();
@@ -1346,6 +1349,11 @@ namespace Soul { namespace Render {
         glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
         _db.environment.cubemap = skybox;
     }
+
+	void System::envSetExposure(float exposure)
+	{
+		_db.environment.exposure = exposure;
+	}
 
     void System::_dirLightUpdateShadowMatrix() {
         Database& db = _db;

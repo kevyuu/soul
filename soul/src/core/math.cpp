@@ -280,6 +280,38 @@ namespace Soul {
 		return res;
 	}
 
+	Mat4 mat4Rotate(const Mat4& mat4)
+	{
+		Mat4 result;
+		for (int i = 0; i < 16; i++)
+		{
+			result.mem[i] = 0.0f;
+		}
+
+		const float* elem = mat4.mem;
+		Vec3f scale = Vec3f(
+			length(Vec3f(elem[0], elem[4], elem[8])),
+			length(Vec3f(elem[1], elem[5], elem[9])),
+			length(Vec3f(elem[2], elem[6], elem[10]))
+		);
+
+		result.mem[0] = elem[0] / scale.x;
+		result.mem[4] = elem[4] / scale.x;
+		result.mem[8] = elem[8] / scale.x;
+
+		result.mem[1] = elem[1] / scale.y;
+		result.mem[5] = elem[5] / scale.y;
+		result.mem[9] = elem[9] / scale.y;
+
+		result.mem[2] = elem[2] / scale.z;
+		result.mem[6] = elem[6] / scale.z;
+		result.mem[10] = elem[10] / scale.z;
+	
+		result.mem[15] = 1.0f;
+
+		return result;
+	}
+
 	Mat4 mat4(const float* data) {
 		Mat4 res;
 		for (int i = 0; i < 16; i++) {

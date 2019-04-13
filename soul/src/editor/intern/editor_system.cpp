@@ -385,18 +385,23 @@ namespace Soul {
 			camera.view = mat4View(camera.position, camera.position + camera.direction, camera.up);
 			
 			_db.widget.menuBar.tick(&_db);
+			
+			if (!_db.widget.menuBar.hide) {
+				// Left Dock
+				_LeftDockBegin();
+				_db.widget.entityListPanel.tick(&_db);
+				_db.widget.renderConfigPanel.tick(&_db);
+				ImGui::ShowDemoWindow();
+				_DockEnd();
 
-			// Left Dock
-			_LeftDockBegin();
-			_db.widget.entityListPanel.tick(&_db);
-			_db.widget.renderConfigPanel.tick(&_db);
-			_DockEnd();
+				// Right Dock
+				_RightDockBegin();
+				_db.widget.entityDetailPanel.tick(&_db);
+				_DockEnd();
 
-			// Right Dock
-			_RightDockBegin();
-			_db.widget.entityDetailPanel.tick(&_db);
-			_DockEnd();
-
+				
+			}
+			
 			_db.widget.manipulator.tick(&_db);
 
 			if (ImGui::IsMouseClicked(1))
@@ -458,7 +463,7 @@ namespace Soul {
 
 			_db.world.renderSystem.render(camera);
 
-			ImGui::ShowDemoWindow();
+			
 			ImGui::Render();
 			ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 

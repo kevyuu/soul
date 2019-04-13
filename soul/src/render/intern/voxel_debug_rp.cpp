@@ -36,6 +36,9 @@ namespace Soul {
 			int mipLevel = 0;
 			int frac = (int)pow(2, mipLevel);
 			glBindImageTexture(0, db.voxelGIBuffer.lightVoxelTex, mipLevel, true, 0, GL_READ_ONLY, GL_RGBA16F);
+			glBindImageTexture(1, db.voxelGIBuffer.gVoxelAlbedoTex, mipLevel, true, 0, GL_READ_ONLY, GL_RGBA8);
+			glBindImageTexture(2, db.voxelGIBuffer.gVoxelEmissiveTex, mipLevel, true, 0, GL_READ_ONLY, GL_RGBA8);
+			glBindImageTexture(3, db.voxelGIBuffer.gVoxelNormalTex, mipLevel, true, 0, GL_READ_ONLY, GL_RGBA8);
 
 			glBindVertexArray(dummyVAO);
 			glClear(GL_DEPTH_BUFFER_BIT);

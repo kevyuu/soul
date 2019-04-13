@@ -57,7 +57,7 @@ namespace Soul {
 					ImGui::InputFloat3("Albedo", (float*)&material.albedo);
 					ImGui::SliderFloat("Metallic", (float*)&material.metallic, 0.0f, 1.0f);
 					ImGui::SliderFloat("Roughness", (float*)&material.roughness, 0.0f, 1.0f);
-					ImGui::InputFloat3("Emissive", (float*)&material.emissive, 0.0f, 1.0f);
+					ImGui::InputFloat3("Emissive", (float*)&material.emissive);
 
 					ImGui::Checkbox("Use albedo tex", &material.useAlbedoTex);
 					ImGui::Checkbox("Use metallic tex", &material.useMetallicTex);

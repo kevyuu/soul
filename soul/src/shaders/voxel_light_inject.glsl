@@ -13,6 +13,7 @@ layout(local_size_x = 8, local_size_y = 8, local_size_z = 8) in;
 uniform sampler3D voxelAlbedoBuffer;
 uniform sampler3D voxelNormalBuffer;
 uniform sampler3D voxelEmissiveBuffer;
+uniform float emissiveScale;
 
 layout(rgba16f) uniform writeonly image3D lightVoxelBuffer;
 
@@ -31,8 +32,8 @@ void main() {
 		return;
 	}
 
+	vec3 luminance = vec3(0.0f, 0.0f, 0.0f);
 	for (int i = 0; i < directionalLightCount; i++) {
-
 		vec3 L = directionalLights[i].direction * -1.0f;
 
 		float visibility = voxel_gi_occlusionRayTrace(
@@ -43,8 +44,10 @@ void main() {
 
 		float NdotL = dot(normal.xyz, L);
 		NdotL = max(NdotL, 0.0f);
-		imageStore(lightVoxelBuffer, voxelIdx, vec4(visibility * albedo.rgb * directionalLights[i].color * NdotL + emissive.rgb * 10.0f, 1.0f));
+		luminance += visibility * albedo.rgb * directionalLights[i].color * NdotL;
 	}
+	luminance += emissive.rgb * emissiveScale;
+	imageStore(lightVoxelBuffer, voxelIdx, vec4(luminance, 1.0f));
 
 }
 

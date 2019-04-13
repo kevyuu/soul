@@ -16,6 +16,7 @@ layout(location = 3) in vec3 aBinormal;
 layout(location = 4) in vec3 aTangent;
 
 uniform mat4 model;
+uniform mat4 rotation;
 
 out VS_OUT{
 	vec3 worldPosition;
@@ -26,8 +27,7 @@ out VS_OUT{
 void main() {
 	gl_Position = model * vec4(aPos, 1.0f);
 	vs_out.worldPosition = vec3((model * vec4(aPos, 1.0f)).xyz);
-	mat3 rotMat = mat3(transpose(inverse(model)));
-	vs_out.worldNormal = rotMat * aNormal;
+	vs_out.worldNormal = mat3(rotation) * normalize(aNormal);
 	vs_out.texCoord = aTexCoord;
 }
 #endif //VERTEX SHADER
@@ -243,7 +243,7 @@ void main() {
 	PixelMaterial pixelMaterial = pixelMaterialCreate(material, gs_out.texCoord);
 
 	imageAtomicRGBA8Avg(voxelAlbedoBuffer, voxelIdx, vec4(pixelMaterial.albedo, 1.0f));
-	imageAtomicRGBA8Avg(voxelNormalBuffer, voxelIdx, vec4(gs_out.worldNormal * 0.5f + 0.5f, 1.0f));
+	imageAtomicRGBA8Avg(voxelNormalBuffer, voxelIdx, vec4(gs_out.worldNormal * 0.5f + vec3(0.5f), 1.0f));
 	imageAtomicRGBA8Avg(voxelEmissiveBuffer, voxelIdx, vec4(pixelMaterial.emissive, 1.0f));
 }
 #endif // FRAGMENT_SHADER

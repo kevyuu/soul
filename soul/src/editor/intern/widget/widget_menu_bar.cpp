@@ -36,6 +36,10 @@ namespace Soul {
 					db->world.renderSystem.voxelGIVoxelize();
 					ImGui::EndMenu();
 				}
+				else if (ImGui::BeginMenu("Hide")) {
+					ImGui::MenuItem("Hide UI", NULL, &hide);
+					ImGui::EndMenu();
+				}
 				ImGui::EndMainMenuBar();
 			}
 

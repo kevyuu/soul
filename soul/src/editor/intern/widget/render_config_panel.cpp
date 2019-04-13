@@ -73,11 +73,14 @@ namespace Soul {
 
 				ImGui::InputFloat3("Ambient Color", (float*)&renderConfig.envConfig.ambientColor);
 				ImGui::InputFloat("Ambient Energy", (float*)&renderConfig.envConfig.ambientEnergy);
+				ImGui::InputFloat("Emissive Scale", (float*)&renderConfig.envConfig.emissiveScale);
+				ImGui::InputFloat("Exposure", (float*)&renderConfig.envConfig.exposure);
 				
-				if (ImGui::Button("Update##Environement")) {
-					db->world.renderSystem.envSetAmbientColor(renderConfig.envConfig.ambientColor);
-					db->world.renderSystem.envSetAmbientEnergy(renderConfig.envConfig.ambientEnergy);
-				}
+				db->world.renderSystem.envSetAmbientColor(renderConfig.envConfig.ambientColor);
+				db->world.renderSystem.envSetAmbientEnergy(renderConfig.envConfig.ambientEnergy);
+				db->world.renderSystem.envSetEmissiveScale(renderConfig.envConfig.emissiveScale);
+				db->world.renderSystem.envSetExposure(renderConfig.envConfig.exposure);
+				
 
 			}
 

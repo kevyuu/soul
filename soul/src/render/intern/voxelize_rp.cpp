@@ -21,6 +21,7 @@ namespace Soul {
 			inverseProjectionViewLoc[2] = glGetUniformLocation(program, "inverseProjectionView[2]");
 
 			modelLoc = glGetUniformLocation(program, "model");
+			rotationLoc = glGetUniformLocation(program, "rotation");
 
 			albedoMapLoc = glGetUniformLocation(program, "material.albedoMap");
 			normalMapLoc = glGetUniformLocation(program, "material.normalMap");
@@ -51,11 +52,9 @@ namespace Soul {
 			float data[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
 
 			glMemoryBarrier(GL_TEXTURE_FETCH_BARRIER_BIT | GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
-
-			glClearTexImage(db.voxelGIBuffer.lightVoxelTex, 0, GL_RGBA, GL_FLOAT, data);
 			glClearTexImage(db.voxelGIBuffer.gVoxelAlbedoTex, 0, GL_RGBA, GL_FLOAT, data);
+			glClearTexImage(db.voxelGIBuffer.gVoxelEmissiveTex, 0, GL_RGBA, GL_FLOAT, data);
 			glClearTexImage(db.voxelGIBuffer.gVoxelNormalTex, 0, GL_RGBA, GL_FLOAT, data);
-
 			glMemoryBarrier(GL_TEXTURE_FETCH_BARRIER_BIT | GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
 
 			glUseProgram(program);
@@ -102,8 +101,6 @@ namespace Soul {
 			glUniform1i(voxelEmissiveBufferLoc, 4);
 			glBindImageTexture(4, db.voxelGIBuffer.gVoxelEmissiveTex, 0, true, 0, GL_READ_WRITE, GL_R32UI);
 
-			SOUL_ASSERT(0, GLExt::IsErrorCheckPass(), "");
-
 			glUniform1i(voxelNormalBufferLoc, 5);
 			glBindImageTexture(5, db.voxelGIBuffer.gVoxelNormalTex, 0, true, 0, GL_READ_WRITE, GL_R32UI);
 
@@ -118,6 +115,8 @@ namespace Soul {
 				const Material& material = db.materialBuffer.get(mesh.materialID);
 
 				glUniformMatrix4fv(modelLoc, 1, GL_TRUE, (const GLfloat*)mesh.transform.elem);
+
+				glUniformMatrix4fv(rotationLoc, 1, GL_TRUE, (const GLfloat*)mat4Rotate(mesh.transform).elem);
 
 				glUniform1i(albedoMapLoc, 0);
 				glActiveTexture(GL_TEXTURE0);
@@ -147,9 +146,6 @@ namespace Soul {
 			}
 
 			glUseProgram(0);
-
-			SOUL_ASSERT(0, GLExt::IsErrorCheckPass(), "");
-			glMemoryBarrier(GL_TEXTURE_FETCH_BARRIER_BIT | GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
 
 			SOUL_PROFILE_RANGE_POP();
 		}

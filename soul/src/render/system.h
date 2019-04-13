@@ -38,8 +38,10 @@ namespace Soul { namespace Render {
 
 		void envSetAmbientEnergy(float ambientEnergy);
 		void envSetAmbientColor(Vec3f ambientColor);
+		void envSetEmissiveScale(float emissiveScale);
 		void envSetPanorama(const float* data, int width, int height);
 		void envSetSkybox(const SkyboxSpec& spec);
+		void envSetExposure(float exposure);
 
 		MaterialRID materialCreate(const MaterialSpec& spec);
 		void materialUpdate(MaterialRID rid, const MaterialSpec& spec);

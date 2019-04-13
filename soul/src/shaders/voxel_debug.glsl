@@ -35,6 +35,9 @@ layout(points) in;
 layout(triangle_strip, max_vertices = 24) out;
 
 layout(binding=0, rgba16f) uniform readonly image3D voxelBuffer;
+layout(binding=1, rgba8) uniform readonly image3D voxelAlbedoBuffer;
+layout(binding=2, rgba8) uniform readonly image3D voxelEmissiveBuffer;
+layout(binding=3, rgba8) uniform readonly image3D voxelNormalBuffer;
 
 out GS_OUT{
 	vec4 color;
@@ -45,6 +48,10 @@ void main() {
 	voxel_gi_init();
 
 	vec4 color = imageLoad(voxelBuffer, ivec3(gl_in[0].gl_Position.xyz));
+	vec4 albedo = imageLoad(voxelAlbedoBuffer, ivec3(gl_in[0].gl_Position.xyz));
+	vec4 normal = imageLoad(voxelNormalBuffer, ivec3(gl_in[0].gl_Position.xyz));
+	vec4 emissive = imageLoad(voxelNormalBuffer, ivec3(gl_in[0].gl_Position.xyz));
+
 	if (color.a == 0.0f) return;
 	
 	vec3 voxelFrustumMin = voxel_gi_getFrustumMin();
@@ -73,7 +80,7 @@ void main() {
 	);
 
 	vec3 voxelCenter = (gl_in[0].gl_Position.xyz + vec3(0.5f)) * voxelSize + voxelFrustumMin;
-	gs_out.color = color;
+	gs_out.color = vec4(normal.rgb, color.a);
 
 	for (int i = 0; i < 6; i++) {
 		for (int j = 0; j < 4; j++) {

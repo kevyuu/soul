@@ -20,6 +20,7 @@ namespace Soul {
 			voxelNormalBufferLoc = glGetUniformLocation(program, "voxelNormalBuffer");
 			voxelEmissiveBufferLoc = glGetUniformLocation(program, "voxelEmissiveBuffer");
 			lightVoxelBufferLoc = glGetUniformLocation(program, "lightVoxelBuffer");
+			emissiveScaleLoc = glGetUniformLocation(program, "emissiveScale");
 
 			glUseProgram(0);
 		}
@@ -28,6 +29,10 @@ namespace Soul {
 
 			SOUL_PROFILE_RANGE_PUSH(__FUNCTION__);
 
+			float data[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
+
+			glClearTexImage(db.voxelGIBuffer.lightVoxelTex, 0, GL_RGBA, GL_FLOAT, data);
+			glClearTexImage(db.voxelGIBuffer.lightVoxelTex, 0, GL_RGBA, GL_FLOAT, data);
 			glMemoryBarrier(GL_TEXTURE_FETCH_BARRIER_BIT | GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
 
 			glUseProgram(program);
@@ -49,10 +54,13 @@ namespace Soul {
 			glUniform1i(lightVoxelBufferLoc, 3);
 			glBindImageTexture(3, db.voxelGIBuffer.lightVoxelTex, 0, false, 0, GL_WRITE_ONLY, GL_RGBA16F);
 
+			glUniform1f(emissiveScaleLoc, db.environment.emissiveScale);
+
 			SOUL_PROFILE_RANGE_PUSH("dispatchCompute()");
 			glDispatchCompute(voxelFrustumReso / 8, voxelFrustumReso / 8, voxelFrustumReso / 8);
 			SOUL_PROFILE_RANGE_POP();
 
+			glMemoryBarrier(GL_TEXTURE_FETCH_BARRIER_BIT | GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
 
 			SOUL_ASSERT(0, GLExt::IsErrorCheckPass(), "");
 

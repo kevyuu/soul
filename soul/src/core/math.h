@@ -56,6 +56,7 @@ namespace Soul {
 	Mat4 mat4Scale(Vec3f scale);
 	Mat4 mat4Translate(Vec3f position);
 	Mat4 mat4Rotate(Vec3f axis, real32 angle);
+	Mat4 mat4Rotate(const Mat4& mat4);
 	Mat4 mat4Transform(const Transform& transform);
 	Mat4 mat4View(Vec3f position, Vec3f target, Vec3f up);
 	Mat4 mat4Perspective(real32 fov, real32 aspectRatio, real32 near, real32 far);

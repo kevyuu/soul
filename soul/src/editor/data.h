@@ -119,6 +119,8 @@ namespace Soul {
 			struct EnvConfig {
 				Vec3f ambientColor;
 				float ambientEnergy;
+				float emissiveScale = 1.0f;
+				float exposure = 1.0f;
 
 				char panoramaFilePath[2048];
 				Render::MaterialRID panoramaRID;
@@ -150,6 +152,7 @@ namespace Soul {
 		struct Database;
 
 		struct MenuBar {
+			bool hide = false;
 			bool setMeshPositionToAABBCenter = false;
 			char gltfFilePath[1000] = {};
 			void tick(Database* db);

@@ -142,6 +142,8 @@ namespace Soul {namespace Render {
 
 		float ambientEnergy;
 		Vec3f ambientColor;
+		float emissiveScale = 1.0f;
+		float exposure = 1.0f;
 		bool useSkybox = false;
 	};
 
@@ -574,6 +576,7 @@ namespace Soul {namespace Render {
 
 		GLint viewPositionLoc;
 		GLint ambientFactorLoc;
+		GLint emissiveScaleLoc;
 
 		GLint predepthModelUniformLoc;
 
@@ -707,6 +710,8 @@ namespace Soul {namespace Render {
 		GLint inverseProjectionViewLoc[3];
 
 		GLint modelLoc;
+		GLint rotationLoc;
+
 		GLint albedoMapLoc;
 		GLint normalMapLoc;
 		GLint metallicMapLoc;
@@ -749,6 +754,7 @@ namespace Soul {namespace Render {
 		GLint voxelNormalBufferLoc;
 		GLint voxelEmissiveBufferLoc;
 		GLint lightVoxelBufferLoc;
+		GLint emissiveScaleLoc;
 
 		void init(Database& database);
 		void execute(Database& database);
@@ -796,6 +802,7 @@ namespace Soul {namespace Render {
 		GLint glowBufferLoc;
 		GLint glowIntensityLoc;
 		GLint glowMaskLoc;
+		GLint exposureLoc;
 
 		void init(Database& database);
 		void execute(Database& database);

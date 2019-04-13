@@ -46,6 +46,7 @@ uniform Material material;
 uniform sampler2DShadow shadowMap;
 uniform vec3 viewPosition;
 uniform vec3 ambientFactor;
+uniform float emissiveScale;
 
 in VS_OUT {
 	vec3 worldPosition;
@@ -207,7 +208,9 @@ void main() {
 	renderTarget1 = vec4(pixelMaterial.albedo, 1.0f);
 	renderTarget2 = vec4(specularOutput, pixelMaterial.metallic);
     renderTarget3 = vec4(worldNormal * 0.5f + 0.5f, pixelMaterial.roughness);
-	renderTarget4 = vec4(ambient + diffuseOutput + (pixelMaterial.emissive * 5.0f), pixelMaterial.ao);
+	vec3 fragViewPos = worldPosition - camera_getPosition();
+	float fragSquareDistance = min(dot(fragViewPos, fragViewPos), 0.01f);
+	renderTarget4 = vec4(ambient + diffuseOutput + (pixelMaterial.emissive * emissiveScale / fragSquareDistance), pixelMaterial.ao);
 
 }
 #endif // FRAGMENT_SHADER
