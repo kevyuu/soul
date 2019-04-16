@@ -1,6 +1,7 @@
 #ifdef LIB_SHADER
 math.lib.glsl
 sampling.lib.glsl
+brdf.lib.glsl
 #endif
 
 /**********************************************************************
@@ -53,6 +54,7 @@ void main()
         float NdotL = max(dot(N, L), 0.0);
         if(NdotL > 0.0)
         {
+			
             prefilteredColor += texture(skybox, L).rgb * NdotL;
             totalWeight      += NdotL;
         }

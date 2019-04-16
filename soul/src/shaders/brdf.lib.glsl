@@ -54,12 +54,9 @@ PixelMaterial pixelMaterialCreate(Material material, vec2 texCoord) {
 
 	PixelMaterial pixelMaterial;
 	
+	pixelMaterial.albedo = pow(material.albedo, vec3(2.2));
 	if (bitTest(material.flags, MaterialFlag_USE_ALBEDO_TEX)) {
-		pixelMaterial.albedo = pow(texture(material.albedoMap, texCoord).rgb, vec3(2.2));
-		pixelMaterial.albedo *= material.albedo;
-	}
-	else {
-		pixelMaterial.albedo = material.albedo;
+		pixelMaterial.albedo *= pow(texture(material.albedoMap, texCoord).rgb, vec3(2.2));
 	}
 
 	if (bitTest(material.flags, MaterialFlag_USE_NORMAL_TEX)) {
@@ -121,12 +118,12 @@ float DistributionGGX(vec3 N, vec3 H, float roughness)
 {
 	float a = roughness * roughness;
 	float a2 = a * a;
-	float NdotH = max(dot(N, H), 1e-8);
+	float NdotH = max(dot(N, H), 1e-4);
 	float NdotH2 = NdotH * NdotH;
 
 	float num = a2;
 	float denom = (NdotH2 * (a2 - 1.0) + 1.0);
-	denom = 3.14 * denom * denom;
+	denom = M_PI * denom * denom;
 	denom = max(denom, 1e-8);
 
 	return num / denom;
@@ -150,6 +147,27 @@ float GeometrySmith(vec3 N, vec3 V, vec3 L, float roughness)
 	float ggx1 = GeometrySchlickGGX(NdotL, roughness);
 
 	return ggx1 * ggx2;
+}
+
+float GeometrySchlickGGXIBL(float NdotV, float roughness)
+{
+	float a = roughness;
+	float k = (a * a) / 2.0f;
+
+	float nom = NdotV;
+	float denom = NdotV * (1.0f - k) + k;
+
+	return nom/denom;
+}
+
+float GeometrySmithIBL(vec3 N, vec3 V, vec3 L, float roughness)
+{
+	float NdotV = max(dot(N, V), 0.0);
+    float NdotL = max(dot(N, L), 0.0);
+    float ggx2 = GeometrySchlickGGXIBL(NdotV, roughness);
+    float ggx1 = GeometrySchlickGGXIBL(NdotL, roughness);
+
+    return ggx1 * ggx2;
 }
 
 vec3 fresnelSchlick(float cosTheta, vec3 F0)
@@ -177,6 +195,7 @@ vec3 computeSpecularBRDF(vec3 L, vec3 V, vec3 N, PixelMaterial pixelMaterial)
 
 	float NDF = DistributionGGX(N, H, pixelMaterial.roughness);
 	float G = GeometrySmith(N, V, L, pixelMaterial.roughness);
+	
 	vec3 F = fresnelSchlick(max(dot(H, V), 0.0), pixelMaterial.f0);
 
 	float denominator = 4 * max(dot(N, V), 0.0) * max(dot(N, L), 0.0);

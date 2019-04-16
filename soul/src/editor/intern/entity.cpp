@@ -86,6 +86,9 @@ namespace Soul {
 			case EntityType_DIRLIGHT:
 				DirLightEntityDelete(world, (DirLightEntity*)entity);
 				break;
+			case EntityType_POINTLIGHT:
+				PointLightEntityDelete(world, (PointLightEntity*)entity);
+				break;
 			case EntityType_SPOTLIGHT:
 				SpotLightEntityDelete(world, (SpotLightEntity*)entity);
 				break;

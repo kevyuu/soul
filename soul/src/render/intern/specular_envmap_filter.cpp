@@ -48,13 +48,13 @@ namespace Soul {
 
 			glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
 
-			int maxMipLevel = 5;
-			int mipWidth = 128;
-			int mipHeight = 128;
+			int maxMipLevel = 8;
+			int mipWidth = 512;
+			int mipHeight = 512;
 			for (int i = 0; i < maxMipLevel; i++, mipWidth /= 2, mipHeight /= 2) {
 				for (int j = 0; j < 6; j++) {
 
-					float roughness = i / (maxMipLevel - 1);
+					float roughness = (float)i / float(maxMipLevel - 1);
 					glUniform1f(roughenssLoc, roughness);
 					glUniformMatrix4fv(viewLoc, 1, GL_TRUE, (const GLfloat*)captureViews[j].elem);
 					glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,

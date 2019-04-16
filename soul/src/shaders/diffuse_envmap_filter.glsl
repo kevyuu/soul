@@ -42,14 +42,14 @@ void main() {
 
     for (float phi = 0; phi < 2 * M_PI ; phi += step) {
         for (float theta = 0; theta < M_PI / 2; theta += step) {
-            vec3 sampleLocalDir = vec3(cos(theta) * sin (phi), cos(theta) * cos(phi), sin(theta));
+            vec3 sampleLocalDir = vec3(sin(theta) * cos(phi),  sin(theta) * sin(phi), cos(theta));
             vec3 sampleWorldDir = right * sampleLocalDir.x + up * sampleLocalDir.y + N * sampleLocalDir.z;
             irradiance += texture(skybox, normalize(sampleWorldDir)).rgb * cos(theta) * sin(theta);
             nSample += 1;
         }
     }
 
-    fragColor = vec4(M_PI * (irradiance / nSample), 1.0f);
+    fragColor = vec4(M_PI * (irradiance / float(nSample)), 1.0f);
 
 }
 #endif // FRAGMENT_SHADER

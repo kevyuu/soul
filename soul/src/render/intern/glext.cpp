@@ -1,4 +1,5 @@
 #include "glext.h"
+#include <map>
 
 namespace Soul {
 	namespace Render {
@@ -19,6 +20,8 @@ namespace Soul {
 				SOUL_ASSERT(0, err == GL_NO_ERROR, "OpenGL error | error_code = %d", err);
 			}
 		}
+
+		static std::map<const char*, GLuint> s_programMap;
 
 		GLuint GLExt::ProgramCreate(const char* shaderFile) {
 
@@ -109,12 +112,16 @@ namespace Soul {
 				glGetShaderInfoLog(computeHandle, 512, NULL, infoLog);
 				SOUL_ASSERT(0, success, "Compute program compilation failed| shaderFile = %s, info = %s", shaderFile, infoLog);
 
-				shaderHandle = glCreateProgram();
 				glAttachShader(shaderHandle, computeHandle);
 				glLinkProgram(shaderHandle);
 				glGetProgramiv(shaderHandle, GL_LINK_STATUS, &success);
 				glGetProgramInfoLog(shaderHandle, 512, NULL, infoLog);
 				SOUL_ASSERT(0, success, "Program linking failed| shaderFile = %s, info = %s", shaderFile, infoLog);
+				if (!success)
+				{
+					glDeleteProgram(shaderHandle);
+					shaderHandle = 0;
+				}
 
 				glDeleteShader(computeHandle);
 
@@ -163,6 +170,10 @@ namespace Soul {
 				glGetProgramiv(shaderHandle, GL_LINK_STATUS, &success);
 				glGetProgramInfoLog(shaderHandle, 512, NULL, infoLog);
 				SOUL_ASSERT(0, success, "Program linking failed| shaderFile = %s, info = %s", shaderFile, infoLog);
+				if (!success) {
+					glDeleteShader(shaderHandle);
+					shaderHandle = 0;
+				}
 
 				glDeleteShader(vertexHandle);
 				if (isGeometryShaderExist) glDeleteShader(geometryHandle);
@@ -172,6 +183,12 @@ namespace Soul {
 			free(libSource);
 			free(shaderCode);
 			SOUL_ASSERT(0, GLExt::IsErrorCheckPass(), "");
+			
+			if (shaderHandle == 0) {
+				shaderHandle = s_programMap.at(shaderFile);
+			}
+			s_programMap[shaderFile] = shaderHandle;
+			
 			return shaderHandle;
 
 		}

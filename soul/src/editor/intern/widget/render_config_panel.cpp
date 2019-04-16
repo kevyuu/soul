@@ -112,6 +112,10 @@ namespace Soul {
 				}
 			}
 
+			if (ImGui::Button("Shader Reload")) {
+				db->world.renderSystem.shaderReload();
+			}
+
 			ImGui::End();
 
 		}
