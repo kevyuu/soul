@@ -181,10 +181,10 @@ void main() {
 
 		float shadowFactor = computeShadowFactor(worldPosition, pointLights[i].shadowMatrixes[shadowIndex], pointLights[i].bias);
 		float distanceAttenuation = light_getDistanceAttenuation(posToLight, 1.0f / pointLights[i].maxDistance);
-		vec3 radiance = pointLights[i].color * distanceAttenuation * (1 - shadowFactor);
+		vec3 illuminance = pointLights[i].color * distanceAttenuation * (1 - shadowFactor) * pointLights[i].preExposedIlluminance;
 
-		specularOutput += computeSpecularBRDF(L, V, worldNormal, pixelMaterial) * radiance * max(dot(worldNormal, L), 0.0f);
-		diffuseOutput += computeDiffuseBRDF(L, V, worldNormal, pixelMaterial) * radiance * max(dot(worldNormal, L), 0.0f);
+		specularOutput += computeSpecularBRDF(L, V, worldNormal, pixelMaterial) * illuminance * max(dot(worldNormal, L), 0.0f);
+		diffuseOutput += computeDiffuseBRDF(L, V, worldNormal, pixelMaterial) * illuminance * max(dot(worldNormal, L), 0.0f);
 
 	}
 
@@ -196,10 +196,10 @@ void main() {
 		float shadowFactor = computeShadowFactor(worldPosition, spotLights[i].shadowMatrix, spotLights[i].bias);
 		float distanceAttenuation = light_getDistanceAttenuation(posToLight, 1.0f / spotLights[i].maxDistance);
 		float angleAttenuation = light_getAngleAttenuation(L, spotLights[i].direction, spotLights[i].cosOuter, spotLights[i].cosInner);
-		vec3 radiance = spotLights[i].color * distanceAttenuation * angleAttenuation * (1.0f - shadowFactor);
+		vec3 illuminance = spotLights[i].color * distanceAttenuation * angleAttenuation * (1.0f - shadowFactor) * spotLights[i].preExposedIlluminance;
 
-		specularOutput += computeSpecularBRDF(L, V, worldNormal, pixelMaterial) * radiance * max(dot(worldNormal, L), 0.0f);
-		diffuseOutput += computeDiffuseBRDF(L, V, worldNormal, pixelMaterial) * radiance * max(dot(worldNormal, L), 0.0f);
+		specularOutput += computeSpecularBRDF(L, V, worldNormal, pixelMaterial) * illuminance * max(dot(worldNormal, L), 0.0f);
+		diffuseOutput += computeDiffuseBRDF(L, V, worldNormal, pixelMaterial) * illuminance * max(dot(worldNormal, L), 0.0f);
 		
 	}
 

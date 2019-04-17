@@ -69,6 +69,7 @@ namespace Soul { namespace Render {
 		void pointLightDestroy(PointLightRID lightRID);
 		PointLight* pointLightPtr(PointLightRID lightRID);
 		void pointLightSetPosition(PointLightRID lightRID, Vec3f position);
+		void pointLightSetPower(PointLightRID lightRID, float intensity);
 		void pointLightSetMaxDistance(PointLightRID lightRID, float maxDistance);
 		void pointLightSetColor(PointLightRID lightRID, Vec3f color);
 		void pointLightSetBias(PointLightRID lightRID, float bias);
@@ -82,6 +83,7 @@ namespace Soul { namespace Render {
 		void spotLightSetAngleOuter(SpotLightRID spotLightRID, float angle); // angle in radian
 		void spotLightSetMaxDistance(SpotLightRID spotLightRID, float maxDistance);
 		void spotLightSetColor(SpotLightRID spotLightRID, Vec3f color);
+		void spotLightSetPower(SpotLightRID spotLightRID, float intensity);
 		void spotLightSetBias(SpotLightRID, float bias);
 
 		void postProcessUpdateGlow(const GlowConfig& config);

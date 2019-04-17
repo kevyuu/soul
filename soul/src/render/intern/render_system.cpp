@@ -779,6 +779,7 @@ namespace Soul { namespace Render {
 
         light.direction = unit(spec.direction);
         light.color = spec.color;
+		light.illuminance = spec.illuminance;
 		light.resolution = spec.shadowMapResolution;
         light.shadowKey = _shadowAtlasGetSlot(spec.shadowMapResolution);
 		light.bias = spec.bias;
@@ -850,7 +851,7 @@ namespace Soul { namespace Render {
 	PointLightRID System::pointLightCreate(const PointLightSpec & spec)
 	{
 		PointLightRID rid = _db.pointLights.add({});
-		PointLight& pointLight = _db.pointLights[rid];
+		PointLight& pointLight = *pointLightPtr(rid);
 		pointLight.position = spec.position;
 		pointLight.bias = spec.bias;
 		pointLight.color = spec.color;
@@ -859,6 +860,7 @@ namespace Soul { namespace Render {
 		{
 			pointLight.shadowKeys[i] = _shadowAtlasGetSlot(spec.shadowMapResolution);
 		}
+		pointLightSetPower(rid, spec.power);
 		return rid;
 	}
 
@@ -894,6 +896,12 @@ namespace Soul { namespace Render {
 		pointLight->color = color;
 	}
 
+	void System::pointLightSetPower(PointLightRID lightRID, float power)
+	{
+		PointLight* pointLight = pointLightPtr(lightRID);
+		pointLight->illuminance = power / (4 * PI);
+	}
+
 	void System::pointLightSetBias(PointLightRID lightRID, float bias)
 	{
 		PointLight* pointLight = pointLightPtr(lightRID);
@@ -903,15 +911,17 @@ namespace Soul { namespace Render {
 	SpotLightRID System::spotLightCreate(const SpotLightSpec& spec)
     {
 		SpotLightRID rid = _db.spotLights.add({});
-		SpotLight& spotLight = _db.spotLights[rid];
+		SpotLight& spotLight = *spotLightPtr(rid);
 		spotLight.position = spec.position;
 		spotLight.direction = spec.direction;
 		spotLight.bias = spec.bias;
 		spotLight.color = spec.color;
+		spotLight.angleOuter = spec.angleOuter;
 		spotLight.cosOuter = cosf(spec.angleOuter);
 		spotLight.cosInner = cosf(spec.angleInner);
 		spotLight.shadowKey = _shadowAtlasGetSlot(spec.shadowMapResolution);
 		spotLight.maxDistance = spec.maxDistance;
+		spotLightSetPower(rid, spec.power);
 		return rid;
     }
 
@@ -962,6 +972,12 @@ namespace Soul { namespace Render {
 		SpotLight* spotLight = spotLightPtr(spotLightRID);
 		spotLight->color = color;
     }
+
+	void System::spotLightSetPower(SpotLightRID spotLightRID, float power)
+	{
+		SpotLight* spotLight = spotLightPtr(spotLightRID);
+		spotLight->illuminance = power / (2 * PI * (1 - cosf(spotLight->angleOuter / 2.0f)));
+	}
 
     void System::spotLightSetBias(SpotLightRID spotLightRID, float bias)
     {
@@ -1603,6 +1619,7 @@ namespace Soul { namespace Render {
 			{
 				pointLightUBO.shadowMatrixes[j] = mat4Transpose(pointLight.shadowMatrixes[j]);
 			}
+			pointLightUBO.preExposedIlluminance = pointLight.illuminance * db.camera.exposure;
 		}
 
 		// Flush spot light
@@ -1621,6 +1638,7 @@ namespace Soul { namespace Render {
 			spotLightUBO.cosInner = spotLight.cosInner;
 			spotLightUBO.maxDistance = spotLight.maxDistance;
 			spotLightUBO.shadowMatrix = mat4Transpose(spotLight.shadowMatrix);
+			spotLightUBO.preExposedIlluminance = spotLight.illuminance * db.camera.exposure;
 		}
 
 		glBindBuffer(GL_UNIFORM_BUFFER, db.lightDataUBOHandle);

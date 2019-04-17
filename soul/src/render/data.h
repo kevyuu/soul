@@ -195,6 +195,8 @@ namespace Soul {namespace Render {
 		float bias;
 		Vec3f color;
 		float maxDistance;
+		float illuminance;
+
 	};
 
 	struct SpotLight
@@ -209,6 +211,8 @@ namespace Soul {namespace Render {
 		float cosInner;
 		ShadowKey shadowKey;
 		float maxDistance;
+		float illuminance;
+	
 	};
 
 	// Resource spec
@@ -328,22 +332,23 @@ namespace Soul {namespace Render {
 	{
 		Vec3f position = Vec3f(0.0f, 0.0f, 0.0f);
 		float bias = 0.001f;
-		Vec3f color = { 10.0f, 10.0f, 10.0f };
+		Vec3f color = { 1.0f, 1.0f, 1.0f };
 		float maxDistance = 10;
 		int32 shadowMapResolution = TexReso_256;
+		float power = 100;
 	};
 
 	struct SpotLightSpec
 	{
 		Vec3f position = Vec3f(0.0f, 0.0f, 0.0f);
 		Vec3f direction = Vec3f(0.0f, -1.0f, 0.0f);
-		Vec3f color = {10.0f, 10.0f, 10.0f};
+		Vec3f color = {1.0f, 1.0f, 1.0f};
 		uint32 shadowMapResolution = TexReso_256;
 		float bias = 0.05f;
 		float angleInner = 0.3f; // in radian
 		float angleOuter = 0.5f; // in radian
 		float maxDistance = 2.0f; // in meter
-
+		float power = 100;
 	};
 
 	struct MaterialSpec {
@@ -460,6 +465,8 @@ namespace Soul {namespace Render {
 		float bias;
 		Vec3f color;
 		float maxDistance;
+		Vec3f pad;
+		float preExposedIlluminance;
 	};
 
 	struct SpotLightUBO
@@ -471,8 +478,10 @@ namespace Soul {namespace Render {
 		float cosOuter;
 		Vec3f color;
 		float maxDistance;
-		Vec3f pad;
+		float preExposedIlluminance;
 		float bias;
+		float pad1;
+		float pad2;
 	};
 
 	struct LightDataUBO {

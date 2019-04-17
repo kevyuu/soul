@@ -191,7 +191,6 @@ void main() {
 	kD *= 1.0 - pixelMaterial.metallic;
 
 	vec3 diffuseEnv = kD * (texture(diffuseEnvTex, N).rgb * pixelMaterial.albedo);
-	diffuseEnv *= camera_getExposure();
 
 	vec4 diffuseVoxelTrace = voxel_gi_diffuseConeTrace(voxelLightBuffer, worldPosition, N);
 	diffuseVoxelTrace *= voxel_gi_getDiffuseMultiplier();
@@ -202,9 +201,8 @@ void main() {
 	vec3 H = normalize((L + V) / 2.0f);
 	float pdf = DistributionGGX(N, H, pixelMaterial.roughness) * max(dot(N, H), 0);
 
-	const float MAX_SPECULAR_ENV_LOD = 4;
+	const float MAX_SPECULAR_ENV_LOD = 7;
 	vec3 specularEnv = textureLod(specularEnvTex, L, pixelMaterial.roughness * MAX_SPECULAR_ENV_LOD).rgb * FG;
-	specularEnv *= camera_getExposure();
 	vec4 specularVoxel = voxel_gi_coneTrace(
 		voxelLightBuffer,
 		worldPosition,
@@ -217,7 +215,7 @@ void main() {
 	specularVoxel *= voxel_gi_getSpecularMultiplier();
 	vec3 specularIndirectColor = reflectionColor + (1 - reflectionAlpha) * specularVoxel.xyz * computeSpecularBRDF(L, V, N, pixelMaterial) * max(dot(N, L), 0) / max(pdf, 1e-8);
 	float specularIndirectAlpha = reflectionAlpha + (1 - reflectionAlpha) * specularVoxel.a;
-	specularIndirectColor += ((1 - specularIndirectAlpha) * specularEnv * camera_getExposure());
+	specularIndirectColor += ((1 - specularIndirectAlpha) * specularEnv);
 	
 	vec3 color = directColor + (diffuseIndirectColor + specularIndirectColor) * pixelMaterial.ao;
 

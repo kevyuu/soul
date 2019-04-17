@@ -150,6 +150,9 @@ namespace Soul {
 				ImGui::InputFloat3("Color", (float*)&pointLightEntity->spec.color);
 				renderSystem.pointLightSetColor(rid, pointLightEntity->spec.color);
 
+				ImGui::InputFloat("Power", (float*)&pointLightEntity->spec.power);
+				renderSystem.pointLightSetPower(rid, pointLightEntity->spec.power);
+
 				ImGui::InputFloat("Max Distance", &pointLightEntity->spec.maxDistance);
 				renderSystem.pointLightSetMaxDistance(rid, pointLightEntity->spec.maxDistance);
 
@@ -165,6 +168,9 @@ namespace Soul {
 
 				ImGui::InputFloat3("Color", (float*)&spotLightEntity->spec.color);
 				renderSystem.spotLightSetColor(rid, spotLightEntity->spec.color);
+
+				ImGui::InputFloat("Power", (float*)&spotLightEntity->spec.power);
+				renderSystem.spotLightSetPower(rid, spotLightEntity->spec.power);
 
 				ImGui::InputFloat("Bias", &spotLightEntity->spec.bias);
 				renderSystem.spotLightSetBias(rid, spotLightEntity->spec.bias);

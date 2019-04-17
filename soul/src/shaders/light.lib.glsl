@@ -23,9 +23,12 @@ struct PointLight
 	float bias;
 	vec3 color;
 	float maxDistance;
+	vec3 pad;
+	float preExposedIlluminance;
 };
 
-struct SpotLight {
+struct SpotLight 
+{
 	mat4 shadowMatrix;
 	vec3 position;
 	float cosInner;
@@ -33,8 +36,10 @@ struct SpotLight {
 	float cosOuter;
 	vec3 color;
 	float maxDistance;
-	vec3 pad;
+	float preExposedIlluminance;
 	float bias;
+	float pad1;
+	float pad2;
 };
 
 
