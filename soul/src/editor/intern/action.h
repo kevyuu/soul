@@ -4,6 +4,6 @@
 
 namespace Soul {
 	namespace Editor {
-		void ActionImportGLTFAsset(World* world, const char* path, bool positionToAABBCenter);
+		EntityID ActionImportGLTFAsset(World* world, const char* path, bool positionToAABBCenter);
 	}
 }

@@ -54,6 +54,7 @@
     <ClInclude Include="src\extern\stb_truetype.h" />
     <ClInclude Include="src\extern\tiny_gltf.h" />
     <ClInclude Include="src\extern\tiny_obj_loader.h" />
+    <ClInclude Include="src\gpu\data.h" />
     <ClInclude Include="src\render\intern\asset.h" />
     <ClInclude Include="src\render\intern\glext.h" />
     <ClInclude Include="src\render\intern\util.h" />
@@ -72,6 +73,8 @@
     <ClCompile Include="src\core\debug.cpp" />
     <ClCompile Include="src\core\hash_map.cpp" />
     <ClCompile Include="src\core\math.cpp" />
+    <ClCompile Include="src\editor\intern\demo\demo.h" />
+    <ClCompile Include="src\editor\intern\demo\sea_of_light_demo.cpp" />
     <ClCompile Include="src\editor\intern\editor_system.cpp" />
     <ClCompile Include="src\editor\intern\action.cpp" />
     <ClCompile Include="src\editor\intern\entity.cpp" />

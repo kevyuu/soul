@@ -177,6 +177,8 @@ namespace Soul {
 			void tick(Database* db);
 		};
 
+		struct Demo;
+
 		struct Database {
 
 			World world;
@@ -193,8 +195,9 @@ namespace Soul {
 				Manipulator manipulator;
 
 			} widget;
-			
 
+			Demo* demo;
+			
 			EntityID selectedEntity;
 		};
 

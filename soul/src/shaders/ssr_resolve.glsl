@@ -54,7 +54,7 @@ out vec3 reflection;
 
 vec3 getSpecularDominantDir(vec3 N, vec3 R, float roughness)
 {
-	float smoothness = clamp(1 - roughness * roughness, 0.0f, 1.0f);
+	float smoothness = clamp(1 - roughness, 0.0f, 1.0f);
 	float lerpFactor = smoothness * (sqrt(smoothness) + roughness);
 	// The result is not normalized as we fetch in a cubemap
 	return mix(N, R, lerpFactor);

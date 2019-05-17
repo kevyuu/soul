@@ -13,7 +13,7 @@
 namespace Soul {
 	namespace Editor {
 
-		void ActionImportGLTFAsset(World* world, const char* path, bool positionToAABBCenter) {
+		EntityID ActionImportGLTFAsset(World* world, const char* path, bool positionToAABBCenter) {
 			tinygltf::Model model;
 			tinygltf::TinyGLTF loader;
 			std::string err;
@@ -28,12 +28,12 @@ namespace Soul {
 
 			if (!err.empty()) {
 				SOUL_LOG_ERROR("ImportGLTFAssets | %s", err.c_str());
-				return;
+				return { 0 };
 			}
 
 			if (!ret) {
 				SOUL_LOG_ERROR("ImportGLTFAssets | failed");
-				return;
+				return { 0 };
 			}
 
 			Array<PoolID> textureIDs;
@@ -196,9 +196,11 @@ namespace Soul {
 				meshEntityIDs.add({ 0 });
 			}
 
+			EntityID firstEntityID = { 0 };
+
 			// LoadNode
 			for (int i = 0; i < model.nodes.size(); i++) {
-
+				
 				const tinygltf::Node& gltfNode = model.nodes[i];
 
 				EntityID entityID;
@@ -238,6 +240,8 @@ namespace Soul {
 				else {
 					entityID = EntityCreate(world, entityParents[i], EntityType_GROUP, gltfNode.name.c_str(), localNodeTransform);
 				}
+
+				if (i == 0) firstEntityID = entityID;
 
 				for (int j = 0; j < gltfNode.children.size(); j++) {
 					entityParents[gltfNode.children[j]] = entityID;
@@ -399,6 +403,8 @@ namespace Soul {
 			meshEntityIDs.cleanup();
 			textureIDs.cleanup();
 			materialIDs.cleanup();
+
+			return firstEntityID;
 		}
 	}
 }

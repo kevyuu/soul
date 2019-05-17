@@ -159,6 +159,9 @@
     <ClInclude Include="src\extern\icon\IconsMaterialDesign.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="src\gpu\data.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\core\math.cpp">
@@ -291,6 +294,12 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\render\intern\glow_blend_rp.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\editor\intern\demo\demo.h">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\editor\intern\demo\sea_of_light_demo.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

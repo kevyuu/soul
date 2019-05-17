@@ -6,6 +6,8 @@
 #include "editor/data.h"
 #include "editor/intern/action.h"
 
+#include "editor/intern/demo/demo.h"
+
 namespace Soul {
 	namespace Editor {
 
@@ -14,6 +16,8 @@ namespace Soul {
 			enum ACTION {
 				ACTION_NONE,
 				ACTION_IMPORT_GLTF,
+
+				ACTION_EDIT_UI_STYLE,
 
 				ACTION_COUNT
 			};
@@ -38,6 +42,19 @@ namespace Soul {
 				}
 				else if (ImGui::BeginMenu("Hide")) {
 					ImGui::MenuItem("Hide UI", NULL, &hide);
+					ImGui::EndMenu();
+				}
+				else if (ImGui::BeginMenu("Demo")) {
+					if (ImGui::MenuItem("Sea Of Light")) {
+						db->demo = new SeaOfLightDemo();
+						db->demo->init(db);
+					}
+					ImGui::EndMenu();
+				}
+				else if (ImGui::BeginMenu("Setting")) {
+					if (ImGui::MenuItem("Edit UI Style")) {
+						action = ACTION_EDIT_UI_STYLE;
+					}
 					ImGui::EndMenu();
 				}
 				ImGui::EndMainMenuBar();
@@ -68,11 +85,20 @@ namespace Soul {
 
 			}
 
+			if (ImGui::BeginPopupModal("Edit UI Style", NULL, ImGuiWindowFlags_AlwaysAutoResize)) {
+				auto& style = ImGui::GetStyle();
+
+				
+			}
+
 			switch (action) {
 			case ACTION_NONE:
 				break;
 			case ACTION_IMPORT_GLTF:
 				ImGui::OpenPopup("Import GLTF");
+				break;
+			case ACTION_EDIT_UI_STYLE:
+				ImGui::OpenPopup("Edit UI Style");
 				break;
 			default:
 				SOUL_ASSERT(0, false, "Invalid menu bar action");

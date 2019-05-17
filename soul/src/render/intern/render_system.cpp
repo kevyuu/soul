@@ -1125,10 +1125,8 @@ namespace Soul { namespace Render {
 		_spotLightUpdateShadowMatrix();
         _flushUBO();
 
-		if (_db.frameIdx % 2 == 0)
-		{
-			voxelGIVoxelize();
-		}
+
+		voxelGIVoxelize();
 
         for (int i = 0; i < _db.renderPassList.size(); i++) {
             _db.renderPassList.get(i)->execute(_db);

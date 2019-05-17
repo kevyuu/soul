@@ -42,9 +42,7 @@ static PieMenuContext s_oPieMenuContext;
 
 bool IsPopupOpen(const char* pName)
 {
-	ImGuiID iID = ImGui::GetID(pName);
-	ImGuiContext g = *GImGui;
-	return g.OpenPopupStack.Size > g.BeginPopupStack.Size && g.OpenPopupStack[g.BeginPopupStack.Size].PopupId == iID;
+	return ImGui::IsPopupOpen(pName);
 }
 
 void BeginPieMenuEx()

@@ -210,7 +210,7 @@ void main() {
     renderTarget3 = vec4(worldNormal * 0.5f + 0.5f, pixelMaterial.roughness);
 	vec3 fragViewPos = worldPosition - camera_getPosition();
 	float fragSquareDistance = min(dot(fragViewPos, fragViewPos), 0.01f);
-	renderTarget4 = vec4(ambient + diffuseOutput + (pixelMaterial.emissive * emissiveScale / fragSquareDistance), pixelMaterial.ao);
+	renderTarget4 = vec4(ambient + diffuseOutput + (pixelMaterial.emissive * 0.001f * emissiveScale / fragSquareDistance), pixelMaterial.ao);
 
 }
 #endif // FRAGMENT_SHADER
