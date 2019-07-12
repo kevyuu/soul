@@ -826,7 +826,7 @@ namespace Soul { namespace Render {
 
 	void System::dirLightSetShadowMapResolution(DirLightRID lightRID, int32 resolution) {
 
-		SOUL_ASSERT(0, resolution == nextPowerOfTwo(resolution), "");
+		SOUL_ASSERT(0, resolution == roundToNextPowOfTwo(resolution), "");
 		DirLight* dirLight = dirLightPtr(lightRID);
 
 		_shadowAtlasFreeSlot(dirLight->shadowKey);

@@ -84,7 +84,7 @@ namespace Soul {
 
 	real32 radians(real32 angle);
 
-	int nextPowerOfTwo(int num);
+	int roundToNextPowOfTwo(uint32 num);
 
 	uint32 hashMurmur32(const char* key, uint32 keyLength);
 

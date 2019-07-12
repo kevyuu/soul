@@ -656,7 +656,7 @@ namespace Soul {
 		return (angle / 180) * PI;
 	}
 
-	int nextPowerOfTwo(int num) {
+	int roundToNextPowOfTwo(uint32 num) {
 		
 		num -= 1;
 		num |= (num >> 1);

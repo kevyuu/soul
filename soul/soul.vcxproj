@@ -21,6 +21,7 @@
   <ItemGroup>
     <ClInclude Include="..\..\..\Users\Kevin Yudi Utama\Downloads\glad\include\glad\glad.h" />
     <ClInclude Include="src\core\array.h" />
+    <ClInclude Include="src\core\architecture.h" />
     <ClInclude Include="src\core\debug.h" />
     <ClInclude Include="src\core\hash_map.h" />
     <ClInclude Include="src\core\math.h" />
@@ -55,6 +56,8 @@
     <ClInclude Include="src\extern\tiny_gltf.h" />
     <ClInclude Include="src\extern\tiny_obj_loader.h" />
     <ClInclude Include="src\gpu\data.h" />
+    <ClInclude Include="src\job\data.h" />
+    <ClInclude Include="src\job\system.h" />
     <ClInclude Include="src\render\intern\asset.h" />
     <ClInclude Include="src\render\intern\glext.h" />
     <ClInclude Include="src\render\intern\util.h" />
@@ -93,6 +96,8 @@
     <ClCompile Include="src\extern\imgui_impl_opengl3.cpp" />
     <ClCompile Include="src\extern\imgui_pie.cpp" />
     <ClCompile Include="src\extern\imgui_widgets.cpp" />
+    <ClCompile Include="src\job\intern\job_system.cpp" />
+    <ClCompile Include="src\job\intern\task_deque.cpp" />
     <ClCompile Include="src\render\intern\glext.cpp" />
     <ClCompile Include="src\render\intern\glow_blend_rp.cpp" />
     <ClCompile Include="src\render\intern\glow_extract_rp.cpp" />

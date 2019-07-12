@@ -78,13 +78,13 @@ namespace Soul {
 
 					float bottomSplitViewport = bottomSubdivViewport + (ySplit * splitReso);
 					float leftSplitViewport = leftSubdivViewport + (xSplit * splitReso);
+					glUniformMatrix4fv(shadowMatrixLoc, 1, GL_TRUE, (const GLfloat*)light.shadowMatrixes[j].elem);
+					glScissor(leftSplitViewport, bottomSplitViewport, splitReso, splitReso);
 
 					for (int k = 0; k < database.meshBuffer.size(); k++) {
 						const Mesh& mesh = database.meshBuffer.get(k);
-						glUniformMatrix4fv(modelLoc, 1, GL_TRUE, (const GLfloat*)mesh.transform.elem);
-						glUniformMatrix4fv(shadowMatrixLoc, 1, GL_TRUE, (const GLfloat*)light.shadowMatrixes[j].elem);
+						glUniformMatrix4fv(modelLoc, 1, GL_TRUE, (const GLfloat*)mesh.transform.elem);	
 						glBindVertexArray(mesh.vaoHandle);
-						glScissor(leftSplitViewport, bottomSplitViewport, splitReso, splitReso);
 						glDrawElements(GL_TRIANGLES, mesh.indexCount, GL_UNSIGNED_INT, 0);
 					}
 				}

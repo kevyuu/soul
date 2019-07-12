@@ -162,6 +162,15 @@
     <ClInclude Include="src\gpu\data.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="src\job\data.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\job\system.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\core\architecture.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\core\math.cpp">
@@ -300,6 +309,12 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\editor\intern\demo\sea_of_light_demo.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\job\intern\job_system.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\job\intern\task_deque.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
