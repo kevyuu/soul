@@ -1,0 +1,73 @@
+{
+	// See https://go.microsoft.com/fwlink/?LinkId=733558
+	// for the documentation about the tasks.json format
+	"version": "2.0.0",
+	"command": "sh",
+	"args": ["-c"],
+	"presentation": {
+		"echo": true,
+		"reveal": "always",
+		"panel": "dedicated",
+		"clear": true
+	},
+	"options": {
+		"env": {
+			"CC": "/usr/bin/clang",
+			"CXX": "/usr/bin/clang++"
+		}
+	},
+	"tasks": [
+		{
+			"label": "cmake-clang-debug",
+			"type": "shell",
+			"options": {
+				"cwd": "${workspaceRoot}/cmake-build-debug"
+			},
+			"args": [
+				"cmake -DCMAKE_C_COMPILER_ID=Clang -DCMAKE_CXX_COMPILER=/usr/bin/clang++ -DCMAKE_BUILD_TYPE=Debug -DGLFW_BUILD_EXAMPLES=OFF -DGLFW_BUILD_TESTS=OFF .."
+			]
+		},
+		{
+			"label": "build-clang-debug",
+			"type": "shell",
+			"args": [
+				"cmake --build . --config Debug"
+			],
+			"options": {
+				"cwd": "${workspaceRoot}/cmake-build-debug"
+			},
+			"group": {
+				"kind": "build",
+				"isDefault": true,
+			}
+		},
+		{
+			"label": "demo",
+			"type": "shell",
+			"args": [
+				"./demo"
+			],
+			"options": {
+				"cwd": "${workspaceRoot}/cmake-build-debug/soul"
+			},
+			"problemMatcher": {
+				"owner": "cpp",
+				"fileLocation": ["relative", "${workspaceFolder}"],
+				"pattern": {
+					// The regular expression. Example to match: helloWorld.c:5:3: warning: implicit declaration of function ‘printf’ [-Wimplicit-function-declaration]
+					"regexp": "^(.*):(\\d+):(\\d+):\\s+(WARNING|ERROR):\\s+(.*)$",
+					// The first match group matches the file name which is relative.
+					"file": 1,
+					// The second match group matches the line on which the problem occurred.
+					"line": 2,
+					// The third match group matches the column at which the problem occurred.
+					"column": 3,
+					// The fourth match group matches the problem's severity. Can be ignored. Then all problems are captured as errors.
+					"severity": 4,
+					// The fifth match group matches the message.
+					"message": 5
+				}
+			}
+		}
+	]
+}

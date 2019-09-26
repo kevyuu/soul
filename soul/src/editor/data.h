@@ -63,6 +63,7 @@ namespace Soul {
 		struct DirLightEntity : Entity {
 			Render::DirectionalLightSpec spec;
 			Render::DirLightRID rid;
+			
 		};
 
 		struct PointLightEntity : Entity {

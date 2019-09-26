@@ -1,0 +1,18 @@
+[submodule "dependencies/volk"]
+	path = dependencies/volk
+	url = https://github.com/zeux/volk.git
+[submodule "dependencies/glfw"]
+	path = dependencies/glfw
+	url = https://github.com/glfw/glfw.git
+[submodule "dependencies/SPIRV-Cross"]
+	path = dependencies/SPIRV-Cross
+	url = https://github.com/KhronosGroup/SPIRV-Cross.git
+[submodule "dependencies/shaderc"]
+	path = dependencies/shaderc
+	url = https://github.com/google/shaderc.git
+[submodule "dependencies/VulkanMemoryAllocator"]
+	path = dependencies/VulkanMemoryAllocator
+	url = https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator.git
+[submodule "dependencies/tinygltf"]
+	path = dependencies/tinygltf
+	url = https://github.com/syoyo/tinygltf.git

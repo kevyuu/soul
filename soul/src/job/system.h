@@ -2,105 +2,111 @@
 #include "core/type.h"
 #include "job/data.h"
 
-namespace Soul {
-	namespace Job {
+namespace Soul { namespace Job {
 		
-		struct System {
+	struct System {
 
-			struct Config {
-				uint16 threadCount; // 0 to use hardware thread count
-				uint16 taskPoolCount;
-			};
-			
-			/*
-				Initialize the Job System. Only call this from the main thread.
-			*/
-			void init(const Config& config);
+		struct Config {
+			uint16 threadCount; // 0 to use hardware thread count
+			uint16 taskPoolCount;
+		};
+		
+		/*
+			Initialize the Job System. Only call this from the main thread.
+		*/
+		void init(const Config& config);
 
-			/*
-				Cleanup all job system resource. Only call this from the main thread.
-			*/
-			void shutdown();
+		/*
+			Cleanup all job system resource. Only call this from the main thread.
+		*/
+		void shutdown();
 
-			void beginFrame(); 
+		void beginFrame(); 
 
-			template <typename T>
-			TaskID taskCreate(TaskID parent, T lambda);
+		template <typename T>
+		TaskID taskCreate(TaskID parent, T lambda);
 
-			template <typename T>
-			TaskID parallelForTaskCreate(TaskID parent, T* data, uint32 dataCount, uint32 blockSize, void(*func)(T* data, uint32 count));
+		template <typename Func>
+		TaskID _parallelForTaskCreateRecursive(TaskID parent, uint32 start, uint32 count, uint32 blockSize, Func func);
 
-			void taskWait(TaskID taskID);
-			void taskRun(TaskID taskID);
+		template <typename Func>
+		inline TaskID parallelForTaskCreate(TaskID parent, uint32 count, uint32 blockSize, Func func) {
+			_parallelForTaskCreate(parent, 0, count, blockSize, func);
+		}
 
-			inline static System& Get() {
-				static System instance;
-				return instance;
-			}
+		void taskWait(TaskID taskID);
+		void taskRun(TaskID taskID);
 
-			TaskID _taskCreate(TaskID parent, TaskFunc func);
-			Task* _getTaskPtr(TaskID taskID);
-			void _taskFinish(Task* task);
-			void _loop(ThreadState* threadState);
-			void _execute(TaskID task);
-			bool _isTaskComplete(Task* task);
-			void _terminate();
+		uint16 getThreadCount() const;
+		uint16 getThreadID() const;
 
-			Database _db;
+		inline static System& Get() {
+			static System instance;
+			return instance;
+		}
+
+		TaskID _taskCreate(TaskID parent, TaskFunc func);
+		Task* _getTaskPtr(TaskID taskID);
+		void _taskFinish(Task* task);
+		void _loop(ThreadState* threadState);
+		void _execute(TaskID task);
+		bool _isTaskComplete(Task* task) const;
+		void _terminate();
+
+		Database _db;
+	};
+
+	template<typename T>
+	TaskID System::taskCreate(TaskID parent, T lambda) {
+		
+		static_assert(sizeof lambda <= sizeof(Task::storage), 
+			"Lambda size is too big."
+			"Consider increase the storage size of the" 
+			"task or dynamically allocate the memory.");
+
+		static auto call = [](TaskID taskID, void* data) {
+			T& lambda = *((T*)data);
+			lambda(taskID);
+			lambda.~T();
 		};
 
-		template<typename T>
-		TaskID System::taskCreate(TaskID parent, T lambda) {
-			
-			static_assert(sizeof lambda <= sizeof(Task::storage), 
-				"Lambda size is too big."
-				"Consider increase the storage size of the" 
-				"task or dyanmically allocate the memory.");
-
-			static auto call = [](TaskID taskID, void* data) {
-				T& lambda = *((T*)data);
-				lambda(taskID);
-				lambda.~T();
-			};
-
-			TaskID taskID = _taskCreate(parent, call);
-			Task* task = _getTaskPtr(taskID);
-			new(task->storage) T(std::move(lambda));
-			return taskID;
-
-		}
-
-		template<typename T>
-		TaskID System::parallelForTaskCreate(TaskID parent, T* data, uint32 dataCount, uint32 blockSize, void(*func)(T* data, uint32 count)) {
-			
-			using TaskData = ParallelForTaskData<T>;
-
-			static_assert(sizeof(TaskData) <= sizeof(Task::storage),
-				"ParallelForTaskData size is too big."
-				"Consider increase the storage size of the task.");
-
-			static auto parallelFunc = [](TaskID taskID, void* data) {
-				TaskData& taskData = (*(TaskData*)data);
-				if (taskData.count > taskData.minCount) {
-					uint32 leftCount = taskData.count / 2;
-					TaskID leftTaskID = Get().parallelForTaskCreate(taskID, taskData.data, leftCount, taskData.minCount, taskData.func);
-					Get().taskRun(leftTaskID);
-
-					uint32 rightCount = taskData.count - leftCount;
-					TaskID rightTaskID = Get().parallelForTaskCreate(taskID, taskData.data + leftCount, rightCount, taskData.minCount, taskData.func);
-					Get().taskRun(rightTaskID);
-				}
-				else {
-					taskData.func(taskData.data, taskData.count);
-				}
-			};
-			
-			TaskID taskID = _taskCreate(parent, parallelFunc);
-			Task* task = _getTaskPtr(taskID);
-			new(task->storage) TaskData(data, dataCount, blockSize, func);
-			return taskID;
-
-		}
+		TaskID taskID = _taskCreate(parent, call);
+		Task* task = _getTaskPtr(taskID);
+		new(task->storage) T(std::move(lambda));
+		return taskID;
 
 	}
-}
+
+	template<typename Func>
+	TaskID System::_parallelForTaskCreateRecursive(TaskID parent, uint32 start, uint32 dataCount, uint32 blockSize, Func func) {
+		
+		using TaskData = ParallelForTaskData<Func>;
+
+		static_assert(sizeof(TaskData) <= sizeof(Task::storage),
+			"ParallelForTaskData size is too big."
+			"Consider to increase the storage size of the task.");
+
+		static auto parallelFunc = [](TaskID taskID, void* data) {
+			TaskData& taskData = (*(TaskData*)data);
+			if (taskData.count > taskData.minCount) {
+				uint32 leftCount = taskData.count / 2;
+				TaskID leftTaskID = Get()._parallelForTaskCreateRecursive(taskID, taskData.start, leftCount, taskData.minCount, taskData.func);
+				Get().taskRun(leftTaskID);
+
+				uint32 rightCount = taskData.count - leftCount;
+				TaskID rightTaskID = Get()._parallelForTaskCreateRecursive(taskID, taskData.start + leftCount, rightCount, taskData.minCount, taskData.func);
+				Get().taskRun(rightTaskID);
+			}
+			else {
+				for (int i = 0; i < taskData.count; i++) {
+					taskData.func(taskData.start + i);
+				}
+			}
+		};
+		
+		TaskID taskID = _taskCreate(parent, parallelFunc);
+		Task* task = _getTaskPtr(taskID);
+		new(task->storage) TaskData(start, dataCount, blockSize, func);
+		return taskID;
+	}
+}}

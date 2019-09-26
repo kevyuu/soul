@@ -6,7 +6,7 @@
 
 namespace Soul
 {
-	typedef PoolID PackedID;
+	using PackedID = PoolID;
 
 	template<typename T>
 	struct PackedArray
@@ -28,16 +28,16 @@ namespace Soul
 
 		~PackedArray()
 		{
-			SOUL_ASSERT(0, _internalIndexes.size() == 0);
-			SOUL_ASSERT(0, _capacity == 0);
-			SOUL_ASSERT(0, _size == 0);
-			SOUL_ASSERT(0, _buffer == nullptr);
-			SOUL_ASSERT(0, _poolIDs == nullptr);
+			SOUL_ASSERT(0, _internalIndexes.size() == 0, "");
+			SOUL_ASSERT(0, _capacity == 0, "");
+			SOUL_ASSERT(0, _size == 0, "");
+			SOUL_ASSERT(0, _buffer == nullptr, "");
+			SOUL_ASSERT(0, _poolIDs == nullptr, "");
 		}
 
 		inline void reserve(uint32 capacity) 
 		{
-			SOUL_ASSERT(0, capacity > _capacity);
+			SOUL_ASSERT(0, capacity > _capacity, "");
 			
 			T* oldBuffer = _buffer;
 			_buffer = (T*)malloc(capacity * sizeof(T));
@@ -48,7 +48,7 @@ namespace Soul
 			if (oldBuffer != nullptr)
 			{
 				memcpy(_buffer, oldBuffer, _capacity * sizeof(T));
-				SOUL_ASSERT(0, oldPoolIDs != nullptr);
+				SOUL_ASSERT(0, oldPoolIDs != nullptr, "");
 				memcpy(_poolIDs, oldPoolIDs, _capacity * sizeof(PoolID));
 			}
 
@@ -82,6 +82,12 @@ namespace Soul
 		}
 
 		inline T& operator[](PackedID id) 
+		{
+			uint32 internalIndex = _internalIndexes[id];
+			return _buffer[internalIndex];
+		}
+
+		inline const T& get(PackedID id) const
 		{
 			uint32 internalIndex = _internalIndexes[id];
 			return _buffer[internalIndex];

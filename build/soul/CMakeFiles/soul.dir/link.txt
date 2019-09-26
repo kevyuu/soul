@@ -1,0 +1,2 @@
+/usr/bin/ar qc libsoul.a  CMakeFiles/soul.dir/src/core/debug.cpp.o CMakeFiles/soul.dir/src/core/math.cpp.o
+/usr/bin/ranlib libsoul.a

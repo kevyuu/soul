@@ -1,0 +1,6 @@
+#ifndef SPIRV_CROSS_GIT_VERSION_H_
+#define SPIRV_CROSS_GIT_VERSION_H_
+
+#define SPIRV_CROSS_GIT_REVISION "Git commit: ffca8735 Timestamp: 2019-09-02T16:28:58"
+
+#endif

@@ -6,7 +6,7 @@
 
 namespace Soul {
 
-	typedef uint32 PoolID;
+	using PoolID = uint32;
 
 	template <typename T>
 	struct PoolArray {
@@ -60,7 +60,7 @@ namespace Soul {
 			return _buffer[id].datum;
 		}
 
-		const T& get(PoolID id) const {
+		inline const T& get(PoolID id) const {
 			SOUL_ASSERT(0, id < _capacity, "Pool Array access violation");
 			return _buffer[id].datum;
 		}

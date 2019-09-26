@@ -1,77 +1,57 @@
 cmake_minimum_required(VERSION 3.10)
+
 project(soul)
 
-set(CMAKE_CXX_STANDARD 11)
+set(EXTERNAL ${CMAKE_CURRENT_SOURCE_DIR}/dependencies)
 
-include_directories(dependencies)
-include_directories(dependencies/glew-2.1.0)
-include_directories(dependencies/glew-2.1.0/include)
-include_directories(dependencies/glew-2.1.0/include/GL)
-include_directories(dependencies/GLFW)
-include_directories(dependencies/GLFW/include)
-include_directories(dependencies/GLFW/include/GLFW)
-include_directories(dependencies/KHR)
-include_directories(soul/src)
-include_directories(soul/src/render)
+# ==================================================================================================
+# General compiler flags
+# ==================================================================================================
+set(CMAKE_CXX_STANDARD 14)
+if (WIN32)
+    set(CXX_STANDARD 14)
+endif()
 
-find_package(OpenGL REQUIRED)
-include_directories(${OPENGL_INCLUDE_DIRS})
-find_package(PkgConfig REQUIRED)
-add_subdirectory(dependencies/glfw-3.2.1)
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CXX_STANDARD} -fstrict-aliasing -Wno-unknown-pragmas -Wno-unused-function --debug")
 
-link_libraries(${OPENGL_LIBRARIES} glfw)
+if (CLANG_CL)
+    # Since the "secure" replacements that MSVC suggests are not portable, disable
+    # the deprecation warnings. Also disable warnings about use of POSIX functions (i.e. "unlink").
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D_CRT_SECURE_NO_WARNINGS -D_CRT_NONSTDC_NO_DEPRECATE")
+	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -D_CRT_SECURE_NO_WARNINGS -D_CRT_NONSTDC_NO_DEPRECATE")
+endif()
 
+message(STATUS "CC : $ENV{CC}")
+message(STATUS "CXX : $ENV{CXX}")
+message(STATUS "Compiler ID : ${CMAKE_CXX_COMPILER_ID}")
+message(STATUS "Compiler Path : ${CMAKE_CXX_COMPILER}")
+message(STATUS "C++ Flags : ${CMAKE_CXX_FLAGS}")
+message(STATUS "C++ Debug Flags : ${CMAKE_CXX_FLAGS_DEBUG}")
 
-add_executable(soul
-        dependencies/glew-2.1.0/include/GL/eglew.h
-        dependencies/glew-2.1.0/include/GL/glew.h
-        dependencies/glew-2.1.0/include/GL/glxew.h
-        dependencies/glew-2.1.0/include/GL/wglew.h
-        dependencies/GLFW/include/GLFW/glfw3.h
-        dependencies/GLFW/include/GLFW/glfw3native.h
-        dependencies/KHR/khrplatform.h
+# ==================================================================================================
+# Try to find vulkan
+# ==================================================================================================
+if (DEFINED ENV{VULKAN_SDK})
+	message(STATUS "Found Vulkan SDK: $ENV{VULKAN_SDK}")
+else()
+	if (APPLE)
+		set(ENV{VULKAN_SDK} ${EXTERNAL}/vulkan/macOS)
+	endif()
+	message(STATUS "Vulkan SDK not found. Use local copy: $ENV{VULKAN_SDK}")
+endif()
 
-        soul/src/extern/imgui.h
-        soul/src/extern/imgui_internal.h
-        soul/src/extern/stb_rect_pack.h
-        soul/src/extern/stb_textedit.h
-        soul/src/extern/stb_truetype.h
-        soul/src/extern/imgui_impl_glfw.h
-        soul/src/extern/imgui_impl_opengl3.h
-        soul/src/extern/imconfig.h
-        soul/src/extern/imgui.cpp
-        soul/src/extern/imgui_draw.cpp
-        soul/src/extern/imgui_impl_glfw.cpp
-        soul/src/extern/imgui_impl_opengl3.cpp
+if (APPLE)
+	find_library(Vulkan_LIBRARY NAMES vulkan HINTS "$ENV{VULKAN_SDK}/lib" "$ENV{VULKAN_SDK}/macOS/lib")
+    if (Vulkan_LIBRARY)
+		set(Vulkan_FOUND ON)
+        message(STATUS "Found Vulkan library in SDK: ${Vulkan_LIBRARY}.")
+		add_definitions(-DSOUL_VKLIBRARY_PATH=\"${Vulkan_LIBRARY}\")
+	else()
+		message(FATAL_ERROR "Vulkan library not found!")
+    endif()
+endif()
 
-        soul/src/render/intern/pbr_scene_rp.cpp
-        soul/src/render/intern/shadow_map_rp.cpp
-        soul/src/render/intern/shadow_map_view_rp.cpp
-        soul/src/render/intern/skybox_rp.cpp
-        soul/src/render/intern/panorama_to_cubemap_rp.cpp
-        soul/src/render/intern/diffuse_envmap_filter_rp.cpp
-        soul/src/render/intern/specular_envmap_filter.cpp
-        soul/src/render/intern/brdf_map_rp.cpp
-        soul/src/render/intern/ssr_trace_rp.cpp
-        soul/src/render/intern/ssr_resolve_rp.cpp
-        soul/src/render/intern/gaussian_blur_rp.cpp
-        soul/src/render/intern/system.cpp
-        soul/src/render/system.h
-        soul/src/render/type.h
-        soul/src/render/intern/util.h
-        soul/src/render/intern/asset.h
+add_subdirectory(dependencies)
 
-        soul/src/extern/glad.c
-        soul/src/extern/glad.h
-        soul/src/main.cpp
-        soul/src/soul_array.h
-        soul/src/soul_core.cpp
-        soul/src/soul_core.h
-        soul/src/core/math.cpp
-        soul/src/core/math.h
-        soul/src/stb_image.h
-        soul/src/core/type.h
-        soul/src/render/intern/specular_envmap_filter.cpp
-        soul/src/render/intern/brdf_map_rp.cpp
-        soul/src/render/intern/lighting_rp.cpp soul/src/render/intern/gbuffer_gen_rp.cpp)
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/soul)
 

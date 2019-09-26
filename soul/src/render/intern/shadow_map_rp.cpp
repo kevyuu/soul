@@ -55,8 +55,6 @@ namespace Soul {
 
 			glUseProgram(program);
 
-			
-
 			for (int i = 0; i < database.dirLightCount; i++) {
 				const DirLight& light = database.dirLights[i];
 				int quadrant = light.shadowKey.quadrant;

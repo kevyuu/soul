@@ -2,6 +2,7 @@
 
 #include "core/debug.h"
 #include <cstdlib>
+#include <cstring>
 
 namespace Soul {
 
@@ -15,9 +16,9 @@ namespace Soul {
 		}
 
 		~Array() {
-			SOUL_ASSERT(0, _capacity == 0);
-			SOUL_ASSERT(0, _size == 0);
-			SOUL_ASSERT(0, _buffer == 0);
+			SOUL_ASSERT(0, _capacity == 0, "");
+			SOUL_ASSERT(0, _size == 0, "");
+			SOUL_ASSERT(0, _buffer == 0, "");
 		}
 
 		void reserve(int capacity) {
@@ -45,48 +46,51 @@ namespace Soul {
 		}
 
 		void add(const T& item) {
-
 			if (_size == _capacity) {
-				T* oldBuffer = _buffer;
-				_buffer = (T*)malloc(sizeof(T) * 2 * _capacity);
-				memcpy(_buffer, oldBuffer, sizeof(T) * _capacity);
-				free(oldBuffer);
-				_capacity *= 2;
+				reserve((_capacity * 2) + 8);
 			}
-
 			_buffer[_size] = item;
 			_size++;
 		}
 
-		T& back() {
+		inline T& back() {
 			return _buffer[_size - 1];
 		}
 
-		void pop() {
+		inline void pop() {
 			SOUL_ASSERT(0, _size != 0, "Cannot pop an empty array.");
 			_size--;
 		}
 
-		T* ptr(int idx) {
+		inline T* ptr(int idx) {
 			return &_buffer[idx];
 		}
 
-		T& operator[](int idx) {
+		inline T* data() {
+			return &_buffer[0];
+		}
+
+		inline const T* constdata() const {
+			return &_buffer[0];
+		}
+
+		inline T& operator[](int idx) {
+			SOUL_ASSERT(0, idx < _size, "Out of bound access to array detected.");
 			return _buffer[idx];
 		}
 
-		T& get(int idx) const {
+		inline const T& get(int idx) const {
 			return _buffer[idx];
 		}
 
-		int size() const {
+		inline int size() const {
 			return _size;
 		}
 
-		T* _buffer;
+		T* _buffer = nullptr;
 
-		int _size;
-		int _capacity;
+		int _size = 0;
+		int _capacity = 0;
 	};
 
 }

@@ -1,0 +1,2 @@
+/usr/bin/ar qc libspirv-cross-c.a  CMakeFiles/spirv-cross-c.dir/spirv_cross_c.cpp.o
+/usr/bin/ranlib libspirv-cross-c.a

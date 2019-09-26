@@ -85,21 +85,37 @@ namespace Soul {
 			uint16 threadCount;
 		};
 
-		template<typename T>
+		template<typename Func>
 		struct ParallelForTaskData {
-			using DataType = T;
-			using ParallelForFunc = void(*)(DataType*, uint32);
+			using ParallelForFunc = Func;
 
-			explicit ParallelForTaskData(DataType* data, 
+			explicit ParallelForTaskData(
+				uint32 start, 
 				uint32 count, 
 				uint32 minCount, 
 				ParallelForFunc func): 
-				data(data), count(count), minCount(minCount), func(func) {}
+				start(start), count(count), minCount(minCount), func(func) {}
 
-			DataType* data;
+			uint32 start;
 			uint32 count;
 			uint32 minCount;
 			ParallelForFunc func;
+		};
+
+		template<typename Input, typename Output, typename Func>
+		struct ParallelMapTaskData {
+
+			explicit ParallelMapTaskData(const Input* input, 
+				Output* output,
+				uint32 count,
+				uint32 minCount,
+				Func func);
+
+			const Input* input;
+			Output* output;
+			uint32 count;
+			uint32 minCount;
+			Func func;
 		};
 
 	}
