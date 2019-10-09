@@ -3,6 +3,7 @@ bin
 .idea
 cmake-build-debug/*
 cmake-build-release/*
+cmake-build-msvc-debug/*
 .vs/*
 .vs
 imgui.ini

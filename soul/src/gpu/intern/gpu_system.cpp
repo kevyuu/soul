@@ -9,7 +9,7 @@
 
 #include <volk/volk.h>
 #define VMA_IMPLEMENTATION
-#include <VulkanMemoryAllocator/src/vk_mem_alloc.h>
+#include <vk_mem_alloc.h>
 
 #include <cstddef>
 #include <limits>

@@ -1,2 +1,0 @@
-/usr/bin/ar qc libspirv-cross-msl.a  CMakeFiles/spirv-cross-msl.dir/spirv_msl.cpp.o
-/usr/bin/ranlib libspirv-cross-msl.a
