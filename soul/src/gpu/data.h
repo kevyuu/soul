@@ -9,7 +9,7 @@
 
 // TODO: Figure out how to do it without single header library
 #define VK_NO_PROTOTYPES
-#include <VulkanMemoryAllocator/src/vk_mem_alloc.h>
+#include <vk_mem_alloc.h>
 
 namespace Soul {
 	namespace GPU {
@@ -142,6 +142,22 @@ namespace Soul {
 			HashMap<VkRenderPass> renderPassMap;
 			HashMap<VkPipeline> pipelineMap;
 			HashMap<VkDescriptorSet> descriptorSetMap;
+		};
+
+		struct RenderGraphExecution {
+			struct BufferInfo {
+				uint16 firstPass;
+				uint16 lastPass;
+				VkBufferUsageFlags usageFlags = 0u;
+			};
+			Array<BufferInfo> bufferInfos;
+			
+			struct TextureInfo {
+				uint16 firstPass;
+				uint16 lastPass;
+				VkImageUsageFlags usageFlags = 0u;
+			};
+			Array<TextureInfo> textureInfos;
 		};
 	}
 }

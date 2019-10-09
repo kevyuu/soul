@@ -11,10 +11,6 @@
 		"clear": true
 	},
 	"options": {
-		"env": {
-			"CC": "/usr/bin/clang",
-			"CXX": "/usr/bin/clang++"
-		}
 	},
 	"tasks": [
 		{
@@ -24,7 +20,7 @@
 				"cwd": "${workspaceRoot}/cmake-build-debug"
 			},
 			"args": [
-				"cmake -DCMAKE_C_COMPILER_ID=Clang -DCMAKE_CXX_COMPILER=/usr/bin/clang++ -DCMAKE_BUILD_TYPE=Debug -DGLFW_BUILD_EXAMPLES=OFF -DGLFW_BUILD_TESTS=OFF .."
+				"cmake -DCMAKE_BUILD_TYPE=Debug -DGLFW_BUILD_EXAMPLES=OFF -DGLFW_BUILD_TESTS=OFF .."
 			]
 		},
 		{
@@ -45,10 +41,10 @@
 			"label": "demo",
 			"type": "shell",
 			"args": [
-				"./demo"
+				"./test"
 			],
 			"options": {
-				"cwd": "${workspaceRoot}/cmake-build-debug/soul"
+				"cwd": "${workspaceRoot}/cmake-build-debug/demo/"
 			},
 			"problemMatcher": {
 				"owner": "cpp",

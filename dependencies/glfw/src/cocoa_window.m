@@ -1032,7 +1032,14 @@ void _glfwPlatformSetWindowSize(_GLFWwindow* window, int width, int height)
             acquireMonitor(window);
     }
     else
-        [window->ns.object setContentSize:NSMakeSize(width, height)];
+    {
+        NSRect contentRect =
+            [window->ns.object contentRectForFrameRect:[window->ns.object frame]];
+        contentRect.origin.y += contentRect.size.height - height;
+        contentRect.size = NSMakeSize(width, height);
+        [window->ns.object setFrame:[window->ns.object frameRectForContentRect:contentRect]
+                            display:YES];
+    }
 
     } // autoreleasepool
 }
@@ -1503,8 +1510,10 @@ const char* _glfwPlatformGetScancodeName(int scancode)
 {
     @autoreleasepool {
 
+    const int key = _glfw.ns.keycodes[scancode];
+
     UInt32 deadKeyState = 0;
-    UniChar characters[8];
+    UniChar characters[4];
     UniCharCount characterCount = 0;
 
     if (UCKeyTranslate([(NSData*) _glfw.ns.unicodeData bytes],
@@ -1529,12 +1538,12 @@ const char* _glfwPlatformGetScancodeName(int scancode)
                                                             characterCount,
                                                             kCFAllocatorNull);
     CFStringGetCString(string,
-                       _glfw.ns.keyName,
-                       sizeof(_glfw.ns.keyName),
+                       _glfw.ns.keynames[key],
+                       sizeof(_glfw.ns.keynames[key]),
                        kCFStringEncodingUTF8);
     CFRelease(string);
 
-    return _glfw.ns.keyName;
+    return _glfw.ns.keynames[key];
 
     } // autoreleasepool
 }

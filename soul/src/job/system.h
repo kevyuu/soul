@@ -1,6 +1,7 @@
 #pragma once
 #include "core/type.h"
 #include "job/data.h"
+#include <utility>
 
 namespace Soul { namespace Job {
 		
@@ -24,14 +25,14 @@ namespace Soul { namespace Job {
 		void beginFrame(); 
 
 		template <typename T>
-		TaskID taskCreate(TaskID parent, T lambda);
+		TaskID taskCreate(TaskID parent, T&& lambda);
 
 		template <typename Func>
-		TaskID _parallelForTaskCreateRecursive(TaskID parent, uint32 start, uint32 count, uint32 blockSize, Func func);
+		TaskID _parallelForTaskCreateRecursive(TaskID parent, uint32 start, uint32 count, uint32 blockSize, Func&& func);
 
 		template <typename Func>
-		inline TaskID parallelForTaskCreate(TaskID parent, uint32 count, uint32 blockSize, Func func) {
-			_parallelForTaskCreate(parent, 0, count, blockSize, func);
+		inline TaskID parallelForTaskCreate(TaskID parent, uint32 count, uint32 blockSize, Func&& func) {
+			return _parallelForTaskCreateRecursive(parent, 0, count, blockSize, std::forward<Func>(func));
 		}
 
 		void taskWait(TaskID taskID);
@@ -57,7 +58,7 @@ namespace Soul { namespace Job {
 	};
 
 	template<typename T>
-	TaskID System::taskCreate(TaskID parent, T lambda) {
+	TaskID System::taskCreate(TaskID parent, T&& lambda) {
 		
 		static_assert(sizeof lambda <= sizeof(Task::storage), 
 			"Lambda size is too big."
@@ -72,13 +73,13 @@ namespace Soul { namespace Job {
 
 		TaskID taskID = _taskCreate(parent, call);
 		Task* task = _getTaskPtr(taskID);
-		new(task->storage) T(std::move(lambda));
+		new(task->storage) T(std::forward<T>(lambda));
 		return taskID;
 
 	}
 
 	template<typename Func>
-	TaskID System::_parallelForTaskCreateRecursive(TaskID parent, uint32 start, uint32 dataCount, uint32 blockSize, Func func) {
+	TaskID System::_parallelForTaskCreateRecursive(TaskID parent, uint32 start, uint32 dataCount, uint32 blockSize, Func&& func) {
 		
 		using TaskData = ParallelForTaskData<Func>;
 
@@ -104,9 +105,9 @@ namespace Soul { namespace Job {
 			}
 		};
 		
-		TaskID taskID = _taskCreate(parent, parallelFunc);
+		TaskID taskID = _taskCreate(parent, std::move(parallelFunc));
 		Task* task = _getTaskPtr(taskID);
-		new(task->storage) TaskData(start, dataCount, blockSize, func);
+		new(task->storage) TaskData(start, dataCount, blockSize, std::forward<Func>(func));
 		return taskID;
 	}
 }}

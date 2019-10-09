@@ -114,7 +114,7 @@ namespace Soul { namespace GPU {
 			vkEnumerateInstanceLayerProperties(&layerCount, nullptr);
 
 			Array<VkLayerProperties> availableLayers;
-			availableLayers.reserve(layerCount);
+			availableLayers.resize(layerCount);
 
 			vkEnumerateInstanceLayerProperties(&layerCount, availableLayers.data());
 
@@ -816,19 +816,69 @@ namespace Soul { namespace GPU {
 	}
 
 
-	void System::renderGraphExecute(RenderGraph* renderGraph) {
-		for (int i = 0; i < renderGraph->passNodes.size(); i++) {
-			const PassNode* passNode = renderGraph->passNodes.get(i);
-			switch (passNode->type) {
-			case PassType::GRAPHIC:
-				// get or create render pass
-				// get or create pipeline
-				// get or create framebuffer
+	void System::renderGraphExecute(const RenderGraph& renderGraph) {
+		RenderGraphExecution execution;
+		execution.bufferInfos.resize(renderGraph.buffers.size());
+		execution.textureInfos.resize(renderGraph.textures.size());
 
-			default:
-				SOUL_ASSERT(0, false, "Pass Type not implemented yet");
+		for (int i = 0; i < renderGraph.passNodes.size(); i++) {
+			const PassNode* passNode = renderGraph.passNodes.get(i);
+			for (int j = 0; j < passNode->bufferReads.size(); j++) {
+				const BufferReadEntry& readEntry = passNode->bufferReads.get(i);
+				const BufferNode& node = renderGraph.bufferNodes.get(readEntry.nodeID);
+				const RenderGraphBuffer& rgBuffer = renderGraph.buffers.get(node.resourceID);
+
+				static constexpr int bufferReadUsageToVkUsage[(uint8)BufferReadUsage::COUNT] = {
+					0x00000000,
+					0x00000000,
+					VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+					VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+					VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
+					VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT,
+					VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+					VK_BUFFER_USAGE_STORAGE_BUFFER_BIT
+				};
+
+				execution.bufferInfos[node.resourceID].usageFlags |= bufferReadUsageToVkUsage[(int)readEntry.usage];
+				execution.bufferInfos[node.resourceID].lastPass = j;
+				if (i == rgBuffer.creatorPassNodeID) {
+					execution.bufferInfos[node.resourceID].firstPass = j;
+				}
+			}
+			for (int j = 0; j < passNode->bufferWrites.size(); j++) {
+				const BufferWriteEntry& writeEntry = passNode->bufferWrites.get(i);
+				const BufferNode& node = renderGraph.bufferNodes.get(writeEntry.nodeID);
+				const RenderGraphBuffer& rgBuffer = renderGraph.buffers.get(node.resourceID);
+
+				static constexpr int bufferWriteUsageToVkUsage[(uint8)BufferWriteUsage::COUNT] = {
+					0x00000000,
+					VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+					VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+				};
+
+				execution.bufferInfos[node.resourceID].usageFlags |= bufferWriteUsageToVkUsage[(int)writeEntry.usage];
+				execution.bufferInfos[node.resourceID].lastPass = j;
+				if (i == rgBuffer.creatorPassNodeID) {
+					execution.bufferInfos[node.resourceID].firstPass = j;
+				}
+
 			}
 		}
+
+		/*
+			For each pass:
+			- Create resource if first time usage, else get resource id.
+			- Submit wait events. Generate VkCmdWaitEvents
+			- Do necessary image layout transition. Use VkCmdPipelineBarrier.
+			- Collect all semaphores
+			- If passtype == graphics create shader module and graphics pipeline
+			- Run render pass execute
+			- Get command buffer, ryb vkBeginCommandBuffer
+			- if passtype == graphics create Render pass, Submit vkCmdBeginRenderPass, vkCmdBindPipeline.
+			- Tranlsate command in commandBucket to vulkan command and submit it to the command buffer
+			- vkQueueSubmit
+			- 
+		*/
 	}
 
 }}

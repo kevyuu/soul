@@ -147,7 +147,7 @@ namespace Soul { namespace Job {
 		SOUL_ASSERT(0, threadCount <= Constant::MAX_THREAD_COUNT, "Thread count : %d is more than MAX_THREAD_COUNT : %d", threadCount, Constant::MAX_THREAD_COUNT);
 		_db.threadCount = threadCount;
 		
-		_db.threadStates.reserve(threadCount);
+		_db.threadStates.resize(threadCount);
 
 		for (int i = 0; i < threadCount; i++) {
 			_db.threadStates[i].taskPoolOffset = 0;

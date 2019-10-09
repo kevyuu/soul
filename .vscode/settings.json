@@ -62,7 +62,22 @@
 		"typeinfo": "cpp",
 		"unordered_map": "cpp",
 		"utility": "cpp",
-		"vector": "cpp"
+		"vector": "cpp",
+		"__errc": "cpp",
+		"__node_handle": "cpp",
+		"complex": "cpp",
+		"csignal": "cpp",
+		"deque": "cpp",
+		"optional": "cpp",
+		"iomanip": "cpp",
+		"list": "cpp",
+		"new": "cpp",
+		"queue": "cpp",
+		"regex": "cpp",
+		"set": "cpp",
+		"shared_mutex": "cpp",
+		"stack": "cpp",
+		"unordered_set": "cpp"
 	},
 	"cmake.cmakePath": "/usr/local/bin/cmake",
 	"shaderc-lint.glslcPath": "/Users/utamak/Dev/personal/bin/glslc",
@@ -91,5 +106,6 @@
 		"-std=c++11",
 		"-I/Users/utamak/Dev/personal/soul/soul/dependencies",
 		"-I/Users/utamak/Dev/personal/soul/soul/src"
-	]
+	],
+	"C_Cpp.errorSquiggles": "Disabled"
 }

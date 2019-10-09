@@ -93,8 +93,8 @@ namespace Soul {
 				uint32 start, 
 				uint32 count, 
 				uint32 minCount, 
-				ParallelForFunc func): 
-				start(start), count(count), minCount(minCount), func(func) {}
+				ParallelForFunc&& func): 
+				start(start), count(count), minCount(minCount), func(std::forward<ParallelForFunc>(func)) {}
 
 			uint32 start;
 			uint32 count;

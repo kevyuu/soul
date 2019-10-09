@@ -23,10 +23,10 @@ namespace Soul {
 
 		void reserve(int capacity) {
 			T* oldBuffer = _buffer;
-			_buffer = (T*)malloc(capacity * sizeof(T));
+			_buffer = new T[capacity];
 			if (oldBuffer != nullptr) {
 				memcpy(_buffer, oldBuffer, _capacity * sizeof(T));
-				free(oldBuffer);
+				delete[] oldBuffer;
 			}
 			_capacity = capacity;
 		}
@@ -39,18 +39,19 @@ namespace Soul {
 		}
 
 		void cleanup() {
-			free(_buffer);
+			delete[] _buffer;
 			_buffer = nullptr;
 			_capacity = 0;
 			_size = 0;
 		}
 
-		void add(const T& item) {
+		int add(const T& item) {
 			if (_size == _capacity) {
 				reserve((_capacity * 2) + 8);
 			}
 			_buffer[_size] = item;
 			_size++;
+			return _size-1;
 		}
 
 		inline T& back() {

@@ -1,6 +1,8 @@
 #pragma once
+#include "core/type.h"
 #include "gpu/data.h"
 #include <limits.h>
+#include <utility>
 
 namespace Soul { namespace GPU {
 
@@ -13,6 +15,7 @@ namespace Soul { namespace GPU {
 	using PassNodeID = uint16;
 
 	enum class Topology : uint8 {
+		NONE,
 		POINT_LIST,
 		LINE_LIST,
 		LINE_STRIP,
@@ -23,6 +26,7 @@ namespace Soul { namespace GPU {
 	};
 
 	enum class PolygonMode : uint8 {
+		NONE,
 		FILL,
 		LINE,
 		POINT,
@@ -38,12 +42,14 @@ namespace Soul { namespace GPU {
 	};
 
 	enum class FrontFace : uint8 {
+		NONE,
 		CLOCKWISE,
 		COUNTER_CLOCKWISE,
 		COUNT
 	};
 
 	enum class CompareOp : uint8 {
+		NONE,
 		NEVER,
 		LESS,
 		EQUAL,
@@ -56,6 +62,7 @@ namespace Soul { namespace GPU {
 	};
 
 	enum class BlendFactor : uint8 {
+		NONE,
 		ZERO,
 		ONE,
 		SRC_COLOR,
@@ -78,6 +85,7 @@ namespace Soul { namespace GPU {
 	};
 
 	enum class BlendOp : uint8 {
+		NONE,
 		ADD,
 		SUBTRACT,
 		REVERSE_SUBTRACT,
@@ -104,34 +112,12 @@ namespace Soul { namespace GPU {
 		};
 
 		template<typename T>
-		struct UpdateTypeBuffer : Command {
+		struct UpdateBufferArray : Command {
 			GPU::BufferID bufferID;
 			T* data;
 			uint16 index;
 		};
 
-	};
-	
-	struct RenderGraphTextureDesc {
-		uint32 width;
-		uint32 height;
-		TextureFormat format;
-		bool clear;
-		ClearValue clearValue;
-	};
-
-	struct RenderGraphTexture {
-		const char* name;
-		RenderGraphTextureDesc desc;
-	};
-
-	struct RenderGraphBufferDesc {
-		uint32 count;
-	};
-
-	struct RenderGraphBuffer {
-		const char* name;
-		RenderGraphBufferDesc desc;
 	};
 
 	struct CommandBucket {
@@ -144,6 +130,37 @@ namespace Soul { namespace GPU {
 		Command* put(uint32 index, uint64 key);
 	};
 
+	
+	struct RenderGraphTextureDesc {
+		uint16 width;
+		uint16 height;
+		TextureFormat format;
+		bool clear;
+		ClearValue clearValue;
+	};
+
+	struct RenderGraphTexture {
+		const char* name;
+		uint16 creatorPassNodeID;
+		uint16 width;
+		uint16 height;
+		TextureFormat format;
+		bool clear;
+		ClearValue clearValue;
+	};
+
+	struct RenderGraphBufferDesc {
+		uint16 count;
+	};
+
+	struct RenderGraphBuffer {
+		const char* name;
+		uint16 creatorPassNodeID;
+		uint16 count;
+		uint16 unitSize;
+	};
+
+	
 	struct GraphicPipelineDesc {
 
 		struct ShaderDesc {
@@ -184,6 +201,7 @@ namespace Soul { namespace GPU {
 	};
 
 	enum class PassType : uint8 {
+		NONE,
 		GRAPHIC,
 		COMPUTE,
 		TRANSFER,
@@ -191,6 +209,7 @@ namespace Soul { namespace GPU {
 	};
 
 	enum class TextureReadUsage : uint8 {
+		NONE,
 		READ_MODIFY,
 		TRANSFER_SRC,
 		DEPTH_STENCIL_SAMPLED,
@@ -201,6 +220,7 @@ namespace Soul { namespace GPU {
 	};
 
 	enum class TextureWriteUsage : uint8 {
+		NONE,
 		TRANSFER_DST,
 		STORAGE,
 		COLOR_ATTACHMENT,
@@ -209,18 +229,19 @@ namespace Soul { namespace GPU {
 	};
 
 	enum class BufferReadUsage : uint8 {
+		NONE,
 		READ_MODIFY,
 		TRANSFER_SRC,
 		VERTEX,
 		INDEX,
 		INDIRECT_BUFFER,
 		UNIFORM,
-		SAMPLED,
 		STORAGE,
 		COUNT
 	};
 
 	enum class BufferWriteUsage : uint8 {
+		NONE,
 		TRANSFER_DST,
 		STORAGE,
 		COUNT
@@ -247,11 +268,11 @@ namespace Soul { namespace GPU {
 	};
 
 	struct PassNode {
-		const char* name;
+		const char* name = nullptr;
 		PassType type;
 
 		Array<BufferReadEntry> bufferReads;
-		Array<BufferWriteUsage> bufferWrites;
+		Array<BufferWriteEntry> bufferWrites;
 
 		Array<TextureReadEntry> textureReads;
 		Array<TextureWriteEntry> textureWrites;
@@ -264,6 +285,8 @@ namespace Soul { namespace GPU {
 		Execute execute;
 		GraphicPipelineDesc pipelineDesc;
 		CommandBucket commandBucket;
+
+		GraphicNode(Execute&& execute) : execute(std::forward<Execute>(execute)){}
 	};
 
 	template<typename Data, typename Execute>
@@ -271,6 +294,8 @@ namespace Soul { namespace GPU {
 		Data data;
 		Execute execute;
 		CommandBucket commandBucket;
+
+		TransferNode(Execute&& execute) : execute(std::forward<Execute>(execute)) {}
 	};
 
 	template<typename Data, typename Execute>
@@ -278,6 +303,8 @@ namespace Soul { namespace GPU {
 		Data data;
 		Execute execute;
 		CommandBucket commandBucket;
+
+		ComputeNode(Execute&& execute) : execute(std::forward<Execute>(execute)) {}
 	};
 
 	struct TextureNode {
@@ -297,13 +324,13 @@ namespace Soul { namespace GPU {
 		static constexpr TextureNodeID SWAPCHAIN_TEXTURE = USHRT_MAX;
 
 		template<typename T, typename Setup, typename Execute>
-		GraphicNode<T, Execute>& addGraphicPass(const char* name, Setup setup, Execute execute);
+		GraphicNode<T, Execute>& addGraphicPass(const char* name, Setup setup, Execute&& execute);
 
 		template<typename T, typename Setup, typename Execute>
-		TransferNode<T, Execute>& addTransferPass(const char* name, Setup setup, Execute execute);
+		TransferNode<T, Execute>& addTransferPass(const char* name, Setup setup, Execute&& execute);
 
 		template<typename T, typename Setup, typename Execute>
-		ComputeNode<T, Execute>& addComputePass(const char* name, Setup setup, Execute execute);
+		ComputeNode<T, Execute>& addComputePass(const char* name, Setup setup, Execute&& execute);
 
 		TextureNodeID importTexture(const char* name, TextureID textureID);
 		TextureNodeID createTexture(const char* name, const RenderGraphTextureDesc& desc, TextureWriteUsage usage);
@@ -312,14 +339,13 @@ namespace Soul { namespace GPU {
 
 		BufferNodeID importBuffer(const char* name, BufferID bufferID);
 		template<typename T>
-		BufferNodeID createBuffer(const RenderGraphBufferDesc& desc, BufferWriteUsage usage);
+		BufferNodeID createBuffer(const char* name, const RenderGraphBufferDesc& desc, BufferWriteUsage usage);
 		BufferNodeID writeBuffer(BufferNodeID buffer, BufferWriteUsage usage);
 		BufferNodeID readBuffer(BufferNodeID buffer, BufferReadUsage usage);
 
 		BufferID getBuffer(BufferNodeID resource);
 		ShaderArgumentID getShaderArgument(GPU::BufferID bufferID, uint32 offset);
 
-		PassNodeID currentPassNodeID;
 		Array<PassNode*> passNodes;
 		
 		Array<BufferNode> bufferNodes;
@@ -330,3 +356,5 @@ namespace Soul { namespace GPU {
 
 	};
 }}
+
+#include "gpu/intern/render_graph.inl"

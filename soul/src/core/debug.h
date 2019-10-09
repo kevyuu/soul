@@ -6,7 +6,8 @@
 #define SOUL_DEBUG_BREAK() __debugbreak()
 #else
 #include <cstdlib>
-#define SOUL_DEBUG_BREAK() exit(1)
+#include <csignal>
+#define SOUL_DEBUG_BREAK() do { raise(SIGSEGV); } while(0)
 #endif //_MSC_VER
 
 void soul_intern_log(int verbosity, int line, const char* file, const char* format, ...);

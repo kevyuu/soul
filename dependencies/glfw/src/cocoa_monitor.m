@@ -215,7 +215,7 @@ static void endFadeReservation(CGDisplayFadeReservationToken token)
 
 // Finds and caches the NSScreen corresponding to the specified monitor
 //
-GLFWbool refreshMonitorScreen(_GLFWmonitor* monitor)
+static GLFWbool refreshMonitorScreen(_GLFWmonitor* monitor)
 {
     if (monitor->ns.screen)
         return GLFW_TRUE;
@@ -528,7 +528,7 @@ void _glfwPlatformSetGammaRamp(_GLFWmonitor* monitor, const GLFWgammaramp* ramp)
 
     CGGammaValue* values = calloc(ramp->size * 3, sizeof(CGGammaValue));
 
-    for (int i = 0;  i < ramp->size;  i++)
+    for (unsigned int i = 0;  i < ramp->size;  i++)
     {
         values[i]                  = ramp->red[i] / 65535.f;
         values[i + ramp->size]     = ramp->green[i] / 65535.f;

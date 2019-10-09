@@ -28,7 +28,7 @@ namespace Soul { namespace GPU {
 		TextureID samplerTextureCreate(const SamplerTextureDesc& desc);
 		void textureDestroy(TextureID textureID);
 
-		void renderGraphExecute(RenderGraph* renderGraph);
+		void renderGraphExecute(const RenderGraph& renderGraph);
 
 		void _surfaceCreate(void* windowHandle, VkSurfaceKHR* surface);
 		void _stagingBufferRequest(VmaAllocation allocation, uint32 size, void* data);

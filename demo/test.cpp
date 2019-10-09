@@ -13,12 +13,13 @@
 #include <cstring>
 #include <algorithm>
 
+#define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 
 #define STB_IMAGE_IMPLEMENTATION
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #define TINYGLTF_IMPLEMENTATION
-#include <tinygltf/tiny_gltf.h>
+#include <tiny_gltf.h>
 
 namespace Soul {
 
@@ -151,6 +152,7 @@ Entity* EntityPtr(Scene* scene, EntityID entityID) {
 		return scene->groupEntities.ptr(entityID.index);
 	default:
 		SOUL_ASSERT(0, false, "Entity type is not valid, entity type = %d", entityID.type);
+		return nullptr;
 	}
 }
 
@@ -584,11 +586,12 @@ void LoadScene(GPU::System* gpuSystem, Scene* scene, const char* path, bool posi
 		vertexes.cleanup();
 		indexes.cleanup();
 	}
-
-	meshEntityIDs.cleanup();
-	textureIDs.cleanup();
-	materialIDs.cleanup();
+ 
 	
+}
+
+void glfwPrintErrorCallback(int code, const char* message) {
+	SOUL_LOG_INFO("GLFW Error. Error code : %d. Message = %s", code, message);
 }
 
 int main() {
@@ -598,12 +601,14 @@ int main() {
 		4096
 	});
 	
-	glfwInit();
+
+	glfwSetErrorCallback(glfwPrintErrorCallback);
+	SOUL_ASSERT(0, glfwInit(), "GLFW Init Failed !");
 	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 	glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
 	SOUL_LOG_INFO("GLFW initialization sucessful");
 
-	SOUL_ASSERT(0, glfwVulkanSupported(), "Vulkan is not supported by glfw!");
+	SOUL_ASSERT(0, glfwVulkanSupported(), "Vulkan not supported by glfw");
 
 	GLFWwindow* window = glfwCreateWindow(1800, 720, "Vulkan", nullptr, nullptr);
 	SOUL_LOG_INFO("GLFW window creation sucessful");
@@ -623,8 +628,9 @@ int main() {
 	LoadScene(&gpuSystem, &scene, "/Users/utamak/Dev/personal/soul/soul/assets/sponza/scene.gltf", false);
 	
 	while(!glfwWindowShouldClose(window)) {
+		Job::System::Get().beginFrame();
 		glfwPollEvents();
-		/*GPU::RenderGraph renderGraph;
+		/* GPU::RenderGraph renderGraph;
 
 		struct UploadModelUniformData {
 			GPU::BufferNodeID modelBuffer;
@@ -633,19 +639,19 @@ int main() {
 		UploadModelUniformData uploadData = renderGraph.addTransferPass<UploadModelUniformData>("Upload uniform data", 
 			[&scene](GPU::RenderGraph* renderGraph, UploadModelUniformData* data) {
 				data->modelBuffer = renderGraph->createBuffer<Transform>({
-					.count = scene.entities.size()
+					.count = (uint16)scene.meshEntities.size()
 				}, GPU::BufferWriteUsage::TRANSFER_DST);
 			},
 			[&scene](GPU::System* gpuSystem, 
 				GPU::CommandBucket* commandBucket,
 				const UploadModelUniformData& data) {
 				GPU::BufferID bufferID = gpuSystem->getBuffer(data.modelBuffer);
-				commandBucket->reserve(scene.entities.size());
-				for (int i = 0; i < scene.entities.size(); i++) {
-					using UpdateCommand = GPU::Command::UpdateTypeBuffer<Transform>;
+				commandBucket->reserve(scene.meshEntities.size());
+				for (int i = 0; i < scene.meshEntities.size(); i++) {
+					using UpdateCommand = GPU::Command::UpdateBufferArray<Transform>;
 					UpdateCommand* command = commandBucket->put<UpdateCommand>(i, 0);
 					command->bufferID = bufferID;
-					command->data = &scene.entities[i].transform;
+					command->data = &scene.meshEntities[i].worldTransform;
 					command->index = i;
 				}
 			}
