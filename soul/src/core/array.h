@@ -1,24 +1,38 @@
 #pragma once
 
-#include "core/debug.h"
+#include "core/dev_util.h"
 #include <cstdlib>
 #include <cstring>
 
 namespace Soul {
 
 	template <typename T>
-	struct Array
+	class Array
 	{
+	public:
+
 		Array() {
 			_buffer = nullptr;
 			_capacity = 0;
 			_size = 0;
 		}
 
+		Array(const Array& other) = default;
+		Array& operator=(const Array& other) = default;
+
+		Array(Array&& other) = default;
+		Array& operator=(Array&& other) = default;
+
 		~Array() {
 			SOUL_ASSERT(0, _capacity == 0, "");
 			SOUL_ASSERT(0, _size == 0, "");
-			SOUL_ASSERT(0, _buffer == 0, "");
+			SOUL_ASSERT(0, _buffer == nullptr, "");
+		}
+
+		void assign(const T* begin, const T* end) {
+			int size = end - begin;
+			resize(size);
+			memcpy(_buffer, begin, size);
 		}
 
 		void reserve(int capacity) {
@@ -36,6 +50,14 @@ namespace Soul {
 				reserve(size);
 			}
 			_size = size;
+		}
+
+		void clear() {
+			_size = 0;
+		}
+
+		void empty() {
+			return _size == 0;
 		}
 
 		void cleanup() {
@@ -58,6 +80,10 @@ namespace Soul {
 			return _buffer[_size - 1];
 		}
 
+		inline const T& back() const {
+			return _buffer[_size - 1];
+		}
+
 		inline void pop() {
 			SOUL_ASSERT(0, _size != 0, "Cannot pop an empty array.");
 			_size--;
@@ -71,16 +97,17 @@ namespace Soul {
 			return &_buffer[0];
 		}
 
-		inline const T* constdata() const {
+		inline const T* data() const {
 			return &_buffer[0];
 		}
 
 		inline T& operator[](int idx) {
-			SOUL_ASSERT(0, idx < _size, "Out of bound access to array detected.");
+			SOUL_ASSERT(0, idx < _size, "Out of bound access to array detected. idx = %d, _size = %d", idx, _size);
 			return _buffer[idx];
 		}
 
-		inline const T& get(int idx) const {
+		inline const T& operator[](int idx) const {
+			SOUL_ASSERT(0, idx < _size, "Out of bound access to array detected. idx = %d, _size=%d", idx, _size);
 			return _buffer[idx];
 		}
 
@@ -88,6 +115,13 @@ namespace Soul {
 			return _size;
 		}
 
+		const T* begin() const { return _buffer; }
+		const T* end() const { return _buffer + _size; }
+
+		T* begin() { return _buffer; }
+		T* end() {return _buffer + _size; }
+
+	private:
 		T* _buffer = nullptr;
 
 		int _size = 0;
@@ -95,4 +129,3 @@ namespace Soul {
 	};
 
 }
-

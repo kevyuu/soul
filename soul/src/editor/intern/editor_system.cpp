@@ -1,4 +1,4 @@
-#include "core/debug.h"
+#include "core/dev_util.h"
 #include "core/math.h"
 
 #include "render/system.h"

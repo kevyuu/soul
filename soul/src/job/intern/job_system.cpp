@@ -1,4 +1,4 @@
-#include "core/debug.h"
+#include "core/dev_util.h"
 #include "core/architecture.h"
 #include "job/system.h"
 
@@ -18,20 +18,24 @@ static unsigned long randXORSHF96() {
 }
 
 namespace Soul { namespace Job {
-	thread_local ThreadState* Database::gThreadState = nullptr;
+	thread_local _ThreadContext* Database::gThreadContext = nullptr;
 	
 	void System::_execute(TaskID taskID) {
 		{
 			std::lock_guard<std::mutex> lock(_db.loopMutex);
 			_db.activeTaskCount -= 1;
 		}
-		Task* task = _getTaskPtr(taskID);
+		Task* task = _taskPtr(taskID);
 		task->func(taskID, task->storage);
 		_taskFinish(task);
 	}
 
-	void System::_loop(ThreadState* threadState) {
-		Database::gThreadState = threadState;
+	void System::_loop(_ThreadContext* threadState) {
+		Database::gThreadContext = threadState;
+
+		char threadName[512];
+		sprintf(threadName, "Worker Thread = %d", getThreadID());
+		// SOUL_PROFILE_THREAD_SET_NAME(threadName);
 
 		while (true) {
 			TaskID taskID = threadState->taskDeque.pop();
@@ -49,7 +53,7 @@ namespace Soul { namespace Job {
 				}
 
 				int threadIndex = (randXORSHF96() % _db.threadCount);
-				taskID = _db.threadStates[threadIndex].taskDeque.steal();
+				taskID = _db.threadContexts[threadIndex].taskDeque.steal();
 			}
 
 			if (_db.isTerminated.load(std::memory_order_relaxed)) {  
@@ -68,45 +72,50 @@ namespace Soul { namespace Job {
 	}
 
 	void System::beginFrame() {
-		
+		SOUL_ASSERT_MAIN_THREAD();
+
+		taskWait(0);
+
 		// NOTE(kevinyu): TaskID 0 is sentinel. TaskID 0 is used as parent for all task
-		_db.threadStates[0].taskPool[0].unfinishedCount.store(0, std::memory_order_relaxed);
-		_db.threadStates[0].taskPoolOffset = 1;
+		_db.threadContexts[0].taskPool[0].unfinishedCount.store(0, std::memory_order_relaxed);
+		_db.threadContexts[0].taskCount = 1;
+		_db.threadContexts[0].taskDeque.reset();
 
 		for (int i = 1; i < _db.threadCount; i++) {
-			_db.threadStates[i].taskPoolOffset = 0;
+			_db.threadContexts[i].taskCount = 0;
+			_db.threadContexts[i].taskDeque.reset();
 		}
 	}
 
 	TaskID System::_taskCreate(TaskID parent, TaskFunc func) {
-		ThreadState* threadState = Database::gThreadState;
+		_ThreadContext* threadState = Database::gThreadContext;
 
 		uint16 threadIndex = threadState->threadIndex;
-		uint16 taskIndex = threadState->taskPoolOffset;
+		uint16 taskIndex = threadState->taskCount;
 		TaskID taskID = ((threadIndex << Constant::TASK_ID_THREAD_INDEX_SHIFT) | (taskIndex << Constant::TASK_ID_TASK_INDEX_SHIFT));
 
-		threadState->taskPoolOffset += 1;
+		threadState->taskCount += 1;
 		Task& task = threadState->taskPool[taskIndex];
 		task.parentID = parent;
 		task.unfinishedCount.store(1, std::memory_order_relaxed);
 		task.func = func;
 
-		Task* parentTask = _getTaskPtr(parent);
+		Task* parentTask = _taskPtr(parent);
 		parentTask->unfinishedCount.fetch_add(1, std::memory_order_relaxed);
 
 		return taskID;
 	}
 
-	Task* System::_getTaskPtr(TaskID taskID) {
+	Task* System::_taskPtr(TaskID taskID) {
 		
 		uint16 threadIndex = (taskID & Constant::TASK_ID_THREAD_INDEX_MASK) >> Constant::TASK_ID_THREAD_INDEX_SHIFT;
 		uint16 taskIndex = (taskID & Constant::TASK_ID_TASK_INDEX_MASK) >> Constant::TASK_ID_TASK_INDEX_SHIFT;
 
-		return &_db.threadStates[threadIndex].taskPool[taskIndex];
+		return &_db.threadContexts[threadIndex].taskPool[taskIndex];
 
 	}
 
-	bool System::_isTaskComplete(Task* task) const {
+	bool System::_taskIsComplete(Task* task) const {
 		// NOTE(kevinyu): Synchronize with fetch_sub in _finishTask() to make sure the task is executed before we return true.
 		return task->unfinishedCount.load(std::memory_order_acquire) == 0;
 	}
@@ -114,9 +123,9 @@ namespace Soul { namespace Job {
 	// TODO(kevinyu) : Implement stealing from other deque when waiting for task. 
 	// Currently we only try to pop task from our thread local deque.
 	void System::taskWait(TaskID taskID) {
-		ThreadState* threadState = Database::gThreadState;
-		Task* taskToWait = _getTaskPtr(taskID);
-		while (!_isTaskComplete(taskToWait)) {
+		_ThreadContext* threadState = Database::gThreadContext;
+		Task* taskToWait = _taskPtr(taskID);
+		while (!_taskIsComplete(taskToWait)) {
 
 			TaskID taskToDo = threadState->taskDeque.pop();
 
@@ -125,7 +134,7 @@ namespace Soul { namespace Job {
 			}
 			else {
 				std::unique_lock<std::mutex> lock(_db.waitMutex);
-				while (!_isTaskComplete(taskToWait)) {
+				while (!_taskIsComplete(taskToWait)) {
 					_db.waitCondVar.wait(lock);
 				}
 			}
@@ -133,7 +142,7 @@ namespace Soul { namespace Job {
 	}
 
 	void System::init(const System::Config& config) {
-		
+
 		int threadCount = config.threadCount;
 		if (threadCount == 0) {
 #ifdef SOUL_USE_STD_HARDWARE_COUNT
@@ -147,27 +156,27 @@ namespace Soul { namespace Job {
 		SOUL_ASSERT(0, threadCount <= Constant::MAX_THREAD_COUNT, "Thread count : %d is more than MAX_THREAD_COUNT : %d", threadCount, Constant::MAX_THREAD_COUNT);
 		_db.threadCount = threadCount;
 		
-		_db.threadStates.resize(threadCount);
+		_db.threadContexts.resize(threadCount);
+
+		// NOTE(kevinyu): i == 0 is for main thread
+		Database::gThreadContext = &_db.threadContexts[0];
 
 		for (int i = 0; i < threadCount; i++) {
-			_db.threadStates[i].taskPoolOffset = 0;
-			_db.threadStates[i].threadIndex = i;
-			_db.threadStates[i].taskDeque.init();
+			_db.threadContexts[i].taskCount = 0;
+			_db.threadContexts[i].threadIndex = i;
+			_db.threadContexts[i].taskDeque.init();
 		}
-
-		// NOTE(kevinyu): i = 0 is for main thread
-		Database::gThreadState = &_db.threadStates[0];
 
 		_db.isTerminated.store(false, std::memory_order_relaxed);
 		for (int i = 1; i < threadCount; i++) {
-			_db.threads[i] = std::thread(&System::_loop, this, _db.threadStates.ptr(i));
+			_db.threads[i] = std::thread(&System::_loop, this, _db.threadContexts.ptr(i));
 		}
 		_db.activeTaskCount = 0;
 
 	}
 
 	void System::taskRun(TaskID taskID) {
-		Database::gThreadState->taskDeque.push(taskID);
+		Database::gThreadContext->taskDeque.push(taskID);
 		{
 			std::lock_guard<std::mutex> lock(_db.loopMutex);
 			_db.activeTaskCount += 1;
@@ -193,19 +202,21 @@ namespace Soul { namespace Job {
 			}
 			_db.waitCondVar.notify_all();
 
-			if (task != _getTaskPtr(0)) {
-				_taskFinish(_getTaskPtr(task->parentID));
+			if (task != _taskPtr(0)) {
+				_taskFinish(_taskPtr(task->parentID));
 			}
 		}
 	}
 
 	void System::shutdown() {
+		SOUL_ASSERT_MAIN_THREAD();
+
 		SOUL_ASSERT(0, _db.activeTaskCount == 0, "There is still pending task in work deque! Active Task Count = %d.", _db.activeTaskCount);
 		_terminate();
 		for (int i = 1; i < _db.threadCount; i++) {
 			_db.threads[i].join();
 		}
-		_db.threadStates.cleanup();
+		_db.threadContexts.cleanup();
 	}
 
 	uint16 System::getThreadCount() const {
@@ -213,7 +224,7 @@ namespace Soul { namespace Job {
 	}
 
 	uint16 System::getThreadID() const {
-		return Database::gThreadState->threadIndex;
+		return Database::gThreadContext->threadIndex;
 	}
 
 }}

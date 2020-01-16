@@ -16,7 +16,7 @@ layout(set = 3, binding = 3) uniform sampler2D roughnessMap;
 layout(set = 3, binding = 4) uniform sampler2D aoMap;
 layout(set = 3, binding = 5) uniform sampler2D emissiveMap;
 
-layout(set = 3, binding = 6) uniform PerMaterial {
+layout(std140, set = 3, binding = 6) uniform PerMaterial {
 	Material material;
 };
 

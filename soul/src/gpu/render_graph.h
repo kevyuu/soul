@@ -1,204 +1,50 @@
 #pragma once
-#include "core/type.h"
+#include "core/util.h"
+
 #include "gpu/data.h"
-#include <limits.h>
-#include <utility>
 
 namespace Soul { namespace GPU {
 
-	using RenderGraphTextureID = uint16;
-	using RenderGraphBufferID = uint16;
+	struct RenderGraph;
+	struct RenderGraphRegistry;
 
-	using TextureNodeID = uint16;
-	using BufferNodeID = uint16;
+	//ID
+	struct PassNode;
+	using PassNodeID = ID<PassNode, uint16>;
+	static constexpr PassNodeID PASS_NODE_ID_NULL = PassNodeID(SOUL_UTYPE_MAX(PassNodeID::id));
 
-	using PassNodeID = uint16;
+	struct _TextureNode;
+	using TextureNodeID = ID<_TextureNode, uint16>;
+	static constexpr TextureNodeID TEXTURE_NODE_ID_NULL = TextureNodeID(SOUL_UTYPE_MAX(TextureNodeID::id));
 
-	enum class Topology : uint8 {
-		NONE,
-		POINT_LIST,
-		LINE_LIST,
-		LINE_STRIP,
-		TRIANGLE_LIST,
-		TRIANGLE_STRIP,
-		TRIANGLE_FAN,
-		COUNT
-	};
+	struct _BufferNode;
+	using BufferNodeID = ID<_BufferNode, uint16>;
+	static constexpr BufferNodeID  BUFFER_NODE_ID_NULL = BufferNodeID(SOUL_UTYPE_MAX(BufferNodeID));
 
-	enum class PolygonMode : uint8 {
-		NONE,
-		FILL,
-		LINE,
-		POINT,
-		COUNT
-	};
+	struct _RGResourceID {
+		uint32 index = SOUL_UTYPE_MAX(uint32);
 
-	enum class CullMode : uint8 {
-		NONE,
-		FRONT,
-		BACK,
-		FRONT_AND_BACK,
-		COUNT
-	};
+		static constexpr uint8 EXTERNAL_BIT_POSITION = 31;
 
-	enum class FrontFace : uint8 {
-		NONE,
-		CLOCKWISE,
-		COUNTER_CLOCKWISE,
-		COUNT
-	};
+		static _RGResourceID InternalID(uint32 index) {return { index }; }
+		static _RGResourceID ExternalID(uint32 index) {return { index | 1 << EXTERNAL_BIT_POSITION }; }
 
-	enum class CompareOp : uint8 {
-		NONE,
-		NEVER,
-		LESS,
-		EQUAL,
-		LESS_OR_EQUAL,
-		GREATER,
-		NOT_EQUAL,
-		GREATER_OR_EQUAL,
-		ALWAYS,
-		COUNT
-	};
+		bool isExternal() const {
+			return index & (1u << EXTERNAL_BIT_POSITION);
+		}
 
-	enum class BlendFactor : uint8 {
-		NONE,
-		ZERO,
-		ONE,
-		SRC_COLOR,
-		ONE_MINUS_SRC_COLOR,
-		DST_COLOR,
-		ONE_MINUS_DST_COLOR,
-		SRC_ALPHA,
-		ONE_MINUS_SRC_ALPHA,
-		DST_ALPHA,
-		CONSTANT_COLOR,
-		ONE_MINUS_CONSTANT_COLOR,
-		CONSTANT_ALPHA,
-		ONE_MINUS_CONSTANT_ALPHA,
-		SRC_ALPHA_SATURATE,
-		SRC1_COLOR,
-		ONE_MINUS_SRC1_COLOR,
-		SRC1_ALPHA,
-		ONE_MINUS_SRC1_ALPHA,
-		COUNT
-	};
-
-	enum class BlendOp : uint8 {
-		NONE,
-		ADD,
-		SUBTRACT,
-		REVERSE_SUBTRACT,
-		MIN,
-		MAX,
-		COUNT
-	};
-
-	struct ClearValue {
-		Vec3f color;
-		Vec2f depthStencil;
-	};
-
-	namespace Command {
-
-		static constexpr uint32 MAX_ARGUMENT_PER_SHADER = 4;
-
-		struct Command {};
-
-		struct DrawIndex : Command {
-			GPU::ShaderArgumentID shaderArguments[MAX_ARGUMENT_PER_SHADER];
-			GPU::BufferID vertexBufferID;
-			GPU::BufferID indexBufferID;
-		};
-
-		template<typename T>
-		struct UpdateBufferArray : Command {
-			GPU::BufferID bufferID;
-			T* data;
-			uint16 index;
-		};
+		uint32 getIndex() const {
+			return index & ~(1u << EXTERNAL_BIT_POSITION);
+		}
 
 	};
+	static constexpr _RGResourceID _RG_RESOURCE_ID_NULL = { SOUL_UTYPE_MAX(uint32) };
 
-	struct CommandBucket {
-		uint64* keys;
-		Array<Command::Command*> commands;
+	using _RGBufferID = _RGResourceID;
+	static constexpr _RGBufferID _RG_BUFFER_ID_NULL = _RG_RESOURCE_ID_NULL;
 
-		void reserve(uint32 capacity);
-
-		template <typename Command>
-		Command* put(uint32 index, uint64 key);
-	};
-
-	
-	struct RenderGraphTextureDesc {
-		uint16 width;
-		uint16 height;
-		TextureFormat format;
-		bool clear;
-		ClearValue clearValue;
-	};
-
-	struct RenderGraphTexture {
-		const char* name;
-		uint16 creatorPassNodeID;
-		uint16 width;
-		uint16 height;
-		TextureFormat format;
-		bool clear;
-		ClearValue clearValue;
-	};
-
-	struct RenderGraphBufferDesc {
-		uint16 count;
-	};
-
-	struct RenderGraphBuffer {
-		const char* name;
-		uint16 creatorPassNodeID;
-		uint16 count;
-		uint16 unitSize;
-	};
-
-	
-	struct GraphicPipelineDesc {
-
-		struct ShaderDesc {
-			char* vertexPath = nullptr;
-			char* geometryPath = nullptr;
-			char* fragmentPath = nullptr;
-		} shaderDesc;
-
-		struct InputLayoutDesc {
-			Topology topology = Topology::TRIANGLE_LIST;
-		} inputLayoutDesc;
-
-		struct RasterDesc {
-			float lineWidth;
-			PolygonMode polygonMode = PolygonMode::FILL;
-			CullMode cullMode = CullMode::NONE;
-			FrontFace frontFace = FrontFace::CLOCKWISE;
-		} rasterDesc;
-
-		struct DepthStencilDesc {
-			bool depthTestEnable = false;
-			bool depthWriteEnable = false;
-			CompareOp depthCompareOp = CompareOp::NEVER;
-			TextureNodeID attachment = 0;
-		} depthStencilDesc;
-
-		struct ColorBlendDesc {
-			bool blendEnable = false;
-			BlendFactor srcColorBlendFactor = BlendFactor::ZERO;
-			BlendFactor dstColorBlendFactor = BlendFactor::ZERO;
-			BlendOp blendOp = BlendOp::ADD;
-			BlendFactor srcAlphaBlendFactor = BlendFactor::ZERO;
-			BlendFactor dstAlphaBlendFactor = BlendFactor::ZERO;
-
-			TextureNodeID attachments[8] = {0};
-		} colorDesc;
-
-	};
+	using _RGTextureID = _RGResourceID;
+	static constexpr _RGTextureID _RG_TEXTURE_ID_NULL = _RG_RESOURCE_ID_NULL;
 
 	enum class PassType : uint8 {
 		NONE,
@@ -208,153 +54,390 @@ namespace Soul { namespace GPU {
 		COUNT
 	};
 
-	enum class TextureReadUsage : uint8 {
-		NONE,
-		READ_MODIFY,
-		TRANSFER_SRC,
-		DEPTH_STENCIL_SAMPLED,
-		COLOR_SAMPLED,
-		INPUT_ATTACHMENT,
-		STORAGE,
-		COUNT
+	struct RGTextureDesc {
+		TextureType type = TextureType::D2;
+		uint16 width = 0;
+		uint16 height = 0;
+		uint16 depth = 1;
+		uint16 mipLevels = 1;
+		TextureFormat format = TextureFormat::RGBA8;
+		bool clear = false;
+		ClearValue clearValue = {};
 	};
 
-	enum class TextureWriteUsage : uint8 {
-		NONE,
-		TRANSFER_DST,
-		STORAGE,
-		COLOR_ATTACHMENT,
-		DEPTH_ATTACHMENT,
-		COUNT
-	};
-
-	enum class BufferReadUsage : uint8 {
-		NONE,
-		READ_MODIFY,
-		TRANSFER_SRC,
-		VERTEX,
-		INDEX,
-		INDIRECT_BUFFER,
-		UNIFORM,
-		STORAGE,
-		COUNT
-	};
-
-	enum class BufferWriteUsage : uint8 {
-		NONE,
-		TRANSFER_DST,
-		STORAGE,
-		COUNT
-	};
-
-	struct BufferReadEntry {
-		BufferNodeID nodeID;
-		BufferReadUsage usage;
-	};
-
-	struct BufferWriteEntry {
-		BufferNodeID nodeID;
-		BufferWriteUsage usage;
-	};
-
-	struct TextureReadEntry {
-		TextureNodeID nodeID;
-		TextureReadUsage usage;
-	};
-
-	struct TextureWriteEntry {
-		TextureNodeID nodeID;
-		TextureWriteUsage usage;
-	};
-
-	struct PassNode {
+	struct _RGInternalTexture {
 		const char* name = nullptr;
-		PassType type;
-
-		Array<BufferReadEntry> bufferReads;
-		Array<BufferWriteEntry> bufferWrites;
-
-		Array<TextureReadEntry> textureReads;
-		Array<TextureWriteEntry> textureWrites;
-		
+		TextureType type = TextureType::D2;
+		uint16 width = 0;
+		uint16 height = 0;
+		uint16 depth = 0;
+		uint16 mipLevels = 0;
+		TextureFormat format;
+		bool clear = false;
+		ClearValue clearValue = {};
 	};
 
-	template<typename Data, typename Execute>
-	struct GraphicNode : PassNode {
-		Data data;
-		Execute execute;
-		GraphicPipelineDesc pipelineDesc;
-		CommandBucket commandBucket;
-
-		GraphicNode(Execute&& execute) : execute(std::forward<Execute>(execute)){}
+	struct _RGExternalTexture {
+		const char* name = nullptr;
+		TextureID textureID = TEXTURE_ID_NULL;
+		bool clear = false;
+		ClearValue clearValue = {};
 	};
 
-	template<typename Data, typename Execute>
-	struct TransferNode : PassNode {
-		Data data;
-		Execute execute;
-		CommandBucket commandBucket;
-
-		TransferNode(Execute&& execute) : execute(std::forward<Execute>(execute)) {}
+	struct RGBufferDesc {
+		uint16 count = 0;
+		uint16 typeSize = 0;
+		uint16 typeAlignment = 0;
 	};
 
-	template<typename Data, typename Execute>
-	struct ComputeNode : PassNode {
-		Data data;
-		Execute execute;
-		CommandBucket commandBucket;
-
-		ComputeNode(Execute&& execute) : execute(std::forward<Execute>(execute)) {}
+	struct _RGInternalBuffer {
+		const char* name = nullptr;
+		uint16 count = 0;
+		uint16 typeSize = 0;
+		uint16 typeAlignment= 0;
+		bool clear = false;
 	};
 
-	struct TextureNode {
-		RenderGraphTextureID resourceID;
-		PassNodeID writer;
+	struct _RGExternalBuffer {
+		const char* name = nullptr;
+		BufferID bufferID = BUFFER_ID_NULL;
+		bool clear = false;
+	};
+
+	struct _TextureNode {
+		_RGBufferID resourceID = _RG_BUFFER_ID_NULL;
+		PassNodeID writer = PASS_NODE_ID_NULL;
 		Array<PassNodeID> readers;
 	};
 
-	struct BufferNode {
-		RenderGraphBufferID resourceID;
-		PassNodeID writer;
+	struct _BufferNode {
+		_RGBufferID resourceID = _RG_BUFFER_ID_NULL;
+		PassNodeID writer = PASS_NODE_ID_NULL;
 		Array<PassNodeID> readers;
 	};
 
-	struct RenderGraph {
+	namespace Command {
 
-		static constexpr TextureNodeID SWAPCHAIN_TEXTURE = USHRT_MAX;
+		class Command {
+		public:
+			virtual void _submit(_Database* db, ProgramID programID, VkCommandBuffer cmdBuffer) = 0;
+		};
 
-		template<typename T, typename Setup, typename Execute>
-		GraphicNode<T, Execute>& addGraphicPass(const char* name, Setup setup, Execute&& execute);
+		class DrawVertex : public Command {
+		public:
+			GPU::ShaderArgSetID  shaderArgSets[MAX_SET_PER_SHADER_PROGRAM];
+			GPU::BufferID vertexBufferID;
+			uint16 vertexCount;
+			void _submit(_Database* db, ProgramID programID, VkCommandBuffer cmdBuffer) final override;
+		};
 
-		template<typename T, typename Setup, typename Execute>
-		TransferNode<T, Execute>& addTransferPass(const char* name, Setup setup, Execute&& execute);
+		class DrawIndex : public Command {
+		public:
 
-		template<typename T, typename Setup, typename Execute>
-		ComputeNode<T, Execute>& addComputePass(const char* name, Setup setup, Execute&& execute);
+			DrawIndex() {
+				for (ShaderArgSetID& argSetID : shaderArgSets) {
+					argSetID = SHADER_ARG_SET_ID_NULL;
+				}
+			}
+
+			ShaderArgSetID shaderArgSets[MAX_SET_PER_SHADER_PROGRAM];
+			BufferID vertexBufferID = BUFFER_ID_NULL;
+			BufferID indexBufferID = BUFFER_ID_NULL;
+			uint16 indexCount = 0;
+			void _submit(_Database* db, ProgramID programID, VkCommandBuffer cmdBuffer) final override;
+		};
+
+		class DrawIndexRegion : public Command {
+		public:
+			struct Viewport {
+				int16 offsetX;
+				int16 offsetY;
+				uint16 width;
+				uint16 height;
+			};
+
+			struct Scissor {
+				int16 offsetX;
+				int16 offsetY;
+				uint16 width;
+				uint16 height;
+			};
+
+			Viewport viewport;
+			Scissor scissor;
+			ShaderArgSetID shaderArgSets[MAX_SET_PER_SHADER_PROGRAM];
+			BufferID vertexBufferID = BUFFER_ID_NULL;
+			BufferID indexBufferID = BUFFER_ID_NULL;
+			uint16 indexCount = 0;
+			uint16 indexOffset = 0;
+			uint16 vertexOffset = 0;
+
+			void _submit(_Database* db, ProgramID program, VkCommandBuffer cmdBuffer) final override;
+		};
+
+	};
+
+	class CommandBucket {
+	public:
+		uint64* keys;
+		Array<Command::Command*> commands;
+
+		void reserve(int capacity) {
+			commands.resize(capacity);
+		}
+
+		template <typename Command>
+		Command* put(uint32 index, uint64 key) {
+			Command* command = new Command();
+			commands[index] = command;
+			return command;
+		}
+
+		template <typename Command>
+		Command* add(uint64 key) {
+			Command* command = new Command();
+			commands.add(command);
+			return command;
+		}
+
+		void _cleanup() {
+			for (int i = 0; i < commands.size(); i++) {
+				delete commands[i];
+			}
+			commands.cleanup();
+		}
+	};
+
+	struct ColorAttachmentDesc {
+		bool blendEnable = false;
+		BlendFactor srcColorBlendFactor = BlendFactor::ZERO;
+		BlendFactor dstColorBlendFactor = BlendFactor::ZERO;
+		BlendOp colorBlendOp = BlendOp::ADD;
+		BlendFactor srcAlphaBlendFactor = BlendFactor::ZERO;
+		BlendFactor dstAlphaBlendFactor = BlendFactor::ZERO;
+		BlendOp alphaBlendOp = BlendOp::ADD;
+		bool clear = false;
+		ClearValue clearValue = {};
+	};
+
+	struct ColorAttachment {
+		TextureNodeID nodeID = TEXTURE_NODE_ID_NULL;
+		ColorAttachmentDesc desc;
+
+		ColorAttachment() = default;
+		ColorAttachment(TextureNodeID nodeID, const ColorAttachmentDesc& desc) : nodeID(nodeID), desc(desc) {}
+	};
+
+	struct DepthStencilAttachmentDesc {
+		bool depthTestEnable = false;
+		bool depthWriteEnable = false;
+		CompareOp depthCompareOp = CompareOp::NEVER;
+		bool clear = false;
+		ClearValue clearValue = {};
+	};
+
+	struct DepthStencilAttachment {
+		TextureNodeID nodeID = TEXTURE_NODE_ID_NULL;
+		DepthStencilAttachmentDesc desc;
+
+		DepthStencilAttachment() = default;
+		DepthStencilAttachment(TextureNodeID nodeID, const DepthStencilAttachmentDesc& desc) : nodeID(nodeID), desc(desc) {}
+	};
+
+	struct ShaderBuffer {
+		BufferNodeID nodeID = BUFFER_NODE_ID_NULL;
+		uint8 set = 0;
+		uint8 binding = 0;
+
+		ShaderBuffer() = default;
+		ShaderBuffer(BufferNodeID nodeID, uint8 set, uint8 binding) : nodeID(nodeID), set(set), binding(binding) {}
+	};
+
+	struct ShaderTexture {
+		TextureNodeID nodeID = TEXTURE_NODE_ID_NULL;
+		uint8 set = 0;
+		uint8 binding = 0;
+
+		ShaderTexture() = default;
+		ShaderTexture(TextureNodeID nodeID, uint8 set, uint8 binding) : nodeID(nodeID), set(set), binding(binding) {}
+	};
+
+	struct GraphicPipelineConfig {
+
+		struct Framebuffer {
+			uint16 width = 0;
+			uint16 height = 0;
+		} framebuffer;
+
+		ShaderID vertexShaderID = SHADER_ID_NULL;
+		ShaderID fragmentShaderID = SHADER_ID_NULL;
+
+		struct InputLayoutConfig {
+			Topology topology = Topology::TRIANGLE_LIST;
+		} inputLayout;
+
+		struct ViewportConfig {
+			uint16 offsetX = 0;
+			uint16 offsetY = 0;
+			uint16 width = 0;
+			uint16 height = 0;
+		} viewport;
+
+		struct ScissorConfig {
+			bool dynamic = false;
+			uint16 offsetX = 0;
+			uint16 offsetY = 0;
+			uint16 width = 0;
+			uint16 height = 0;
+		} scissor;
+
+		struct RasterConfig {
+			float lineWidth = 1.0f;
+			PolygonMode polygonMode = PolygonMode::FILL;
+			CullMode cullMode = CullMode::NONE;
+			FrontFace frontFace = FrontFace::CLOCKWISE;
+		} raster;
+	};
+
+	class PassNode {
+	public:
+		const char* name = nullptr;
+		PassType type = PassType::NONE;
+		virtual void executePass(RenderGraphRegistry* registry, CommandBucket* commandBucket) const = 0;
+		virtual void cleanup() = 0;
+	};
+
+	class GraphicBaseNode : public PassNode {
+	public:
+		GraphicPipelineConfig pipelineConfig;
+		Array<ColorAttachment> colorAttachments;
+		DepthStencilAttachment depthStencilAttachment;
+		Array<ShaderBuffer> inShaderBuffers;
+		Array<ShaderBuffer> outShaderBuffers;
+		Array<BufferNodeID> vertexBuffers;
+		Array<BufferNodeID> indexBuffers;
+
+		Array<ShaderTexture> inShaderTextures;
+		Array<ShaderTexture> outShaderTextures;
+		Array<TextureNodeID> inputAttachments;
+
+		void cleanup() override {
+			colorAttachments.cleanup();
+			inShaderBuffers.cleanup();
+			outShaderBuffers.cleanup();
+			vertexBuffers.cleanup();
+			indexBuffers.cleanup();
+
+			inShaderTextures.cleanup();
+			outShaderTextures.cleanup();
+			inputAttachments.cleanup();
+		}
+	};
+
+	template<typename Data, typename Execute>
+	class GraphicNode : public GraphicBaseNode {
+	public:
+		Data data;
+		Execute execute;
+
+		explicit GraphicNode(Execute&& execute) : execute(std::forward<Execute>(execute)){}
+		void executePass(RenderGraphRegistry* registry, CommandBucket* commandBucket) const final override {
+			execute(registry, data, commandBucket);
+		}
+	};
+
+	class GraphicNodeBuilder {
+	public:
+		PassNodeID _passID;
+		GraphicBaseNode* _graphicNode;
+		RenderGraph* _renderGraph;
+
+		GraphicNodeBuilder(PassNodeID passID, GraphicBaseNode* graphicNode, RenderGraph* renderGraph):
+			_passID(passID), _graphicNode(graphicNode), _renderGraph(renderGraph) {}
+
+		GraphicNodeBuilder(const GraphicNodeBuilder& other) = delete;
+		GraphicNodeBuilder(GraphicNodeBuilder&& other) = delete;
+
+		GraphicNodeBuilder& operator=(const GraphicNodeBuilder& other) = delete;
+		GraphicNodeBuilder& operator=(GraphicNodeBuilder&& other) = delete;
+
+		~GraphicNodeBuilder(){}
+
+		BufferNodeID addVertexBuffer(BufferNodeID nodeID);
+		BufferNodeID addIndexBuffer(BufferNodeID nodeID);
+		BufferNodeID addInShaderBuffer(BufferNodeID nodeID, uint8 set, uint8 binding);
+		BufferNodeID addOutShaderBuffer(BufferNodeID nodeID, uint8 set, uint8 binding);
+
+		TextureNodeID addInShaderTexture(TextureNodeID nodeID, uint8 set, uint8 binding);
+		TextureNodeID addOutShaderTexture(TextureNodeID nodeID, uint8 set, uint8 binding);
+		TextureNodeID addInputAttachment(TextureNodeID nodeID);
+		TextureNodeID addColorAttachment(TextureNodeID nodeID, const ColorAttachmentDesc& desc);
+		TextureNodeID setDepthStencilAttachment(TextureNodeID nodeID, const DepthStencilAttachmentDesc& desc);
+
+		void setPipelineConfig(const GraphicPipelineConfig& config);
+	};
+
+	class RenderGraph {
+	public:
+
+		RenderGraph() = default;
+
+		RenderGraph(const RenderGraph& other) = delete;
+		RenderGraph(RenderGraph&& other) = delete;
+
+		RenderGraph& operator=(const RenderGraph& other) = delete;
+		RenderGraph& operator=(RenderGraph&& other) = delete;
+
+		~RenderGraph(){}
+
+		template<typename Data,
+				SOUL_TEMPLATE_ARG_LAMBDA(Setup, void(GraphicNodeBuilder*, Data *)),
+				SOUL_TEMPLATE_ARG_LAMBDA(Execute, void(RenderGraphRegistry*, const Data&, CommandBucket*))>
+		const Data& addGraphicPass(const char* name, Setup setup, Execute&& execute) {
+			using Node = GraphicNode<Data, Execute>;
+			Node* node = (Node*) malloc(sizeof(Node));
+			new(node) Node(std::forward<Execute>(execute));
+			node->type = PassType::GRAPHIC;
+			node->name = name;
+			_passNodes.add(node);
+			GraphicNodeBuilder builder(PassNodeID(_passNodes.size() - 1), node, this);
+			setup(&builder, &node->data);
+			return node->data;
+		}
 
 		TextureNodeID importTexture(const char* name, TextureID textureID);
-		TextureNodeID createTexture(const char* name, const RenderGraphTextureDesc& desc, TextureWriteUsage usage);
-		TextureNodeID writeTexture(TextureNodeID texture, TextureWriteUsage usage);
-		TextureNodeID readTexture(TextureNodeID texture, TextureReadUsage usage);
+		TextureNodeID createTexture(const char* name, const RGTextureDesc& desc);
 
 		BufferNodeID importBuffer(const char* name, BufferID bufferID);
-		template<typename T>
-		BufferNodeID createBuffer(const char* name, const RenderGraphBufferDesc& desc, BufferWriteUsage usage);
-		BufferNodeID writeBuffer(BufferNodeID buffer, BufferWriteUsage usage);
-		BufferNodeID readBuffer(BufferNodeID buffer, BufferReadUsage usage);
+		BufferNodeID createBuffer(const char* name, const RGBufferDesc& desc);
 
-		BufferID getBuffer(BufferNodeID resource);
-		ShaderArgumentID getShaderArgument(GPU::BufferID bufferID, uint32 offset);
+		void cleanup();
 
-		Array<PassNode*> passNodes;
-		
-		Array<BufferNode> bufferNodes;
-		Array<TextureNode> textureNodes;
+		void _bufferNodeRead(BufferNodeID bufferNodeID, PassNodeID passNodeID);
+		BufferNodeID _bufferNodeWrite(BufferNodeID bufferNodeID, PassNodeID passNodeID);
 
-		Array<RenderGraphTexture> textures;
-		Array<RenderGraphBuffer> buffers;
+		void _textureNodeRead(TextureNodeID textureNodeID, PassNodeID passNodeID);
+		TextureNodeID _textureNodeWrite(TextureNodeID textureNodeID, PassNodeID passNodeID);
+
+		const _BufferNode* _bufferNodePtr(BufferNodeID nodeID) const ;
+		_BufferNode* _bufferNodePtr(BufferNodeID nodeID);
+
+		const _TextureNode* _textureNodePtr(TextureNodeID nodeID) const;
+		_TextureNode* _textureNodePtr(TextureNodeID nodeID);
+
+		Array<PassNode*> _passNodes;
+
+		Array<_BufferNode> _bufferNodes;
+		Array<_TextureNode> _textureNodes;
+
+		Array<_RGInternalBuffer> _internalBuffers;
+		Array<_RGInternalTexture> _internalTextures;
+
+		Array<_RGExternalBuffer> _externalBuffers;
+		Array<_RGExternalTexture> _externalTextures;
 
 	};
+
 }}
 
 #include "gpu/intern/render_graph.inl"

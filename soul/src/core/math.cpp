@@ -1,5 +1,5 @@
 #include "core/math.h"
-#include "core/debug.h"
+#include "core/dev_util.h"
 
 #include <cmath>
 #include <iostream>
@@ -668,11 +668,11 @@ namespace Soul {
 		return num + 1;
 	}
 
-	uint32 hashMurmur32(const char* key, uint32 keyLength) {
+	uint32 hashMurmur32(const uint8* data, uint32 size) {
 		uint32 h = 0;
-		if (keyLength > 3) {
-			const uint32* key_x4 = (const uint32*)key;
-			size_t i = keyLength >> 2;
+		if (size > 3) {
+			const uint32* key_x4 = (const uint32*)data;
+			size_t i = size >> 2;
 			do {
 				uint32 k = *key_x4++;
 				k *= 0xcc9e2d51;
@@ -682,27 +682,35 @@ namespace Soul {
 				h = (h << 13) | (h >> 19);
 				h = (h * 5) + 0xe6546b64;
 			} while (--i);
-			key = (const char*)key_x4;
+			data = (const uint8*)key_x4;
 		}
-		if (keyLength & 3) {
-			uint32 i = keyLength & 3;
+		if (size & 3) {
+			uint32 i = size & 3;
 			uint32 k = 0;
-			key = &key[i - 1];
+			data = &data[i - 1];
 			do {
 				k <<= 8;
-				k |= *key--;
+				k |= *data--;
 			} while (--i);
 			k *= 0xcc9e2d51;
 			k = (k << 15) | (k >> 17);
 			k *= 0x1b873593;
 			h ^= k;
 		}
-		h ^= keyLength;
+		h ^= size;
 		h ^= h >> 16;
 		h *= 0x85ebca6b;
 		h ^= h >> 13;
 		h *= 0xc2b2ae35;
 		h ^= h >> 16;
 		return h;
+	}
+
+	uint64 hashFNV1(const uint8* data, uint32 size, uint64 initial) {
+		uint64 hash = initial;
+		for (uint32 i = 0; i < size; i++) {
+			hash = (hash * 0x100000001b3ull) ^ data[i];
+		}
+		return hash;
 	}
 }

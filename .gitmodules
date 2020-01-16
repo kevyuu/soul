@@ -12,4 +12,16 @@
 	url = https://github.com/google/shaderc.git
 [submodule "dependencies/VulkanMemoryAllocator"]
 	path = dependencies/VulkanMemoryAllocator
-	url = https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator.git
+	url = https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator.gitls
+[submodule "dependencies/SPIRV-Tools"]
+	path = dependencies/SPIRV-Tools
+	url = https://github.com/KhronosGroup/SPIRV-Tools
+[submodule "dependencies/SPIRV-Headers"]
+	path = dependencies/SPIRV-Headers
+	url = https://github.com/KhronosGroup/SPIRV-Headers
+[submodule "dependencies/glslang"]
+	path = dependencies/glslang
+	url = https://github.com/KhronosGroup/glslang
+[submodule "dependencies/tracy"]
+	path = dependencies/tracy
+	url = https://bitbucket.org/wolfpld/tracy.git

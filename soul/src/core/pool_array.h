@@ -1,7 +1,7 @@
 #pragma once
 
 #include "core/type.h"
-#include "core/debug.h"
+#include "core/dev_util.h"
 #include <cstdlib>
 
 namespace Soul {
@@ -60,6 +60,11 @@ namespace Soul {
 			return _buffer[id].datum;
 		}
 
+		inline const T& operator[](PoolID id) const {
+			SOUL_ASSERT(0, id < _capacity, "Pool Array access violation");
+			return _buffer[id].datum;
+		}
+
 		inline const T& get(PoolID id) const {
 			SOUL_ASSERT(0, id < _capacity, "Pool Array access violation");
 			return _buffer[id].datum;
@@ -82,6 +87,10 @@ namespace Soul {
 			{
 				_buffer[i].next = i + 1;
 			}
+		}
+
+		inline bool empty() {
+			return _size == 0;
 		}
 
 		inline void cleanup() 

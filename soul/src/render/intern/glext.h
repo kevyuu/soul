@@ -1,7 +1,7 @@
 #pragma once
 
 #include "render/data.h"
-#include "core/debug.h"
+#include "core/dev_util.h"
 #include "extern/glad.h"
 #include "core/array.h"
 #include "render/intern/asset.h"

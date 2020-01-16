@@ -5,7 +5,7 @@ project(soul)
 # ==================================================================================================
 # General compiler flags
 # ==================================================================================================
-set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
@@ -18,6 +18,7 @@ message(STATUS "Compiler Path : ${CMAKE_CXX_COMPILER}")
 find_package(Vulkan REQUIRED)
 if (Vulkan_FOUND)
 	message(STATUS "Found Vulkan library : ${Vulkan_LIBRARY}.")
+	message(STATUS "Include Dir : ${Vulkan_INCLUDE_DIR}")
 else()
 	message(FATAL_ERROR "Vulkan library not found!")
 endif()

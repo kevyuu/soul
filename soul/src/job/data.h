@@ -53,24 +53,25 @@ namespace Soul {
 			void init();
 			void shutdown();
 
+			void reset();
 			void push(TaskID task);
 			TaskID pop(); // return nullptr if empty
 			TaskID steal(); // return nullptr if empty or fail (other thread do steal operation concurrently)
 
 		};
 
-		struct alignas(SOUL_CACHELINE_SIZE) ThreadState {
+		struct alignas(SOUL_CACHELINE_SIZE) _ThreadContext {
 			TaskDeque taskDeque;
 
 			Task taskPool[Constant::MAX_TASK_PER_THREAD];
-			uint16 taskPoolOffset;
+			uint16 taskCount;
 
 			uint16 threadIndex;
 		};
 
 		struct Database {
-			thread_local static ThreadState* gThreadState;
-			Array<ThreadState> threadStates;
+			thread_local static _ThreadContext* gThreadContext;
+			Array<_ThreadContext> threadContexts;
 			std::thread threads[Constant::MAX_THREAD_COUNT];
 			
 			std::condition_variable waitCondVar;
@@ -100,22 +101,6 @@ namespace Soul {
 			uint32 count;
 			uint32 minCount;
 			ParallelForFunc func;
-		};
-
-		template<typename Input, typename Output, typename Func>
-		struct ParallelMapTaskData {
-
-			explicit ParallelMapTaskData(const Input* input, 
-				Output* output,
-				uint32 count,
-				uint32 minCount,
-				Func func);
-
-			const Input* input;
-			Output* output;
-			uint32 count;
-			uint32 minCount;
-			Func func;
 		};
 
 	}

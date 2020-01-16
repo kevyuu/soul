@@ -1,6 +1,7 @@
 #pragma once
 
 #define SOUL_DEVELOPMENT
+#define SOUL_PROFILE_CPU_BACKEND_TRACY
 
 #ifdef _MSC_VER
 #define SOUL_DEBUG_BREAK() __debugbreak()
@@ -40,19 +41,40 @@ void soul_intern_assert(int paranoia, int line, const char* file, const char* fo
 #if defined(SOUL_DEVELOPMENT)
 #define SOUL_ASSERT(paranoia, test, msg, ...) do {if (!(test)) {soul_intern_assert(paranoia, __LINE__, __FILE__, \
         "Assertion failed: %s\n\n" msg, #test,  ##__VA_ARGS__); SOUL_DEBUG_BREAK();}} while (0)
+#define SOUL_PANIC(paranoia, msg, ...) do{soul_intern_assert(paranoia, __LINE__, __FILE__, \
+        "Panic! \n\n" msg, ##__VA_ARGS__); SOUL_DEBUG_BREAK();} while(0)
+#define SOUL_NOT_IMPLEMENTED() do{soul_intern_assert(0, __LINE__, __FILE__, \
+        "Not implemented yet! \n\n"); SOUL_DEBUG_BREAK();} while(0)
 #else
 #define SOUL_ASSERT(paranoia, test, msg, ...) ((void)0)
+#define SOUL_PANIC(paranoia, msg) ((void)0)
 #endif // SOUL_DEVELOPMENT
 
 #if defined(SOUL_DEVELOPMENT)
 
-#define SOUL_PROFILE_RANGE_PUSH(msg) ((void)0)
-#define SOUL_PROFILE_RANGE_POP(msg) ((void)0)
+#if defined(SOUL_PROFILE_CPU_BACKEND_TRACY)
+#include <tracy/Tracy.hpp>
+#include <tracy/common/TracySystem.hpp>
+#include <tracy/TracyC.h>
 
-#if defined(SOUL_PROFILE_BACKEND_NSIGHT)
-#include <nvToolsExt.h>
-#define SOUL_PROFILE_RANGE_PUSH(name) do {nvtxRangePush(name);} while(0)
-#define SOUL_PROFILE_RANGE_POP() do {nvtxRangePop();} while(0)
-#endif // SOUL_PROFILE_BACKEND_NSIGHT
+struct FrameProfileScope {
+	~FrameProfileScope() {
+		FrameMark
+	}
+};
+
+
+#define SOUL_PROFILE_FRAME() FrameProfileScope()
+#define SOUL_PROFILE_ZONE() ZoneScoped
+#define SOUL_PROFILE_ZONE_WITH_NAME(x) ZoneScopedN(x)
+#define SOUL_PROFILE_THREAD_SET_NAME(x) do{tracy::SetThreadName(x);} while(0)
+
+#endif // SOUL_PROFILE_CPU_BACKEND_TRACY
+
+#else
+#define SOUL_PROFILE_FRAME ((void) 0)
+#define SOUL_PROFILE_ZONE ((void) 0)
+#define SOUL_PROFILE_ZONE_WITH_NAME(x) ((void) 0)
+#define SOUL_PROFILE_THREAD_SET_NAME(x) ((void) 0)
 
 #endif // SOUL_DEVELOPMENT

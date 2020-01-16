@@ -62,21 +62,21 @@ PixelMaterial pixelMaterialCreate(Material material, vec2 texCoord) {
 	
 	pixelMaterial.albedo = pow(material.albedo, vec3(2.2));
 	if (bitTest(material.flags, MaterialFlag_USE_ALBEDO_TEX)) {
-		pixelMaterial.albedo *= pow(texture(material.albedoMap, texCoord).rgb, vec3(2.2));
+		pixelMaterial.albedo *= pow(texture(albedoMap, texCoord).rgb, vec3(2.2));
 	}
 
 	if (bitTest(material.flags, MaterialFlag_USE_NORMAL_TEX)) {
-		pixelMaterial.normal = normalize(vec3(texture(material.normalMap, texCoord).rgb * 2 - 1.0f));
+		pixelMaterial.normal = normalize(vec3(texture(normalMap, texCoord).rgb * 2 - 1.0f));
 	}
 	else {
 		pixelMaterial.normal = vec3(0, 0, 1.0f);
 	}
 
 	if (bitTest(material.flags, MaterialFlag_USE_METALLIC_TEX)) {
-		if (bitTest(material.flags, MaterialFlag_METALLIC_CHANNEL_RED)) pixelMaterial.metallic = texture(material.metallicMap, texCoord).r;
-		if (bitTest(material.flags, MaterialFlag_METALLIC_CHANNEL_GREEN)) pixelMaterial.metallic = texture(material.metallicMap, texCoord).g;
-		if (bitTest(material.flags, MaterialFlag_METALLIC_CHANNEL_BLUE)) pixelMaterial.metallic = texture(material.metallicMap, texCoord).b;
-		if (bitTest(material.flags, MaterialFlag_METALLIC_CHANNEL_ALPHA)) pixelMaterial.metallic = texture(material.metallicMap, texCoord).a;
+		if (bitTest(material.flags, MaterialFlag_METALLIC_CHANNEL_RED)) pixelMaterial.metallic = texture(metallicMap, texCoord).r;
+		if (bitTest(material.flags, MaterialFlag_METALLIC_CHANNEL_GREEN)) pixelMaterial.metallic = texture(metallicMap, texCoord).g;
+		if (bitTest(material.flags, MaterialFlag_METALLIC_CHANNEL_BLUE)) pixelMaterial.metallic = texture(metallicMap, texCoord).b;
+		if (bitTest(material.flags, MaterialFlag_METALLIC_CHANNEL_ALPHA)) pixelMaterial.metallic = texture(metallicMap, texCoord).a;
 		pixelMaterial.metallic *= material.metallic;
 	}
 	else {
@@ -84,10 +84,10 @@ PixelMaterial pixelMaterialCreate(Material material, vec2 texCoord) {
 	}
 
 	if (bitTest(material.flags, MaterialFlag_USE_ROUGHNESS_TEX)) {
-		if (bitTest(material.flags, MaterialFlag_ROUGHNESS_CHANNEL_RED)) pixelMaterial.roughness = texture(material.roughnessMap, texCoord).r;
-		if (bitTest(material.flags, MaterialFlag_ROUGHNESS_CHANNEL_GREEN)) pixelMaterial.roughness = texture(material.roughnessMap, texCoord).g;
-		if (bitTest(material.flags, MaterialFlag_ROUGHNESS_CHANNEL_BLUE)) pixelMaterial.roughness = texture(material.roughnessMap, texCoord).b;
-		if (bitTest(material.flags, MaterialFlag_ROUGHNESS_CHANNEL_ALPHA)) pixelMaterial.roughness = texture(material.roughnessMap, texCoord).a;
+		if (bitTest(material.flags, MaterialFlag_ROUGHNESS_CHANNEL_RED)) pixelMaterial.roughness = texture(roughnessMap, texCoord).r;
+		if (bitTest(material.flags, MaterialFlag_ROUGHNESS_CHANNEL_GREEN)) pixelMaterial.roughness = texture(roughnessMap, texCoord).g;
+		if (bitTest(material.flags, MaterialFlag_ROUGHNESS_CHANNEL_BLUE)) pixelMaterial.roughness = texture(roughnessMap, texCoord).b;
+		if (bitTest(material.flags, MaterialFlag_ROUGHNESS_CHANNEL_ALPHA)) pixelMaterial.roughness = texture(roughnessMap, texCoord).a;
 		pixelMaterial.roughness *= material.roughness;
 	}
 	else {
@@ -97,17 +97,17 @@ PixelMaterial pixelMaterialCreate(Material material, vec2 texCoord) {
 	pixelMaterial.roughness = max(pixelMaterial.roughness, 1e-4);
 
 	if (bitTest(material.flags, MaterialFlag_USE_AO_TEX)) {
-		if (bitTest(material.flags, MaterialFlag_AO_CHANNEL_RED)) pixelMaterial.ao = texture(material.aoMap, texCoord).r;
-		if (bitTest(material.flags, MaterialFlag_AO_CHANNEL_GREEN)) pixelMaterial.ao = texture(material.aoMap, texCoord).g;
-		if (bitTest(material.flags, MaterialFlag_AO_CHANNEL_BLUE)) pixelMaterial.ao = texture(material.aoMap, texCoord).b;
-		if (bitTest(material.flags, MaterialFlag_AO_CHANNEL_ALPHA)) pixelMaterial.ao = texture(material.aoMap, texCoord).a;
+		if (bitTest(material.flags, MaterialFlag_AO_CHANNEL_RED)) pixelMaterial.ao = texture(aoMap, texCoord).r;
+		if (bitTest(material.flags, MaterialFlag_AO_CHANNEL_GREEN)) pixelMaterial.ao = texture(aoMap, texCoord).g;
+		if (bitTest(material.flags, MaterialFlag_AO_CHANNEL_BLUE)) pixelMaterial.ao = texture(aoMap, texCoord).b;
+		if (bitTest(material.flags, MaterialFlag_AO_CHANNEL_ALPHA)) pixelMaterial.ao = texture(aoMap, texCoord).a;
 	}
 	else {
 		pixelMaterial.ao = 1;
 	}
 
 	if (bitTest(material.flags, MaterialFlag_USE_EMISSIVE_TEX)) {
-		pixelMaterial.emissive = texture(material.emissiveMap, texCoord).rgb;
+		pixelMaterial.emissive = texture(emissiveMap, texCoord).rgb;
 		pixelMaterial.emissive *= material.emissive;
 	}
 	else {

@@ -1,32 +1,43 @@
 #include "core/math.h"
 #include "job/data.h"
+#include "job/system.h"
 
 namespace Soul {
 	namespace Job {
 
 		void TaskDeque::init() {
+			SOUL_ASSERT_MAIN_THREAD();
 			_bottom.store(0, std::memory_order_relaxed);
 			_top.store(0, std::memory_order_relaxed);
 		}
 
 		void TaskDeque::shutdown() {
+			SOUL_ASSERT_MAIN_THREAD();
 			free(_tasks);
 		}
 
-		void TaskDeque::push(TaskID task) {
+		void TaskDeque::reset() {
+			SOUL_ASSERT_MAIN_THREAD();
 
+			SOUL_ASSERT(0, _bottom.load(std::memory_order_relaxed) == _top.load(std::memory_order_relaxed),
+				"Reset cannot be called when deque is not empty");
+
+			// TODO(kevinyu): Is memory_order_seq_cst here necessary or even enough?
+			_bottom.store(0, std::memory_order_seq_cst);
+			_top.store(0, std::memory_order_seq_cst);
+		}
+
+		void TaskDeque::push(TaskID task) {
 			int32 bottom = _bottom.load(std::memory_order_relaxed);
-			SOUL_ASSERT(0, bottom != Constant::MAX_TASK_PER_THREAD, "Number of task exceed capacity." 
+			SOUL_ASSERT(0, bottom < Constant::MAX_TASK_PER_THREAD, "Number of task exceed capacity."
 				"You can configure capacity in Job::Constant::MAX_TASK_PER_THREAD.");
 			_tasks[bottom] = task;
 
 			// NOTE(kevinyu): make sure steal() can see the item that is push to the deque
 			_bottom.store(bottom + 1, std::memory_order_release);
-
 		}
 
 		TaskID TaskDeque::pop() {
-			
 			// NOTE(kevinyu): bottom must be fetched before top hence memory_order_acquire here
 			int32 bottom = _bottom.fetch_sub(1, std::memory_order_acquire);
 			bottom = bottom - 1;
@@ -50,11 +61,9 @@ namespace Soul {
 
 			_bottom.store(top, std::memory_order_relaxed);
 			return task;
-
 		}
 
 		TaskID TaskDeque::steal() {
-
 			// NOTE(kevinyu): top must be fetch before bottom
 			int32 top = _top.load(std::memory_order_acquire);
 

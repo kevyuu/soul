@@ -84,8 +84,11 @@ namespace Soul {
 
 	real32 radians(real32 angle);
 
+	inline bool isPowerOfTwo(uint32 num) { return (num & -num) == num;}
 	int roundToNextPowOfTwo(uint32 num);
 
-	uint32 hashMurmur32(const char* key, uint32 keyLength);
+	uint32 hashMurmur32(const uint8* data, uint32 size);
+
+	uint64 hashFNV1(const uint8* data, uint32 size, uint64 initial  = 0xcbf29ce484222325ull);
 
 };

@@ -8,6 +8,7 @@
 #include <cstddef>
 #include <climits>
 #include <cfloat>
+#include <type_traits>
 
 typedef int8_t int8;
 typedef int16_t int16;
@@ -58,6 +59,14 @@ namespace Soul {
 	struct Vec2f;
 	struct Vec3f;
 	struct Vec4f;
+
+	struct Vec2ui32 {
+		uint32 x;
+		uint32 y;
+
+		Vec2ui32() : x(0), y(0) {}
+		Vec2ui32(uint32 x, uint32 y) : x(x), y(y) {}
+	};
 
 	struct Vec2f {
 		float x;
@@ -140,4 +149,55 @@ namespace Soul {
 		Vec3f min;
 		Vec3f max;
 	};
+
+	template <typename ResourceType, typename IDType>
+	struct ID {
+		IDType id;
+
+		constexpr ID() = default;
+		constexpr explicit ID(IDType id) : id(id) {}
+		bool operator==(const ID& other) const { return other.id == id; }
+		bool operator!=(const ID& other) const { return other.id != id; }
+	};
+
+	template <typename Enum, typename T>
+	void ForEachEnum(const T& func) {
+		for (uint64 i = 0; i < uint64(Enum::COUNT); i++) {
+			func(Enum(i));
+		}
+	}
+
+	template<typename T>
+	class Enum {
+
+	public:
+		class Iterator {
+		public:
+			Iterator(uint64 index): _index(index) {}
+			Iterator operator++() { ++_index; return *this; }
+			bool operator!=(const Iterator& other) const { return _index != other._index; }
+			const T& operator*() const { return T(_index); }
+		private:
+			uint64 _index;
+		};
+		Iterator begin() const { return Iterator(0);}
+		Iterator end() const { return Iterator(uint64(T::COUNT)); }
+
+		static Enum Iterates() {
+			return Enum();
+		}
+
+		static uint64 Count() {
+			return uint64(T::COUNT);
+		}
+
+	private:
+		Enum() = default;
+
+	};
+
 }
+
+#define SOUL_ARRAY_LEN(arr) (sizeof(arr) / sizeof(*arr))
+#define SOUL_BIT_COUNT(type) (sizeof(type) * 8)
+#define SOUL_UTYPE_MAX(type) ((1u << (SOUL_BIT_COUNT(type) - 1)) - 1)

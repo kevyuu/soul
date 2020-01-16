@@ -1,7 +1,7 @@
 #include "render/intern/asset.h"
 #include "render/data.h"
 #include "render/intern/glext.h"
-#include "core/debug.h"
+#include "core/dev_util.h"
 #include "core/math.h"
 
 #include <iostream>

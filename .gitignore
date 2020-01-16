@@ -11,3 +11,5 @@ soul/imgui.ini
 enc_temp_folder
 soul/imgui.ini
 soul/assets/*
+build/*
+.vscode/*

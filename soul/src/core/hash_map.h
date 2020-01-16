@@ -1,6 +1,6 @@
 #pragma once
 #include "core/type.h"
-#include "core/debug.h"
+#include "core/dev_util.h"
 
 namespace Soul {
 
@@ -41,6 +41,13 @@ namespace Soul {
 			memset(_values, 0, sizeof(Data) * capacity);
 
 			_capacity = capacity;
+		}
+
+		void clear() {
+			memset(_indexes, 0, sizeof(Index) * _capacity);
+			memset(_values, 0, sizeof(Data) * _capacity);
+			_maxDIB = 0;
+			_size = 0;
 		}
 
 		void cleanup() {
