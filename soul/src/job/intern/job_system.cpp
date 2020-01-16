@@ -76,10 +76,7 @@ namespace Soul { namespace Job {
 
 		taskWait(0);
 
-		// NOTE(kevinyu): TaskID 0 is sentinel. TaskID 0 is used as parent for all task
-		_db.threadContexts[0].taskPool[0].unfinishedCount.store(0, std::memory_order_relaxed);
-		_db.threadContexts[0].taskCount = 1;
-		_db.threadContexts[0].taskDeque.reset();
+		_initSentinel();
 
 		for (int i = 1; i < _db.threadCount; i++) {
 			_db.threadContexts[i].taskCount = 0;
@@ -141,6 +138,13 @@ namespace Soul { namespace Job {
 		}
 	}
 
+	void System::_initSentinel() {
+		// NOTE(kevinyu): TaskID 0 is sentinel. TaskID 0 is used as parent for all task
+		_db.threadContexts[0].taskPool[0].unfinishedCount.store(0, std::memory_order_relaxed);
+		_db.threadContexts[0].taskCount = 1;
+		_db.threadContexts[0].taskDeque.reset();
+	}
+
 	void System::init(const System::Config& config) {
 
 		int threadCount = config.threadCount;
@@ -172,6 +176,8 @@ namespace Soul { namespace Job {
 			_db.threads[i] = std::thread(&System::_loop, this, _db.threadContexts.ptr(i));
 		}
 		_db.activeTaskCount = 0;
+
+		_initSentinel();
 
 	}
 

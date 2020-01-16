@@ -84,7 +84,7 @@ namespace Soul { namespace GPU {
 		static const char* requiredExtensions[] = {
 			VK_KHR_SURFACE_EXTENSION_NAME,
 			
-			#ifdef SOUL_OS_WIN32
+			#if defined(SOUL_OS_WINDOWS)
 			"VK_KHR_win32_surface",
 			#endif // SOUL_PLATFORM_OS_WIN32
 			
@@ -498,7 +498,7 @@ namespace Soul { namespace GPU {
 				vkGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice, surface, &formatCount, formats.data());
 
 				for (int i = 0; i < formats.size(); i++) {
-					const VkSurfaceFormatKHR& surfaceFormat = formats[0];
+					const VkSurfaceFormatKHR surfaceFormat = formats[0];
 					if (surfaceFormat.format == VK_FORMAT_B8G8R8A8_UNORM && surfaceFormat.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
 						formats.cleanup();
 						return surfaceFormat;
@@ -533,24 +533,25 @@ namespace Soul { namespace GPU {
 			SOUL_LOG_INFO("Swapchain image count = %d", imageCount);
 
 			uint32_t queueFamily = db->presentQueueFamilyIndex;
-			SOUL_ASSERT(0, db->presentQueueFamilyIndex == db->graphicsQueueFamilyIndex, "");
-			 VkSwapchainCreateInfoKHR swapchainInfo {
-				.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
-				.surface = db->surface,
-				.minImageCount = imageCount,
-				.imageFormat = db->swapchain.format.format,
-				.imageColorSpace = db->swapchain.format.colorSpace,
-				.imageExtent = db->swapchain.extent,
-				.imageArrayLayers = 1,
-				.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT,
-				.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE,
-				.queueFamilyIndexCount = 1,
-				.pQueueFamilyIndices = &queueFamily,
-				.preTransform = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR,
-				.presentMode = VK_PRESENT_MODE_FIFO_KHR,
-				.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR,
-				.clipped = VK_TRUE
-			};
+			SOUL_ASSERT(0, db->presentQueueFamilyIndex == db->graphicsQueueFamilyIndex,
+			        "Currently we create swapchain with sharing mode exclusive."
+               "If present and graphic queue is different we need to update sharingMode and queueFamilyIndices.");
+			VkSwapchainCreateInfoKHR swapchainInfo = { VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR };
+			swapchainInfo.surface = db->surface;
+			swapchainInfo.minImageCount = imageCount;
+			swapchainInfo.imageFormat = db->swapchain.format.format;
+			swapchainInfo.imageColorSpace = db->swapchain.format.colorSpace;
+			swapchainInfo.imageExtent = db->swapchain.extent;
+			swapchainInfo.imageArrayLayers = 1;
+			swapchainInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+			swapchainInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
+			swapchainInfo.queueFamilyIndexCount = 1;
+			swapchainInfo.pQueueFamilyIndices = &queueFamily;
+			swapchainInfo.preTransform = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR;
+			swapchainInfo.presentMode = VK_PRESENT_MODE_FIFO_KHR;
+			swapchainInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
+			swapchainInfo.clipped = VK_TRUE;
+
 			SOUL_VK_CHECK(vkCreateSwapchainKHR(db->device, &swapchainInfo, nullptr, &db->swapchain.vkHandle), "Fail to create vulkan swapchain!");
 
 			vkGetSwapchainImagesKHR(db->device, db->swapchain.vkHandle, &imageCount, nullptr);
@@ -559,22 +560,18 @@ namespace Soul { namespace GPU {
 			
 			db->swapchain.imageViews.resize(imageCount);
 			for (int i = 0; i < imageCount; i++) {
-				VkImageViewCreateInfo createInfo {
-					.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
-					.image = db->swapchain.images[i],
-					.viewType = VK_IMAGE_VIEW_TYPE_2D,
-					.format = db->swapchain.format.format,
-					.components.r = VK_COMPONENT_SWIZZLE_IDENTITY,
-					.components.g = VK_COMPONENT_SWIZZLE_IDENTITY,
-					.components.b = VK_COMPONENT_SWIZZLE_IDENTITY,
-					.components.a = VK_COMPONENT_SWIZZLE_IDENTITY,
-					.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-					.subresourceRange.baseMipLevel = 0,
-					.subresourceRange.levelCount = 1,
-					.subresourceRange.baseArrayLayer = 0,
-					.subresourceRange.layerCount = 1
-				};
-				SOUL_VK_CHECK(vkCreateImageView(db->device, &createInfo, nullptr, &db->swapchain.imageViews[i]), "Fail to creat swapchain imageview %d", i);
+			    VkImageViewCreateInfo imageViewInfo = { VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO };
+			    imageViewInfo.image = db->swapchain.images[i];
+			    imageViewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+			    imageViewInfo.format = db->swapchain.format.format;
+			    imageViewInfo.components = { VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY };
+			    imageViewInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+			    imageViewInfo.subresourceRange.baseMipLevel = 0;
+			    imageViewInfo.subresourceRange.levelCount = 1;
+			    imageViewInfo.subresourceRange.baseArrayLayer = 0;
+			    imageViewInfo.subresourceRange.layerCount = 1;
+
+				SOUL_VK_CHECK(vkCreateImageView(db->device, &imageViewInfo, nullptr, &db->swapchain.imageViews[i]), "Fail to create swapchain imageview %d", i);
 			}
 
 			db->swapchain.textures.resize(imageCount);
@@ -608,39 +605,38 @@ namespace Soul { namespace GPU {
 		_frameContextInit(config);
 
 		static const auto initAllocator = [](_Database* db) {
-			VmaVulkanFunctions vulkanFunctions = {
-				.vkGetPhysicalDeviceProperties = vkGetPhysicalDeviceProperties,
-				.vkGetPhysicalDeviceMemoryProperties = vkGetPhysicalDeviceMemoryProperties,
-				.vkAllocateMemory = vkAllocateMemory,
-				.vkFreeMemory = vkFreeMemory,
-				.vkMapMemory = vkMapMemory,
-				.vkUnmapMemory = vkUnmapMemory,
-				.vkFlushMappedMemoryRanges = vkFlushMappedMemoryRanges,
-				.vkInvalidateMappedMemoryRanges = vkInvalidateMappedMemoryRanges,
-				.vkBindBufferMemory = vkBindBufferMemory,
-       			.vkBindImageMemory = vkBindImageMemory,
-				.vkGetBufferMemoryRequirements = vkGetBufferMemoryRequirements,
-				.vkGetImageMemoryRequirements = vkGetImageMemoryRequirements,
-				.vkCreateBuffer = vkCreateBuffer,
-				.vkDestroyBuffer = vkDestroyBuffer,
-				.vkCreateImage = vkCreateImage,
-				.vkDestroyImage = vkDestroyImage,
-				.vkCmdCopyBuffer = vkCmdCopyBuffer,
-				.vkGetBufferMemoryRequirements2KHR = vkGetBufferMemoryRequirements2KHR,
-				.vkGetImageMemoryRequirements2KHR = vkGetImageMemoryRequirements2KHR,
-				.vkBindBufferMemory2KHR = vkBindBufferMemory2KHR,
-				.vkBindImageMemory2KHR = vkBindImageMemory2KHR
-			};
-			VmaAllocatorCreateInfo allocatorInfo = {
-				.physicalDevice = db->physicalDevice,
-				.device = db->device,
-				.preferredLargeHeapBlockSize = 0,
-				.pAllocationCallbacks = nullptr,
-				.pDeviceMemoryCallbacks = nullptr,
-				.frameInUseCount = 0,
-				.pHeapSizeLimit = 0,
-				.pVulkanFunctions = &vulkanFunctions
-			};
+			VmaVulkanFunctions vulkanFunctions = {};
+            vulkanFunctions.vkGetPhysicalDeviceProperties = vkGetPhysicalDeviceProperties;
+            vulkanFunctions.vkGetPhysicalDeviceMemoryProperties = vkGetPhysicalDeviceMemoryProperties;
+            vulkanFunctions.vkAllocateMemory = vkAllocateMemory;
+            vulkanFunctions.vkFreeMemory = vkFreeMemory;
+            vulkanFunctions.vkMapMemory = vkMapMemory;
+            vulkanFunctions.vkUnmapMemory = vkUnmapMemory;
+            vulkanFunctions.vkFlushMappedMemoryRanges = vkFlushMappedMemoryRanges;
+            vulkanFunctions.vkInvalidateMappedMemoryRanges = vkInvalidateMappedMemoryRanges;
+            vulkanFunctions.vkBindBufferMemory = vkBindBufferMemory;
+            vulkanFunctions.vkBindImageMemory = vkBindImageMemory;
+            vulkanFunctions.vkGetBufferMemoryRequirements = vkGetBufferMemoryRequirements;
+            vulkanFunctions.vkGetImageMemoryRequirements = vkGetImageMemoryRequirements;
+            vulkanFunctions.vkCreateBuffer = vkCreateBuffer;
+            vulkanFunctions.vkDestroyBuffer = vkDestroyBuffer;
+            vulkanFunctions.vkCreateImage = vkCreateImage;
+            vulkanFunctions.vkDestroyImage = vkDestroyImage;
+            vulkanFunctions.vkCmdCopyBuffer = vkCmdCopyBuffer;
+            vulkanFunctions.vkGetBufferMemoryRequirements2KHR = vkGetBufferMemoryRequirements2KHR;
+            vulkanFunctions.vkGetImageMemoryRequirements2KHR = vkGetImageMemoryRequirements2KHR;
+            vulkanFunctions.vkBindBufferMemory2KHR = vkBindBufferMemory2KHR;
+            vulkanFunctions.vkBindImageMemory2KHR = vkBindImageMemory2KHR;
+				        
+			VmaAllocatorCreateInfo allocatorInfo = {};
+			allocatorInfo.physicalDevice = db->physicalDevice;
+			allocatorInfo.device = db->device;
+			allocatorInfo.preferredLargeHeapBlockSize = 0;
+			allocatorInfo.pAllocationCallbacks = nullptr;
+			allocatorInfo.pDeviceMemoryCallbacks = nullptr;
+			allocatorInfo.frameInUseCount = 0;
+			allocatorInfo.pHeapSizeLimit = 0;
+			allocatorInfo.pVulkanFunctions = &vulkanFunctions;
 		
 			vmaCreateAllocator(&allocatorInfo, &db->allocator);
 
@@ -738,9 +734,9 @@ namespace Soul { namespace GPU {
 		imageInfo.pQueueFamilyIndices = queueData.indices;
 		imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 
-		VmaAllocationCreateInfo allocInfo = {
-				.usage = VMA_MEMORY_USAGE_GPU_ONLY
-		};
+		VmaAllocationCreateInfo allocInfo = {};
+		allocInfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
+
 		SOUL_VK_CHECK(vmaCreateImage(_db.allocator,
 			 &imageInfo, &allocInfo, &texture.vkHandle,
 			 &texture.allocation, nullptr), "");
@@ -1692,12 +1688,10 @@ namespace Soul { namespace GPU {
 
 		if (frameContext.usedCommandBuffers[queueType] == cmdBuffers.size()) {
 			VkCommandBuffer cmdBuffer;
-			VkCommandBufferAllocateInfo allocInfo = {
-					.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
-					.commandPool = frameContext.commandPools[queueType],
-					.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
-					.commandBufferCount = (uint32_t) 1
-			};
+			VkCommandBufferAllocateInfo allocInfo = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO };
+			allocInfo.commandPool = frameContext.commandPools[queueType];
+			allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+			allocInfo.commandBufferCount = 1;
 
 			SOUL_VK_CHECK(vkAllocateCommandBuffers(_db.device, &allocInfo, &cmdBuffer), "");
 			cmdBuffers.add(cmdBuffer);

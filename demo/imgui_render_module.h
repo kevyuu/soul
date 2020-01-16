@@ -22,14 +22,14 @@ public:
 	void init(GPU::System* system, Vec2ui32 extent) {
 		_extent = extent;
 
-		const char* vertSrc = LoadFile("/Users/utamak/Dev/personal/soul/soul/shaders/imgui_render.vert.glsl");
+		const char* vertSrc = LoadFile("shaders/imgui_render.vert.glsl");
 		GPU::ShaderDesc vertShaderDesc;
 		vertShaderDesc.name = "Imgui vertex shader";
 		vertShaderDesc.source = vertSrc;
 		vertShaderDesc.sourceSize = strlen(vertSrc);
 		_vertShaderID = system->shaderCreate(vertShaderDesc, GPU::ShaderStage::VERTEX);
 
-		const char* fragSrc = LoadFile("/Users/utamak/Dev/personal/soul/soul/shaders/imgui_render.frag.glsl");
+		const char* fragSrc = LoadFile("shaders/imgui_render.frag.glsl");
 		GPU::ShaderDesc fragShaderDesc;
 		fragShaderDesc.name = "Imgui fragment shader";
 		fragShaderDesc.source = fragSrc;

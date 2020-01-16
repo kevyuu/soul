@@ -29,7 +29,7 @@ namespace Soul {namespace GPU {
 
 	void _RenderGraphExecution::init() {
 		SOUL_ASSERT_MAIN_THREAD();
-		ZoneScoped
+
 		passInfos.resize(_renderGraph->_passNodes.size());
 
 		bufferInfos.resize(_renderGraph->_internalBuffers.size() + _renderGraph->_externalBuffers.size());
@@ -547,7 +547,7 @@ namespace Soul {namespace GPU {
 
 		// Sync semaphores
 		for(PassType srcPassType : Enum<PassType>::Iterates()) {
-			SemaphoreID semaphoreIDs[Enum<PassType>::Count()];
+			SemaphoreID semaphoreIDs[uint64(PassType::COUNT)];
 			uint32 semaphoreCount = 0;
 
 			QueueType srcQueueType = _PASS_TYPE_TO_QUEUE_TYPE_MAP[srcPassType];

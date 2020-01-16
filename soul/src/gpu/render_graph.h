@@ -1,6 +1,5 @@
 #pragma once
 #include "core/util.h"
-
 #include "gpu/data.h"
 
 namespace Soul { namespace GPU {
@@ -439,5 +438,3 @@ namespace Soul { namespace GPU {
 	};
 
 }}
-
-#include "gpu/intern/render_graph.inl"

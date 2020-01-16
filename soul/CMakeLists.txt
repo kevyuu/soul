@@ -7,7 +7,7 @@ set (SOUL_HEADERS
 	
 	src/core/architecture.h
 	src/core/array.h
-        src/core/dev_util.h
+	src/core/dev_util.h
 	src/core/hash_map.h
 	src/core/math.h
 	src/core/packed_array.h
@@ -52,5 +52,6 @@ target_include_directories(soul
 	PUBLIC src/)
 target_compile_definitions(soul
 	PUBLIC
-		$<$<CONFIG:Debug>:SOUL_OPTION_VULKAN_ENABLE_VALIDATION>
-		SOUL_OS_APPLE)
+		$<$<CONFIG:Debug>:"SOUL_ENV_DEBUG"> 
+		$<$<STREQUAL:${CMAKE_SYSTEM_NAME},Windows>:"SOUL_OS_WINDOWS"> 
+		$<$<STREQUAL:${CMAKE_SYSTEM_NAME},Darwin>:"SOUL_OS_APPLE">)

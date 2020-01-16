@@ -103,6 +103,8 @@ namespace Soul { namespace Job {
 
 		void _terminate();
 
+		void _initSentinel();
+
 		Database _db;
 	};
 }}

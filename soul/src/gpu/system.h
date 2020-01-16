@@ -2,6 +2,7 @@
 #include "core/util.h"
 
 #include "gpu/data.h"
+#include "gpu/render_graph.h"
 
 #define SOUL_VK_CHECK(result, message, ...) SOUL_ASSERT(0, result == VK_SUCCESS, "result = %d | " message, result, ##__VA_ARGS__)
 

@@ -24,7 +24,6 @@
 #include <imgui/imgui.h>
 #include <imgui/examples/imgui_impl_glfw.h>
 
-#include <tracy/client/TracyProfiler.hpp>
 #include <tiny_gltf.h>
 
 using namespace Soul;
@@ -697,11 +696,11 @@ int main() {
 
 	Scene scene;
 	LoadScene(&gpuSystem, &scene,
-			"/Users/utamak/Dev/personal/soul/soul/assets/sponza/scene.gltf",
+			"sponza/scene.gltf",
 			true);
 
-	const char* renderAlbedoVertSrc = LoadFile("/Users/utamak/Dev/personal/soul/soul/shaders/render_albedo.vert.glsl");
-	const char* renderAlbedoFragSrc = LoadFile("/Users/utamak/Dev/personal/soul/soul/shaders/render_albedo.frag.glsl");
+	const char* renderAlbedoVertSrc = LoadFile("render_albedo.vert.glsl");
+	const char* renderAlbedoFragSrc = LoadFile("render_albedo.frag.glsl");
 	GPU::ShaderDesc vertShaderDesc;
 	vertShaderDesc.name = "Render albedo vertex";
 	vertShaderDesc.source = renderAlbedoVertSrc;
@@ -830,7 +829,6 @@ int main() {
 	while(!glfwWindowShouldClose(window)) {
 		SOUL_PROFILE_FRAME();
 
-		tracy::SetThreadName("Main Thread");
 		Job::System::Get().beginFrame();
 
 		glfwPollEvents();
@@ -1043,7 +1041,7 @@ int main() {
 		indexBufferNodeIDs.cleanup();
 		sceneTextureNodeIDs.cleanup();
 
-			static float translationSpeed = 1.0f;
+			static float translationSpeed = 0.025f;
 
 			float cameraSpeedInc = 0.1f;
 			translationSpeed += (cameraSpeedInc * translationSpeed * io.MouseWheel);

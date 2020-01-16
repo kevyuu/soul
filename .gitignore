@@ -13,3 +13,6 @@ soul/imgui.ini
 soul/assets/*
 build/*
 .vscode/*
+out/*
+assets/*
+CMakeSettings.json
