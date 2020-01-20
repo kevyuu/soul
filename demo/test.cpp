@@ -28,6 +28,51 @@
 
 using namespace Soul;
 
+struct Camera {
+	Vec3f up;
+	Vec3f direction;
+	Vec3f position;
+
+	Mat4 projection;
+	Mat4 view;
+
+	uint16 viewportWidth;
+	uint16 viewportHeight;
+
+	float aperture = 1.0f;
+	float shutterSpeed = 1.0f;
+	float sensitivity = 1.0f;
+	float exposure = 1.0f;
+
+	bool exposureFromSetting = false;
+
+	union {
+		struct {
+			float fov;
+			float aspectRatio;
+			float zNear;
+			float zFar;
+		} perspective;
+
+		struct {
+			float left;
+			float right;
+			float top;
+			float bottom;
+			float zNear;
+			float zFar;
+		} ortho;
+	};
+
+	void updateExposure() {
+		if (exposureFromSetting) {
+			float ev100 = log2((aperture * aperture) / shutterSpeed * 100.0 / sensitivity);
+			exposure = 1.0f / (pow(2.0f, ev100) * 1.2f);
+		}
+	}
+
+};
+
 namespace Soul {
 
 	enum EntityType {
@@ -147,8 +192,6 @@ namespace Soul {
 
 		GPU::BufferID materialBuffer;
 	};
-
-	using TextureID = uint32;
 
 };
 
@@ -696,11 +739,11 @@ int main() {
 
 	Scene scene;
 	LoadScene(&gpuSystem, &scene,
-			"sponza/scene.gltf",
+			"assets/sponza/scene.gltf",
 			true);
 
-	const char* renderAlbedoVertSrc = LoadFile("render_albedo.vert.glsl");
-	const char* renderAlbedoFragSrc = LoadFile("render_albedo.frag.glsl");
+	const char* renderAlbedoVertSrc = LoadFile("shaders/render_albedo.vert.glsl");
+	const char* renderAlbedoFragSrc = LoadFile("shaders/render_albedo.frag.glsl");
 	GPU::ShaderDesc vertShaderDesc;
 	vertShaderDesc.name = "Render albedo vertex";
 	vertShaderDesc.source = renderAlbedoVertSrc;
@@ -740,52 +783,9 @@ int main() {
 	ImGuiIO& io = ImGui::GetIO(); (void)io;
 	ImGui_ImplGlfw_InitForVulkan(window, true);
 	ImGuiRenderModule imguiRenderModule;
-	imguiRenderModule.init(&gpuSystem, gpuSystem.getSwapchainExtent());
+	imguiRenderModule.init(&gpuSystem);
 
-	struct Camera {
-		Vec3f up;
-		Vec3f direction;
-		Vec3f position;
-
-		Mat4 projection;
-		Mat4 view;
-
-		uint16 viewportWidth;
-		uint16 viewportHeight;
-
-		float aperture = 1.0f;
-		float shutterSpeed = 1.0f;
-		float sensitivity = 1.0f;
-		float exposure = 1.0f;
-
-		bool exposureFromSetting = false;
-
-		union {
-			struct {
-				float fov;
-				float aspectRatio;
-				float zNear;
-				float zFar;
-			} perspective;
-
-			struct {
-				float left;
-				float right;
-				float top;
-				float bottom;
-				float zNear;
-				float zFar;
-			} ortho;
-		};
-
-		void updateExposure() {
-			if (exposureFromSetting) {
-				float ev100 = log2((aperture * aperture) / shutterSpeed * 100.0 / sensitivity);
-				exposure = 1.0f / (pow(2.0f, ev100) * 1.2f);
-			}
-		}
-
-	};
+	
 
 	Camera camera;
 	camera.position = Soul::Vec3f(1.0f, 1.0f, 0.0f);
@@ -835,16 +835,18 @@ int main() {
 
 		Vec2ui32 extent = gpuSystem.getSwapchainExtent();
 
-		SOUL_LOG_INFO("Extent x = %d, y = %d.", extent.x, extent.y);
-
 		GPU::RenderGraph renderGraph;
 
 		// Start the Dear ImGui frame
 		ImGui_ImplGlfw_NewFrame();
 		ImGui::NewFrame();
-		ImGui::Render();
 
-		cameraDataUBO.projection = mat4Transpose(camera.projection);
+		
+		ImGui::GetIO().Fonts->TexID = SoulImTexture(renderGraph.importTexture("Imgui font", imguiRenderModule.getFontTexture())).getImTextureID();
+		ImGui::Render();
+		imguiRenderModule.addPass(&gpuSystem, &renderGraph, *ImGui::GetDrawData(), gpuSystem.getSwapchainTexture());
+
+		/* cameraDataUBO.projection = mat4Transpose(camera.projection);
 		Mat4 viewMat = mat4View(camera.position, camera.position +
 												 camera.direction, camera.up);
 		cameraDataUBO.view = mat4Transpose(viewMat);
@@ -1033,9 +1035,7 @@ int main() {
 
 		});
 
-		gpuSystem.renderGraphExecute(renderGraph);
-		gpuSystem.frameFlush();
-		renderGraph.cleanup();
+		
 
 		vertexBufferNodeIDs.cleanup();
 		indexBufferNodeIDs.cleanup();
@@ -1089,7 +1089,11 @@ int main() {
 				camera.position += Soul::unit(right) * translationSpeed;
 			}
 
-		camera.view = mat4View(camera.position, camera.position + camera.direction, camera.up);
+		camera.view = mat4View(camera.position, camera.position + camera.direction, camera.up); */
+
+		gpuSystem.renderGraphExecute(renderGraph);
+		gpuSystem.frameFlush();
+		renderGraph.cleanup();
 	}
 
 	glfwDestroyWindow(window);

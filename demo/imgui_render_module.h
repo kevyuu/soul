@@ -4,23 +4,60 @@
 #pragma once
 
 #include <imgui/imgui.h>
+#include "core/type.h"
 #include "gpu/gpu.h"
 #include "utils.h"
 #include <stdio.h>
 
 using namespace Soul;
+
+struct SoulImTexture {
+public:
+
+	union Val{
+	
+		GPU::TextureNodeID renderGraphTex = GPU::TEXTURE_NODE_ID_NULL;
+		ImTextureID imTextureID;
+
+		Val() {};
+	} val;
+
+	static_assert(sizeof(ImTextureID) <= sizeof(val), "");
+	
+	SoulImTexture() = default;
+
+
+	SoulImTexture(GPU::TextureNodeID texNodeID) {
+		val.renderGraphTex = texNodeID;
+	}
+
+	SoulImTexture(ImTextureID imTextureID) {
+		val.imTextureID = imTextureID;
+	}
+
+	ImTextureID getImTextureID() {
+		return val.imTextureID;
+	}
+
+	GPU::TextureNodeID getTextureNodeID() {
+		return val.renderGraphTex;
+	}
+
+};
+static_assert(sizeof(SoulImTexture) <= sizeof(ImTextureID), "Size of SoulImTexture must be less that ImTextureID");
+
 class ImGuiRenderModule {
+
 public:
 	struct Data {
 		GPU::BufferNodeID vertexBuffer;
 		GPU::BufferNodeID indexBuffer;
 		GPU::BufferNodeID transformBuffer;
-		GPU::TextureNodeID fontTex;
 		GPU::TextureNodeID targetTex;
+		std::map<GPU::TextureNodeID, GPU::TextureNodeID> imTextures;
 	};
 
-	void init(GPU::System* system, Vec2ui32 extent) {
-		_extent = extent;
+	void init(GPU::System* system) {
 
 		const char* vertSrc = LoadFile("shaders/imgui_render.vert.glsl");
 		GPU::ShaderDesc vertShaderDesc;
@@ -38,7 +75,8 @@ public:
 
 		unsigned char* fontPixels;
 		int width, height;
-		ImGui::GetIO().Fonts->GetTexDataAsRGBA32(&fontPixels, &width, &height);
+		ImGuiIO io = ImGui::GetIO();
+		io.Fonts->GetTexDataAsRGBA32(&fontPixels, &width, &height);
 		GPU::TextureDesc fontTexDesc = {};
 		fontTexDesc.type = GPU::TextureType::D2;
 		fontTexDesc.format = GPU::TextureFormat::RGBA8;
@@ -63,19 +101,19 @@ public:
 
 	}
 
-	Data addPass(GPU::System* system, GPU::RenderGraph* renderGraph, const ImDrawData& drawData) {
+	GPU::TextureID getFontTexture() {
+		return _fontTex;
+	}
+
+	const Data& addPass(GPU::System* system, GPU::RenderGraph* renderGraph, const ImDrawData& drawData, GPU::TextureID targetTextureID) {
 		if (drawData.TotalVtxCount == 0) return Data();
 		int fb_width = (int)(drawData.DisplaySize.x * drawData.FramebufferScale.x);
 		int fb_height = (int)(drawData.DisplaySize.y * drawData.FramebufferScale.y);
-		_extent.x = fb_width;
-		_extent.y = fb_height;
+		Vec2ui32 fbDim;
+		fbDim.x = fb_width;
+		fbDim.y = fb_height;
 
-		GPU::RGTextureDesc desc;
-		desc.width = _extent.x;
-		desc.height = _extent.y;
-		desc.clear = true;
-		desc.clearValue = {};
-		GPU::TextureNodeID targetTex = renderGraph->createTexture("Imgui layer", desc);
+		GPU::TextureNodeID targetTex = renderGraph->importTexture("Color output", targetTextureID);
 
 		GPU::BufferDesc vertexBufferDesc;
 		vertexBufferDesc.typeSize = sizeof(ImDrawVert);
@@ -102,7 +140,7 @@ public:
 			}
 		};
 		VertexIterator vertIterator(drawData);
-		_vertexBuffer = system->bufferCreate(vertexBufferDesc,
+		GPU::BufferID _vertexBuffer = system->bufferCreate(vertexBufferDesc,
 			[&vertIterator]
 			(int i, byte* data){
 			auto vertex = (ImDrawVert*) data;
@@ -137,7 +175,7 @@ public:
 			}
 		};
 		IndexIterator idxIterator(drawData);
-		_indexBuffer = system->bufferCreate(indexBufferDesc,
+		GPU::BufferID _indexBuffer = system->bufferCreate(indexBufferDesc,
 			[&idxIterator]
 			(int i, byte* data) {
 			auto index = (ImDrawIdx*) data;
@@ -145,8 +183,6 @@ public:
 			idxIterator.next();
 		});
 		GPU::BufferNodeID indexNodeID = renderGraph->importBuffer("Index buffer", _indexBuffer);
-
-		GPU::TextureNodeID fontNodeID = renderGraph->importTexture("Font texture", _fontTex);
 
 		struct TransformUBO {
 			float scale[2];
@@ -176,7 +212,7 @@ public:
 
 		return renderGraph->addGraphicPass<Data>(
 			"Imgui Pass",
-			[this, targetTex, vertexNodeID, indexNodeID, fontNodeID, transformNodeID, drawData]
+			[this, targetTex, vertexNodeID, indexNodeID, transformNodeID, drawData, fbDim]
 			(GPU::GraphicNodeBuilder* builder, Data* data) {
 				GPU::ColorAttachmentDesc targetAttchDesc;
 				targetAttchDesc.clear = true;
@@ -191,26 +227,36 @@ public:
 				data->targetTex = builder->addColorAttachment(targetTex, targetAttchDesc);
 				data->vertexBuffer = builder->addVertexBuffer(vertexNodeID);
 				data->indexBuffer = builder->addIndexBuffer(indexNodeID);
-				data->fontTex = builder->addInShaderTexture(fontNodeID, 0, 1);
 				data->transformBuffer = builder->addInShaderBuffer(transformNodeID, 0, 0);
 
+				for (int n = 0; n < drawData.CmdListsCount; n++) {
+					const ImDrawList& cmdList = *drawData.CmdLists[n];
+					for (int cmd_i = 0; cmd_i < cmdList.CmdBuffer.Size; cmd_i++) {
+						const ImDrawCmd& cmd = cmdList.CmdBuffer[cmd_i];
+						GPU::TextureNodeID imTexture = SoulImTexture(cmd.TextureId).getTextureNodeID();
+						if (data->imTextures.find(imTexture) != data->imTextures.end()) {
+							data->imTextures[imTexture] = builder->addInShaderTexture(imTexture, 1, 0);
+						}
+					}
+				}
+
 				GPU::GraphicPipelineConfig config;
-				config.framebuffer.width = _extent.x;
-				config.framebuffer.height = _extent.y;
+				config.framebuffer.width = fbDim.x;
+				config.framebuffer.height = fbDim.y;
 
 				config.vertexShaderID = _vertShaderID;
 				config.fragmentShaderID = _fragShaderID;
 
-				config.viewport.width = _extent.x;
-				config.viewport.height = _extent.y;
+				config.viewport.width = fbDim.x;
+				config.viewport.height = fbDim.y;
 
 				config.scissor.dynamic = true;
-				config.scissor.width = _extent.x;
-				config.scissor.height = _extent.y;
+				config.scissor.width = fbDim.x;
+				config.scissor.height = fbDim.y;
 
 				builder->setPipelineConfig(config);
 			},
-			[drawData, this]
+			[drawData, this, fbDim]
 			(GPU::RenderGraphRegistry* registry, const Data& data, GPU::CommandBucket* commandBucket) {
 				// Will project scissor/clipping rectangles into framebuffer space
 				ImVec2 clip_off = drawData.DisplayPos;         // (0,0) unless using multi-viewports
@@ -219,22 +265,15 @@ public:
 				int global_vtx_offset = 0;
 				int global_idx_offset = 0;
 
-				GPU::Descriptor descriptors[2];
-
-				GPU::Descriptor& transformDescriptor = descriptors[0];
+				GPU::Descriptor transformDescriptor;
 				transformDescriptor.type = GPU::DescriptorType::UNIFORM_BUFFER;
 				transformDescriptor.uniformInfo.bufferID = registry->getBuffer(data.transformBuffer);
 				transformDescriptor.uniformInfo.unitIndex = 0;
 
-				GPU::Descriptor& fontDescriptor = descriptors[1];
-				fontDescriptor.type = GPU::DescriptorType::SAMPLED_IMAGE;
-				fontDescriptor.sampledImageInfo.textureID = registry->getTexture(data.fontTex);
-				fontDescriptor.sampledImageInfo.samplerID = _fontSampler;
-
 				GPU::ShaderArgSetDesc argSetDesc;
-				argSetDesc.bindingCount = 2;
-				argSetDesc.bindingDescriptions = descriptors;
-				GPU::ShaderArgSetID argSetID = registry->getShaderArgSet(0, argSetDesc);
+				argSetDesc.bindingCount = 1;
+				argSetDesc.bindingDescriptions = &transformDescriptor;
+				GPU::ShaderArgSetID argSet0 = registry->getShaderArgSet(0, argSetDesc);
 
 				uint32 scissorChange = 0;
 				for (int n = 0; n < drawData.CmdListsCount; n++) {
@@ -252,7 +291,7 @@ public:
 							clip_rect.z = (cmd.ClipRect.z - clip_off.x) * clip_scale.x;
 							clip_rect.w = (cmd.ClipRect.w - clip_off.y) * clip_scale.y;
 
-							if (clip_rect.x < _extent.x && clip_rect.y < _extent.y && clip_rect.z >= 0.0f && clip_rect.w >= 0.0f)
+							if (clip_rect.x < fbDim.x && clip_rect.y < fbDim.y && clip_rect.z >= 0.0f && clip_rect.w >= 0.0f)
 							{
 								if (clip_rect.x < 0.0f)
 									clip_rect.x = 0.0f;
@@ -272,7 +311,12 @@ public:
 								command->indexCount = cmd.ElemCount;
 								command->indexOffset = cmd.IdxOffset + global_idx_offset;
 
-								command->shaderArgSets[0] = argSetID;
+								command->shaderArgSets[0] = argSet0;
+
+								GPU::Descriptor imageDescriptor;
+								imageDescriptor.type = GPU::DescriptorType::SAMPLED_IMAGE;
+								imageDescriptor.sampledImageInfo.textureID = registry->getTexture(data.imTextures[cmd.TextureId]);
+
 								++scissorChange;
 							}
 						}
@@ -286,14 +330,10 @@ public:
 
 	}
 private:
-	Vec2ui32 _extent;
 	GPU::ShaderID _vertShaderID;
 	GPU::ShaderID _fragShaderID;
 
-	GPU::BufferID _vertexBuffer;
-	GPU::BufferID _indexBuffer;
-
-	GPU::TextureID _fontTex;
 	GPU::SamplerID _fontSampler;
+	GPU::TextureID _fontTex;
 };
 

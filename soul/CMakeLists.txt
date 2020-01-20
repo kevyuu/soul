@@ -52,6 +52,7 @@ target_include_directories(soul
 	PUBLIC src/)
 target_compile_definitions(soul
 	PUBLIC
-		$<$<CONFIG:Debug>:"SOUL_ENV_DEBUG"> 
-		$<$<STREQUAL:${CMAKE_SYSTEM_NAME},Windows>:"SOUL_OS_WINDOWS"> 
-		$<$<STREQUAL:${CMAKE_SYSTEM_NAME},Darwin>:"SOUL_OS_APPLE">)
+		"$<$<CONFIG:Debug>:SOUL_ENV_DEBUG>"
+	PRIVATE
+		"$<$<STREQUAL:${CMAKE_SYSTEM_NAME},Windows>:SOUL_OS_WINDOWS>"
+		"$<$<STREQUAL:${CMAKE_SYSTEM_NAME},Darwin>:SOUL_OS_APPLE>")

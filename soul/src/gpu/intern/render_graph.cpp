@@ -74,14 +74,8 @@ namespace Soul { namespace GPU {
 		}
 		_passNodes.cleanup();
 
-		for (_BufferNode& node : _bufferNodes) {
-			node.readers.cleanup();
-		}
 		_bufferNodes.cleanup();
 
-		for (_TextureNode& node : _textureNodes) {
-			node.readers.cleanup();
-		}
 		_textureNodes.cleanup();
 
 		_internalBuffers.cleanup();
@@ -91,7 +85,7 @@ namespace Soul { namespace GPU {
 	}
 
 	void RenderGraph::_bufferNodeRead(BufferNodeID bufferNodeID, PassNodeID passNodeID) {
-		_bufferNodePtr((bufferNodeID))->readers.add(passNodeID);
+		// _bufferNodePtr((bufferNodeID))->readers.add(passNodeID);
 	}
 
 	BufferNodeID RenderGraph::_bufferNodeWrite(BufferNodeID bufferNodeID, PassNodeID passNodeID) {
@@ -104,7 +98,7 @@ namespace Soul { namespace GPU {
 	}
 
 	void RenderGraph::_textureNodeRead(TextureNodeID textureNodeID, PassNodeID passNodeID) {
-		_textureNodePtr(textureNodeID)->readers.add(passNodeID);
+		// _textureNodePtr(textureNodeID)->readers.add(passNodeID);
 	}
 
 	TextureNodeID RenderGraph::_textureNodeWrite(TextureNodeID textureNodeID, PassNodeID passNodeID) {

@@ -106,13 +106,11 @@ namespace Soul { namespace GPU {
 	struct _TextureNode {
 		_RGBufferID resourceID = _RG_BUFFER_ID_NULL;
 		PassNodeID writer = PASS_NODE_ID_NULL;
-		Array<PassNodeID> readers;
 	};
 
 	struct _BufferNode {
 		_RGBufferID resourceID = _RG_BUFFER_ID_NULL;
 		PassNodeID writer = PASS_NODE_ID_NULL;
-		Array<PassNodeID> readers;
 	};
 
 	namespace Command {
