@@ -28,7 +28,8 @@
 
 using namespace Soul;
 
-struct Camera {
+struct Camera
+{
 	Vec3f up;
 	Vec3f direction;
 	Vec3f position;
@@ -46,15 +47,18 @@ struct Camera {
 
 	bool exposureFromSetting = false;
 
-	union {
-		struct {
+	union
+	{
+		struct
+		{
 			float fov;
 			float aspectRatio;
 			float zNear;
 			float zFar;
 		} perspective;
 
-		struct {
+		struct
+		{
 			float left;
 			float right;
 			float top;
@@ -64,19 +68,20 @@ struct Camera {
 		} ortho;
 	};
 
-	void updateExposure() {
-		if (exposureFromSetting) {
+	void updateExposure()
+	{
+		if (exposureFromSetting)
+		{
 			float ev100 = log2((aperture * aperture) / shutterSpeed * 100.0 / sensitivity);
 			exposure = 1.0f / (pow(2.0f, ev100) * 1.2f);
 		}
 	}
-
 };
 
-namespace Soul {
-
-	enum EntityType {
-
+namespace Soul
+{
+	enum EntityType
+	{
 		EntityType_GROUP,
 		EntityType_MESH,
 		EntityType_DIRLIGHT,
@@ -86,23 +91,26 @@ namespace Soul {
 		EntityType_Count
 	};
 
-	struct EntityID {
+	struct EntityID
+	{
 		PoolID index;
 		uint16 type;
 
-		inline bool operator==(const EntityID& rhs) {
+		bool operator==(const EntityID& rhs)
+		{
 			return this->type == rhs.type && this->index == rhs.index;
 		}
 
-		inline bool operator!=(const EntityID& rhs) {
+		bool operator!=(const EntityID& rhs)
+		{
 			return this->type != rhs.type || this->index != rhs.index;
 		}
-
 	};
 
 	struct GroupEntity;
 
-	struct Entity {
+	struct Entity
+	{
 		static constexpr uint32 MAX_NAME_LENGTH = 1024;
 		EntityID entityID;
 		char name[MAX_NAME_LENGTH];
@@ -115,31 +123,36 @@ namespace Soul {
 		Transform worldTransform;
 	};
 
-	struct GroupEntity : Entity {
+	struct GroupEntity : Entity
+	{
 		Entity* first;
 	};
 
-	struct MeshEntity : Entity {
+	struct MeshEntity : Entity
+	{
 		uint32 meshID;
 		uint32 materialID;
 	};
 
-	struct Mesh {
+	struct Mesh
+	{
 		GPU::BufferID vertexBufferID;
 		GPU::BufferID indexBufferID;
 		uint16 indexCount;
 	};
 
-	struct DirectionalLight {
+	struct DirectionalLight
+	{
 		Vec3f direction = Vec3f(0.0f, -1.0f, 0.0f);
-		Vec3f color = { 1.0f, 1.0f, 1.0f };
+		Vec3f color = {1.0f, 1.0f, 1.0f};
 		float illuminance = 100000; // in lx;
-		float split[3] = { 0.1f, 0.3f, 0.6f };
+		float split[3] = {0.1f, 0.3f, 0.6f};
 		int32 shadowMapResolution = 2048;
 		float bias = 0.001f;
 	};
 
-	enum class TexChannel : uint8 {
+	enum class TexChannel : uint8
+	{
 		RED,
 		GREEN,
 		BLUE,
@@ -147,7 +160,8 @@ namespace Soul {
 		COUNT
 	};
 
-	struct SceneMaterial {
+	struct SceneMaterial
+	{
 		char name[1024];
 
 		PoolID albedoTexID;
@@ -174,29 +188,32 @@ namespace Soul {
 		TexChannel aoTextureChannel;
 	};
 
-	struct SceneTexture {
+	struct SceneTexture
+	{
 		char name[1024];
 		GPU::TextureID rid;
 	};
 
-	struct Scene {
+	struct Scene
+	{
 		EntityID rootEntityID;
 
 		PoolArray<GroupEntity> groupEntities;
 		Array<MeshEntity> meshEntities;
 		Array<Mesh> meshes;
 		Array<SceneMaterial> materials;
-		
+
 		Array<SceneTexture> textures;
 		DirectionalLight light;
 
 		GPU::BufferID materialBuffer;
 	};
-
 };
 
-Entity* EntityPtr(Scene* scene, EntityID entityID) {
-	switch (entityID.type) {
+Entity* EntityPtr(Scene* scene, EntityID entityID)
+{
+	switch (entityID.type)
+	{
 	case EntityType_MESH:
 		return scene->meshEntities.ptr(entityID.index);
 	case EntityType_GROUP:
@@ -207,11 +224,14 @@ Entity* EntityPtr(Scene* scene, EntityID entityID) {
 	}
 }
 
-EntityID EntityCreate(Scene* scene, EntityID parentID, EntityType entityType, const char* name, Transform localTransform) {
+EntityID EntityCreate(Scene* scene, EntityID parentID, EntityType entityType, const char* name,
+                      Transform localTransform)
+{
 	EntityID entityID;
 	entityID.type = entityType;
 	Entity* entity = nullptr;
-	switch (entityType) {
+	switch (entityType)
+	{
 	case EntityType_MESH:
 		entityID.index = scene->meshEntities.add(MeshEntity());
 		entity = scene->meshEntities.ptr(entityID.index);
@@ -224,9 +244,10 @@ EntityID EntityCreate(Scene* scene, EntityID parentID, EntityType entityType, co
 		SOUL_ASSERT(0, false, "Entity type is not valid, entity type = %d", entityType);
 	}
 
-	GroupEntity* parent = (GroupEntity*)EntityPtr(scene, parentID);
+	GroupEntity* parent = static_cast<GroupEntity*>(EntityPtr(scene, parentID));
 	Entity* next = parent->first;
-	if (next != nullptr) {
+	if (next != nullptr)
+	{
 		next->prev = entity;
 	}
 
@@ -245,8 +266,8 @@ EntityID EntityCreate(Scene* scene, EntityID parentID, EntityType entityType, co
 	return entityID;
 }
 
-void LoadScene(GPU::System* gpuSystem, Scene* scene, const char* path, bool positionToAABBCenter) {
-
+void LoadScene(GPU::System* gpuSystem, Scene* scene, const char* path, bool positionToAABBCenter)
+{
 	scene->groupEntities.reserve(3000);
 	PoolID rootIndex = scene->groupEntities.add({});
 	scene->rootEntityID.index = rootIndex;
@@ -259,7 +280,7 @@ void LoadScene(GPU::System* gpuSystem, Scene* scene, const char* path, bool posi
 	rootEntity->next = nullptr;
 	rootEntity->localTransform = transformIdentity();
 	rootEntity->worldTransform = transformIdentity();
-	
+
 	scene->meshEntities.reserve(10000);
 	scene->meshEntities.add({});
 
@@ -269,16 +290,19 @@ void LoadScene(GPU::System* gpuSystem, Scene* scene, const char* path, bool posi
 	std::string warn;
 	bool ret = loader.LoadASCIIFromFile(&model, &err, &warn, path);
 
-	if (!warn.empty()) {
+	if (!warn.empty())
+	{
 		SOUL_LOG_WARN("ImportGLTFAssets | %s", warn.c_str());
 	}
 
-	if (!err.empty()) {
+	if (!err.empty())
+	{
 		SOUL_LOG_ERROR("ImportGLTFAssets | %s", err.c_str());
 		return;
 	}
 
-	if (!ret) {
+	if (!ret)
+	{
 		SOUL_LOG_ERROR("ImportGLTFAssets | failed");
 		return;
 	}
@@ -286,7 +310,8 @@ void LoadScene(GPU::System* gpuSystem, Scene* scene, const char* path, bool posi
 	//Load Textures
 	Array<PoolID> textureIDs;
 	textureIDs.resize(model.textures.size());
-	for (int i = 0; i < model.textures.size(); i++) {
+	for (int i = 0; i < model.textures.size(); i++)
+	{
 		const tinygltf::Texture& texture = model.textures[i];
 		const tinygltf::Image& image = model.images[texture.source];
 
@@ -300,7 +325,7 @@ void LoadScene(GPU::System* gpuSystem, Scene* scene, const char* path, bool posi
 		texDesc.usageFlags = GPU::TEXTURE_USAGE_SAMPLED_BIT;
 		texDesc.queueFlags = GPU::QUEUE_GRAPHIC_BIT;
 
-		GPU::TextureID textureID = gpuSystem->textureCreate(texDesc, (byte*) &image.image[0], image.image.size());
+		GPU::TextureID textureID = gpuSystem->textureCreate(texDesc, (byte*)&image.image[0], image.image.size());
 
 		PoolID sceneTextureID = scene->textures.add({});
 		SceneTexture& sceneTexture = scene->textures[sceneTextureID];
@@ -313,40 +338,48 @@ void LoadScene(GPU::System* gpuSystem, Scene* scene, const char* path, bool posi
 	SOUL_LOG_INFO("Materials count : %d", model.materials.size());
 	Array<PoolID> materialIDs;
 	materialIDs.resize(model.materials.size());
-	for (int i = 0; i < model.materials.size(); i++) {
+	for (int i = 0; i < model.materials.size(); i++)
+	{
 		SceneMaterial sceneMaterial = {};
 		const tinygltf::Material& material = model.materials[i];
-		
-		if (material.values.count("baseColorFactor") != 0) {
+
+		if (material.values.count("baseColorFactor") != 0)
+		{
 			const tinygltf::ColorValue& colorValue = material.values.at("baseColorFactor").ColorFactor();
 			sceneMaterial.albedo = {
-				(float)colorValue[0],
-				(float)colorValue[1],
-				(float)colorValue[2]
+				static_cast<float>(colorValue[0]),
+				static_cast<float>(colorValue[1]),
+				static_cast<float>(colorValue[2])
 			};
 		}
 
-		if (material.values.count("baseColorTexture") != 0) {
+		if (material.values.count("baseColorTexture") != 0)
+		{
 			int texID = material.values.at("baseColorTexture").TextureIndex();
 			sceneMaterial.albedoTexID = textureIDs[texID];
 			sceneMaterial.useAlbedoTex = true;
 		}
 
-		if (material.values.count("metallicFactor") != 0) {
+		if (material.values.count("metallicFactor") != 0)
+		{
 			sceneMaterial.metallic = material.values.at("metallicFactor").Factor();
 		}
-		else {
+		else
+		{
 			sceneMaterial.metallic = 0.0f;
 		}
 
-		if (material.values.count("roughnessFactor") != 0) {
+		if (material.values.count("roughnessFactor") != 0)
+		{
 			sceneMaterial.roughness = material.values.at("roughnessFactor").Factor();
 		}
-		else {
+		else
+		{
 			sceneMaterial.roughness = 0.0f;
 		}
 
-		if (material.values.count("metallicRoughnessTexture") != 0) {
+		if (material.values.count("metallicRoughnessTexture") != 0)
+		{
 			int texID = material.values.at("metallicRoughnessTexture").TextureIndex();
 
 			sceneMaterial.metallicTexID = textureIDs[texID];
@@ -358,47 +391,53 @@ void LoadScene(GPU::System* gpuSystem, Scene* scene, const char* path, bool posi
 			sceneMaterial.useRoughnessTex = true;
 		}
 
-		if (material.additionalValues.count("normalTexture")) {
+		if (material.additionalValues.count("normalTexture"))
+		{
 			int texID = material.additionalValues.at("normalTexture").TextureIndex();
 
 			sceneMaterial.normalTexID = textureIDs[texID];
 			sceneMaterial.useNormalTex = true;
-
 		}
 
-		if (material.additionalValues.count("occlusionTexture")) {
+		if (material.additionalValues.count("occlusionTexture"))
+		{
 			int texID = material.additionalValues.at("occlusionTexture").TextureIndex();
 			sceneMaterial.aoTexID = textureIDs[texID];
 			sceneMaterial.useAOTex = true;
 			sceneMaterial.aoTextureChannel = TexChannel::RED;
 		}
 
-		if (material.additionalValues.count("emissiveTexture")) {
+		if (material.additionalValues.count("emissiveTexture"))
+		{
 			int texID = material.additionalValues.at("emissiveTexture").TextureIndex();
 			sceneMaterial.emissiveTexID = textureIDs[texID];
 			sceneMaterial.useEmissiveTex = true;
 		}
 
-		if (material.additionalValues.count("emissiveFactor")) {
+		if (material.additionalValues.count("emissiveFactor"))
+		{
 			const tinygltf::ColorValue& colorValue = material.additionalValues.at("emissiveFactor").ColorFactor();
 			sceneMaterial.emissive = {
-				(float)colorValue[0],
-				(float)colorValue[1],
-				(float)colorValue[2]
+				static_cast<float>(colorValue[0]),
+				static_cast<float>(colorValue[1]),
+				static_cast<float>(colorValue[2])
 			};
 		}
-		else {
+		else
+		{
 			sceneMaterial.emissive = Vec3f(0.0f, 0.0f, 0.0f);
 		}
 
-		SOUL_ASSERT(0, strlen(material.name.c_str()) <= 512, "Material name is too long | material.name = %s", material.name.c_str());
+		SOUL_ASSERT(0, strlen(material.name.c_str()) <= 512, "Material name is too long | material.name = %s",
+		            material.name.c_str());
 		strcpy(sceneMaterial.name, material.name.c_str());
 
 		PoolID poolID = scene->materials.add(sceneMaterial);
 		materialIDs[i] = poolID;
 	}
 
-	struct MaterialData {
+	struct MaterialData
+	{
 		Vec3f albedo;
 		float metallic;
 		Vec3f emissive;
@@ -406,7 +445,8 @@ void LoadScene(GPU::System* gpuSystem, Scene* scene, const char* path, bool posi
 		uint32 flags;
 	};
 
-	enum MaterialFlag {
+	enum MaterialFlag
+	{
 		MaterialFlag_USE_ALBEDO_TEX = (1UL << 0),
 		MaterialFlag_USE_NORMAL_TEX = (1UL << 1),
 		MaterialFlag_USE_METALLIC_TEX = (1UL << 2),
@@ -437,98 +477,127 @@ void LoadScene(GPU::System* gpuSystem, Scene* scene, const char* path, bool posi
 	bufferDesc.queueFlags = GPU::QUEUE_GRAPHIC_BIT;
 	bufferDesc.usageFlags = GPU::BUFFER_USAGE_UNIFORM_BIT;
 	scene->materialBuffer = gpuSystem->bufferCreate(bufferDesc,
-			[scene](int index, byte* data) {
-		auto materialData = (MaterialData*) data;
-		SceneMaterial& sceneMaterial = scene->materials[index];
+	                                                [scene](int index, byte* data)
+	                                                {
+		                                                auto materialData = (MaterialData*)data;
+		                                                SceneMaterial& sceneMaterial = scene->materials[index];
 
-		materialData->albedo = sceneMaterial.albedo;
-		materialData->metallic = sceneMaterial.metallic;
-		materialData->emissive = sceneMaterial.emissive;
-		materialData->roughness = sceneMaterial.roughness;
+		                                                materialData->albedo = sceneMaterial.albedo;
+		                                                materialData->metallic = sceneMaterial.metallic;
+		                                                materialData->emissive = sceneMaterial.emissive;
+		                                                materialData->roughness = sceneMaterial.roughness;
 
-		int flags = 0;
-		if (sceneMaterial.useAlbedoTex) flags |= MaterialFlag_USE_ALBEDO_TEX;
-		if (sceneMaterial.useNormalTex) flags |= MaterialFlag_USE_NORMAL_TEX;
-		if (sceneMaterial.useMetallicTex) flags |= MaterialFlag_USE_METALLIC_TEX;
-		if (sceneMaterial.useRoughnessTex) flags |= MaterialFlag_USE_ROUGHNESS_TEX;
-		if (sceneMaterial.useAOTex) flags |= MaterialFlag_USE_AO_TEX;
-		if (sceneMaterial.useEmissiveTex) flags |= MaterialFlag_USE_EMISSIVE_TEX;
+		                                                int flags = 0;
+		                                                if (sceneMaterial.useAlbedoTex)
+			                                                flags |=
+				                                                MaterialFlag_USE_ALBEDO_TEX;
+		                                                if (sceneMaterial.useNormalTex)
+			                                                flags |=
+				                                                MaterialFlag_USE_NORMAL_TEX;
+		                                                if (sceneMaterial.useMetallicTex)
+			                                                flags |=
+				                                                MaterialFlag_USE_METALLIC_TEX;
+		                                                if (sceneMaterial.useRoughnessTex)
+			                                                flags |=
+				                                                MaterialFlag_USE_ROUGHNESS_TEX;
+		                                                if (sceneMaterial.useAOTex) flags |= MaterialFlag_USE_AO_TEX;
+		                                                if (sceneMaterial.useEmissiveTex)
+			                                                flags |=
+				                                                MaterialFlag_USE_EMISSIVE_TEX;
 
-		materialData->flags = flags;
-	});
+		                                                materialData->flags = flags;
+	                                                });
 
 	Array<EntityID> entityParents;
 	entityParents.reserve(model.nodes.size());
 	Array<EntityID> meshEntityIDs;
 	meshEntityIDs.reserve(model.meshes.size());
 
-	for (int i = 0; i < model.nodes.size(); i++) {
+	for (int i = 0; i < model.nodes.size(); i++)
+	{
 		entityParents.add(scene->rootEntityID);
 	}
 
-	for (int i = 0; i < model.meshes.size(); i++) {
-		meshEntityIDs.add({ 0 });
+	for (int i = 0; i < model.meshes.size(); i++)
+	{
+		meshEntityIDs.add({0});
 	}
 
-	EntityID firstEntityID = { 0 };
+	EntityID firstEntityID = {0};
 
 	// LoadNode
-	for (int i = 0; i < model.nodes.size(); i++) {
-		
+	for (int i = 0; i < model.nodes.size(); i++)
+	{
 		const tinygltf::Node& gltfNode = model.nodes[i];
 
 		EntityID entityID;
 
 		Transform localNodeTransform;
-		if (gltfNode.matrix.size() == 16) {
+		if (gltfNode.matrix.size() == 16)
+		{
 			Mat4 temp = mat4(gltfNode.matrix.data());
 			localNodeTransform = transformMat4(mat4Transpose(temp));
 			localNodeTransform.rotation = unit(localNodeTransform.rotation);
 		}
-		else {
-			if (gltfNode.translation.size() == 3) {
-				localNodeTransform.position = Vec3f(gltfNode.translation[0], gltfNode.translation[1], gltfNode.translation[2]);
+		else
+		{
+			if (gltfNode.translation.size() == 3)
+			{
+				localNodeTransform.position = Vec3f(gltfNode.translation[0], gltfNode.translation[1],
+				                                    gltfNode.translation[2]);
 			}
-			else {
+			else
+			{
 				localNodeTransform.position = Vec3f(0.0f, 0.0f, 0.0f);
 			}
-			if (gltfNode.scale.size() == 3) {
+			if (gltfNode.scale.size() == 3)
+			{
 				localNodeTransform.scale = Vec3f(gltfNode.scale[0], gltfNode.scale[1], gltfNode.scale[2]);
 			}
-			else {
+			else
+			{
 				localNodeTransform.scale = Vec3f(1.0f, 1.0f, 1.0f);
 			}
-			if (gltfNode.rotation.size() == 4) {
-				localNodeTransform.rotation = Quaternion(gltfNode.rotation[0], gltfNode.rotation[1], gltfNode.rotation[2], gltfNode.rotation[3]);
+			if (gltfNode.rotation.size() == 4)
+			{
+				localNodeTransform.rotation = Quaternion(gltfNode.rotation[0], gltfNode.rotation[1],
+				                                         gltfNode.rotation[2], gltfNode.rotation[3]);
 			}
-			else {
+			else
+			{
 				localNodeTransform.rotation = quaternionIdentity();
 			}
 		}
 
-		if (gltfNode.mesh > -1) {
-			entityID = EntityCreate(scene, entityParents[i], EntityType_MESH, gltfNode.name.c_str(), localNodeTransform);
+		if (gltfNode.mesh > -1)
+		{
+			entityID = EntityCreate(scene, entityParents[i], EntityType_MESH, gltfNode.name.c_str(),
+			                        localNodeTransform);
 			meshEntityIDs[gltfNode.mesh] = entityID;
-			SOUL_ASSERT(0, gltfNode.children.size() == 0, "Node containing mesh must not have children node. | Mesh index : %d", i);
+			SOUL_ASSERT(0, gltfNode.children.size() == 0,
+			            "Node containing mesh must not have children node. | Mesh index : %d", i);
 		}
-		else {
-			entityID = EntityCreate(scene, entityParents[i], EntityType_GROUP, gltfNode.name.c_str(), localNodeTransform);
+		else
+		{
+			entityID = EntityCreate(scene, entityParents[i], EntityType_GROUP, gltfNode.name.c_str(),
+			                        localNodeTransform);
 		}
 
 		if (i == 0) firstEntityID = entityID;
 
-		for (int j = 0; j < gltfNode.children.size(); j++) {
+		for (int j = 0; j < gltfNode.children.size(); j++)
+		{
 			entityParents[gltfNode.children[j]] = entityID;
 		}
-
 	}
 
 	entityParents.cleanup();
 
 	// Load Mesh
-	for (int i = 0; i < model.meshes.size(); i++) {
-
-		struct Vertex {
+	for (int i = 0; i < model.meshes.size(); i++)
+	{
+		struct Vertex
+		{
 			Vec3f pos;
 			Vec3f normal;
 			Vec2f texUV;
@@ -536,16 +605,18 @@ void LoadScene(GPU::System* gpuSystem, Scene* scene, const char* path, bool posi
 			Vec3f tangent;
 		};
 
-		Soul::Array<Vertex> vertexes;
+		Array<Vertex> vertexes;
 		vertexes.reserve(100000);
 		using Index = uint32;
-		Soul::Array<Index> indexes;
+		Array<Index> indexes;
 		indexes.reserve(100000);
 
-		MeshEntity *meshEntity = (MeshEntity*)EntityPtr(scene, meshEntityIDs[i]);
+		MeshEntity* meshEntity = static_cast<MeshEntity*>(EntityPtr(scene, meshEntityIDs[i]));
 
 		const tinygltf::Mesh& mesh = model.meshes[i];
-		SOUL_ASSERT(0, mesh.primitives.size() == 1, "Mesh with multiple number of primitive is not supported yet | mesh name = %s, number of primitive = %d", mesh.name.c_str(), mesh.primitives.size());
+		SOUL_ASSERT(0, mesh.primitives.size() == 1,
+		            "Mesh with multiple number of primitive is not supported yet | mesh name = %s, number of primitive = %d",
+		            mesh.name.c_str(), mesh.primitives.size());
 
 		const tinygltf::Primitive& primitive = mesh.primitives[0];
 
@@ -555,109 +626,136 @@ void LoadScene(GPU::System* gpuSystem, Scene* scene, const char* path, bool posi
 
 		SOUL_ASSERT(0, positionAccessor.count == normalAccessor.count, "");
 
-		SOUL_ASSERT(0, positionAccessor.componentType == TINYGLTF_COMPONENT_TYPE_FLOAT, "Component type %d for position is not supported yet. | mesh name = %s.", positionAccessor.componentType, mesh.name.c_str());
-		SOUL_ASSERT(0, positionAccessor.type == TINYGLTF_TYPE_VEC3, "Type %d for position is not supported yet. | mesh name = %s.", positionAccessor.type, mesh.name.c_str());
+		SOUL_ASSERT(0, positionAccessor.componentType == TINYGLTF_COMPONENT_TYPE_FLOAT,
+		            "Component type %d for position is not supported yet. | mesh name = %s.",
+		            positionAccessor.componentType, mesh.name.c_str());
+		SOUL_ASSERT(0, positionAccessor.type == TINYGLTF_TYPE_VEC3,
+		            "Type %d for position is not supported yet. | mesh name = %s.", positionAccessor.type,
+		            mesh.name.c_str());
 		const tinygltf::BufferView& positionBufferView = model.bufferViews[positionAccessor.bufferView];
 		int positionOffset = positionAccessor.byteOffset + positionBufferView.byteOffset;
 		int positionByteStride = positionAccessor.ByteStride(positionBufferView);
 		unsigned char* positionBuffer = &model.buffers[positionBufferView.buffer].data[positionOffset];
 
-		SOUL_ASSERT(0, normalAccessor.componentType == TINYGLTF_COMPONENT_TYPE_FLOAT, "Component type %d for normal is not supported yet. | mesh name = %s.", normalAccessor.componentType, mesh.name.c_str());
-		SOUL_ASSERT(0, normalAccessor.type == TINYGLTF_TYPE_VEC3, "Type %d for normal is not supported yet. | mesh name = %s.", normalAccessor.type, mesh.name.c_str());
+		SOUL_ASSERT(0, normalAccessor.componentType == TINYGLTF_COMPONENT_TYPE_FLOAT,
+		            "Component type %d for normal is not supported yet. | mesh name = %s.",
+		            normalAccessor.componentType, mesh.name.c_str());
+		SOUL_ASSERT(0, normalAccessor.type == TINYGLTF_TYPE_VEC3,
+		            "Type %d for normal is not supported yet. | mesh name = %s.", normalAccessor.type,
+		            mesh.name.c_str());
 		const tinygltf::BufferView& normalBufferView = model.bufferViews[normalAccessor.bufferView];
 		int normalOffset = normalAccessor.byteOffset + normalBufferView.byteOffset;
 		int normalByteStride = normalAccessor.ByteStride(normalBufferView);
 		unsigned char* normalBuffer = &model.buffers[normalBufferView.buffer].data[normalOffset];
 
 		AABB meshAABB;
-		Soul::Vec3f position0 = *(Soul::Vec3f*)&positionBuffer[0];
+		Vec3f position0 = *(Vec3f*)&positionBuffer[0];
 		meshAABB.min = meshEntity->worldTransform * position0;
 		meshAABB.max = meshAABB.min;
 
-		for (int i = 1; i < positionAccessor.count; i++) {
+		for (int i = 1; i < positionAccessor.count; i++)
+		{
+			Vec3f position = *(Vec3f*)&positionBuffer[positionByteStride * i];
 
-			Soul::Vec3f position = *(Soul::Vec3f*)&positionBuffer[positionByteStride * i];
-
-			Soul::Vec3f worldPosition = meshEntity->worldTransform * position;
+			Vec3f worldPosition = meshEntity->worldTransform * position;
 
 			meshAABB.min = componentMin(meshAABB.min, worldPosition);
 			meshAABB.max = componentMax(meshAABB.max, worldPosition);
 		}
 
 		Mat4 vertexPositionTransform = mat4Identity();
-		if (positionToAABBCenter) {
+		if (positionToAABBCenter)
+		{
 			vertexPositionTransform = mat4Transform(meshEntity->worldTransform);
 			Vec3f meshAABBCenter = (meshAABB.min + meshAABB.max) / 2.0f;
 			meshEntity->worldTransform.position = meshAABBCenter;
-			Mat4 localMat4 = mat4Inverse(mat4Transform(meshEntity->parent->worldTransform)) * mat4Transform(meshEntity->worldTransform);
+			Mat4 localMat4 = mat4Inverse(mat4Transform(meshEntity->parent->worldTransform)) * mat4Transform(
+				meshEntity->worldTransform);
 			meshEntity->localTransform = transformMat4(localMat4);
 			vertexPositionTransform = mat4Inverse(mat4Transform(meshEntity->worldTransform)) * vertexPositionTransform;
-			
 		}
 
 		Array<Vec2f> texCoord0s;
 		texCoord0s.reserve(positionAccessor.count);
-		if (primitive.attributes.find("TEXCOORD_0") != primitive.attributes.end()) {
+		if (primitive.attributes.find("TEXCOORD_0") != primitive.attributes.end())
+		{
 			const tinygltf::Accessor& texCoord0Accessor = model.accessors[primitive.attributes.at("TEXCOORD_0")];
-			SOUL_ASSERT(0, texCoord0Accessor.componentType == TINYGLTF_COMPONENT_TYPE_FLOAT, "Component type %d for texCoord0 is not supported yet. | mesh name = %s.", texCoord0Accessor.componentType, mesh.name.c_str());
-			SOUL_ASSERT(0, texCoord0Accessor.type == TINYGLTF_TYPE_VEC2, "Type %d for texCoord0 is not supported yet. | mesh name = %s.", texCoord0Accessor.type, mesh.name.c_str());
+			SOUL_ASSERT(0, texCoord0Accessor.componentType == TINYGLTF_COMPONENT_TYPE_FLOAT,
+			            "Component type %d for texCoord0 is not supported yet. | mesh name = %s.",
+			            texCoord0Accessor.componentType, mesh.name.c_str());
+			SOUL_ASSERT(0, texCoord0Accessor.type == TINYGLTF_TYPE_VEC2,
+			            "Type %d for texCoord0 is not supported yet. | mesh name = %s.", texCoord0Accessor.type,
+			            mesh.name.c_str());
 			const tinygltf::BufferView& texCoord0BufferView = model.bufferViews[texCoord0Accessor.bufferView];
 			int texCoord0Offset = texCoord0Accessor.byteOffset + texCoord0BufferView.byteOffset;
 			int texCoord0ByteStride = texCoord0Accessor.ByteStride(texCoord0BufferView);
 			unsigned char* texCoord0Buffer = &model.buffers[texCoord0BufferView.buffer].data[texCoord0Offset];
-			for (int i = 0; i < positionAccessor.count; i++) {
-				texCoord0s.add(*(Soul::Vec2f*)&texCoord0Buffer[texCoord0ByteStride * i]);
+			for (int i = 0; i < positionAccessor.count; i++)
+			{
+				texCoord0s.add(*(Vec2f*)&texCoord0Buffer[texCoord0ByteStride * i]);
 			}
 		}
-		else {
+		else
+		{
 			texCoord0s.add(Vec2f(0.0f, 0.0f));
 		}
-		
+
 		Array<Vec4f> tangents;
 		tangents.reserve(positionAccessor.count);
-		if (primitive.attributes.find("TANGENT") != primitive.attributes.end()) {
+		if (primitive.attributes.find("TANGENT") != primitive.attributes.end())
+		{
 			const tinygltf::Accessor& tangentAccessor = model.accessors[primitive.attributes.at("TANGENT")];
-			SOUL_ASSERT(0, tangentAccessor.componentType == TINYGLTF_COMPONENT_TYPE_FLOAT, "Component type %d for tangent is not supported yet. | mesh name = %s.", tangentAccessor.componentType, mesh.name.c_str());
-			SOUL_ASSERT(0, tangentAccessor.type == TINYGLTF_TYPE_VEC4, "Type %d for tangent is not supported yet. | mesh name = %s.", tangentAccessor.type, mesh.name.c_str());
+			SOUL_ASSERT(0, tangentAccessor.componentType == TINYGLTF_COMPONENT_TYPE_FLOAT,
+			            "Component type %d for tangent is not supported yet. | mesh name = %s.",
+			            tangentAccessor.componentType, mesh.name.c_str());
+			SOUL_ASSERT(0, tangentAccessor.type == TINYGLTF_TYPE_VEC4,
+			            "Type %d for tangent is not supported yet. | mesh name = %s.", tangentAccessor.type,
+			            mesh.name.c_str());
 			const tinygltf::BufferView& tangentBufferView = model.bufferViews[tangentAccessor.bufferView];
 			int tangentOffset = tangentAccessor.byteOffset + tangentBufferView.byteOffset;
 			int tangentByteStride = tangentAccessor.ByteStride(tangentBufferView);
 			unsigned char* tangentBuffer = &model.buffers[tangentBufferView.buffer].data[tangentOffset];
-			for (int i = 0; i < positionAccessor.count; i++) {
-				tangents.add(*(Soul::Vec4f*)&tangentBuffer[tangentByteStride * i]);
+			for (int i = 0; i < positionAccessor.count; i++)
+			{
+				tangents.add(*(Vec4f*)&tangentBuffer[tangentByteStride * i]);
 			}
 		}
-		else {
-			for (int i = 0; i < positionAccessor.count; i++) {
+		else
+		{
+			for (int i = 0; i < positionAccessor.count; i++)
+			{
 				tangents.add(Vec4f(0.0f, 1.0f, 0.0f, 1.0f));
 			}
 		}
-		
-		for (int i = 0; i < positionAccessor.count; i++) {
 
-			Soul::Vec3f position = *(Soul::Vec3f*)&positionBuffer[positionByteStride * i];
-			Soul::Vec3f normal = *(Soul::Vec3f*)&normalBuffer[normalByteStride * i];
-			Soul::Vec4f tangent = tangents[i];
-			Soul::Vec2f texCoord0 = texCoord0s[i];
+		for (int i = 0; i < positionAccessor.count; i++)
+		{
+			Vec3f position = *(Vec3f*)&positionBuffer[positionByteStride * i];
+			Vec3f normal = *(Vec3f*)&normalBuffer[normalByteStride * i];
+			Vec4f tangent = tangents[i];
+			Vec2f texCoord0 = texCoord0s[i];
 
 			vertexes.add({
 				vertexPositionTransform * position,
 				normal,
 				texCoord0,
-				Soul::cross(normal, tangent.xyz()),
+				cross(normal, tangent.xyz()),
 				tangent.xyz()
 			});
-
 		}
 
-		SOUL_ASSERT(0, indexAccessor.componentType == TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT, "Component type %d for index is not supported. | mesh name = %s.", indexAccessor.componentType, mesh.name.c_str());
-		SOUL_ASSERT(0, indexAccessor.type == TINYGLTF_TYPE_SCALAR, "Type %d for index is not supported. | mesh name = %s.", indexAccessor.type, mesh.name.c_str());
+		SOUL_ASSERT(0, indexAccessor.componentType == TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT,
+		            "Component type %d for index is not supported. | mesh name = %s.", indexAccessor.componentType,
+		            mesh.name.c_str());
+		SOUL_ASSERT(0, indexAccessor.type == TINYGLTF_TYPE_SCALAR,
+		            "Type %d for index is not supported. | mesh name = %s.", indexAccessor.type, mesh.name.c_str());
 		const tinygltf::BufferView& indexBufferView = model.bufferViews[indexAccessor.bufferView];
 		int indexOffset = indexAccessor.byteOffset + indexBufferView.byteOffset;
 		int indexByteStride = indexAccessor.ByteStride(indexBufferView);
 		unsigned char* indexBuffer = &model.buffers[indexBufferView.buffer].data[indexOffset];
 
-		for (int i = 0; i < indexAccessor.count; ++i) {
+		for (int i = 0; i < indexAccessor.count; ++i)
+		{
 			uint32 index = *(uint32*)&indexBuffer[indexByteStride * i];
 			indexes.add(index);
 		}
@@ -672,10 +770,11 @@ void LoadScene(GPU::System* gpuSystem, Scene* scene, const char* path, bool posi
 		vertexBufferDesc.queueFlags = GPU::QUEUE_GRAPHIC_BIT;
 		vertexBufferDesc.usageFlags = GPU::BUFFER_USAGE_VERTEX_BIT;
 		sceneMesh.vertexBufferID = gpuSystem->bufferCreate(vertexBufferDesc,
-				[&vertexes](int index, byte* data) {
-			auto vertex = (Vertex*) data;
-			(*vertex) = vertexes[index];
-		});
+		                                                   [&vertexes](int index, byte* data)
+		                                                   {
+			                                                   const auto vertex = (Vertex*)data;
+			                                                   (*vertex) = vertexes[index];
+		                                                   });
 
 		GPU::BufferDesc indexBufferDesc;
 		indexBufferDesc.typeSize = sizeof(Index);
@@ -684,10 +783,11 @@ void LoadScene(GPU::System* gpuSystem, Scene* scene, const char* path, bool posi
 		indexBufferDesc.queueFlags = GPU::QUEUE_GRAPHIC_BIT;
 		indexBufferDesc.usageFlags = GPU::BUFFER_USAGE_INDEX_BIT;
 		sceneMesh.indexBufferID = gpuSystem->bufferCreate(indexBufferDesc,
-				[&indexes](int i, byte* data) {
-			auto index = (Index*) data;
-			(*index) = indexes[i];
-		});
+		                                                  [&indexes](int i, byte* data)
+		                                                  {
+			                                                  const auto index = (Index*)data;
+			                                                  (*index) = indexes[i];
+		                                                  });
 		sceneMesh.indexCount = indexes.size();
 
 		meshEntity->meshID = scene->meshes.add(sceneMesh);
@@ -704,18 +804,19 @@ void LoadScene(GPU::System* gpuSystem, Scene* scene, const char* path, bool posi
 	meshEntityIDs.cleanup();
 }
 
-void glfwPrintErrorCallback(int code, const char* message) {
+void glfwPrintErrorCallback(int code, const char* message)
+{
 	SOUL_LOG_INFO("GLFW Error. Error code : %d. Message = %s", code, message);
 }
 
-int main() {
-	
+int main()
+{
 	Job::System::Get().init({
 		0,
 		4096
 	});
 
-	
+
 	glfwSetErrorCallback(glfwPrintErrorCallback);
 	SOUL_ASSERT(0, glfwInit(), "GLFW Init Failed !");
 	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
@@ -724,11 +825,13 @@ int main() {
 
 	SOUL_ASSERT(0, glfwVulkanSupported(), "Vulkan not supported by glfw");
 
-	GLFWwindow* window = glfwCreateWindow(2880, 1800, "Vulkan", nullptr, nullptr);
+	const GLFWvidmode* mode = glfwGetVideoMode(glfwGetPrimaryMonitor());
+	GLFWwindow* window = glfwCreateWindow(mode->width, mode->height, "Vulkan", nullptr, nullptr);
+	glfwMaximizeWindow(window);
 	SOUL_LOG_INFO("GLFW window creation sucessful");
 
-	Soul::GPU::System gpuSystem;
-	Soul::GPU::System::Config config = {};
+	GPU::System gpuSystem;
+	GPU::System::Config config = {};
 	config.windowHandle = window;
 	config.swapchainWidth = 3360;
 	config.swapchainHeight = 2010;
@@ -739,8 +842,9 @@ int main() {
 
 	Scene scene;
 	LoadScene(&gpuSystem, &scene,
-			"assets/sponza/scene.gltf",
-			true);
+	          "assets/sponza/scene.gltf",
+	          true);
+	Vec2ui32 sceneResolution = { 1920, 1080 };
 
 	const char* renderAlbedoVertSrc = LoadFile("shaders/render_albedo.vert.glsl");
 	const char* renderAlbedoFragSrc = LoadFile("shaders/render_albedo.frag.glsl");
@@ -756,17 +860,6 @@ int main() {
 	fragShaderDesc.sourceSize = strlen(renderAlbedoFragSrc);
 	GPU::ShaderID fragShaderID = gpuSystem.shaderCreate(fragShaderDesc, GPU::ShaderStage::FRAGMENT);
 
-	GPU::TextureDesc depthTexDesc = {};
-	depthTexDesc.width = gpuSystem.getSwapchainExtent().x;
-	depthTexDesc.height = gpuSystem.getSwapchainExtent().y;
-	depthTexDesc.depth = 1;
-	depthTexDesc.mipLevels = 1;
-	depthTexDesc.format = GPU::TextureFormat::DEPTH24_STENCIL8UI;
-	depthTexDesc.type = GPU::TextureType::D2;
-	depthTexDesc.usageFlags = GPU::TEXTURE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
-	depthTexDesc.queueFlags = GPU::QUEUE_GRAPHIC_BIT;
-	GPU::TextureID depthTexID = gpuSystem.textureCreate(depthTexDesc);
-
 	GPU::SamplerDesc samplerDesc = {};
 	samplerDesc.minFilter = GPU::TextureFilter::LINEAR;
 	samplerDesc.magFilter = GPU::TextureFilter::LINEAR;
@@ -780,29 +873,31 @@ int main() {
 
 	IMGUI_CHECKVERSION();
 	ImGui::CreateContext();
-	ImGuiIO& io = ImGui::GetIO(); (void)io;
+	ImGuiIO& io = ImGui::GetIO();
+	io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+	
 	ImGui_ImplGlfw_InitForVulkan(window, true);
 	ImGuiRenderModule imguiRenderModule;
 	imguiRenderModule.init(&gpuSystem);
 
-	
 
 	Camera camera;
-	camera.position = Soul::Vec3f(1.0f, 1.0f, 0.0f);
-	camera.direction = Soul::Vec3f(0.0f, 0.0f, -1.0f);
-	camera.up = Soul::Vec3f(0.0f, 1.0f, 0.0f);
-	camera.perspective.fov = Soul::PI / 4;
-	camera.perspective.aspectRatio = config.swapchainWidth / config.swapchainHeight;
-	camera.viewportWidth = config.swapchainWidth;
-	camera.viewportHeight = config.swapchainHeight;
+	camera.position = Vec3f(1.0f, 1.0f, 0.0f);
+	camera.direction = Vec3f(0.0f, 0.0f, -1.0f);
+	camera.up = Vec3f(0.0f, 1.0f, 0.0f);
+	camera.perspective.fov = PI / 4;
+	camera.perspective.aspectRatio = sceneResolution.x / sceneResolution.y;
+	camera.viewportWidth = sceneResolution.x;
+	camera.viewportHeight = sceneResolution.y;
 	camera.perspective.zNear = 0.1f;
 	camera.perspective.zFar = 3000.0f;
-	camera.projection = Soul::mat4Perspective(camera.perspective.fov,
-		camera.perspective.aspectRatio,
-		camera.perspective.zNear,
-		camera.perspective.zFar);
+	camera.projection = mat4Perspective(camera.perspective.fov,
+	                                    camera.perspective.aspectRatio,
+	                                    camera.perspective.zNear,
+	                                    camera.perspective.zFar);
 
-	struct CameraUBO {
+	struct CameraUBO
+	{
 		Mat4 projection;
 		Mat4 view;
 		Mat4 projectionView;
@@ -821,12 +916,16 @@ int main() {
 	modelBufferDesc.usageFlags = GPU::BUFFER_USAGE_UNIFORM_BIT;
 	modelBufferDesc.queueFlags = GPU::QUEUE_GRAPHIC_BIT;
 	GPU::BufferID modelBuffer = gpuSystem.bufferCreate(modelBufferDesc,
-		[&scene](int i, byte* data) {
-		auto model = (Mat4*) data;
-		*model = mat4Transpose(mat4Transform(scene.meshEntities[i].worldTransform));
-	});
+   [&scene](int i, byte* data)
+   {
+       auto model = (Mat4*)data;
+       *model = mat4Transpose(
+           mat4Transform(scene.meshEntities[i].worldTransform));
+   });
 
-	while(!glfwWindowShouldClose(window)) {
+	
+	while (!glfwWindowShouldClose(window))
+	{
 		SOUL_PROFILE_FRAME();
 
 		Job::System::Get().beginFrame();
@@ -837,18 +936,9 @@ int main() {
 
 		GPU::RenderGraph renderGraph;
 
-		// Start the Dear ImGui frame
-		ImGui_ImplGlfw_NewFrame();
-		ImGui::NewFrame();
-
-		
-		ImGui::GetIO().Fonts->TexID = SoulImTexture(renderGraph.importTexture("Imgui font", imguiRenderModule.getFontTexture())).getImTextureID();
-		ImGui::Render();
-		imguiRenderModule.addPass(&gpuSystem, &renderGraph, *ImGui::GetDrawData(), gpuSystem.getSwapchainTexture());
-
-		/* cameraDataUBO.projection = mat4Transpose(camera.projection);
+		cameraDataUBO.projection = mat4Transpose(camera.projection);
 		Mat4 viewMat = mat4View(camera.position, camera.position +
-												 camera.direction, camera.up);
+			camera.direction, camera.up);
 		cameraDataUBO.view = mat4Transpose(viewMat);
 		Mat4 projectionView = camera.projection * viewMat;
 		cameraDataUBO.projectionView = mat4Transpose(projectionView);
@@ -864,10 +954,10 @@ int main() {
 		cameraBufferDesc.usageFlags = GPU::BUFFER_USAGE_UNIFORM_BIT;
 		cameraBufferDesc.queueFlags = GPU::QUEUE_GRAPHIC_BIT;
 		GPU::BufferID cameraBuffer = gpuSystem.bufferCreate(cameraBufferDesc,
-		[&cameraDataUBO](int i, byte* data) {
-			auto cameraData = (CameraUBO*) data;
-			*cameraData = cameraDataUBO;
-		});
+			[&cameraDataUBO](int i, byte* data) {
+				auto cameraData = (CameraUBO*)data;
+				*cameraData = cameraDataUBO;
+			});
 
 		gpuSystem.bufferDestroy(cameraBuffer);
 
@@ -893,8 +983,27 @@ int main() {
 			indexBufferNodeIDs.add(renderGraph.importBuffer("Index buffer", mesh.indexBufferID));
 		}
 
-		GPU::TextureNodeID renderTarget = renderGraph.importTexture("Render target", gpuSystem.getSwapchainTexture());
-		GPU::TextureNodeID depthTarget = renderGraph.importTexture("Depth target", depthTexID);
+		GPU::RGTextureDesc sceneColorTexDesc;
+		sceneColorTexDesc.width = sceneResolution.x;
+		sceneColorTexDesc.height = sceneResolution.y;
+		sceneColorTexDesc.depth = 1;
+		sceneColorTexDesc.clear = true;
+		sceneColorTexDesc.clearValue = {};
+		sceneColorTexDesc.format = GPU::TextureFormat::RGBA8;
+		sceneColorTexDesc.mipLevels = 1;
+		sceneColorTexDesc.type = GPU::TextureType::D2;
+		GPU::TextureNodeID renderTarget = renderGraph.createTexture("Scene render target", sceneColorTexDesc);
+
+		GPU::RGTextureDesc sceneDepthTexDesc;
+		sceneDepthTexDesc.width = sceneResolution.x;
+		sceneDepthTexDesc.height = sceneResolution.y;
+		sceneDepthTexDesc.depth = 1;
+		sceneDepthTexDesc.clear = true;
+		sceneDepthTexDesc.clearValue.depthStencil = { 1.0f, 0.0f };
+		sceneDepthTexDesc.format = GPU::TextureFormat::DEPTH24_STENCIL8UI;
+		sceneDepthTexDesc.mipLevels = 1;
+		sceneDepthTexDesc.type = GPU::TextureType::D2;
+		GPU::TextureNodeID depthTarget = renderGraph.createTexture("Depth target", sceneDepthTexDesc);
 
 		struct RenderAlbedoData {
 			Array<GPU::BufferNodeID> vertexBuffers;
@@ -913,13 +1022,13 @@ int main() {
 			}
 		};
 
-		renderGraph.addGraphicPass<RenderAlbedoData>("Render albedo",
-		[&scene,
-		   &sceneTextureNodeIDs, &vertexBufferNodeIDs, &indexBufferNodeIDs,
-		   materialNodeID, modelNodeID, cameraNodeID,
-		   vertShaderID, fragShaderID,
-		   renderTarget, depthTarget,
-		   extent]
+		const RenderAlbedoData& renderAlbedoData = renderGraph.addGraphicPass<RenderAlbedoData>("Render albedo",
+			[&scene,
+			&sceneTextureNodeIDs, &vertexBufferNodeIDs, &indexBufferNodeIDs,
+			materialNodeID, modelNodeID, cameraNodeID,
+			vertShaderID, fragShaderID,
+			renderTarget, depthTarget,
+			sceneResolution]
 		(GPU::GraphicNodeBuilder* builder, RenderAlbedoData* data) {
 
 			for (GPU::TextureNodeID nodeID : sceneTextureNodeIDs) {
@@ -947,21 +1056,21 @@ int main() {
 			colorAttchDesc.dstAlphaBlendFactor = GPU::BlendFactor::ZERO;
 			colorAttchDesc.alphaBlendOp = GPU::BlendOp::ADD;
 			colorAttchDesc.clear = true;
-			colorAttchDesc.clearValue.color = {1.0f, 0.0f, 0.0f, 1.0f};
+			colorAttchDesc.clearValue.color = { 1.0f, 0.0f, 0.0f, 1.0f };
 			data->renderTarget = builder->addColorAttachment(renderTarget, colorAttchDesc);
 
 			GPU::DepthStencilAttachmentDesc depthAttchDesc;
 			depthAttchDesc.clear = true;
-			depthAttchDesc.clearValue.depthStencil = {1.0f, 0.0f};
+			depthAttchDesc.clearValue.depthStencil = { 1.0f, 0.0f };
 			depthAttchDesc.depthWriteEnable = true;
 			depthAttchDesc.depthTestEnable = true;
 			depthAttchDesc.depthCompareOp = GPU::CompareOp::LESS;
 			data->depthAttachment = builder->setDepthStencilAttachment(depthTarget, depthAttchDesc);
 
 			GPU::GraphicPipelineConfig pipelineConfig;
-			pipelineConfig.viewport = {0, 0, uint16(extent.x), uint16(extent.y)};
-			pipelineConfig.scissor = {false, 0, 0, uint16(extent.x), uint16(extent.y)};
-			pipelineConfig.framebuffer = {uint16(extent.x), uint16(extent.y)};
+			pipelineConfig.viewport = { 0, 0, uint16(sceneResolution.x), uint16(sceneResolution.y) };
+			pipelineConfig.scissor = { false, 0, 0, uint16(sceneResolution.x), uint16(sceneResolution.y) };
+			pipelineConfig.framebuffer = { uint16(sceneResolution.x), uint16(sceneResolution.y) };
 			pipelineConfig.vertexShaderID = vertShaderID;
 			pipelineConfig.fragmentShaderID = fragShaderID;
 			pipelineConfig.raster.cullMode = GPU::CullMode::NONE;
@@ -970,7 +1079,7 @@ int main() {
 
 		},
 		[&scene, samplerID]
-		(GPU::RenderGraphRegistry* registry, const RenderAlbedoData& data, GPU::CommandBucket* commandBucket){
+		(GPU::RenderGraphRegistry* registry, const RenderAlbedoData& data, GPU::CommandBucket* commandBucket) {
 
 			commandBucket->reserve(scene.meshEntities.size());
 
@@ -992,7 +1101,8 @@ int main() {
 				materialDescriptors[0].type = GPU::DescriptorType::SAMPLED_IMAGE;
 				if (material.useAlbedoTex) {
 					materialDescriptors[0].sampledImageInfo.textureID = registry->getTexture(data.sceneTextures[material.albedoTexID]);
-				} else {
+				}
+				else {
 					materialDescriptors[0].sampledImageInfo.textureID = registry->getTexture(data.sceneTextures[0]);
 				}
 				materialDescriptors[0].sampledImageInfo.samplerID = samplerID;
@@ -1035,12 +1145,50 @@ int main() {
 
 		});
 
-		
-
 		vertexBufferNodeIDs.cleanup();
 		indexBufferNodeIDs.cleanup();
 		sceneTextureNodeIDs.cleanup();
 
+		// Start the Dear ImGui frame
+		ImGui_ImplGlfw_NewFrame();
+		ImGui::NewFrame();
+		GPU::TextureNodeID imguiFontNodeID = renderGraph.
+			importTexture("Imgui font", imguiRenderModule.getFontTexture());
+		ImGui::GetIO().Fonts->TexID = SoulImTexture(imguiFontNodeID).getImTextureID();
+
+		ImGui::SetNextWindowPos(ImVec2(0, 20));
+		ImGui::SetNextWindowSize(ImVec2(io.DisplaySize.x, io.DisplaySize.y - 20));
+		ImGuiWindowFlags leftDockWindowFlags = ImGuiWindowFlags_None;
+		leftDockWindowFlags |= ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove;
+		leftDockWindowFlags |= ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoNavFocus;
+		ImGui::Begin("Left Dock", nullptr, leftDockWindowFlags);
+		ImGuiDockNodeFlags dockspaceFlags = ImGuiDockNodeFlags_None;
+		dockspaceFlags |= ImGuiDockNodeFlags_PassthruCentralNode;
+		ImGuiID dockspace_id = ImGui::GetID("Left Dock");
+		ImGui::DockSpace(dockspace_id, ImVec2(0.0f, 0.0f), dockspaceFlags);
+
+		static bool dummy = true;
+		ImGui::ShowDemoWindow(&dummy);
+
+		ImGui::Begin("Scene");
+		ImVec2 sceneWindowSize = ImGui::GetWindowSize();
+		float sceneAspectRatio = sceneResolution.x / (float) sceneResolution.y;
+		ImVec2 sceneImageSize = { min(sceneWindowSize.x, sceneAspectRatio * sceneWindowSize.y), min(sceneWindowSize.y, sceneWindowSize.x / sceneAspectRatio) };
+		ImGui::SetCursorPos(ImVec2((sceneWindowSize.x - sceneImageSize.x) * 0.5f, (sceneWindowSize.y - sceneImageSize.y) * 0.5f));
+		ImGui::Image(SoulImTexture(renderAlbedoData.renderTarget).getImTextureID(), sceneImageSize);
+		ImGui::End();
+
+		ImGui::End();
+
+		ImGui::Render();
+		imguiRenderModule.addPass(&gpuSystem, &renderGraph, *ImGui::GetDrawData(), gpuSystem.getSwapchainTexture());
+
+		gpuSystem.renderGraphExecute(renderGraph);
+		gpuSystem.frameFlush();
+		renderGraph.cleanup();
+
+		
+		if (ImGui::IsMouseDown(2)) {
 			static float translationSpeed = 0.025f;
 
 			float cameraSpeedInc = 0.1f;
@@ -1065,7 +1213,7 @@ int main() {
 				}
 
 				{
-					Soul::Mat4 rotate = mat4Rotate(Soul::Vec3f(0.0f, 1.0f, 0.0f), -2.0f * io.MouseDelta.x / camera.viewportWidth *Soul::PI);
+					Soul::Mat4 rotate = mat4Rotate(Soul::Vec3f(0.0f, 1.0f, 0.0f), -2.0f * io.MouseDelta.x / camera.viewportWidth * Soul::PI);
 
 					if (camera.direction != Soul::Vec3f(0.0f, 1.0f, 0.0f))
 						camera.direction = rotate * camera.direction;
@@ -1088,12 +1236,8 @@ int main() {
 			if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) {
 				camera.position += Soul::unit(right) * translationSpeed;
 			}
-
-		camera.view = mat4View(camera.position, camera.position + camera.direction, camera.up); */
-
-		gpuSystem.renderGraphExecute(renderGraph);
-		gpuSystem.frameFlush();
-		renderGraph.cleanup();
+		}
+		camera.view = mat4View(camera.position, camera.position + camera.direction, camera.up);
 	}
 
 	glfwDestroyWindow(window);

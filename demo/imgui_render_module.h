@@ -8,6 +8,7 @@
 #include "gpu/gpu.h"
 #include "utils.h"
 #include <stdio.h>
+#include <map>
 
 using namespace Soul;
 
@@ -234,7 +235,7 @@ public:
 					for (int cmd_i = 0; cmd_i < cmdList.CmdBuffer.Size; cmd_i++) {
 						const ImDrawCmd& cmd = cmdList.CmdBuffer[cmd_i];
 						GPU::TextureNodeID imTexture = SoulImTexture(cmd.TextureId).getTextureNodeID();
-						if (data->imTextures.find(imTexture) != data->imTextures.end()) {
+						if (data->imTextures.find(imTexture) == data->imTextures.end()) {
 							data->imTextures[imTexture] = builder->addInShaderTexture(imTexture, 1, 0);
 						}
 					}
@@ -275,7 +276,6 @@ public:
 				argSetDesc.bindingDescriptions = &transformDescriptor;
 				GPU::ShaderArgSetID argSet0 = registry->getShaderArgSet(0, argSetDesc);
 
-				uint32 scissorChange = 0;
 				for (int n = 0; n < drawData.CmdListsCount; n++) {
 					const ImDrawList& cmdList = *drawData.CmdLists[n];
 					for (int cmd_i = 0; cmd_i < cmdList.CmdBuffer.Size; cmd_i++) {
@@ -315,16 +315,22 @@ public:
 
 								GPU::Descriptor imageDescriptor;
 								imageDescriptor.type = GPU::DescriptorType::SAMPLED_IMAGE;
-								imageDescriptor.sampledImageInfo.textureID = registry->getTexture(data.imTextures[cmd.TextureId]);
+								SoulImTexture soulImTexture(cmd.TextureId);
+								imageDescriptor.sampledImageInfo.textureID = registry->getTexture(soulImTexture.getTextureNodeID());
+								imageDescriptor.sampledImageInfo.samplerID = _fontSampler;
 
-								++scissorChange;
+								GPU::ShaderArgSetDesc argSet1Desc;
+								argSet1Desc.bindingCount = 1;
+								argSet1Desc.bindingDescriptions = &imageDescriptor;
+
+								GPU::ShaderArgSetID argSet1 = registry->getShaderArgSet(1, argSet1Desc);
+								command->shaderArgSets[1] = argSet1;
 							}
 						}
 					}
 					global_idx_offset += cmdList.IdxBuffer.Size;
 					global_vtx_offset += cmdList.VtxBuffer.Size;
 				}
-				SOUL_LOG_INFO("Scissor change = %d", scissorChange);
 			}
 		);
 

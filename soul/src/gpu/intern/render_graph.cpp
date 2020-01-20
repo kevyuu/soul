@@ -71,6 +71,7 @@ namespace Soul { namespace GPU {
 		SOUL_PROFILE_ZONE();
 		for (PassNode* passNode : _passNodes) {
 			passNode->cleanup();
+			delete passNode;
 		}
 		_passNodes.cleanup();
 

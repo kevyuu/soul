@@ -336,6 +336,8 @@ namespace Soul {namespace GPU {
 
 		for (int i = 0; i < externalBufferInfos.size(); i++) {
 			_RGBufferExecInfo& bufferInfo = externalBufferInfos[i];
+			if (bufferInfo.passes.size() == 0) continue;
+
 			bufferInfo.bufferID = _renderGraph->_externalBuffers[i].bufferID;
 
 			PassType firstPassType = _renderGraph->_passNodes[bufferInfo.passes[0].id]->type;
@@ -382,9 +384,10 @@ namespace Soul {namespace GPU {
 
 		for (int i = 0; i < externalTextureInfos.size(); i++) {
 			_RGTextureExecInfo& textureInfo = externalTextureInfos[i];
+			if (textureInfo.passes.size() == 0) continue;
 			textureInfo.textureID = _renderGraph->_externalTextures[i].textureID;
 
-			PassType firstPassType = textureInfo.passes.size() > 0 ? _renderGraph->_passNodes[textureInfo.passes[0].id]->type : PassType::NONE;
+			PassType firstPassType = _renderGraph->_passNodes[textureInfo.passes[0].id]->type;
 			ResourceOwner owner = _gpuSystem->_texturePtr(textureInfo.textureID)->owner;
 			PassType externalPassType = _RESOURCE_OWNER_TO_PASS_TYPE_MAP[owner];
 			if (firstPassType == PassType::NONE) {
@@ -968,6 +971,7 @@ namespace Soul {namespace GPU {
 		});
 
 		for (const _RGTextureExecInfo& textureInfo : textureInfos) {
+			if (textureInfo.passes.size() == 0) continue;
 			_Texture* texture = _gpuSystem->_texturePtr(textureInfo.textureID);
 			uint64 lastPassIdx = textureInfo.passes.back().id;
 			PassType lastPassType = _renderGraph->_passNodes[lastPassIdx]->type;
@@ -975,6 +979,7 @@ namespace Soul {namespace GPU {
 		}
 
 		for (const _RGBufferExecInfo& bufferInfo : bufferInfos) {
+			if (bufferInfo.passes.size() == 0) continue;
 			_Buffer* buffer = _gpuSystem->_bufferPtr(bufferInfo.bufferID);
 			uint64 lastPassIdx = bufferInfo.passes.back().id;
 			PassType lastPassType = _renderGraph->_passNodes[lastPassIdx]->type;

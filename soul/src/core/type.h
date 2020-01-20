@@ -158,6 +158,8 @@ namespace Soul {
 		constexpr explicit ID(IDType id) : id(id) {}
 		bool operator==(const ID& other) const { return other.id == id; }
 		bool operator!=(const ID& other) const { return other.id != id; }
+		bool operator<(const ID& other) const { return id < other.id; }
+		bool operator<=(const ID& other) const { return id <= other.id; }
 	};
 
 	template <typename Enum, typename T>
