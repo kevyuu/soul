@@ -4,6 +4,8 @@
 #include "core/dev_util.h"
 #include "core/array.h"
 #include "core/math.h"
+
+#include "memory/memory.h"
 #include "job/system.h"
 
 #include <cstring>
@@ -811,11 +813,21 @@ void glfwPrintErrorCallback(int code, const char* message)
 
 int main()
 {
+	using DefaultAllocator = Memory::ProxyAllocator<
+	        Memory::MallocAllocator,
+	        Memory::ThreadingProxy::NoSync,
+	        Memory::TrackingProxy::Untrack,
+	        Memory::TaggingProxy::Untagged>;
+
+	DefaultAllocator defaultAllocator("Default");
+	Memory::System::Get().init({
+		&defaultAllocator
+   });
+
 	Job::System::Get().init({
 		0,
 		4096
 	});
-
 
 	glfwSetErrorCallback(glfwPrintErrorCallback);
 	SOUL_ASSERT(0, glfwInit(), "GLFW Init Failed !");

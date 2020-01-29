@@ -1,21 +1,26 @@
 #pragma once
 
 #include "core/dev_util.h"
+
+#include "memory/memory.h"
+
 #include <cstdlib>
 #include <cstring>
 
 namespace Soul {
 
-	template <typename T>
+	template <typename T,
+			typename = typename std::enable_if<std::is_trivially_destructible<T>::value>::type>
 	class Array
 	{
 	public:
 
-		Array() {
-			_buffer = nullptr;
-			_capacity = 0;
-			_size = 0;
-		}
+		Array(Memory::Allocator* const allocator = Memory::System::Get().getDefaultAllocator()) :
+			_buffer(nullptr),
+			_capacity(0),
+			_size(0),
+			_allocator(allocator)
+			{}
 
 		Array(const Array& other) = default;
 		Array& operator=(const Array& other) = default;
@@ -37,10 +42,10 @@ namespace Soul {
 
 		void reserve(int capacity) {
 			T* oldBuffer = _buffer;
-			_buffer = new T[capacity];
+			_buffer = _allocator->allocate(sizeof(T)* capacity, alignof(T), "");
 			if (oldBuffer != nullptr) {
 				memcpy(_buffer, oldBuffer, _capacity * sizeof(T));
-				delete[] oldBuffer;
+				_allocator->deallocate(_buffer);
 			}
 			_capacity = capacity;
 		}
@@ -126,6 +131,9 @@ namespace Soul {
 
 		int _size = 0;
 		int _capacity = 0;
+
+		Memory::Allocator* const _allocator;
+
 	};
 
 }

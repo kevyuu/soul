@@ -26,6 +26,10 @@ set (SOUL_HEADERS
 
 	src/job/data.h
 	src/job/system.h
+
+	src/memory/memory.h
+	src/memory/allocator.h
+	src/memory/system.h
 )
 
 set (SOUL_SOURCES
@@ -39,10 +43,13 @@ set (SOUL_SOURCES
 	src/gpu/intern/commands.cpp
 	src/gpu/intern/render_graph_registry.cpp
 	src/gpu/intern/render_graph_execution.cpp
+	src/gpu/intern/render_graph_registry.cpp
+
+	src/memory/intern/malloc_allocator.cpp
+	src/memory/intern/proxy_allocator.cpp
 
 	src/job/intern/job_system.cpp
-	src/job/intern/task_deque.cpp
-	src/gpu/intern/render_graph_registry.cpp)
+	src/job/intern/task_deque.cpp)
 
 add_library(soul STATIC ${SOUL_SOURCES})
 target_link_libraries(soul
