@@ -335,11 +335,12 @@ public:
 		);
 
 	}
+	GPU::TextureID _fontTex;
 private:
 	GPU::ShaderID _vertShaderID;
 	GPU::ShaderID _fragShaderID;
 
 	GPU::SamplerID _fontSampler;
-	GPU::TextureID _fontTex;
+
 };
 

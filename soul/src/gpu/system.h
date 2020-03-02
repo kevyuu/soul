@@ -1,5 +1,6 @@
 #pragma once
 #include "core/util.h"
+#include "memory/memory.h"
 
 #include "gpu/data.h"
 #include "gpu/render_graph.h"
@@ -12,6 +13,8 @@ namespace Soul { namespace GPU {
 	struct RenderGraph;
 
 	struct System {
+
+		explicit System(Memory::Allocator* allocator) : _db(allocator) {}
 
 		struct Config {
 			void* windowHandle = nullptr;
@@ -45,17 +48,17 @@ namespace Soul { namespace GPU {
 
 			VmaAllocationCreateInfo stagingAllocInfo = {};
 			stagingAllocInfo.usage = VMA_MEMORY_USAGE_CPU_ONLY;
-			SOUL_VK_CHECK(vmaCreateBuffer(_db.allocator, &stagingBufferInfo, &stagingAllocInfo, &stagingBuffer.vkHandle,
+			SOUL_VK_CHECK(vmaCreateBuffer(_db.gpuAllocator, &stagingBufferInfo, &stagingAllocInfo, &stagingBuffer.vkHandle,
 										  &stagingBuffer.allocation, nullptr), "");
 
 			_frameContext().stagingBuffers.add(stagingBuffer);
 
 			void *mappedData;
-			vmaMapMemory(_db.allocator, stagingBuffer.allocation, &mappedData);
+			vmaMapMemory(_db.gpuAllocator, stagingBuffer.allocation, &mappedData);
 			for (int i = 0; i < buffer.unitCount; i++) {
 				dataGenFunc(i, (byte *) mappedData + i * buffer.unitSize);
 			}
-			vmaUnmapMemory(_db.allocator, stagingBuffer.allocation);
+			vmaUnmapMemory(_db.gpuAllocator, stagingBuffer.allocation);
 
 			_transferBufferToBuffer(stagingBuffer.vkHandle, buffer.vkHandle, size);
 

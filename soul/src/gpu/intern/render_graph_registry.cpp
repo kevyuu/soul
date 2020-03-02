@@ -14,17 +14,14 @@
 
 namespace Soul {namespace GPU {
 	BufferID RenderGraphRegistry::getBuffer(BufferNodeID bufferNodeID) const {
-		SOUL_ASSERT_MAIN_THREAD();
 		return _execution->getBufferID(bufferNodeID);
 	}
 
 	TextureID RenderGraphRegistry::getTexture(TextureNodeID textureNodeId) const {
-		SOUL_ASSERT_MAIN_THREAD();
 		return _execution->getTextureID(textureNodeId);
 	}
 
 	ShaderArgSetID RenderGraphRegistry::getShaderArgSet(uint32 set, const ShaderArgSetDesc &desc) {
-		SOUL_ASSERT_MAIN_THREAD();
 		return _system->_shaderArgSetRequest(desc, _programID, set);
 	}
 }}

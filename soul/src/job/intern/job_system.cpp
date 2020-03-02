@@ -2,6 +2,11 @@
 #include "core/architecture.h"
 #include "job/system.h"
 
+#include "memory/allocators/proxy_allocator.h"
+#include "memory/allocators/linear_allocator.h"
+
+#include <thread>
+
 static unsigned long randXORSHF96() {
 	static thread_local unsigned long x = 123456789, y = 362436069, z = 521288629;
 	unsigned long t;
@@ -35,7 +40,12 @@ namespace Soul { namespace Job {
 
 		char threadName[512];
 		sprintf(threadName, "Worker Thread = %d", getThreadID());
-		// SOUL_PROFILE_THREAD_SET_NAME(threadName);
+		SOUL_PROFILE_THREAD_SET_NAME(threadName);
+
+		char tempAllocatorName[512];
+		Memory::LinearAllocator linearAllocator(tempAllocatorName, 10 * ONE_MEGABYTE, Memory::GetContextAllocator());
+		Memory::TempAllocator tempAllocator(&linearAllocator, Memory::TempProxy());
+		Memory::SetTempAllocator(&tempAllocator);
 
 		while (true) {
 			TaskID taskID = threadState->taskDeque.pop();
@@ -149,8 +159,8 @@ namespace Soul { namespace Job {
 
 		int threadCount = config.threadCount;
 		if (threadCount == 0) {
-#ifdef SOUL_USE_STD_HARDWARE_COUNT
-			threadCount = std::hardware_concurrency();
+#ifdef SOUL_USE_STD_HARDWARE_THREAD_COUNT
+			threadCount = std::thread::hardware_concurrency();
 #endif
 			if (threadCount == 0) {
 				threadCount = SOUL_HARDWARE_THREAD_COUNT;
@@ -159,8 +169,8 @@ namespace Soul { namespace Job {
 
 		SOUL_ASSERT(0, threadCount <= Constant::MAX_THREAD_COUNT, "Thread count : %d is more than MAX_THREAD_COUNT : %d", threadCount, Constant::MAX_THREAD_COUNT);
 		_db.threadCount = threadCount;
-		
-		_db.threadContexts.resize(threadCount);
+
+		_db.threadContexts.init(threadCount);
 
 		// NOTE(kevinyu): i == 0 is for main thread
 		Database::gThreadContext = &_db.threadContexts[0];

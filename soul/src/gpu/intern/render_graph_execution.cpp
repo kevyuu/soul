@@ -8,6 +8,9 @@
 #include "gpu/intern/render_graph_execution.h"
 #include "gpu/intern/enum_mapping.h"
 
+#include "memory/allocators/scope_allocator.h"
+#include "memory/allocators/linear_allocator.h"
+
 #include <volk/volk.h>
 
 namespace Soul {namespace GPU {
@@ -634,7 +637,8 @@ namespace Soul {namespace GPU {
 				VkPipeline pipeline = _gpuSystem->_pipelineCreate(*graphicNode, programID, renderPass);
 				vkCmdBindPipeline(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
 
-				CommandBucket commandBucket;
+				Memory::ScopeAllocator<> scopeAllocator("command buckets");
+				CommandBucket commandBucket(&scopeAllocator);
 				RenderGraphRegistry registry(_gpuSystem, this, programID);
 				passNode->executePass(&registry, &commandBucket);
 
@@ -642,8 +646,6 @@ namespace Soul {namespace GPU {
 					Command::Command* command = commandBucket.commands[i];
 					command->_submit(&_gpuSystem->_db, programID, cmdBuffer);
 				}
-
-				commandBucket._cleanup();
 
 				vkCmdEndRenderPass(cmdBuffer);
 
@@ -663,17 +665,18 @@ namespace Soul {namespace GPU {
 	void _RenderGraphExecution::run() {
 		SOUL_ASSERT_MAIN_THREAD();
 		SOUL_PROFILE_ZONE();
+		Memory::ScopeAllocator<> scopeAllocator("_RenderGraphExecution::run");
 
 		_submitExternalSyncPrimitive();
 
-		Array<VkEvent> garbageEvents;
-		Array<SemaphoreID> garbageSemaphores;
+		Array<VkEvent> garbageEvents(&scopeAllocator);
+		Array<SemaphoreID> garbageSemaphores(&scopeAllocator);
 
-		Array<VkBufferMemoryBarrier> eventBufferBarriers;
-		Array<VkImageMemoryBarrier> eventImageBarriers;
-		Array<VkImageMemoryBarrier> initLayoutBarriers;
-		Array<VkImageMemoryBarrier> semaphoreLayoutBarriers;
-		Array<VkEvent> events;
+		Array<VkBufferMemoryBarrier> eventBufferBarriers(&scopeAllocator);
+		Array<VkImageMemoryBarrier> eventImageBarriers(&scopeAllocator);
+		Array<VkImageMemoryBarrier> initLayoutBarriers(&scopeAllocator);
+		Array<VkImageMemoryBarrier> semaphoreLayoutBarriers(&scopeAllocator);
+		Array<VkEvent> events(&scopeAllocator);
 
 		static auto needInvalidate = [](VkAccessFlags visibleAccessMatrix[],
 			VkPipelineStageFlags stageFlags, VkAccessFlags accessFlags) -> bool {

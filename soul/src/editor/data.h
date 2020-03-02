@@ -2,7 +2,7 @@
 
 #include "extern/ImGuizmo.h"
 
-#include "core/pool_array.h"
+#include "core/pool.h"
 #include "core/type.h"
 
 #include "render/data.h"

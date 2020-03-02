@@ -97,8 +97,6 @@ namespace Soul { namespace Render {
 		}
 	}
 
-	
-
     void System::_gBufferInit() {
 
 		_gBufferCleanup();

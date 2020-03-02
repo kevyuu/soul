@@ -4,6 +4,7 @@
 
 #pragma once
 #include "gpu/data.h"
+#include "memory/allocator.h"
 
 namespace Soul { namespace GPU {
 
@@ -70,8 +71,9 @@ namespace Soul { namespace GPU {
 
 	class _RenderGraphExecution {
 	public:
-		_RenderGraphExecution(const RenderGraph* renderGraph, System* system):
-				_renderGraph(renderGraph), _gpuSystem(system) {}
+		_RenderGraphExecution(const RenderGraph* renderGraph, System* system, Memory::Allocator* allocator):
+				_renderGraph(renderGraph), _gpuSystem(system),
+				bufferInfos(allocator), textureInfos(allocator), passInfos(allocator) {}
 
 		_RenderGraphExecution(const _RenderGraphExecution& other) = delete;
 		_RenderGraphExecution& operator=(const _RenderGraphExecution& other) = delete;
@@ -112,8 +114,6 @@ namespace Soul { namespace GPU {
 
 		EnumArray<PassType, VkEvent> _externalEvents;
 		EnumArray<PassType, EnumArray<PassType, SemaphoreID>> _externalSemaphores;
-
-
 
 		VkRenderPass _renderPassCreate(uint32 passIndex);
 		VkFramebuffer _framebufferCreate(uint32 passIndex, VkRenderPass renderPass);

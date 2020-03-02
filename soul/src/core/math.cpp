@@ -706,11 +706,4 @@ namespace Soul {
 		return h;
 	}
 
-	uint64 hashFNV1(const uint8* data, uint32 size, uint64 initial) {
-		uint64 hash = initial;
-		for (uint32 i = 0; i < size; i++) {
-			hash = (hash * 0x100000001b3ull) ^ data[i];
-		}
-		return hash;
-	}
 }

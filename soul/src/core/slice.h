@@ -6,6 +6,7 @@
 #include "core/type.h"
 
 namespace Soul {
+
 	template <typename T>
 	class Slice
 	{
@@ -13,6 +14,11 @@ namespace Soul {
 
 		Slice(): _array(nullptr), _beginIdx(0), _endIdx(0), _size(0) {}
 		Slice(Array<T>* array, int begin, int end): _array(array), _beginIdx(begin), _endIdx(end), _size(_endIdx - _beginIdx) {}
+
+		Slice(const Slice& other) = delete;
+		Slice& operator=(const Slice& other) = delete;
+		Slice(Slice&& other) = delete;
+		Slice& operator=(const Slice&& other) = delete;
 
 		void set(Array<T>* array, int begin, int end) {
 			_array = array;
@@ -31,9 +37,7 @@ namespace Soul {
 			return this->operator[](idx);
 		}
 
-		inline int size() const {
-			return _size;
-		}
+		inline int size() const { return _size; }
 
 		const T* begin() const { return _array->data() + _beginIdx; }
 		const T* end() const { return _array->data + _endIdx; }

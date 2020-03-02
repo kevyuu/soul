@@ -2,8 +2,8 @@
 
 #include "core/type.h"
 #include "core/array.h"
-#include "core/pool_array.h"
-#include "core/packed_array.h"
+#include "core/pool.h"
+#include "core/packed_pool.h"
 
 namespace Soul {namespace Render {
 	

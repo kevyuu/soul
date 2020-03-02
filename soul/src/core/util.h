@@ -6,6 +6,8 @@
 
 #define SOUL_TRAILING_ZEROES(x) ctz(x)
 #define SOUL_TEMPLATE_ARG_LAMBDA(T, F) typename T, typename std::enable_if_t<std::is_convertible<T, std::function<F>>::value, T>* = nullptr
+#define SOUL_TEMPLATE_ARG_TRIVIALLY_DESTRUCTIBLE(T) typename T, std::enable_if_t<std::is_trivially_destructible<T>::value, T>* = nullptr
+#define SOUL_TEMPLATE_ARG_NOT_TRIVIALLY_DESTRUCTIBLE(T) typename T, std::enable_if_t<!std::is_trivially_destructible<T>::value, T>* = nullptr
 
 namespace Soul { namespace Util {
 

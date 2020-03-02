@@ -7,8 +7,10 @@
 
 #include "core/type.h"
 #include "core/architecture.h"
-#include "core/pool_array.h"
+
 #include "core/array.h"
+#include "core/pool.h"
+#include "core/static_array.h"
 
 namespace Soul {
 	namespace Job {
@@ -71,7 +73,7 @@ namespace Soul {
 
 		struct Database {
 			thread_local static _ThreadContext* gThreadContext;
-			Array<_ThreadContext> threadContexts;
+			StaticArray<_ThreadContext> threadContexts;
 			std::thread threads[Constant::MAX_THREAD_COUNT];
 			
 			std::condition_variable waitCondVar;

@@ -5,9 +5,12 @@
 #include "core/array.h"
 #include "core/enum_array.h"
 #include "core/slice.h"
-#include "core/pool_array.h"
+#include "core/pool.h"
 #include "core/hash_map.h"
 #include "core/architecture.h"
+
+#include "memory/memory.h"
+#include "memory/allocators/proxy_allocator.h"
 
 // TODO: Figure out how to do it without single header library
 #define VK_NO_PROTOTYPES
@@ -460,6 +463,12 @@ namespace Soul {
 
 		struct _Database {
 
+			using CPUAllocatorProxy = Memory::MultiProxy<Memory::CounterProxy>;
+			using CPUAllocator = Memory::ProxyAllocator<
+			        Memory::Allocator,
+			        CPUAllocatorProxy>;
+			CPUAllocator cpuAllocator;
+
 			VkInstance instance = VK_NULL_HANDLE;
 			VkDebugUtilsMessengerEXT debugMessenger;
 
@@ -489,13 +498,13 @@ namespace Soul {
 			Array<_FrameContext> frameContexts;
 			uint32 currentFrame;
 
-			VmaAllocator allocator;
+			VmaAllocator gpuAllocator;
 
-			PoolArray<_Buffer> buffers;
-			PoolArray<_Texture> textures;
-			PoolArray<_Shader> shaders;
-			PoolArray<_Program> programs;
-			PoolArray<_Semaphore> semaphores;
+			Pool<_Buffer> buffers;
+			Pool<_Texture> textures;
+			Pool<_Shader> shaders;
+			Pool<_Program> programs;
+			Pool<_Semaphore> semaphores;
 
 			HashMap<VkSampler> samplerMap;
 
@@ -504,6 +513,20 @@ namespace Soul {
 
 			EnumArray<QueueType, _Submission> submissions;
 
+			std::mutex shaderArgSetRequestMutex;
+
+			explicit _Database(Memory::Allocator* backingAllocator):
+					cpuAllocator("GPU System", backingAllocator, CPUAllocatorProxy(Memory::CounterProxy())),
+					frameContexts(&cpuAllocator),
+					buffers(&cpuAllocator),
+					textures(&cpuAllocator),
+					shaders(&cpuAllocator),
+					programs(&cpuAllocator),
+					semaphores(&cpuAllocator),
+					samplerMap(&cpuAllocator),
+					descriptorSets(&cpuAllocator),
+					shaderArgSets(&cpuAllocator)
+			{}
 		};
 
 	}

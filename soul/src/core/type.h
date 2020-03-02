@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <cstring>
 #include <cstdint>
 #include <cstddef>
 #include <climits>
@@ -197,6 +198,46 @@ namespace Soul {
 		Enum() = default;
 
 	};
+
+	template <typename ElemType,
+			typename std::enable_if_t<std::is_trivially_copy_constructible<ElemType>::value>* = nullptr>
+	inline void Copy(ElemType* begin, ElemType* end, ElemType* dst) {
+		memcpy((void*)dst, (void*)begin, uint32(end - begin) * sizeof(ElemType));
+	}
+
+	template <typename ElemType,
+			typename std::enable_if_t<!std::is_trivially_copy_constructible<ElemType>::value>* = nullptr>
+	inline void Copy(ElemType* begin, ElemType* end, ElemType* dst) {
+		for (ElemType* iter = begin; iter != end; iter++, dst++) {
+			new (dst) ElemType(*iter);
+		}
+	}
+
+	template <typename ElemType,
+			typename std::enable_if_t<std::is_trivially_move_constructible<ElemType>::value>* = nullptr>
+	inline void Move(ElemType* begin, ElemType* end, ElemType* dst) {
+		memcpy((void*)dst, (void*)begin, uint32(end - begin) * sizeof(ElemType));
+	}
+
+	template<typename ElemType,
+			typename std::enable_if_t<!std::is_trivially_move_constructible<ElemType>::value>* = nullptr>
+	inline void Move(ElemType* begin, ElemType* end, ElemType* dst) {
+		for (ElemType* iter = begin; iter != end; iter++, dst++) {
+			new (dst) ElemType(std::move(*iter));
+		}
+	}
+
+	template<typename ElemType,
+	        typename std::enable_if_t<std::is_trivially_destructible<ElemType>::value>* = nullptr>
+	inline void Destruct(ElemType* begin, ElemType* end) {}
+
+	template<typename ElemType,
+			typename std::enable_if_t<!std::is_trivially_destructible<ElemType>::value>* = nullptr>
+	inline void Destruct(ElemType* begin, ElemType* end) {
+		for (ElemType* iter = begin; iter != end; iter++) {
+			iter->~ElemType();
+		}
+	}
 
 }
 

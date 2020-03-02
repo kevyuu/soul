@@ -1,4 +1,5 @@
 #include "core/dev_util.h"
+#include "memory/profiler.h"
 
 #include <cstdio>
 #include <cstdarg>
@@ -45,3 +46,39 @@ void soul_intern_assert(int paranoia, int line, const char* file, const char* fo
 		printf("\n");
 	}
 }
+
+#if defined(SOUL_MEMPROFILE_CPU_BACKEND_SOUL_PROFILER)
+
+Soul::Memory::Profiler* _GetProfiler() {
+	SOUL_NOT_IMPLEMENTED();
+	return nullptr;
+}
+
+void MemProfile::RegisterAllocator(const char *name) {
+	_GetProfiler()->registerAllocator(name);
+}
+
+void MemProfile::UnregisterAllocator(const char *name) {
+	_GetProfiler()->unregisterAllocator(name);
+}
+
+void MemProfile::RegisterAllocation(const char *name, const char *tag, const void *addr, uint32 size) {
+	_GetProfiler()->registerAllocation(name, tag, addr, size);
+}
+
+void MemProfile::RegisterDeallocation(const char *name, const void *addr, uint32 size) {
+	_GetProfiler()->registerDeallocation(name, addr, size);
+}
+
+void MemProfile::Snapshot(const char* name) {
+	_GetProfiler()->snapshot(name);
+}
+
+MemProfile::Scope::Scope() {
+	_GetProfiler()->beginFrame();
+}
+
+MemProfile::Scope::~Scope() {
+	_GetProfiler()->endFrame();
+}
+#endif

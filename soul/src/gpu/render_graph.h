@@ -2,6 +2,8 @@
 #include "core/util.h"
 #include "gpu/data.h"
 
+#include "memory/allocators/scope_allocator.h"
+
 namespace Soul { namespace GPU {
 
 	struct RenderGraph;
@@ -176,33 +178,34 @@ namespace Soul { namespace GPU {
 
 	class CommandBucket {
 	public:
-		uint64* keys;
+		Array<uint64> keys;
 		Array<Command::Command*> commands;
+		Memory::ScopeAllocator<>* allocator;
+
+		CommandBucket() = delete;
+		explicit CommandBucket(Memory::ScopeAllocator<>* allocator): allocator(allocator), keys(allocator), commands(allocator){}
 
 		void reserve(int capacity) {
+			keys.resize(capacity);
 			commands.resize(capacity);
 		}
 
 		template <typename Command>
 		Command* put(uint32 index, uint64 key) {
-			Command* command = new Command();
+			Command* command = allocator->create<Command>();
+			keys[index] = key;
 			commands[index] = command;
 			return command;
 		}
 
 		template <typename Command>
 		Command* add(uint64 key) {
-			Command* command = new Command();
+			Command* command = allocator->create<Command>();
 			commands.add(command);
 			return command;
 		}
 
-		void _cleanup() {
-			for (int i = 0; i < commands.size(); i++) {
-				delete commands[i];
-			}
-			commands.cleanup();
-		}
+		void _cleanup() {}
 	};
 
 	struct ColorAttachmentDesc {

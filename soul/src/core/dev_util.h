@@ -2,9 +2,12 @@
 
 #if defined(SOUL_ENV_DEBUG)
     #define SOUL_OPTION_VULKAN_ENABLE_VALIDATION
-    #define SOUL_OPTION_VULKAN_ENABLE_RENDERDOC
+	#if defined(SOUL_OS_WINDOWS)
+		#define SOUL_OPTION_VULKAN_ENABLE_RENDERDOC
+	#endif // SOUL_OS_WINDOWS
     #define SOUL_ASSERT_PARANOIA_LEVEL 1
     #define SOUL_PROFILE_CPU_BACKEND_TRACY
+	#define SOUL_MEMPROFILE_CPU_BACKEND_SOUL_PROFILER
 #endif // SOUL_ENV_DEBUG
 
 #if defined(_MSC_VER)
@@ -81,6 +84,39 @@ void soul_intern_assert(int paranoia, int line, const char* file, const char* fo
     #define SOUL_PROFILE_ZONE_WITH_NAME(x) ((void) 0)
     #define SOUL_PROFILE_THREAD_SET_NAME(x) ((void) 0)
 
-#endif // SOUL_PROFILE_CPU_BACKEND_TRACY
+#endif // SOUL_PROFILE_CPU_BACKEND
 
+#if defined(SOUL_MEMPROFILE_CPU_BACKEND_SOUL_PROFILER)
+	#include "core/type.h"
+	struct MemProfile {
+
+		struct Scope {
+			Scope();
+			~Scope();
+		};
+
+		static void RegisterAllocator(const char* name);
+		static void UnregisterAllocator(const char* name);
+		static void RegisterAllocation(const char* name, const char* tag, const void* addr, uint32 size);
+		static void RegisterDeallocation(const char* name, const void* addr, uint32 size);
+		static void Snapshot(const char* name);
+	};
+
+	#define SOUL_MEMPROFILE_REGISTER_ALLOCATOR(x) do { MemProfile::RegisterAllocator(x);} while(0)
+	#define SOUL_MEMPROFILE_DEREGISTER_ALLOCATOR(x) do { MemProfile::UnregisterAllocator(x);} while(0)
+	#define SOUL_MEMPROFILE_REGISTER_ALLOCATION(allocatorName, tag, addr, size) do { MemProfile::RegisterAllocation(allocatorName, tag, addr, size);} while(0)
+	#define SOUL_MEMPROFILE_REGISTER_DEALLOCATION(allocatorName, addr, size) do{ MemProfile::RegisterDeallocation(allocatorName, addr, size); } while(0)
+	#define SOUL_MEMPROFILE_SNAPSHOT(x) do{ MemProfile::Snapshot(x); } while(0)
+	#define SOUL_MEMPROFILE_FRAME() MemProfile::Scope()
+
+#else
+
+	#define SOUL_MEMPROFILE_REGISTER_ALLOCATOR(x) ((void) 0)
+	#define SOUL_MEMPROFILE_DEREGISTER_ALLOCATOR(x) ((void) 0)
+	#define SOUL_MEMPROFILE_REGISTER_ALLOCATION(allocatorName, tag, addr, size) ((void) 0)
+	#define SOUL_MEMPROFILE_REGISTER_DEALLOCATION(allocatorName, addr, size) ((void) 0)
+	#define SOUL_MEMPROFILE_SNAPSHOT(x) ((void) 0)
+	#define SOUL_MEMPROFILE_FRAME() ((void) 0)
+
+#endif // SOUL_MEMPROFILE_CPU_BACKEND
   

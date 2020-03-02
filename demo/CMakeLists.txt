@@ -1,4 +1,4 @@
-add_executable(demo test.cpp imgui_impl_glfw.cpp)
+add_executable(demo test.cpp imgui_impl_glfw.cpp widget/memory_profiler_panel.cpp)
 target_link_libraries(demo
 	PRIVATE soul glfw ${GLFW_LIBRARIES} tiny_gltf imgui tracy)
 

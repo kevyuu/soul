@@ -10,12 +10,14 @@ set (SOUL_HEADERS
 	src/core/dev_util.h
 	src/core/hash_map.h
 	src/core/math.h
-	src/core/packed_array.h
-	src/core/pool_array.h
+	src/core/packed_pool.h
+	src/core/pool.h
+	src/core/static_array.h
 	src/core/type.h
 	src/core/util.h
 	src/core/slice.h
 	src/core/enum_array.h
+	src/core/bitset.h
 
 	src/gpu/data.h
 	src/gpu/system.h
@@ -29,13 +31,19 @@ set (SOUL_HEADERS
 
 	src/memory/memory.h
 	src/memory/allocator.h
-	src/memory/system.h
+	src/memory/allocators/page_allocator.h
+	src/memory/allocators/proxy_allocator.h
+	src/memory/allocators/malloc_allocator.h
+	src/memory/allocators/linear_allocator.h
+	src/memory/allocators/mt_linear_allocator.h
+	src/memory/allocators/scope_allocator.h
 )
 
 set (SOUL_SOURCES
 
 	src/core/dev_util.cpp
 	src/core/math.cpp
+	src/core/bitset.cpp
 
 	src/gpu/intern/gpu_system_glfw.cpp
 	src/gpu/intern/gpu_system.cpp
@@ -45,11 +53,17 @@ set (SOUL_SOURCES
 	src/gpu/intern/render_graph_execution.cpp
 	src/gpu/intern/render_graph_registry.cpp
 
+	src/memory/intern/memory.cpp
 	src/memory/intern/malloc_allocator.cpp
-	src/memory/intern/proxy_allocator.cpp
+	src/memory/intern/proxy.cpp
+	src/memory/intern/profiler.cpp
+	src/memory/intern/linear_allocator.cpp
+	src/memory/intern/mt_linear_allocator.cpp
+	src/memory/intern/scope_allocator.cpp
+	src/memory/intern/osx/page_allocator.cpp
 
 	src/job/intern/job_system.cpp
-	src/job/intern/task_deque.cpp)
+	src/job/intern/task_deque.cpp src/memory/intern/profiler.cpp)
 
 add_library(soul STATIC ${SOUL_SOURCES})
 target_link_libraries(soul

@@ -7,8 +7,8 @@
 
 namespace Soul { namespace Job {
 		
-	struct System {
-
+	class System {
+	public:
 		struct Config {
 			uint16 threadCount; // 0 to use hardware thread count
 			uint16 taskPoolCount;
@@ -50,7 +50,7 @@ namespace Soul { namespace Job {
 			using TaskData = ParallelForTaskData<Func>;
 
 			static_assert(sizeof(TaskData) <= sizeof(Task::storage),
-						  "ParallelForTaskData size is too big."
+						  "ParallelForTaskData size is too big. TaskData = %d"
 						  "Consider to increase the storage size of the task.");
 
 			static auto parallelFunc = [](TaskID taskID, void* data) {
@@ -92,6 +92,8 @@ namespace Soul { namespace Job {
 			static System instance;
 			return instance;
 		}
+
+	private:
 
 		TaskID _taskCreate(TaskID parent, TaskFunc func);
 		Task* _taskPtr(TaskID taskID);

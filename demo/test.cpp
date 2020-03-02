@@ -6,6 +6,11 @@
 #include "core/math.h"
 
 #include "memory/memory.h"
+#include "memory/allocators/malloc_allocator.h"
+#include "memory/allocators/linear_allocator.h"
+#include "memory/allocators/mt_linear_allocator.h"
+#include "memory/allocators/scope_allocator.h"
+
 #include "job/system.h"
 
 #include <cstring>
@@ -17,16 +22,16 @@
 #define STB_IMAGE_IMPLEMENTATION
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "stb_image.h"
-#include <vector>
 
 #include "utils.h"
-
+#include "widget/scene_panel.h"
 
 #include "imgui_render_module.h"
 #include <imgui/imgui.h>
 #include <imgui/examples/imgui_impl_glfw.h>
 
 #include <tiny_gltf.h>
+#include <memory/allocators/page_allocator.h>
 
 using namespace Soul;
 
@@ -200,7 +205,7 @@ namespace Soul
 	{
 		EntityID rootEntityID;
 
-		PoolArray<GroupEntity> groupEntities;
+		Pool<GroupEntity> groupEntities;
 		Array<MeshEntity> meshEntities;
 		Array<Mesh> meshes;
 		Array<SceneMaterial> materials;
@@ -270,6 +275,9 @@ EntityID EntityCreate(Scene* scene, EntityID parentID, EntityType entityType, co
 
 void LoadScene(GPU::System* gpuSystem, Scene* scene, const char* path, bool positionToAABBCenter)
 {
+	SOUL_PROFILE_ZONE();
+	Memory::ScopeAllocator<> scopeAllocator("Load scene allocator");
+
 	scene->groupEntities.reserve(3000);
 	PoolID rootIndex = scene->groupEntities.add({});
 	scene->rootEntityID.index = rootIndex;
@@ -290,7 +298,13 @@ void LoadScene(GPU::System* gpuSystem, Scene* scene, const char* path, bool posi
 	tinygltf::TinyGLTF loader;
 	std::string err;
 	std::string warn;
-	bool ret = loader.LoadASCIIFromFile(&model, &err, &warn, path);
+
+	bool ret;
+	{
+		SOUL_PROFILE_ZONE_WITH_NAME("Load ASCII From File");
+		ret = loader.LoadASCIIFromFile(&model, &err, &warn, path);
+	}
+
 
 	if (!warn.empty())
 	{
@@ -310,7 +324,7 @@ void LoadScene(GPU::System* gpuSystem, Scene* scene, const char* path, bool posi
 	}
 
 	//Load Textures
-	Array<PoolID> textureIDs;
+	Array<PoolID> textureIDs(&scopeAllocator);
 	textureIDs.resize(model.textures.size());
 	for (int i = 0; i < model.textures.size(); i++)
 	{
@@ -338,7 +352,7 @@ void LoadScene(GPU::System* gpuSystem, Scene* scene, const char* path, bool posi
 
 	//Load Material
 	SOUL_LOG_INFO("Materials count : %d", model.materials.size());
-	Array<PoolID> materialIDs;
+	Array<PoolID> materialIDs(&scopeAllocator);
 	materialIDs.resize(model.materials.size());
 	for (int i = 0; i < model.materials.size(); i++)
 	{
@@ -478,41 +492,42 @@ void LoadScene(GPU::System* gpuSystem, Scene* scene, const char* path, bool posi
 	bufferDesc.count = scene->materials.size();
 	bufferDesc.queueFlags = GPU::QUEUE_GRAPHIC_BIT;
 	bufferDesc.usageFlags = GPU::BUFFER_USAGE_UNIFORM_BIT;
-	scene->materialBuffer = gpuSystem->bufferCreate(bufferDesc,
-	                                                [scene](int index, byte* data)
-	                                                {
-		                                                auto materialData = (MaterialData*)data;
-		                                                SceneMaterial& sceneMaterial = scene->materials[index];
+	scene->materialBuffer = gpuSystem->bufferCreate(
+		bufferDesc,
+		[scene](int index, byte* data)
+		{
+			auto materialData = (MaterialData*)data;
+			SceneMaterial& sceneMaterial = scene->materials[index];
 
-		                                                materialData->albedo = sceneMaterial.albedo;
-		                                                materialData->metallic = sceneMaterial.metallic;
-		                                                materialData->emissive = sceneMaterial.emissive;
-		                                                materialData->roughness = sceneMaterial.roughness;
+			materialData->albedo = sceneMaterial.albedo;
+			materialData->metallic = sceneMaterial.metallic;
+			materialData->emissive = sceneMaterial.emissive;
+			materialData->roughness = sceneMaterial.roughness;
 
-		                                                int flags = 0;
-		                                                if (sceneMaterial.useAlbedoTex)
-			                                                flags |=
-				                                                MaterialFlag_USE_ALBEDO_TEX;
-		                                                if (sceneMaterial.useNormalTex)
-			                                                flags |=
-				                                                MaterialFlag_USE_NORMAL_TEX;
-		                                                if (sceneMaterial.useMetallicTex)
-			                                                flags |=
-				                                                MaterialFlag_USE_METALLIC_TEX;
-		                                                if (sceneMaterial.useRoughnessTex)
-			                                                flags |=
-				                                                MaterialFlag_USE_ROUGHNESS_TEX;
-		                                                if (sceneMaterial.useAOTex) flags |= MaterialFlag_USE_AO_TEX;
-		                                                if (sceneMaterial.useEmissiveTex)
-			                                                flags |=
-				                                                MaterialFlag_USE_EMISSIVE_TEX;
+			int flags = 0;
+			if (sceneMaterial.useAlbedoTex)
+				flags |=
+					MaterialFlag_USE_ALBEDO_TEX;
+			if (sceneMaterial.useNormalTex)
+				flags |=
+					MaterialFlag_USE_NORMAL_TEX;
+			if (sceneMaterial.useMetallicTex)
+				flags |=
+					MaterialFlag_USE_METALLIC_TEX;
+			if (sceneMaterial.useRoughnessTex)
+				flags |=
+					MaterialFlag_USE_ROUGHNESS_TEX;
+			if (sceneMaterial.useAOTex) flags |= MaterialFlag_USE_AO_TEX;
+			if (sceneMaterial.useEmissiveTex)
+				flags |=
+					MaterialFlag_USE_EMISSIVE_TEX;
 
-		                                                materialData->flags = flags;
-	                                                });
+			materialData->flags = flags;
+		});
 
-	Array<EntityID> entityParents;
+	Array<EntityID> entityParents(&scopeAllocator);
 	entityParents.reserve(model.nodes.size());
-	Array<EntityID> meshEntityIDs;
+	Array<EntityID> meshEntityIDs(&scopeAllocator);
 	meshEntityIDs.reserve(model.meshes.size());
 
 	for (int i = 0; i < model.nodes.size(); i++)
@@ -593,11 +608,12 @@ void LoadScene(GPU::System* gpuSystem, Scene* scene, const char* path, bool posi
 		}
 	}
 
-	entityParents.cleanup();
-
 	// Load Mesh
 	for (int i = 0; i < model.meshes.size(); i++)
 	{
+		Memory::ScopeAllocator<> loadMeshAllocator("Load mesh allocator");
+		SOUL_MEMORY_ALLOCATOR_ZONE(&loadMeshAllocator);
+
 		struct Vertex
 		{
 			Vec3f pos;
@@ -699,7 +715,9 @@ void LoadScene(GPU::System* gpuSystem, Scene* scene, const char* path, bool posi
 		}
 		else
 		{
-			texCoord0s.add(Vec2f(0.0f, 0.0f));
+			for (int i = 0; i < positionAccessor.count; i++) {
+				texCoord0s.add(Vec2f(0.0f, 0.0f));
+			}
 		}
 
 		Array<Vec4f> tangents;
@@ -794,16 +812,7 @@ void LoadScene(GPU::System* gpuSystem, Scene* scene, const char* path, bool posi
 
 		meshEntity->meshID = scene->meshes.add(sceneMesh);
 		meshEntity->materialID = materialIDs[primitive.material];
-
-		texCoord0s.cleanup();
-		tangents.cleanup();
-		vertexes.cleanup();
-		indexes.cleanup();
 	}
-	textureIDs.cleanup();
-	materialIDs.cleanup();
-	entityParents.cleanup();
-	meshEntityIDs.cleanup();
 }
 
 void glfwPrintErrorCallback(int code, const char* message)
@@ -813,21 +822,28 @@ void glfwPrintErrorCallback(int code, const char* message)
 
 int main()
 {
-	using DefaultAllocator = Memory::ProxyAllocator<
-	        Memory::MallocAllocator,
-	        Memory::ThreadingProxy::NoSync,
-	        Memory::TrackingProxy::Untrack,
-	        Memory::TaggingProxy::Untagged>;
 
-	DefaultAllocator defaultAllocator("Default");
-	Memory::System::Get().init({
-		&defaultAllocator
-   });
+	Memory::MallocAllocator mallocAllocator("Default");
+	Memory::DefaultAllocator defaultAllocator(&mallocAllocator,
+		Memory::DefaultAllocatorProxy(
+			Memory::CounterProxy(),
+			Memory::ClearValuesProxy(0xFA, 0xFF),
+			Memory::BoundGuardProxy()));
+
+	Memory::Init(&defaultAllocator);
+
+	SOUL_PROFILE_THREAD_SET_NAME("Main Thread");
 
 	Job::System::Get().init({
 		0,
 		4096
 	});
+
+	Memory::PageAllocator pageAllocator("Page Allocator");
+	Memory::LinearAllocator linearAllocator("Main Thread Temp Allocator", 10 * ONE_MEGABYTE, &pageAllocator);
+	Memory::TempAllocator tempAllocator(&linearAllocator,
+			Memory::TempProxy());
+	Memory::SetTempAllocator(&tempAllocator);
 
 	glfwSetErrorCallback(glfwPrintErrorCallback);
 	SOUL_ASSERT(0, glfwInit(), "GLFW Init Failed !");
@@ -842,7 +858,7 @@ int main()
 	glfwMaximizeWindow(window);
 	SOUL_LOG_INFO("GLFW window creation sucessful");
 
-	GPU::System gpuSystem;
+	GPU::System gpuSystem(Memory::GetContextAllocator());
 	GPU::System::Config config = {};
 	config.windowHandle = window;
 	config.swapchainWidth = 3360;
@@ -854,9 +870,10 @@ int main()
 
 	Scene scene;
 	LoadScene(&gpuSystem, &scene,
-	          "assets/sponza/scene.gltf",
+	          "assets/mirrors_edge_apartment_-_interior_scene/scene.gltf",
 	          true);
 	Vec2ui32 sceneResolution = { 1920, 1080 };
+	ScenePanel scenePanel(sceneResolution);
 
 	const char* renderAlbedoVertSrc = LoadFile("shaders/render_albedo.vert.glsl");
 	const char* renderAlbedoFragSrc = LoadFile("shaders/render_albedo.frag.glsl");
@@ -935,11 +952,13 @@ int main()
            mat4Transform(scene.meshEntities[i].worldTransform));
    });
 
-	
+	if (scene.textures.size() == 0) {
+		scene.textures.add({"fontTex", imguiRenderModule._fontTex});
+	}
+
 	while (!glfwWindowShouldClose(window))
 	{
 		SOUL_PROFILE_FRAME();
-
 		Job::System::Get().beginFrame();
 
 		glfwPollEvents();
@@ -1105,56 +1124,79 @@ int main()
 			set0Desc.bindingDescriptions = &cameraDescriptor;
 			GPU::ShaderArgSetID set0 = registry->getShaderArgSet(0, set0Desc);
 
-			int meshOffset = 0;
-			for (const MeshEntity& meshEntity : scene.meshEntities) {
+			struct JobData {
+				GPU::RenderGraphRegistry* registry;
+				GPU::CommandBucket* commandBucket;
+				const RenderAlbedoData& data;
+				GPU::ShaderArgSetID set0;
+				GPU::SamplerID samplerID;
+			};
 
-				const SceneMaterial& material = scene.materials[meshEntity.materialID];
-				GPU::Descriptor materialDescriptors[2] = {};
-				materialDescriptors[0].type = GPU::DescriptorType::SAMPLED_IMAGE;
-				if (material.useAlbedoTex) {
-					materialDescriptors[0].sampledImageInfo.textureID = registry->getTexture(data.sceneTextures[material.albedoTexID]);
-				}
-				else {
-					materialDescriptors[0].sampledImageInfo.textureID = registry->getTexture(data.sceneTextures[0]);
-				}
-				materialDescriptors[0].sampledImageInfo.samplerID = samplerID;
-				materialDescriptors[1].type = GPU::DescriptorType::UNIFORM_BUFFER;
-				materialDescriptors[1].uniformInfo.bufferID = registry->getBuffer(data.material);
-				materialDescriptors[1].uniformInfo.unitIndex = meshEntity.materialID;
+			JobData jobData = {
+					registry,
+					commandBucket,
+					data,
+					set0,
+					samplerID
+			};
 
-				GPU::ShaderArgSetDesc set1Desc;
-				set1Desc.bindingCount = 1;
-				set1Desc.bindingDescriptions = &materialDescriptors[1];
-				GPU::ShaderArgSetID set1 = registry->getShaderArgSet(1, set1Desc);
+			Job::TaskID commandCreateTask = Job::System::Get().parallelForTaskCreate(0, scene.meshEntities.size(), 8,
+				[&scene, &jobData](int index) {
+					SOUL_PROFILE_ZONE_WITH_NAME("Create Render Albedo Command");
+					GPU::RenderGraphRegistry* registry = jobData.registry;
+					GPU::CommandBucket* commandBucket = jobData.commandBucket;
+					const RenderAlbedoData& data = jobData.data;
+					GPU::ShaderArgSetID set0 = jobData.set0;
+					GPU::SamplerID samplerID = jobData.samplerID;
 
-				GPU::ShaderArgSetDesc set2Desc;
-				set2Desc.bindingCount = 1;
-				set2Desc.bindingDescriptions = materialDescriptors;
-				GPU::ShaderArgSetID set2 = registry->getShaderArgSet(2, set2Desc);
+					const MeshEntity& meshEntity = scene.meshEntities[index];
+					const SceneMaterial& material = scene.materials[meshEntity.materialID];
+					GPU::Descriptor materialDescriptors[2] = {};
+					materialDescriptors[0].type = GPU::DescriptorType::SAMPLED_IMAGE;
+					if (material.useAlbedoTex) {
+						materialDescriptors[0].sampledImageInfo.textureID = registry->getTexture(data.sceneTextures[material.albedoTexID]);
+					}
+					else {
+						materialDescriptors[0].sampledImageInfo.textureID = registry->getTexture(data.sceneTextures[0]);
+					}
+					materialDescriptors[0].sampledImageInfo.samplerID = samplerID;
+					materialDescriptors[1].type = GPU::DescriptorType::UNIFORM_BUFFER;
+					materialDescriptors[1].uniformInfo.bufferID = registry->getBuffer(data.material);
+					materialDescriptors[1].uniformInfo.unitIndex = meshEntity.materialID;
 
-				GPU::Descriptor modelDescriptor;
-				modelDescriptor.type = GPU::DescriptorType::UNIFORM_BUFFER;
-				modelDescriptor.uniformInfo.bufferID = registry->getBuffer(data.model);
-				modelDescriptor.uniformInfo.unitIndex = meshOffset;
-				GPU::ShaderArgSetDesc set3Desc;
-				set3Desc.bindingCount = 1;
-				set3Desc.bindingDescriptions = &modelDescriptor;
-				GPU::ShaderArgSetID set3 = registry->getShaderArgSet(3, set3Desc);
+					GPU::ShaderArgSetDesc set1Desc;
+					set1Desc.bindingCount = 1;
+					set1Desc.bindingDescriptions = &materialDescriptors[1];
+					GPU::ShaderArgSetID set1 = registry->getShaderArgSet(1, set1Desc);
 
-				const Mesh& mesh = scene.meshes[meshEntity.meshID];
-				using DrawCommand = GPU::Command::DrawIndex;
-				DrawCommand* command = commandBucket->put<DrawCommand>(meshOffset, meshOffset);
-				command->vertexBufferID = registry->getBuffer(data.vertexBuffers[meshEntity.meshID]);
-				command->indexBufferID = registry->getBuffer(data.indexBuffers[meshEntity.meshID]);
-				command->indexCount = mesh.indexCount;
-				command->shaderArgSets[0] = set0;
-				command->shaderArgSets[1] = set1;
-				command->shaderArgSets[2] = set2;
-				command->shaderArgSets[3] = set3;
+					GPU::ShaderArgSetDesc set2Desc;
+					set2Desc.bindingCount = 1;
+					set2Desc.bindingDescriptions = materialDescriptors;
+					GPU::ShaderArgSetID set2 = registry->getShaderArgSet(2, set2Desc);
 
-				++meshOffset;
-			}
+					GPU::Descriptor modelDescriptor;
+					modelDescriptor.type = GPU::DescriptorType::UNIFORM_BUFFER;
+					modelDescriptor.uniformInfo.bufferID = registry->getBuffer(data.model);
+					modelDescriptor.uniformInfo.unitIndex = index;
+					GPU::ShaderArgSetDesc set3Desc;
+					set3Desc.bindingCount = 1;
+					set3Desc.bindingDescriptions = &modelDescriptor;
+					GPU::ShaderArgSetID set3 = registry->getShaderArgSet(3, set3Desc);
 
+					const Mesh& mesh = scene.meshes[meshEntity.meshID];
+					using DrawCommand = GPU::Command::DrawIndex;
+					DrawCommand* command = commandBucket->put<DrawCommand>(index, index);
+					command->vertexBufferID = registry->getBuffer(data.vertexBuffers[meshEntity.meshID]);
+					command->indexBufferID = registry->getBuffer(data.indexBuffers[meshEntity.meshID]);
+					command->indexCount = mesh.indexCount;
+					command->shaderArgSets[0] = set0;
+					command->shaderArgSets[1] = set1;
+					command->shaderArgSets[2] = set2;
+					command->shaderArgSets[3] = set3;
+			});
+
+			Job::System::Get().taskRun(commandCreateTask);
+			Job::System::Get().taskWait(commandCreateTask);
 		});
 
 		vertexBufferNodeIDs.cleanup();
@@ -1179,23 +1221,17 @@ int main()
 		ImGuiID dockspace_id = ImGui::GetID("Left Dock");
 		ImGui::DockSpace(dockspace_id, ImVec2(0.0f, 0.0f), dockspaceFlags);
 
-		static bool dummy = true;
-		ImGui::ShowDemoWindow(&dummy);
+		static bool trueDummy = true;
+		ImGui::ShowDemoWindow(&trueDummy);
 
-		ImGui::Begin("Scene");
-		ImVec2 sceneWindowSize = ImGui::GetWindowSize();
-		float sceneAspectRatio = sceneResolution.x / (float) sceneResolution.y;
-		ImVec2 sceneImageSize = { min(sceneWindowSize.x, sceneAspectRatio * sceneWindowSize.y), min(sceneWindowSize.y, sceneWindowSize.x / sceneAspectRatio) };
-		ImGui::SetCursorPos(ImVec2((sceneWindowSize.x - sceneImageSize.x) * 0.5f, (sceneWindowSize.y - sceneImageSize.y) * 0.5f));
-		ImGui::Image(SoulImTexture(renderAlbedoData.renderTarget).getImTextureID(), sceneImageSize);
-		ImGui::End();
-
+		scenePanel.update(SoulImTexture(renderAlbedoData.renderTarget).getImTextureID());
 		ImGui::End();
 
 		ImGui::Render();
 		imguiRenderModule.addPass(&gpuSystem, &renderGraph, *ImGui::GetDrawData(), gpuSystem.getSwapchainTexture());
 
 		gpuSystem.renderGraphExecute(renderGraph);
+
 		gpuSystem.frameFlush();
 		renderGraph.cleanup();
 
