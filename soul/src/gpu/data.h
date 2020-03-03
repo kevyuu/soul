@@ -6,6 +6,7 @@
 #include "core/enum_array.h"
 #include "core/slice.h"
 #include "core/pool.h"
+#include "core/uint64_hash_map.h"
 #include "core/hash_map.h"
 #include "core/architecture.h"
 
@@ -381,6 +382,23 @@ namespace Soul {
 			VkPipelineStageFlags pipelineStageFlags = 0;
 		};
 
+		struct _ProgramKey {
+			ShaderID vertShaderID;
+			ShaderID fragShaderID;
+
+			inline bool operator==(const _ProgramKey& other) {
+				return (memcmp(this, &other, sizeof(_ProgramKey)) == 0);
+			}
+
+			inline bool operator!=(const _ProgramKey& other) {
+				return (memcmp( this, &other, sizeof(_ProgramKey)) != 0);
+			}
+
+			uint64 hash() {
+				return hashFNV1((uint8*)(this), sizeof(_ProgramKey));
+			}
+		};
+
 		struct _Program {
 			VkPipelineLayout pipelineLayout;
 			VkDescriptorSetLayout descriptorLayouts[MAX_SET_PER_SHADER_PROGRAM];
@@ -421,7 +439,6 @@ namespace Soul {
 				Array<TextureID> textures;
 				Array<BufferID> buffers;
 				Array<ShaderID> shaders;
-				Array<ProgramID> programs;
 				Array<VkRenderPass> renderPasses;
 				Array<VkFramebuffer> frameBuffers;
 				Array<VkPipeline> pipelines;
@@ -510,12 +527,15 @@ namespace Soul {
 			Pool<_Buffer> buffers;
 			Pool<_Texture> textures;
 			Pool<_Shader> shaders;
+
+			HashMap<_ProgramKey, ProgramID> programMaps;
 			Pool<_Program> programs;
+
 			Pool<_Semaphore> semaphores;
 
-			HashMap<VkSampler> samplerMap;
+			UInt64HashMap<VkSampler> samplerMap;
 
-			HashMap<VkDescriptorSet> descriptorSets;
+			UInt64HashMap<VkDescriptorSet> descriptorSets;
 			Array<_ShaderArgSet> shaderArgSets;
 
 			EnumArray<QueueType, _Submission> submissions;

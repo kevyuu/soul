@@ -52,7 +52,7 @@ namespace Soul { namespace Memory {
 		AllocatorData& allocatorData = _allocatorsData[_HashAddr(allocatorName)];
 		const Allocation& allocation = allocatorData.allocations[_HashAddr(addr)];
 		if (_allocatorsData.isExist(_HashAddr(allocation.tag))) {
-			HashMap<Region>& regions = _allocatorsData[_HashAddr(allocation.tag)].regions;
+			UInt64HashMap<Region>& regions = _allocatorsData[_HashAddr(allocation.tag)].regions;
 			_allocatorsData[_HashAddr(allocation.tag)].regionAddrs.remove(regions[_HashAddr(addr)].index);
 			regions.remove(_HashAddr(addr));
 		}

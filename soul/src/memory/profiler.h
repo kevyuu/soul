@@ -1,7 +1,7 @@
 #pragma once
 
 #include "core/array.h"
-#include "core/hash_map.h"
+#include "core/uint64_hash_map.h"
 
 #include "core/packed_pool.h"
 
@@ -27,10 +27,10 @@ namespace Soul {
 			struct AllocatorData {
 				uint32 index;
 
-				HashMap<Region> regions;
+				UInt64HashMap<Region> regions;
 				PackedPool<const void*> regionAddrs;
 
-				HashMap<Allocation> allocations;
+				UInt64HashMap<Allocation> allocations;
 				PackedPool<const char*> allocationTags;
 
 				explicit AllocatorData(Allocator* allocator) :
@@ -66,11 +66,11 @@ namespace Soul {
 
 			struct Snapshot {
 				const char* name;
-				HashMap<AllocatorData> allocatorsData;
+				UInt64HashMap<AllocatorData> allocatorsData;
 				PackedPool<const char*> allocatorNames;
 
 				explicit Snapshot(const char* name,
-								  const HashMap<AllocatorData>& allocatorsData,
+								  const UInt64HashMap<AllocatorData>& allocatorsData,
 								  const PackedPool<const char*>& allocatorNames):
 						name(name), allocatorsData(allocatorsData), allocatorNames(allocatorNames) {
 
@@ -106,7 +106,7 @@ namespace Soul {
 
 		private:
 			Allocator* _allocator;
-			HashMap<AllocatorData> _allocatorsData;
+			UInt64HashMap<AllocatorData> _allocatorsData;
 			PackedPool<const char*> _allocatorNames;
 			Array<Frame> _frames;
 		};

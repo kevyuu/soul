@@ -8,6 +8,7 @@ set (SOUL_HEADERS
 	src/core/architecture.h
 	src/core/array.h
 	src/core/dev_util.h
+	src/core/uint64_hash_map.h
 	src/core/hash_map.h
 	src/core/math.h
 	src/core/packed_pool.h

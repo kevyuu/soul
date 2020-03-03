@@ -1289,15 +1289,20 @@ namespace Soul { namespace GPU {
 		return &_db.shaders[shaderID.id];
 	}
 
-	ProgramID System::programCreate(const GraphicBaseNode &node) {
+	ProgramID System::programRequest(const GraphicBaseNode &node) {
 		SOUL_ASSERT_MAIN_THREAD();
+		SOUL_PROFILE_ZONE_WITH_NAME("GPU::System::programCreate");
+
 		Memory::ScopeAllocator<> scopeAllocator("GPU::System::programCreate");
 		const GraphicPipelineConfig &pipelineConfig = node.pipelineConfig;
 
 		SOUL_ASSERT(0, pipelineConfig.vertexShaderID != SHADER_ID_NULL, "");
 		SOUL_ASSERT(0, pipelineConfig.fragmentShaderID != SHADER_ID_NULL, "");
 
-		_FrameContext &frameContext = _frameContext();
+		_ProgramKey programKey = {pipelineConfig.vertexShaderID, pipelineConfig.fragmentShaderID};
+		if (_db.programMaps.isExist(programKey)) {
+			return _db.programMaps[programKey];
+		}
 
 		ProgramID programID = ProgramID(_db.programs.add({}));
 		_Program &program = _db.programs[programID.id];
@@ -1377,12 +1382,8 @@ namespace Soul { namespace GPU {
 		SOUL_VK_CHECK(vkCreatePipelineLayout(_db.device, &pipelineLayoutInfo, nullptr, &program.pipelineLayout),
 					  "");
 
+		_db.programMaps.add(programKey, programID);
 		return programID;
-	}
-
-	void System::programDestroy(ProgramID programID) {
-		SOUL_ASSERT_MAIN_THREAD();
-		_frameContext().garbages.programs.add(programID);
 	}
 
 	_Program *System::_programPtr(ProgramID programID) {
@@ -1391,8 +1392,9 @@ namespace Soul { namespace GPU {
 
 	VkPipeline System::_pipelineCreate(const GraphicBaseNode &node, ProgramID programID, VkRenderPass renderPass) {
 		SOUL_ASSERT_MAIN_THREAD();
-		SOUL_PROFILE_ZONE();
+		SOUL_PROFILE_ZONE_WITH_NAME("GPU::System::_pipelineCreate");
 		Memory::ScopeAllocator<> scopeAllocator("GPU::System::_pipelineCreate");
+
 		const GraphicPipelineConfig &pipelineConfig = node.pipelineConfig;
 
 		Array<VkPipelineShaderStageCreateInfo> shaderStageInfos(&scopeAllocator);
@@ -1549,8 +1551,10 @@ namespace Soul { namespace GPU {
 		pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
 
 		VkPipeline pipeline;
-		SOUL_VK_CHECK(vkCreateGraphicsPipelines(_db.device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &pipeline),
-					  "");
+		{
+			SOUL_PROFILE_ZONE_WITH_NAME("vkCreateGraphicsPipelines");
+			SOUL_VK_CHECK(vkCreateGraphicsPipelines(_db.device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &pipeline),"");
+		}
 
 		shaderStageInfos.cleanup();
 
@@ -1924,16 +1928,6 @@ namespace Soul { namespace GPU {
 			_db.shaders.remove(shaderID.id);
 		}
 		frameContext.garbages.shaders.resize(0);
-
-		for (ProgramID programID : frameContext.garbages.programs) {
-			_Program program = _db.programs[programID.id];
-			vkDestroyPipelineLayout(_db.device, program.pipelineLayout, nullptr);
-			for (int i = 0; i < MAX_SET_PER_SHADER_PROGRAM; i++) {
-				vkDestroyDescriptorSetLayout(_db.device, program.descriptorLayouts[i], nullptr);
-			}
-			_db.programs.remove(programID.id);
-		}
-		frameContext.garbages.programs.resize(0);
 
 		for (VkRenderPass renderPass: frameContext.garbages.renderPasses) {
 			vkDestroyRenderPass(_db.device, renderPass, nullptr);

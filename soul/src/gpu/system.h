@@ -80,8 +80,7 @@ namespace Soul { namespace GPU {
 		void shaderDestroy(ShaderID shaderID);
 		_Shader* _shaderPtr(ShaderID shaderID);
 
-		ProgramID programCreate(const GraphicBaseNode& node);
-		void programDestroy(ProgramID programID);
+		ProgramID programRequest(const GraphicBaseNode& node);
 		_Program* _programPtr(ProgramID programID);
 
 		VkPipeline _pipelineCreate(const GraphicBaseNode& node, ProgramID programID, VkRenderPass renderPass);

@@ -99,7 +99,7 @@ namespace Soul {namespace GPU {
 				case PassType::GRAPHIC: {
 
 					auto graphicNode = (const GraphicBaseNode *) &passNode;
-					passInfo.programID = _gpuSystem->programCreate(*graphicNode);
+					passInfo.programID = _gpuSystem->programRequest(*graphicNode);
 					const _Program& program = *_gpuSystem->_programPtr(passInfo.programID);
 
 					for (const BufferNodeID nodeID : graphicNode->vertexBuffers) {
@@ -633,7 +633,7 @@ namespace Soul {namespace GPU {
 
 				vkCmdBeginRenderPass(cmdBuffer, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
 
-				ProgramID programID = _gpuSystem->programCreate(*graphicNode);
+				ProgramID programID = _gpuSystem->programRequest(*graphicNode);
 				VkPipeline pipeline = _gpuSystem->_pipelineCreate(*graphicNode, programID, renderPass);
 				vkCmdBindPipeline(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
 
@@ -1094,7 +1094,6 @@ namespace Soul {namespace GPU {
 		textureInfos.cleanup();
 
 		for (_RGExecPassInfo& passInfo : passInfos) {
-			_gpuSystem->programDestroy(passInfo.programID);
 			passInfo.bufferInvalidates.cleanup();
 			passInfo.bufferFlushes.cleanup();
 			passInfo.textureInvalidates.cleanup();
