@@ -33,6 +33,7 @@ namespace Soul { namespace GPU {
 
 		template <SOUL_TEMPLATE_ARG_LAMBDA(DataGenFunc, void(int, byte*))>
 		BufferID bufferCreate(const BufferDesc& desc, DataGenFunc dataGenFunc) {
+			SOUL_PROFILE_ZONE();
 			BufferDesc desc2 = desc;
 			desc2.usageFlags |= BUFFER_USAGE_TRANSFER_DST_BIT;
 			desc2.queueFlags |= QUEUE_TRANSFER_BIT;

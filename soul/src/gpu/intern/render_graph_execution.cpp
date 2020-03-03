@@ -32,7 +32,7 @@ namespace Soul {namespace GPU {
 
 	void _RenderGraphExecution::init() {
 		SOUL_ASSERT_MAIN_THREAD();
-
+		SOUL_PROFILE_ZONE_WITH_NAME("Render Graph Execution Init");
 		passInfos.resize(_renderGraph->_passNodes.size());
 
 		bufferInfos.resize(_renderGraph->_internalBuffers.size() + _renderGraph->_externalBuffers.size());
@@ -642,11 +642,13 @@ namespace Soul {namespace GPU {
 				RenderGraphRegistry registry(_gpuSystem, this, programID);
 				passNode->executePass(&registry, &commandBucket);
 
-				for (int i = 0; i < commandBucket.commands.size(); i++) {
-					Command::Command* command = commandBucket.commands[i];
-					command->_submit(&_gpuSystem->_db, programID, cmdBuffer);
+				{
+					SOUL_PROFILE_ZONE_WITH_NAME("Commands translation");
+					for (int i = 0; i < commandBucket.commands.size(); i++) {
+						Command::Command* command = commandBucket.commands[i];
+						command->_submit(&_gpuSystem->_db, programID, cmdBuffer);
+					}
 				}
-
 				vkCmdEndRenderPass(cmdBuffer);
 
 				_gpuSystem->_pipelineDestroy(pipeline);

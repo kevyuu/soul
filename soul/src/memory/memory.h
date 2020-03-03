@@ -28,11 +28,22 @@ namespace Soul { namespace Memory {
 	void* Allocate(uint32 size, uint32 alignment);
 	void Deallocate(void* addr, uint32 size);
 
+	struct AllocatorInitializer {
+		AllocatorInitializer() = delete;
+		explicit AllocatorInitializer(Allocator* allocator) {
+			PushAllocator(allocator);
+		}
+
+		void end() {
+			PopAllocator();
+		}
+	};
+
 	struct AllocatorZone{
 
 		AllocatorZone() = delete;
 
-		AllocatorZone(Allocator* allocator) {
+		explicit AllocatorZone(Allocator* allocator) {
 			PushAllocator(allocator);
 		}
 

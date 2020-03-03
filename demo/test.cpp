@@ -870,7 +870,7 @@ int main()
 
 	Scene scene;
 	LoadScene(&gpuSystem, &scene,
-	          "assets/mirrors_edge_apartment_-_interior_scene/scene.gltf",
+	          "assets/sponza/scene.gltf",
 	          true);
 	Vec2ui32 sceneResolution = { 1920, 1080 };
 	ScenePanel scenePanel(sceneResolution);
@@ -961,7 +961,10 @@ int main()
 		SOUL_PROFILE_FRAME();
 		Job::System::Get().beginFrame();
 
-		glfwPollEvents();
+		{
+			SOUL_PROFILE_ZONE_WITH_NAME("Glfw Poll events");
+			glfwPollEvents();
+		}
 
 		Vec2ui32 extent = gpuSystem.getSwapchainExtent();
 
@@ -993,9 +996,12 @@ int main()
 		gpuSystem.bufferDestroy(cameraBuffer);
 
 		Array<GPU::TextureNodeID> sceneTextureNodeIDs;
-		sceneTextureNodeIDs.reserve(scene.textures.size());
-		for (const SceneTexture& sceneTexture : scene.textures) {
-			sceneTextureNodeIDs.add(renderGraph.importTexture("Scene Texture", sceneTexture.rid));
+		{
+			SOUL_PROFILE_ZONE_WITH_NAME("Create scene texture node ids");
+			sceneTextureNodeIDs.reserve(scene.textures.size());
+			for (const SceneTexture& sceneTexture : scene.textures) {
+				sceneTextureNodeIDs.add(renderGraph.importTexture("Scene Texture", sceneTexture.rid));
+			}
 		}
 
 		GPU::BufferNodeID materialNodeID = renderGraph.importBuffer("Material buffer", scene.materialBuffer);
@@ -1003,15 +1009,22 @@ int main()
 		GPU::BufferNodeID cameraNodeID = renderGraph.importBuffer("Camera buffer", cameraBuffer);
 
 		Array<GPU::BufferNodeID> vertexBufferNodeIDs;
-		vertexBufferNodeIDs.reserve(scene.meshes.size());
-		for (const Mesh& mesh : scene.meshes) {
-			vertexBufferNodeIDs.add(renderGraph.importBuffer("Vertex buffer", mesh.vertexBufferID));
+		{
+			SOUL_PROFILE_ZONE_WITH_NAME("Create vertex buffer node ids");
+			vertexBufferNodeIDs.reserve(scene.meshes.size());
+			for (const Mesh& mesh : scene.meshes) {
+				vertexBufferNodeIDs.add(renderGraph.importBuffer("Vertex buffer", mesh.vertexBufferID));
+			}
 		}
 
+
 		Array<GPU::BufferNodeID> indexBufferNodeIDs;
-		indexBufferNodeIDs.reserve(scene.meshes.size());
-		for (const Mesh& mesh : scene.meshes) {
-			indexBufferNodeIDs.add(renderGraph.importBuffer("Index buffer", mesh.indexBufferID));
+		{
+			SOUL_PROFILE_ZONE_WITH_NAME("Create index buffer node ids");
+			indexBufferNodeIDs.reserve(scene.meshes.size());
+			for (const Mesh& mesh : scene.meshes) {
+				indexBufferNodeIDs.add(renderGraph.importBuffer("Index buffer", mesh.indexBufferID));
+			}
 		}
 
 		GPU::RGTextureDesc sceneColorTexDesc;
@@ -1061,7 +1074,7 @@ int main()
 			renderTarget, depthTarget,
 			sceneResolution]
 		(GPU::GraphicNodeBuilder* builder, RenderAlbedoData* data) {
-
+			SOUL_PROFILE_ZONE_WITH_NAME("Setup render albedo pass");
 			for (GPU::TextureNodeID nodeID : sceneTextureNodeIDs) {
 				data->sceneTextures.add(builder->addInShaderTexture(nodeID, 2, 0));
 			}
@@ -1111,7 +1124,7 @@ int main()
 		},
 		[&scene, samplerID]
 		(GPU::RenderGraphRegistry* registry, const RenderAlbedoData& data, GPU::CommandBucket* commandBucket) {
-
+			SOUL_PROFILE_ZONE_WITH_NAME("Execute render albedo pass");
 			commandBucket->reserve(scene.meshEntities.size());
 
 			GPU::Descriptor cameraDescriptor;
@@ -1140,7 +1153,7 @@ int main()
 					samplerID
 			};
 
-			Job::TaskID commandCreateTask = Job::System::Get().parallelForTaskCreate(0, scene.meshEntities.size(), 8,
+			Job::TaskID commandCreateTask = Job::System::Get().parallelForTaskCreate(0, scene.meshEntities.size(), 1024,
 				[&scene, &jobData](int index) {
 					SOUL_PROFILE_ZONE_WITH_NAME("Create Render Albedo Command");
 					GPU::RenderGraphRegistry* registry = jobData.registry;
@@ -1199,10 +1212,6 @@ int main()
 			Job::System::Get().taskWait(commandCreateTask);
 		});
 
-		vertexBufferNodeIDs.cleanup();
-		indexBufferNodeIDs.cleanup();
-		sceneTextureNodeIDs.cleanup();
-
 		// Start the Dear ImGui frame
 		ImGui_ImplGlfw_NewFrame();
 		ImGui::NewFrame();
@@ -1227,7 +1236,10 @@ int main()
 		scenePanel.update(SoulImTexture(renderAlbedoData.renderTarget).getImTextureID());
 		ImGui::End();
 
-		ImGui::Render();
+		{
+			SOUL_PROFILE_ZONE_WITH_NAME("ImGui Render");
+			ImGui::Render();
+		}
 		imguiRenderModule.addPass(&gpuSystem, &renderGraph, *ImGui::GetDrawData(), gpuSystem.getSwapchainTexture());
 
 		gpuSystem.renderGraphExecute(renderGraph);

@@ -82,6 +82,7 @@ namespace Soul { namespace Job {
 	}
 
 	void System::beginFrame() {
+		SOUL_PROFILE_ZONE();
 		SOUL_ASSERT_MAIN_THREAD();
 
 		taskWait(0);

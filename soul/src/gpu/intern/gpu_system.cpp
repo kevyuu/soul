@@ -709,8 +709,9 @@ namespace Soul { namespace GPU {
 		SOUL_ASSERT_MAIN_THREAD();
 
 		SOUL_LOG_INFO("Frame Context Init");
-		_db.frameContexts.resize(config.maxFrameInFlight);
-		for (int i = 0; i < _db.frameContexts.size(); i++) {
+		_db.frameContexts.reserve(config.maxFrameInFlight);
+		for (int i = 0; i < _db.frameContexts.capacity(); i++) {
+			_db.frameContexts.add(_FrameContext(&_db.cpuAllocator));
 			_FrameContext &frameContext = _db.frameContexts[i];
 			frameContext.threadContexts.resize(config.threadCount);
 
@@ -769,6 +770,7 @@ namespace Soul { namespace GPU {
 	}
 
 	TextureID System::textureCreate(const TextureDesc &desc) {
+		SOUL_PROFILE_ZONE();
 		SOUL_ASSERT_MAIN_THREAD();
 
 		TextureID textureID = TextureID(_db.textures.add(_Texture()));
@@ -1389,6 +1391,7 @@ namespace Soul { namespace GPU {
 
 	VkPipeline System::_pipelineCreate(const GraphicBaseNode &node, ProgramID programID, VkRenderPass renderPass) {
 		SOUL_ASSERT_MAIN_THREAD();
+		SOUL_PROFILE_ZONE();
 		Memory::ScopeAllocator<> scopeAllocator("GPU::System::_pipelineCreate");
 		const GraphicPipelineConfig &pipelineConfig = node.pipelineConfig;
 
@@ -1682,6 +1685,7 @@ namespace Soul { namespace GPU {
 	}
 
 	VkRenderPass System::_renderPassCreate(const VkRenderPassCreateInfo &info) {
+		SOUL_PROFILE_ZONE();
 		VkRenderPass renderPass;
 		SOUL_VK_CHECK(vkCreateRenderPass(_db.device, &info, nullptr, &renderPass), "");
 		return renderPass;
@@ -1692,6 +1696,7 @@ namespace Soul { namespace GPU {
 	}
 
 	VkFramebuffer System::_framebufferCreate(const VkFramebufferCreateInfo &info) {
+		SOUL_PROFILE_ZONE();
 		VkFramebuffer framebuffer;
 		SOUL_VK_CHECK(vkCreateFramebuffer(_db.device, &info, nullptr, &framebuffer), "");
 		return framebuffer;

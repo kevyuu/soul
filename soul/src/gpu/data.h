@@ -403,6 +403,8 @@ namespace Soul {
 
 		struct _FrameContext {
 
+			Memory::AllocatorInitializer allocatorInitializer;
+
 			Array<_ThreadContext> threadContexts;
 
 			EnumArray<QueueType, VkCommandPool> commandPools;
@@ -433,6 +435,10 @@ namespace Soul {
 			VkCommandBuffer stagingCommandBuffer = VK_NULL_HANDLE;
 			bool stagingAvailable = false;
 			bool stagingSynced = false;
+
+			_FrameContext(Memory::Allocator* allocator) : allocatorInitializer(allocator) {
+				allocatorInitializer.end();
+			}
 		};
 
 		struct _Swapchain {
@@ -468,6 +474,7 @@ namespace Soul {
 			        Memory::Allocator,
 			        CPUAllocatorProxy>;
 			CPUAllocator cpuAllocator;
+			Memory::AllocatorInitializer allocatorInitializer;
 
 			VkInstance instance = VK_NULL_HANDLE;
 			VkDebugUtilsMessengerEXT debugMessenger;
@@ -516,17 +523,10 @@ namespace Soul {
 			std::mutex shaderArgSetRequestMutex;
 
 			explicit _Database(Memory::Allocator* backingAllocator):
-					cpuAllocator("GPU System", backingAllocator, CPUAllocatorProxy(Memory::CounterProxy())),
-					frameContexts(&cpuAllocator),
-					buffers(&cpuAllocator),
-					textures(&cpuAllocator),
-					shaders(&cpuAllocator),
-					programs(&cpuAllocator),
-					semaphores(&cpuAllocator),
-					samplerMap(&cpuAllocator),
-					descriptorSets(&cpuAllocator),
-					shaderArgSets(&cpuAllocator)
-			{}
+				cpuAllocator("GPU System", backingAllocator, CPUAllocatorProxy(Memory::CounterProxy())),
+				allocatorInitializer(&cpuAllocator) {
+				allocatorInitializer.end();
+			}
 		};
 
 	}
