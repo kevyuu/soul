@@ -9,7 +9,6 @@
 #include "gpu/intern/enum_mapping.h"
 
 #include "memory/allocators/scope_allocator.h"
-#include "memory/allocators/linear_allocator.h"
 
 #include <volk/volk.h>
 
@@ -668,17 +667,18 @@ namespace Soul {namespace GPU {
 		SOUL_ASSERT_MAIN_THREAD();
 		SOUL_PROFILE_ZONE();
 		Memory::ScopeAllocator<> scopeAllocator("_RenderGraphExecution::run");
+		SOUL_MEMORY_ALLOCATOR_ZONE(&scopeAllocator);
 
 		_submitExternalSyncPrimitive();
 
-		Array<VkEvent> garbageEvents(&scopeAllocator);
-		Array<SemaphoreID> garbageSemaphores(&scopeAllocator);
+		Array<VkEvent> garbageEvents;
+		Array<SemaphoreID> garbageSemaphores;
 
-		Array<VkBufferMemoryBarrier> eventBufferBarriers(&scopeAllocator);
-		Array<VkImageMemoryBarrier> eventImageBarriers(&scopeAllocator);
-		Array<VkImageMemoryBarrier> initLayoutBarriers(&scopeAllocator);
-		Array<VkImageMemoryBarrier> semaphoreLayoutBarriers(&scopeAllocator);
-		Array<VkEvent> events(&scopeAllocator);
+		Array<VkBufferMemoryBarrier> eventBufferBarriers;
+		Array<VkImageMemoryBarrier> eventImageBarriers;
+		Array<VkImageMemoryBarrier> initLayoutBarriers;
+		Array<VkImageMemoryBarrier> semaphoreLayoutBarriers;
+		Array<VkEvent> events;
 
 		static auto needInvalidate = [](VkAccessFlags visibleAccessMatrix[],
 			VkPipelineStageFlags stageFlags, VkAccessFlags accessFlags) -> bool {
