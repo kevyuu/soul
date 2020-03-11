@@ -22,8 +22,9 @@ namespace Soul {
 		void cleanup();
 
 	private:
+	    using BitUnit = uint8;
 		Memory::Allocator* _allocator;
-		uint8* _bitTable;
+		BitUnit* _bitTable;
 		uint32 _size;
 
 		static const uint32 _BIT_TABLE_SHIFT = 3;

@@ -108,20 +108,18 @@ namespace Soul { namespace GPU {
 		instanceCreateInfo.enabledExtensionCount = requiredExtensionCount;
 		instanceCreateInfo.ppEnabledExtensionNames = requiredExtensions;
 
+#ifdef SOUL_OPTION_VULKAN_VALIDATION_ENABLE
 		static const char *requiredLayers[] = {
-
-#ifdef SOUL_OPTION_VULKAN_ENABLE_VALIDATION
 				"VK_LAYER_KHRONOS_validation",
-#endif // SOUL_OPTION_VULKAN_ENABLE_VALIDATION
 
 #ifdef SOUL_OPTION_VULKAN_ENABLE_RENDERDOC
 				"VK_LAYER_RENDERDOC_Capture",
 #endif // SOUL_OPTION_VULKAN_ENABLE_RENDERDOC
-
 		};
+
 		static const uint32_t requiredLayerCount = sizeof(requiredLayers) / sizeof(requiredLayers[0]);
 
-		static const auto checkLayerSupport = [](int count, const char **layers) -> bool {
+		static const auto checkLayerSupport = [](int count, const char** layers) -> bool {
 			SOUL_LOG_INFO("Check vulkan layer support.");
 			uint32 layerCount;
 
@@ -151,6 +149,8 @@ namespace Soul { namespace GPU {
 		SOUL_ASSERT(0, checkLayerSupport(requiredLayerCount, requiredLayers), "");
 		instanceCreateInfo.enabledLayerCount = requiredLayerCount;
 		instanceCreateInfo.ppEnabledLayerNames = requiredLayers;
+#endif // SOUL_OPTION_VULKAN_VALIDATION_ENABLE
+		
 		SOUL_VK_CHECK(vkCreateInstance(&instanceCreateInfo, nullptr, &_db.instance),
 					  "Vulkan instance creation fail!");
 		SOUL_LOG_INFO("Vulkan instance creation succesful");
@@ -1536,10 +1536,10 @@ namespace Soul { namespace GPU {
 		depthStencilInfo.maxDepthBounds = 1.0f;
 		pipelineInfo.pDepthStencilState = &depthStencilInfo;
 
+		VkPipelineDynamicStateCreateInfo dynamicStateInfo = {
+					VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO };
+		VkDynamicState dynamicStates[] = { VK_DYNAMIC_STATE_SCISSOR };
 		if (pipelineConfig.scissor.dynamic) {
-			VkPipelineDynamicStateCreateInfo dynamicStateInfo = {
-					VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO};
-			VkDynamicState dynamicStates[] = {VK_DYNAMIC_STATE_SCISSOR};
 			dynamicStateInfo.dynamicStateCount = 1;
 			dynamicStateInfo.pDynamicStates = dynamicStates;
 			pipelineInfo.pDynamicState = &dynamicStateInfo;

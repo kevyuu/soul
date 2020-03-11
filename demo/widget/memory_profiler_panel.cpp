@@ -9,6 +9,8 @@
 #include "memory/memory.h"
 #include "memory/profiler.h"
 
+#include <algorithm>
+
 using Frame = Soul::Memory::Profiler::Frame;
 using Snapshot = Soul::Memory::Profiler::Snapshot;
 using AllocatorData = Soul::Memory::Profiler::AllocatorData;

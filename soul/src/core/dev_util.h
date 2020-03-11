@@ -1,14 +1,23 @@
 #pragma once
 
+#define SOUL_ASSERT_PARANOIA_LEVEL 0
 #if defined(SOUL_ENV_DEBUG)
-    #define SOUL_OPTION_VULKAN_ENABLE_VALIDATION
+    #define SOUL_OPTION_VULKAN_VALIDATION_ENABLE
 	#if defined(SOUL_OS_WINDOWS)
 		#define SOUL_OPTION_VULKAN_ENABLE_RENDERDOC
 	#endif // SOUL_OS_WINDOWS
     #define SOUL_ASSERT_PARANOIA_LEVEL 1
     #define SOUL_PROFILE_CPU_BACKEND_TRACY
 	#define SOUL_MEMPROFILE_CPU_BACKEND_SOUL_PROFILER
+	#define SOUL_OPTION_LOGGING_ENABLE
+	#define SOUL_OPTION_ASSERTION_ENABLE
 #endif // SOUL_ENV_DEBUG
+
+#if defined(SOUL_ENV_RELEASE)
+	#define SOUL_OPTION_LOGGING_ENABLE
+	#define SOUL_OPTION_ASSERTION_ENABLE
+	#define SOUL_PROFILE_CPU_BACKEND_TRACY
+#endif // SOUL_ENV_RELEASE
 
 #if defined(_MSC_VER)
     #define SOUL_DEBUG_BREAK() __debugbreak()
@@ -23,11 +32,11 @@ void soul_intern_log(int verbosity, int line, const char* file, const char* form
 // Log
 #define SOUL_LOG_VERBOSE_LEVEL SOUL_LOG_VERBOSE_INFO
 
-#if defined(SOUL_ENV_DEBUG)
+#if defined(SOUL_OPTION_LOGGING_ENABLE)
     #define SOUL_LOG(verbosity, format, ...) do {soul_intern_log(verbosity, __LINE__, __FILE__, format, ##__VA_ARGS__);} while(0)
 #else
     #define SOUL_LOG(verbosity, format, ...) ((void) 0)
-#endif // SOUL_ENV_DEBUG
+#endif // SOUL_OPTION_ASSERTION_ENABLE
 
 // Logging
 #define SOUL_LOG_VERBOSE_COUNT 4
@@ -44,7 +53,7 @@ void soul_intern_log(int verbosity, int line, const char* file, const char* form
 void soul_intern_assert(int paranoia, int line, const char* file, const char* format, ...);
 
 // Assert
-#if defined(SOUL_ENV_DEBUG)
+#if defined(SOUL_OPTION_ASSERTION_ENABLE)
     #define SOUL_ASSERT(paranoia, test, msg, ...) do {if (!(test)) {soul_intern_assert(paranoia, __LINE__, __FILE__, \
             "Assertion failed: %s\n\n" msg, #test,  ##__VA_ARGS__); SOUL_DEBUG_BREAK();}} while (0)
     #define SOUL_PANIC(paranoia, msg, ...) do{soul_intern_assert(paranoia, __LINE__, __FILE__, \
@@ -55,7 +64,7 @@ void soul_intern_assert(int paranoia, int line, const char* file, const char* fo
     #define SOUL_ASSERT(paranoia, test, msg, ...) ((void)0)
     #define SOUL_PANIC(paranoia, msg) ((void)0)
     #define SOUL_NOT_IMPLEMENTED() ((void)0)
-#endif // SOUL_ENV_DEBUG
+#endif // SOUL_OPTION_ASSERTION_ENABLE
 
 // Profiling
 

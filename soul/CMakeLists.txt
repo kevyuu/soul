@@ -40,6 +40,12 @@ set (SOUL_HEADERS
 	src/memory/allocators/scope_allocator.h
 )
 
+set (SOUL_SOURCES_OSX
+	src/memory/intern/osx/page_allocator.cpp)
+
+set (SOUL_SOURCES_WINDOWS
+	src/memory/intern/windows/page_allocator.cpp)
+
 set (SOUL_SOURCES
 
 	src/core/dev_util.cpp
@@ -61,10 +67,12 @@ set (SOUL_SOURCES
 	src/memory/intern/linear_allocator.cpp
 	src/memory/intern/mt_linear_allocator.cpp
 	src/memory/intern/scope_allocator.cpp
-	src/memory/intern/osx/page_allocator.cpp
 
 	src/job/intern/job_system.cpp
-	src/job/intern/task_deque.cpp src/memory/intern/profiler.cpp)
+	src/job/intern/task_deque.cpp src/memory/intern/profiler.cpp
+
+	"$<$<STREQUAL:${CMAKE_SYSTEM_NAME},Darwin>:${SOUL_SOURCES_OSX}>"
+	"$<$<STREQUAL:${CMAKE_SYSTEM_NAME},Windows>:${SOUL_SOURCES_WINDOWS}>")
 
 add_library(soul STATIC ${SOUL_SOURCES})
 target_link_libraries(soul
@@ -75,6 +83,7 @@ target_include_directories(soul
 target_compile_definitions(soul
 	PUBLIC
 		"$<$<CONFIG:Debug>:SOUL_ENV_DEBUG>"
+		"$<$<CONFIG:Release>:SOUL_ENV_RELEASE>"
 	PRIVATE
 		"$<$<STREQUAL:${CMAKE_SYSTEM_NAME},Windows>:SOUL_OS_WINDOWS>"
 		"$<$<STREQUAL:${CMAKE_SYSTEM_NAME},Darwin>:SOUL_OS_APPLE>")

@@ -2,12 +2,13 @@
 #include "core/array.h"
 
 namespace Soul { namespace Memory {
-	static thread_local Array<Allocator*> _gAllocatorStack;
+	static thread_local Array<Allocator*> _gAllocatorStack(nullptr);
 	static thread_local TempAllocator* _gTempAllocator;
 	static Allocator* _gDefaultAllocator = nullptr;
 
 	void Init(Allocator* defaultAllocator) {
 		_gDefaultAllocator = defaultAllocator;
+		_gAllocatorStack.init(_gDefaultAllocator);
 	}
 
 	void SetTempAllocator(TempAllocator* tempAllocator) {
@@ -16,7 +17,6 @@ namespace Soul { namespace Memory {
 
 	void PushAllocator(Allocator* allocator) {
 		SOUL_ASSERT(0, _gDefaultAllocator != nullptr, "");
-		if (_gAllocatorStack.empty()) _gAllocatorStack = Array<Allocator*>(_gDefaultAllocator);
 		_gAllocatorStack.add(allocator);
 	}
 

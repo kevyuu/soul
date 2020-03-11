@@ -6,7 +6,7 @@
 namespace Soul {
 
 	uint32 BitSet::_ByteCount(uint32 size) {
-		return ((size + sizeof(*_bitTable) - 1) >> _BIT_TABLE_SHIFT) * sizeof(*_bitTable);
+		return ((size + sizeof(BitUnit) - 1) >> _BIT_TABLE_SHIFT) * sizeof(BitUnit);
 	}
 
 	uint32 BitSet::_TableIndex(uint32 index) {
@@ -22,7 +22,7 @@ namespace Soul {
 
 	BitSet::BitSet(const BitSet& other) : _allocator(other._allocator) {
 		_size = other._size;
-		_bitTable = (uint8*) _allocator->allocate(_ByteCount(_size), alignof(*_bitTable));
+		_bitTable = (uint8*) _allocator->allocate(_ByteCount(_size), alignof(BitUnit));
 		memcpy(_bitTable, other._bitTable, _ByteCount(_size));
 	}
 
@@ -30,7 +30,7 @@ namespace Soul {
 		if (this == &other) { return *this; }
 		_allocator->deallocate(_bitTable, _ByteCount(_size));
 		_size = other._size;
-		_bitTable = (uint8*) _allocator->allocate(_ByteCount(_size), alignof(*_bitTable));
+		_bitTable = (uint8*) _allocator->allocate(_ByteCount(_size), alignof(BitUnit));
 		memcpy(_bitTable, other._bitTable, _ByteCount(_size));
 	}
 
@@ -74,7 +74,7 @@ namespace Soul {
 
 	void BitSet::resize(uint32 size) {
 		uint8* oldBitTable = _bitTable;
-		_bitTable = (uint8*) _allocator->allocate(_ByteCount(size), alignof(*_bitTable));
+		_bitTable = (uint8*) _allocator->allocate(_ByteCount(size), alignof(BitUnit));
 
 		memcpy(_bitTable, oldBitTable, min(_ByteCount(size), _ByteCount(_size)));
 

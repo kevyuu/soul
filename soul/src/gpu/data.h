@@ -17,6 +17,8 @@
 #define VK_NO_PROTOTYPES
 #include <vk_mem_alloc.h>
 
+#include <mutex>
+
 namespace Soul {
 	namespace GPU {
 

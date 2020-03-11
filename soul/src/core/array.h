@@ -20,6 +20,7 @@ namespace Soul {
 		Array& operator=(Array&& other) noexcept ;
 		~Array();
 
+		void init(Memory::Allocator* allocator);
 		void reserve(uint32 capacity);
 		void resize(uint32 size);
 
@@ -125,6 +126,13 @@ namespace Soul {
 		_allocator->deallocate(_buffer, sizeof(T) * _capacity);
 		new (this) Array<T>(std::move(other));
 		return *this;
+	}
+
+	template<typename T>
+	void Array<T>::init(Memory::Allocator* allocator)
+	{
+		SOUL_ASSERT(0, allocator != nullptr, "");
+		_allocator = allocator;
 	}
 
 	template<typename T>
