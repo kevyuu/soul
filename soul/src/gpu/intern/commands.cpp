@@ -55,7 +55,7 @@ namespace Soul { namespace GPU{ namespace Command {
 			vkCmdBindDescriptorSets(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, program.pipelineLayout, i, 1, &argSet.vkHandle, argSet.offsetCount, argSet.offset);
 		}
 		vkCmdBindVertexBuffers(cmdBuffer, 0, 1, &vertexBuffer.vkHandle, offsets);
-		vkCmdBindIndexBuffer(cmdBuffer, indexBuffer.vkHandle, 0, VK_INDEX_TYPE_UINT16);
+		vkCmdBindIndexBuffer(cmdBuffer, indexBuffer.vkHandle, 0, indexBuffer.unitSize == 2 ? VK_INDEX_TYPE_UINT16 : VK_INDEX_TYPE_UINT32);
 		vkCmdDrawIndexed(cmdBuffer, indexCount, 1, indexOffset, vertexOffset, 0);
 	}
 
