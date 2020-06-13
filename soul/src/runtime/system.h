@@ -1,26 +1,22 @@
 #pragma once
 #include "core/type.h"
 #include "core/util.h"
-#include "job/data.h"
+#include "runtime/data.h"
 
-#define SOUL_ASSERT_MAIN_THREAD() SOUL_ASSERT(0, Job::System::Get().getThreadID() == 0, "This method is not thread safe. Please only call it only from main thread!")
+#define SOUL_ASSERT_MAIN_THREAD() SOUL_ASSERT(0, Runtime::System::Get().getThreadID() == 0, "This method is not thread safe. Please only call it only from main thread!")
 
-namespace Soul { namespace Job {
-		
+namespace Soul { namespace Runtime {
+
 	class System {
 	public:
-		struct Config {
-			uint16 threadCount; // 0 to use hardware thread count
-			uint16 taskPoolCount;
-		};
-		
+
 		/*
-			Initialize the Job System. Only call this from the main thread.
+			Initialize the Runtime System. Only call this from the main thread.
 		*/
 		void init(const Config& config);
 
 		/*
-			Cleanup all job system resource. Only call this from the main thread.
+			Cleanup all runtime system resource. Only call this from the main thread.
 		*/
 		void shutdown();
 
@@ -87,11 +83,19 @@ namespace Soul { namespace Job {
 
 		uint16 getThreadCount() const;
 		uint16 getThreadID() const;
+		_ThreadContext& _threadContext();
 
 		inline static System& Get() {
 			static System instance;
 			return instance;
 		}
+
+		void pushAllocator(Memory::Allocator* allocator);
+		void popAllocator();
+		Memory::Allocator* getContextAllocator();
+		void* allocate(uint32 size, uint32 alignment);
+		void deallocate(void* addr, uint32 size);
+		TempAllocator* getTempAllocator();
 
 	private:
 
@@ -100,7 +104,7 @@ namespace Soul { namespace Job {
 		void _taskFinish(Task* task);
 		bool _taskIsComplete(Task* task) const;
 
-		void _loop(_ThreadContext* threadState);
+		void _loop(_ThreadContext* threadContext);
 		void _execute(TaskID task);
 
 		void _terminate();

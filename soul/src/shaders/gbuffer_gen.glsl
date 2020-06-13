@@ -203,7 +203,7 @@ void main() {
 		
 	}
 
-	vec3 ambient = ambientFactor * pixelMaterial.albedo;
+	vec3 ambient = 0.5f * pixelMaterial.albedo;
 
 	renderTarget1 = vec4(pixelMaterial.albedo, 1.0f);
 	renderTarget2 = vec4(specularOutput, pixelMaterial.metallic);

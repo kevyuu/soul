@@ -4,7 +4,7 @@
 #include "core/dev_util.h"
 #include "core/pool.h"
 
-#include "memory/memory.h"
+#include "runtime/runtime.h"
 
 namespace Soul
 {
@@ -80,7 +80,7 @@ namespace Soul
 
 	template <typename T>
 	PackedPool<T>::PackedPool() :
-		_allocator((Memory::Allocator*)Memory::GetContextAllocator()),
+		_allocator((Memory::Allocator*) Runtime::GetContextAllocator()),
 		_internalIndexes(_allocator),
 		_poolIDs(nullptr), _buffer(nullptr),
 		_size(0), _capacity(0)

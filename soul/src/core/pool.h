@@ -4,10 +4,15 @@
 #include "core/dev_util.h"
 #include "core/bitset.h"
 
+#include "memory/allocator.h"
+
 #include <cstdlib>
-#include "memory/memory.h"
 
 namespace Soul {
+
+    namespace Runtime {
+        Memory::Allocator* GetContextAllocator();
+    }
 
 	using PoolID = uint32;
 
@@ -15,7 +20,7 @@ namespace Soul {
 	class Pool {
 	public:
 
-		Pool() : _capacity(0), _size(0), _freelist(0), _buffer(nullptr), _allocator((Memory::Allocator*) Memory::GetContextAllocator()), _bitSet() {}
+		Pool() : _capacity(0), _size(0), _freelist(0), _buffer(nullptr), _allocator((Memory::Allocator*) Runtime::GetContextAllocator()), _bitSet() {}
 		explicit Pool(Memory::Allocator* allocator) : _capacity(0), _size(0), _freelist(0), _buffer(nullptr), _allocator(allocator), _bitSet(_allocator) {}
 		Pool(const Pool& other);
 		Pool& operator=(const Pool& other);

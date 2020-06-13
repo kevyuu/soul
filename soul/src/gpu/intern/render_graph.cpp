@@ -31,6 +31,8 @@ namespace Soul { namespace GPU {
 		internalTexture.depth = desc.depth;
 		internalTexture.mipLevels = desc.mipLevels;
 		internalTexture.format = desc.format;
+        internalTexture.clear = desc.clear;
+        internalTexture.clearValue = desc.clearValue;
 
 		node.resourceID = _RGResourceID::InternalID(resourceIndex);
 
@@ -163,9 +165,9 @@ namespace Soul { namespace GPU {
 		return outNodeID;
 	}
 
-	TextureNodeID GraphicNodeBuilder::addInputAttachment(TextureNodeID nodeID) {
+	TextureNodeID GraphicNodeBuilder::addInputAttachment(TextureNodeID nodeID, uint8 set, uint8 binding) {
 		_renderGraph->_textureNodeRead(nodeID, _passID);
-		_graphicNode->inputAttachments.add(nodeID);
+		_graphicNode->inputAttachments.add(InputAttachment(nodeID, set, binding));
 		return nodeID;
 	}
 
@@ -188,5 +190,33 @@ namespace Soul { namespace GPU {
 
 	void GraphicNodeBuilder::setPipelineConfig(const GraphicPipelineConfig &config) {
 		_graphicNode->pipelineConfig = config;
+	}
+
+    BufferNodeID ComputeNodeBuilder::addInShaderBuffer(BufferNodeID nodeID, uint8 set, uint8 binding) {
+        _renderGraph->_bufferNodeRead(nodeID, _passID);
+        _computeNode->inShaderBuffers.add(ShaderBuffer(nodeID, set, binding));
+        return nodeID;
+    }
+
+    BufferNodeID ComputeNodeBuilder::addOutShaderBuffer(BufferNodeID nodeID, uint8 set, uint8 binding) {
+        BufferNodeID dstBufferNodeID = _renderGraph->_bufferNodeWrite(nodeID, _passID);
+        _computeNode->outShaderBuffers.add(ShaderBuffer(dstBufferNodeID, set, binding));
+        return dstBufferNodeID;
+    }
+
+    TextureNodeID ComputeNodeBuilder::addInShaderTexture(TextureNodeID nodeID, uint8 set, uint8 binding) {
+        _renderGraph->_textureNodeRead(nodeID, _passID);
+        _computeNode->inShaderTextures.add(ShaderTexture(nodeID, set, binding));
+        return nodeID;
+    }
+
+    TextureNodeID ComputeNodeBuilder::addOutShaderTexture(TextureNodeID nodeID, uint8 set, uint8 binding) {
+        TextureNodeID outNodeID = _renderGraph->_textureNodeWrite(nodeID, _passID);
+        _computeNode->outShaderTextures.add(ShaderTexture(outNodeID, set, binding));
+        return outNodeID;
+    }
+
+    void ComputeNodeBuilder::setPipelineConfig(const ComputePipelineConfig &config) {
+	    _computeNode->pipelineConfig = config;
 	}
 }}

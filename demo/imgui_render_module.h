@@ -148,7 +148,7 @@ public:
 			*vertex = vertIterator.get();
 			vertIterator.next();
 		});
-		GPU::BufferNodeID vertexNodeID = renderGraph->importBuffer("Vertex buffer", _vertexBuffer);
+		GPU::BufferNodeID vertexNodeID = renderGraph->importBuffer("Vertex buffers", _vertexBuffer);
 
 		GPU::BufferDesc indexBufferDesc;
 		indexBufferDesc.typeSize = sizeof(ImDrawIdx);
@@ -266,12 +266,12 @@ public:
 				int global_vtx_offset = 0;
 				int global_idx_offset = 0;
 
-				GPU::Descriptor transformDescriptor;
+				GPU::Descriptor transformDescriptor = {};
 				transformDescriptor.type = GPU::DescriptorType::UNIFORM_BUFFER;
 				transformDescriptor.uniformInfo.bufferID = registry->getBuffer(data.transformBuffer);
 				transformDescriptor.uniformInfo.unitIndex = 0;
 
-				GPU::ShaderArgSetDesc argSetDesc;
+				GPU::ShaderArgSetDesc argSetDesc = {};
 				argSetDesc.bindingCount = 1;
 				argSetDesc.bindingDescriptions = &transformDescriptor;
 				GPU::ShaderArgSetID argSet0 = registry->getShaderArgSet(0, argSetDesc);
@@ -313,13 +313,13 @@ public:
 
 								command->shaderArgSets[0] = argSet0;
 
-								GPU::Descriptor imageDescriptor;
+								GPU::Descriptor imageDescriptor = {};
 								imageDescriptor.type = GPU::DescriptorType::SAMPLED_IMAGE;
 								SoulImTexture soulImTexture(cmd.TextureId);
 								imageDescriptor.sampledImageInfo.textureID = registry->getTexture(soulImTexture.getTextureNodeID());
 								imageDescriptor.sampledImageInfo.samplerID = _fontSampler;
 
-								GPU::ShaderArgSetDesc argSet1Desc;
+								GPU::ShaderArgSetDesc argSet1Desc = {};
 								argSet1Desc.bindingCount = 1;
 								argSet1Desc.bindingDescriptions = &imageDescriptor;
 

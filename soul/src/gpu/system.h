@@ -1,6 +1,6 @@
 #pragma once
 #include "core/util.h"
-#include "memory/memory.h"
+#include "runtime/runtime.h"
 
 #include "gpu/data.h"
 #include "gpu/render_graph.h"
@@ -73,16 +73,19 @@ namespace Soul { namespace GPU {
 
 		TextureID textureCreate(const TextureDesc& desc);
 		TextureID textureCreate(const TextureDesc& desc, const byte* data, uint32 dataSize);
+		TextureID textureCreate(const TextureDesc& desc, ClearValue clearValue);
 		void textureDestroy(TextureID textureID);
 		_Texture* _texturePtr(TextureID textureID);
+		VkImageView _textureGetMipView(TextureID textureID, uint32 level);
 
 		ShaderID shaderCreate(const ShaderDesc& desc, ShaderStage stage);
 		void shaderDestroy(ShaderID shaderID);
 		_Shader* _shaderPtr(ShaderID shaderID);
 
-		ProgramID programRequest(const GraphicBaseNode& node);
+		ProgramID programRequest(const _ProgramKey& key);
 		_Program* _programPtr(ProgramID programID);
 
+		VkPipeline _pipelineCreate(const ComputeBaseNode& node, ProgramID programID);
 		VkPipeline _pipelineCreate(const GraphicBaseNode& node, ProgramID programID, VkRenderPass renderPass);
 		void _pipelineDestroy(VkPipeline pipeline);
 
@@ -109,6 +112,12 @@ namespace Soul { namespace GPU {
 									   VkFence = VK_NULL_HANDLE);
 		VkCommandBuffer _queueRequestCommandBuffer(QueueType queueType);
 
+		VkCommandBuffer _requestSecondaryCommandBuffer();
+
+		void _commandPoolInit(CommandPool* commandPool, QueueType queueType);
+		void _commandPoolReset(CommandPool* commandPool);
+		VkCommandBuffer _commandPoolRequestCommandBuffer(CommandPool* commandPool, VkCommandBufferLevel level);
+		
 		void frameFlush();
 		void _frameBegin();
 		void _frameEnd();
@@ -132,6 +141,7 @@ namespace Soul { namespace GPU {
 		_FrameContext& _frameContext();
 		_ThreadContext& _threadContext();
 
+		VkRenderPass _renderPassRequest(const _RenderPassKey& key);
 		VkRenderPass _renderPassCreate(const VkRenderPassCreateInfo& info);
 		void _renderPassDestroy(VkRenderPass renderPass);
 

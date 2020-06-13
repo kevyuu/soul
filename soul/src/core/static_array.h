@@ -1,15 +1,18 @@
 #pragma once
 
-#include "memory/memory.h"
 #include "core/type.h"
 
 namespace Soul {
+
+    namespace Runtime {
+        Memory::Allocator* GetContextAllocator();
+    }
 
 	template<typename T>
 	class StaticArray {
 	public:
 
-		StaticArray() : _allocator((Memory::Allocator*) Memory::GetContextAllocator()) {};
+		StaticArray() : _allocator((Memory::Allocator*) Runtime::GetContextAllocator()) {};
 		explicit StaticArray(Memory::Allocator* allocator) : _allocator(allocator), _size(0), _buffer(nullptr) {}
 		~StaticArray() { cleanup(); }
 
@@ -18,6 +21,9 @@ namespace Soul {
 
 		StaticArray(StaticArray&& other) noexcept;
 		StaticArray& operator=(StaticArray&& other) noexcept;
+
+		template<typename... ARGS>
+		void init(Memory::Allocator* allocator, uint32 size, ARGS&&... args);
 
 		template<typename... ARGS>
 		void init(uint32 size, ARGS&&... args);
@@ -82,6 +88,16 @@ namespace Soul {
 		other._buffer = nullptr;
 		return *this;
 	}
+
+    template <typename T>
+    template <typename... ARGS>
+    void StaticArray<T>::init(Memory::Allocator* allocator, uint32 size, ARGS&&... args) {
+        SOUL_ASSERT(0, size != 0, "");
+        SOUL_ASSERT(0, _buffer == nullptr, "Array have been initialized before");
+        SOUL_ASSERT(0, _allocator == nullptr, "");
+        _allocator = allocator;
+        init(size, std::forward<ARGS>(args) ...);
+    }
 
 	template <typename T>
 	template <typename... ARGS>

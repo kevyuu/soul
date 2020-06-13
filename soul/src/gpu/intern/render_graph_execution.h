@@ -119,5 +119,10 @@ namespace Soul { namespace GPU {
 		VkFramebuffer _framebufferCreate(uint32 passIndex, VkRenderPass renderPass);
 		void _submitExternalSyncPrimitive();
 		void _executePass(uint32 passIndex, VkCommandBuffer commandBuffer);
+
+		void _initInShaderBuffers(const Array<ShaderBuffer>& shaderBuffers, int index, QueueFlagBits queueFlags);
+	    void _initOutShaderBuffers(const Array<ShaderBuffer>& shaderBuffers, int index, QueueFlagBits queueFlags);
+        void _initInShaderTextures(const Array<ShaderTexture>& shaderTextures, int index, QueueFlagBits queueFlags);
+        void _initOutShaderTextures(const Array<ShaderTexture>& shaderTextures, int index, QueueFlagBits queueFlags);
 	};
 }}

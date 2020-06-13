@@ -1,17 +1,20 @@
 #pragma once
 
+// TODO(kevinyu) : Move this to runtime namespace
+
 #include "memory/allocator.h"
+#include "runtime/runtime.h"
 
 #include "core/array.h"
 
 namespace Soul {namespace Memory {
 
-	template <typename BACKING_ALLOCATOR = Memory::TempAllocator>
+	template <typename BACKING_ALLOCATOR = Runtime::TempAllocator>
 	class ScopeAllocator: public Allocator {
 
 	public:
 		ScopeAllocator() = delete;
-		ScopeAllocator(const char* name, BACKING_ALLOCATOR* backingAllocator = Memory::GetTempAllocator(), Allocator* fallbackAllocator = (Allocator*) Memory::GetContextAllocator());
+		ScopeAllocator(const char* name, BACKING_ALLOCATOR* backingAllocator = Runtime::GetTempAllocator(), Allocator* fallbackAllocator = (Allocator*) Runtime::GetContextAllocator());
 		virtual ~ScopeAllocator();
 		ScopeAllocator(const ScopeAllocator& other) = delete;
 		ScopeAllocator& operator=(const ScopeAllocator& other) = delete;

@@ -27,10 +27,10 @@ set (SOUL_HEADERS
 	src/gpu/intern/render_graph_execution.h
 	src/gpu/render_graph_registry.h
 
-	src/job/data.h
-	src/job/system.h
+	src/runtime/data.h
+	src/runtime/system.h
+	src/runtime/runtime.h
 
-	src/memory/memory.h
 	src/memory/allocator.h
 	src/memory/allocators/page_allocator.h
 	src/memory/allocators/proxy_allocator.h
@@ -60,7 +60,6 @@ set (SOUL_SOURCES
 	src/gpu/intern/render_graph_execution.cpp
 	src/gpu/intern/render_graph_registry.cpp
 
-	src/memory/intern/memory.cpp
 	src/memory/intern/malloc_allocator.cpp
 	src/memory/intern/proxy.cpp
 	src/memory/intern/profiler.cpp
@@ -68,8 +67,8 @@ set (SOUL_SOURCES
 	src/memory/intern/mt_linear_allocator.cpp
 	src/memory/intern/scope_allocator.cpp
 
-	src/job/intern/job_system.cpp
-	src/job/intern/task_deque.cpp src/memory/intern/profiler.cpp
+		src/runtime/intern/runtime_system.cpp
+	src/runtime/intern/task_deque.cpp src/memory/intern/profiler.cpp
 
 	"$<$<STREQUAL:${CMAKE_SYSTEM_NAME},Darwin>:${SOUL_SOURCES_OSX}>"
 	"$<$<STREQUAL:${CMAKE_SYSTEM_NAME},Windows>:${SOUL_SOURCES_WINDOWS}>")

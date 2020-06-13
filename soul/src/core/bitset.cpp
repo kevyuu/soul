@@ -1,7 +1,5 @@
 #include "core/bitset.h"
-#include "core/math.h"
-
-#include "memory/memory.h"
+#include "runtime/runtime.h"
 
 namespace Soul {
 
@@ -17,7 +15,7 @@ namespace Soul {
 		return index % 8;
 	}
 
-	BitSet::BitSet() : _allocator((Memory::Allocator*)Memory::GetContextAllocator()), _bitTable(nullptr), _size(0) {}
+	BitSet::BitSet() : _allocator((Memory::Allocator*) Runtime::GetContextAllocator()), _bitTable(nullptr), _size(0) {}
 	BitSet::BitSet(Memory::Allocator* allocator) : _allocator(allocator), _bitTable(nullptr), _size(0) {}
 
 	BitSet::BitSet(const BitSet& other) : _allocator(other._allocator) {

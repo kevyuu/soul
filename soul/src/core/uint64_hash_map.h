@@ -2,7 +2,7 @@
 
 #include "core/type.h"
 #include "core/dev_util.h"
-#include "memory/memory.h"
+#include "runtime/runtime.h"
 
 namespace Soul {
 
@@ -11,7 +11,7 @@ namespace Soul {
 
 	public:
 
-		UInt64HashMap() : _allocator((Memory::Allocator*)Memory::GetContextAllocator()),
+		UInt64HashMap() : _allocator((Memory::Allocator*) Runtime::GetContextAllocator()),
 						  _capacity(0), _size(0), _maxDIB(0),
 						  _indexes(nullptr), _values(nullptr)
 			{};

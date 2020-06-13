@@ -1,9 +1,9 @@
 #include "core/math.h"
-#include "job/data.h"
-#include "job/system.h"
+#include "runtime/data.h"
+#include "runtime/system.h"
 
 namespace Soul {
-	namespace Job {
+	namespace Runtime {
 
 		void TaskDeque::init() {
 			SOUL_ASSERT_MAIN_THREAD();
@@ -30,7 +30,7 @@ namespace Soul {
 		void TaskDeque::push(TaskID task) {
 			int32 bottom = _bottom.load(std::memory_order_relaxed);
 			SOUL_ASSERT(0, bottom < Constant::MAX_TASK_PER_THREAD, "Number of task exceed capacity."
-				"You can configure capacity in Job::Constant::MAX_TASK_PER_THREAD.");
+				"You can configure capacity in Runtime::Constant::MAX_TASK_PER_THREAD.");
 			_tasks[bottom] = task;
 
 			// NOTE(kevinyu): make sure steal() can see the item that is push to the deque

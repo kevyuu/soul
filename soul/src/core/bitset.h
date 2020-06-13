@@ -1,3 +1,4 @@
+#pragma once
 #include "core/type.h"
 #include "memory/allocator.h"
 

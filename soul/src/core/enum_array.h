@@ -24,6 +24,14 @@ public:
 		}
 	}
 
+	ValType operator[](uint64 index) {
+	    return _buffer[index];
+	}
+
+	ValType operator[](uint64 index) const {
+	    return _buffer[index];
+	}
+
 	ValType& operator[](EnumType index) {
 		return _buffer[uint64(index)];
 	}

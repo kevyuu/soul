@@ -295,6 +295,7 @@ namespace Soul { namespace Memory {
 
 		void reset() final {
 			_proxy.onPreCleanup();
+			allocator->reset();
 			_proxy.onPostCleanup();
 		}
 

@@ -1,6 +1,6 @@
 #include "core/dev_util.h"
 #include "core/architecture.h"
-#include "job/system.h"
+#include "runtime/system.h"
 
 #include "memory/allocators/proxy_allocator.h"
 #include "memory/allocators/linear_allocator.h"
@@ -22,7 +22,7 @@ static unsigned long randXORSHF96() {
 	return z;
 }
 
-namespace Soul { namespace Job {
+namespace Soul { namespace Runtime {
 	thread_local _ThreadContext* Database::gThreadContext = nullptr;
 	
 	void System::_execute(TaskID taskID) {
@@ -35,20 +35,20 @@ namespace Soul { namespace Job {
 		_taskFinish(task);
 	}
 
-	void System::_loop(_ThreadContext* threadState) {
-		Database::gThreadContext = threadState;
+	void System::_loop(_ThreadContext* threadContext) {
+		Database::gThreadContext = threadContext;
 
 		char threadName[512];
 		sprintf(threadName, "Worker Thread = %d", getThreadID());
 		SOUL_PROFILE_THREAD_SET_NAME(threadName);
 
 		char tempAllocatorName[512];
-		Memory::LinearAllocator linearAllocator(tempAllocatorName, 10 * ONE_MEGABYTE, Memory::GetContextAllocator());
-		Memory::TempAllocator tempAllocator(&linearAllocator, Memory::TempProxy());
-		Memory::SetTempAllocator(&tempAllocator);
+		Memory::LinearAllocator linearAllocator(tempAllocatorName, 20 * ONE_MEGABYTE, Runtime::GetContextAllocator());
+		Runtime::TempAllocator tempAllocator(&linearAllocator, Runtime::TempProxy());
+        threadContext->tempAllocator = &tempAllocator;
 
 		while (true) {
-			TaskID taskID = threadState->taskDeque.pop();
+			TaskID taskID = threadContext->taskDeque.pop();
 			while (taskID == 0) {
 				
 				{
@@ -89,9 +89,12 @@ namespace Soul { namespace Job {
 
 		_initSentinel();
 
+		_db.threadContexts[0].tempAllocator->reset();
+
 		for (int i = 1; i < _db.threadCount; i++) {
 			_db.threadContexts[i].taskCount = 0;
 			_db.threadContexts[i].taskDeque.reset();
+			_db.threadContexts[i].tempAllocator->reset();
 		}
 	}
 
@@ -156,7 +159,10 @@ namespace Soul { namespace Job {
 		_db.threadContexts[0].taskDeque.reset();
 	}
 
-	void System::init(const System::Config& config) {
+	void System::init(const Config& config) {
+
+	    _db.defaultAllocator = config.defaultAllocator;
+        _db.tempAllocatorSize = config.workerTempAllocatorSize;
 
 		int threadCount = config.threadCount;
 		if (threadCount == 0) {
@@ -171,7 +177,7 @@ namespace Soul { namespace Job {
 		SOUL_ASSERT(0, threadCount <= Constant::MAX_THREAD_COUNT, "Thread count : %d is more than MAX_THREAD_COUNT : %d", threadCount, Constant::MAX_THREAD_COUNT);
 		_db.threadCount = threadCount;
 
-		_db.threadContexts.init(threadCount);
+		_db.threadContexts.init(config.defaultAllocator, threadCount);
 
 		// NOTE(kevinyu): i == 0 is for main thread
 		Database::gThreadContext = &_db.threadContexts[0];
@@ -180,6 +186,7 @@ namespace Soul { namespace Job {
 			_db.threadContexts[i].taskCount = 0;
 			_db.threadContexts[i].threadIndex = i;
 			_db.threadContexts[i].taskDeque.init();
+			_db.threadContexts[i].allocatorStack.init(config.defaultAllocator);
 		}
 
 		_db.isTerminated.store(false, std::memory_order_relaxed);
@@ -188,8 +195,9 @@ namespace Soul { namespace Job {
 		}
 		_db.activeTaskCount = 0;
 
+		_threadContext().tempAllocator = config.mainThreadTempAllocator;
+		
 		_initSentinel();
-
 	}
 
 	void System::taskRun(TaskID taskID) {
@@ -244,4 +252,36 @@ namespace Soul { namespace Job {
 		return Database::gThreadContext->threadIndex;
 	}
 
-}}
+	_ThreadContext& System::_threadContext() {
+        return _db.threadContexts[getThreadID()];
+	}
+
+    void System::pushAllocator(Memory::Allocator *allocator) {
+        SOUL_ASSERT(0, _db.defaultAllocator != nullptr, "");
+        _threadContext().allocatorStack.add(allocator);
+    }
+
+    void System::popAllocator() {
+	    SOUL_ASSERT(0, !_threadContext().allocatorStack.empty(), "");
+	    _threadContext().allocatorStack.pop();
+	}
+
+    Memory::Allocator* System::getContextAllocator() {
+	    if (_threadContext().allocatorStack.empty()) return _db.defaultAllocator;
+        return _threadContext().allocatorStack.back();
+	}
+
+	void* System::allocate(uint32 size, uint32 alignment) {
+        return getContextAllocator()->allocate(size, alignment);
+	}
+
+	void System::deallocate(void* addr, uint32 size) {
+	    getContextAllocator()->deallocate(addr, size);
+	}
+
+	TempAllocator* System::getTempAllocator() {
+	    SOUL_ASSERT(0, _threadContext().tempAllocator != nullptr, "");
+	    return _threadContext().tempAllocator;
+	}
+
+    }}

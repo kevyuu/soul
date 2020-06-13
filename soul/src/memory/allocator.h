@@ -7,6 +7,10 @@
 
 #include <tuple>
 
+#define ONE_KILOBYTE 1024
+#define ONE_MEGABYTE 1024 * ONE_KILOBYTE
+#define ONE_GIGABYTE 1024 * ONE_MEGABYTE
+
 namespace Soul { namespace Memory {
 
 	struct Allocation {
@@ -35,7 +39,6 @@ namespace Soul { namespace Memory {
 		TYPE* create(ARGS&&... args)
 		{
 			Allocation allocation = allocate(sizeof(TYPE), alignof(TYPE), "untagged");
-			SOUL_ASSERT(0, allocation.size == sizeof(TYPE), "Cannot use page allocator to create abritary size object");
 			return allocation.addr ? new(allocation.addr) TYPE(std::forward<ARGS>(args)...) : nullptr;
 		}
 

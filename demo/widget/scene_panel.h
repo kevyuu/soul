@@ -11,8 +11,8 @@ struct ScenePanel {
 
 	ScenePanel(Soul::Vec2ui32 sceneResoultion): sceneResolution(sceneResoultion) {}
 
-	void update(ImTextureID sceneTextureID) {
-		ImGui::Begin("Scene");
+	void update(const char* name, ImTextureID sceneTextureID) {
+		ImGui::Begin(name);
 		ImVec2 sceneWindowSize = ImGui::GetWindowSize();
 		float sceneAspectRatio = sceneResolution.x / (float) sceneResolution.y;
 		ImVec2 sceneImageSize = { fmin(sceneWindowSize.x, sceneAspectRatio * sceneWindowSize.y), fmin(sceneWindowSize.y, sceneWindowSize.x / sceneAspectRatio) };

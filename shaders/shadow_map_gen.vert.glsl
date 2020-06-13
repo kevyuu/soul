@@ -1,7 +1,5 @@
 #version 450
 #extension GL_ARB_separate_shader_objects : enable
-#extension GL_GOOGLE_include_directive : enable
-#pragma shader_stage(vertex)
 
 layout (location = 0) in vec3 aPos;
 layout (location = 1) in vec3 aNormal;
@@ -19,4 +17,5 @@ layout (set = 3, binding = 0) uniform PerModel {
 
 void main() {
 	gl_Position = perLight.matrix * perModel.matrix * vec4(aPos, 1.0f);
+	gl_Position.z = (gl_Position.z + gl_Position.w) / 2.0;
 }

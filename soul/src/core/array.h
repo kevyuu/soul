@@ -2,10 +2,13 @@
 
 #include "core/dev_util.h"
 #include "core/util.h"
-
-#include "memory/memory.h"
+#include "memory/allocator.h"
 
 namespace Soul {
+
+    namespace Runtime {
+        Memory::Allocator* GetContextAllocator();
+    };
 
 	template <typename T>
 	class Array
@@ -78,7 +81,7 @@ namespace Soul {
 		_buffer(nullptr),
 		_capacity(0),
 		_size(0),
-		_allocator((Memory::Allocator*)Memory::GetContextAllocator()) {}
+		_allocator((Memory::Allocator*) Runtime::GetContextAllocator()) {}
 
 	template<typename T>
 	Array<T>::Array(Memory::Allocator* const allocator) :
@@ -95,7 +98,7 @@ namespace Soul {
 	template <typename T>
 	Array<T>::Array(const Array<T>& other) : _buffer(nullptr), _capacity(0), _size(0), _allocator(other._allocator) {
 		reserve(other._capacity);
-		Copy(other._buffer, other._size, _buffer);
+		Copy(other._buffer, other._buffer + other._size, _buffer);
 		_size = other._size;
 	}
 
@@ -104,7 +107,7 @@ namespace Soul {
 		cleanup();
 		_allocator = other._allocator;
 		reserve(other._capacity);
-		Copy(other._buffer, other._size, _buffer);
+		Copy(other._buffer, other._buffer + other._size, _buffer);
 		_size = other._size;
 		return *this;
 	}

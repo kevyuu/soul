@@ -1,12 +1,10 @@
 #include "memory_profiler_panel.h"
 
-#include "core/type.h"
 #include "core/math.h"
 #include "core/array.h"
 
 #include "imgui/imgui.h"
 
-#include "memory/memory.h"
 #include "memory/profiler.h"
 
 #include <algorithm>

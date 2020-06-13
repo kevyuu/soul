@@ -122,12 +122,19 @@ namespace Soul { namespace GPU {
 			virtual void _submit(_Database* db, ProgramID programID, VkCommandBuffer cmdBuffer) = 0;
 		};
 
+		class Dispatch : public Command {
+		public:
+		    GPU::ShaderArgSetID shaderArgSets[MAX_SET_PER_SHADER_PROGRAM];
+		    Vec3ui32 groupCount;
+		    void _submit(_Database* db, ProgramID programID, VkCommandBuffer cmdBuffer) final;
+		};
+
 		class DrawVertex : public Command {
 		public:
 			GPU::ShaderArgSetID  shaderArgSets[MAX_SET_PER_SHADER_PROGRAM];
 			GPU::BufferID vertexBufferID;
-			uint16 vertexCount;
-			void _submit(_Database* db, ProgramID programID, VkCommandBuffer cmdBuffer) final override;
+			uint32 vertexCount;
+			void _submit(_Database* db, ProgramID programID, VkCommandBuffer cmdBuffer) final;
 		};
 
 		class DrawIndex : public Command {
@@ -178,12 +185,14 @@ namespace Soul { namespace GPU {
 
 	class CommandBucket {
 	public:
+		Runtime::AllocatorInitializer allocatorInitializer;
 		Array<uint64> keys;
 		Array<Command::Command*> commands;
-		Memory::ScopeAllocator<>* allocator;
 
-		CommandBucket() = delete;
-		explicit CommandBucket(Memory::ScopeAllocator<>* allocator): allocator(allocator), keys(allocator), commands(allocator){}
+		CommandBucket(): allocatorInitializer(Runtime::GetContextAllocator())
+		{
+			allocatorInitializer.end();
+		}
 
 		void reserve(int capacity) {
 			keys.resize(capacity);
@@ -192,7 +201,7 @@ namespace Soul { namespace GPU {
 
 		template <typename Command>
 		Command* put(uint32 index, uint64 key) {
-			Command* command = allocator->create<Command>();
+			Command* command = Runtime::GetTempAllocator()->create<Command>();
 			keys[index] = key;
 			commands[index] = command;
 			return command;
@@ -200,7 +209,7 @@ namespace Soul { namespace GPU {
 
 		template <typename Command>
 		Command* add(uint64 key) {
-			Command* command = allocator->create<Command>();
+			Command* command = Runtime::GetTempAllocator()->create<Command>();
 			commands.add(command);
 			return command;
 		}
@@ -244,6 +253,15 @@ namespace Soul { namespace GPU {
 		DepthStencilAttachment(TextureNodeID nodeID, const DepthStencilAttachmentDesc& desc) : nodeID(nodeID), desc(desc) {}
 	};
 
+    struct InputAttachment {
+        TextureNodeID nodeID = TEXTURE_NODE_ID_NULL;
+        uint8 set = 0;
+        uint8 binding = 0;
+
+        InputAttachment() = default;
+        InputAttachment(TextureNodeID nodeID, uint8 set, uint8 binding) : nodeID(nodeID), set(set), binding(binding) {}
+    };
+
 	struct ShaderBuffer {
 		BufferNodeID nodeID = BUFFER_NODE_ID_NULL;
 		uint8 set = 0;
@@ -270,6 +288,7 @@ namespace Soul { namespace GPU {
 		} framebuffer;
 
 		ShaderID vertexShaderID = SHADER_ID_NULL;
+		ShaderID geometryShaderID = SHADER_ID_NULL;
 		ShaderID fragmentShaderID = SHADER_ID_NULL;
 
 		struct InputLayoutConfig {
@@ -299,6 +318,10 @@ namespace Soul { namespace GPU {
 		} raster;
 	};
 
+	struct ComputePipelineConfig {
+	    ShaderID computeShaderID = SHADER_ID_NULL;
+	};
+
 	class PassNode {
 	public:
 		const char* name = nullptr;
@@ -319,7 +342,7 @@ namespace Soul { namespace GPU {
 
 		Array<ShaderTexture> inShaderTextures;
 		Array<ShaderTexture> outShaderTextures;
-		Array<TextureNodeID> inputAttachments;
+		Array<InputAttachment> inputAttachments;
 
 		void cleanup() override {
 			colorAttachments.cleanup();
@@ -334,6 +357,19 @@ namespace Soul { namespace GPU {
 		}
 	};
 
+	class ComputeBaseNode : public PassNode {
+	public:
+	    ComputePipelineConfig pipelineConfig;
+	    Array<ShaderBuffer> inShaderBuffers;
+	    Array<ShaderBuffer> outShaderBuffers;
+	    Array<ShaderTexture> inShaderTextures;
+	    Array<ShaderTexture> outShaderTextures;
+
+	    void cleanup() override {
+	        //
+	    }
+	};
+
 	template<typename Data, typename Execute>
 	class GraphicNode : public GraphicBaseNode {
 	public:
@@ -344,6 +380,18 @@ namespace Soul { namespace GPU {
 		void executePass(RenderGraphRegistry* registry, CommandBucket* commandBucket) const final override {
 			execute(registry, data, commandBucket);
 		}
+	};
+
+	template<typename Data, typename Execute>
+	class ComputeNode : public ComputeBaseNode {
+	public:
+	    Data data;
+	    Execute execute;
+
+        explicit ComputeNode(Execute&& execute) : execute(std::forward<Execute>(execute)){}
+        void executePass(RenderGraphRegistry* registry, CommandBucket* commandBucket) const final override {
+            execute(registry, data, commandBucket);
+        }
 	};
 
 	class GraphicNodeBuilder {
@@ -370,11 +418,37 @@ namespace Soul { namespace GPU {
 
 		TextureNodeID addInShaderTexture(TextureNodeID nodeID, uint8 set, uint8 binding);
 		TextureNodeID addOutShaderTexture(TextureNodeID nodeID, uint8 set, uint8 binding);
-		TextureNodeID addInputAttachment(TextureNodeID nodeID);
+		TextureNodeID addInputAttachment(TextureNodeID nodeID, uint8 set, uint8 binding);
 		TextureNodeID addColorAttachment(TextureNodeID nodeID, const ColorAttachmentDesc& desc);
 		TextureNodeID setDepthStencilAttachment(TextureNodeID nodeID, const DepthStencilAttachmentDesc& desc);
 
 		void setPipelineConfig(const GraphicPipelineConfig& config);
+	};
+
+	class ComputeNodeBuilder {
+	public:
+	    PassNodeID _passID;
+	    ComputeBaseNode* _computeNode;
+	    RenderGraph* _renderGraph;
+
+        ComputeNodeBuilder(PassNodeID passID, ComputeBaseNode* computeNode, RenderGraph* renderGraph):
+        _passID(passID), _computeNode(computeNode), _renderGraph(renderGraph) {}
+
+        ComputeNodeBuilder(const ComputeNodeBuilder& other) = delete;
+        ComputeNodeBuilder(ComputeNodeBuilder&& other) = delete;
+
+        ComputeNodeBuilder& operator=(const ComputeNodeBuilder& other) = delete;
+        ComputeNodeBuilder& operator=(ComputeNodeBuilder&& other) = delete;
+
+        ~ComputeNodeBuilder(){}
+
+        BufferNodeID addInShaderBuffer(BufferNodeID nodeID, uint8 set, uint8 binding);
+        BufferNodeID addOutShaderBuffer(BufferNodeID nodeID, uint8 set, uint8 binding);
+
+        TextureNodeID addInShaderTexture(TextureNodeID nodeID, uint8 set, uint8 binding);
+        TextureNodeID addOutShaderTexture(TextureNodeID nodeID, uint8 set, uint8 binding);
+
+        void setPipelineConfig(const ComputePipelineConfig& config);
 	};
 
 	class RenderGraph {
@@ -403,6 +477,21 @@ namespace Soul { namespace GPU {
 			GraphicNodeBuilder builder(PassNodeID(_passNodes.size() - 1), node, this);
 			setup(&builder, &node->data);
 			return node->data;
+		}
+
+		template<typename Data,
+		        SOUL_TEMPLATE_ARG_LAMBDA(Setup, void(ComputeNodeBuilder* , Data*)),
+		        SOUL_TEMPLATE_ARG_LAMBDA(Execute, void(RenderGraphRegistry*, const Data& , CommandBucket*))>
+        const Data& addComputePass(const char* name, Setup setup, Execute&& execute) {
+            using Node = ComputeNode<Data, Execute>;
+            Node* node = (Node*) malloc(sizeof(Node));
+            new(node) Node(std::forward<Execute>(execute));
+            node->type = PassType::COMPUTE;
+            node->name = name;
+            _passNodes.add(node);
+            ComputeNodeBuilder builder(PassNodeID(_passNodes.size() - 1), node, this);
+            setup(&builder, &node->data);
+            return node->data;
 		}
 
 		TextureNodeID importTexture(const char* name, TextureID textureID);

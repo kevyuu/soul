@@ -12,8 +12,36 @@
 #include "core/pool.h"
 #include "core/static_array.h"
 
+#include "memory/allocator.h"
+#include "memory/allocators/linear_allocator.h"
+#include "memory/allocators/proxy_allocator.h"
+#include "memory/allocators/malloc_allocator.h"
+
 namespace Soul {
-	namespace Job {
+
+	namespace Runtime {
+
+        using TempProxy = Memory::NoOpProxy;
+        using TempAllocator = Memory::ProxyAllocator<Memory::LinearAllocator, TempProxy>;
+
+        using DefaultAllocatorProxy = Memory::MultiProxy<
+                Memory::CounterProxy,
+                Memory::ClearValuesProxy,
+                Memory::BoundGuardProxy,
+                Memory::NoOpProxy,
+                Memory::NoOpProxy>;
+        using DefaultAllocator = Memory::ProxyAllocator<
+                Memory::MallocAllocator,
+                DefaultAllocatorProxy>;
+
+        struct Config {
+            uint16 threadCount; // 0 to use hardware thread count
+            uint16 taskPoolCount;
+            TempAllocator* mainThreadTempAllocator;
+            uint64 workerTempAllocatorSize;
+            DefaultAllocator* defaultAllocator;
+        };
+
 		struct Constant {
 
 			static constexpr uint16 MAX_THREAD_COUNT = 16;
@@ -69,6 +97,12 @@ namespace Soul {
 			uint16 taskCount;
 
 			uint16 threadIndex;
+
+            Array<Memory::Allocator*> allocatorStack;
+			Runtime::TempAllocator* tempAllocator;
+
+			_ThreadContext() : allocatorStack(nullptr) {};
+
 		};
 
 		struct Database {
@@ -86,6 +120,11 @@ namespace Soul {
 			
 			uint16 activeTaskCount;
 			uint16 threadCount;
+
+			Memory::Allocator* defaultAllocator;
+			uint64 tempAllocatorSize;
+
+			Database() : threadContexts(nullptr) {};
 		};
 
 		template<typename Func>

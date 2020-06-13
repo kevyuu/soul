@@ -40,7 +40,7 @@ namespace Soul {
 			}
 
 		};
-
+		
 		struct GroupEntity;
 
 		struct Entity {

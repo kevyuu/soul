@@ -16,3 +16,5 @@ build/*
 out/*
 assets/*
 CMakeSettings.json
+soul/out
+nsight-report

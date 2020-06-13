@@ -86,6 +86,15 @@ namespace Soul {
 		constexpr Vec3f(float x, float y, float z) : x(x), y(y), z(z) {}
 	};
 
+	struct Vec3ui32 {
+	    uint32 x;
+	    uint32 y;
+	    uint32 z;
+
+	    constexpr Vec3ui32() : x(0), y(0), z(0) {}
+        constexpr Vec3ui32(uint32 x, uint32 y, uint32 z) : x(x), y(y), z(z) {}
+	};
+
 	struct Vec4f {
 		float x;
 		float y;
@@ -97,6 +106,26 @@ namespace Soul {
 		Vec4f(Vec3f xyz, float w) : x(xyz.x), y(xyz.y), z(xyz.z), w(w) {}
 		Vec3f xyz() const { return Vec3f(x, y, z); }
 	};
+
+    struct Vec4i32 {
+        float x;
+        float y;
+        float z;
+        float w;
+
+        Vec4i32() : x(0), y(0), z(0), w(0) {}
+        Vec4i32(int32 x, int32 y, int32 z, int32 w) : x(x), y(y), z(z), w(w) {}
+    };
+
+    struct Vec4ui32 {
+        float x;
+        float y;
+        float z;
+        float w;
+
+        Vec4ui32() : x(0), y(0), z(0), w(0) {}
+        Vec4ui32(uint32 x, uint32 y, uint32 z, uint32 w) : x(x), y(y), z(z), w(w) {}
+    };
 
 	struct Quaternion {
 		float x;

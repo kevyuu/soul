@@ -10,7 +10,7 @@
 #include "core/hash_map.h"
 #include "core/architecture.h"
 
-#include "memory/memory.h"
+#include "runtime/runtime.h"
 #include "memory/allocators/proxy_allocator.h"
 
 // TODO: Figure out how to do it without single header library
@@ -34,6 +34,8 @@ namespace Soul {
 		using BufferID = ID<_Buffer, uint32>;
 		static constexpr BufferID BUFFER_ID_NULL = BufferID(0);
 
+		static BufferID s_lastIndexBuffer;
+
 		struct _Sampler {};
 		using SamplerID = ID<_Sampler, VkSampler>;
 		static constexpr SamplerID SAMPLER_ID_NULL = SamplerID(VK_NULL_HANDLE);
@@ -54,11 +56,12 @@ namespace Soul {
 		using SemaphoreID = ID<_Semaphore, uint32>;
 		static constexpr SemaphoreID SEMAPHORE_ID_NULL = SemaphoreID(0);
 
-		static constexpr uint32 MAX_SET_PER_SHADER_PROGRAM = 4;
+		static constexpr uint32 MAX_SET_PER_SHADER_PROGRAM = 8;
 		static constexpr unsigned int SET_COUNT = 8;
-		static constexpr uint32 MAX_BINDING_PER_SET = 4;
+		static constexpr uint32 MAX_BINDING_PER_SET = 8;
 		static constexpr uint32 MAX_INPUT_PER_SHADER = 8;
 		static constexpr uint32 MAX_COLOR_ATTACHMENT_PER_SHADER = 8;
+		static constexpr uint32 MAX_INPUT_ATTACHMENT_PER_SHADER = 8;
 		static constexpr uint32 MAX_DYNAMIC_BUFFER_PER_SET = 4;
 		static constexpr uint32 MAX_SIGNAL_SEMAPHORE = 4;
 
@@ -94,8 +97,8 @@ namespace Soul {
 			BUFFER_USAGE_VERTEX_BIT = 0x2,
 			BUFFER_USAGE_UNIFORM_BIT = 0x4,
 			BUFFER_USAGE_STORAGE_BIT = 0x8,
-			BUFFER_USAGE_TRANSFER_SRC_BIT = 0x16,
-			BUFFER_USAGE_TRANSFER_DST_BIT = 0x32,
+			BUFFER_USAGE_TRANSFER_SRC_BIT = 0x10,
+			BUFFER_USAGE_TRANSFER_DST_BIT = 0x20,
 			BUFFER_USAGE_ENUM_END_BIT
 		};
 		using BufferUsageFlags = uint8;
@@ -105,7 +108,9 @@ namespace Soul {
 			TEXTURE_USAGE_SAMPLED_BIT = 0x1,
 			TEXTURE_USAGE_COLOR_ATTACHMENT_BIT = 0x2,
 			TEXTURE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT = 0x4,
-			TEXTURE_USAGE_TRANSFER_DST_BIT = 0x8,
+			TEXTURE_USAGE_INPUT_ATTACHMENT_BIT = 0x8,
+			TEXTURE_USAGE_TRANSFER_DST_BIT = 0x10,
+			TEXTURE_USAGE_STORAGE_BIT = 0x20,
 			TEXTURE_USAGE_ENUM_END_BIT
 		};
 		using TextureUsageFlags = uint8;
@@ -123,10 +128,12 @@ namespace Soul {
 			RGB8,
 			DEPTH24,
 
+			RGBA8UI,
 			RGBA8,
 			BGRA8,
 			DEPTH24_STENCIL8UI,
 			DEPTH32F,
+			RGBA16F,
 
 			RGB16,
 			RGB16F,
@@ -236,8 +243,11 @@ namespace Soul {
 		};
 
 		enum class DescriptorType : uint8 {
+			NONE,
 			UNIFORM_BUFFER,
 			SAMPLED_IMAGE,
+			INPUT_ATTACHMENT,
+			STORAGE_IMAGE,
 			COUNT
 		};
 		struct DescriptorTypeUtil {
@@ -250,11 +260,11 @@ namespace Soul {
 			}
 
 			static bool IsTexture(DescriptorType type) {
-				return type == DescriptorType::SAMPLED_IMAGE;
+				return type == DescriptorType::SAMPLED_IMAGE || type == DescriptorType::STORAGE_IMAGE;
 			}
 
 			static bool IsWriteableTexture(DescriptorType type) {
-				return false;
+				return type == DescriptorType::STORAGE_IMAGE;
 			}
 		};
 
@@ -275,8 +285,15 @@ namespace Soul {
 
 
 		struct ClearValue {
-			Vec4f color;
-			Vec2f depthStencil;
+            union {
+		        Vec4f float32;
+		        Vec4ui32 uint32;
+		        Vec4i32 int32;
+            } color;
+            struct {
+                float depth;
+                uint32 stencil;
+            } depthStencil;
 		};
 
 		struct UniformDescriptor {
@@ -289,12 +306,54 @@ namespace Soul {
 			SamplerID samplerID;
 		};
 
+		struct StorageImageDescriptor {
+		    TextureID textureID;
+		    uint8 mipLevel;
+		};
+
+		struct InputAttachmentDescriptor {
+		    TextureID textureID;
+		};
+
 		struct Descriptor {
 			DescriptorType type;
 			union {
 				UniformDescriptor uniformInfo;
 				SampledImageDescriptor sampledImageInfo;
+				StorageImageDescriptor storageImageInfo;
+				InputAttachmentDescriptor inputAttachmentInfo;
 			};
+
+			inline static Descriptor Uniform(BufferID bufferID, uint32 unitIndex) {
+			    Descriptor descriptor = {};
+			    descriptor.type = DescriptorType::UNIFORM_BUFFER;
+			    descriptor.uniformInfo.bufferID = bufferID;
+			    descriptor.uniformInfo.unitIndex = unitIndex;
+			    return descriptor;
+			}
+
+            inline static Descriptor SampledImage(TextureID textureID, SamplerID samplerID) {
+			    Descriptor descriptor = {};
+			    descriptor.type = DescriptorType::SAMPLED_IMAGE;
+			    descriptor.sampledImageInfo.textureID = textureID;
+			    descriptor.sampledImageInfo.samplerID = samplerID;
+			    return descriptor;
+			}
+
+			inline static Descriptor StorageImage(TextureID textureID, uint8 mipLevel) {
+			    Descriptor descriptor = {};
+			    descriptor.type = DescriptorType::STORAGE_IMAGE;
+			    descriptor.storageImageInfo.textureID = textureID;
+			    descriptor.storageImageInfo.mipLevel = mipLevel;
+			    return descriptor;
+			}
+
+			inline static Descriptor InputAttachment(TextureID textureID) {
+			    Descriptor descriptor = {};
+			    descriptor.type = DescriptorType::INPUT_ATTACHMENT;
+			    descriptor.inputAttachmentInfo.textureID = textureID;
+			}
+
 		};
 
 		struct ShaderArgSetDesc {
@@ -317,6 +376,7 @@ namespace Soul {
 			uint16 mipLevels;
 			TextureUsageFlags usageFlags;
 			QueueFlags queueFlags;
+			const char* name = nullptr;
 		};
 
 		struct SamplerDesc {
@@ -358,11 +418,14 @@ namespace Soul {
 			TextureFormat format;
 			TextureType type;
 			ResourceOwner owner;
+			VkImageView* mipViews;
+			uint8 mipCount;
 		};
 
 		struct _ShaderDescriptorBinding {
 			DescriptorType type = {};
 			uint8 count = 0;
+			uint8 attachmentIndex = 0;
 		};
 
 		struct _ShaderInput {
@@ -380,13 +443,17 @@ namespace Soul {
 		struct _ProgramDescriptorBinding {
 			DescriptorType type;
 			uint8 count = 0;
+			uint8 attachmentIndex = 0;
 			VkShaderStageFlags shaderStageFlags = 0;
 			VkPipelineStageFlags pipelineStageFlags = 0;
 		};
 
 		struct _ProgramKey {
-			ShaderID vertShaderID;
-			ShaderID fragShaderID;
+			EnumArray<ShaderStage, ShaderID> shaderIDs;
+
+			_ProgramKey() {
+                shaderIDs = {};
+			}
 
 			inline bool operator==(const _ProgramKey& other) {
 				return (memcmp(this, &other, sizeof(_ProgramKey)) == 0);
@@ -401,6 +468,42 @@ namespace Soul {
 			}
 		};
 
+		using AttachmentFlagBits = enum {
+			ATTACHMENT_ACTIVE_BIT = 0x1,
+			ATTACHMENT_FIRST_PASS_BIT = 0x2,
+			ATTACHMENT_LAST_PASS_BIT = 0x4,
+			ATTACHMENT_EXTERNAL_BIT = 0x8,
+			ATTACHMENT_CLEAR_BIT = 0x10,
+			ATTACHMENT_ENUM_END_BIT
+		};
+		using AttachmentFlags = uint8;
+		static_assert(ATTACHMENT_ENUM_END_BIT - 1 < SOUL_UTYPE_MAX(AttachmentFlags), "");
+
+		struct Attachment
+		{
+			TextureFormat format;
+			AttachmentFlags flags;
+		};
+
+		struct _RenderPassKey
+		{
+			Attachment colorAttachments[MAX_COLOR_ATTACHMENT_PER_SHADER];
+			Attachment inputAttachments[MAX_INPUT_ATTACHMENT_PER_SHADER];
+			Attachment depthAttachment;
+
+			inline bool operator==(const _RenderPassKey& other) {
+				return (memcmp(this, &other, sizeof(_RenderPassKey)) == 0);
+			}
+
+			inline bool operator!=(const _RenderPassKey& other) {
+				return (memcmp(this, &other, sizeof(_RenderPassKey)) != 0);
+			}
+
+			uint64 hash() {
+				return hashFNV1((uint8*)(this), sizeof(_RenderPassKey));
+			}
+		};
+
 		struct _Program {
 			VkPipelineLayout pipelineLayout;
 			VkDescriptorSetLayout descriptorLayouts[MAX_SET_PER_SHADER_PROGRAM];
@@ -412,18 +515,40 @@ namespace Soul {
 			uint32 indices[3] = {};
 		};
 
+		enum class _SemaphoreState : uint8 {
+            INITIAL,
+            SUBMITTED,
+            PENDING
+		};
+
 		struct _Semaphore {
 			VkSemaphore vkHandle = VK_NULL_HANDLE;
 			VkPipelineStageFlags stageFlags = 0;
+            _SemaphoreState state = _SemaphoreState::INITIAL;
+
+            bool isPending() { return state == _SemaphoreState::PENDING; }
+		};
+
+		struct CommandPool
+		{
+			VkCommandPool vkHandle;
+			Array<VkCommandBuffer> allocatedBuffers;
+			uint16 count;
 		};
 
 		struct alignas(SOUL_CACHELINE_SIZE) _ThreadContext {
+			Runtime::AllocatorInitializer allocatorInitializer;
+			CommandPool secondaryCommandPool;
 
+			_ThreadContext(Memory::Allocator* allocator) : allocatorInitializer(allocator)
+			{
+				allocatorInitializer.end();
+			}
 		};
 
 		struct _FrameContext {
 
-			Memory::AllocatorInitializer allocatorInitializer;
+			Runtime::AllocatorInitializer allocatorInitializer;
 
 			Array<_ThreadContext> threadContexts;
 
@@ -452,6 +577,7 @@ namespace Soul {
 
 			Array<_Buffer> stagingBuffers;
 			VkCommandBuffer stagingCommandBuffer = VK_NULL_HANDLE;
+			VkCommandBuffer clearCommandBuffer = VK_NULL_HANDLE;
 			bool stagingAvailable = false;
 			bool stagingSynced = false;
 
@@ -493,7 +619,7 @@ namespace Soul {
 			        Memory::Allocator,
 			        CPUAllocatorProxy>;
 			CPUAllocator cpuAllocator;
-			Memory::AllocatorInitializer allocatorInitializer;
+			Runtime::AllocatorInitializer allocatorInitializer;
 
 			VkInstance instance = VK_NULL_HANDLE;
 			VkDebugUtilsMessengerEXT debugMessenger;
@@ -532,6 +658,8 @@ namespace Soul {
 
 			HashMap<_ProgramKey, ProgramID> programMaps;
 			Pool<_Program> programs;
+
+			HashMap<_RenderPassKey, VkRenderPass> renderPassMaps;
 
 			Pool<_Semaphore> semaphores;
 
