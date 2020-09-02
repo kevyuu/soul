@@ -159,7 +159,7 @@ static bool ImGui_ImplGlfw_Init(GLFWwindow* window, bool install_callbacks, Glfw
 #endif
     io.BackendPlatformName = "imgui_impl_glfw";
 
-    // Keyboard mapping. ImGui will use those indices to peek into the io.KeysDown[] array.
+    // Keyboard mapping. ImGui will use those indices to peek into the io.KeysDown[] adorray.
     io.KeyMap[ImGuiKey_Tab] = GLFW_KEY_TAB;
     io.KeyMap[ImGuiKey_LeftArrow] = GLFW_KEY_LEFT;
     io.KeyMap[ImGuiKey_RightArrow] = GLFW_KEY_RIGHT;

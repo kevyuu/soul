@@ -1,11 +1,6 @@
-#pragma once
+#include "data.h"
 
-#include "core/type.h"
-#include "core/math.h"
-#include "core/array.h"
 #include "core/dev_util.h"
-
-#include "gpu/gpu.h"
 
 #define STB_IMAGE_IMPLEMENTATION
 #define STB_IMAGE_WRITE_IMPLEMENTATION
@@ -13,362 +8,21 @@
 
 #include <tiny_gltf.h>
 
+#include <imgui/imgui.h>
+#include <GLFW/glfw3.h>
+
 using namespace Soul;
 
-struct Camera
-{
-	Vec3f up;
-	Vec3f direction;
-	Vec3f position;
-
-	Mat4 projection;
-	Mat4 view;
-
-	uint16 viewportWidth;
-	uint16 viewportHeight;
-
-	float aperture = 1.0f;
-	float shutterSpeed = 1.0f;
-	float sensitivity = 1.0f;
-	float exposure = 1.0f;
-
-	bool exposureFromSetting = false;
-
-	union
-	{
-		struct
-		{
-			float fov;
-			float aspectRatio;
-			float zNear;
-			float zFar;
-		} perspective;
-
-		struct
-		{
-			float left;
-			float right;
-			float top;
-			float bottom;
-			float zNear;
-			float zFar;
-		} ortho;
-	};
-
-	void updateExposure()
-	{
-		if (exposureFromSetting)
-		{
-			float ev100 = log2((aperture * aperture) / shutterSpeed * 100.0 / sensitivity);
-			exposure = 1.0f / (pow(2.0f, ev100) * 1.2f);
-		}
-	}
-};
-
-enum EntityType
-{
-	EntityType_GROUP,
-	EntityType_MESH,
-	EntityType_DIRLIGHT,
-	EntityType_POINTLIGHT,
-	EntityType_SPOTLIGHT,
-
-	EntityType_Count
-};
-
-struct EntityID
-{
-	PoolID index;
-	uint16 type;
-
-	bool operator==(const EntityID& rhs)
-	{
-		return this->type == rhs.type && this->index == rhs.index;
-	}
-
-	bool operator!=(const EntityID& rhs)
-	{
-		return this->type != rhs.type || this->index != rhs.index;
-	}
-};
-
-struct GroupEntity;
-
-struct Entity
-{
-	static constexpr uint32 MAX_NAME_LENGTH = 1024;
-	EntityID entityID;
-	char name[MAX_NAME_LENGTH];
-
-	GroupEntity* parent = nullptr;
-	Entity* prev = nullptr;
-	Entity* next = nullptr;
-
-	Transform localTransform;
-	Transform worldTransform;
-};
-
-struct GroupEntity : Entity
-{
-	Entity* first;
-};
-
-struct MeshEntity : Entity
-{
-	uint32 meshID;
-	uint32 materialID;
-};
-
-struct Mesh
-{
-	GPU::BufferID vertexBufferID;
-	GPU::BufferID indexBufferID;
-	uint16 indexCount;
-};
-
-struct DirectionalLight
-{
-	static constexpr uint32 SHADOW_MAP_RESOLUTION = 2048 * 2;
-	Vec3f direction = Vec3f(0.0f, -1.0f, 0.0f);
-	Vec3f color = { 1.0f, 1.0f, 1.0f };
-	float illuminance = 10; // in lx;
-	float split[3] = { 0.1f, 0.3f, 0.6f };
-	float bias = 0.001f;
-	Mat4 shadowMatrixes[4];
-	
-	void updateShadowMatrixes(Camera& camera)
-	{
-		float zNear = camera.perspective.zNear;
-		float zFar = camera.perspective.zFar;
-		float zDepth = zFar - zNear;
-		float fov = camera.perspective.fov;
-		float aspectRatio = camera.perspective.aspectRatio;
-		Vec3f upVec = Vec3f(0.0f, 1.0f, 0.0f);
-		if (abs(dot(upVec, direction)) == 1.0f)
-		{
-			upVec = Vec3f(1.0f, 0.0f, 0.0f);
-		}
-		Mat4 lightRot = mat4View(Vec3f(0, 0, 0), direction, upVec);
-
-		Mat4 viewMat = mat4View(camera.position, camera.position + camera.direction, camera.up);
-
-
-		float splitOffset[5] = { 0, split[0], split[1], split[2], 1 };
-		float splitNDCWidth = 1.0f;
-		for (int i = 0; i < 4; i++)
-		{
-			Vec3f frustumCorners[8] = {
-				   Vec3f(-1.0f, -1.0f, -1), Vec3f(1.0f, -1.0f, -1), Vec3f(1.0f, 1.0f, -1), Vec3f(-1.0f, 1.0f, -1),
-				   Vec3f(-1.0f, -1.0f, 1), Vec3f(1.0f, -1.0f, 1), Vec3f(1.0f, 1.0f, 1), Vec3f(-1.0f, 1.0f, 1)
-			};
-
-			Mat4 projectionMat = mat4Perspective(fov, aspectRatio, zNear + splitOffset[i] * zDepth, zNear + splitOffset[i + 1] * zDepth);
-			Mat4 projectionViewMat = projectionMat * viewMat;
-			Mat4 invProjectionViewMat = mat4Inverse(projectionViewMat);
-
-			Vec3f worldFrustumCenter = Vec3f(0, 0, 0);
-
-			for (int k = 0; k < 8; k++) {
-				Vec4f frustumCorner = invProjectionViewMat * Vec4f(frustumCorners[k], 1.0f);
-				frustumCorners[k] = frustumCorner.xyz() / frustumCorner.w;
-				worldFrustumCenter += frustumCorners[k];
-			}
-			worldFrustumCenter *= (1.0f / 8.0f);
-
-			float cascadeDepth = (splitOffset[i + 1] - splitOffset[i]) * zDepth;
-			float cascadeFarDistance = zNear + splitOffset[i + 1] * zDepth;
-			float cascadeFarWidth = tan(camera.perspective.fov / 2) * 2 * cascadeFarDistance;
-			float cascadeFarHeight = cascadeFarWidth / camera.perspective.aspectRatio;
-
-			float radius = sqrt(cascadeFarWidth * cascadeFarWidth + cascadeDepth * cascadeDepth + cascadeFarHeight * cascadeFarHeight);
-
-			float texelPerUnit = DirectionalLight::SHADOW_MAP_RESOLUTION / (radius * 4.0f);
-			Mat4 texelScaleLightRot = mat4Scale(Soul::Vec3f(texelPerUnit, texelPerUnit, texelPerUnit)) * lightRot;
-
-			Vec3f lightTexelFrustumCenter = texelScaleLightRot * worldFrustumCenter;
-			lightTexelFrustumCenter.x = (float)floor(lightTexelFrustumCenter.x);
-			lightTexelFrustumCenter.y = (float)floor(lightTexelFrustumCenter.y);
-			worldFrustumCenter = mat4Inverse(texelScaleLightRot) * lightTexelFrustumCenter;
-
-			int xSplit = i % 2;
-			int ySplit = i / 2;
-
-			float bottomSplitNDC = -1 + (ySplit * splitNDCWidth);
-			float leftSplitNDC = -1 + (xSplit * splitNDCWidth);
-
-			Mat4 atlasMatrix;
-			atlasMatrix.elem[0][0] = splitNDCWidth / 2;
-			atlasMatrix.elem[0][3] = leftSplitNDC + (splitNDCWidth * 0.5f);
-			atlasMatrix.elem[1][1] = splitNDCWidth / 2;
-			atlasMatrix.elem[1][3] = bottomSplitNDC + (splitNDCWidth * 0.5f);
-			atlasMatrix.elem[2][2] = 1;
-			atlasMatrix.elem[3][3] = 1;
-
-			/*Vec3f sceneBoundCorners[8] = {
-				db.sceneBound.min,
-				Vec3f(db.sceneBound.min.x, db.sceneBound.min.y, db.sceneBound.max.z),
-				Vec3f(db.sceneBound.min.x, db.sceneBound.max.y, db.sceneBound.min.z),
-				Vec3f(db.sceneBound.min.x, db.sceneBound.max.y, db.sceneBound.max.z),
-				Vec3f(db.sceneBound.max.x, db.sceneBound.min.y, db.sceneBound.min.z),
-				Vec3f(db.sceneBound.max.x, db.sceneBound.min.y, db.sceneBound.max.z),
-				Vec3f(db.sceneBound.max.x, db.sceneBound.max.y, db.sceneBound.min.z),
-				db.sceneBound.max
-			};
-
-			float shadowMapFar = dot(direction, (sceneBoundCorners[0] - worldFrustumCenter));
-			float shadowMapNear = shadowMapFar;
-
-			for (int j = 1; j < 8; j++) {
-				float cornerDist = dot(direction, sceneBoundCorners[j] - worldFrustumCenter);
-				if (cornerDist > shadowMapFar) shadowMapFar = cornerDist;
-				if (cornerDist < shadowMapNear) shadowMapNear = cornerDist;
-			}*/
-			float shadowMapFar = 500;
-			float shadowMapNear = -500;
-
-			shadowMatrixes[i] = atlasMatrix * mat4Ortho(-radius, radius, -radius, radius, shadowMapNear, shadowMapFar) *
-				mat4View(worldFrustumCenter, worldFrustumCenter + direction, upVec);
-		}
-	}
-};
-
-enum class TexChannel : uint8
-{
-	RED,
-	GREEN,
-	BLUE,
-	ALPHA,
-	COUNT
-};
-
-struct SceneMaterial
-{
-	char name[1024];
-
-	PoolID albedoTexID;
-	PoolID normalTexID;
-	PoolID metallicTexID;
-	PoolID roughnessTexID;
-	PoolID aoTexID;
-	PoolID emissiveTexID;
-
-	Vec3f albedo;
-	float metallic;
-	float roughness;
-	Vec3f emissive;
-
-	bool useAlbedoTex;
-	bool useNormalTex;
-	bool useMetallicTex;
-	bool useRoughnessTex;
-	bool useAOTex;
-	bool useEmissiveTex;
-
-	TexChannel metallicTextureChannel;
-	TexChannel roughnessTextureChannel;
-	TexChannel aoTextureChannel;
-};
-
-struct SceneTexture
-{
-	char name[1024];
-	GPU::TextureID rid;
-};
-
-struct Scene
-{
-	EntityID rootEntityID;
-
-	Pool<GroupEntity> groupEntities;
-	Array<MeshEntity> meshEntities;
-	Array<Mesh> meshes;
-	Array<SceneMaterial> materials;
-
-	Array<SceneTexture> textures;
-	DirectionalLight dirLight;
-
-    struct VoxelGIConfig {
-        Vec3f center = { 0.0f, 0.0f, 0.0f };
-        real32 bias = 1.5f;
-        real32 diffuseMultiplier = 1.0f;
-        real32 specularMultiplier = 1.0f;
-        real32 halfSpan = 15;
-        uint32 resolution = 128;
-    } voxelGIConfig;
-
-	GPU::BufferID materialBuffer;
-
-	Camera camera;
-};
-
-
-Entity* EntityPtr(Scene* scene, EntityID entityID)
-{
-	switch (entityID.type)
-	{
-	case EntityType_MESH:
-		return scene->meshEntities.ptr(entityID.index);
-	case EntityType_GROUP:
-		return scene->groupEntities.ptr(entityID.index);
-	default:
-		SOUL_ASSERT(0, false, "Entity type is not valid, entity type = %d", entityID.type);
-		return nullptr;
-	}
-}
-
-EntityID EntityCreate(Scene* scene, EntityID parentID, EntityType entityType, const char* name,
-	Transform localTransform)
-{
-	EntityID entityID;
-	entityID.type = entityType;
-	Entity* entity = nullptr;
-	switch (entityType)
-	{
-	case EntityType_MESH:
-		entityID.index = scene->meshEntities.add(MeshEntity());
-		entity = scene->meshEntities.ptr(entityID.index);
-		break;
-	case EntityType_GROUP:
-		entityID.index = scene->groupEntities.add(GroupEntity());
-		entity = scene->groupEntities.ptr(entityID.index);
-		break;
-	default:
-		SOUL_ASSERT(0, false, "Entity type is not valid, entity type = %d", entityType);
-	}
-
-	GroupEntity* parent = static_cast<GroupEntity*>(EntityPtr(scene, parentID));
-	Entity* next = parent->first;
-	if (next != nullptr)
-	{
-		next->prev = entity;
-	}
-
-	entity->entityID = entityID;
-	entity->next = next;
-	entity->prev = nullptr;
-	entity->parent = parent;
-	parent->first = entity;
-
-	entity->localTransform = localTransform;
-	entity->worldTransform = parent->worldTransform * localTransform;
-
-	SOUL_ASSERT(0, strlen(name) <= Entity::MAX_NAME_LENGTH, "Entity name exceed max length. Name = %s", name);
-	strcpy(entity->name, name);
-
-	return entityID;
-}
-
-void LoadScene(GPU::System* gpuSystem, Scene* scene, const char* path, bool positionToAABBCenter)
-{
+void DeferredPipeline::Scene::importFromGLTF(const char* path) {
 	SOUL_PROFILE_ZONE();
 	Memory::ScopeAllocator<> scopeAllocator("Load scene allocator");
 
-	scene->groupEntities.reserve(3000);
-	PoolID rootIndex = scene->groupEntities.add({});
-	scene->rootEntityID.index = rootIndex;
-	scene->rootEntityID.type = EntityType_GROUP;
-	GroupEntity* rootEntity = scene->groupEntities.ptr(rootIndex);
-	rootEntity->entityID = scene->rootEntityID;
+	groupEntities.reserve(3000);
+	PoolID rootIndex = groupEntities.add({});
+	rootEntityID.index = rootIndex;
+	rootEntityID.type = EntityType_GROUP;
+	GroupEntity* rootEntity = groupEntities.ptr(rootIndex);
+	rootEntity->entityID = rootEntityID;
 	rootEntity->first = nullptr;
 	strcpy(rootEntity->name, "Root");
 	rootEntity->prev = nullptr;
@@ -376,8 +30,8 @@ void LoadScene(GPU::System* gpuSystem, Scene* scene, const char* path, bool posi
 	rootEntity->localTransform = transformIdentity();
 	rootEntity->worldTransform = transformIdentity();
 
-	scene->meshEntities.reserve(10000);
-	scene->meshEntities.add({});
+	meshEntities.reserve(10000);
+	meshEntities.add({});
 
 	tinygltf::Model model;
 	tinygltf::TinyGLTF loader;
@@ -429,8 +83,8 @@ void LoadScene(GPU::System* gpuSystem, Scene* scene, const char* path, bool posi
 
 		GPU::TextureID textureID = gpuSystem->textureCreate(texDesc, (byte*)&image.image[0], image.image.size());
 
-		PoolID sceneTextureID = scene->textures.add({});
-		SceneTexture& sceneTexture = scene->textures[sceneTextureID];
+		PoolID sceneTextureID = textures.add({});
+		SceneTexture& sceneTexture = textures[sceneTextureID];
 		strcpy(sceneTexture.name, texture.name.c_str());
 		sceneTexture.rid = textureID;
 		textureIDs[i] = sceneTextureID;
@@ -543,7 +197,7 @@ void LoadScene(GPU::System* gpuSystem, Scene* scene, const char* path, bool posi
 			material.name.c_str());
 		strcpy(sceneMaterial.name, material.name.c_str());
 
-		PoolID poolID = scene->materials.add(sceneMaterial);
+		PoolID poolID = materials.add(sceneMaterial);
 		materialIDs[i] = poolID;
 	}
 
@@ -584,15 +238,15 @@ void LoadScene(GPU::System* gpuSystem, Scene* scene, const char* path, bool posi
 	GPU::BufferDesc bufferDesc;
 	bufferDesc.typeSize = sizeof(MaterialData);
 	bufferDesc.typeAlignment = alignof(MaterialData);
-	bufferDesc.count = scene->materials.size();
+	bufferDesc.count = materials.size();
 	bufferDesc.queueFlags = GPU::QUEUE_GRAPHIC_BIT;
 	bufferDesc.usageFlags = GPU::BUFFER_USAGE_UNIFORM_BIT;
-	scene->materialBuffer = gpuSystem->bufferCreate(
+	materialBuffer = gpuSystem->bufferCreate(
 		bufferDesc,
-		[scene](int index, byte* data)
+		[this](int index, byte* data)
 		{
 			auto materialData = (MaterialData*)data;
-			SceneMaterial& sceneMaterial = scene->materials[index];
+			SceneMaterial& sceneMaterial = materials[index];
 
 			materialData->albedo = sceneMaterial.albedo;
 			materialData->metallic = sceneMaterial.metallic;
@@ -621,7 +275,7 @@ void LoadScene(GPU::System* gpuSystem, Scene* scene, const char* path, bool posi
 
 	for (int i = 0; i < model.nodes.size(); i++)
 	{
-		entityParents.add(scene->rootEntityID);
+		entityParents.add(rootEntityID);
 	}
 
 	for (int i = 0; i < model.meshes.size(); i++)
@@ -678,7 +332,7 @@ void LoadScene(GPU::System* gpuSystem, Scene* scene, const char* path, bool posi
 
 		if (gltfNode.mesh > -1)
 		{
-			entityID = EntityCreate(scene, entityParents[i], EntityType_MESH, gltfNode.name.c_str(),
+			entityID = _createEntity(entityParents[i], EntityType_MESH, gltfNode.name.c_str(),
 				localNodeTransform);
 			SOUL_ASSERT(0, meshEntityIDs[gltfNode.mesh] == EntityID{ 0 }, "");
 			meshEntityIDs[gltfNode.mesh] = entityID;
@@ -687,7 +341,7 @@ void LoadScene(GPU::System* gpuSystem, Scene* scene, const char* path, bool posi
 		}
 		else
 		{
-			entityID = EntityCreate(scene, entityParents[i], EntityType_GROUP, gltfNode.name.c_str(),
+			entityID = _createEntity(entityParents[i], EntityType_GROUP, gltfNode.name.c_str(),
 				localNodeTransform);
 		}
 
@@ -719,7 +373,7 @@ void LoadScene(GPU::System* gpuSystem, Scene* scene, const char* path, bool posi
 		vertexes.reserve(100000);
 
 
-		MeshEntity* meshEntity = static_cast<MeshEntity*>(EntityPtr(scene, meshEntityIDs[i]));
+		MeshEntity* meshEntity = static_cast<MeshEntity*>(_entityPtr(meshEntityIDs[i]));
 
 		const tinygltf::Mesh& mesh = model.meshes[i];
 
@@ -769,6 +423,8 @@ void LoadScene(GPU::System* gpuSystem, Scene* scene, const char* path, bool posi
 		}
 
 		Mat4 vertexPositionTransform = mat4Identity();
+
+		bool positionToAABBCenter = true;
 		if (positionToAABBCenter)
 		{
 			vertexPositionTransform = mat4Transform(meshEntity->worldTransform);
@@ -858,9 +514,6 @@ void LoadScene(GPU::System* gpuSystem, Scene* scene, const char* path, bool posi
 		int indexByteStride = indexAccessor.ByteStride(indexBufferView);
 		unsigned char* indexBuffer = &model.buffers[indexBufferView.buffer].data[indexOffset];
 
-
-
-		Array<SceneMaterial>& materials = scene->materials;
 		Mesh sceneMesh = {};
 
 		GPU::BufferDesc vertexBufferDesc;
@@ -932,7 +585,151 @@ void LoadScene(GPU::System* gpuSystem, Scene* scene, const char* path, bool posi
 			SOUL_NOT_IMPLEMENTED();
 		}
 
-		meshEntity->meshID = scene->meshes.add(sceneMesh);
+		meshEntity->meshID = meshes.add(sceneMesh);
 		meshEntity->materialID = materialIDs[primitive.material];
+	}
+
+	Vec2ui32 sceneResolution = { camera.viewportWidth, camera.viewportHeight };
+	camera.position = Vec3f(1.0f, 1.0f, 0.0f);
+	camera.direction = Vec3f(0.0f, 0.0f, -1.0f);
+	camera.up = Vec3f(0.0f, 1.0f, 0.0f);
+	camera.perspective.fov = PI / 4;
+	camera.perspective.aspectRatio = sceneResolution.x / sceneResolution.y;
+	camera.perspective.zNear = 0.1f;
+	camera.perspective.zFar = 30.0f;
+	camera.projection = mat4Perspective(
+		camera.perspective.fov,
+		camera.perspective.aspectRatio,
+		camera.perspective.zNear,
+		camera.perspective.zFar);
+}
+
+bool DeferredPipeline::Scene::handleInput() {
+	ImGuiIO& io = ImGui::GetIO();
+	if (ImGui::IsMouseDown(2)) {
+		static float translationSpeed = 1.0f;
+
+		float cameraSpeedInc = 0.1f;
+		translationSpeed += (cameraSpeedInc * translationSpeed * io.MouseWheel);
+
+		if (ImGui::IsKeyPressed(GLFW_KEY_M)) {
+			translationSpeed *= 0.9f;
+		}
+		if (ImGui::IsKeyPressed(GLFW_KEY_N)) {
+			translationSpeed *= 1.1;
+		}
+
+		if (ImGui::IsMouseDragging(2)) {
+
+			Soul::Vec3f cameraRight = cross(camera.up, camera.direction) * -1.0f;
+
+			{
+				Soul::Mat4 rotate = mat4Rotate(cameraRight, -2.0f * io.MouseDelta.y / camera.viewportHeight * Soul::PI);
+				camera.direction = rotate * camera.direction;
+				camera.up = rotate * camera.up;
+			}
+
+			{
+				Soul::Mat4 rotate = mat4Rotate(Soul::Vec3f(0.0f, 1.0f, 0.0f), -2.0f * io.MouseDelta.x / camera.viewportWidth * Soul::PI);
+
+				if (camera.direction != Soul::Vec3f(0.0f, 1.0f, 0.0f))
+					camera.direction = rotate * camera.direction;
+				if (camera.up != Soul::Vec3f(0.0f, 1.0f, 0.0f))
+					camera.up = rotate * camera.up;
+			}
+		}
+
+		Soul::Vec3f right = Soul::unit(cross(camera.direction, camera.up));
+		if (ImGui::IsKeyPressed(GLFW_KEY_W)) {
+			camera.position += Soul::unit(camera.direction) * translationSpeed;
+		}
+		if (ImGui::IsKeyPressed(GLFW_KEY_S)) {
+			camera.position -= Soul::unit(camera.direction) * translationSpeed;
+		}
+		if (ImGui::IsKeyPressed(GLFW_KEY_A)) {
+			camera.position -= Soul::unit(right) * translationSpeed;
+		}
+		if (ImGui::IsKeyPressed(GLFW_KEY_D)) {
+			camera.position += Soul::unit(right) * translationSpeed;
+		}
+		return true;
+	}
+
+	camera.view = mat4View(camera.position, camera.position + camera.direction, camera.up);
+	dirLight.updateShadowMatrixes(camera);
+	return false;
+}
+
+DeferredPipeline::EntityID DeferredPipeline::Scene::_createEntity(EntityID parentID, EntityType entityType, const char* name, Transform localTransform) {
+	EntityID entityID;
+	entityID.type = entityType;
+	Entity* entity = nullptr;
+	switch (entityType)
+	{
+	case EntityType_MESH:
+		entityID.index = meshEntities.add(MeshEntity());
+		entity = meshEntities.ptr(entityID.index);
+		break;
+	case EntityType_GROUP:
+		entityID.index = groupEntities.add(GroupEntity());
+		entity = groupEntities.ptr(entityID.index);
+		break;
+	default:
+		SOUL_ASSERT(0, false, "Entity type is not valid, entity type = %d", entityType);
+	}
+
+	GroupEntity* parent = static_cast<GroupEntity*>(_entityPtr(parentID));
+	Entity* next = parent->first;
+	if (next != nullptr)
+	{
+		next->prev = entity;
+	}
+
+	entity->entityID = entityID;
+	entity->next = next;
+	entity->prev = nullptr;
+	entity->parent = parent;
+	parent->first = entity;
+
+	entity->localTransform = localTransform;
+	entity->worldTransform = parent->worldTransform * localTransform;
+
+	SOUL_ASSERT(0, strlen(name) <= Entity::MAX_NAME_LENGTH, "Entity name exceed max length. Name = %s", name);
+	strcpy(entity->name, name);
+
+	return entityID;
+}
+
+void DeferredPipeline::Scene::cleanup() {
+	for (Mesh& mesh : meshes) {
+		gpuSystem->bufferDestroy(mesh.indexBufferID);
+		gpuSystem->bufferDestroy(mesh.vertexBufferID);
+	}
+
+	if (materialBuffer != GPU::BUFFER_ID_NULL) {
+		gpuSystem->bufferDestroy(materialBuffer);
+	}
+
+	for (SceneTexture& texture : textures) {
+		gpuSystem->textureDestroy(texture.rid);
+	}
+
+	groupEntities.cleanup();
+	meshEntities.cleanup();
+	meshes.cleanup();
+	materials.cleanup();
+	textures.cleanup();
+}
+
+DeferredPipeline::Entity* DeferredPipeline::Scene::_entityPtr(EntityID entityID) {
+	switch (entityID.type)
+	{
+	case EntityType_MESH:
+		return meshEntities.ptr(entityID.index);
+	case EntityType_GROUP:
+		return groupEntities.ptr(entityID.index);
+	default:
+		SOUL_ASSERT(0, false, "Entity type is not valid, entity type = %d", entityID.type);
+		return nullptr;
 	}
 }

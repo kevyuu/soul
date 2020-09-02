@@ -3,12 +3,7 @@
 #define SOUL_ASSERT_PARANOIA_LEVEL 0
 #if defined(SOUL_ENV_DEBUG)
     #define SOUL_OPTION_VULKAN_VALIDATION_ENABLE
-	#if defined(SOUL_OS_WINDOWS)
-		#define SOUL_OPTION_VULKAN_ENABLE_RENDERDOC
-	#endif // SOUL_OS_WINDOWS
     #define SOUL_ASSERT_PARANOIA_LEVEL 1
-    #define SOUL_PROFILE_CPU_BACKEND_TRACY
-	#define SOUL_MEMPROFILE_CPU_BACKEND_SOUL_PROFILER
 	#define SOUL_OPTION_LOGGING_ENABLE
 	#define SOUL_OPTION_ASSERTION_ENABLE
 #endif // SOUL_ENV_DEBUG
@@ -86,6 +81,26 @@ void soul_intern_assert(int paranoia, int line, const char* file, const char* fo
     #define SOUL_PROFILE_ZONE_WITH_NAME(x) ZoneScopedN(x)
     #define SOUL_PROFILE_THREAD_SET_NAME(x) do{tracy::SetThreadName(x);} while(0)
 
+#elif defined(SOUL_PROFILE_CPU_BACKEND_NVTX)
+    #include "core/type.h"
+    #include <nvToolsExt.h>
+    struct NVTXScope {
+        NVTXScope(const char* name) {
+            nvtxRangePush(name);
+        }
+
+        ~NVTXScope() {
+            nvtxRangePop();
+        }
+    };
+
+    uint32_t GetOsThreadId();
+
+    #define SOUL_PROFILE_FRAME() NVTXScope("Frame")
+    #define SOUL_PROFILE_ZONE() NVTXScope(__FUNCTION__)
+    #define SOUL_PROFILE_ZONE_WITH_NAME(x) NVTXScope(x)
+    #define SOUL_PROFILE_THREAD_SET_NAME(x) do{nvtxNameOsThread(GetOsThreadId(), x);} while(0)
+    
 #else
 
     #define SOUL_PROFILE_FRAME ((void) 0)

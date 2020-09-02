@@ -14,6 +14,8 @@
 #include "memory/allocators/proxy_allocator.h"
 
 // TODO: Figure out how to do it without single header library
+#define VMA_STATIC_VULKAN_FUNCTIONS 0
+#define VMA_DYNAMIC_VULKAN_FUNCTIONS 0
 #define VK_NO_PROTOTYPES
 #include <vk_mem_alloc.h>
 
@@ -109,8 +111,9 @@ namespace Soul {
 			TEXTURE_USAGE_COLOR_ATTACHMENT_BIT = 0x2,
 			TEXTURE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT = 0x4,
 			TEXTURE_USAGE_INPUT_ATTACHMENT_BIT = 0x8,
-			TEXTURE_USAGE_TRANSFER_DST_BIT = 0x10,
-			TEXTURE_USAGE_STORAGE_BIT = 0x20,
+			TEXTURE_USAGE_TRANSFER_SRC_BIT = 0x10,
+			TEXTURE_USAGE_TRANSFER_DST_BIT = 0x20,
+			TEXTURE_USAGE_STORAGE_BIT = 0x40,
 			TEXTURE_USAGE_ENUM_END_BIT
 		};
 		using TextureUsageFlags = uint8;
@@ -134,6 +137,7 @@ namespace Soul {
 			DEPTH24_STENCIL8UI,
 			DEPTH32F,
 			RGBA16F,
+			R32UI,
 
 			RGB16,
 			RGB16F,
@@ -285,15 +289,21 @@ namespace Soul {
 
 
 		struct ClearValue {
-            union {
-		        Vec4f float32;
+            union Color {
+				Vec4f float32;
 		        Vec4ui32 uint32;
 		        Vec4i32 int32;
+				Color() {
+					float32 = {};
+				}
             } color;
+
             struct {
                 float depth;
                 uint32 stencil;
             } depthStencil;
+
+
 		};
 
 		struct UniformDescriptor {
@@ -648,6 +658,7 @@ namespace Soul {
 			_Swapchain swapchain;
 
 			Array<_FrameContext> frameContexts;
+			uint32 frameCounter;
 			uint32 currentFrame;
 
 			VmaAllocator gpuAllocator;

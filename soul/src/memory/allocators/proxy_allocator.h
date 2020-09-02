@@ -300,6 +300,7 @@ namespace Soul { namespace Memory {
 		}
 
 		Allocation allocate(uint32 size, uint32 alignment, const char* tag) final {
+			if (size == 0) return { nullptr, 0 };
 			AllocateParam param = { size, alignment, tag };
 			param = _proxy.onPreAllocate(param);
 			Allocation allocation = allocator->allocate(param.size, param.alignment, getName());
@@ -307,7 +308,7 @@ namespace Soul { namespace Memory {
 		}
 
 		void deallocate(void* addr, uint32 size) final {
-			if (addr == nullptr) return;
+			if (addr == nullptr || size == 0) return;
 			DeallocateParam param = { addr, size };
 			param = _proxy.onPreDeallocate(param);
 			allocator->deallocate(param.addr, size);

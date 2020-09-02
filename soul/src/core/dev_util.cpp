@@ -82,3 +82,11 @@ MemProfile::Scope::~Scope() {
 	_GetProfiler()->endFrame();
 }
 #endif
+
+#if defined(SOUL_PROFILE_CPU_BACKEND_NVTX)
+#include <Windows.h>
+
+uint32_t GetOsThreadId() {
+	return GetCurrentThreadId();
+}
+#endif

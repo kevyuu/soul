@@ -10,6 +10,40 @@ namespace Soul {
             System::Get().init(config);
         }
 
+        inline void Shutdown() {
+            System::Get().shutdown();
+        }
+
+        inline void BeginFrame() {
+            System::Get().beginFrame();
+        }
+
+        template <SOUL_TEMPLATE_ARG_LAMBDA(Execute, void(TaskID))>
+        inline TaskID CreateTask(TaskID parent, Execute&& lambda) {
+            return System::Get().taskCreate(parent, std::forward<Execute>(lambda));
+        }
+
+        inline void WaitTask(TaskID taskID) {
+            System::Get().taskWait(taskID);
+        }
+
+        inline void RunTask(TaskID taskID) {
+            System::Get().taskRun(taskID);
+        }
+
+        template <SOUL_TEMPLATE_ARG_LAMBDA(Func, void(int))>
+        inline TaskID ParallelForTaskCreate(TaskID parent, uint32 count, uint32 blockSize, Func&& func) {
+            return System::Get()._parallelForTaskCreateRecursive(parent, 0, count, blockSize, std::forward<Func>(func));
+        }
+
+        inline uint16 ThreadID() {
+            return System::Get().getThreadID();
+        }
+
+        inline uint16 ThreadCount() {
+            return System::Get().getThreadCount();
+        }
+
         inline void PushAllocator(Memory::Allocator* allocator) {
             System::Get().pushAllocator(allocator);
         }

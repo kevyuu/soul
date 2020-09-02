@@ -3,7 +3,7 @@
 #include <cstdio>
 #include <cstdlib>
 
-char* LoadFile(const char* filepath) {
+inline char* LoadFile(const char* filepath) {
 	FILE *f = fopen(filepath, "rb");
 	fseek(f, 0, SEEK_END);
 	long fsize = ftell(f);

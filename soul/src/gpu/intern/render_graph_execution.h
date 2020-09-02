@@ -43,7 +43,7 @@ namespace Soul { namespace GPU {
 	struct _RGTextureExecInfo {
 		PassNodeID firstPass = PASS_NODE_ID_NULL;
 		PassNodeID lastPass = PASS_NODE_ID_NULL;
-		VkImageUsageFlags usageFlags = 0u;
+		TextureUsageFlags usageFlags = 0u;
 		QueueFlags queueFlags = 0;
 		TextureID textureID = TEXTURE_ID_NULL;
 

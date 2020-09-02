@@ -1,5 +1,6 @@
 #pragma once
 #include "core/util.h"
+#include "core/slice.h"
 #include "gpu/data.h"
 
 #include "memory/allocators/scope_allocator.h"
@@ -21,6 +22,14 @@ namespace Soul { namespace GPU {
 	struct _BufferNode;
 	using BufferNodeID = ID<_BufferNode, uint16>;
 	static constexpr BufferNodeID  BUFFER_NODE_ID_NULL = BufferNodeID(SOUL_UTYPE_MAX(BufferNodeID));
+
+	struct _TextureGroupNode;
+	using TextureGroupNodeID = ID<_TextureGroupNode, uint16>;
+	static constexpr TextureGroupNodeID TEXTURE_GROUP_NODE_ID_NULL = TextureGroupNodeID(SOUL_UTYPE_MAX(TextureGroupNodeID));
+
+	struct _BufferGroupNode;
+	using BufferGroupNodeID = ID<_BufferGroupNode, uint16>;
+	static constexpr BufferGroupNodeID BUFFER_GROUP_NODE_ID_NULL = BufferGroupNodeID(SOUL_UTYPE_MAX(BufferGroupNodeID));
 
 	struct _RGResourceID {
 		uint32 index = SOUL_UTYPE_MAX(uint32);
@@ -63,7 +72,7 @@ namespace Soul { namespace GPU {
 		uint16 mipLevels = 1;
 		TextureFormat format = TextureFormat::RGBA8;
 		bool clear = false;
-		ClearValue clearValue = {};
+		ClearValue clearValue;
 	};
 
 	struct _RGInternalTexture {
@@ -112,6 +121,18 @@ namespace Soul { namespace GPU {
 
 	struct _BufferNode {
 		_RGBufferID resourceID = _RG_BUFFER_ID_NULL;
+		PassNodeID writer = PASS_NODE_ID_NULL;
+	};
+
+	struct _BufferGroupNode {
+		const char* name;
+		Slice<BufferID> bufferIDs;
+		PassNodeID writer = PASS_NODE_ID_NULL;
+	};
+
+	struct _TextureGroupNode {
+		const char* name;
+		Slice<TextureID> textureIDs;
 		PassNodeID writer = PASS_NODE_ID_NULL;
 	};
 
@@ -181,6 +202,13 @@ namespace Soul { namespace GPU {
 			void _submit(_Database* db, ProgramID program, VkCommandBuffer cmdBuffer) final override;
 		};
 
+		class CopyTexToCPUBuffer : public Command {
+			TextureID srcTexture;
+			void** dstBuffer = nullptr;
+
+			void _submit(_Database* db, ProgramID program, VkCommandBuffer cmdBuffer) final override;
+		};
+
 	};
 
 	class CommandBucket {
@@ -226,7 +254,7 @@ namespace Soul { namespace GPU {
 		BlendFactor dstAlphaBlendFactor = BlendFactor::ZERO;
 		BlendOp alphaBlendOp = BlendOp::ADD;
 		bool clear = false;
-		ClearValue clearValue = {};
+		ClearValue clearValue;
 	};
 
 	struct ColorAttachment {
@@ -242,7 +270,7 @@ namespace Soul { namespace GPU {
 		bool depthWriteEnable = false;
 		CompareOp depthCompareOp = CompareOp::NEVER;
 		bool clear = false;
-		ClearValue clearValue = {};
+		ClearValue clearValue;
 	};
 
 	struct DepthStencilAttachment {
@@ -344,6 +372,11 @@ namespace Soul { namespace GPU {
 		Array<ShaderTexture> outShaderTextures;
 		Array<InputAttachment> inputAttachments;
 
+		Array<BufferGroupNodeID> vertexBufferGroups;
+		Array<BufferGroupNodeID> indexBufferGroups;
+		Array<BufferGroupNodeID> inShaderBufferGroups;
+		Array<TextureGroupNodeID> inShaderTextureGroups;
+
 		void cleanup() override {
 			colorAttachments.cleanup();
 			inShaderBuffers.cleanup();
@@ -365,9 +398,20 @@ namespace Soul { namespace GPU {
 	    Array<ShaderTexture> inShaderTextures;
 	    Array<ShaderTexture> outShaderTextures;
 
+		Array<BufferGroupNodeID> inShaderBufferGroups;
+		Array<TextureGroupNodeID> inShaderTextureGroups;
+
 	    void cleanup() override {
 	        //
 	    }
+	};
+
+	class TransferBaseNode : public PassNode {
+	public:
+
+		void cleanup() override {
+			//
+		}
 	};
 
 	template<typename Data, typename Execute>
@@ -392,6 +436,13 @@ namespace Soul { namespace GPU {
         void executePass(RenderGraphRegistry* registry, CommandBucket* commandBucket) const final override {
             execute(registry, data, commandBucket);
         }
+	};
+
+	template<typename Data, typename Execute>
+	class TransferNode : TransferBaseNode {
+	public:
+		Data data;
+		Execute execute;
 	};
 
 	class GraphicNodeBuilder {
@@ -451,6 +502,11 @@ namespace Soul { namespace GPU {
         void setPipelineConfig(const ComputePipelineConfig& config);
 	};
 
+	struct TextureExport {
+		TextureNodeID tex;
+		char* pixels;
+	};
+
 	class RenderGraph {
 	public:
 
@@ -500,6 +556,11 @@ namespace Soul { namespace GPU {
 		BufferNodeID importBuffer(const char* name, BufferID bufferID);
 		BufferNodeID createBuffer(const char* name, const RGBufferDesc& desc);
 
+		TextureGroupNodeID importTextureGroup(const char* name, Slice<TextureID> textureIDs);
+		BufferGroupNodeID importBufferGroup(const char* name, Slice<BufferID> bufferIDs);
+
+		void exportTexture(TextureNodeID tex, char* pixels);
+
 		void cleanup();
 
 		void _bufferNodeRead(BufferNodeID bufferNodeID, PassNodeID passNodeID);
@@ -524,6 +585,8 @@ namespace Soul { namespace GPU {
 
 		Array<_RGExternalBuffer> _externalBuffers;
 		Array<_RGExternalTexture> _externalTextures;
+
+		Array<TextureExport> _textureExports;
 
 	};
 

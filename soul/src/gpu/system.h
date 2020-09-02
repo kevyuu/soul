@@ -60,9 +60,9 @@ namespace Soul { namespace GPU {
 				dataGenFunc(i, (byte *) mappedData + i * buffer.unitSize);
 			}
 			vmaUnmapMemory(_db.gpuAllocator, stagingBuffer.allocation);
-
+		
 			_transferBufferToBuffer(stagingBuffer.vkHandle, buffer.vkHandle, size);
-
+			
 			buffer.owner = ResourceOwner::TRANSFER_QUEUE;
 
 			return bufferID;
@@ -74,6 +74,7 @@ namespace Soul { namespace GPU {
 		TextureID textureCreate(const TextureDesc& desc);
 		TextureID textureCreate(const TextureDesc& desc, const byte* data, uint32 dataSize);
 		TextureID textureCreate(const TextureDesc& desc, ClearValue clearValue);
+		TextureID _textureExportCreate(TextureID srcTextureID);
 		void textureDestroy(TextureID textureID);
 		_Texture* _texturePtr(TextureID textureID);
 		VkImageView _textureGetMipView(TextureID textureID, uint32 level);

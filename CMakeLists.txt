@@ -28,6 +28,23 @@ else()
 	message(FATAL_ERROR "Vulkan library not found!")
 endif()
 
+# ==================================================================================================
+# Try to find NVTX
+# ==================================================================================================
+message(STATUS $ENV{NVTOOLSEXT_PATH})
+find_library(NVTX 
+	NAMES nvToolsExt64_1
+	PATHS "$ENV{NVTOOLSEXT_PATH}" ENV NVTOOLSEXT_PATH
+	PATH_SUFFIXES "lib/x64")
+
+if (NVTX)
+	message(STATUS "Found NVTX library : ${NVTX}.")
+	set(NVTX_INCLUDE_DIR "$ENV{NVTOOLSEXT_PATH}/include")
+	message(STATUS "NVTX include dir : ${NVTX_INCLUDE_DIR}")
+else()
+	message(STATUS "NVTX library not found")
+endif()
+
 
 if(MSVC)
     add_definitions(-D_CRT_SECURE_NO_WARNINGS)
@@ -36,4 +53,5 @@ endif()
 add_subdirectory(dependencies)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/soul)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/demo)
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/blender_render_graph)
 

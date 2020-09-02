@@ -42,6 +42,8 @@ namespace Soul { namespace Runtime {
 		sprintf(threadName, "Worker Thread = %d", getThreadID());
 		SOUL_PROFILE_THREAD_SET_NAME(threadName);
 
+		SOUL_LOG_INFO("Loop");
+
 		char tempAllocatorName[512];
 		Memory::LinearAllocator linearAllocator(tempAllocatorName, 20 * ONE_MEGABYTE, Runtime::GetContextAllocator());
 		Runtime::TempAllocator tempAllocator(&linearAllocator, Runtime::TempProxy());

@@ -8,7 +8,7 @@ namespace Soul {namespace Memory {
 	{
 		SOUL_ASSERT_MAIN_THREAD();
 
-		_threadCount = Runtime::System::Get().getThreadCount();
+		_threadCount = Runtime::ThreadCount();
 		_sizePerThread = sizePerThread;
 		Allocation allocation = _backingAllocator->allocate(
 				(sizeof(PerThread) + _sizePerThread) * _threadCount, alignof(PerThread), getName());
@@ -27,7 +27,7 @@ namespace Soul {namespace Memory {
 
 	Allocation MTLinearAllocator::allocate(uint32 size, uint32 alignment, const char* tag) {
 
-		PerThread& perThread = _perThreads[Runtime::System::Get().getThreadID()];
+		PerThread& perThread = _perThreads[Runtime::ThreadID()];
 		void* addr = Util::AlignForward(perThread.currentAddr, alignment);
 		if (Util::Add(addr, size) > Util::Add(perThread.baseAddr, _sizePerThread)) {
 			return { nullptr, 0 };
@@ -39,12 +39,12 @@ namespace Soul {namespace Memory {
 	void MTLinearAllocator::deallocate(void* addr, uint32 size) {}
 
 	void* MTLinearAllocator::getMarker() {
-		PerThread& perThread = _perThreads[Runtime::System::Get().getThreadID()];
+		PerThread& perThread = _perThreads[Runtime::ThreadID()];
 		return perThread.currentAddr;
 	}
 
 	void MTLinearAllocator::rewind(void* addr) {
-		PerThread& perThread = _perThreads[Runtime::System::Get().getThreadID()];
+		PerThread& perThread = _perThreads[Runtime::ThreadID()];
 		SOUL_ASSERT(0, addr >= perThread.baseAddr && addr <= perThread.currentAddr, "");
 		perThread.currentAddr = addr;
 	}

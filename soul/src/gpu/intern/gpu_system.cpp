@@ -64,6 +64,7 @@ namespace Soul { namespace GPU {
 		SOUL_MEMORY_ALLOCATOR_ZONE(&scopeAllocator);
 
 		_db.currentFrame = 0;
+		_db.frameCounter = 0;
 
 		_db.buffers.add({});
 		_db.shaderArgSets.add({});
@@ -102,11 +103,10 @@ namespace Soul { namespace GPU {
 #if defined(SOUL_OS_WINDOWS)
 				"VK_KHR_win32_surface",
 #endif // SOUL_PLATFORM_OS_WIN32
-
 #ifdef SOUL_OS_APPLE
 				"VK_MVK_macos_surface",
 #endif // SOUL_PLATFORM_OS_APPLE
-				VK_EXT_DEBUG_UTILS_EXTENSION_NAME
+			VK_EXT_DEBUG_UTILS_EXTENSION_NAME
 		};
 		static const uint32_t requiredExtensionCount = sizeof(requiredExtensions) / sizeof(requiredExtensions[0]);
 		instanceCreateInfo.enabledExtensionCount = requiredExtensionCount;
@@ -115,9 +115,6 @@ namespace Soul { namespace GPU {
 #ifdef SOUL_OPTION_VULKAN_VALIDATION_ENABLE
 		static const char *requiredLayers[] = {
 				"VK_LAYER_KHRONOS_validation",
-#ifdef SOUL_OPTION_VULKAN_ENABLE_RENDERDOC
-				"VK_LAYER_RENDERDOC_Capture",
-#endif // SOUL_OPTION_VULKAN_ENABLE_RENDERDOC
 		};
 
 		static const uint32_t requiredLayerCount = sizeof(requiredLayers) / sizeof(requiredLayers[0]);
@@ -219,13 +216,15 @@ namespace Soul { namespace GPU {
 				const uint32_t deviceID = physicalDeviceProperties.deviceID;
 
 				SOUL_LOG_INFO("Devices %d\n"
-							  " -- Name = %s\n"
-							  " -- Vendor = 0x%.8X\n"
-							  " -- Device ID = 0x%.8X\n"
-							  " -- Api Version = 0x%.8X\n"
-							  " -- Driver Version = 0x%.8X\n",
-							  i, physicalDeviceProperties.deviceName, vendorID, deviceID, apiVersion,
-							  driverVersion);
+					" -- Name = %s\n"
+					" -- Vendor = 0x%.8X\n"
+					" -- Device ID = 0x%.8X\n"
+					" -- Api Version = %d.%d.%d\n"
+					" -- Driver Version = %d.%d.%d\n",
+					i, physicalDeviceProperties.deviceName, vendorID, 
+					deviceID, 
+					VK_VERSION_MAJOR(apiVersion), VK_VERSION_MINOR(apiVersion), VK_VERSION_PATCH(apiVersion),
+					VK_VERSION_MAJOR(driverVersion), VK_VERSION_MINOR(driverVersion), VK_VERSION_PATCH(driverVersion));
 
 				uint32_t extensionCount;
 				vkEnumerateDeviceExtensionProperties(devices[i], nullptr, &extensionCount, nullptr);
@@ -395,31 +394,31 @@ namespace Soul { namespace GPU {
 
 			vkGetPhysicalDeviceProperties(db->physicalDevice, &db->physicalDeviceProperties);
 			vkGetPhysicalDeviceFeatures(db->physicalDevice, &db->physicalDeviceFeatures);
-
+			
 			const uint32_t apiVersion = db->physicalDeviceProperties.apiVersion;
 			const uint32_t driverVersion = db->physicalDeviceProperties.driverVersion;
 			const uint32_t vendorID = db->physicalDeviceProperties.vendorID;
 			const uint32_t deviceID = db->physicalDeviceProperties.deviceID;
 
 			SOUL_LOG_INFO("Selected device\n"
-						  " -- Name = %s\n"
-						  " -- Vendor = 0x%.8X\n"
-						  " -- Device ID = 0x%.8X\n"
-						  " -- Api Version = 0x%.8X\n"
-						  " -- Driver Version = 0x%.8X\n"
-						  " -- Graphics queue family index = %d\n"
-						  " -- Presentation queue family index = %d\n"
-						  " -- Transfer queue family index = %d\n"
-						  " -- Compute queue family index = %d\n",
-						  db->physicalDeviceProperties.deviceName,
-						  vendorID,
-						  deviceID,
-						  apiVersion,
-						  driverVersion,
-						  db->graphicsQueueFamilyIndex,
-						  db->presentQueueFamilyIndex,
-						  db->transferQueueFamilyIndex,
-						  db->computeQueueFamilyIndex);
+				" -- Name = %s\n"
+				" -- Vendor = 0x%.8X\n"
+				" -- Device ID = 0x%.8X\n"
+				" -- Api Version = 0x%.8X\n"
+				" -- Driver Version = 0x%.8X\n"
+				" -- Graphics queue family index = %d\n"
+				" -- Presentation queue family index = %d\n"
+				" -- Transfer queue family index = %d\n"
+				" -- Compute queue family index = %d\n",
+				db->physicalDeviceProperties.deviceName,
+				vendorID,
+				deviceID,
+				apiVersion,
+				driverVersion,
+				db->graphicsQueueFamilyIndex,
+				db->presentQueueFamilyIndex,
+				db->transferQueueFamilyIndex,
+				db->computeQueueFamilyIndex);
 			db->queueFamilyIndices[QueueType::NONE] = 0;
 			db->queueFamilyIndices[QueueType::GRAPHIC] = db->graphicsQueueFamilyIndex;
 			db->queueFamilyIndices[QueueType::TRANSFER] = db->transferQueueFamilyIndex;
@@ -624,7 +623,7 @@ namespace Soul { namespace GPU {
 			swapchainInfo.queueFamilyIndexCount = 1;
 			swapchainInfo.pQueueFamilyIndices = &queueFamily;
 			swapchainInfo.preTransform = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR;
-			swapchainInfo.presentMode = VK_PRESENT_MODE_FIFO_KHR;
+			swapchainInfo.presentMode = VK_PRESENT_MODE_MAILBOX_KHR;
 			swapchainInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
 			swapchainInfo.clipped = VK_TRUE;
 
@@ -684,8 +683,8 @@ namespace Soul { namespace GPU {
 		createSwapchain(&_db, config.swapchainWidth, config.swapchainHeight);
 
 		SOUL_ASSERT(0,
-					_db.graphicsQueueFamilyIndex == _db.presentQueueFamilyIndex,
-					"Current implementation does not support different queue family for graphics and presentation yet!");
+			_db.graphicsQueueFamilyIndex == _db.presentQueueFamilyIndex,
+			"Current implementation does not support different queue family for graphics and presentation yet!");
 		_frameContextInit(config);
 
 		static const auto initAllocator = [](_Database *db) {
@@ -711,10 +710,12 @@ namespace Soul { namespace GPU {
 			vulkanFunctions.vkGetImageMemoryRequirements2KHR = vkGetImageMemoryRequirements2KHR;
 			vulkanFunctions.vkBindBufferMemory2KHR = vkBindBufferMemory2KHR;
 			vulkanFunctions.vkBindImageMemory2KHR = vkBindImageMemory2KHR;
+			vulkanFunctions.vkGetPhysicalDeviceMemoryProperties2KHR = vkGetPhysicalDeviceMemoryProperties2KHR;
 
 			VmaAllocatorCreateInfo allocatorInfo = {};
 			allocatorInfo.physicalDevice = db->physicalDevice;
 			allocatorInfo.device = db->device;
+			allocatorInfo.instance = db->instance;
 			allocatorInfo.preferredLargeHeapBlockSize = 0;
 			allocatorInfo.pAllocationCallbacks = nullptr;
 			allocatorInfo.pDeviceMemoryCallbacks = nullptr;
@@ -731,6 +732,8 @@ namespace Soul { namespace GPU {
 		_frameBegin();
 		
 	}
+
+
 
 	void System::_frameContextInit(const System::Config &config) {
 		SOUL_ASSERT_MAIN_THREAD();
@@ -820,6 +823,7 @@ namespace Soul { namespace GPU {
 		imageInfo.queueFamilyIndexCount = queueData.count;
 		imageInfo.pQueueFamilyIndices = queueData.indices;
 		imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+		imageInfo.flags |= VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT;
 
 		VmaAllocationCreateInfo allocInfo = {};
 		allocInfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
@@ -835,7 +839,7 @@ namespace Soul { namespace GPU {
 			imageAspect &= ~(VK_IMAGE_ASPECT_STENCIL_BIT);
 		}
 		
-		VkImageViewCreateInfo imageViewInfo = {VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO};
+		VkImageViewCreateInfo imageViewInfo = { VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO };
 		imageViewInfo.image = texture.vkHandle;
 		imageViewInfo.viewType = vkCastToImageViewType(desc.type);
 		imageViewInfo.format = format;
@@ -848,8 +852,8 @@ namespace Soul { namespace GPU {
 				1
 		};
 		SOUL_VK_CHECK(vkCreateImageView(_db.device,
-										&imageViewInfo, nullptr, &texture.view), "Create Image View fail");
-
+			&imageViewInfo, nullptr, &texture.view), "Create Image View fail");
+		
 		texture.layout = VK_IMAGE_LAYOUT_UNDEFINED;
 		texture.extent = imageInfo.extent;
 		texture.sharingMode = imageInfo.sharingMode;
@@ -859,13 +863,16 @@ namespace Soul { namespace GPU {
 		texture.mipCount = desc.mipLevels;
 		texture.mipViews = nullptr;
 
+
 		if (desc.name != nullptr) {
+			char texName[1024];
+			sprintf(texName, "%s(%d)", desc.name, _db.frameCounter);
             VkDebugUtilsObjectNameInfoEXT imageNameInfo = {
                 VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT, // sType
                 nullptr,                                               // pNext
                 VK_OBJECT_TYPE_IMAGE,                               // objectType
                 (uint64_t) texture.vkHandle,                         // object
-                desc.name,                            // pObjectName
+                texName,                            // pObjectName
             };
 
             vkSetDebugUtilsObjectNameEXT(_db.device, &imageNameInfo);
@@ -902,6 +909,22 @@ namespace Soul { namespace GPU {
 		beforeTransferBarrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
 
 		if (!_frameContext().stagingAvailable) _stagingSetup();
+
+		const char* texName = "Unknown Texture";
+		if (desc.name != nullptr) {
+			texName = desc.name;
+		}
+
+		Vec4f color = { (rand() % 125) / 255.0f, (rand() % 125) / 255.0f, (rand() % 125) / 255.0f, 1.0f };
+		const VkDebugUtilsLabelEXT passLabel = {
+			VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT, // sType
+			nullptr,                                  // pNext
+			texName,                           // pLabelName
+		{color.x, color.y, color.z, color.w},             // color
+		};
+		vkCmdBeginDebugUtilsLabelEXT(_frameContext().stagingCommandBuffer, &passLabel);
+
+
 		vkCmdPipelineBarrier(
 				_frameContext().stagingCommandBuffer,
 				VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
@@ -911,6 +934,8 @@ namespace Soul { namespace GPU {
 				1, &beforeTransferBarrier);
 
 		_stagingTransferToTexture(dataSize, data, desc, textureID);
+
+		vkCmdEndDebugUtilsLabelEXT(_frameContext().stagingCommandBuffer);
 
 		texture.layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
 		texture.owner = ResourceOwner::TRANSFER_QUEUE;
@@ -985,6 +1010,70 @@ namespace Soul { namespace GPU {
         return textureID;
 	}
 
+	TextureID System::_textureExportCreate(TextureID srcTextureID) {
+
+		SOUL_PROFILE_ZONE();
+		SOUL_ASSERT_MAIN_THREAD();
+
+		TextureID textureID = TextureID(_db.textures.add(_Texture()));
+		_Texture& texture = *_texturePtr(textureID);
+
+		_Texture* srcTexture = _texturePtr(srcTextureID);
+
+		VkImageCreateInfo imageInfo = { VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO };
+		imageInfo.imageType = vkCast(srcTexture->type);
+		imageInfo.format = vkCast(srcTexture->format);
+		imageInfo.extent = srcTexture->extent;
+		imageInfo.mipLevels = srcTexture->mipCount;
+		imageInfo.arrayLayers = 1;
+		imageInfo.samples = VK_SAMPLE_COUNT_1_BIT;
+		imageInfo.tiling = VK_IMAGE_TILING_LINEAR;
+		imageInfo.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT;;
+		_QueueData queueData = _getQueueDataFromQueueFlags(QUEUE_GRAPHIC_BIT);
+		imageInfo.sharingMode = queueData.count == 1 ? VK_SHARING_MODE_EXCLUSIVE : VK_SHARING_MODE_CONCURRENT;
+		imageInfo.queueFamilyIndexCount = queueData.count;
+		imageInfo.pQueueFamilyIndices = queueData.indices;
+		imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+
+		VmaAllocationCreateInfo allocInfo = {};
+		allocInfo.requiredFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+
+		SOUL_VK_CHECK(vmaCreateImage(_db.gpuAllocator,
+			&imageInfo, &allocInfo, &texture.vkHandle,
+			&texture.allocation, nullptr), "");
+
+		VkImageAspectFlags imageAspect = vkCastFormatToAspectFlags(srcTexture->format);
+		if (imageAspect & VK_IMAGE_ASPECT_STENCIL_BIT)
+		{
+			SOUL_LOG_WARN("Texture creation with stencil format detected. Current version will remove the aspect stencil bit so the texture cannot be used for depth stencil. The reason is because Vulkan spec stated that descriptor cannot have more than one aspect.");
+			imageAspect &= ~(VK_IMAGE_ASPECT_STENCIL_BIT);
+		}
+
+		texture.layout = VK_IMAGE_LAYOUT_UNDEFINED;
+		texture.extent = srcTexture->extent;
+		texture.sharingMode = imageInfo.sharingMode;
+		texture.format = srcTexture->format;
+		texture.type = srcTexture->type;
+		texture.owner = ResourceOwner::NONE;
+		texture.mipCount = srcTexture->mipCount;
+		texture.mipViews = nullptr;
+
+		char texName[1024];
+		sprintf(texName, "Export Tex(%d)", _db.frameCounter);
+
+		VkDebugUtilsObjectNameInfoEXT imageNameInfo = {
+			VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT, // sType
+			nullptr,                                               // pNext
+			VK_OBJECT_TYPE_IMAGE,                               // objectType
+			(uint64_t)texture.vkHandle,                         // object
+			texName,                            // pObjectName
+		};
+
+		vkSetDebugUtilsObjectNameEXT(_db.device, &imageNameInfo);
+
+		return textureID;
+	}
+
 	void System::textureDestroy(TextureID id) {
 		SOUL_ASSERT_MAIN_THREAD();
 		_frameContext().garbages.textures.add(id);
@@ -1026,6 +1115,7 @@ namespace Soul { namespace GPU {
 	}
 
 	void System::_stagingFrameBegin() {
+		SOUL_PROFILE_ZONE();
 		SOUL_ASSERT_MAIN_THREAD();
 		_FrameContext &frameContext = _frameContext();
 		for (const _Buffer &buffer : frameContext.stagingBuffers) {
@@ -1076,7 +1166,18 @@ namespace Soul { namespace GPU {
 
 		_ThreadContext &threadContext = _threadContext();
 
+		const char* name = "Unknown texture";
+		Vec4f color = { (rand() % 125) / 255.0f, (rand() % 125) / 255.0f, (rand() % 125) / 255.0f, 1.0f };
+		const VkDebugUtilsLabelEXT passLabel = {
+			VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT, // sType
+			nullptr,                                  // pNext
+			name,                           // pLabelName
+			{color.x, color.y, color.z, color.w},             // color
+		};
+		vkCmdBeginDebugUtilsLabelEXT(_frameContext().stagingCommandBuffer, &passLabel);
 		vkCmdCopyBuffer(_frameContext().stagingCommandBuffer, srcBuffer, dstBuffer, 1, &copyRegion);
+
+		vkCmdEndDebugUtilsLabelEXT(_frameContext().stagingCommandBuffer);
 	}
 
 	_Buffer System::_stagingBufferRequest(const byte *data, uint32 size) {
@@ -1115,8 +1216,7 @@ namespace Soul { namespace GPU {
 		_transferBufferToBuffer(stagingBuffer.vkHandle, _bufferPtr(bufferID)->vkHandle, size);
 	}
 
-	void
-	System::_stagingTransferToTexture(uint32 size, const byte *data, const TextureDesc &desc, TextureID textureID) {
+	void System::_stagingTransferToTexture(uint32 size, const byte *data, const TextureDesc &desc, TextureID textureID) {
 		SOUL_ASSERT_MAIN_THREAD();
 
 		_Buffer stagingBuffer = _stagingBufferRequest(data, size);
@@ -1225,7 +1325,7 @@ namespace Soul { namespace GPU {
 	}
 
 	_ThreadContext &System::_threadContext() {
-		return _frameContext().threadContexts[Runtime::System::Get().getThreadID()];
+		return _frameContext().threadContexts[Runtime::ThreadID()];
 	}
 
 	ShaderID System::shaderCreate(const ShaderDesc &desc, ShaderStage stage) {
@@ -1251,6 +1351,7 @@ namespace Soul { namespace GPU {
 		};
 
 		shaderc::CompileOptions options;
+		options.SetTargetSpirv(shaderc_spirv_version_1_3);
 		shaderc::SpvCompilationResult glslCompileResult = glslCompiler.CompileGlslToSpv(
 				desc.source,
 				desc.sourceSize,
@@ -1918,6 +2019,7 @@ namespace Soul { namespace GPU {
 
 	VkRenderPass System::_renderPassRequest(const _RenderPassKey& key)
 	{
+		SOUL_PROFILE_ZONE();
 		SOUL_ASSERT_MAIN_THREAD();
 		if (_db.renderPassMaps.isExist(key))
 		{
@@ -2281,31 +2383,41 @@ namespace Soul { namespace GPU {
 		SOUL_ASSERT_MAIN_THREAD();
 
 		_FrameContext &frameContext = _frameContext();
-		SOUL_VK_CHECK(vkWaitForFences(_db.device, 1, &frameContext.fence, VK_TRUE, UINT64_MAX), "");
-
-		for (int i = 0; i < uint64(QueueType::COUNT); i++) {
-			QueueType queueType = QueueType(i);
-			if (queueType == QueueType::NONE) continue;
-			vkResetCommandPool(_db.device, frameContext.commandPools[queueType], 0);
-		}
-		for (uint16 &usedCommandBuffer : frameContext.usedCommandBuffers) {
-			usedCommandBuffer = 0;
-		}
-
-		for (int i = 0; i < frameContext.threadContexts.size(); i++)
 		{
-			_commandPoolReset(&frameContext.threadContexts[i].secondaryCommandPool);
+			SOUL_PROFILE_ZONE_WITH_NAME("Wait fence");
+			SOUL_VK_CHECK(vkWaitForFences(_db.device, 1, &frameContext.fence, VK_TRUE, UINT64_MAX), "");
 		}
+		
+		{
+			SOUL_PROFILE_ZONE_WITH_NAME("Reset command pools");
+			for (int i = 0; i < uint64(QueueType::COUNT); i++) {
+				QueueType queueType = QueueType(i);
+				if (queueType == QueueType::NONE) continue;
+				vkResetCommandPool(_db.device, frameContext.commandPools[queueType], 0);
+			}
+			for (uint16& usedCommandBuffer : frameContext.usedCommandBuffers) {
+				usedCommandBuffer = 0;
+			}
 
+			for (int i = 0; i < frameContext.threadContexts.size(); i++)
+			{
+				_commandPoolReset(&frameContext.threadContexts[i].secondaryCommandPool);
+			}
+		}
+		
 		_stagingFrameBegin();
 
 		_semaphoreReset(frameContext.imageAvailableSemaphore);
 		_semaphoreReset(frameContext.renderFinishedSemaphore);
 
 		uint32 swapchainIndex;
-		vkAcquireNextImageKHR(_db.device, _db.swapchain.vkHandle, UINT64_MAX,
-							  _semaphorePtr(frameContext.imageAvailableSemaphore)->vkHandle, VK_NULL_HANDLE,
-							  &swapchainIndex);
+		{
+			SOUL_PROFILE_ZONE_WITH_NAME("Acquire Next Image KHR");
+			vkAcquireNextImageKHR(_db.device, _db.swapchain.vkHandle, UINT64_MAX,
+				_semaphorePtr(frameContext.imageAvailableSemaphore)->vkHandle, VK_NULL_HANDLE,
+				&swapchainIndex);
+		}
+		
 		_semaphorePtr(frameContext.imageAvailableSemaphore)->state = _SemaphoreState::SUBMITTED;
 		frameContext.swapchainIndex = swapchainIndex;
 		TextureID swapchainTextureID = _db.swapchain.textures[swapchainIndex];
@@ -2313,27 +2425,39 @@ namespace Soul { namespace GPU {
 		swapchainTexture->owner = ResourceOwner::PRESENTATION_ENGINE;
 		swapchainTexture->layout = VK_IMAGE_LAYOUT_UNDEFINED;
 
-		vkResetDescriptorPool(_db.device, frameContext.descriptorPool, 0);
-
-		for (TextureID textureID : frameContext.garbages.textures) {
-			_Texture &texture = *_texturePtr(textureID);
-			vmaDestroyImage(_db.gpuAllocator, texture.vkHandle, texture.allocation);
-			vkDestroyImageView(_db.device, texture.view, nullptr);
-			if (texture.mipViews != nullptr) {
-			    for (int i = 0; i < texture.mipCount; i++) {
-			        vkDestroyImageView(_db.device, texture.mipViews[i], nullptr);
-			    }
-			    _db.cpuAllocator.deallocate(texture.mipViews, sizeof(VkImageView) * texture.mipCount);
-			    texture.mipViews = nullptr;
+		{
+			SOUL_PROFILE_ZONE_WITH_NAME("Reset descriptor pool");
+			vkResetDescriptorPool(_db.device, frameContext.descriptorPool, 0);
+		}
+		
+		{
+			SOUL_PROFILE_ZONE_WITH_NAME("Destroy images");
+			for (TextureID textureID : frameContext.garbages.textures) {
+				_Texture& texture = *_texturePtr(textureID);
+				vmaDestroyImage(_db.gpuAllocator, texture.vkHandle, texture.allocation);
+				vkDestroyImageView(_db.device, texture.view, nullptr);
+				if (texture.mipViews != nullptr) {
+					for (int i = 0; i < texture.mipCount; i++) {
+						vkDestroyImageView(_db.device, texture.mipViews[i], nullptr);
+					}
+					_db.cpuAllocator.deallocate(texture.mipViews, sizeof(VkImageView) * texture.mipCount);
+					texture.mipViews = nullptr;
+				}
+				_db.textures.remove(textureID.id);
 			}
+			frameContext.garbages.textures.resize(0);
 		}
-		frameContext.garbages.textures.resize(0);
+		
 
-		for (BufferID bufferID : frameContext.garbages.buffers) {
-			_Buffer &buffer = *_bufferPtr(bufferID);
-			vmaDestroyBuffer(_db.gpuAllocator, buffer.vkHandle, buffer.allocation);
+		{
+			SOUL_PROFILE_ZONE_WITH_NAME("Destroy buffers");
+			for (BufferID bufferID : frameContext.garbages.buffers) {
+				_Buffer& buffer = *_bufferPtr(bufferID);
+				vmaDestroyBuffer(_db.gpuAllocator, buffer.vkHandle, buffer.allocation);
+				_db.buffers.remove(bufferID.id);
+			}
+			frameContext.garbages.buffers.resize(0);
 		}
-		frameContext.garbages.buffers.resize(0);
 
 		for (ShaderID shaderID : frameContext.garbages.shaders) {
 			_Shader &shader = _db.shaders[shaderID.id];
@@ -2342,10 +2466,14 @@ namespace Soul { namespace GPU {
 		}
 		frameContext.garbages.shaders.resize(0);
 
-		for (VkRenderPass renderPass: frameContext.garbages.renderPasses) {
-			vkDestroyRenderPass(_db.device, renderPass, nullptr);
+		{
+			SOUL_PROFILE_ZONE_WITH_NAME("Destroy render passes");
+			for (VkRenderPass renderPass : frameContext.garbages.renderPasses) {
+				vkDestroyRenderPass(_db.device, renderPass, nullptr);
+			}
+			frameContext.garbages.renderPasses.resize(0);
 		}
-		frameContext.garbages.renderPasses.resize(0);
+		
 
 		for (VkFramebuffer framebuffer : frameContext.garbages.frameBuffers) {
 			vkDestroyFramebuffer(_db.device, framebuffer, nullptr);
@@ -2472,6 +2600,7 @@ namespace Soul { namespace GPU {
 			SOUL_VK_CHECK(vkQueuePresentKHR(_db.presentQueue, &presentInfo), "");
 		}
 		
+		_db.frameCounter++;
 		_db.currentFrame += 1;
 		_db.currentFrame %= _db.frameContexts.size();
 

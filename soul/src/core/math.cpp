@@ -1,16 +1,13 @@
 #include "core/math.h"
 #include "core/dev_util.h"
 
-#include <cmath>
-#include <iostream>
-
 namespace Soul {
 
-	float min(float f1, float f2) {
+	real32 min(real32 f1, real32 f2) {
 		return f1 < f2 ? f1 : f2;
 	}
 
-	float max(float f1, float f2) {
+	real32 max(real32 f1, real32 f2) {
 		return f1 > f2 ? f1 : f2;
 	}
 

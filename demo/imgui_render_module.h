@@ -10,42 +10,10 @@
 #include <stdio.h>
 #include <map>
 
+#include "ui/ui.h"
+
 using namespace Soul;
-
-struct SoulImTexture {
-public:
-
-	union Val{
-	
-		GPU::TextureNodeID renderGraphTex = GPU::TEXTURE_NODE_ID_NULL;
-		ImTextureID imTextureID;
-
-		Val() {};
-	} val;
-
-	static_assert(sizeof(ImTextureID) <= sizeof(val), "");
-	
-	SoulImTexture() = default;
-
-
-	SoulImTexture(GPU::TextureNodeID texNodeID) {
-		val.renderGraphTex = texNodeID;
-	}
-
-	SoulImTexture(ImTextureID imTextureID) {
-		val.imTextureID = imTextureID;
-	}
-
-	ImTextureID getImTextureID() {
-		return val.imTextureID;
-	}
-
-	GPU::TextureNodeID getTextureNodeID() {
-		return val.renderGraphTex;
-	}
-
-};
-static_assert(sizeof(SoulImTexture) <= sizeof(ImTextureID), "Size of SoulImTexture must be less that ImTextureID");
+using namespace Demo;
 
 class ImGuiRenderModule {
 
@@ -183,7 +151,7 @@ public:
 			*index = idxIterator.get();
 			idxIterator.next();
 		});
-		GPU::BufferNodeID indexNodeID = renderGraph->importBuffer("Index buffer", _indexBuffer);
+		GPU::BufferNodeID indexNodeID = renderGraph->importBuffer("Index Buffer", _indexBuffer);
 
 		struct TransformUBO {
 			float scale[2];
@@ -205,7 +173,7 @@ public:
 			auto transform = (TransformUBO*) data;
 			*transform = transformUBO;
 		});
-		GPU::BufferNodeID transformNodeID = renderGraph->importBuffer("Transform UBO", transformBufferID);
+		GPU::BufferNodeID transformNodeID = renderGraph->importBuffer("Transform uBO", transformBufferID);
 
 		system->bufferDestroy(_vertexBuffer);
 		system->bufferDestroy(_indexBuffer);
@@ -218,6 +186,7 @@ public:
 				GPU::ColorAttachmentDesc targetAttchDesc;
 				targetAttchDesc.clear = true;
 				targetAttchDesc.clearValue = {};
+				targetAttchDesc.clearValue.color.float32 = { 1.0f, 0.0f, 0.0f, 1.0f };
 				targetAttchDesc.blendEnable = true;
 				targetAttchDesc.srcColorBlendFactor = GPU::BlendFactor::SRC_ALPHA;
 				targetAttchDesc.dstColorBlendFactor = GPU::BlendFactor::ONE_MINUS_SRC_ALPHA;
@@ -234,7 +203,7 @@ public:
 					const ImDrawList& cmdList = *drawData.CmdLists[n];
 					for (int cmd_i = 0; cmd_i < cmdList.CmdBuffer.Size; cmd_i++) {
 						const ImDrawCmd& cmd = cmdList.CmdBuffer[cmd_i];
-						GPU::TextureNodeID imTexture = SoulImTexture(cmd.TextureId).getTextureNodeID();
+						GPU::TextureNodeID imTexture = UI::SoulImTexture(cmd.TextureId).getTextureNodeID();
 						if (data->imTextures.find(imTexture) == data->imTextures.end()) {
 							data->imTextures[imTexture] = builder->addInShaderTexture(imTexture, 1, 0);
 						}
@@ -315,7 +284,7 @@ public:
 
 								GPU::Descriptor imageDescriptor = {};
 								imageDescriptor.type = GPU::DescriptorType::SAMPLED_IMAGE;
-								SoulImTexture soulImTexture(cmd.TextureId);
+								UI::SoulImTexture soulImTexture(cmd.TextureId);
 								imageDescriptor.sampledImageInfo.textureID = registry->getTexture(soulImTexture.getTextureNodeID());
 								imageDescriptor.sampledImageInfo.samplerID = _fontSampler;
 

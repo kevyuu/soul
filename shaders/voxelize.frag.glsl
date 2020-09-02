@@ -230,7 +230,4 @@ void main() {
     ivec3 voxelIdx = ivec3(gs_out.voxelIdx);
     PixelMaterial pixelMaterial = pixelMaterialCreate(material, gs_out.texCoord);
 
-    imageAtomicRGBA8Avg(voxelAlbedoBuffer, voxelIdx, vec4(pixelMaterial.albedo, 1.0f));
-    imageAtomicRGBA8Avg(voxelNormalBuffer, voxelIdx, vec4(gs_out.worldNormal * 0.5f + vec3(0.5f), 1.0f));
-    imageAtomicRGBA8Avg(voxelEmissiveBuffer, voxelIdx, vec4(pixelMaterial.emissive, 1.0f));
 }

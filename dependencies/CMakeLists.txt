@@ -40,6 +40,13 @@ target_include_directories(imgui
 target_link_libraries(imgui
 	PRIVATE glfw ${GLFW_LIBRARIES})
 
+# Imgui addons
+add_library(imgui_filesystem STATIC imguifilesystem.cpp)
+target_include_directories(imgui_filesystem
+	PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+target_link_libraries(imgui_filesystem
+	PRIVATE imgui)
+
 # single header library
 add_library(stb_image_write INTERFACE)
 target_include_directories(stb_image_write

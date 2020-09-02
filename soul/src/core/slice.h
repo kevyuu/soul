@@ -40,7 +40,7 @@ namespace Soul {
 		inline int size() const { return _size; }
 
 		const T* begin() const { return _array->data() + _beginIdx; }
-		const T* end() const { return _array->data + _endIdx; }
+		const T* end() const { return _array->data() + _endIdx; }
 
 		T* begin() { return _array->data() + _beginIdx; }
 		T* end() { return _array->data() + _endIdx; }

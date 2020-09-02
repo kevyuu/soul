@@ -6,8 +6,8 @@ namespace Soul {
 
 	static const real32 PI = 3.14f;
 
-	float min(float f1, float f2);
-	float max(float f1, float f2);
+	real32 min(real32 f1, real32 f2);
+	real32 max(real32 f1, real32 f2);
 
 	Vec2f operator+(const Vec2f& lhs, const Vec2f& rhs);
 	Vec2f operator-(const Vec2f& lhs, const Vec2f& rhs);

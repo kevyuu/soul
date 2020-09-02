@@ -69,6 +69,10 @@ namespace Soul { namespace GPU {
 		return nodeID;
 	}
 
+	void RenderGraph::exportTexture(TextureNodeID tex, char* pixels) {
+		_textureExports.add({ tex, pixels });
+	}
+
 	void RenderGraph::cleanup() {
 		SOUL_PROFILE_ZONE();
 		for (PassNode* passNode : _passNodes) {

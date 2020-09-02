@@ -67,7 +67,7 @@ set (SOUL_SOURCES
 	src/memory/intern/mt_linear_allocator.cpp
 	src/memory/intern/scope_allocator.cpp
 
-		src/runtime/intern/runtime_system.cpp
+	src/runtime/intern/runtime_system.cpp
 	src/runtime/intern/task_deque.cpp src/memory/intern/profiler.cpp
 
 	"$<$<STREQUAL:${CMAKE_SYSTEM_NAME},Darwin>:${SOUL_SOURCES_OSX}>"
@@ -75,10 +75,10 @@ set (SOUL_SOURCES
 
 add_library(soul STATIC ${SOUL_SOURCES})
 target_link_libraries(soul
-	PUBLIC glfw ${GLFW_LIBRARIES} vk_mem_alloc
+	PUBLIC glfw ${GLFW_LIBRARIES} vk_mem_alloc ${NVTX}
 	PRIVATE volk shaderc spirv-cross-core tracy)
 target_include_directories(soul 
-	PUBLIC src/)
+	PUBLIC src/ ${NVTX_INCLUDE_DIR})
 target_compile_definitions(soul
 	PUBLIC
 		"$<$<CONFIG:Debug>:SOUL_ENV_DEBUG>"
