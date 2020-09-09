@@ -144,8 +144,7 @@ namespace Demo {
 			
 			_DockBegin();
 
-			// Vec2ui32 sceneResolution = store->scene->getViewport();
-			Vec2ui32 sceneResolution = { 1920, 1080 };
+			Vec2ui32 sceneResolution = store->scene->getViewport();
 			store->scenePanel.setResolution(sceneResolution);
 			store->scenePanel.setTexture(store->sceneTex.getImTextureID());
 			store->scenePanel.render(store);

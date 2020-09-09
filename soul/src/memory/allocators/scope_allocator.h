@@ -24,7 +24,7 @@ namespace Soul {namespace Memory {
 		void reset() final;
 		Allocation allocate(uint32 size, uint32 alignment, const char* tag) final;
 		void deallocate(void* addr, uint32 size) final;
-
+		 
 	private:
 		BACKING_ALLOCATOR* _backingAllocator;
 		Allocator* _fallbackAllocator;
