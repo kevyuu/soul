@@ -56,6 +56,18 @@ namespace Soul {
             return System::Get().getContextAllocator();
         }
 
+        template <typename TYPE, typename... ARGS>
+        TYPE* Create(ARGS&&... args)
+        {
+            return GetContextAllocator()->create<TYPE>(std::forward<ARGS>(args)...);
+        }
+
+        template <typename TYPE>
+        void Destroy(TYPE* ptr)
+        {
+            GetContextAllocator()->destroy <TYPE>(ptr);
+        }
+       
         inline TempAllocator* GetTempAllocator() {
             return System::Get().getTempAllocator();
         }

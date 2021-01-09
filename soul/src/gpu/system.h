@@ -83,6 +83,8 @@ namespace Soul { namespace GPU {
 		void shaderDestroy(ShaderID shaderID);
 		_Shader* _shaderPtr(ShaderID shaderID);
 
+		VkDescriptorSetLayout _descriptorSetLayoutRequest(const _DescriptorSetLayoutKey& key);
+
 		ProgramID programRequest(const _ProgramKey& key);
 		_Program* _programPtr(ProgramID programID);
 
@@ -92,7 +94,7 @@ namespace Soul { namespace GPU {
 
 		SamplerID samplerRequest(const SamplerDesc& desc);
 
-		ShaderArgSetID _shaderArgSetRequest(const ShaderArgSetDesc& desc, ProgramID programID, uint32 set);
+		ShaderArgSetID _shaderArgSetRequest(const ShaderArgSetDesc& desc);
 
 		SemaphoreID _semaphoreCreate();
 		void _semaphoreReset(SemaphoreID ID);
@@ -102,7 +104,7 @@ namespace Soul { namespace GPU {
 		VkEvent _eventCreate();
 		void _eventDestroy(VkEvent event);
 
-		void renderGraphExecute(const RenderGraph& renderGraph);
+		void renderGraphExecute(const RenderGraph& kyuren);
 
 		void _queueFlush(QueueType queueType,
 						 uint32 semaphoreCount, SemaphoreID* semaphoreID,
@@ -143,7 +145,6 @@ namespace Soul { namespace GPU {
 		_ThreadContext& _threadContext();
 
 		VkRenderPass _renderPassRequest(const _RenderPassKey& key);
-		VkRenderPass _renderPassCreate(const VkRenderPassCreateInfo& info);
 		void _renderPassDestroy(VkRenderPass renderPass);
 
 		VkFramebuffer _framebufferCreate(const VkFramebufferCreateInfo& info);

@@ -36,22 +36,22 @@ namespace Soul {
 		void remove(PoolID id);
 
 		inline T& operator[](PoolID id) {
-			SOUL_ASSERT(0, id < _capacity, "Pool access violation");
+			SOUL_ASSERT(0, id < _capacity, "id = %d, _capacity = %d", id , _capacity);
 			return _buffer[id].datum;
 		}
 
 		inline const T& operator[](PoolID id) const {
-			SOUL_ASSERT(0, id < _capacity, "Pool access violation");
+			SOUL_ASSERT(0, id < _capacity, "id = %d, _capacity = %d", id, _capacity);
 			return _buffer[id].datum;
 		}
 
 		inline const T& get(PoolID id) const {
-			SOUL_ASSERT(0, id < _capacity, "Pool access violation");
+			SOUL_ASSERT(0, id < _capacity, "id = %d, _capacity = %d", id, _capacity);
 			return _buffer[id].datum;
 		}
 
 		inline T* ptr(PoolID id) const {
-			SOUL_ASSERT(0, id < _capacity, "Pool access violation");
+			SOUL_ASSERT(0, id < _capacity, "id = %d, _capacity = %d", id, _capacity);
 			return &(_buffer[id].datum);
 		}
 

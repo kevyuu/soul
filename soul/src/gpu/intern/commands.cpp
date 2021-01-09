@@ -50,6 +50,30 @@ namespace Soul { namespace GPU{ namespace Command {
 		vkCmdDrawIndexed(cmdBuffer, indexCount, 1, 0, 0, 0);
 	}
 
+	void DrawIndex2::_submit(_Database* db, ProgramID programID, VkCommandBuffer cmdBuffer) {
+
+		_Buffer& indexBuffer = db->buffers[indexBufferID.id];
+		SOUL_ASSERT(0, indexBuffer.usageFlags & BUFFER_USAGE_INDEX_BIT, "");
+
+		VkDeviceSize offsets[MAX_INPUT_PER_SHADER] = {};
+		_Program& program = db->programs[programID.id];
+		for (int i = 0; i < MAX_SET_PER_SHADER_PROGRAM; i++) {
+			if (shaderArgSets[i] == SHADER_ARG_SET_ID_NULL) continue;
+			const _ShaderArgSet& argSet = db->shaderArgSets[shaderArgSets[i].id];
+			vkCmdBindDescriptorSets(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, program.pipelineLayout, i, 1, &argSet.vkHandle, argSet.offsetCount, argSet.offset);
+		}
+
+		VkBuffer vertexVkHandles[MAX_INPUT_PER_SHADER];
+		for (int i = 0; i < vertexCount; i++) {
+			_Buffer& vertexBuffer = db->buffers[vertexBufferIDs[i].id];
+			SOUL_ASSERT(0, vertexBuffer.usageFlags & BUFFER_USAGE_VERTEX_BIT, "");
+			vertexVkHandles[i] = vertexBuffer.vkHandle;
+		}
+		vkCmdBindVertexBuffers(cmdBuffer, 0, vertexCount, vertexVkHandles, offsets);
+		vkCmdBindIndexBuffer(cmdBuffer, indexBuffer.vkHandle, 0, indexBuffer.unitSize == 2 ? VK_INDEX_TYPE_UINT16 : VK_INDEX_TYPE_UINT32);
+		vkCmdDrawIndexed(cmdBuffer, indexCount, 1, 0, 0, 0);
+	}
+
 	void DrawIndexRegion::_submit(_Database *db, ProgramID programID, VkCommandBuffer cmdBuffer) {
 
 		VkRect2D scissorRect;

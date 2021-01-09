@@ -37,7 +37,18 @@ namespace Soul
 
 		inline void remove(PackedID id);
 
+		inline uint32 getInternalID(PackedID id) const
+		{
+			return _internalIndexes[id];
+		}
+
 		inline T& operator[](PackedID id) 
+		{
+			uint32 internalIndex = _internalIndexes[id];
+			return _buffer[internalIndex];
+		}
+
+		inline const T& operator[](PackedID id) const
 		{
 			uint32 internalIndex = _internalIndexes[id];
 			return _buffer[internalIndex];
@@ -51,6 +62,10 @@ namespace Soul
 
 		inline const T& getInternal(uint32 idx) const {
 			return _buffer[idx];
+		}
+
+		inline const PackedID getPackedID(uint32 idx) const {
+			return _poolIDs[idx];
 		}
 
 		inline T* ptr(PackedID id)

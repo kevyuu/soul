@@ -69,8 +69,8 @@ namespace Soul {
 		}
 
 		uint32 _findIndex(KEYTYPE key) const {
-			uint32 baseIndex = key.hash() % _capacity;
-			uint32 iterIndex = baseIndex;
+			uint64 baseIndex = key.hash() % _capacity;
+			uint64 iterIndex = baseIndex;
 			uint32 dib = 0;
 			while ((_indexes[iterIndex].key != key) && (_indexes[iterIndex].dib != 0) && (dib < _maxDIB)) {
 				dib++;

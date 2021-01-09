@@ -220,4 +220,14 @@ namespace Soul { namespace GPU {
 
 	}
 
+	static VkPipelineStageFlags vkCastShaderStageToPipelineStageFlags(ShaderStageFlags stageFlags) {
+		static VkPipelineStageFlags BIT_MAPPING[] = {
+			VK_PIPELINE_STAGE_VERTEX_SHADER_BIT,
+			VK_PIPELINE_STAGE_GEOMETRY_SHADER_BIT,
+			VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+			VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+		};
+		return Util::CastFlags(stageFlags, BIT_MAPPING);
+	}
+
 }}

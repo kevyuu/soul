@@ -289,6 +289,7 @@ public:
 								imageDescriptor.sampledImageInfo.samplerID = _fontSampler;
 
 								GPU::ShaderArgSetDesc argSet1Desc = {};
+
 								argSet1Desc.bindingCount = 1;
 								argSet1Desc.bindingDescriptions = &imageDescriptor;
 

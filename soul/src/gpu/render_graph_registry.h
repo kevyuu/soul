@@ -28,10 +28,13 @@ namespace Soul { namespace GPU {
 		BufferID getBuffer(BufferNodeID bufferNodeID) const;
 		TextureID getTexture(TextureNodeID textureNodeId) const;
 		ShaderArgSetID  getShaderArgSet(uint32 set, const ShaderArgSetDesc& desc);
+		PipelineStateID getPipelineState(uint32 set, const GraphicPipelineDesc& pipelineConfig);
+
 
 	private:
 		System* _system;
 		const _RenderGraphExecution* _execution;
 		ProgramID _programID;
+		VkRenderPass renderPass;
 	};
 }}

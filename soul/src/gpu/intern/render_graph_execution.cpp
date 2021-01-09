@@ -30,6 +30,40 @@ namespace Soul {namespace GPU {
 		PassType::NONE
 	});
 
+	static auto getBufferUsageFromShaderReadUsage = [](ShaderBufferReadUsage shaderUsage) -> BufferUsageFlags {
+		static constexpr BufferUsageFlags mapping[] = {
+			BUFFER_USAGE_UNIFORM_BIT,
+			BUFFER_USAGE_STORAGE_BIT,
+		};
+		static_assert(SOUL_ARRAY_LEN(mapping) == uint64(ShaderBufferReadUsage::COUNT), "");
+		return mapping[uint64(shaderUsage)];
+	};
+
+	static auto getBufferUsageFromShaderWriteUsage = [](ShaderBufferWriteUsage shaderUsage) -> BufferUsageFlags {
+		static constexpr BufferUsageFlags mapping[] = {
+			BUFFER_USAGE_STORAGE_BIT
+		};
+		static_assert(SOUL_ARRAY_LEN(mapping) == uint64(ShaderBufferWriteUsage::COUNT), "");
+		return mapping[uint64(shaderUsage)];
+	};
+
+	static auto getTextureUsageFromShaderReadUsage = [](ShaderTextureReadUsage shaderUsage) -> TextureUsageFlags {
+		static constexpr TextureUsageFlags mapping[] = {
+			TEXTURE_USAGE_SAMPLED_BIT,
+			TEXTURE_USAGE_STORAGE_BIT
+		};
+		static_assert(SOUL_ARRAY_LEN(mapping) == uint64(ShaderTextureReadUsage::COUNT), "");
+		return mapping[uint64(shaderUsage)];
+	};
+
+	static auto getTextureUsageFromShaderWriteUsage = [](ShaderTextureWriteUsage shaderUsage) -> TextureUsageFlags {
+		static constexpr TextureUsageFlags mapping[] = {
+			TEXTURE_USAGE_STORAGE_BIT
+		};
+		static_assert(SOUL_ARRAY_LEN(mapping) == uint64(ShaderTextureWriteUsage::COUNT), "");
+		return mapping[uint64(shaderUsage)];
+	};
+
     static auto getBufferUsageFlagsFromDescriptorType = [](DescriptorType type) -> BufferUsageFlags {
         SOUL_ASSERT(0, DescriptorTypeUtil::IsBuffer(type), "");
         static constexpr BufferUsageFlags mapping[] = {
@@ -57,7 +91,7 @@ namespace Soul {namespace GPU {
     };
 
     static auto updateBufferInfo = [](_RGBufferExecInfo* bufferInfo, QueueFlagBits queueFlag,
-                                      VkFlags usageFlags, PassNodeID passID) {
+										BufferUsageFlags usageFlags, PassNodeID passID) {
 
         bufferInfo->usageFlags |= usageFlags;
         bufferInfo->queueFlags |= queueFlag;
@@ -164,10 +198,10 @@ namespace Soul {namespace GPU {
 						updateBufferInfo(&bufferInfos[bufferInfoID], QUEUE_GRAPHIC_BIT, BUFFER_USAGE_INDEX_BIT, PassNodeID(i));
 					}
 
-                    _initInShaderBuffers(graphicNode->inShaderBuffers, i, QUEUE_GRAPHIC_BIT);
-                    _initOutShaderBuffers(graphicNode->outShaderBuffers, i, QUEUE_GRAPHIC_BIT);
-                    _initInShaderTextures(graphicNode->inShaderTextures, i, QUEUE_GRAPHIC_BIT);
-                    _initOutShaderTextures(graphicNode->outShaderTextures, i, QUEUE_GRAPHIC_BIT);
+					_initInShaderBuffers(graphicNode->shaderBufferReadAccesses, i, QUEUE_GRAPHIC_BIT);
+					_initOutShaderBuffers(graphicNode->shaderBufferWriteAccesses, i, QUEUE_GRAPHIC_BIT);
+					_initShaderTextures(graphicNode->shaderTextureReadAccesses, i, QUEUE_GRAPHIC_BIT);
+					_initShaderTextures(graphicNode->shaderTextureWriteAccesses, i, QUEUE_GRAPHIC_BIT);
 
 					for (const ColorAttachment& colorAttachment : graphicNode->colorAttachments) {
 						SOUL_ASSERT(0, colorAttachment.nodeID != TEXTURE_NODE_ID_NULL, "");
@@ -601,93 +635,97 @@ namespace Soul {namespace GPU {
 
 				// TODO(kevinyu) : Make this threshold configurable
 				static uint32 SECONDARY_COMMAND_BUFFER_THRESHOLD = 10;
-				if (commandBucket.commands.size() > SECONDARY_COMMAND_BUFFER_THRESHOLD)
+
+				SOUL_LOG_INFO("Command buffer size = %d", commandBucket.commands.size());
+				if (commandBucket.commands.size() < SECONDARY_COMMAND_BUFFER_THRESHOLD)
 				{
 					SOUL_PROFILE_ZONE_WITH_NAME("ST Graphic Command Submission");
 					vkCmdBeginRenderPass(cmdBuffer, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
 					vkCmdBindPipeline(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
-					for (Command::Command* command : commandBucket.commands)
+					
 					{
-						command->_submit(&_gpuSystem->_db, programID, cmdBuffer);
+						SOUL_PROFILE_ZONE_WITH_NAME("Command submission");
+						for (Command::Command* command : commandBucket.commands)
+						{
+							command->_submit(&_gpuSystem->_db, programID, cmdBuffer);
+						}
 					}
+					
 					vkCmdEndRenderPass(cmdBuffer);
 				}
 				else
 				{
+					SOUL_PROFILE_ZONE_WITH_NAME("MT Graphic Command Submission");
 					vkCmdBeginRenderPass(cmdBuffer, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
 					Array<VkCommandBuffer> secondaryCommandBuffers;
 					secondaryCommandBuffers.resize(Soul::min(_gpuSystem->_frameContext().threadContexts.size(), int((commandBucket.commands.size() + 99)/ 100)));
 
+					struct CommandTranslationData
 					{
-						SOUL_PROFILE_ZONE_WITH_NAME("MT Commands translation Master");
+						Array<VkCommandBuffer>* cmdBuffers;
+						CommandBucket* cmdBucket;
+						ProgramID programID;
+						VkRenderPass renderPass;
+						VkFramebuffer framebuffer;
+						VkPipeline pipeline;
+						GPU::System* gpuSystem;
+					} taskData = {};
+					taskData.cmdBuffers = &secondaryCommandBuffers;
+					taskData.cmdBucket = &commandBucket;
+					taskData.programID = programID;
+					taskData.renderPass = renderPass;
+					taskData.framebuffer = framebuffer;
+					taskData.gpuSystem = _gpuSystem;
+					taskData.pipeline = pipeline;
 
-						struct CommandTranslationData
+					Runtime::TaskID commandTranslationJob = Runtime::ParallelForTaskCreate(
+						0, secondaryCommandBuffers.size(), 1,
+                        [&taskData](int index)
+					{
+						SOUL_PROFILE_ZONE_WITH_NAME("Command Translation Child");
+						VkCommandBuffer secCmdBuffer = taskData.gpuSystem->_requestSecondaryCommandBuffer();
+						VkCommandBufferBeginInfo beginInfo = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
+						beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT | VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT;
+
+						VkCommandBufferInheritanceInfo inheritanceInfo = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO };
+						inheritanceInfo.renderPass = taskData.renderPass;
+						inheritanceInfo.subpass = 0;
+						inheritanceInfo.framebuffer = taskData.framebuffer;
+
+						beginInfo.pInheritanceInfo = &inheritanceInfo;
+
+						vkBeginCommandBuffer(secCmdBuffer, &beginInfo);
+						vkCmdBindPipeline(secCmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, taskData.pipeline);
+
+						uint32 div = taskData.cmdBucket->commands.size() / taskData.cmdBuffers->size();
+						uint32 mod = taskData.cmdBucket->commands.size() % taskData.cmdBuffers->size();
+
+						if (index < mod)
 						{
-							Array<VkCommandBuffer>* cmdBuffers;
-							CommandBucket* cmdBucket;
-							ProgramID programID;
-							VkRenderPass renderPass;
-							VkFramebuffer framebuffer;
-							VkPipeline pipeline;
-							GPU::System* gpuSystem;
-						} taskData = {};
-						taskData.cmdBuffers = &secondaryCommandBuffers;
-						taskData.cmdBucket = &commandBucket;
-						taskData.programID = programID;
-						taskData.renderPass = renderPass;
-						taskData.framebuffer = framebuffer;
-						taskData.gpuSystem = _gpuSystem;
-						taskData.pipeline = pipeline;
+							int start = index * (div + 1);
 
-						Runtime::TaskID commandTranslationJob = Runtime::ParallelForTaskCreate(
-							0, secondaryCommandBuffers.size(), 1,
-                            [&taskData](int index)
-						{
-							SOUL_PROFILE_ZONE_WITH_NAME("Command Translation Child");
-							VkCommandBuffer secCmdBuffer = taskData.gpuSystem->_requestSecondaryCommandBuffer();
-							VkCommandBufferBeginInfo beginInfo = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
-							beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT | VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT;
-
-							VkCommandBufferInheritanceInfo inheritanceInfo = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO };
-							inheritanceInfo.renderPass = taskData.renderPass;
-							inheritanceInfo.subpass = 0;
-							inheritanceInfo.framebuffer = taskData.framebuffer;
-
-							beginInfo.pInheritanceInfo = &inheritanceInfo;
-
-							vkBeginCommandBuffer(secCmdBuffer, &beginInfo);
-							vkCmdBindPipeline(secCmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, taskData.pipeline);
-
-							uint32 div = taskData.cmdBucket->commands.size() / taskData.cmdBuffers->size();
-							uint32 mod = taskData.cmdBucket->commands.size() % taskData.cmdBuffers->size();
-
-							if (index < mod)
+							for (int i = 0; i < div + 1; i++)
 							{
-								int start = index * (div + 1);
-
-								for (int i = 0; i < div + 1; i++)
-								{
-									taskData.cmdBucket->commands[start + i]->_submit(&taskData.gpuSystem->_db, taskData.programID, secCmdBuffer);
-								}
-							}  else
-							{
-								int start = mod * (div + 1) + (index - mod) * div;
-								for (int i = 0; i < div; i++)
-								{
-									taskData.cmdBucket->commands[start + i]->_submit(&taskData.gpuSystem->_db, taskData.programID, secCmdBuffer);
-								}
+								taskData.cmdBucket->commands[start + i]->_submit(&taskData.gpuSystem->_db, taskData.programID, secCmdBuffer);
 							}
+						}
+						else
+						{
+							int start = mod * (div + 1) + (index - mod) * div;
+							for (int i = 0; i < div; i++)
+							{
+								taskData.cmdBucket->commands[start + i]->_submit(&taskData.gpuSystem->_db, taskData.programID, secCmdBuffer);
+							}
+						}
+						
+						vkEndCommandBuffer(secCmdBuffer);
+						(*taskData.cmdBuffers)[index] = secCmdBuffer;
+					});
 
+					Runtime::RunTask(commandTranslationJob);
+					Runtime::WaitTask(commandTranslationJob);
 
-							vkEndCommandBuffer(secCmdBuffer);
-							(*taskData.cmdBuffers)[index] = secCmdBuffer;
-						});
-
-						Runtime::RunTask(commandTranslationJob);
-						Runtime::WaitTask(commandTranslationJob);
-
-					}
-
+				
 					vkCmdExecuteCommands(cmdBuffer, secondaryCommandBuffers.size(), secondaryCommandBuffers.data());
 					vkCmdEndRenderPass(cmdBuffer);
 				}
@@ -1176,6 +1214,7 @@ namespace Soul {namespace GPU {
 			uint16 extentWidth = dstTexture->extent.width;
 			uint16 rowPitch = subResourceLayout.rowPitch;
 
+			SOUL_LOG_INFO("Prememcpy");
 			auto copyPixelsJob = Runtime::ParallelForTaskCreate(
 				0, dstTexture->extent.height, 16,
 				[data, dstPixels, extentWidth, rowPitch](int index) {
@@ -1363,6 +1402,32 @@ namespace Soul {namespace GPU {
 
 	}
 
+	void _RenderGraphExecution::_initInShaderBuffers(const Array<ShaderBufferReadAccess>& shaderAccessList, int index, QueueFlagBits queueFlags) {
+		_RGExecPassInfo& passInfo = passInfos[index];
+		for (const ShaderBufferReadAccess& shaderAccess : shaderAccessList) {
+			SOUL_ASSERT(0, shaderAccess.nodeID != BUFFER_NODE_ID_NULL, "");
+
+			uint32 bufferInfoID = getBufferInfoIndex(shaderAccess.nodeID);
+
+			VkPipelineStageFlags stageFlags = vkCastShaderStageToPipelineStageFlags(shaderAccess.stageFlags);
+
+			_BufferBarrier invalidateBarrier;
+			invalidateBarrier.stageFlags = stageFlags;
+			invalidateBarrier.accessFlags = VK_ACCESS_SHADER_READ_BIT;
+			invalidateBarrier.bufferInfoIdx = bufferInfoID;
+			passInfo.bufferInvalidates.add(invalidateBarrier);
+
+			_BufferBarrier flushBarrier;
+			flushBarrier.stageFlags = stageFlags;
+			flushBarrier.accessFlags = 0;
+			flushBarrier.bufferInfoIdx = bufferInfoID;
+			passInfo.bufferFlushes.add(flushBarrier);
+
+			updateBufferInfo(&bufferInfos[bufferInfoID], queueFlags, getBufferUsageFromShaderReadUsage(shaderAccess.usage), PassNodeID(index));
+		}
+
+	}
+
 	void _RenderGraphExecution::_initOutShaderBuffers(const Array<ShaderBuffer> &shaderBuffers, int index, QueueFlagBits queueFlags) {
         _RGExecPassInfo& passInfo = passInfos[index];
         const _Program& program = *_gpuSystem->_programPtr(passInfo.programID);
@@ -1392,6 +1457,32 @@ namespace Soul {namespace GPU {
 
             updateBufferInfo(&bufferInfos[bufferInfoID], queueFlags, getBufferUsageFlagsFromDescriptorType(binding.type), PassNodeID(index));
         }
+	}
+
+	void _RenderGraphExecution::_initOutShaderBuffers(const Array<ShaderBufferWriteAccess>& shaderAccessList, int index, QueueFlagBits queueFlags) {
+		_RGExecPassInfo& passInfo = passInfos[index];
+		for (const ShaderBufferWriteAccess& shaderAccess : shaderAccessList) {
+			SOUL_ASSERT(0, shaderAccess.nodeID != BUFFER_NODE_ID_NULL, "");
+
+			uint32 bufferInfoID = getBufferInfoIndex(shaderAccess.nodeID);
+
+			VkPipelineStageFlags stageFlags = vkCastShaderStageToPipelineStageFlags(shaderAccess.stageFlags);
+
+			_BufferBarrier invalidateBarrier;
+			invalidateBarrier.stageFlags = stageFlags;
+			invalidateBarrier.accessFlags = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
+			invalidateBarrier.bufferInfoIdx = bufferInfoID;
+			passInfo.bufferInvalidates.add(invalidateBarrier);
+
+			_BufferBarrier flushBarrier;
+			flushBarrier.stageFlags = stageFlags;
+			flushBarrier.accessFlags = VK_ACCESS_SHADER_WRITE_BIT;
+			flushBarrier.bufferInfoIdx = bufferInfoID;
+			passInfo.bufferFlushes.add(flushBarrier);
+
+			updateBufferInfo(&bufferInfos[bufferInfoID], queueFlags, getBufferUsageFromShaderWriteUsage(shaderAccess.usage), PassNodeID(index));
+		}
+
 	}
 
 	void _RenderGraphExecution::_initInShaderTextures(const Array<ShaderTexture> &shaderTextures, int index, QueueFlagBits queueFlags) {
@@ -1450,20 +1541,92 @@ namespace Soul {namespace GPU {
             updateTextureInfo(&textureInfos[textureInfoID], queueFlags,
                               getTextureUsageFlagsFromDescriptorType(binding.type), PassNodeID(index));
 
+			//TODO(kevinyu) : check whether the barrier is correct
+
             _TextureBarrier invalidateBarrier;
             invalidateBarrier.stageFlags = binding.pipelineStageFlags;
-            invalidateBarrier.accessFlags = VK_ACCESS_SHADER_READ_BIT;
+            invalidateBarrier.accessFlags = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
             invalidateBarrier.layout = VK_IMAGE_LAYOUT_GENERAL;
             invalidateBarrier.textureInfoIdx = getTextureInfoIndex(shaderTexture.nodeID);
             passInfo.textureInvalidates.add(invalidateBarrier);
 
             _TextureBarrier flushBarrier;
             flushBarrier.stageFlags = binding.pipelineStageFlags;
-            flushBarrier.accessFlags = 0;
+            flushBarrier.accessFlags = VK_ACCESS_SHADER_WRITE_BIT;
             flushBarrier.layout = VK_IMAGE_LAYOUT_GENERAL;
             flushBarrier.textureInfoIdx = getTextureInfoIndex(shaderTexture.nodeID);
             passInfo.textureFlushes.add(flushBarrier);
         }
+	}
+
+	void _RenderGraphExecution::_initShaderTextures(const Array<ShaderTextureReadAccess>& shaderAccessList, int index, QueueFlagBits queueFlags) {
+		_RGExecPassInfo& passInfo = passInfos[index];
+		const _Program& program = *_gpuSystem->_programPtr(passInfo.programID);
+		for (const ShaderTextureReadAccess& shaderAccess : shaderAccessList) {
+
+			SOUL_ASSERT(0, shaderAccess.nodeID != TEXTURE_NODE_ID_NULL, "");
+
+			uint32 textureInfoID = getTextureInfoIndex(shaderAccess.nodeID);
+			VkPipelineStageFlags stageFlags = vkCastShaderStageToPipelineStageFlags(shaderAccess.stageFlags);
+
+			updateTextureInfo(&textureInfos[textureInfoID], queueFlags,
+				getTextureUsageFromShaderReadUsage(shaderAccess.usage), PassNodeID(index));
+
+			auto isWriteableUsage = [](ShaderTextureReadUsage usage) -> bool {
+				bool mapping[] = {
+					false,
+					true
+				};
+				return mapping[uint64(usage)];
+			};
+
+			VkImageLayout imageLayout = isWriteableUsage(shaderAccess.usage) ? VK_IMAGE_LAYOUT_GENERAL : VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+
+			_TextureBarrier invalidateBarrier;
+			invalidateBarrier.stageFlags = stageFlags;
+			invalidateBarrier.accessFlags = VK_ACCESS_SHADER_READ_BIT;
+			invalidateBarrier.layout = imageLayout;
+			invalidateBarrier.textureInfoIdx = getTextureInfoIndex(shaderAccess.nodeID);
+			passInfo.textureInvalidates.add(invalidateBarrier);
+
+			_TextureBarrier flushBarrier;
+			flushBarrier.stageFlags = stageFlags;
+			flushBarrier.accessFlags = 0;
+			flushBarrier.layout = imageLayout;
+			flushBarrier.textureInfoIdx = getTextureInfoIndex(shaderAccess.nodeID);
+			passInfo.textureFlushes.add(flushBarrier);
+		}
+	}
+
+	void _RenderGraphExecution::_initShaderTextures(const Array<ShaderTextureWriteAccess>& shaderAccessList, int index, QueueFlagBits queueFlags) {
+		_RGExecPassInfo& passInfo = passInfos[index];
+		const _Program& program = *_gpuSystem->_programPtr(passInfo.programID);
+		for (const ShaderTextureWriteAccess& shaderAccess : shaderAccessList) {
+			SOUL_ASSERT(0, shaderAccess.nodeID != TEXTURE_NODE_ID_NULL, "");
+
+			uint32 textureInfoID = getTextureInfoIndex(shaderAccess.nodeID);
+			VkPipelineStageFlags stageFlags = vkCastShaderStageToPipelineStageFlags(shaderAccess.stageFlags);
+
+			updateTextureInfo(&textureInfos[textureInfoID], queueFlags,
+				getTextureUsageFromShaderWriteUsage(shaderAccess.usage), PassNodeID(index));
+
+
+			//TODO(kevinyu) : check whether the barrier is correct
+
+			_TextureBarrier invalidateBarrier;
+			invalidateBarrier.stageFlags = stageFlags;
+			invalidateBarrier.accessFlags = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
+			invalidateBarrier.layout = VK_IMAGE_LAYOUT_GENERAL;
+			invalidateBarrier.textureInfoIdx = getTextureInfoIndex(shaderAccess.nodeID);
+			passInfo.textureInvalidates.add(invalidateBarrier);
+
+			_TextureBarrier flushBarrier;
+			flushBarrier.stageFlags = stageFlags;
+			flushBarrier.accessFlags = VK_ACCESS_SHADER_WRITE_BIT;
+			flushBarrier.layout = VK_IMAGE_LAYOUT_GENERAL;
+			flushBarrier.textureInfoIdx = getTextureInfoIndex(shaderAccess.nodeID);
+			passInfo.textureFlushes.add(flushBarrier);
+		}
 	}
 
 }}

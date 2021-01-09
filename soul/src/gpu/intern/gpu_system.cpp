@@ -1529,6 +1529,7 @@ namespace Soul { namespace GPU {
 			int location = attrExtraInfos[i].location;
 			uint32 alignmentMinusOne = attrExtraInfos[i].alignment - 1;
 			shader.inputs[location].offset = (currentOffset + alignmentMinusOne) & ~alignmentMinusOne;
+			shader.inputs[location].size = attrExtraInfos[i].size;
 			currentOffset += attrExtraInfos[i].size;
 			vertexAlignment = max(vertexAlignment, attrExtraInfos[i].alignment);
 		}
@@ -1547,6 +1548,42 @@ namespace Soul { namespace GPU {
 
 	_Shader *System::_shaderPtr(ShaderID shaderID) {
 		return &_db.shaders[shaderID.id];
+	}
+
+	VkDescriptorSetLayout System::_descriptorSetLayoutRequest(const _DescriptorSetLayoutKey& key) {
+		SOUL_ASSERT_MAIN_THREAD();
+		SOUL_PROFILE_ZONE_WITH_NAME("GPU::System::_descriptorSetLayoutRequest");
+		Memory::ScopeAllocator<> scopeAllocator("GPU::System::_descriptorSetLayoutRequest");
+		
+		if (_db.descriptorSetLayoutMaps.isExist(key)) {
+			return _db.descriptorSetLayoutMaps[key];
+		}
+
+		VkDescriptorSetLayout setLayout = VK_NULL_HANDLE;
+
+		Array<VkDescriptorSetLayoutBinding> bindings(&scopeAllocator);
+		for (int i = 0; i < MAX_BINDING_PER_SET; i++) {
+			const _DescriptorSetLayoutBinding& binding = key.bindings[i];
+			if (binding.stageFlags == 0) continue;
+			bindings.add({});
+
+			bindings.back().stageFlags = binding.stageFlags;
+			bindings.back().descriptorType = binding.descriptorType;
+			bindings.back().descriptorCount = binding.descriptorCount;
+			bindings.back().binding = i;
+		}
+
+		VkDescriptorSetLayoutCreateInfo layoutInfo = { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO };
+		layoutInfo.bindingCount = bindings.size();
+		layoutInfo.pBindings = bindings.data();
+		SOUL_VK_CHECK(
+			vkCreateDescriptorSetLayout(_db.device, &layoutInfo, nullptr, &setLayout),
+			"");
+		bindings.cleanup();
+
+		_db.descriptorSetLayoutMaps.add(key, setLayout);
+
+		return setLayout;
 	}
 
 	ProgramID System::programRequest(const _ProgramKey& programKey) {
@@ -1610,24 +1647,19 @@ namespace Soul { namespace GPU {
         }
 
         for (int i = 0; i < MAX_SET_PER_SHADER_PROGRAM; i++) {
-            Array<VkDescriptorSetLayoutBinding> bindings(&scopeAllocator);
+			_DescriptorSetLayoutKey descriptorSetLayoutKey = {};
+
             for (int j = 0; j < MAX_BINDING_PER_SET; j++) {
                 const _ProgramDescriptorBinding &progBinding = program.bindings[i][j];
                 if (progBinding.shaderStageFlags == 0) continue;
-                bindings.add({});
 
-                bindings.back().stageFlags = progBinding.shaderStageFlags;
-                bindings.back().descriptorType = vkCast(progBinding.type);
-                bindings.back().descriptorCount = progBinding.count;
-                bindings.back().binding = j;
+				_DescriptorSetLayoutBinding& binding = descriptorSetLayoutKey.bindings[j];
+
+				binding.stageFlags = progBinding.shaderStageFlags;
+                binding.descriptorType = vkCast(progBinding.type);
+                binding.descriptorCount = progBinding.count;
             }
-            VkDescriptorSetLayoutCreateInfo layoutInfo = {VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO};
-            layoutInfo.bindingCount = bindings.size();
-            layoutInfo.pBindings = bindings.data();
-            SOUL_VK_CHECK(
-                    vkCreateDescriptorSetLayout(_db.device, &layoutInfo, nullptr, &program.descriptorLayouts[i]),
-                    "");
-            bindings.cleanup();
+			program.descriptorLayouts[i] = _descriptorSetLayoutRequest(descriptorSetLayoutKey);
         }
 
         VkPipelineLayoutCreateInfo pipelineLayoutInfo = {VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO};
@@ -1678,7 +1710,7 @@ namespace Soul { namespace GPU {
 		SOUL_PROFILE_ZONE_WITH_NAME("GPU::System::_pipelineCreate");
 		Memory::ScopeAllocator<> scopeAllocator("GPU::System::_pipelineCreate");
 
-		const GraphicPipelineConfig &pipelineConfig = node.pipelineConfig;
+		const GraphicPipelineDesc &pipelineConfig = node.pipelineConfig;
 
 		Array<VkPipelineShaderStageCreateInfo> shaderStageInfos(&scopeAllocator);
 		const _Shader &vertShader = *_shaderPtr(pipelineConfig.vertexShaderID);
@@ -1757,27 +1789,29 @@ namespace Soul { namespace GPU {
 		VkPipelineColorBlendAttachmentState colorBlendAttachmentState = {};
 
 		VkVertexInputAttributeDescription attrDescs[MAX_INPUT_PER_SHADER];
+		VkVertexInputBindingDescription inputBindingDescs[MAX_INPUT_PER_SHADER];
 		uint32 attrDescCount = 0;
 		for (int i = 0; i < MAX_INPUT_PER_SHADER; i++) {
 			if (vertShader.inputs[i].format == VK_FORMAT_UNDEFINED) continue;
+
 			attrDescs[attrDescCount].format = vertShader.inputs[i].format;
-			attrDescs[attrDescCount].binding = 0;
+			attrDescs[attrDescCount].binding = i;
 			attrDescs[attrDescCount].location = i;
-			attrDescs[attrDescCount].offset = vertShader.inputs[i].offset;
+			attrDescs[attrDescCount].offset = 0;
+			
+			inputBindingDescs[attrDescCount].binding = i;
+			inputBindingDescs[attrDescCount].stride = vertShader.inputs[i].size;
+			inputBindingDescs[attrDescCount].inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+
 			attrDescCount++;
 		}
-
-		VkVertexInputBindingDescription inputBindingDesc = {};
-		inputBindingDesc.binding = 0;
-		inputBindingDesc.stride = vertShader.inputStride;
-		inputBindingDesc.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
 
 		VkPipelineVertexInputStateCreateInfo inputStateInfo = {
 				VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO};
 		inputStateInfo.vertexAttributeDescriptionCount = attrDescCount;
 		inputStateInfo.pVertexAttributeDescriptions = attrDescs;
-		inputStateInfo.vertexBindingDescriptionCount = attrDescCount > 0 ? 1 : 0;
-		inputStateInfo.pVertexBindingDescriptions = attrDescCount > 0 ? &inputBindingDesc : nullptr;
+		inputStateInfo.vertexBindingDescriptionCount = attrDescCount;
+		inputStateInfo.pVertexBindingDescriptions = attrDescCount > 0 ? inputBindingDescs : nullptr;
 
 		VkGraphicsPipelineCreateInfo pipelineInfo = {VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO};
 		pipelineInfo.stageCount = shaderStageInfos.size();
@@ -1885,50 +1919,49 @@ namespace Soul { namespace GPU {
 		return SamplerID(sampler);
 	}
 
-	ShaderArgSetID System::_shaderArgSetRequest(const ShaderArgSetDesc &desc, ProgramID programID, uint32 set) {
-
+	ShaderArgSetID System::_shaderArgSetRequest(const ShaderArgSetDesc& desc) {
 		uint64 hash = 0;
 		int offsetCount = 0;
 		int offset[MAX_DYNAMIC_BUFFER_PER_SET];
 		for (int i = 0; i < desc.bindingCount; i++) {
-			Descriptor &descriptorDesc = desc.bindingDescriptions[i];
+			Descriptor& descriptorDesc = desc.bindingDescriptions[i];
 			switch (descriptorDesc.type) {
-				case DescriptorType::NONE:
-				{
-					hash = hashFNV1((uint8*)&descriptorDesc.type, sizeof(descriptorDesc.type), hash);
-					break;
-				}
-				case DescriptorType::UNIFORM_BUFFER: {
-					const UniformDescriptor &uniformDescriptor = descriptorDesc.uniformInfo;
-					hash = hashFNV1((uint8 *) &descriptorDesc.type, sizeof(descriptorDesc.type), hash);
-					_Buffer* buffer = _bufferPtr(descriptorDesc.uniformInfo.bufferID);
-					hash = hashFNV1((uint8 *) &descriptorDesc.uniformInfo.bufferID, sizeof(BufferID), hash);
-					offset[offsetCount++] =
-							uniformDescriptor.unitIndex * _bufferPtr(uniformDescriptor.bufferID)->unitSize;
-					break;
-				}
-				case DescriptorType::SAMPLED_IMAGE: {
-					hash = hashFNV1((uint8 *) &descriptorDesc.type, sizeof(descriptorDesc.type), hash);
-					SampledImageDescriptor& descriptor = descriptorDesc.sampledImageInfo;
-					hash = hashFNV1((uint8 *) &(_texturePtr(descriptor.textureID)->view), sizeof(VkImageView), hash);
-					hash = hashFNV1((uint8 *) &descriptorDesc.sampledImageInfo.samplerID, sizeof(SamplerID), hash);
-					break;
-				}
-				case DescriptorType::INPUT_ATTACHMENT: {
-                    hash = hashFNV1((uint8 *) &descriptorDesc.type, sizeof(descriptorDesc.type), hash);
-                    hash = hashFNV1((uint8 *) &(_texturePtr(descriptorDesc.inputAttachmentInfo.textureID)->view), sizeof(VkImageView), hash);
-                    break;
-				}
-				case DescriptorType::STORAGE_IMAGE: {
-				    hash = hashFNV1((uint8 *) &descriptorDesc.type, sizeof(descriptorDesc.type), hash);
-                    hash = hashFNV1((uint8 *) &(_texturePtr(descriptorDesc.storageImageInfo.textureID)->view), sizeof(VkImageView), hash);
-                    hash = hashFNV1((uint8 *) &descriptorDesc.storageImageInfo.mipLevel, sizeof(descriptorDesc.storageImageInfo.mipLevel), hash);
-                    break;
-				}
-				default: {
-					SOUL_NOT_IMPLEMENTED();
-					break;
-				}
+			case DescriptorType::NONE:
+			{
+				hash = hashFNV1((uint8*)&descriptorDesc.type, sizeof(descriptorDesc.type), hash);
+				break;
+			}
+			case DescriptorType::UNIFORM_BUFFER: {
+				const UniformDescriptor& uniformDescriptor = descriptorDesc.uniformInfo;
+				hash = hashFNV1((uint8*)&descriptorDesc.type, sizeof(descriptorDesc.type), hash);
+				_Buffer* buffer = _bufferPtr(descriptorDesc.uniformInfo.bufferID);
+				hash = hashFNV1((uint8*)&descriptorDesc.uniformInfo.bufferID, sizeof(BufferID), hash);
+				offset[offsetCount++] =
+					uniformDescriptor.unitIndex * _bufferPtr(uniformDescriptor.bufferID)->unitSize;
+				break;
+			}
+			case DescriptorType::SAMPLED_IMAGE: {
+				hash = hashFNV1((uint8*)&descriptorDesc.type, sizeof(descriptorDesc.type), hash);
+				SampledImageDescriptor& descriptor = descriptorDesc.sampledImageInfo;
+				hash = hashFNV1((uint8*)&(_texturePtr(descriptor.textureID)->view), sizeof(VkImageView), hash);
+				hash = hashFNV1((uint8*)&descriptorDesc.sampledImageInfo.samplerID, sizeof(SamplerID), hash);
+				break;
+			}
+			case DescriptorType::INPUT_ATTACHMENT: {
+				hash = hashFNV1((uint8*)&descriptorDesc.type, sizeof(descriptorDesc.type), hash);
+				hash = hashFNV1((uint8*)&(_texturePtr(descriptorDesc.inputAttachmentInfo.textureID)->view), sizeof(VkImageView), hash);
+				break;
+			}
+			case DescriptorType::STORAGE_IMAGE: {
+				hash = hashFNV1((uint8*)&descriptorDesc.type, sizeof(descriptorDesc.type), hash);
+				hash = hashFNV1((uint8*)&(_texturePtr(descriptorDesc.storageImageInfo.textureID)->view), sizeof(VkImageView), hash);
+				hash = hashFNV1((uint8*)&descriptorDesc.storageImageInfo.mipLevel, sizeof(descriptorDesc.storageImageInfo.mipLevel), hash);
+				break;
+			}
+			default: {
+				SOUL_NOT_IMPLEMENTED();
+				break;
+			}
 			}
 		}
 		VkDescriptorSet descriptorSet;
@@ -1937,65 +1970,78 @@ namespace Soul { namespace GPU {
 			std::lock_guard<std::mutex> lock(_db.shaderArgSetRequestMutex);
 			if (_db.descriptorSets.isExist(hash)) {
 				descriptorSet = _db.descriptorSets[hash];
-			} else {
-				VkDescriptorSetAllocateInfo allocInfo = {VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO};
+			}
+			else {
+
+				_DescriptorSetLayoutKey setLayoutKey = {};
+
+				for (int i = 0; i < desc.bindingCount; i++) {
+					Descriptor& descriptorDesc = desc.bindingDescriptions[i];
+					if (descriptorDesc.type == DescriptorType::NONE) continue;
+					setLayoutKey.bindings[i].descriptorCount = 1;
+					setLayoutKey.bindings[i].descriptorType = vkCast(descriptorDesc.type);
+					setLayoutKey.bindings[i].stageFlags = vkCast(descriptorDesc.stageFlags);
+				}
+
+				VkDescriptorSetAllocateInfo allocInfo = { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO };
 				allocInfo.descriptorPool = _frameContext().descriptorPool;
 				allocInfo.descriptorSetCount = 1;
-				allocInfo.pSetLayouts = &(_programPtr(programID)->descriptorLayouts[set]);
+				VkDescriptorSetLayout setLayout = _descriptorSetLayoutRequest(setLayoutKey);
+				allocInfo.pSetLayouts = &setLayout;
 
 				SOUL_VK_CHECK(vkAllocateDescriptorSets(_db.device, &allocInfo, &descriptorSet), "");
 
 				for (int i = 0; i < desc.bindingCount; i++) {
-					VkWriteDescriptorSet descriptorWrite = {VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET};
+					VkWriteDescriptorSet descriptorWrite = { VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET };
 					descriptorWrite.dstSet = descriptorSet;
 					descriptorWrite.dstBinding = i;
 					descriptorWrite.dstArrayElement = 0;
 					descriptorWrite.descriptorCount = 1;
 
-					Descriptor &descriptorDesc = desc.bindingDescriptions[i];
+					Descriptor& descriptorDesc = desc.bindingDescriptions[i];
 					descriptorWrite.descriptorType = DESCRIPTOR_TYPE_MAP[uint64(descriptorDesc.type)];
 
 					VkDescriptorBufferInfo bufferInfo;
 					VkDescriptorImageInfo imageInfo;
 					switch (descriptorDesc.type) {
-						case DescriptorType::NONE:
-						{
-							continue;
-						}
-						case DescriptorType::UNIFORM_BUFFER: {
-							bufferInfo.buffer = _bufferPtr(descriptorDesc.uniformInfo.bufferID)->vkHandle;
-							_Buffer* buffer = _bufferPtr(descriptorDesc.uniformInfo.bufferID);
-							bufferInfo.offset = 0;
-							bufferInfo.range = buffer->unitSize;
-							descriptorWrite.pBufferInfo = &bufferInfo;
-							break;
-						}
-						case DescriptorType::SAMPLED_IMAGE: {
-							imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-							TextureID texID = descriptorDesc.sampledImageInfo.textureID;
-							imageInfo.imageView = _texturePtr(texID)->view;
-							imageInfo.sampler = descriptorDesc.sampledImageInfo.samplerID.id;
-							descriptorWrite.pImageInfo = &imageInfo;
-							break;
-						}
-						case DescriptorType::INPUT_ATTACHMENT: {
-						    imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-                            imageInfo.imageView = _texturePtr(descriptorDesc.inputAttachmentInfo.textureID)->view;
-                            imageInfo.sampler = VK_NULL_HANDLE;
-                            descriptorWrite.pImageInfo = &imageInfo;
-                            break;
-						}
-						case DescriptorType::STORAGE_IMAGE: {
-                            imageInfo.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
-                            imageInfo.imageView = _textureGetMipView(descriptorDesc.storageImageInfo.textureID, descriptorDesc.storageImageInfo.mipLevel);
-                            imageInfo.sampler = VK_NULL_HANDLE;
-                            descriptorWrite.pImageInfo = &imageInfo;
-                            break;
-						}
-						default: {
-							SOUL_NOT_IMPLEMENTED();
-							break;
-						}
+					case DescriptorType::NONE:
+					{
+						continue;
+					}
+					case DescriptorType::UNIFORM_BUFFER: {
+						bufferInfo.buffer = _bufferPtr(descriptorDesc.uniformInfo.bufferID)->vkHandle;
+						_Buffer* buffer = _bufferPtr(descriptorDesc.uniformInfo.bufferID);
+						bufferInfo.offset = 0;
+						bufferInfo.range = buffer->unitSize;
+						descriptorWrite.pBufferInfo = &bufferInfo;
+						break;
+					}
+					case DescriptorType::SAMPLED_IMAGE: {
+						imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+						TextureID texID = descriptorDesc.sampledImageInfo.textureID;
+						imageInfo.imageView = _texturePtr(texID)->view;
+						imageInfo.sampler = descriptorDesc.sampledImageInfo.samplerID.id;
+						descriptorWrite.pImageInfo = &imageInfo;
+						break;
+					}
+					case DescriptorType::INPUT_ATTACHMENT: {
+						imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+						imageInfo.imageView = _texturePtr(descriptorDesc.inputAttachmentInfo.textureID)->view;
+						imageInfo.sampler = VK_NULL_HANDLE;
+						descriptorWrite.pImageInfo = &imageInfo;
+						break;
+					}
+					case DescriptorType::STORAGE_IMAGE: {
+						imageInfo.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+						imageInfo.imageView = _textureGetMipView(descriptorDesc.storageImageInfo.textureID, descriptorDesc.storageImageInfo.mipLevel);
+						imageInfo.sampler = VK_NULL_HANDLE;
+						descriptorWrite.pImageInfo = &imageInfo;
+						break;
+					}
+					default: {
+						SOUL_NOT_IMPLEMENTED();
+						break;
+					}
 					}
 
 					vkUpdateDescriptorSets(_db.device, 1, &descriptorWrite, 0, nullptr);
@@ -2006,7 +2052,7 @@ namespace Soul { namespace GPU {
 
 		}
 
-		_ShaderArgSet &argSet = _db.shaderArgSets[argSetID.id];
+		_ShaderArgSet& argSet = _db.shaderArgSets[argSetID.id];
 
 		argSet.vkHandle = descriptorSet;
 		argSet.offsetCount = offsetCount;
@@ -2149,13 +2195,6 @@ namespace Soul { namespace GPU {
 
 		_db.renderPassMaps.add(key, renderPass);
 		
-		return renderPass;
-	}
-
-	VkRenderPass System::_renderPassCreate(const VkRenderPassCreateInfo &info) {
-		SOUL_PROFILE_ZONE();
-		VkRenderPass renderPass;
-		SOUL_VK_CHECK(vkCreateRenderPass(_db.device, &info, nullptr, &renderPass), "");
 		return renderPass;
 	}
 
@@ -2613,6 +2652,10 @@ namespace Soul { namespace GPU {
 
 	TextureID System::getSwapchainTexture() {
 		return _db.swapchain.textures[_frameContext().swapchainIndex];
+	}
+
+	void System::shutdown() {
+
 	}
 
 	}

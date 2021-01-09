@@ -1,0 +1,11 @@
+from distutils.core import setup, Extension
+
+pykyuren_module = Extension('pykyuren',
+                    define_macros = [],
+                    include_dirs = ['${CMAKE_CURRENT_SOURCE_DIR}'],
+                    libraries = ['LIBCMT', 'MSVCRT', 'gdi32', 'user32', 'shell32', 'pykyuren_bundled', 'advapi32'],
+                    extra_compile_args = ['/MD'],
+                    library_dirs = ['${CMAKE_CURRENT_BINARY_DIR}'],
+                    sources = ['${CMAKE_CURRENT_SOURCE_DIR}/pykyuren_binding.cpp'])
+
+setup(name = 'pykyuren', version = '1.0', ext_modules = [pykyuren_module])

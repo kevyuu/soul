@@ -59,6 +59,7 @@ namespace Soul {
 		}
 
 		inline int capacity() const { return _capacity; }
+
 		inline int size() const { return _size; }
 		inline bool empty() const {return _size == 0; }
 

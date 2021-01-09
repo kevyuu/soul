@@ -2,6 +2,7 @@
 
 #include "type.h"
 #include <cmath>
+
 namespace Soul {
 
 	static const real32 PI = 3.14f;

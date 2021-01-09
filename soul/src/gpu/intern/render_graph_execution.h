@@ -14,12 +14,20 @@ namespace Soul { namespace GPU {
 		uint16 bufferInfoIdx = 0;
 	};
 
+	struct _BufferGroupBarrier {
+
+	};
+
 	struct _TextureBarrier {
 		VkPipelineStageFlags stageFlags = 0;
 		VkAccessFlags accessFlags = 0;
 
 		VkImageLayout layout = VK_IMAGE_LAYOUT_UNDEFINED;
 		uint16 textureInfoIdx = 0;
+	};
+
+	struct _TextureGroupBarrier {
+
 	};
 
 	struct _RGBufferExecInfo {
@@ -122,7 +130,11 @@ namespace Soul { namespace GPU {
 
 		void _initInShaderBuffers(const Array<ShaderBuffer>& shaderBuffers, int index, QueueFlagBits queueFlags);
 	    void _initOutShaderBuffers(const Array<ShaderBuffer>& shaderBuffers, int index, QueueFlagBits queueFlags);
+		void _initInShaderBuffers(const Array<ShaderBufferReadAccess>& accessList, int index, QueueFlagBits queueFlags);
+		void _initOutShaderBuffers(const Array<ShaderBufferWriteAccess>& accessList, int index, QueueFlagBits queueFlags);
         void _initInShaderTextures(const Array<ShaderTexture>& shaderTextures, int index, QueueFlagBits queueFlags);
         void _initOutShaderTextures(const Array<ShaderTexture>& shaderTextures, int index, QueueFlagBits queueFlags);
+		void _initShaderTextures(const Array<ShaderTextureReadAccess>& shaderAccessList, int index, QueueFlagBits queueFlags);
+		void _initShaderTextures(const Array<ShaderTextureWriteAccess>& shaderAccessList, int index, QueueFlagBits queueFlags);
 	};
 }}

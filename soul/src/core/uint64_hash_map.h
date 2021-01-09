@@ -12,9 +12,9 @@ namespace Soul {
 	public:
 
 		UInt64HashMap() : _allocator((Memory::Allocator*) Runtime::GetContextAllocator()),
-						  _capacity(0), _size(0), _maxDIB(0),
-						  _indexes(nullptr), _values(nullptr)
-			{};
+			_capacity(0), _size(0), _maxDIB(0),
+			_indexes(nullptr), _values(nullptr)
+		{};
 		explicit UInt64HashMap(Memory::Allocator* allocator) : _allocator(allocator) {};
 		UInt64HashMap(const UInt64HashMap& other);
 		UInt64HashMap& operator=(const UInt64HashMap& other);
@@ -34,6 +34,7 @@ namespace Soul {
 		void remove(uint64 key);
 
 		inline bool isExist(uint64 key) const {
+			if (_size == 0) return false;
 			uint32 index = _findIndex(key);
 			return (_indexes[index].key == key && _indexes[index].dib != 0);
 		}
@@ -198,7 +199,7 @@ namespace Soul {
 
 	template <typename ValType>
 	void UInt64HashMap<ValType>::reserve(uint32 capacity) {
-		SOUL_ASSERT(0, _size == _capacity, "");
+		SOUL_ASSERT(0, _size == _capacity, "Size = %d, Capacity = %d", _size, _capacity);
 		Index* oldIndexes = _indexes;
 		_indexes = (Index*) _allocator->allocate(capacity * sizeof(Index), alignof(Index));
 		memset(_indexes, 0, sizeof(Index) * capacity);

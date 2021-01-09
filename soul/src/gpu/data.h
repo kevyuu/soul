@@ -46,6 +46,9 @@ namespace Soul {
 		using ShaderArgSetID = ID<_ShaderArgSet, uint32>;
 		static constexpr ShaderArgSetID  SHADER_ARG_SET_ID_NULL = ShaderArgSetID(0);
 
+		using PipelineStateID = ID <VkPipeline, VkPipeline>;
+		static constexpr PipelineStateID PIPELINE_STATE_ID_NULL = PipelineStateID(VK_NULL_HANDLE);
+
 		struct _Shader;
 		using ShaderID = ID<_Shader, uint16>;
 		static constexpr ShaderID SHADER_ID_NULL = ShaderID(0);
@@ -67,6 +70,15 @@ namespace Soul {
 		static constexpr uint32 MAX_DYNAMIC_BUFFER_PER_SET = 4;
 		static constexpr uint32 MAX_SIGNAL_SEMAPHORE = 4;
 
+		enum class ShaderStage : uint8 {
+			NONE,
+			VERTEX,
+			GEOMETRY,
+			FRAGMENT,
+			COMPUTE,
+			COUNT
+		};
+
 		enum class ResourceOwner : uint8 {
 			NONE,
 			GRAPHIC_QUEUE,
@@ -83,6 +95,16 @@ namespace Soul {
 			TRANSFER,
 			COUNT
 		};
+
+		using ShaderStageFlagBits = enum {
+			SHADER_STAGE_VERTEX = 0x1,
+			SHADER_STAGE_GEOMETRY = 0x2,
+			SHADER_STAGE_FRAGMENT = 0x4,
+			SHADER_STAGE_COMPUTE = 0x8,
+			SHADER_STAGE_ENUM_END_BIT
+		};
+		using ShaderStageFlags = uint8;
+		static_assert(SHADER_STAGE_ENUM_END_BIT - 1 <= SOUL_UTYPE_MAX(ShaderStageFlags), "");
 
 		using QueueFlagBits = enum {
 			QUEUE_GRAPHIC_BIT = 0x1,
@@ -162,14 +184,7 @@ namespace Soul {
 			COUNT
 		};
 
-		enum class ShaderStage : uint8 {
-			NONE,
-			VERTEX,
-			GEOMETRY,
-			FRAGMENT,
-			COMPUTE,
-			COUNT
-		};
+		
 
 		enum class Topology : uint8 {
 			POINT_LIST,
@@ -333,35 +348,41 @@ namespace Soul {
 				StorageImageDescriptor storageImageInfo;
 				InputAttachmentDescriptor inputAttachmentInfo;
 			};
+			ShaderStageFlags stageFlags;
 
-			inline static Descriptor Uniform(BufferID bufferID, uint32 unitIndex) {
+			inline static Descriptor Uniform(BufferID bufferID, uint32 unitIndex, ShaderStageFlags stageFlags) {
 			    Descriptor descriptor = {};
 			    descriptor.type = DescriptorType::UNIFORM_BUFFER;
 			    descriptor.uniformInfo.bufferID = bufferID;
 			    descriptor.uniformInfo.unitIndex = unitIndex;
+				descriptor.stageFlags = stageFlags;
 			    return descriptor;
 			}
 
-            inline static Descriptor SampledImage(TextureID textureID, SamplerID samplerID) {
+            inline static Descriptor SampledImage(TextureID textureID, SamplerID samplerID, ShaderStageFlags stageFlags) {
 			    Descriptor descriptor = {};
 			    descriptor.type = DescriptorType::SAMPLED_IMAGE;
 			    descriptor.sampledImageInfo.textureID = textureID;
 			    descriptor.sampledImageInfo.samplerID = samplerID;
+				descriptor.stageFlags = stageFlags;
 			    return descriptor;
 			}
 
-			inline static Descriptor StorageImage(TextureID textureID, uint8 mipLevel) {
+			inline static Descriptor StorageImage(TextureID textureID, uint8 mipLevel, ShaderStageFlags stageFlags) {
 			    Descriptor descriptor = {};
 			    descriptor.type = DescriptorType::STORAGE_IMAGE;
 			    descriptor.storageImageInfo.textureID = textureID;
 			    descriptor.storageImageInfo.mipLevel = mipLevel;
+				descriptor.stageFlags = stageFlags;
 			    return descriptor;
 			}
 
-			inline static Descriptor InputAttachment(TextureID textureID) {
+			inline static Descriptor InputAttachment(TextureID textureID, ShaderStageFlags stageFlags) {
 			    Descriptor descriptor = {};
 			    descriptor.type = DescriptorType::INPUT_ATTACHMENT;
 			    descriptor.inputAttachmentInfo.textureID = textureID;
+				descriptor.stageFlags = stageFlags;
+				return descriptor;
 			}
 
 		};
@@ -372,7 +393,7 @@ namespace Soul {
 		};
 
 		struct BufferDesc {
-			uint16 count = 0;
+			uint32 count = 0;
 			uint16 typeSize = 0;
 			uint16 typeAlignment = 0;
 			BufferUsageFlags usageFlags = 0;
@@ -441,6 +462,7 @@ namespace Soul {
 		struct _ShaderInput {
 			VkFormat format = VK_FORMAT_UNDEFINED;
 			uint32 offset = 0;
+			uint32 size = 0;
 		};
 
 		struct _Shader {
@@ -488,6 +510,28 @@ namespace Soul {
 		};
 		using AttachmentFlags = uint8;
 		static_assert(ATTACHMENT_ENUM_END_BIT - 1 < SOUL_UTYPE_MAX(AttachmentFlags), "");
+
+		struct _DescriptorSetLayoutBinding {
+			VkDescriptorType descriptorType;
+			uint32 descriptorCount;
+			VkShaderStageFlags stageFlags;
+		};
+
+		struct _DescriptorSetLayoutKey {
+			_DescriptorSetLayoutBinding bindings[MAX_BINDING_PER_SET];
+
+			inline bool operator==(const _DescriptorSetLayoutKey& other) {
+				return (memcmp(this, &other, sizeof(_DescriptorSetLayoutKey)) == 0);
+			}
+
+			inline bool operator!=(const _DescriptorSetLayoutKey& other) {
+				return (memcmp(this, &other, sizeof(_DescriptorSetLayoutKey)) != 0);
+			}
+
+			uint64 hash() {
+				return hashFNV1((uint8*)(this), sizeof(_DescriptorSetLayoutKey));
+			}
+		};
 
 		struct Attachment
 		{
@@ -666,6 +710,8 @@ namespace Soul {
 			Pool<_Buffer> buffers;
 			Pool<_Texture> textures;
 			Pool<_Shader> shaders;
+
+			HashMap<_DescriptorSetLayoutKey, VkDescriptorSetLayout> descriptorSetLayoutMaps;
 
 			HashMap<_ProgramKey, ProgramID> programMaps;
 			Pool<_Program> programs;

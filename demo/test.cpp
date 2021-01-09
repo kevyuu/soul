@@ -91,50 +91,19 @@ int main()
 	store.scene = renderer.getScene();
 	store.gpuSystem = &gpuSystem;
 
-	struct Vertex {
-		Vec2f pos;
-		Vec3f color;
-	};
-
-	const std::vector<Vertex> vertices = {
-		{{0.0f, -0.5f}, {1.0f, 0.0f, 0.0f}},
-		{{0.5f, 0.5f}, {0.0f, 1.0f, 0.0f}},
-		{{-0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}}
-	};
-
-	GPU::BufferDesc vertexBufferDesc;
-	vertexBufferDesc.typeSize = sizeof(Vertex);
-	vertexBufferDesc.typeAlignment = alignof(Vertex);
-	vertexBufferDesc.count = vertices.size();
-	vertexBufferDesc.usageFlags = GPU::BUFFER_USAGE_VERTEX_BIT;
-	vertexBufferDesc.queueFlags = GPU::QUEUE_GRAPHIC_BIT;
-
-	GPU::BufferID vertexBuffer = gpuSystem.bufferCreate(
-		vertexBufferDesc,
-		[&vertices](int i, byte* data) {
-			auto vertex = (Vertex*)data;
-			*vertex = vertices[i];
-		}
-	);
-
-	const char* vertSrc = LoadFile("shaders/triangle.vert.glsl");
+	const char* vertSrc = LoadFile("shaders/unlit.vert.glsl");
 	GPU::ShaderDesc vertShaderDesc;
 	vertShaderDesc.name = "Triangle Verte Shader";
 	vertShaderDesc.source = vertSrc;
 	vertShaderDesc.sourceSize = strlen(vertSrc);
 	GPU::ShaderID vertShaderID = gpuSystem.shaderCreate(vertShaderDesc, GPU::ShaderStage::VERTEX);
 
-	const char* fragSrc = LoadFile("shaders/triangle.frag.glsl");
+	const char* fragSrc = LoadFile("shaders/unlit.frag.glsl");
 	GPU::ShaderDesc fragShaderDesc;
-	fragShaderDesc.name = "Imgui fragment shader";
+	fragShaderDesc.name = "Unlit fragment shader";
 	fragShaderDesc.source = fragSrc;
 	fragShaderDesc.sourceSize = strlen(fragSrc);
 	GPU::ShaderID fragShaderID = gpuSystem.shaderCreate(fragShaderDesc, GPU::ShaderStage::FRAGMENT);
-
-	struct Data {
-		GPU::BufferNodeID vertexBuffer;
-		GPU::TextureNodeID targetTex;
-	};
 
 	while (!glfwWindowShouldClose(window))
 	{
@@ -149,7 +118,7 @@ int main()
 		Vec2ui32 extent = gpuSystem.getSwapchainExtent();
 
 		GPU::RenderGraph renderGraph;
-		GPU::TextureNodeID imguiFontNodeID = renderGraph.importTexture("Imgui Font", imguiRenderModule.getFontTexture());
+		/*GPU::TextureNodeID imguiFontNodeID = renderGraph.importTexture("Imgui Font", imguiRenderModule.getFontTexture());
 
 		GPU::TextureNodeID renderTarget = renderer.computeRenderGraph(&renderGraph);
 
@@ -162,7 +131,119 @@ int main()
 		gpuSystem.renderGraphExecute(renderGraph);
 		renderGraph.cleanup();
 
+		gpuSystem.frameFlush();*/
+
+
+		uint32 width = gpuSystem.getSwapchainExtent().x;
+		uint32 height = gpuSystem.getSwapchainExtent().y;
+		GPU::TextureNodeID renderTargetNodeID = renderGraph.importTexture("Render target", gpuSystem.getSwapchainTexture());
+
+		Vec2f positions[4] = {
+			{-0.5f, -0.5f},
+			{0.5f, -0.5f},
+			{0.5f, 0.5f},
+			{-0.5f, 0.5f}
+		};
+		GPU::BufferDesc posBufferDesc;
+		posBufferDesc.count = sizeof(positions) / sizeof(positions[0]);
+		posBufferDesc.typeSize = sizeof(Vec2f);
+		posBufferDesc.typeAlignment = alignof(Vec2f);
+		posBufferDesc.queueFlags = GPU::QUEUE_GRAPHIC_BIT;
+		posBufferDesc.usageFlags = GPU::BUFFER_USAGE_VERTEX_BIT;
+		GPU::BufferID posVertexBuffer = gpuSystem.bufferCreate(
+			posBufferDesc,
+			[positions](int index, void* byte) {
+				Vec2f* position = (Vec2f*)byte;
+				(*position) = positions[index];
+			}
+		);
+		GPU::BufferNodeID posBufferNodeID = renderGraph.importBuffer("Pos Buffer", posVertexBuffer);
+
+		Vec3f colors[4] = {
+			{1.0f, 0.0f, 0.0f},
+			{0.0f, 1.0f, 0.0f},
+			{0.0f, 0.0f, 1.0f},
+			{1.0f, 1.0f, 1.0f}
+		};
+		GPU::BufferDesc colorBufferDesc;
+		colorBufferDesc.count = sizeof(colors) / sizeof(colors[0]);
+		colorBufferDesc.typeSize = sizeof(Vec3f);
+		colorBufferDesc.typeAlignment = alignof(Vec3f);
+		colorBufferDesc.queueFlags = GPU::QUEUE_GRAPHIC_BIT;
+		colorBufferDesc.usageFlags = GPU::BUFFER_USAGE_VERTEX_BIT;
+		GPU::BufferID colorVertexBuffer = gpuSystem.bufferCreate(
+			colorBufferDesc,
+			[colors](int index, void* byte) {
+				Vec3f* color = (Vec3f*)byte;
+				(*color) = colors[index];
+			}
+		);
+		GPU::BufferNodeID colorBufferNodeID = renderGraph.importBuffer("Color Buffer", colorVertexBuffer);
+
+		uint16 indexes[6] = {
+			 0, 1, 2, 2, 3, 0
+		};
+		GPU::BufferDesc indexBufferDesc;
+		indexBufferDesc.count = sizeof(indexes) / sizeof(indexes[0]);
+		indexBufferDesc.typeSize = sizeof(uint16);
+		indexBufferDesc.typeAlignment = alignof(uint16);
+		indexBufferDesc.queueFlags = GPU::QUEUE_GRAPHIC_BIT;
+		indexBufferDesc.usageFlags = GPU::BUFFER_USAGE_INDEX_BIT;
+		GPU::BufferID indexBuffer = gpuSystem.bufferCreate(
+			indexBufferDesc,
+			[indexes](int i, void* byte) {
+				uint16* index = (uint16*)byte;
+				(*index) = indexes[i];
+			}
+		);
+		GPU::BufferNodeID indexBufferNodeID = renderGraph.importBuffer("Index Buffer", indexBuffer);
+
+		struct PassData {
+			GPU::BufferNodeID posVertexBuffer;
+			GPU::BufferNodeID colorVertexBuffer;
+			GPU::BufferNodeID indexBuffer;
+			GPU::TextureNodeID renderTargetTex;
+		};
+
+		renderGraph.addGraphicPass<PassData>(
+			"Rectange Render Pass",
+			[posBufferNodeID, colorBufferNodeID, indexBufferNodeID, renderTargetNodeID, vertShaderID, fragShaderID, width, height]
+		(GPU::GraphicNodeBuilder* builder, PassData* data) {
+				data->posVertexBuffer = builder->addVertexBuffer(posBufferNodeID);
+				data->colorVertexBuffer = builder->addVertexBuffer(colorBufferNodeID);
+				data->indexBuffer = builder->addIndexBuffer(indexBufferNodeID);
+				GPU::ColorAttachmentDesc colorAttchDesc;
+				colorAttchDesc.blendEnable = false;
+				colorAttchDesc.clear = true;
+				colorAttchDesc.clearValue.color.float32 = {0, 0, 0, 0};
+				data->renderTargetTex = builder->addColorAttachment(renderTargetNodeID, colorAttchDesc);
+
+				Vec2f sceneResolution = Vec2f(width, height);
+				GPU::GraphicPipelineConfig pipelineConfig;
+				pipelineConfig.viewport = { 0, 0, uint16(sceneResolution.x), uint16(sceneResolution.y) };
+				pipelineConfig.scissor = { false, 0, 0, uint16(sceneResolution.x), uint16(sceneResolution.y) };
+				pipelineConfig.framebuffer = { uint16(sceneResolution.x), uint16(sceneResolution.y) };
+				pipelineConfig.vertexShaderID = vertShaderID;
+				pipelineConfig.fragmentShaderID = fragShaderID;
+				pipelineConfig.raster.cullMode = GPU::CullMode::NONE;
+
+				builder->setPipelineConfig(pipelineConfig);
+			},
+			[]
+			(GPU::RenderGraphRegistry* registry, const PassData& passData, GPU::CommandBucket* commandBucket) {
+				using DrawCommand = GPU::Command::DrawIndex2;
+				DrawCommand* command = commandBucket->add<DrawCommand>(0);
+				command->vertexBufferIDs[0] = registry->getBuffer(passData.posVertexBuffer);
+				command->vertexBufferIDs[1] = registry->getBuffer(passData.colorVertexBuffer);
+				command->vertexCount = 2;
+				command->indexBufferID = registry->getBuffer(passData.indexBuffer);
+				command->indexCount = 6;
+			}
+		);
+
+		gpuSystem.renderGraphExecute(renderGraph);
 		gpuSystem.frameFlush();
+		renderGraph.cleanup();
 
 	}
 

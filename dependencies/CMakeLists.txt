@@ -77,3 +77,18 @@ target_compile_definitions(tiny_gltf
 add_library(vk_mem_alloc INTERFACE)
 target_include_directories(vk_mem_alloc
 	INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/VulkanMemoryAllocator/src ${Vulkan_INCLUDE_DIR})
+
+add_library(blenderlib INTERFACE)
+target_include_directories(blenderlib
+	INTERFACE
+		${CMAKE_CURRENT_SOURCE_DIR}/blender/intern/guardedalloc
+		${CMAKE_CURRENT_SOURCE_DIR}/blender/source/blender/makesdna 
+		${CMAKE_CURRENT_SOURCE_DIR}/blender/source/blender/makesrna
+		${CMAKE_CURRENT_SOURCE_DIR}/blender/source/blender/makesrna/intern
+		${CMAKE_CURRENT_SOURCE_DIR}/blender/source/blender/depsgraph
+		${CMAKE_CURRENT_SOURCE_DIR}/blender/source/blender/blenkernel
+		${CMAKE_CURRENT_SOURCE_DIR}/blender/source/blender/blenlib
+		${CMAKE_CURRENT_SOURCE_DIR}/blender/source/blender/bmesh
+		${CMAKE_CURRENT_SOURCE_DIR}/blender/source/blender/draw
+		${CMAKE_CURRENT_SOURCE_DIR}/blender/source/blender/modifiers
+		${CMAKE_CURRENT_SOURCE_DIR}/blender/source/blender/windowmanager)
