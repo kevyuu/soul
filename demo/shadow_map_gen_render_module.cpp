@@ -28,8 +28,8 @@ ShadowMapGenRenderModule::Parameter ShadowMapGenRenderModule::addPass(GPU::Syste
 			[this, &passData, scene = &scene, i]
 		(GPU::GraphicNodeBuilder* builder, Parameter* data) -> void
 			{
-				data->modelBuffer = builder->addInShaderBuffer(passData.modelBuffer, 3, 0);
-				data->shadowMatrixesBuffer = builder->addInShaderBuffer(passData.shadowMatrixesBuffer, 1, 0);
+				data->modelBuffer = builder->addShaderBuffer(passData.modelBuffer, GPU::SHADER_STAGE_VERTEX, GPU::ShaderBufferReadUsage::UNIFORM);
+				data->shadowMatrixesBuffer = builder->addShaderBuffer(passData.shadowMatrixesBuffer, GPU::SHADER_STAGE_VERTEX, GPU::ShaderBufferReadUsage::UNIFORM);
 				for (GPU::BufferNodeID nodeID : passData.vertexBuffers)
 				{
 					data->vertexBuffers.add(builder->addVertexBuffer(nodeID));

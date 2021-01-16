@@ -26,10 +26,10 @@ GBufferGenRenderModule::Parameter GBufferGenRenderModule::addPass(GPU::System* s
     (GPU::GraphicNodeBuilder* builder, Parameter* params) -> void {
             SOUL_PROFILE_ZONE_WITH_NAME("Setup render albedo pass");
             for (GPU::TextureNodeID nodeID : inputParams.sceneTextures) {
-                params->sceneTextures.add(builder->addInShaderTexture(nodeID, 2, 0));
+                params->sceneTextures.add(builder->addShaderTexture(nodeID, GPU::SHADER_STAGE_FRAGMENT, GPU::ShaderTextureReadUsage::UNIFORM));
             }
 
-            params->stubTexture = builder->addInShaderTexture(inputParams.stubTexture, 2, 0);
+            params->stubTexture = builder->addShaderTexture(inputParams.stubTexture, GPU::SHADER_STAGE_FRAGMENT, GPU::ShaderTextureReadUsage::UNIFORM);
 
             for (GPU::BufferNodeID nodeID : inputParams.vertexBuffers) {
                 params->vertexBuffers.add(builder->addVertexBuffer(nodeID));
@@ -39,11 +39,11 @@ GBufferGenRenderModule::Parameter GBufferGenRenderModule::addPass(GPU::System* s
                 params->indexBuffers.add(builder->addIndexBuffer(nodeID));
             }
 
-            params->camera = builder->addInShaderBuffer(inputParams.camera, 0, 0);
-            params->light = builder->addInShaderBuffer(inputParams.light, 0, 1);
-            params->material = builder->addInShaderBuffer(inputParams.material, 1, 0);
-            params->model = builder->addInShaderBuffer(inputParams.model, 3, 0);
-            params->shadowMap = builder->addInShaderTexture(inputParams.shadowMap, 0, 2);
+            params->camera = builder->addShaderBuffer(inputParams.camera, GPU::SHADER_STAGE_VERTEX | GPU::SHADER_STAGE_FRAGMENT, GPU::ShaderBufferReadUsage::UNIFORM);
+            params->light = builder->addShaderBuffer(inputParams.light, GPU::SHADER_STAGE_FRAGMENT, GPU::ShaderBufferReadUsage::UNIFORM);
+            params->material = builder->addShaderBuffer(inputParams.material, GPU::SHADER_STAGE_FRAGMENT, GPU::ShaderBufferReadUsage::UNIFORM);
+            params->model = builder->addShaderBuffer(inputParams.model, GPU::SHADER_STAGE_VERTEX, GPU::ShaderBufferReadUsage::UNIFORM);
+            params->shadowMap = builder->addShaderTexture(inputParams.shadowMap, GPU::SHADER_STAGE_FRAGMENT, GPU::ShaderTextureReadUsage::UNIFORM);
 
             GPU::ColorAttachmentDesc colorAttchDesc;
             colorAttchDesc.blendEnable = false;

@@ -80,6 +80,40 @@ namespace Soul {namespace GPU {
         textureInfo->passes.add(passID);
     };
 
+	static auto getBufferUsageFromShaderReadUsage = [](ShaderBufferReadUsage shaderUsage) -> BufferUsageFlags {
+		static constexpr BufferUsageFlags mapping[] = {
+			BUFFER_USAGE_UNIFORM_BIT,
+			BUFFER_USAGE_STORAGE_BIT,
+		};
+		static_assert(SOUL_ARRAY_LEN(mapping) == uint64(ShaderBufferReadUsage::COUNT), "");
+		return mapping[uint64(shaderUsage)];
+	};
+
+	static auto getBufferUsageFromShaderWriteUsage = [](ShaderBufferWriteUsage shaderUsage) -> BufferUsageFlags {
+		static constexpr BufferUsageFlags mapping[] = {
+			BUFFER_USAGE_STORAGE_BIT
+		};
+		static_assert(SOUL_ARRAY_LEN(mapping) == uint64(ShaderBufferWriteUsage::COUNT), "");
+		return mapping[uint64(shaderUsage)];
+	};
+
+	static auto getTextureUsageFromShaderReadUsage = [](ShaderTextureReadUsage shaderUsage) -> TextureUsageFlags {
+		static constexpr TextureUsageFlags mapping[] = {
+			TEXTURE_USAGE_SAMPLED_BIT,
+			TEXTURE_USAGE_STORAGE_BIT
+		};
+		static_assert(SOUL_ARRAY_LEN(mapping) == uint64(ShaderTextureReadUsage::COUNT), "");
+		return mapping[uint64(shaderUsage)];
+	};
+
+	static auto getTextureUsageFromShaderWriteUsage = [](ShaderTextureWriteUsage shaderUsage) -> TextureUsageFlags {
+		static constexpr TextureUsageFlags mapping[] = {
+			TEXTURE_USAGE_STORAGE_BIT
+		};
+		static_assert(SOUL_ARRAY_LEN(mapping) == uint64(ShaderTextureWriteUsage::COUNT), "");
+		return mapping[uint64(shaderUsage)];
+	};
+
 	void _RenderGraphExecution::init() {
 		SOUL_ASSERT_MAIN_THREAD();
 		SOUL_PROFILE_ZONE_WITH_NAME("Render Graph Execution Init");
@@ -164,10 +198,10 @@ namespace Soul {namespace GPU {
 						updateBufferInfo(&bufferInfos[bufferInfoID], QUEUE_GRAPHIC_BIT, BUFFER_USAGE_INDEX_BIT, PassNodeID(i));
 					}
 
-                    _initInShaderBuffers(graphicNode->inShaderBuffers, i, QUEUE_GRAPHIC_BIT);
-                    _initOutShaderBuffers(graphicNode->outShaderBuffers, i, QUEUE_GRAPHIC_BIT);
-                    _initInShaderTextures(graphicNode->inShaderTextures, i, QUEUE_GRAPHIC_BIT);
-                    _initOutShaderTextures(graphicNode->outShaderTextures, i, QUEUE_GRAPHIC_BIT);
+					_initInShaderBuffers(graphicNode->shaderBufferReadAccesses, i, QUEUE_GRAPHIC_BIT);
+					_initOutShaderBuffers(graphicNode->shaderBufferWriteAccesses, i, QUEUE_GRAPHIC_BIT);
+					_initShaderTextures(graphicNode->shaderTextureReadAccesses, i, QUEUE_GRAPHIC_BIT);
+					_initShaderTextures(graphicNode->shaderTextureWriteAccesses, i, QUEUE_GRAPHIC_BIT);
 
 					for (const ColorAttachment& colorAttachment : graphicNode->colorAttachments) {
 						SOUL_ASSERT(0, colorAttachment.nodeID != TEXTURE_NODE_ID_NULL, "");
@@ -1053,7 +1087,7 @@ namespace Soul {namespace GPU {
 			
 			VkImageMemoryBarrier srcMemBarrier = { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
 			srcMemBarrier.oldLayout = srcTexture->layout;
-			srcMemBarrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+			srcMemBarrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
 			srcMemBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 			srcMemBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 			srcMemBarrier.image = srcTexture->vkHandle;
@@ -1414,6 +1448,32 @@ namespace Soul {namespace GPU {
 
 	}
 
+	void _RenderGraphExecution::_initInShaderBuffers(const Array<ShaderBufferReadAccess>& shaderAccessList, int index, QueueFlagBits queueFlags) {
+		_RGExecPassInfo& passInfo = passInfos[index];
+		for (const ShaderBufferReadAccess& shaderAccess : shaderAccessList) {
+			SOUL_ASSERT(0, shaderAccess.nodeID != BUFFER_NODE_ID_NULL, "");
+
+			uint32 bufferInfoID = getBufferInfoIndex(shaderAccess.nodeID);
+
+			VkPipelineStageFlags stageFlags = vkCastShaderStageToPipelineStageFlags(shaderAccess.stageFlags);
+
+			_BufferBarrier invalidateBarrier;
+			invalidateBarrier.stageFlags = stageFlags;
+			invalidateBarrier.accessFlags = VK_ACCESS_SHADER_READ_BIT;
+			invalidateBarrier.bufferInfoIdx = bufferInfoID;
+			passInfo.bufferInvalidates.add(invalidateBarrier);
+
+			_BufferBarrier flushBarrier;
+			flushBarrier.stageFlags = stageFlags;
+			flushBarrier.accessFlags = 0;
+			flushBarrier.bufferInfoIdx = bufferInfoID;
+			passInfo.bufferFlushes.add(flushBarrier);
+
+			updateBufferInfo(&bufferInfos[bufferInfoID], queueFlags, getBufferUsageFromShaderReadUsage(shaderAccess.usage), PassNodeID(index));
+		}
+
+	}
+
 	void _RenderGraphExecution::_initOutShaderBuffers(const Array<ShaderBuffer> &shaderBuffers, int index, QueueFlagBits queueFlags) {
         _RGExecPassInfo& passInfo = passInfos[index];
         const _Program& program = *_gpuSystem->_programPtr(passInfo.programID);
@@ -1443,6 +1503,32 @@ namespace Soul {namespace GPU {
 
             updateBufferInfo(&bufferInfos[bufferInfoID], queueFlags, getBufferUsageFlagsFromDescriptorType(binding.type), PassNodeID(index));
         }
+	}
+
+	void _RenderGraphExecution::_initOutShaderBuffers(const Array<ShaderBufferWriteAccess>& shaderAccessList, int index, QueueFlagBits queueFlags) {
+		_RGExecPassInfo& passInfo = passInfos[index];
+		for (const ShaderBufferWriteAccess& shaderAccess : shaderAccessList) {
+			SOUL_ASSERT(0, shaderAccess.nodeID != BUFFER_NODE_ID_NULL, "");
+
+			uint32 bufferInfoID = getBufferInfoIndex(shaderAccess.nodeID);
+
+			VkPipelineStageFlags stageFlags = vkCastShaderStageToPipelineStageFlags(shaderAccess.stageFlags);
+
+			_BufferBarrier invalidateBarrier;
+			invalidateBarrier.stageFlags = stageFlags;
+			invalidateBarrier.accessFlags = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
+			invalidateBarrier.bufferInfoIdx = bufferInfoID;
+			passInfo.bufferInvalidates.add(invalidateBarrier);
+
+			_BufferBarrier flushBarrier;
+			flushBarrier.stageFlags = stageFlags;
+			flushBarrier.accessFlags = VK_ACCESS_SHADER_WRITE_BIT;
+			flushBarrier.bufferInfoIdx = bufferInfoID;
+			passInfo.bufferFlushes.add(flushBarrier);
+
+			updateBufferInfo(&bufferInfos[bufferInfoID], queueFlags, getBufferUsageFromShaderWriteUsage(shaderAccess.usage), PassNodeID(index));
+		}
+
 	}
 
 	void _RenderGraphExecution::_initInShaderTextures(const Array<ShaderTexture> &shaderTextures, int index, QueueFlagBits queueFlags) {
@@ -1513,6 +1599,76 @@ namespace Soul {namespace GPU {
             flushBarrier.textureInfoIdx = getTextureInfoIndex(shaderTexture.nodeID);
             passInfo.textureFlushes.add(flushBarrier);
         }
+	}
+
+	void _RenderGraphExecution::_initShaderTextures(const Array<ShaderTextureReadAccess>& shaderAccessList, int index, QueueFlagBits queueFlags) {
+		_RGExecPassInfo& passInfo = passInfos[index];
+		const _Program& program = *_gpuSystem->_programPtr(passInfo.programID);
+		for (const ShaderTextureReadAccess& shaderAccess : shaderAccessList) {
+
+			SOUL_ASSERT(0, shaderAccess.nodeID != TEXTURE_NODE_ID_NULL, "");
+
+			uint32 textureInfoID = getTextureInfoIndex(shaderAccess.nodeID);
+			VkPipelineStageFlags stageFlags = vkCastShaderStageToPipelineStageFlags(shaderAccess.stageFlags);
+
+			updateTextureInfo(&textureInfos[textureInfoID], queueFlags,
+				getTextureUsageFromShaderReadUsage(shaderAccess.usage), PassNodeID(index));
+
+			auto isWriteableUsage = [](ShaderTextureReadUsage usage) -> bool {
+				bool mapping[] = {
+					false,
+					true
+				};
+				return mapping[uint64(usage)];
+			};
+
+			VkImageLayout imageLayout = isWriteableUsage(shaderAccess.usage) ? VK_IMAGE_LAYOUT_GENERAL : VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+
+			_TextureBarrier invalidateBarrier;
+			invalidateBarrier.stageFlags = stageFlags;
+			invalidateBarrier.accessFlags = VK_ACCESS_SHADER_READ_BIT;
+			invalidateBarrier.layout = imageLayout;
+			invalidateBarrier.textureInfoIdx = getTextureInfoIndex(shaderAccess.nodeID);
+			passInfo.textureInvalidates.add(invalidateBarrier);
+
+			_TextureBarrier flushBarrier;
+			flushBarrier.stageFlags = stageFlags;
+			flushBarrier.accessFlags = 0;
+			flushBarrier.layout = imageLayout;
+			flushBarrier.textureInfoIdx = getTextureInfoIndex(shaderAccess.nodeID);
+			passInfo.textureFlushes.add(flushBarrier);
+		}
+	}
+
+	void _RenderGraphExecution::_initShaderTextures(const Array<ShaderTextureWriteAccess>& shaderAccessList, int index, QueueFlagBits queueFlags) {
+		_RGExecPassInfo& passInfo = passInfos[index];
+		const _Program& program = *_gpuSystem->_programPtr(passInfo.programID);
+		for (const ShaderTextureWriteAccess& shaderAccess : shaderAccessList) {
+			SOUL_ASSERT(0, shaderAccess.nodeID != TEXTURE_NODE_ID_NULL, "");
+
+			uint32 textureInfoID = getTextureInfoIndex(shaderAccess.nodeID);
+			VkPipelineStageFlags stageFlags = vkCastShaderStageToPipelineStageFlags(shaderAccess.stageFlags);
+
+			updateTextureInfo(&textureInfos[textureInfoID], queueFlags,
+				getTextureUsageFromShaderWriteUsage(shaderAccess.usage), PassNodeID(index));
+
+
+			//TODO(kevinyu) : check whether the barrier is correct
+
+			_TextureBarrier invalidateBarrier;
+			invalidateBarrier.stageFlags = stageFlags;
+			invalidateBarrier.accessFlags = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
+			invalidateBarrier.layout = VK_IMAGE_LAYOUT_GENERAL;
+			invalidateBarrier.textureInfoIdx = getTextureInfoIndex(shaderAccess.nodeID);
+			passInfo.textureInvalidates.add(invalidateBarrier);
+
+			_TextureBarrier flushBarrier;
+			flushBarrier.stageFlags = stageFlags;
+			flushBarrier.accessFlags = VK_ACCESS_SHADER_WRITE_BIT;
+			flushBarrier.layout = VK_IMAGE_LAYOUT_GENERAL;
+			flushBarrier.textureInfoIdx = getTextureInfoIndex(shaderAccess.nodeID);
+			passInfo.textureFlushes.add(flushBarrier);
+		}
 	}
 
 }}

@@ -121,8 +121,12 @@ namespace Soul { namespace GPU {
 		void _executePass(uint32 passIndex, VkCommandBuffer commandBuffer);
 
 		void _initInShaderBuffers(const Array<ShaderBuffer>& shaderBuffers, int index, QueueFlagBits queueFlags);
-	    void _initOutShaderBuffers(const Array<ShaderBuffer>& shaderBuffers, int index, QueueFlagBits queueFlags);
-        void _initInShaderTextures(const Array<ShaderTexture>& shaderTextures, int index, QueueFlagBits queueFlags);
-        void _initOutShaderTextures(const Array<ShaderTexture>& shaderTextures, int index, QueueFlagBits queueFlags);
+		void _initOutShaderBuffers(const Array<ShaderBuffer>& shaderBuffers, int index, QueueFlagBits queueFlags);
+		void _initInShaderBuffers(const Array<ShaderBufferReadAccess>& accessList, int index, QueueFlagBits queueFlags);
+		void _initOutShaderBuffers(const Array<ShaderBufferWriteAccess>& accessList, int index, QueueFlagBits queueFlags);
+		void _initInShaderTextures(const Array<ShaderTexture>& shaderTextures, int index, QueueFlagBits queueFlags);
+		void _initOutShaderTextures(const Array<ShaderTexture>& shaderTextures, int index, QueueFlagBits queueFlags);
+		void _initShaderTextures(const Array<ShaderTextureReadAccess>& shaderAccessList, int index, QueueFlagBits queueFlags);
+		void _initShaderTextures(const Array<ShaderTextureWriteAccess>& shaderAccessList, int index, QueueFlagBits queueFlags);
 	};
 }}

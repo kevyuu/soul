@@ -5,10 +5,7 @@
 
 #include "../../shadow_map_gen_render_module.h"
 #include "../../final_gather_render_module.h"
-#include "../../voxelize_render_module.h"
-#include "../../voxel_gi_debug_render_module.h"
 #include "../../gbuffer_gen_render_module.h"
-#include "../../voxel_light_inject_render_module.h"
 
 using namespace Soul;
 
@@ -29,9 +26,6 @@ namespace DeferredPipeline {
 		ShadowMapGenRenderModule shadowMapGenRenderModule;
 		GBufferGenRenderModule gBufferGenRenderModule;
 		FinalGatherRenderModule finalGatherRenderModule;
-		VoxelizeRenderModule voxelizeRenderModule;
-		VoxelGIDebugRenderModule voxelGIDebugRenderModule;
-		VoxelLightInjectRenderModule voxelLightInjectRenderModule;
 
 		GPU::TextureID stubTexture;
 		GPU::BufferID quadBuffer;

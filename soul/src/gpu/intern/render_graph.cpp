@@ -145,27 +145,27 @@ namespace Soul { namespace GPU {
 		return nodeID;
 	}
 
-	BufferNodeID GraphicNodeBuilder::addInShaderBuffer(BufferNodeID nodeID, uint8 set, uint8 binding) {
+	BufferNodeID GraphicNodeBuilder::addShaderBuffer(BufferNodeID nodeID, ShaderStageFlags stageFlags, ShaderBufferReadUsage usage) {
 		_renderGraph->_bufferNodeRead(nodeID, _passID);
-		_graphicNode->inShaderBuffers.add(ShaderBuffer(nodeID, set, binding));
+		_graphicNode->shaderBufferReadAccesses.add({ nodeID, stageFlags, usage });
 		return nodeID;
 	}
 
-	BufferNodeID GraphicNodeBuilder::addOutShaderBuffer(BufferNodeID nodeID, uint8 set, uint8 binding) {
-		BufferNodeID dstBufferNodeID = _renderGraph->_bufferNodeWrite(nodeID, _passID);
-		_graphicNode->outShaderBuffers.add(ShaderBuffer(dstBufferNodeID, set, binding));
-		return dstBufferNodeID;
+	BufferNodeID GraphicNodeBuilder::addShaderBuffer(BufferNodeID nodeID, ShaderStageFlags stageFlags, ShaderBufferWriteUsage usage) {
+		BufferNodeID outNodeID = _renderGraph->_bufferNodeWrite(nodeID, _passID);
+		_graphicNode->shaderBufferWriteAccesses.add({ nodeID, stageFlags, usage });
+		return nodeID;
 	}
 
-	TextureNodeID GraphicNodeBuilder::addInShaderTexture(TextureNodeID nodeID, uint8 set, uint8 binding) {
+	TextureNodeID GraphicNodeBuilder::addShaderTexture(TextureNodeID nodeID, ShaderStageFlags stageFlags, ShaderTextureReadUsage usage) {
 		_renderGraph->_textureNodeRead(nodeID, _passID);
-		_graphicNode->inShaderTextures.add(ShaderTexture(nodeID, set, binding));
+		_graphicNode->shaderTextureReadAccesses.add({ nodeID, stageFlags, usage });
 		return nodeID;
 	}
 
-	TextureNodeID GraphicNodeBuilder::addOutShaderTexture(TextureNodeID nodeID, uint8 set, uint8 binding) {
+	TextureNodeID GraphicNodeBuilder::addShaderTexture(TextureNodeID nodeID, ShaderStageFlags stageFlags, ShaderTextureWriteUsage usage) {
 		TextureNodeID outNodeID = _renderGraph->_textureNodeWrite(nodeID, _passID);
-		_graphicNode->outShaderTextures.add(ShaderTexture(outNodeID, set, binding));
+		_graphicNode->shaderTextureWriteAccesses.add({ outNodeID, stageFlags, usage });
 		return outNodeID;
 	}
 

@@ -197,7 +197,7 @@ public:
 				data->targetTex = builder->addColorAttachment(targetTex, targetAttchDesc);
 				data->vertexBuffer = builder->addVertexBuffer(vertexNodeID);
 				data->indexBuffer = builder->addIndexBuffer(indexNodeID);
-				data->transformBuffer = builder->addInShaderBuffer(transformNodeID, 0, 0);
+				data->transformBuffer = builder->addShaderBuffer(transformNodeID, GPU::SHADER_STAGE_VERTEX, GPU::ShaderBufferReadUsage::UNIFORM);
 
 				for (int n = 0; n < drawData.CmdListsCount; n++) {
 					const ImDrawList& cmdList = *drawData.CmdLists[n];
@@ -205,7 +205,7 @@ public:
 						const ImDrawCmd& cmd = cmdList.CmdBuffer[cmd_i];
 						GPU::TextureNodeID imTexture = UI::SoulImTexture(cmd.TextureId).getTextureNodeID();
 						if (data->imTextures.find(imTexture) == data->imTextures.end()) {
-							data->imTextures[imTexture] = builder->addInShaderTexture(imTexture, 1, 0);
+							data->imTextures[imTexture] = builder->addShaderTexture(imTexture, GPU::SHADER_STAGE_FRAGMENT, GPU::ShaderTextureReadUsage::UNIFORM);
 						}
 					}
 				}

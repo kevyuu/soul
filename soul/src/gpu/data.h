@@ -67,6 +67,25 @@ namespace Soul {
 		static constexpr uint32 MAX_DYNAMIC_BUFFER_PER_SET = 4;
 		static constexpr uint32 MAX_SIGNAL_SEMAPHORE = 4;
 
+		enum class ShaderStage : uint8 {
+			NONE,
+			VERTEX,
+			GEOMETRY,
+			FRAGMENT,
+			COMPUTE,
+			COUNT
+		};
+
+		using ShaderStageFlagBits = enum {
+			SHADER_STAGE_VERTEX = 0x1,
+			SHADER_STAGE_GEOMETRY = 0x2,
+			SHADER_STAGE_FRAGMENT = 0x4,
+			SHADER_STAGE_COMPUTE = 0x8,
+			SHADER_STAGE_ENUM_END_BIT
+		};
+		using ShaderStageFlags = uint8;
+		static_assert(SHADER_STAGE_ENUM_END_BIT - 1 <= SOUL_UTYPE_MAX(ShaderStageFlags), "");
+
 		enum class ResourceOwner : uint8 {
 			NONE,
 			GRAPHIC_QUEUE,
@@ -159,15 +178,6 @@ namespace Soul {
 			CLAMP_TO_EDGE,
 			CLAMP_TO_BORDER,
 			MIRROR_CLAMP_TO_EDGE,
-			COUNT
-		};
-
-		enum class ShaderStage : uint8 {
-			NONE,
-			VERTEX,
-			GEOMETRY,
-			FRAGMENT,
-			COMPUTE,
 			COUNT
 		};
 

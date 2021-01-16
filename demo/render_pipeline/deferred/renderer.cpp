@@ -46,9 +46,6 @@ namespace DeferredPipeline {
 		shadowMapGenRenderModule.init(_gpuSystem);
 		gBufferGenRenderModule.init(_gpuSystem);
 		finalGatherRenderModule.init(_gpuSystem);
-		voxelizeRenderModule.init(_gpuSystem);
-		voxelGIDebugRenderModule.init(_gpuSystem);
-		voxelLightInjectRenderModule.init(_gpuSystem);
 	}
 
 	GPU::TextureNodeID Renderer::computeRenderGraph(GPU::RenderGraph* renderGraph)
