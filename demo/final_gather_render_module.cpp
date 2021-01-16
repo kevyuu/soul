@@ -24,7 +24,7 @@ FinalGatherRenderModule::Parameter FinalGatherRenderModule::addPass(GPU::System*
         [this, &parameter, sceneResolution]
     (GPU::GraphicNodeBuilder* builder, Parameter* params) -> void {
             for (int i = 0; i < 4; i++) {
-                params->renderMap[i] = builder->addInputAttachment(parameter.renderMap[i], 0, i);
+                params->renderMap[i] = builder->addInputAttachment(parameter.renderMap[i], GPU::SHADER_STAGE_FRAGMENT);
             }
 
             GPU::ColorAttachmentDesc colorAttchDesc;

@@ -283,11 +283,10 @@ namespace Soul { namespace GPU {
 
     struct InputAttachment {
         TextureNodeID nodeID = TEXTURE_NODE_ID_NULL;
-        uint8 set = 0;
-        uint8 binding = 0;
+		ShaderStageFlags stageFlags;
 
         InputAttachment() = default;
-        InputAttachment(TextureNodeID nodeID, uint8 set, uint8 binding) : nodeID(nodeID), set(set), binding(binding) {}
+        InputAttachment(TextureNodeID nodeID, ShaderStageFlags stageFlags) : nodeID(nodeID), stageFlags(stageFlags) {}
     };
 
 	enum class ShaderBufferReadUsage : uint8 {
@@ -508,7 +507,7 @@ namespace Soul { namespace GPU {
 		TextureNodeID addShaderTexture(TextureNodeID nodeID, ShaderStageFlags stageFlags, ShaderTextureReadUsage usageType);
 		TextureNodeID addShaderTexture(TextureNodeID nodeID, ShaderStageFlags stageFlags, ShaderTextureWriteUsage usageType);
 
-		TextureNodeID addInputAttachment(TextureNodeID nodeID, uint8 set, uint8 binding);
+		TextureNodeID addInputAttachment(TextureNodeID nodeID, ShaderStageFlags stageFlags);
 		TextureNodeID addColorAttachment(TextureNodeID nodeID, const ColorAttachmentDesc& desc);
 		TextureNodeID setDepthStencilAttachment(TextureNodeID nodeID, const DepthStencilAttachmentDesc& desc);
 

@@ -169,9 +169,9 @@ namespace Soul { namespace GPU {
 		return outNodeID;
 	}
 
-	TextureNodeID GraphicNodeBuilder::addInputAttachment(TextureNodeID nodeID, uint8 set, uint8 binding) {
+	TextureNodeID GraphicNodeBuilder::addInputAttachment(TextureNodeID nodeID, ShaderStageFlags stageFlags) {
 		_renderGraph->_textureNodeRead(nodeID, _passID);
-		_graphicNode->inputAttachments.add(InputAttachment(nodeID, set, binding));
+		_graphicNode->inputAttachments.add(InputAttachment(nodeID, stageFlags));
 		return nodeID;
 	}
 

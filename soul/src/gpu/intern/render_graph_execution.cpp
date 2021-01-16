@@ -227,29 +227,19 @@ namespace Soul {namespace GPU {
 
 					for (const InputAttachment& inputAttachment : graphicNode->inputAttachments) {
 
-                        SOUL_ASSERT(0, inputAttachment.set < MAX_SET_PER_SHADER_PROGRAM, "");
-                        SOUL_ASSERT(0, inputAttachment.binding < MAX_BINDING_PER_SET, "");
-                        const _ProgramDescriptorBinding& binding = program.bindings[inputAttachment.set][inputAttachment.binding];
-                        SOUL_ASSERT(0, binding.shaderStageFlags != 0,
-                                    "No binding for set = %d, binding = %d detected on the shaders.",
-                                    inputAttachment.set, inputAttachment.binding);
-                        SOUL_ASSERT(0, binding.type == DescriptorType::INPUT_ATTACHMENT,
-                                    "Cannot bind texture to set = %d, binding = %d.",
-                                    inputAttachment.set, inputAttachment.binding);
-
 					    uint32 textureInfoID = getTextureInfoIndex(inputAttachment.nodeID);
                         updateTextureInfo(&textureInfos[textureInfoID], QUEUE_GRAPHIC_BIT,
                                           TEXTURE_USAGE_INPUT_ATTACHMENT_BIT, passNodeID);
 
                         _TextureBarrier invalidateBarrier;
-                        invalidateBarrier.stageFlags = binding.pipelineStageFlags;
+                        invalidateBarrier.stageFlags = vkCastShaderStageToPipelineStageFlags(inputAttachment.stageFlags);
                         invalidateBarrier.accessFlags = VK_ACCESS_INPUT_ATTACHMENT_READ_BIT;
                         invalidateBarrier.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
                         invalidateBarrier.textureInfoIdx = textureInfoID;
                         passInfo.textureInvalidates.add(invalidateBarrier);
 
                         _TextureBarrier flushBarrier;
-                        flushBarrier.stageFlags = binding.pipelineStageFlags;
+                        flushBarrier.stageFlags = vkCastShaderStageToPipelineStageFlags(inputAttachment.stageFlags);
                         flushBarrier.accessFlags = 0;
                         flushBarrier.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
                         flushBarrier.textureInfoIdx = textureInfoID;
