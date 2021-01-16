@@ -335,53 +335,6 @@ namespace DeferredPipeline {
 		gBufferGenParam.stubTexture = stubTextureNodeID;
 		gBufferGenRenderModule.addPass(_gpuSystem, renderGraph, gBufferGenParam, _scene);
 
-		VoxelizeRenderModule::Parameter voxelizeParam;
-		voxelizeParam.stubTexture = stubTextureNodeID;
-		voxelizeParam.vertexBuffers = vertexBufferNodeIDs;
-		voxelizeParam.indexBuffers = indexBufferNodeIDs;
-		voxelizeParam.model = modelNodeID;
-		voxelizeParam.rotation = rotationNodeID;
-		voxelizeParam.voxelGIData = voxelGIDataNodeID;
-		GPU::RGTextureDesc voxelTargetTexDesc;
-		voxelTargetTexDesc.width = _scene.voxelGIConfig.resolution;
-		voxelTargetTexDesc.height = _scene.voxelGIConfig.resolution;
-		voxelTargetTexDesc.depth = _scene.voxelGIConfig.resolution;
-		voxelTargetTexDesc.clear = true;
-		voxelTargetTexDesc.clearValue.color.uint32 = {};
-		voxelTargetTexDesc.format = GPU::TextureFormat::R32UI;
-		voxelTargetTexDesc.mipLevels = 1;
-		voxelTargetTexDesc.type = GPU::TextureType::D3;
-		voxelizeParam.voxelAlbedo = renderGraph->createTexture("Voxel Albedo Target", voxelTargetTexDesc);
-		voxelizeParam.voxelEmissive = renderGraph->createTexture("Voxel Emissive target", voxelTargetTexDesc);
-		voxelizeParam.voxelNormal = renderGraph->createTexture("Voxel Normal target", voxelTargetTexDesc);
-		voxelizeParam.material = materialNodeID;
-		voxelizeParam.materialTextures = sceneTextureNodeIDs;
-		voxelizeParam.voxelizeMatrixes = voxelGIMatrixesNodeID;
-		voxelizeParam = voxelizeRenderModule.addPass(_gpuSystem, renderGraph, voxelizeParam, _scene);
-
-		VoxelLightInjectRenderModule::Parameter voxelInjectParam;
-		voxelInjectParam.voxelAlbedo = voxelizeParam.voxelAlbedo;
-		voxelInjectParam.voxelNormal = voxelizeParam.voxelNormal;
-		voxelInjectParam.voxelEmissive = voxelizeParam.voxelEmissive;
-		GPU::RGTextureDesc voxelLightTexDesc = voxelTargetTexDesc;
-		voxelLightTexDesc.format = GPU::TextureFormat::RGBA16F;
-		voxelLightTexDesc.mipLevels = int(log2f(_scene.voxelGIConfig.resolution));
-		voxelInjectParam.voxelLight = renderGraph->createTexture("Voxel light Target", voxelLightTexDesc);
-		voxelInjectParam.voxelGIData = voxelGIDataNodeID;
-		voxelInjectParam.lightData = lightNodeID;
-		voxelInjectParam = voxelLightInjectRenderModule.addPass(_gpuSystem, renderGraph, voxelInjectParam, _scene);
-
-		/* VoxelGIDebugRenderModule::Parameter voxelGIDebugParam;
-		voxelGIDebugParam.renderTarget = renderGraph->createTexture("Voxel GI color target", renderTargetDesc);
-		voxelGIDebugParam.depthTarget = renderGraph->createTexture("Voxel GI depth target", sceneDepthTexDesc);
-		voxelGIDebugParam.voxelGIData = voxelGIDataNodeID;
-		voxelGIDebugParam.cameraData = cameraNodeID;
-		voxelGIDebugParam.voxelAlbedo = voxelizeParam.voxelAlbedo;
-		voxelGIDebugParam.voxelEmissive = voxelizeParam.voxelEmissive;
-		voxelGIDebugParam.voxelNormal = voxelizeParam.voxelNormal;
-		voxelGIDebugParam.voxelLight = voxelInjectParam.voxelLight;
-		voxelGIDebugParam = voxelGIDebugRenderModule.addPass(_gpuSystem, renderGraphh, voxelGIDebugParam, scene); */
-
 		GPU::BufferNodeID quadBufferNodeID = renderGraph->importBuffer("Quad Buffer", quadBuffer);
 		FinalGatherRenderModule::Parameter finalGatherParameter;
 		for (int i = 0; i < 4; i++) {

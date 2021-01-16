@@ -53,5 +53,4 @@ endif()
 add_subdirectory(dependencies)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/soul)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/demo)
-add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/blender_render_graph)
 
