@@ -1,11 +1,11 @@
-#include "memory/allocators/page_allocator.h"
-#include "memory/util.h"
-
 #include <sys/mman.h>
 #include <unistd.h>
 #include <errno.h>
 
-namespace Soul { namespace Memory {
+#include "memory/allocators/page_allocator.h"
+#include "memory/util.h"
+
+namespace Soul::Memory {
 
 	PageAllocator::PageAllocator(const char* name) : Allocator(name) {
 		_pageSize = getpagesize();
@@ -13,7 +13,7 @@ namespace Soul { namespace Memory {
 
 	void PageAllocator::reset() {};
 
-	Allocation PageAllocator::allocate(uint32 size, uint32 alignment, const char* tag) {
+	Allocation PageAllocator::tryAllocate(uint32 size, uint32 alignment, const char* tag) {
 		uint32 newSize = Util::PageSizeRound(size, _pageSize);
 		void* addr = mmap(nullptr, newSize, PROT_READ | PROT_WRITE, MAP_ANON | MAP_PRIVATE, -1, 0);
 		return {addr, newSize};
@@ -24,4 +24,4 @@ namespace Soul { namespace Memory {
 		munmap(addr, size);
 	}
 
-}}
+}

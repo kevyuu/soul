@@ -1,8 +1,8 @@
-#include "memory/allocators/scope_allocator.h"
-#include "memory/allocators/proxy_allocator.h"
 #include "memory/allocators/linear_allocator.h"
+#include "memory/allocators/proxy_allocator.h"
+#include "memory/allocators/scope_allocator.h"
 
-namespace Soul {namespace Memory {
+namespace Soul::Memory {
 
 	template<>
 	void* ScopeAllocator<ProxyAllocator<LinearAllocator>>::getMarker(){
@@ -23,4 +23,5 @@ namespace Soul {namespace Memory {
 	void ScopeAllocator<LinearAllocator>::rewind(void* addr) {
 		_backingAllocator->rewind(addr);
 	}
-}}
+
+}

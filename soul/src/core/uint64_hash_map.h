@@ -11,7 +11,7 @@ namespace Soul {
 
 	public:
 
-		UInt64HashMap() : _allocator((Memory::Allocator*) Runtime::GetContextAllocator()),
+		UInt64HashMap() : _allocator(Runtime::GetContextAllocator()),
 						  _capacity(0), _size(0), _maxDIB(0),
 						  _indexes(nullptr), _values(nullptr)
 			{};
@@ -212,7 +212,7 @@ namespace Soul {
 		if (oldCapacity != 0) {
 			SOUL_ASSERT(0, oldIndexes != nullptr, "");
 			SOUL_ASSERT(0, oldValues != nullptr, "");
-			for (int i = 0; i < oldCapacity; i++) {
+			for (uint64 i = 0; i < oldCapacity; i++) {
 				if (oldIndexes[i].dib != 0) {
 					add(oldIndexes[i].key, std::move(oldValues[i]));
 				}

@@ -182,7 +182,7 @@ namespace Soul { namespace GPU {
 	}
 
 	TextureNodeID GraphicNodeBuilder::setDepthStencilAttachment(TextureNodeID nodeID, const DepthStencilAttachmentDesc& desc) {
-		if (desc.depthWriteEnable) {
+		if (desc.depthWriteEnable || desc.clear) {
 			TextureNodeID dstTextureNodeID = _renderGraph->_textureNodeWrite(nodeID, _passID);
 			_graphicNode->depthStencilAttachment = DepthStencilAttachment(dstTextureNodeID, desc);
 			return dstTextureNodeID;
@@ -192,33 +192,33 @@ namespace Soul { namespace GPU {
 		return nodeID;
 	}
 
-	void GraphicNodeBuilder::setPipelineConfig(const GraphicPipelineConfig &config) {
-		_graphicNode->pipelineConfig = config;
+	void GraphicNodeBuilder::setRenderTargetDimension(Vec2ui32 dimension) {
+		_graphicNode->renderTargetDimension = dimension;
 	}
 
-    BufferNodeID ComputeNodeBuilder::addInShaderBuffer(BufferNodeID nodeID, uint8 set, uint8 binding) {
-        _renderGraph->_bufferNodeRead(nodeID, _passID);
-        _computeNode->inShaderBuffers.add(ShaderBuffer(nodeID, set, binding));
-        return nodeID;
-    }
+	BufferNodeID ComputeNodeBuilder::addShaderBuffer(BufferNodeID nodeID, ShaderStageFlags stageFlags, ShaderBufferReadUsage usage) {
+		_renderGraph->_bufferNodeRead(nodeID, _passID);
+		_computeNode->shaderBufferReadAccesses.add({ nodeID, stageFlags, usage });
+		return nodeID;
+	}
 
-    BufferNodeID ComputeNodeBuilder::addOutShaderBuffer(BufferNodeID nodeID, uint8 set, uint8 binding) {
-        BufferNodeID dstBufferNodeID = _renderGraph->_bufferNodeWrite(nodeID, _passID);
-        _computeNode->outShaderBuffers.add(ShaderBuffer(dstBufferNodeID, set, binding));
-        return dstBufferNodeID;
-    }
+	BufferNodeID ComputeNodeBuilder::addShaderBuffer(BufferNodeID nodeID, ShaderStageFlags stageFlags, ShaderBufferWriteUsage usage) {
+		BufferNodeID outNodeID = _renderGraph->_bufferNodeWrite(nodeID, _passID);
+		_computeNode->shaderBufferWriteAccesses.add({ nodeID, stageFlags, usage });
+		return nodeID;
+	}
 
-    TextureNodeID ComputeNodeBuilder::addInShaderTexture(TextureNodeID nodeID, uint8 set, uint8 binding) {
-        _renderGraph->_textureNodeRead(nodeID, _passID);
-        _computeNode->inShaderTextures.add(ShaderTexture(nodeID, set, binding));
-        return nodeID;
-    }
+	TextureNodeID ComputeNodeBuilder::addShaderTexture(TextureNodeID nodeID, ShaderStageFlags stageFlags, ShaderTextureReadUsage usage) {
+		_renderGraph->_textureNodeRead(nodeID, _passID);
+		_computeNode->shaderTextureReadAccesses.add({ nodeID, stageFlags, usage });
+		return nodeID;
+	}
 
-    TextureNodeID ComputeNodeBuilder::addOutShaderTexture(TextureNodeID nodeID, uint8 set, uint8 binding) {
-        TextureNodeID outNodeID = _renderGraph->_textureNodeWrite(nodeID, _passID);
-        _computeNode->outShaderTextures.add(ShaderTexture(outNodeID, set, binding));
-        return outNodeID;
-    }
+	TextureNodeID ComputeNodeBuilder::addShaderTexture(TextureNodeID nodeID, ShaderStageFlags stageFlags, ShaderTextureWriteUsage usage) {
+		TextureNodeID outNodeID = _renderGraph->_textureNodeWrite(nodeID, _passID);
+		_computeNode->shaderTextureWriteAccesses.add({ outNodeID, stageFlags, usage });
+		return outNodeID;
+	}
 
     void ComputeNodeBuilder::setPipelineConfig(const ComputePipelineConfig &config) {
 	    _computeNode->pipelineConfig = config;

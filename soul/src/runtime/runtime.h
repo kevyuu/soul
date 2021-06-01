@@ -3,98 +3,96 @@
 #include "runtime/data.h"
 #include "runtime/system.h"
 
-namespace Soul {
-    namespace Runtime {
+namespace Soul::Runtime {
 
-        inline void Init(const Config& config) {
-            System::Get().init(config);
-        }
+	inline void Init(const Config& config) {
+		System::Get().init(config);
+	}
 
-        inline void Shutdown() {
-            System::Get().shutdown();
-        }
+	inline void Shutdown() {
+		System::Get().shutdown();
+	}
 
-        inline void BeginFrame() {
-            System::Get().beginFrame();
-        }
+	inline void BeginFrame() {
+		System::Get().beginFrame();
+	}
 
-        template <SOUL_TEMPLATE_ARG_LAMBDA(Execute, void(TaskID))>
-        inline TaskID CreateTask(TaskID parent, Execute&& lambda) {
-            return System::Get().taskCreate(parent, std::forward<Execute>(lambda));
-        }
+	template <SOUL_TEMPLATE_ARG_LAMBDA(Execute, void(TaskID))>
+	inline TaskID CreateTask(TaskID parent, Execute&& lambda) {
+		return System::Get().taskCreate(parent, std::forward<Execute>(lambda));
+	}
 
-        inline void WaitTask(TaskID taskID) {
-            System::Get().taskWait(taskID);
-        }
+	inline void WaitTask(TaskID taskID) {
+		System::Get().taskWait(taskID);
+	}
 
-        inline void RunTask(TaskID taskID) {
-            System::Get().taskRun(taskID);
-        }
+	inline void RunTask(TaskID taskID) {
+		System::Get().taskRun(taskID);
+	}
 
-        template <SOUL_TEMPLATE_ARG_LAMBDA(Func, void(int))>
-        inline TaskID ParallelForTaskCreate(TaskID parent, uint32 count, uint32 blockSize, Func&& func) {
-            return System::Get()._parallelForTaskCreateRecursive(parent, 0, count, blockSize, std::forward<Func>(func));
-        }
+	template <SOUL_TEMPLATE_ARG_LAMBDA(Func, void(int))>
+	inline TaskID ParallelForTaskCreate(TaskID parent, uint32 count, uint32 blockSize, Func&& func) {
+		return System::Get()._parallelForTaskCreateRecursive(parent, 0, count, blockSize, std::forward<Func>(func));
+	}
 
-        inline uint16 ThreadID() {
-            return System::Get().getThreadID();
-        }
+	inline uint16 ThreadID() {
+		return System::Get().getThreadID();
+	}
 
-        inline uint16 ThreadCount() {
-            return System::Get().getThreadCount();
-        }
+	inline uint16 ThreadCount() {
+		return System::Get().getThreadCount();
+	}
 
-        inline void PushAllocator(Memory::Allocator* allocator) {
-            System::Get().pushAllocator(allocator);
-        }
+	inline void PushAllocator(Memory::Allocator* allocator) {
+		System::Get().pushAllocator(allocator);
+	}
 
-        inline void PopAllocator() {
-            System::Get().popAllocator();
-        }
+	inline void PopAllocator() {
+		System::Get().popAllocator();
+	}
 
-        inline Memory::Allocator* GetContextAllocator() {
-            return System::Get().getContextAllocator();
-        }
+	inline Memory::Allocator* GetContextAllocator() {
+		return System::Get().getContextAllocator();
+	}
 
-        inline TempAllocator* GetTempAllocator() {
-            return System::Get().getTempAllocator();
-        }
+	inline TempAllocator* GetTempAllocator() {
+		return System::Get().getTempAllocator();
+	}
 
-        inline void* Allocate(uint32 size, uint32 alignment) {
-            return System::Get().allocate(size, alignment);
-        }
+	inline void* Allocate(uint32 size, uint32 alignment) {
+		return System::Get().allocate(size, alignment);
+	}
 
-        inline void Deallocate(void* addr, uint32 size) {
-            return System::Get().deallocate(addr, size);
-        }
+	inline void Deallocate(void* addr, uint32 size) {
+		return System::Get().deallocate(addr, size);
+	}
 
-        struct AllocatorInitializer {
-            AllocatorInitializer() = delete;
-            explicit AllocatorInitializer(Memory::Allocator* allocator) {
-                PushAllocator(allocator);
-            }
+	struct AllocatorInitializer {
+		AllocatorInitializer() = delete;
+		explicit AllocatorInitializer(Memory::Allocator* allocator) {
+			PushAllocator(allocator);
+		}
 
-            void end() {
-                PopAllocator();
-            }
-        };
+		void end() {
+			PopAllocator();
+		}
+	};
 
-        struct AllocatorZone{
+	struct AllocatorZone{
 
-            AllocatorZone() = delete;
+		AllocatorZone() = delete;
 
-            explicit AllocatorZone(Memory::Allocator* allocator) {
-                PushAllocator(allocator);
-            }
+		explicit AllocatorZone(Memory::Allocator* allocator) {
+			PushAllocator(allocator);
+		}
 
-            ~AllocatorZone() {
-                PopAllocator();
-            }
-        };
+		~AllocatorZone() {
+			PopAllocator();
+		}
+	};
 
-        #define STRING_JOIN2(arg1, arg2) DO_STRING_JOIN2(arg1, arg2)
-        #define DO_STRING_JOIN2(arg1, arg2) arg1 ## arg2
-        #define SOUL_MEMORY_ALLOCATOR_ZONE(allocator) \
+#define STRING_JOIN2(arg1, arg2) DO_STRING_JOIN2(arg1, arg2)
+#define DO_STRING_JOIN2(arg1, arg2) arg1 ## arg2
+#define SOUL_MEMORY_ALLOCATOR_ZONE(allocator) \
                 Soul::Runtime::AllocatorZone STRING_JOIN2(allocatorZone, __LINE__)(allocator)
-    }
 }

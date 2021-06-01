@@ -54,7 +54,6 @@ namespace Demo {
 			SoulImTexture fontTex;
 			
 			ScenePanel scenePanel;
-			SceneConfigPanel sceneConfigPanel;
 			MetricPanel metricPanel;
 			MenuBar menuBar;
 		};

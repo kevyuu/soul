@@ -1,3 +1,5 @@
+#pragma once
+
 #define SOUL_CACHELINE_SIZE 64
 
 #define SOUL_USE_STD_HARDWARE_THREAD_COUNT

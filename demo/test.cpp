@@ -1,26 +1,20 @@
-#define VK_USE_PLATFORM_MACOS_MVK
-
 #include "core/type.h"
 #include "core/dev_util.h"
 #include "core/array.h"
 
+#include "memory/allocators/page_allocator.h"
 #include "runtime/runtime.h"
-
 #include "gpu/gpu.h"
+
 #include <GLFW/glfw3.h>
 
-#include "utils.h"
 #include "ui/ui.h"
 
 #include "imgui_render_module.h"
-#include "render_pipeline/deferred/renderer.h"
+#include "render_pipeline/filament/renderer.h"
+#include "render_pipeline/filament/data.h"
 
-#include <memory/allocators/page_allocator.h>
 #include "data.h"
-#include <vector>
-#include <fstream>
-
-#include <chrono>
 
 using namespace Soul;
 using namespace Demo;
@@ -56,7 +50,7 @@ int main()
 			Memory::BoundGuardProxy()));
 
 	Memory::PageAllocator pageAllocator("Page Allocator");
-	Memory::LinearAllocator linearAllocator("Main Thread Temp Allocator", 10 * ONE_MEGABYTE, &pageAllocator);
+	Memory::LinearAllocator linearAllocator("Main Thread Temp Allocator", 10 * Soul::Memory::ONE_MEGABYTE, &pageAllocator);
 	Runtime::TempAllocator tempAllocator(&linearAllocator,
 		Runtime::TempProxy());
 
@@ -64,9 +58,10 @@ int main()
 		0,
 		4096,
 		&tempAllocator,
-		20 * ONE_MEGABYTE,
+		20 * Soul::Memory::ONE_MEGABYTE,
 		&defaultAllocator
 		});
+
 
 	GPU::System gpuSystem(Runtime::GetContextAllocator());
 	GPU::System::Config config = {};
@@ -83,59 +78,13 @@ int main()
 	ImGuiRenderModule imguiRenderModule;
 	imguiRenderModule.init(&gpuSystem);
 
-    DeferredPipeline::Renderer renderer(&gpuSystem);
+    SoulFila::Renderer renderer(&gpuSystem);
 	renderer.init();
-	renderer.getScene()->setViewport({ 1920, 1080 });
+	renderer.getScene()->setViewport({ 614, 640 });
 
 	UI::Store store;
 	store.scene = renderer.getScene();
 	store.gpuSystem = &gpuSystem;
-
-
-	struct Vertex {
-		Vec2f pos;
-		Vec3f color;
-	};
-
-	const std::vector<Vertex> vertices = {
-		{{0.0f, -0.5f}, {1.0f, 0.0f, 0.0f}},
-		{{0.5f, 0.5f}, {0.0f, 1.0f, 0.0f}},
-		{{-0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}}
-	};
-
-	GPU::BufferDesc vertexBufferDesc;
-	vertexBufferDesc.typeSize = sizeof(Vertex);
-	vertexBufferDesc.typeAlignment = alignof(Vertex);
-	vertexBufferDesc.count = vertices.size();
-	vertexBufferDesc.usageFlags = GPU::BUFFER_USAGE_VERTEX_BIT;
-	vertexBufferDesc.queueFlags = GPU::QUEUE_GRAPHIC_BIT;
-
-	GPU::BufferID vertexBuffer = gpuSystem.bufferCreate(
-		vertexBufferDesc,
-		[&vertices](int i, byte* data) {
-			auto vertex = (Vertex*)data;
-			*vertex = vertices[i];
-		}
-	);
-
-	const char* vertSrc = LoadFile("shaders/triangle.vert.glsl");
-	GPU::ShaderDesc vertShaderDesc;
-	vertShaderDesc.name = "Triangle Verte Shader";
-	vertShaderDesc.source = vertSrc;
-	vertShaderDesc.sourceSize = strlen(vertSrc);
-	GPU::ShaderID vertShaderID = gpuSystem.shaderCreate(vertShaderDesc, GPU::ShaderStage::VERTEX);
-
-	const char* fragSrc = LoadFile("shaders/triangle.frag.glsl");
-	GPU::ShaderDesc fragShaderDesc;
-	fragShaderDesc.name = "Imgui fragment shader";
-	fragShaderDesc.source = fragSrc;
-	fragShaderDesc.sourceSize = strlen(fragSrc);
-	GPU::ShaderID fragShaderID = gpuSystem.shaderCreate(fragShaderDesc, GPU::ShaderStage::FRAGMENT);
-
-	struct Data {
-		GPU::BufferNodeID vertexBuffer;
-		GPU::TextureNodeID targetTex;
-	};
 
 	while (!glfwWindowShouldClose(window))
 	{

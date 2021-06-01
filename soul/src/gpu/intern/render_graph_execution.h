@@ -6,7 +6,8 @@
 #include "gpu/data.h"
 #include "memory/allocator.h"
 
-namespace Soul { namespace GPU {
+namespace Soul::GPU
+{
 
 	struct _BufferBarrier {
 		VkPipelineStageFlags stageFlags = 0;
@@ -27,7 +28,7 @@ namespace Soul { namespace GPU {
 		PassNodeID lastPass = PASS_NODE_ID_NULL;
 		BufferUsageFlags usageFlags = 0u;
 		QueueFlags queueFlags = 0;
-		BufferID bufferID = BUFFER_ID_NULL;
+		BufferID bufferID;
 
 		VkEvent pendingEvent = VK_NULL_HANDLE;
 		SemaphoreID pendingSemaphore = SEMAPHORE_ID_NULL;
@@ -45,7 +46,7 @@ namespace Soul { namespace GPU {
 		PassNodeID lastPass = PASS_NODE_ID_NULL;
 		TextureUsageFlags usageFlags = 0u;
 		QueueFlags queueFlags = 0;
-		TextureID textureID = TEXTURE_ID_NULL;
+		TextureID textureID;
 
 		VkEvent pendingEvent = VK_NULL_HANDLE;
 		SemaphoreID pendingSemaphore = SEMAPHORE_ID_NULL;
@@ -60,8 +61,6 @@ namespace Soul { namespace GPU {
 	};
 
 	struct _RGExecPassInfo {
-		ProgramID programID;
-
 		Array<_BufferBarrier> bufferFlushes;
 		Array<_BufferBarrier> bufferInvalidates;
 		Array<_TextureBarrier> textureFlushes;
@@ -72,8 +71,8 @@ namespace Soul { namespace GPU {
 	class _RenderGraphExecution {
 	public:
 		_RenderGraphExecution(const RenderGraph* renderGraph, System* system, Memory::Allocator* allocator):
-				_renderGraph(renderGraph), _gpuSystem(system),
-				bufferInfos(allocator), textureInfos(allocator), passInfos(allocator) {}
+			_renderGraph(renderGraph), _gpuSystem(system), _externalEvents(), _externalSemaphores(),
+			bufferInfos(allocator), textureInfos(allocator), passInfos(allocator) {}
 
 		_RenderGraphExecution(const _RenderGraphExecution& other) = delete;
 		_RenderGraphExecution& operator=(const _RenderGraphExecution& other) = delete;
@@ -124,9 +123,7 @@ namespace Soul { namespace GPU {
 		void _initOutShaderBuffers(const Array<ShaderBuffer>& shaderBuffers, int index, QueueFlagBits queueFlags);
 		void _initInShaderBuffers(const Array<ShaderBufferReadAccess>& accessList, int index, QueueFlagBits queueFlags);
 		void _initOutShaderBuffers(const Array<ShaderBufferWriteAccess>& accessList, int index, QueueFlagBits queueFlags);
-		void _initInShaderTextures(const Array<ShaderTexture>& shaderTextures, int index, QueueFlagBits queueFlags);
-		void _initOutShaderTextures(const Array<ShaderTexture>& shaderTextures, int index, QueueFlagBits queueFlags);
 		void _initShaderTextures(const Array<ShaderTextureReadAccess>& shaderAccessList, int index, QueueFlagBits queueFlags);
 		void _initShaderTextures(const Array<ShaderTextureWriteAccess>& shaderAccessList, int index, QueueFlagBits queueFlags);
 	};
-}}
+}

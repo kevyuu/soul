@@ -109,7 +109,7 @@ namespace Soul { namespace Runtime {
 
 		void _terminate();
 
-		void _initSentinel();
+		void _initRootTask();
 
 		Database _db;
 	};

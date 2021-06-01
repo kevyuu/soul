@@ -175,7 +175,7 @@ namespace Soul {
 			_allocator->deallocate(_buffer, sizeof(Unit) * _capacity);
 		}
 		_buffer = newBuffer;
-		for (int i = _capacity; i < capacity; i++) {
+		for (uint64 i = _capacity; i < capacity; i++) {
 			_buffer[i].next = i + 1;
 		}
 		_freelist = _size;
@@ -225,7 +225,7 @@ namespace Soul {
 		_destructUnits();
 		_size = 0;
 		_freelist = 0;
-		for (int i = 0; i < _capacity; i++) {
+		for (uint64 i = 0; i < _capacity; i++) {
 			_buffer[i].next = i + 1;
 		}
 		_bitSet.clear();

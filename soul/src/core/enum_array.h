@@ -1,57 +1,53 @@
 //
 // Created by Kevin Yudi Utama on 2/1/20.
 //
-
 #pragma once
+
 #include "core/type.h"
 
-#include <initializer_list>
+namespace Soul {
 
-template<typename EnumType, typename ValType>
-class EnumArray {
-public:
-	constexpr EnumArray<EnumType, ValType>() = default;
-	constexpr explicit EnumArray<EnumType, ValType>(ValType val) noexcept {
-		for (ValType& _val : _buffer) {
-			_val = val;
+	template<typename EnumType, typename ValType>
+	class EnumArray {
+	public:
+		constexpr EnumArray<EnumType, ValType>() : _buffer(){}
+
+		constexpr explicit EnumArray<EnumType, ValType>(ValType val) noexcept : _buffer() {
+			for (ValType& bufferVal : _buffer) {
+				bufferVal = val;
+			}
 		}
-	}
-	constexpr EnumArray<EnumType, ValType>(std::initializer_list<ValType> list) noexcept {
-		SOUL_ASSERT(0, list.size() == uint64(EnumType::COUNT), "");
-		int i = 0;
-		for (auto val : list) {
-			_buffer[i++] = val;
+
+		template<size_t N>
+		constexpr explicit EnumArray<EnumType, ValType>(const ValType(&list)[N]) noexcept : _buffer() {
+			static_assert(N == uint64(EnumType::COUNT), "Enum array argument count mismatch!");
+			int i = 0;
+			for (auto val : list) {
+				_buffer[i++] = val;
+			}
 		}
-	}
 
-	ValType operator[](uint64 index) {
-	    return _buffer[index];
-	}
+		ValType& operator[](EnumType index) noexcept {
+			return _buffer[uint64(index)];
+		}
 
-	ValType operator[](uint64 index) const {
-	    return _buffer[index];
-	}
+		const ValType& operator[](EnumType index) const {
+			return _buffer[uint64(index)];
+		}
 
-	ValType& operator[](EnumType index) {
-		return _buffer[uint64(index)];
-	}
+		[[nodiscard]] constexpr int size() const {
+			return uint64(EnumType::COUNT);
+		}
 
-	const ValType& operator[](EnumType index) const {
-		return _buffer[uint64(index)];
-	}
+		[[nodiscard]] const ValType* begin() const { return _buffer; }
+		[[nodiscard]] const ValType* end() const { return _buffer + uint64(EnumType::COUNT); }
 
-	constexpr int size() const {
-		return uint64(EnumType::COUNT);
-	}
+		[[nodiscard]] ValType* begin() { return _buffer; }
+		[[nodiscard]] ValType* end() { return _buffer + uint64(EnumType::COUNT); }
 
-	const ValType* begin() const { return _buffer; }
-	const ValType* end() const { return _buffer + EnumType::COUNT; }
+	private:
+		ValType _buffer[uint64(EnumType::COUNT)];
 
-	ValType* begin() { return _buffer; }
-	ValType* end() {return _buffer + uint64(EnumType::COUNT); }
-
-private:
-	ValType _buffer[uint64(EnumType::COUNT)];
-
-};
+	};
+}
 

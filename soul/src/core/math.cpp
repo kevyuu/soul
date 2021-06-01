@@ -1,14 +1,33 @@
+#include <algorithm>
+#include <cmath>
+#include <limits>
+
 #include "core/math.h"
 #include "core/dev_util.h"
 
+
 namespace Soul {
 
-	real32 min(real32 f1, real32 f2) {
+	float min(float f1, float f2) {
 		return f1 < f2 ? f1 : f2;
 	}
 
-	real32 max(real32 f1, real32 f2) {
+	float max(float f1, float f2) {
 		return f1 > f2 ? f1 : f2;
+	}
+
+	Vec3f min(Vec3f v1, Vec3f v2) {
+		return { min(v1.x, v2.x), min(v1.y, v2.y), min(v1.z, v2.z) };
+	}
+
+	Vec3f max(Vec3f v1, Vec3f v2) {
+		return { max(v1.x, v2.x), max(v1.y, v2.y), max(v1.z, v2.z) };
+	}
+
+	uint32 floorLog2(uint32 val) {
+		uint32 level = 0;
+		while (val >>= 1) ++level;
+		return level;
 	}
 
 	Vec2f operator+(const Vec2f & lhs, const Vec2f & rhs)
@@ -42,6 +61,12 @@ namespace Soul {
 	{
 		lhs.x *= rhs;
 		lhs.y *= rhs;
+	}
+
+	Vec2f unit(Vec2f vec)
+	{
+		float magnitude = sqrt(vec.x * vec.x + vec.y * vec.y);
+		return Vec2f(vec.x / magnitude, vec.y / magnitude);
 	}
 
 	Vec3f operator+(const Vec3f & lhs, const Vec3f & rhs)
@@ -111,7 +136,7 @@ namespace Soul {
 		return res;
 	}
 
-	real32 dot(const Vec3f & lhs, const Vec3f & rhs)
+	float dot(const Vec3f & lhs, const Vec3f & rhs)
 	{
 		return lhs.x * rhs.x + lhs.y * rhs.y + lhs.z * rhs.z;
 	}
@@ -126,15 +151,15 @@ namespace Soul {
 
 	Vec3f unit(const Vec3f & vec)
 	{
-		real32 magnitude = sqrt(vec.x * vec.x + vec.y * vec.y + vec.z * vec.z);
+		float magnitude = sqrt(vec.x * vec.x + vec.y * vec.y + vec.z * vec.z);
 		return Vec3f(vec.x / magnitude, vec.y / magnitude, vec.z / magnitude);
 	}
 
-	real32 squareLength(const Vec3f& vec) {
+	float squareLength(const Vec3f& vec) {
 		return vec.x * vec.x + vec.y * vec.y + vec.z * vec.z;
 	}
 
-	real32 length(const Vec3f & vec)
+	float length(const Vec3f & vec)
 	{
 		return sqrt(vec.x * vec.x + vec.y * vec.y + vec.z * vec.z);
 	}
@@ -147,8 +172,34 @@ namespace Soul {
 		return { max(v1.x, v2.x), max(v1.y, v2.y), max(v1.z, v2.z) };
 	}
 
-	Quaternion quaternionFromVec3f(const Vec3f& source, const Vec3f& destination) {
-		Quaternion res;
+	Vec4f operator/(const Vec4f& lhs, const float rhs) {
+		return { lhs.x / rhs, lhs.y / rhs, lhs.z / rhs, lhs.w / rhs };
+	}
+
+	void operator*=(Vec4f& lhs, const float rhs) {
+		lhs.x *= rhs;
+		lhs.y *= rhs;
+		lhs.z *= rhs;
+		lhs.w *= rhs;
+	}
+
+	void operator/=(Vec4f& lhs, const float rhs) {
+		lhs.x /= rhs;
+		lhs.y /= rhs;
+		lhs.z /= rhs;
+		lhs.w /= rhs;
+	}
+
+	float squareLength(const Vec4f& vec) {
+		return vec.x * vec.x + vec.y * vec.y + vec.z * vec.z + vec.w * vec.w;
+	}
+
+	float length(const Vec4f& vec) {
+		return sqrt(vec.x * vec.x + vec.y * vec.y + vec.z * vec.z + vec.w * vec.w);
+	}
+
+	Quaternionf quaternionFromVec3f(const Vec3f& source, const Vec3f& destination) {
+		Quaternionf res;
 		Vec3f src = unit(source);
 		Vec3f dst = unit(destination);
 		float dotRes = dot(src, dst);
@@ -156,7 +207,7 @@ namespace Soul {
 			return quaternionIdentity();
 		}
 		if (dotRes <= -1.0f) {
-			SOUL_ASSERT(0, false, "Have not been implemented yet");
+			SOUL_NOT_IMPLEMENTED();
 			return quaternionIdentity();
 		}
 		Vec3f xyz = cross(src, dst);
@@ -167,30 +218,151 @@ namespace Soul {
 		return unit(res);
 	}
 
-	Quaternion quaternionIdentity()
+	Quaternionf quaternionFromMat4(const Mat4f& mat) {
+		Quaternionf quat;
+
+		const float trace = mat.elem[0][0] + mat.elem[1][1] + mat.elem[2][2];
+
+		if (trace > 0) {
+			float s = sqrt(trace + 1);
+			quat.w = 0.5f * s;
+			s = 0.5f / s;
+			quat.x = (mat.elem[2][1] - mat.elem[1][2]) * s;
+			quat.y = (mat.elem[0][2] - mat.elem[2][0]) * s;
+			quat.z = (mat.elem[1][0] - mat.elem[0][1]) * s;
+		}
+		else {
+
+			// Find the index of the greatest diagonal
+			size_t i = 0;
+			if (mat.elem[1][1] > mat.elem[0][0]) { i = 1; }
+			if (mat.elem[2][2] > mat.elem[i][i]) { i = 2; }
+
+			// Get the next indices: (n+1)%3
+			static constexpr size_t next_ijk[3] = { 1, 2, 0 };
+			size_t j = next_ijk[i];
+			size_t k = next_ijk[j];
+			float s = sqrt((mat.elem[i][i] - (mat.elem[j][j] + mat.elem[k][k])) + 1);
+			quat.mem[i] = 0.5f * s;
+			if (s != 0) {
+				s = 0.5f / s;
+			}
+			quat.w = (mat.elem[k][j] - mat.elem[j][k]) * s;
+			quat.mem[j] = (mat.elem[j][i] + mat.elem[i][j]) * s;
+			quat.mem[k] = (mat.elem[k][i] + mat.elem[i][k]) * s;
+		}
+		return quat;
+	}
+
+	Quaternionf qtangent(Vec3f tbn[3], uint64 storageSize) {
+		Vec4f columns[4] = { Vec4f(tbn[0], 0.0f), Vec4f(tbn[1], 0.0f), Vec4f(tbn[2], 0.0f), Vec4f(0, 0, 0, 1.0f) };
+	
+		Quaternionf q = quaternionFromMat4(mat4FromColumns(columns));
+		q = unit(q);
+		q = q.w > 0 ? q * -1 : q;
+
+		// Ensure w is never 0.0
+		// Bias is 2^(nb_bits - 1) - 1
+		const float bias = 1.0f / float((1 << (storageSize * CHAR_BIT - 1)) - 1);
+		if (q.w < bias) {
+			q.w = bias;
+
+			const float factor = float(std::sqrt(1.0 - float((double)bias * (double)bias)));
+			q.xyz *= factor;
+		}
+
+		// If there's a reflection ((n x t) . b <= 0), make sure w is negative
+		if (dot(cross(tbn[0], tbn[2]), tbn[1]) < 0.0f) {
+			q = q * -1;
+		}
+
+		return q;
+	}
+
+	Quaternionf quaternionIdentity()
 	{
 		return { 0.0f, 0.0f, 0.0f, 1.0f };
 	}
 
-	bool operator==(const Quaternion& lhs, const Quaternion& rhs) {
+	bool operator==(const Quaternionf& lhs, const Quaternionf& rhs) {
 		return (lhs.x == rhs.x) && (lhs.y == rhs.y) && (lhs.z == rhs.z) && (lhs.w == rhs.w);
 	}
 
-	bool operator!=(const Quaternion& lhs, const Quaternion& rhs) {
+	bool operator!=(const Quaternionf& lhs, const Quaternionf& rhs) {
 		return (lhs.x != rhs.x) || (lhs.y != rhs.y) || (lhs.z != rhs.z) || (lhs.w != rhs.w);
 	}
 
-	Quaternion operator*(const Quaternion& lhs, float scalar) {
+	Quaternionf operator+(const Quaternionf& lhs, const Quaternionf& rhs) {
+		return Quaternionf(lhs.x + rhs.x, lhs.y + rhs.y, lhs.z + rhs.z, lhs.w + rhs.w);
+	}
+	
+	Mat3f mat3Transpose(const Mat3f& matrix) {
+		Mat3f res;
+		for (int i = 0; i < 3; i++) {
+			for (int j = 0; j < 3; j++) {
+				res.elem[j][i] = matrix.elem[i][j];
+			}
+		}
+
+		return res;
+	}
+
+	Mat3f operator*(const Mat3f& lhs, const Mat3f& rhs) {
+		Mat3f res;
+		for (int i = 0; i < 3; i++) {
+			for (int j = 0; j < 3; j++) {
+				res.elem[i][j] = 0;
+				for (int k = 0; k < 3; k++) {
+					res.elem[i][j] += lhs.elem[i][k] * rhs.elem[k][j];
+				}
+			}
+		}
+		return res;	
+	}
+
+	void operator*=(Mat3f& lhs, const Mat3f& rhs)
+	{
+		Mat3f res = lhs * rhs;
+		lhs = res;
+	}
+
+	Mat3f cofactor(const Mat3f& m) {
+		Mat3f cof;
+
+		const float a = m.elem[0][0];
+		const float b = m.elem[1][0];
+		const float c = m.elem[2][0];
+		const float d = m.elem[0][1];
+		const float e = m.elem[1][1];
+		const float f = m.elem[2][1];
+		const float g = m.elem[0][2];
+		const float h = m.elem[1][2];
+		const float i = m.elem[2][2];
+
+		cof.elem[0][0] = e * i - f * h;  // A
+		cof.elem[0][1] = c * h - b * i;  // D
+		cof.elem[0][2] = b * f - c * e;  // G
+		cof.elem[1][0] = f * g - d * i;  // B
+		cof.elem[1][1] = a * i - c * g;  // E
+		cof.elem[1][2] = c * d - a * f;  // H
+		cof.elem[2][0] = d * h - e * g;  // C
+		cof.elem[2][1] = b * g - a * h;  // F
+		cof.elem[2][2] = a * e - b * d;  // I
+
+		return cof;
+	}
+
+	Quaternionf operator*(const Quaternionf& lhs, float scalar) {
 		return { lhs.x * scalar, lhs.y * scalar, lhs.z * scalar, lhs.w * scalar };
 	}
 
-	Quaternion operator/(const Quaternion& lhs, float scalar) {
+	Quaternionf operator/(const Quaternionf& lhs, float scalar) {
 		return { lhs.x / scalar, lhs.y / scalar, lhs.z / scalar, lhs.w / scalar };
 	}
 
-	Quaternion operator*(const Quaternion& lhs, const Quaternion& rhs) {
+	Quaternionf operator*(const Quaternionf& lhs, const Quaternionf& rhs) {
 
-		Quaternion result;
+		Quaternionf result;
 		result.x = lhs.w * rhs.x + lhs.x * rhs.w + lhs.y * rhs.z - lhs.z * rhs.y;
 		result.y = lhs.w * rhs.y - lhs.x * rhs.z + lhs.y * rhs.w + lhs.z * rhs.x;
 		result.z = lhs.w * rhs.z + lhs.x * rhs.y - lhs.y * rhs.x + lhs.z * rhs.w;
@@ -200,33 +372,57 @@ namespace Soul {
 
 	}
 
-	Vec3f operator*(const Quaternion& lhs, const Vec3f& rhs) {
-		
-		return (lhs.xyz() * 2 * (dot(lhs.xyz(), rhs))) +
-			(rhs * (lhs.w * lhs.w - dot(lhs.xyz(), lhs.xyz()))) +
-			cross(lhs.xyz(), rhs) * 2 * lhs.w;
-	
+	Vec3f rotate(const Quaternionf& lhs, const Vec3f& rhs) {
+		return (lhs.xyz * 2 * (dot(lhs.xyz, rhs))) +
+			(rhs * (lhs.w * lhs.w - dot(lhs.xyz, lhs.xyz))) +
+			cross(lhs.xyz, rhs) * 2 * lhs.w;
 	}
 
-	Quaternion unit(const Quaternion& quaternion) {
+	Quaternionf unit(const Quaternionf& quaternion) {
 		return quaternion / length(quaternion);
 	}
 
-	float length(const Quaternion& quaternion) {
+	float length(const Quaternionf& quaternion) {
 		return sqrt(quaternion.x * quaternion.x + quaternion.y * quaternion.y + quaternion.z * quaternion.z + quaternion.w * quaternion.w);
 	}
 
-	float squareLength(const Quaternion& quaternion) {
+	float squareLength(const Quaternionf& quaternion) {
 		return quaternion.x * quaternion.x + quaternion.y * quaternion.y + quaternion.z * quaternion.z + quaternion.w * quaternion.w;
 	}
 
-	Vec3f rotate(const Quaternion& quaternion, const Vec3f& vec3) {
-		//TODO: make faster
-		return mat4Quaternion(quaternion) * vec3;
+	float dot(const Quaternionf& q1, const Quaternionf& q2) {
+		return q1.x * q2.x + q1.y * q2.y + q1.z * q2.z + q1.w * q2.w;
 	}
 
-	Mat4 mat4Identity() {
-		Mat4 res;
+	Quaternionf slerp(const Quaternionf& q1, const Quaternionf& q2, float t) {
+		float cosTheta = dot(q1, q2);
+		float absCosTheta = std::abs(cosTheta);
+		static constexpr float eps = 10.0f * std::numeric_limits<float>::epsilon();
+		if ((1.0f - absCosTheta) < eps) {
+			return unit(lerp(cosTheta < 0 ? q1 * -1 : q1, q2, t));
+		}
+		float lenq1q2 = std::sqrt(dot(q1, q1) * dot(q2, q2));
+		float theta = std::acos(std::clamp(cosTheta / lenq1q2, -1.0f, 1.0f));
+		float theta1 = theta * (1 - t);
+		float theta2 = theta * t;
+		float sinTheta = std::sin(theta);
+		if (sinTheta < eps) {
+			return unit(lerp(q1, q2, t));
+		}
+		float invSinTheta = 1 / sinTheta;
+		float fac1 = std::sin(theta1) * invSinTheta;
+		float fac2 = std::sin(theta2) * invSinTheta;
+		Quaternionf tmp = unit(fac1 * q1 + (cosTheta < 0 ? -fac2 : fac2) * q2);
+		SOUL_ASSERT(0, std::none_of(tmp.mem, tmp.mem + 4, [](float i) { return std::isnan(i);  }), "");
+		return tmp;
+	}
+
+	Quaternionf lerp(const Quaternionf& q1, const Quaternionf& q2, float t) {
+		return ((1 - t) * q1) + (t * q2);
+	}
+
+	Mat4f mat4Identity() {
+		Mat4f res;
 		res.elem[0][0] = 1.0f;
 		res.elem[1][1] = 1.0f;
 		res.elem[2][2] = 1.0f;
@@ -234,9 +430,9 @@ namespace Soul {
 		return res;
 	}
 
-	Mat4 mat4Scale(Vec3f scale)
+	Mat4f mat4Scale(Vec3f scale)
 	{
-		Mat4 res;
+		Mat4f res;
 		res.elem[0][0] = scale.x;
 		res.elem[1][1] = scale.y;
 		res.elem[2][2] = scale.z;
@@ -244,8 +440,8 @@ namespace Soul {
 		return res;
 	}
 
-	Mat4 mat4Translate(Vec3f offset) {
-		Mat4 res;
+	Mat4f mat4Translate(Vec3f offset) {
+		Mat4f res;
 		for (int i = 0; i < 4; i++) {
 			res.elem[i][i] = 1;
 		}
@@ -255,13 +451,13 @@ namespace Soul {
 		return res;
 	}
 
-	Mat4 mat4Rotate(Vec3f axis, real32 angle)
+	Mat4f mat4Rotate(Vec3f axis, float angle)
 	{
-		Mat4 res;
+		Mat4f res;
 
-		real32 cosVal = cos(angle);
-		real32 invCosVal = 1 - cosVal;
-		real32 sinVal = sin(angle);
+		float cosVal = cos(angle);
+		float invCosVal = 1 - cosVal;
+		float sinVal = sin(angle);
 
 		res.elem[0][0] = cosVal + axis.x * axis.x * invCosVal;
 		res.elem[0][1] = axis.x * axis.y * invCosVal - axis.z * sinVal;
@@ -277,9 +473,9 @@ namespace Soul {
 		return res;
 	}
 
-	Mat4 mat4Rotate(const Mat4& mat4)
+	Mat4f mat4Rotate(const Mat4f& mat4)
 	{
-		Mat4 result;
+		Mat4f result;
 		for (int i = 0; i < 16; i++)
 		{
 			result.mem[i] = 0.0f;
@@ -309,25 +505,27 @@ namespace Soul {
 		return result;
 	}
 
-	Mat4 mat4(const float* data) {
-		Mat4 res;
+	Mat4f mat4(const float* data) {
+		Mat4f res;
 		for (int i = 0; i < 16; i++) {
 			res.mem[i] = data[i];
 		}
 		return res;
 	}
 
-	Mat4 mat4(const double* data) {
-		Mat4 res;
-		for (int i = 0; i < 16; i++) {
-			res.mem[i] = data[i];
+	Mat4f mat4FromColumns(Vec4f columns[4]) {
+		Mat4f mat4;
+		for (int i = 0; i < 4; i++) {
+			for (int j = 0; j < 4; j++) {
+				mat4.elem[i][j] = columns[j].mem[i];
+			}
 		}
-		return res;
+		return mat4;
 	}
 
-	Mat4 mat4Quaternion(const Quaternion& quaternion) {
+	Mat4f mat4Quaternion(const Quaternionf& quaternion) {
 
-		Mat4 mat4;
+		Mat4f mat4;
 		float s = squareLength(quaternion);
 		
 		float qxx = quaternion.x * quaternion.x;
@@ -366,13 +564,48 @@ namespace Soul {
 
 	}
 
-	Mat4 mat4Transform(const Transform& transform) {
-		// TODO: make more efficient by not using matrix multiplication. Instead compose the matrix manually itself
-		return mat4Translate(transform.position) * mat4Quaternion(transform.rotation) * mat4Scale(transform.scale);
+	Mat4f mat4Transform(const Transformf& transform) {
+		Mat4f mat4;
+		const Quaternionf& quaternion = transform.rotation;
+		float s = squareLength(quaternion);
+
+		float qxx = quaternion.x * quaternion.x;
+		float qxy = quaternion.x * quaternion.y;
+		float qxz = quaternion.x * quaternion.z;
+		float qxw = quaternion.x * quaternion.w;
+
+		float qyy = quaternion.y * quaternion.y;
+		float qyz = quaternion.y * quaternion.z;
+		float qyw = quaternion.y * quaternion.w;
+
+		float qzz = quaternion.z * quaternion.z;
+		float qzw = quaternion.z * quaternion.w;
+
+		mat4.elem[0][0] = (1 - 2 * s * (qyy + qzz)) * transform.scale.x;
+		mat4.elem[0][1] = (2 * s * (qxy - qzw)) * transform.scale.y;
+		mat4.elem[0][2] = (2 * s * (qxz + qyw)) * transform.scale.z;
+		mat4.elem[0][3] = transform.position.x;
+
+		mat4.elem[1][0] = (2 * s * (qxy + qzw)) * transform.scale.x;
+		mat4.elem[1][1] = (1 - 2 * s * (qxx + qzz)) * transform.scale.y;
+		mat4.elem[1][2] = (2 * s * (qyz - qxw)) * transform.scale.z;
+		mat4.elem[1][3] = transform.position.y;
+
+		mat4.elem[2][0] = (2 * s * (qxz - qyw)) * transform.scale.x;
+		mat4.elem[2][1] = (2 * s * (qyz + qxw)) * transform.scale.y;
+		mat4.elem[2][2] = (1 - 2 * s * (qxx + qyy)) * transform.scale.z;
+		mat4.elem[2][3] = transform.position.z;
+
+		mat4.elem[3][0] = 0;
+		mat4.elem[3][1] = 0;
+		mat4.elem[3][2] = 0;
+		mat4.elem[3][3] = 1;
+
+		return mat4;
 	}
 
-	Mat4 mat4View(Vec3f position, Vec3f target, Vec3f up) {
-		Mat4 res;
+	Mat4f mat4View(Vec3f position, Vec3f target, Vec3f up) {
+		Mat4f res;
 
 		Vec3f direction = unit(target - position);
 		Vec3f zAxis = direction * -1;
@@ -394,14 +627,14 @@ namespace Soul {
 
 		res.elem[3][3] = 1;
 
-		Mat4 translateMat = mat4Translate(position * -1);
+		Mat4f translateMat = mat4Translate(position * -1);
 		res = res * translateMat;
 
 		return res;
 	}
 
-	Mat4 mat4Perspective(real32 fov, real32 aspect, real32 zNear, real32 zFar) {
-		Mat4 res;
+	Mat4f mat4Perspective(float fov, float aspect, float zNear, float zFar) {
+		Mat4f res;
 		res.elem[0][0] = 1 / (aspect * tan(fov / 2));
 		res.elem[1][1] = 1 / (tan(fov / 2));
 		res.elem[2][2] = (zNear + zFar) * -1 / (zFar - zNear);
@@ -411,9 +644,9 @@ namespace Soul {
 		return res;
 	}
 
-	Mat4 mat4Ortho(real32 left, real32 right, real32 bottom, real32 top, real32 zNear, real32 zFar)
+	Mat4f mat4Ortho(float left, float right, float bottom, float top, float zNear, float zFar)
 	{
-		Mat4 res;
+		Mat4f res;
 		res.elem[0][0] = 2 / (right - left); 
 		res.elem[1][1] = 2 / (top - bottom);
 		res.elem[2][2] = -2 / (zFar - zNear);
@@ -426,9 +659,9 @@ namespace Soul {
 		return res;
 	}
 
-	Mat4 mat4Transpose(const Mat4 & matrix)
+	Mat4f mat4Transpose(const Mat4f & matrix)
 	{
-		Mat4 res;
+		Mat4f res;
 		for (int i = 0; i < 4; i++) {
 			for (int j = 0; j < 4; j++) {
 				res.elem[j][i] = matrix.elem[i][j];
@@ -438,9 +671,9 @@ namespace Soul {
 		return res;
 	}
 
-	Mat4 mat4Inverse(const Mat4 & matrix)
+	Mat4f mat4Inverse(const Mat4f & matrix)
 	{
-		Mat4 res;
+		Mat4f res;
 		float det;
 		
 		res.mem[0] = matrix.mem[5] * matrix.mem[10] * matrix.mem[15] - matrix.mem[5] * matrix.mem[11] * matrix.mem[14] - matrix.mem[9] * matrix.mem[6] * matrix.mem[15] + matrix.mem[9] * matrix.mem[7] * matrix.mem[14] + matrix.mem[13] * matrix.mem[6] * matrix.mem[11] - matrix.mem[13] * matrix.mem[7] * matrix.mem[10];
@@ -463,7 +696,7 @@ namespace Soul {
 		det = matrix.mem[0] * res.mem[0] + matrix.mem[1] * res.mem[4] + matrix.mem[2] * res.mem[8] + matrix.mem[3] * res.mem[12];
 
 		if (det == 0)
-			return Mat4();
+			return Mat4f();
 
 		det = 1.f / det;
 
@@ -473,9 +706,9 @@ namespace Soul {
 		return res;
 	}
 
-	Mat4 operator+(const Mat4 & lhs, const Mat4 & rhs)
+	Mat4f operator+(const Mat4f & lhs, const Mat4f & rhs)
 	{
-		Mat4 res;
+		Mat4f res;
 
 		for (int i = 0; i < 4; i++) {
 			for (int j = 0; j < 4; j++) {
@@ -486,8 +719,8 @@ namespace Soul {
 		return res;
 	}
 
-	Mat4 operator-(const Mat4& lhs, const Mat4& rhs) {
-		Mat4 res;
+	Mat4f operator-(const Mat4f& lhs, const Mat4f& rhs) {
+		Mat4f res;
 
 		for (int i = 0; i < 4; i++) {
 			for (int j = 0; j < 4; j++) {
@@ -498,9 +731,9 @@ namespace Soul {
 		return res;
 	}
 
-	Mat4 operator*(const Mat4& lhs, const Mat4& rhs) 
+	Mat4f operator*(const Mat4f& lhs, const Mat4f& rhs) 
 	{
-		Mat4 res;
+		Mat4f res;
 
 		for (int i = 0; i < 4; i++) {
 			for (int j = 0; j < 4; j++) {
@@ -514,24 +747,24 @@ namespace Soul {
 		return res;
 	}
 
-	Vec3f operator*(const Mat4 & lhs, const Vec3f & rhs)
+	Vec3f operator*(const Mat4f & lhs, const Vec3f & rhs)
 	{
-		real32 x = lhs.elem[0][0] * rhs.x + lhs.elem[0][1] * rhs.y + lhs.elem[0][2] * rhs.z + lhs.elem[0][3];
-		real32 y = lhs.elem[1][0] * rhs.x + lhs.elem[1][1] * rhs.y + lhs.elem[1][2] * rhs.z + lhs.elem[1][3];
-		real32 z = lhs.elem[2][0] * rhs.x + lhs.elem[2][1] * rhs.y + lhs.elem[2][2] * rhs.z + lhs.elem[2][3];
+		float x = lhs.elem[0][0] * rhs.x + lhs.elem[0][1] * rhs.y + lhs.elem[0][2] * rhs.z + lhs.elem[0][3];
+		float y = lhs.elem[1][0] * rhs.x + lhs.elem[1][1] * rhs.y + lhs.elem[1][2] * rhs.z + lhs.elem[1][3];
+		float z = lhs.elem[2][0] * rhs.x + lhs.elem[2][1] * rhs.y + lhs.elem[2][2] * rhs.z + lhs.elem[2][3];
 		return Vec3f(x, y, z);
 	}
 
-	Vec4f operator*(const Mat4 & lhs, const Vec4f & rhs)
+	Vec4f operator*(const Mat4f & lhs, const Vec4f & rhs)
 	{
-		real32 x = lhs.elem[0][0] * rhs.x + lhs.elem[0][1] * rhs.y + lhs.elem[0][2] * rhs.z + lhs.elem[0][3] * rhs.w;
-		real32 y = lhs.elem[1][0] * rhs.x + lhs.elem[1][1] * rhs.y + lhs.elem[1][2] * rhs.z + lhs.elem[1][3] * rhs.w;
-		real32 z = lhs.elem[2][0] * rhs.x + lhs.elem[2][1] * rhs.y + lhs.elem[2][2] * rhs.z + lhs.elem[2][3] * rhs.w;
-		real32 w = lhs.elem[3][0] * rhs.x + lhs.elem[3][1] * rhs.y + lhs.elem[3][2] * rhs.z + lhs.elem[3][3] * rhs.w;
+		float x = lhs.elem[0][0] * rhs.x + lhs.elem[0][1] * rhs.y + lhs.elem[0][2] * rhs.z + lhs.elem[0][3] * rhs.w;
+		float y = lhs.elem[1][0] * rhs.x + lhs.elem[1][1] * rhs.y + lhs.elem[1][2] * rhs.z + lhs.elem[1][3] * rhs.w;
+		float z = lhs.elem[2][0] * rhs.x + lhs.elem[2][1] * rhs.y + lhs.elem[2][2] * rhs.z + lhs.elem[2][3] * rhs.w;
+		float w = lhs.elem[3][0] * rhs.x + lhs.elem[3][1] * rhs.y + lhs.elem[3][2] * rhs.z + lhs.elem[3][3] * rhs.w;
 		return Vec4f(x, y, z, w);
 	}
 
-	void operator+=(Mat4& lhs, const Mat4& rhs)
+	void operator+=(Mat4f& lhs, const Mat4f& rhs)
 	{
 		for (int i = 0; i < 4; i++) {
 			for (int j = 0; j < 4; j++) {
@@ -540,7 +773,7 @@ namespace Soul {
 		}
 	}
 
-	void operator-=(Mat4& lhs, const Mat4& rhs) {
+	void operator-=(Mat4f& lhs, const Mat4f& rhs) {
 		for (int i = 0; i < 4; i++) {
 			for (int j = 0; j < 4; j++) {
 				lhs.elem[i][j] -= rhs.elem[i][j];
@@ -548,37 +781,53 @@ namespace Soul {
 		}
 	}
 
-	void operator*=(Mat4 & lhs, const Mat4 & rhs)
+	void operator*=(Mat4f & lhs, const Mat4f & rhs)
 	{
-		Mat4 res = lhs * rhs;
+		Mat4f res = lhs * rhs;
 		lhs = res;
 	}
 
-	bool operator==(const Mat4& lhs, const Mat4& rhs) {
+	bool operator==(const Mat4f& lhs, const Mat4f& rhs) {
 		for (int i = 0; i < 16; i++) {
 			if (lhs.mem[i] != rhs.mem[i]) return false;
 		}
 		return true;
 	}
 
-	bool operator!=(const Mat4& lhs, const Mat4& rhs) {
+	bool operator!=(const Mat4f& lhs, const Mat4f& rhs) {
 		for (int i = 0; i < 16; i++) {
 			if (lhs.mem[i] != rhs.mem[i]) return true;
 		}
 		return false;
 	}
 
-	Transform transformIdentity() {
-		Transform result;
+	Mat3f mat3FromMat4UpperLeft(const Mat4f& mat4) {
+		Mat3f res;
+		res.rows[0] = { mat4.elem[0][0], mat4.elem[0][1], mat4.elem[0][2] };
+		res.rows[1] = { mat4.elem[1][0], mat4.elem[1][1], mat4.elem[1][2] };
+		res.rows[2] = { mat4.elem[2][0], mat4.elem[2][1], mat4.elem[2][2] };
+		return res;
+	}
+
+	AABB AABBCombine(AABB aabb1, AABB aabb2) {
+		return AABB(min(aabb1.min, aabb2.min), max(aabb1.max, aabb2.max));
+	}
+
+	AABB AABBTransform(AABB aabb, const Mat4f& transform) {
+		return AABB(transform * aabb.min, transform * aabb.max);
+	}
+
+	Transformf transformIdentity() {
+		Transformf result;
 		result.position = Vec3f(0.0f, 0.0f, 0.0f);
 		result.rotation = quaternionIdentity();
 		result.scale = Vec3f(1.0f, 1.0f, 1.0f);
 		return result;
 	}
 
-	Transform transformMat4(const Mat4& mat4) {
+	Transformf transformMat4(const Mat4f& mat4) {
 		const float* elem = mat4.mem;
-		Transform result;
+		Transformf result;
 		result.position = Vec3f(elem[3], elem[7], elem[11]);
 		result.scale = Vec3f(
 			length(Vec3f(elem[0], elem[4], elem[8])),
@@ -600,8 +849,8 @@ namespace Soul {
 
 		float tr = elem0 + elem5 + elem10;
 		if (tr > 0) {
-			float w4 = sqrt(1.0 + tr) * 2.0f;
-			result.rotation.w = 0.25 * w4;
+			float w4 = sqrt(1.0f + tr) * 2.0f;
+			result.rotation.w = 0.25f * w4;
 			result.rotation.x = (elem9 - elem6) / w4;
 			result.rotation.y = (elem2 - elem8) / w4;
 			result.rotation.z = (elem4 - elem1) / w4;
@@ -631,26 +880,26 @@ namespace Soul {
 		return result;
 	}
 
-	bool operator==(const Transform& lhs, const Transform& rhs) {
+	bool operator==(const Transformf& lhs, const Transformf& rhs) {
 		return (lhs.position == rhs.position) && (lhs.rotation == rhs.rotation) && (lhs.scale == rhs.scale);
 	}
 
-	bool operator!=(const Transform& lhs, const Transform& rhs) {
+	bool operator!=(const Transformf& lhs, const Transformf& rhs) {
 		return (lhs.position != rhs.position) || (lhs.rotation != rhs.rotation) || (lhs.scale != rhs.scale);
 	}
 
-	Transform operator*(const Transform& lhs, const Transform& rhs)
+	Transformf operator*(const Transformf& lhs, const Transformf& rhs)
 	{
 		return transformMat4(mat4Transform(lhs) * mat4Transform(rhs));
 	}
 
-	Vec3f operator*(const Transform& lhs, const Vec3f& rhs)
+	Vec3f operator*(const Transformf& lhs, const Vec3f& rhs)
 	{
 		return mat4Transform(lhs) * rhs;
 	}
 
-	real32 radians(real32 angle) {
-		return (angle / 180) * PI;
+	float radians(float angle) {
+		return (angle / 180) * FCONST::PI;
 	}
 
 	int roundToNextPowOfTwo(uint32 num) {

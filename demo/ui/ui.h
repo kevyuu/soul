@@ -18,24 +18,35 @@ namespace Demo {
 			ImGuiStyle& style = ImGui::GetStyle();
 			ImVec4* colors = style.Colors;
 
-			/// 0 = FLAT APPEARENCE
-			/// 1 = MORE "3D" LOOK
-			int is3D = 0;
+			static constexpr float WINDOW_BACKGROUND = 35.0f / 255.0f;
+			static constexpr float CHILD_BG = 40.0f / 255.0f;
+			static constexpr float TEXT = 232.0f / 255.0f;
+			static constexpr float TEXT_DISABLED = 192.0f / 255.0f;
+			static constexpr float BORDER = 30.0f / 255.0f;
+			static constexpr float FRAME_BG = 30.0f / 255.0f;
+			static constexpr float FRAME_BG_HOVERED = 35.0f / 255.0f;
+			static constexpr float TITLE_BG = 35.0f / 255.0f;
+			static constexpr float TITLE_BG_ACTIVE = 40.0f / 255.0f;
 
-			colors[ImGuiCol_Text] = ImVec4(1.00f, 1.00f, 1.00f, 1.00f);
-			colors[ImGuiCol_TextDisabled] = ImVec4(0.40f, 0.40f, 0.40f, 1.00f);
-			colors[ImGuiCol_ChildBg] = ImVec4(0.25f, 0.25f, 0.25f, 1.00f);
-			colors[ImGuiCol_WindowBg] = ImVec4(0.25f, 0.25f, 0.25f, 1.00f);
+
+			static const ImVec4 SELECTABLE_BG_ACTIVE = ImVec4(59.0f / 255.0f, 86.0f / 255.0f, 137.0f / 255.0f, 1.0f);
+			static const ImVec4 SELECTABLE_BG_HOVERED = ImVec4(106.0f / 255.0f, 106.0f / 255.0f, 106.0f / 255.0f, 1.0f);
+			static const ImVec4 SELECTABLE_BG = ImVec4(89.0f / 255.0f, 89.0f / 255.0f, 89.0f / 255.0f, 1.0f);
+
+			colors[ImGuiCol_Text] = ImVec4(TEXT, TEXT, TEXT, 1.00f);
+			colors[ImGuiCol_TextDisabled] = ImVec4(TEXT_DISABLED, TEXT_DISABLED, TEXT_DISABLED, 1.00f);
+			colors[ImGuiCol_ChildBg] = ImVec4(CHILD_BG, CHILD_BG, CHILD_BG, 1.00f);
+			colors[ImGuiCol_WindowBg] = ImVec4(WINDOW_BACKGROUND, WINDOW_BACKGROUND, WINDOW_BACKGROUND, 1.00f);
 			colors[ImGuiCol_PopupBg] = ImVec4(0.25f, 0.25f, 0.25f, 1.00f);
-			colors[ImGuiCol_Border] = ImVec4(0.12f, 0.12f, 0.12f, 0.71f);
-			colors[ImGuiCol_BorderShadow] = ImVec4(1.00f, 1.00f, 1.00f, 0.06f);
-			colors[ImGuiCol_FrameBg] = ImVec4(0.42f, 0.42f, 0.42f, 0.54f);
-			colors[ImGuiCol_FrameBgHovered] = ImVec4(0.42f, 0.42f, 0.42f, 0.40f);
+			colors[ImGuiCol_Border] = ImVec4(BORDER, BORDER, BORDER, 1.0f);
+			colors[ImGuiCol_BorderShadow] = ImVec4(BORDER, BORDER, BORDER, 1.0f);
+			colors[ImGuiCol_FrameBg] = ImVec4(FRAME_BG, FRAME_BG, FRAME_BG, 0.54f);
+			colors[ImGuiCol_FrameBgHovered] = ImVec4(FRAME_BG_HOVERED, FRAME_BG_HOVERED, FRAME_BG_HOVERED, 0.40f);
 			colors[ImGuiCol_FrameBgActive] = ImVec4(0.56f, 0.56f, 0.56f, 0.67f);
-			colors[ImGuiCol_TitleBg] = ImVec4(0.19f, 0.19f, 0.19f, 1.00f);
-			colors[ImGuiCol_TitleBgActive] = ImVec4(0.22f, 0.22f, 0.22f, 1.00f);
+			colors[ImGuiCol_TitleBg] = ImVec4(TITLE_BG, TITLE_BG, TITLE_BG, 1.00f);
+			colors[ImGuiCol_TitleBgActive] = ImVec4(TITLE_BG_ACTIVE, TITLE_BG_ACTIVE, TITLE_BG_ACTIVE, 1.00f);
 			colors[ImGuiCol_TitleBgCollapsed] = ImVec4(0.17f, 0.17f, 0.17f, 0.90f);
-			colors[ImGuiCol_MenuBarBg] = ImVec4(0.335f, 0.335f, 0.335f, 1.000f);
+			colors[ImGuiCol_MenuBarBg] = ImVec4(TITLE_BG, TITLE_BG, TITLE_BG, 1.000f);
 			colors[ImGuiCol_ScrollbarBg] = ImVec4(0.24f, 0.24f, 0.24f, 0.53f);
 			colors[ImGuiCol_ScrollbarGrab] = ImVec4(0.41f, 0.41f, 0.41f, 1.00f);
 			colors[ImGuiCol_ScrollbarGrabHovered] = ImVec4(0.52f, 0.52f, 0.52f, 1.00f);
@@ -43,13 +54,15 @@ namespace Demo {
 			colors[ImGuiCol_CheckMark] = ImVec4(0.65f, 0.65f, 0.65f, 1.00f);
 			colors[ImGuiCol_SliderGrab] = ImVec4(0.52f, 0.52f, 0.52f, 1.00f);
 			colors[ImGuiCol_SliderGrabActive] = ImVec4(0.64f, 0.64f, 0.64f, 1.00f);
-			colors[ImGuiCol_Button] = ImVec4(0.54f, 0.54f, 0.54f, 0.35f);
-			colors[ImGuiCol_ButtonHovered] = ImVec4(0.52f, 0.52f, 0.52f, 0.59f);
-			colors[ImGuiCol_ButtonActive] = ImVec4(0.76f, 0.76f, 0.76f, 1.00f);
+			colors[ImGuiCol_Button] = SELECTABLE_BG;
+			colors[ImGuiCol_ButtonHovered] = SELECTABLE_BG_HOVERED;
+			colors[ImGuiCol_ButtonActive] = SELECTABLE_BG_ACTIVE;
+
 			colors[ImGuiCol_Header] = ImVec4(0.38f, 0.38f, 0.38f, 1.00f);
 			colors[ImGuiCol_HeaderHovered] = ImVec4(0.47f, 0.47f, 0.47f, 1.00f);
 			colors[ImGuiCol_HeaderActive] = ImVec4(0.76f, 0.76f, 0.76f, 0.77f);
 			colors[ImGuiCol_Separator] = ImVec4(0.000f, 0.000f, 0.000f, 0.137f);
+
 			colors[ImGuiCol_SeparatorHovered] = ImVec4(0.700f, 0.671f, 0.600f, 0.290f);
 			colors[ImGuiCol_SeparatorActive] = ImVec4(0.702f, 0.671f, 0.600f, 0.674f);
 			colors[ImGuiCol_ResizeGrip] = ImVec4(0.26f, 0.59f, 0.98f, 0.25f);
@@ -68,33 +81,35 @@ namespace Demo {
 
 			style.PopupRounding = 3;
 
-			style.WindowPadding = ImVec2(4, 4);
+			style.WindowPadding = ImVec2(6, 4);
 			style.FramePadding = ImVec2(6, 4);
-			style.ItemSpacing = ImVec2(6, 2);
+			style.ItemSpacing = ImVec2(6, 4);
+			style.ItemInnerSpacing = ImVec2(6, 4);
 
 			style.ScrollbarSize = 18;
 
 			style.WindowBorderSize = 1;
 			style.ChildBorderSize = 1;
 			style.PopupBorderSize = 1;
-			style.FrameBorderSize = is3D;
+			style.FrameBorderSize = false;
 
-			style.WindowRounding = 3;
-			style.ChildRounding = 3;
-			style.FrameRounding = 3;
-			style.ScrollbarRounding = 2;
-			style.GrabRounding = 3;
+			style.WindowRounding = 0;
+			style.ChildRounding = 4;
+			style.FrameRounding = 4;
+			style.ScrollbarRounding = 4;
+			style.GrabRounding = 4;
 
 #ifdef IMGUI_HAS_DOCK 
-			style.TabBorderSize = is3D;
-			style.TabRounding = 3;
+			style.TabBorderSize = false;
+			style.TabRounding = 6;
 
 			colors[ImGuiCol_DockingEmptyBg] = ImVec4(0.38f, 0.38f, 0.38f, 1.00f);
 			colors[ImGuiCol_Tab] = ImVec4(0.25f, 0.25f, 0.25f, 1.00f);
 			colors[ImGuiCol_TabHovered] = ImVec4(0.40f, 0.40f, 0.40f, 1.00f);
-			colors[ImGuiCol_TabActive] = ImVec4(0.33f, 0.33f, 0.33f, 1.00f);
-			colors[ImGuiCol_TabUnfocused] = ImVec4(0.25f, 0.25f, 0.25f, 1.00f);
-			colors[ImGuiCol_TabUnfocusedActive] = ImVec4(0.33f, 0.33f, 0.33f, 1.00f);
+			colors[ImGuiCol_TabActive] = ImVec4(66.0f / 255.0f, 66.0f / 255.0f, 66.0f / 255.0f, 1.00f);
+			colors[ImGuiCol_TabUnfocused] = ImVec4(43.0f / 255.0f, 43.0f / 255.0f, 43.0f / 255.0f, 1.00f);
+			colors[ImGuiCol_TabUnfocusedActive] = ImVec4(66.0f / 255.0f, 66.0f / 255.0f, 66.0f / 255.0f, 1.00f);
+			
 			colors[ImGuiCol_DockingPreview] = ImVec4(0.85f, 0.85f, 0.85f, 0.28f);
 
 			if (ImGui::GetIO().ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
@@ -138,26 +153,50 @@ namespace Demo {
 			ImGui_ImplGlfw_NewFrame();
 			ImGui::NewFrame();
 
+			ImGuiContext* g = ImGui::GetCurrentContext();
+
 			ImGui::GetIO().Fonts->TexID = store->fontTex.getImTextureID();
 
 			store->menuBar.render(store);
 			
 			_DockBegin();
 
-			// Vec2ui32 sceneResolution = store->scene->getViewport();
-			Vec2ui32 sceneResolution = { 1920, 1080 };
+
+			Vec2ui32 sceneResolution = store->scene->getViewport();
 			store->scenePanel.setResolution(sceneResolution);
 			store->scenePanel.setTexture(store->sceneTex.getImTextureID());
-			store->scenePanel.render(store);
-
-			store->sceneConfigPanel.render(store);
+			bool isMouseHoverScene = store->scenePanel.render(store);
 
 			store->metricPanel.render(store);
+			store->scene->renderPanels();
+			
+			ImGui::ShowDemoWindow();
 
 			_DockEnd();
 
+			Input input = {};
+			const ImGuiIO& io = ImGui::GetIO();
+			input.deltaTime = io.DeltaTime;
+
+			if (!io.WantCaptureKeyboard) {
+				input.keyAlt = io.KeyAlt;
+				input.keyCtrl = io.KeyCtrl;
+				input.keyShift = io.KeyShift;
+				input.keySuper = io.KeySuper;
+				memcpy(input.keysDown, io.KeysDown, sizeof(io.KeysDown));
+			}
+
+			if (isMouseHoverScene) {
+				memcpy(input.mouseDown, io.MouseDown, sizeof(io.MouseDown));
+				input.mouseWheel = io.MouseWheel;
+				input.mouseDelta = Soul::Vec2f(io.MouseDelta.x, io.MouseDelta.y);
+				for (uint64 buttonIdx = 0; buttonIdx < Input::MOUSE_BUTTON_COUNT; buttonIdx++) {
+					input.mouseDragging[buttonIdx] = ImGui::IsMouseDragging(buttonIdx);
+				}
+			}
+
 			if (store->scene != nullptr) {
-				store->scene->handleInput();
+				store->scene->update(input);
 			}
 
 			ImGui::Render();

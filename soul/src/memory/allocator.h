@@ -1,44 +1,52 @@
 #pragma once
 
+#include <tuple>
+
 #include "core/type.h"
 #include "core/dev_util.h"
 
-#include "memory/util.h"
+namespace Soul::Memory {
 
-#include <tuple>
-
-#define ONE_KILOBYTE 1024
-#define ONE_MEGABYTE 1024 * ONE_KILOBYTE
-#define ONE_GIGABYTE 1024 * ONE_MEGABYTE
-
-namespace Soul { namespace Memory {
+	static constexpr soul_size ONE_KILOBYTE = 1024;
+	static constexpr soul_size ONE_MEGABYTE = 1024 * ONE_KILOBYTE;
+	static constexpr soul_size ONE_GIGABYTE = 1024 * ONE_MEGABYTE;
 
 	struct Allocation {
-		void* addr;
-		uint64 size;
+		void* addr = nullptr;
+		soul_size size = 0;
+
+		Allocation() = default;
+		Allocation(void* addr, soul_size size): addr(addr), size(size) {}
 	};
 
-	class Allocator
-	{
+	class Allocator {
 	public:
 		Allocator() = delete;
-		explicit Allocator(const char* name) { _name = name; }
-		virtual ~Allocator() {};
+		explicit Allocator(const char* name) noexcept : _name(name) {}
+		Allocator(const Allocator& other) = delete;
+		Allocator& operator=(const Allocator& other) = delete;
+		Allocator(Allocator&& other) = delete;
+		Allocator& operator=(Allocator&& other) = delete;
+		virtual ~Allocator() = default;
 
-		const char* getName() { return _name; }
+		[[nodiscard]] const char* name() const { return _name; }
 
-		virtual void reset() = 0;
-		virtual Allocation allocate(uint32 size, uint32 alignment, const char* tag) = 0;
-		virtual void deallocate(void* addr, uint32 size) = 0;
-
-		virtual void* allocate(uint32 size, uint32 alignment) final {
-			return allocate(size, alignment, "untagged").addr;
+		
+		virtual Allocation tryAllocate(soul_size size, soul_size alignment, const char* tag) = 0;
+		virtual void* allocate(soul_size size, soul_size alignment) final {
+			const Allocation allocation = tryAllocate(size, alignment, "untagged");
+			return allocation.addr;
 		}
+		virtual void* allocate(soul_size size, soul_size alignment, const char* tag) final {
+			const Allocation allocation = tryAllocate(size, alignment, tag);
+			return allocation.addr;
+		}
+		virtual void deallocate(void* addr, soul_size size) = 0;
 
 		template <typename TYPE, typename... ARGS>
 		TYPE* create(ARGS&&... args)
 		{
-			Allocation allocation = allocate(sizeof(TYPE), alignof(TYPE), "untagged");
+			Allocation allocation = tryAllocate(sizeof(TYPE), alignof(TYPE), "untagged");
 			return allocation.addr ? new(allocation.addr) TYPE(std::forward<ARGS>(args)...) : nullptr;
 		}
 
@@ -50,10 +58,10 @@ namespace Soul { namespace Memory {
 			deallocate(ptr, sizeof(TYPE));
 		}
 
+		virtual void reset() = 0;
+
 	private:
 		const char* _name = nullptr;
 	};
 
-
-
-}}
+}

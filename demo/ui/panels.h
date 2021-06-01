@@ -20,14 +20,9 @@ namespace Demo {
 			void setResolution(Vec2ui32 sceneResolution) { this->sceneResolution = sceneResolution; };
 			void setName(const char* name) { this->name = name; }
 			void setTexture(ImTextureID textureID) { this->textureID = textureID; }
-			void render(Store* store);
+			bool render(Store* store);
 
 		};
-
-		struct SceneConfigPanel {
-			void render(Store* store);
-		};
-
 		struct MetricPanel {
 			void render(Store* store);
 		};

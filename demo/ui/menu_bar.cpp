@@ -55,6 +55,11 @@ namespace Demo {
 					store->scene->importFromGLTF(gltfFilePath);
 					ImGui::CloseCurrentPopup();
 				}
+				ImGui::SameLine();
+
+				if (ImGui::Button("Cancel", ImVec2(120, 0))) {
+					ImGui::CloseCurrentPopup();
+				}
 
 				ImGui::SetItemDefaultFocus();
 				ImGui::SameLine();
@@ -64,6 +69,7 @@ namespace Demo {
 
 			if (ImGui::BeginPopupModal("Edit UI Style", NULL, ImGuiWindowFlags_AlwaysAutoResize)) {
 				auto& style = ImGui::GetStyle();
+				ImGui::EndPopup();
 			}
 
 			switch (action) {

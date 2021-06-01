@@ -45,7 +45,7 @@ namespace Soul {
 
 			if (bottom < top) {
 				_bottom.store(top);
-				return 0;
+				return TaskID::NULLVAL();
 			}
 			
 			if (bottom > top) {
@@ -53,7 +53,7 @@ namespace Soul {
 			}
 
 			// NOTE(kevinyu): bottom == top. last element case. pretend to steal
-			TaskID task = 0;
+			TaskID task = TaskID::NULLVAL();
 			if (_top.compare_exchange_strong(top, top + 1, std::memory_order_acq_rel, std::memory_order_relaxed)) {
 				top += 1;
 				task = _tasks[bottom];
@@ -71,7 +71,7 @@ namespace Soul {
 			int32 bottom = _bottom.load(std::memory_order_acquire);
 			
 			if (top >= bottom) {
-				return 0;
+				return TaskID::NULLVAL();
 			}
 
 			TaskID task = _tasks[top];
@@ -79,7 +79,7 @@ namespace Soul {
 				return task;
 			}
 
-			return 0;
+			return TaskID::NULLVAL();
 		}
 
 	}

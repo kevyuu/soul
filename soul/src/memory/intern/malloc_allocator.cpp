@@ -1,17 +1,20 @@
 #include "memory/allocators/malloc_allocator.h"
 
-namespace Soul { namespace Memory {
+namespace Soul::Memory {
 
-	MallocAllocator::MallocAllocator(const char* name): Allocator(name) {}
+	MallocAllocator::MallocAllocator(const char* name) noexcept : Allocator(name) {}
 
-	void MallocAllocator::reset() {}
+	void MallocAllocator::reset()
+	{
+		SOUL_NOT_IMPLEMENTED();
+	}
 
-	Allocation MallocAllocator::allocate(uint32 size, uint32 alignment, const char* tag) {
+	Allocation MallocAllocator::tryAllocate(soul_size size, soul_size alignment, const char* tag) {
 		return {malloc(size), size};
 	}
 
-	void MallocAllocator::deallocate(void *addr, uint32 size) {
+	void MallocAllocator::deallocate(void *addr, soul_size size) {
 		free(addr);
 	}
 
-}}
+}

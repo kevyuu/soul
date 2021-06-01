@@ -33,12 +33,12 @@ namespace Soul {
 		inline T* data() { return &_buffer[0]; }
 		inline const T* data() const { return &_buffer[0];}
 
-		inline T& operator[](int idx) {
+		inline T& operator[](uint64 idx) {
 			SOUL_ASSERT(0, idx < _size, "Out of bound access to array detected. idx = %d, _size = %d", idx, _size);
 			return _buffer[idx];
 		}
 
-		inline const T& operator[](int idx) const {
+		inline const T& operator[](uint64 idx) const {
 			SOUL_ASSERT(0, idx < _size, "Out of bound access to array detected. idx = %d, _size=%d", idx, _size);
 			return _buffer[idx];
 		}
@@ -106,7 +106,7 @@ namespace Soul {
 		SOUL_ASSERT(0, _buffer == nullptr, "Array have been initialized before");
 		_size = size;
 		_buffer = (T*) _allocator->allocate(_size * sizeof(T), alignof(T));
-		for (int i = 0; i < _size; i++) {
+		for (uint64 i = 0; i < _size; i++) {
 			new (_buffer + i) T(std::forward<ARGS>(args) ... );
 		}
 	}

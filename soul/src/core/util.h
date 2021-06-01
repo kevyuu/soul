@@ -51,5 +51,7 @@ namespace Soul { namespace Util {
 		return dstFlags;
 	}
 
+	
+
 }};
 

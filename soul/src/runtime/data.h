@@ -54,9 +54,31 @@ namespace Soul {
 
 		};
 
-		using TaskID = uint16;
 
 		struct Task;
+		// NOTE(kevinyu): We use id == 0 as both root and null value;
+		struct TaskID {
+			uint16 id;
+			inline static constexpr TaskID NULLVAL() { return TaskID(0, 0); }
+			inline static constexpr TaskID ROOT() { return NULLVAL(); }
+			constexpr TaskID() : id(NULLVAL().id) {}
+			constexpr TaskID(uint16 threadIndex, uint16 taskIndex) : 
+				id((threadIndex << Constant::TASK_ID_THREAD_INDEX_SHIFT) | (taskIndex << Constant::TASK_ID_TASK_INDEX_SHIFT)) {}
+
+			uint16 threadIndex() {
+				return (id & Constant::TASK_ID_THREAD_INDEX_MASK) >> Constant::TASK_ID_THREAD_INDEX_SHIFT;
+			}
+
+			uint16 taskIndex() {
+				return (id & Constant::TASK_ID_TASK_INDEX_MASK) >> Constant::TASK_ID_TASK_INDEX_SHIFT;
+			}
+			inline bool operator==(const TaskID& other) const { return other.id == id; }
+			inline bool operator!=(const TaskID& other) const { return other.id != id; }
+			inline bool isRoot() const { return id == ROOT().id; }
+			inline bool isNull() const { return id == NULLVAL().id; }
+		};
+		
+		
 		using TaskFunc = void(*)(TaskID taskID, void* data);
 
 		struct alignas(SOUL_CACHELINE_SIZE) Task {
@@ -66,10 +88,10 @@ namespace Soul {
 				- 2 // parentID size
 				- 2; // unfinishedCount size
 				
-			void* storage[STORAGE_SIZE_BYTE / sizeof(void*)];
-			TaskFunc func;
+			void* storage[STORAGE_SIZE_BYTE / sizeof(void*)] = {};
+			TaskFunc func = nullptr;
 			TaskID parentID;
-			std::atomic<uint16> unfinishedCount;
+			std::atomic<uint16> unfinishedCount = { 0 };
 		
 		};
 		static_assert(sizeof(Task) == SOUL_CACHELINE_SIZE, "Task must be the same size as cache line size.");
@@ -101,7 +123,7 @@ namespace Soul {
             Array<Memory::Allocator*> allocatorStack;
 			Runtime::TempAllocator* tempAllocator;
 
-			_ThreadContext() : allocatorStack(nullptr) {};
+			_ThreadContext() : allocatorStack(nullptr), taskCount(0), threadIndex(0), tempAllocator(nullptr) {};
 
 		};
 
@@ -118,11 +140,11 @@ namespace Soul {
 
 			std::atomic<bool> isTerminated;
 			
-			uint16 activeTaskCount;
-			uint16 threadCount;
+			uint16 activeTaskCount = 0;
+			uint16 threadCount = 0;
 
-			Memory::Allocator* defaultAllocator;
-			uint64 tempAllocatorSize;
+			Memory::Allocator* defaultAllocator = nullptr;
+			uint64 tempAllocatorSize = 0;
 
 			Database() : threadContexts(nullptr) {};
 		};

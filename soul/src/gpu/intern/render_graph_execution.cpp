@@ -8,6 +8,7 @@
 #include "gpu/render_graph_registry.h"
 #include "gpu/intern/render_graph_execution.h"
 #include "gpu/intern/enum_mapping.h"
+#include "gpu/intern/render_compiler.h"
 
 #include <chrono>
 
@@ -15,14 +16,14 @@
 
 namespace Soul {namespace GPU {
 
-	static EnumArray<PassType, QueueType> PASS_TYPE_TO_QUEUE_TYPE_MAP({
+	static constexpr EnumArray<PassType, QueueType> PASS_TYPE_TO_QUEUE_TYPE_MAP({
 		QueueType::NONE,
 		QueueType::GRAPHIC,
 		QueueType::COMPUTE,
 		QueueType::TRANSFER,
 	});
 
-	static EnumArray<ResourceOwner, PassType> RESOURCE_OWNER_TO_PASS_TYPE_MAP({
+	static constexpr EnumArray<ResourceOwner, PassType> RESOURCE_OWNER_TO_PASS_TYPE_MAP({
 		PassType::NONE,
 		PassType::GRAPHIC,
 		PassType::COMPUTE,
@@ -137,26 +138,19 @@ namespace Soul {namespace GPU {
 					break;
 				}
 				case PassType::COMPUTE: {
-				    auto computeNode = (const ComputeBaseNode *) &passNode;
-				    _ProgramKey programKey;
+				    /*auto computeNode = (const ComputeBaseNode *) &passNode;
+				    ProgramDesc programKey;
 				    programKey.shaderIDs[ShaderStage::COMPUTE] = computeNode->pipelineConfig.computeShaderID;
 				    passInfo.programID = _gpuSystem->programRequest(programKey);
-                    _initInShaderBuffers(computeNode->inShaderBuffers, i, QUEUE_COMPUTE_BIT);
-                    _initOutShaderBuffers(computeNode->outShaderBuffers, i, QUEUE_COMPUTE_BIT);
-                    _initInShaderTextures(computeNode->inShaderTextures, i, QUEUE_COMPUTE_BIT);
-                    _initOutShaderTextures(computeNode->outShaderTextures, i, QUEUE_COMPUTE_BIT);
+                    _initInShaderBuffers(computeNode->shaderBufferReadAccesses, i, QUEUE_COMPUTE_BIT);
+                    _initOutShaderBuffers(computeNode->shaderBufferWriteAccesses, i, QUEUE_COMPUTE_BIT);
+                    _initShaderTextures(computeNode->shaderTextureReadAccesses, i, QUEUE_COMPUTE_BIT);
+                    _initShaderTextures(computeNode->shaderTextureWriteAccesses, i, QUEUE_COMPUTE_BIT);*/
 				    break;
 				}
 				case PassType::GRAPHIC: {
 
 					auto graphicNode = (const GraphicBaseNode *) &passNode;
-                    _ProgramKey programKey;
-                    programKey.shaderIDs[ShaderStage::VERTEX] = graphicNode->pipelineConfig.vertexShaderID;
-                    programKey.shaderIDs[ShaderStage::GEOMETRY] = graphicNode->pipelineConfig.geometryShaderID;
-                    programKey.shaderIDs[ShaderStage::FRAGMENT] = graphicNode->pipelineConfig.fragmentShaderID;
-					passInfo.programID = _gpuSystem->programRequest(programKey);
-					const _Program& program = *_gpuSystem->_programPtr(passInfo.programID);
-
 					for (const BufferNodeID nodeID : graphicNode->vertexBuffers) {
 						SOUL_ASSERT(0, nodeID != BUFFER_NODE_ID_NULL, "");
 
@@ -286,8 +280,8 @@ namespace Soul {namespace GPU {
 			event = VK_NULL_HANDLE;
 		}
 
-		for (auto srcPassType : Enum<PassType>::Iterates()) {
-			for (auto dstPassType : Enum<PassType>::Iterates()) {
+		for (auto srcPassType : EnumIter<PassType>::Iterates()) {
+			for (auto dstPassType : EnumIter<PassType>::Iterates()) {
 				_externalSemaphores[srcPassType][dstPassType] = SEMAPHORE_ID_NULL;
 			}
 		}
@@ -503,8 +497,8 @@ namespace Soul {namespace GPU {
 		framebufferInfo.renderPass = renderPass;
 		framebufferInfo.attachmentCount = imageViewCount;
 		framebufferInfo.pAttachments = imageViews;
-		framebufferInfo.width = graphicNode->pipelineConfig.framebuffer.width;
-		framebufferInfo.height = graphicNode->pipelineConfig.framebuffer.height;
+		framebufferInfo.width = graphicNode->renderTargetDimension.x;
+		framebufferInfo.height = graphicNode->renderTargetDimension.y;
 		framebufferInfo.layers = 1;
 
 		return _gpuSystem->_framebufferCreate(framebufferInfo);
@@ -513,13 +507,13 @@ namespace Soul {namespace GPU {
 	void _RenderGraphExecution::_submitExternalSyncPrimitive() {
 
 		// Sync semaphores
-		for(PassType srcPassType : Enum<PassType>::Iterates()) {
+		for(PassType srcPassType : EnumIter<PassType>::Iterates()) {
 			SemaphoreID semaphoreIDs[uint64(PassType::COUNT)];
 			uint32 semaphoreCount = 0;
 
 			QueueType srcQueueType = PASS_TYPE_TO_QUEUE_TYPE_MAP[srcPassType];
 
-			for (PassType dstPassType : Enum<PassType>::Iterates()) {
+			for (PassType dstPassType : EnumIter<PassType>::Iterates()) {
 				if (_externalSemaphores[srcPassType][dstPassType] != SEMAPHORE_ID_NULL) {
 					semaphoreIDs[semaphoreCount++] = _externalSemaphores[srcPassType][dstPassType];
 				}
@@ -531,7 +525,7 @@ namespace Soul {namespace GPU {
 		}
 
 		// Sync events
-		for(PassType passType : Enum<PassType>::Iterates()) {
+		for(PassType passType : EnumIter<PassType>::Iterates()) {
 			QueueType queueType = PASS_TYPE_TO_QUEUE_TYPE_MAP[passType];
 			if (_externalEvents[passType] != VK_NULL_HANDLE && passType != PassType::NONE) {
 				VkCommandBuffer syncEventCmdBuffer = _gpuSystem->_queueRequestCommandBuffer(queueType);
@@ -554,14 +548,14 @@ namespace Soul {namespace GPU {
 				SOUL_NOT_IMPLEMENTED();
 				break;
 			case PassType::COMPUTE: {
-                auto computeNode = (const ComputeBaseNode*) passNode;
-                _ProgramKey programKey;
+                /*auto computeNode = (const ComputeBaseNode*) passNode;
+                ProgramDesc programKey;
                 programKey.shaderIDs[ShaderStage::COMPUTE] = computeNode->pipelineConfig.computeShaderID;
                 ProgramID programID = _gpuSystem->programRequest(programKey);
                 VkPipeline pipeline = _gpuSystem->_pipelineCreate(*computeNode, programID);
                 vkCmdBindPipeline(cmdBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline);
                 CommandBucket commandBucket;
-                RenderGraphRegistry registry(_gpuSystem, this, programID);
+                RenderGraphRegistry registry(_gpuSystem, this, VK_NULL_HANDLE);
                 passNode->executePass(&registry, &commandBucket);
 
 				{
@@ -571,7 +565,7 @@ namespace Soul {namespace GPU {
 					}
 				}
                 
-                _gpuSystem->_pipelineDestroy(pipeline);
+                _gpuSystem->_pipelineDestroy(pipeline);*/
 
                 break;
 			}
@@ -586,8 +580,8 @@ namespace Soul {namespace GPU {
 				renderPassBeginInfo.framebuffer = framebuffer;
 				renderPassBeginInfo.renderArea.offset = {0, 0};
 				renderPassBeginInfo.renderArea.extent = {
-						graphicNode->pipelineConfig.framebuffer.width,
-						graphicNode->pipelineConfig.framebuffer.height
+					graphicNode->renderTargetDimension.x,
+					graphicNode->renderTargetDimension.y
 				};
 
 
@@ -612,15 +606,8 @@ namespace Soul {namespace GPU {
 				renderPassBeginInfo.clearValueCount = clearCount;
 				renderPassBeginInfo.pClearValues = clearValues;
 
-				_ProgramKey programKey;
-				programKey.shaderIDs[ShaderStage::VERTEX] = graphicNode->pipelineConfig.vertexShaderID;
-				programKey.shaderIDs[ShaderStage::GEOMETRY] = graphicNode->pipelineConfig.geometryShaderID;
-				programKey.shaderIDs[ShaderStage::FRAGMENT] = graphicNode->pipelineConfig.fragmentShaderID;
-				ProgramID programID = _gpuSystem->programRequest(programKey);
-				VkPipeline pipeline = _gpuSystem->_pipelineCreate(*graphicNode, programID, renderPass);
-
-				CommandBucket commandBucket;
-				RenderGraphRegistry registry(_gpuSystem, this, programID);
+				RenderCommandBucket commandBucket;
+				RenderGraphRegistry registry(_gpuSystem, this, renderPass);
 				passNode->executePass(&registry, &commandBucket);
 
 				// TODO(kevinyu) : Make this threshold configurable
@@ -629,10 +616,10 @@ namespace Soul {namespace GPU {
 				{
 					SOUL_PROFILE_ZONE_WITH_NAME("ST Graphic Command Submission");
 					vkCmdBeginRenderPass(cmdBuffer, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
-					vkCmdBindPipeline(cmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
-					for (Command::Command* command : commandBucket.commands)
+					RenderCompiler renderCompiler(_gpuSystem, cmdBuffer);
+					for (const RenderCommand* command : commandBucket.commands)
 					{
-						command->_submit(&_gpuSystem->_db, programID, cmdBuffer);
+						renderCompiler.compileCommand(*command);
 					}
 					vkCmdEndRenderPass(cmdBuffer);
 				}
@@ -640,7 +627,7 @@ namespace Soul {namespace GPU {
 				{
 					vkCmdBeginRenderPass(cmdBuffer, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
 					Array<VkCommandBuffer> secondaryCommandBuffers;
-					secondaryCommandBuffers.resize(Soul::min(_gpuSystem->_frameContext().threadContexts.size(), int((commandBucket.commands.size() + 99)/ 100)));
+					secondaryCommandBuffers.resize(std::min(_gpuSystem->_frameContext().threadContexts.size(), ((commandBucket.commands.size() + 99)/ 100)));
 
 					{
 						SOUL_PROFILE_ZONE_WITH_NAME("MT Commands translation Master");
@@ -648,63 +635,61 @@ namespace Soul {namespace GPU {
 						struct CommandTranslationData
 						{
 							Array<VkCommandBuffer>* cmdBuffers;
-							CommandBucket* cmdBucket;
-							ProgramID programID;
+							RenderCommandBucket* cmdBucket;
 							VkRenderPass renderPass;
 							VkFramebuffer framebuffer;
-							VkPipeline pipeline;
 							GPU::System* gpuSystem;
 						} taskData = {};
 						taskData.cmdBuffers = &secondaryCommandBuffers;
 						taskData.cmdBucket = &commandBucket;
-						taskData.programID = programID;
 						taskData.renderPass = renderPass;
 						taskData.framebuffer = framebuffer;
 						taskData.gpuSystem = _gpuSystem;
-						taskData.pipeline = pipeline;
 
 						Runtime::TaskID commandTranslationJob = Runtime::ParallelForTaskCreate(
-							0, secondaryCommandBuffers.size(), 1,
-                            [&taskData](int index)
-						{
-							SOUL_PROFILE_ZONE_WITH_NAME("Command Translation Child");
-							VkCommandBuffer secCmdBuffer = taskData.gpuSystem->_requestSecondaryCommandBuffer();
-							VkCommandBufferBeginInfo beginInfo = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
-							beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT | VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT;
-
-							VkCommandBufferInheritanceInfo inheritanceInfo = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO };
-							inheritanceInfo.renderPass = taskData.renderPass;
-							inheritanceInfo.subpass = 0;
-							inheritanceInfo.framebuffer = taskData.framebuffer;
-
-							beginInfo.pInheritanceInfo = &inheritanceInfo;
-
-							vkBeginCommandBuffer(secCmdBuffer, &beginInfo);
-							vkCmdBindPipeline(secCmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, taskData.pipeline);
-
-							uint32 div = taskData.cmdBucket->commands.size() / taskData.cmdBuffers->size();
-							uint32 mod = taskData.cmdBucket->commands.size() % taskData.cmdBuffers->size();
-
-							if (index < mod)
+							Runtime::TaskID::ROOT(), secondaryCommandBuffers.size(), 1,
+							[&taskData](int index)
 							{
-								int start = index * (div + 1);
+								SOUL_PROFILE_ZONE_WITH_NAME("Command Translation Child");
+								VkCommandBuffer secCmdBuffer = taskData.gpuSystem->_requestSecondaryCommandBuffer();
+								VkCommandBufferBeginInfo beginInfo = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
+								beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT | VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT;
 
-								for (int i = 0; i < div + 1; i++)
+								VkCommandBufferInheritanceInfo inheritanceInfo = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO };
+								inheritanceInfo.renderPass = taskData.renderPass;
+								inheritanceInfo.subpass = 0;
+								inheritanceInfo.framebuffer = taskData.framebuffer;
+
+								beginInfo.pInheritanceInfo = &inheritanceInfo;
+
+								vkBeginCommandBuffer(secCmdBuffer, &beginInfo);
+
+								uint32 div = taskData.cmdBucket->commands.size() / taskData.cmdBuffers->size();
+								uint32 mod = taskData.cmdBucket->commands.size() % taskData.cmdBuffers->size();
+
+								RenderCompiler renderCompiler(taskData.gpuSystem, secCmdBuffer);
+
+								if (index < mod)
 								{
-									taskData.cmdBucket->commands[start + i]->_submit(&taskData.gpuSystem->_db, taskData.programID, secCmdBuffer);
-								}
-							}  else
-							{
-								int start = mod * (div + 1) + (index - mod) * div;
-								for (int i = 0; i < div; i++)
+									int start = index * (div + 1);
+
+									for (int i = 0; i < div + 1; i++)
+									{
+										renderCompiler.compileCommand(*taskData.cmdBucket->commands[start + i]);
+									}
+								}  
+								else
 								{
-									taskData.cmdBucket->commands[start + i]->_submit(&taskData.gpuSystem->_db, taskData.programID, secCmdBuffer);
+									int start = mod * (div + 1) + (index - mod) * div;
+									for (int i = 0; i < div; i++)
+									{
+										renderCompiler.compileCommand(*taskData.cmdBucket->commands[start + i]);
+									}
 								}
-							}
 
 
-							vkEndCommandBuffer(secCmdBuffer);
-							(*taskData.cmdBuffers)[index] = secCmdBuffer;
+								vkEndCommandBuffer(secCmdBuffer);
+								(*taskData.cmdBuffers)[index] = secCmdBuffer;
 						});
 
 						Runtime::RunTask(commandTranslationJob);
@@ -716,7 +701,6 @@ namespace Soul {namespace GPU {
 					vkCmdEndRenderPass(cmdBuffer);
 				}
 
-				_gpuSystem->_pipelineDestroy(pipeline);
 				_gpuSystem->_framebufferDestroy(framebuffer);
 
 				break;
@@ -960,7 +944,7 @@ namespace Soul {namespace GPU {
 			VkEvent event = VK_NULL_HANDLE;
 			VkPipelineStageFlags eventStageFlags = 0;
 
-			for (PassType passType : Enum<PassType>::Iterates()) {
+			for (PassType passType : EnumIter<PassType>::Iterates()) {
 				if (isPassTypeDependent[passType] && passType == passNode->type) {
 					event = _gpuSystem->_eventCreate();
 					garbageEvents.add(event);
@@ -1252,7 +1236,7 @@ namespace Soul {namespace GPU {
 			uint16 rowPitch = subResourceLayout.rowPitch;
 
 			auto copyPixelsJob = Runtime::ParallelForTaskCreate(
-				0, dstTexture->extent.height, 16,
+				Runtime::TaskID::ROOT(), dstTexture->extent.height, 16,
 				[data, dstPixels, extentWidth, rowPitch](int index) {
 					uint32 pixelOffset = 4 * extentWidth * index;
 					memcpy(dstPixels + pixelOffset, data + rowPitch * index, 4 * extentWidth);
@@ -1272,7 +1256,7 @@ namespace Soul {namespace GPU {
 		}
 
 		// Update resource owner for external resource
-		static EnumArray<PassType, ResourceOwner> PASS_TYPE_TO_RESOURCE_OWNER({
+		static constexpr EnumArray<PassType, ResourceOwner> PASS_TYPE_TO_RESOURCE_OWNER({
 			ResourceOwner::NONE,
 			ResourceOwner::GRAPHIC_QUEUE,
 			ResourceOwner::COMPUTE_QUEUE,
@@ -1370,8 +1354,8 @@ namespace Soul {namespace GPU {
 			}
 		}
 
-		for (PassType srcPassType : Enum<PassType>::Iterates()) {
-			for (PassType dstPassType : Enum<PassType>::Iterates()) {
+		for (PassType srcPassType : EnumIter<PassType>::Iterates()) {
+			for (PassType dstPassType : EnumIter<PassType>::Iterates()) {
 				SemaphoreID semaphoreID = _externalSemaphores[srcPassType][dstPassType];
 				if (semaphoreID != SEMAPHORE_ID_NULL) {
 					_gpuSystem->_semaphoreDestroy(semaphoreID);
@@ -1406,38 +1390,6 @@ namespace Soul {namespace GPU {
 		passInfos.cleanup();
 	}
 
-	void _RenderGraphExecution::_initInShaderBuffers(const Array<ShaderBuffer> &shaderBuffers, int index, QueueFlagBits queueFlags) {
-        _RGExecPassInfo& passInfo = passInfos[index];
-        const _Program& program = *_gpuSystem->_programPtr(passInfo.programID);
-        for (const ShaderBuffer& shaderBuffer : shaderBuffers) {
-            SOUL_ASSERT(0, shaderBuffer.nodeID != BUFFER_NODE_ID_NULL, "");
-            SOUL_ASSERT(0, shaderBuffer.set < MAX_SET_PER_SHADER_PROGRAM, "");
-            SOUL_ASSERT(0, shaderBuffer.binding < MAX_BINDING_PER_SET, "");
-            const _ProgramDescriptorBinding& binding = program.bindings[shaderBuffer.set][shaderBuffer.binding];
-            SOUL_ASSERT(0, binding.shaderStageFlags != 0,
-                        "No binding for set = %d, binding = %d detected on the shaders.",
-                        shaderBuffer.set, shaderBuffer.binding);
-            SOUL_ASSERT(0, DescriptorTypeUtil::IsBuffer(binding.type), "");
-
-            uint32 bufferInfoID = getBufferInfoIndex(shaderBuffer.nodeID);
-
-            _BufferBarrier invalidateBarrier;
-            invalidateBarrier.stageFlags = binding.pipelineStageFlags;
-            invalidateBarrier.accessFlags = VK_ACCESS_SHADER_READ_BIT;
-            invalidateBarrier.bufferInfoIdx = bufferInfoID;
-            passInfo.bufferInvalidates.add(invalidateBarrier);
-
-            _BufferBarrier flushBarrier;
-            flushBarrier.stageFlags = binding.pipelineStageFlags;
-            flushBarrier.accessFlags = 0;
-            flushBarrier.bufferInfoIdx = bufferInfoID;
-            passInfo.bufferFlushes.add(flushBarrier);
-
-            updateBufferInfo(&bufferInfos[bufferInfoID], queueFlags, getBufferUsageFlagsFromDescriptorType(binding.type), PassNodeID(index));
-        }
-
-	}
-
 	void _RenderGraphExecution::_initInShaderBuffers(const Array<ShaderBufferReadAccess>& shaderAccessList, int index, QueueFlagBits queueFlags) {
 		_RGExecPassInfo& passInfo = passInfos[index];
 		for (const ShaderBufferReadAccess& shaderAccess : shaderAccessList) {
@@ -1462,37 +1414,6 @@ namespace Soul {namespace GPU {
 			updateBufferInfo(&bufferInfos[bufferInfoID], queueFlags, getBufferUsageFromShaderReadUsage(shaderAccess.usage), PassNodeID(index));
 		}
 
-	}
-
-	void _RenderGraphExecution::_initOutShaderBuffers(const Array<ShaderBuffer> &shaderBuffers, int index, QueueFlagBits queueFlags) {
-        _RGExecPassInfo& passInfo = passInfos[index];
-        const _Program& program = *_gpuSystem->_programPtr(passInfo.programID);
-	    for (const ShaderBuffer& shaderBuffer : shaderBuffers) {
-            SOUL_ASSERT(0, shaderBuffer.nodeID != BUFFER_NODE_ID_NULL, "");
-            SOUL_ASSERT(0, shaderBuffer.set < MAX_SET_PER_SHADER_PROGRAM, "");
-            SOUL_ASSERT(0, shaderBuffer.binding < MAX_BINDING_PER_SET, "");
-            const _ProgramDescriptorBinding& binding = program.bindings[shaderBuffer.set][shaderBuffer.binding];
-            SOUL_ASSERT(0, binding.shaderStageFlags != 0,
-                        "No binding for set = %d, binding = %d detected on the shaders.",
-                        shaderBuffer.set, shaderBuffer.binding);
-            SOUL_ASSERT(0, DescriptorTypeUtil::IsWriteableBuffer(binding.type), "");
-
-            uint32 bufferInfoID = getBufferInfoIndex(shaderBuffer.nodeID);
-
-            _BufferBarrier invalidateBarrier;
-            invalidateBarrier.stageFlags = binding.pipelineStageFlags;
-            invalidateBarrier.accessFlags = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
-            invalidateBarrier.bufferInfoIdx = getBufferInfoIndex(shaderBuffer.nodeID);
-            passInfo.bufferInvalidates.add(invalidateBarrier);
-
-            _BufferBarrier flushBarrier;
-            flushBarrier.stageFlags = binding.pipelineStageFlags;
-            flushBarrier.accessFlags = VK_ACCESS_SHADER_WRITE_BIT;
-            flushBarrier.bufferInfoIdx = getBufferInfoIndex(shaderBuffer.nodeID);
-            passInfo.bufferFlushes.add(flushBarrier);
-
-            updateBufferInfo(&bufferInfos[bufferInfoID], queueFlags, getBufferUsageFlagsFromDescriptorType(binding.type), PassNodeID(index));
-        }
 	}
 
 	void _RenderGraphExecution::_initOutShaderBuffers(const Array<ShaderBufferWriteAccess>& shaderAccessList, int index, QueueFlagBits queueFlags) {
@@ -1521,79 +1442,8 @@ namespace Soul {namespace GPU {
 
 	}
 
-	void _RenderGraphExecution::_initInShaderTextures(const Array<ShaderTexture> &shaderTextures, int index, QueueFlagBits queueFlags) {
-        _RGExecPassInfo& passInfo = passInfos[index];
-        const _Program& program = *_gpuSystem->_programPtr(passInfo.programID);
-	    for (const ShaderTexture& shaderTexture : shaderTextures) {
-            SOUL_ASSERT(0, shaderTexture.nodeID != TEXTURE_NODE_ID_NULL, "");
-            SOUL_ASSERT(0, shaderTexture.set < MAX_SET_PER_SHADER_PROGRAM, "");
-            SOUL_ASSERT(0, shaderTexture.binding < MAX_BINDING_PER_SET, "");
-            const _ProgramDescriptorBinding& binding = program.bindings[shaderTexture.set][shaderTexture.binding];
-            SOUL_ASSERT(0, binding.shaderStageFlags != 0,
-                        "No binding for set = %d, binding = %d detected on the shaders.",
-                        shaderTexture.set, shaderTexture.binding);
-            SOUL_ASSERT(0, DescriptorTypeUtil::IsTexture(binding.type),
-                        "Cannot bind texture to set = %d, binding = %d.",
-                        shaderTexture.set, shaderTexture.binding);
-
-            uint32 textureInfoID = getTextureInfoIndex(shaderTexture.nodeID);
-            updateTextureInfo(&textureInfos[textureInfoID], queueFlags,
-                              getTextureUsageFlagsFromDescriptorType(binding.type), PassNodeID(index));
-
-            VkImageLayout imageLayout = DescriptorTypeUtil::IsWriteableTexture(binding.type) ? VK_IMAGE_LAYOUT_GENERAL : VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-
-            _TextureBarrier invalidateBarrier;
-            invalidateBarrier.stageFlags = binding.pipelineStageFlags;
-            invalidateBarrier.accessFlags = VK_ACCESS_SHADER_READ_BIT;
-            invalidateBarrier.layout = imageLayout;
-            invalidateBarrier.textureInfoIdx = getTextureInfoIndex(shaderTexture.nodeID);
-            passInfo.textureInvalidates.add(invalidateBarrier);
-
-            _TextureBarrier flushBarrier;
-            flushBarrier.stageFlags = binding.pipelineStageFlags;
-            flushBarrier.accessFlags = 0;
-            flushBarrier.layout = imageLayout;
-            flushBarrier.textureInfoIdx = getTextureInfoIndex(shaderTexture.nodeID);
-            passInfo.textureFlushes.add(flushBarrier);
-        }
-	}
-
-	void _RenderGraphExecution::_initOutShaderTextures(const Array<ShaderTexture> &shaderTextures, int index, QueueFlagBits queueFlags) {
-        _RGExecPassInfo& passInfo = passInfos[index];
-        const _Program& program = *_gpuSystem->_programPtr(passInfo.programID);
-	    for (const ShaderTexture& shaderTexture : shaderTextures) {
-            SOUL_ASSERT(0, shaderTexture.nodeID != TEXTURE_NODE_ID_NULL, "");
-            SOUL_ASSERT(0, shaderTexture.set < MAX_SET_PER_SHADER_PROGRAM, "");
-            SOUL_ASSERT(0, shaderTexture.binding < MAX_BINDING_PER_SET, "");
-            const _ProgramDescriptorBinding& binding = program.bindings[shaderTexture.set][shaderTexture.binding];
-            SOUL_ASSERT(0, binding.shaderStageFlags != 0,
-                        "No binding for set = %d, binding = %d detected on the shaders.",
-                        shaderTexture.set, shaderTexture.binding);
-            SOUL_ASSERT(0, DescriptorTypeUtil::IsWriteableTexture(binding.type), "");
-
-            uint32 textureInfoID = getTextureInfoIndex(shaderTexture.nodeID);
-            updateTextureInfo(&textureInfos[textureInfoID], queueFlags,
-                              getTextureUsageFlagsFromDescriptorType(binding.type), PassNodeID(index));
-
-            _TextureBarrier invalidateBarrier;
-            invalidateBarrier.stageFlags = binding.pipelineStageFlags;
-            invalidateBarrier.accessFlags = VK_ACCESS_SHADER_READ_BIT;
-            invalidateBarrier.layout = VK_IMAGE_LAYOUT_GENERAL;
-            invalidateBarrier.textureInfoIdx = getTextureInfoIndex(shaderTexture.nodeID);
-            passInfo.textureInvalidates.add(invalidateBarrier);
-
-            _TextureBarrier flushBarrier;
-            flushBarrier.stageFlags = binding.pipelineStageFlags;
-            flushBarrier.accessFlags = 0;
-            flushBarrier.layout = VK_IMAGE_LAYOUT_GENERAL;
-            flushBarrier.textureInfoIdx = getTextureInfoIndex(shaderTexture.nodeID);
-            passInfo.textureFlushes.add(flushBarrier);
-        }
-	}
-
 	void _RenderGraphExecution::_initShaderTextures(const Array<ShaderTextureReadAccess>& shaderAccessList, int index, QueueFlagBits queueFlags) {
 		_RGExecPassInfo& passInfo = passInfos[index];
-		const _Program& program = *_gpuSystem->_programPtr(passInfo.programID);
 		for (const ShaderTextureReadAccess& shaderAccess : shaderAccessList) {
 
 			SOUL_ASSERT(0, shaderAccess.nodeID != TEXTURE_NODE_ID_NULL, "");
@@ -1632,7 +1482,6 @@ namespace Soul {namespace GPU {
 
 	void _RenderGraphExecution::_initShaderTextures(const Array<ShaderTextureWriteAccess>& shaderAccessList, int index, QueueFlagBits queueFlags) {
 		_RGExecPassInfo& passInfo = passInfos[index];
-		const _Program& program = *_gpuSystem->_programPtr(passInfo.programID);
 		for (const ShaderTextureWriteAccess& shaderAccess : shaderAccessList) {
 			SOUL_ASSERT(0, shaderAccess.nodeID != TEXTURE_NODE_ID_NULL, "");
 
@@ -1641,7 +1490,6 @@ namespace Soul {namespace GPU {
 
 			updateTextureInfo(&textureInfos[textureInfoID], queueFlags,
 				getTextureUsageFromShaderWriteUsage(shaderAccess.usage), PassNodeID(index));
-
 
 			//TODO(kevinyu) : check whether the barrier is correct
 

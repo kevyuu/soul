@@ -15,7 +15,7 @@ namespace Soul { namespace GPU {
 			VK_COMPARE_OP_GREATER_OR_EQUAL,
 			VK_COMPARE_OP_ALWAYS
 		};
-		static_assert(SOUL_ARRAY_LEN(COMPARE_OP_MAP) == uint64(CompareOp::COUNT), "");
+		static_assert(SOUL_ARRAY_LEN(COMPARE_OP_MAP) == uint64(CompareOp::COUNT));
 
 		return COMPARE_OP_MAP[uint64(compareOp)];
 	}
@@ -33,7 +33,7 @@ namespace Soul { namespace GPU {
 			VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
 			VK_IMAGE_LAYOUT_PRESENT_SRC_KHR
 		};
-		static_assert(SOUL_ARRAY_LEN(IMAGE_LAYOUT_MAP) == uint64(TextureLayout::COUNT), "");
+		static_assert(SOUL_ARRAY_LEN(IMAGE_LAYOUT_MAP) == uint64(TextureLayout::COUNT));
 
 		return IMAGE_LAYOUT_MAP[uint64(layout)];
 	}
@@ -45,7 +45,7 @@ namespace Soul { namespace GPU {
 		VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT,
 		VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
 	};
-	static_assert(SOUL_ARRAY_LEN(DESCRIPTOR_TYPE_MAP) == uint64(DescriptorType::COUNT), "");
+	static_assert(SOUL_ARRAY_LEN(DESCRIPTOR_TYPE_MAP) == uint64(DescriptorType::COUNT));
 
 	static VkDescriptorType vkCast(DescriptorType type) {
 		return DESCRIPTOR_TYPE_MAP[uint64(type)];
@@ -128,8 +128,8 @@ namespace Soul { namespace GPU {
 	}
 
 	static VkSamplerMipmapMode MIPMAP_FILTER_MAP[] = {
-		VK_SAMPLER_MIPMAP_MODE_LINEAR,
-		VK_SAMPLER_MIPMAP_MODE_NEAREST
+		VK_SAMPLER_MIPMAP_MODE_NEAREST,
+		VK_SAMPLER_MIPMAP_MODE_LINEAR
 	};
 	static_assert(SOUL_ARRAY_LEN(MIPMAP_FILTER_MAP) == uint64(TextureFilter::COUNT), "");
 
@@ -201,11 +201,6 @@ namespace Soul { namespace GPU {
 		return Util::CastFlags(usageFlags, BIT_MAPPING);
 	}
 
-	static VkPipelineStageFlags vkCast(uint32 pipelineStages) {
-		// TODO: do proper casting
-		return pipelineStages;
-	}
-
 	static VkBufferUsageFlags vkCastBufferUsageFlags(BufferUsageFlags usageFlags) {
 		static VkBufferUsageFlags BIT_MAPPING[] = {
 			VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
@@ -228,6 +223,93 @@ namespace Soul { namespace GPU {
 			VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
 		};
 		return Util::CastFlags(stageFlags, BIT_MAPPING);
+	}
+
+	static VkShaderStageFlags vkCast(ShaderStageFlags stageFlags) {
+		static VkShaderStageFlags BIT_MAPPING[] = {
+			VK_SHADER_STAGE_VERTEX_BIT,
+			VK_SHADER_STAGE_GEOMETRY_BIT,
+			VK_SHADER_STAGE_FRAGMENT_BIT,
+			VK_SHADER_STAGE_COMPUTE_BIT,
+		};
+		return Util::CastFlags(stageFlags, BIT_MAPPING);
+	}
+
+	static VkShaderStageFlags vkCast(ShaderStage stageFlag) {
+		static VkShaderStageFlags MAPPING[] = {
+			0,
+			VK_SHADER_STAGE_VERTEX_BIT,
+			VK_SHADER_STAGE_GEOMETRY_BIT,
+			VK_SHADER_STAGE_FRAGMENT_BIT,
+			VK_SHADER_STAGE_COMPUTE_BIT,
+		};
+		return MAPPING[uint64(stageFlag)];
+	}
+
+	static VkFormat vkCast(VertexElementType type, VertexElementFlags flags) {
+		const bool integer = flags & VERTEX_ELEMENT_INTEGER_TARGET;
+		const bool normalized =flags & VERTEX_ELEMENT_NORMALIZED;
+		using ElementType = VertexElementType;
+		if (normalized) {
+			switch (type) {
+				// Single Component Types
+			case ElementType::BYTE: return VK_FORMAT_R8_SNORM;
+			case ElementType::UBYTE: return VK_FORMAT_R8_UNORM;
+			case ElementType::SHORT: return VK_FORMAT_R16_SNORM;
+			case ElementType::USHORT: return VK_FORMAT_R16_UNORM;
+				// Two Component Types
+			case ElementType::BYTE2: return VK_FORMAT_R8G8_SNORM;
+			case ElementType::UBYTE2: return VK_FORMAT_R8G8_UNORM;
+			case ElementType::SHORT2: return VK_FORMAT_R16G16_SNORM;
+			case ElementType::USHORT2: return VK_FORMAT_R16G16_UNORM;
+				// Three Component Types
+			case ElementType::BYTE3: return VK_FORMAT_R8G8B8_SNORM;      // NOT MINSPEC
+			case ElementType::UBYTE3: return VK_FORMAT_R8G8B8_UNORM;     // NOT MINSPEC
+			case ElementType::SHORT3: return VK_FORMAT_R16G16B16_SNORM;  // NOT MINSPEC
+			case ElementType::USHORT3: return VK_FORMAT_R16G16B16_UNORM; // NOT MINSPEC
+			// Four Component Types
+			case ElementType::BYTE4: return VK_FORMAT_R8G8B8A8_SNORM;
+			case ElementType::UBYTE4: return VK_FORMAT_R8G8B8A8_UNORM;
+			case ElementType::SHORT4: return VK_FORMAT_R16G16B16A16_SNORM;
+			case ElementType::USHORT4: return VK_FORMAT_R16G16B16A16_UNORM;
+			default:
+				SOUL_NOT_IMPLEMENTED();
+				return VK_FORMAT_UNDEFINED;
+			}
+		}
+		switch (type) {
+			// Single Component Types
+		case ElementType::BYTE: return integer ? VK_FORMAT_R8_SINT : VK_FORMAT_R8_SSCALED;
+		case ElementType::UBYTE: return integer ? VK_FORMAT_R8_UINT : VK_FORMAT_R8_USCALED;
+		case ElementType::SHORT: return integer ? VK_FORMAT_R16_SINT : VK_FORMAT_R16_SSCALED;
+		case ElementType::USHORT: return integer ? VK_FORMAT_R16_UINT : VK_FORMAT_R16_USCALED;
+		case ElementType::HALF: return VK_FORMAT_R16_SFLOAT;
+		case ElementType::INT: return VK_FORMAT_R32_SINT;
+		case ElementType::UINT: return VK_FORMAT_R32_UINT;
+		case ElementType::FLOAT: return VK_FORMAT_R32_SFLOAT;
+			// Two Component Types
+		case ElementType::BYTE2: return integer ? VK_FORMAT_R8G8_SINT : VK_FORMAT_R8G8_SSCALED;
+		case ElementType::UBYTE2: return integer ? VK_FORMAT_R8G8_UINT : VK_FORMAT_R8G8_USCALED;
+		case ElementType::SHORT2: return integer ? VK_FORMAT_R16G16_SINT : VK_FORMAT_R16G16_SSCALED;
+		case ElementType::USHORT2: return integer ? VK_FORMAT_R16G16_UINT : VK_FORMAT_R16G16_USCALED;
+		case ElementType::HALF2: return VK_FORMAT_R16G16_SFLOAT;
+		case ElementType::FLOAT2: return VK_FORMAT_R32G32_SFLOAT;
+			// Three Component Types
+		case ElementType::BYTE3: return VK_FORMAT_R8G8B8_SINT;      // NOT MINSPEC
+		case ElementType::UBYTE3: return VK_FORMAT_R8G8B8_UINT;     // NOT MINSPEC
+		case ElementType::SHORT3: return VK_FORMAT_R16G16B16_SINT;  // NOT MINSPEC
+		case ElementType::USHORT3: return VK_FORMAT_R16G16B16_UINT; // NOT MINSPEC
+		case ElementType::HALF3: return VK_FORMAT_R16G16B16_SFLOAT; // NOT MINSPEC
+		case ElementType::FLOAT3: return VK_FORMAT_R32G32B32_SFLOAT;
+			// Four Component Types
+		case ElementType::BYTE4: return integer ? VK_FORMAT_R8G8B8A8_SINT : VK_FORMAT_R8G8B8A8_SSCALED;
+		case ElementType::UBYTE4: return integer ? VK_FORMAT_R8G8B8A8_UINT : VK_FORMAT_R8G8B8A8_USCALED;
+		case ElementType::SHORT4: return integer ? VK_FORMAT_R16G16B16A16_SINT : VK_FORMAT_R16G16B16A16_SSCALED;
+		case ElementType::USHORT4: return integer ? VK_FORMAT_R16G16B16A16_UINT : VK_FORMAT_R16G16B16A16_USCALED;
+		case ElementType::HALF4: return VK_FORMAT_R16G16B16A16_SFLOAT;
+		case ElementType::FLOAT4: return VK_FORMAT_R32G32B32A32_SFLOAT;
+		}
+		return VK_FORMAT_UNDEFINED;
 	}
 
 }}

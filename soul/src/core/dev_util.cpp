@@ -5,8 +5,7 @@
 #include <cstdarg>
 #include <cstring>
 
-const char* _project_path(const char* filepath) {
-	const char* this_file_path = __FILE__;
+static const char* ProjectPath(const char* filepath) {
 	return filepath + strlen(__FILE__) - strlen("core/debug.cpp");
 }
 
@@ -21,21 +20,20 @@ void soul_intern_log(int verbosity, int line, const char* file, const char* form
 	if (verbosity <= SOUL_LOG_VERBOSE_LEVEL) {
 		printf("%s", LOG_PREFIX[verbosity]);
 		printf(":");
-		printf("%s", _project_path(file));
+		printf("%s", ProjectPath(file));
 		printf(":");
 		printf("%d", line);
 		printf("::");
-		va_list args_list;
-		va_start(args_list, format);
-		vprintf(format, args_list);
-		va_end(args_list);
+		va_list argsList;
+		va_start(argsList, format);
+		vprintf(format, argsList);
 		printf("\n");
 	}
 }
 
 void soul_intern_assert(int paranoia, int line, const char* file, const char* format, ...) {
 	if (paranoia <= SOUL_ASSERT_PARANOIA_LEVEL) {
-		printf("%s", _project_path(file));
+		printf("%s", ProjectPath(file));
 		printf(":");
 		printf("%d", line);
 		printf("::");

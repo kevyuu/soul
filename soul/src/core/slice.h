@@ -27,12 +27,12 @@ namespace Soul {
 			_size = _endIdx - _beginIdx;
 		}
 
-		inline T& operator[](int idx) {
+		inline T& operator[](uint64 idx) {
 			SOUL_ASSERT(0, idx < _size, "");
 			return (*_array)[_beginIdx + idx];
 		}
 
-		inline const T& operator[](int idx) const {
+		inline const T& operator[](uint64 idx) const {
 			SOUL_ASSERT(0, idx < _size, "");
 			return this->operator[](idx);
 		}

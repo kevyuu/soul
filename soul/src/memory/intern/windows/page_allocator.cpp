@@ -1,8 +1,9 @@
-#include "memory/allocators/page_allocator.h"
-#include "memory/util.h"
 #include <windows.h>
 
-namespace Soul { namespace Memory {
+#include "memory/allocators/page_allocator.h"
+#include "memory/util.h"
+
+namespace Soul::Memory {
 
 	PageAllocator::PageAllocator(const char* name) : Allocator(name) {
 		SYSTEM_INFO sSysInfo;
@@ -12,17 +13,17 @@ namespace Soul { namespace Memory {
 
 	void PageAllocator::reset() {};
 
-	Allocation PageAllocator::allocate(uint32 size, uint32 alignment, const char* tag) {
-		uint32 newSize = Util::PageSizeRound(size, _pageSize);
+	Allocation PageAllocator::tryAllocate(soul_size size, soul_size alignment, const char* tag) {
+		soul_size newSize = Util::PageSizeRound(size, _pageSize);
 		void* addr = VirtualAlloc(NULL, newSize, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
 		SOUL_ASSERT(0, addr != nullptr, "");
-		return {addr, newSize};
+		return Allocation(addr, newSize);
 	}
 
-	void PageAllocator::deallocate(void* addr, uint32 size) {
+	void PageAllocator::deallocate(void* addr, soul_size size) {
 		SOUL_ASSERT(0, Util::PageSizeRound(size, _pageSize) == size, "");
-		bool isSuccess = VirtualFree(addr, size, MEM_RELEASE);
+		bool isSuccess = VirtualFree(addr, 0, MEM_RELEASE);
 		SOUL_ASSERT(0, isSuccess, "");
 	}
 
-}}
+}

@@ -19,12 +19,15 @@ set (SOUL_HEADERS
 	src/core/slice.h
 	src/core/enum_array.h
 	src/core/bitset.h
+	src/core/geometry.h
+	src/core/string.h
 
 	src/gpu/data.h
 	src/gpu/system.h
 	src/gpu/render_graph.h
 	src/gpu/intern/enum_mapping.h
 	src/gpu/intern/render_graph_execution.h
+	src/gpu/intern/render_compiler.h
 	src/gpu/render_graph_registry.h
 
 	src/runtime/data.h
@@ -51,20 +54,23 @@ set (SOUL_SOURCES
 	src/core/dev_util.cpp
 	src/core/math.cpp
 	src/core/bitset.cpp
+	src/core/geometry.cpp
+	src/core/string.cpp
 
 	src/gpu/intern/gpu_system_glfw.cpp
 	src/gpu/intern/gpu_system.cpp
 	src/gpu/intern/render_graph.cpp
-	src/gpu/intern/commands.cpp
+	
 	src/gpu/intern/render_graph_registry.cpp
 	src/gpu/intern/render_graph_execution.cpp
 	src/gpu/intern/render_graph_registry.cpp
+	src/gpu/intern/render_compiler.cpp
 
 	src/memory/intern/malloc_allocator.cpp
 	src/memory/intern/proxy.cpp
 	src/memory/intern/profiler.cpp
 	src/memory/intern/linear_allocator.cpp
-	src/memory/intern/mt_linear_allocator.cpp
+	
 	src/memory/intern/scope_allocator.cpp
 
 	src/runtime/intern/runtime_system.cpp
@@ -73,7 +79,7 @@ set (SOUL_SOURCES
 	"$<$<STREQUAL:${CMAKE_SYSTEM_NAME},Darwin>:${SOUL_SOURCES_OSX}>"
 	"$<$<STREQUAL:${CMAKE_SYSTEM_NAME},Windows>:${SOUL_SOURCES_WINDOWS}>")
 
-add_library(soul STATIC ${SOUL_SOURCES})
+add_library(soul STATIC ${SOUL_SOURCES} )
 target_link_libraries(soul
 	PUBLIC glfw ${GLFW_LIBRARIES} vk_mem_alloc ${NVTX}
 	PRIVATE volk shaderc spirv-cross-core tracy)
@@ -86,3 +92,5 @@ target_compile_definitions(soul
 	PRIVATE
 		"$<$<STREQUAL:${CMAKE_SYSTEM_NAME},Windows>:SOUL_OS_WINDOWS>"
 		"$<$<STREQUAL:${CMAKE_SYSTEM_NAME},Darwin>:SOUL_OS_APPLE>")
+
+

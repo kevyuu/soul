@@ -15,28 +15,31 @@ namespace Soul {
 	{
 	public:
 
-		Array();
+		Array() noexcept;
 		explicit Array(Memory::Allocator* allocator);
 		Array(const Array& other);
-		Array& operator=(const Array& other);
-		Array(Array&& other) noexcept ;
-		Array& operator=(Array&& other) noexcept ;
+		Array& operator=(const Array& rhs);
+		Array(Array&& other) noexcept;
+		Array& operator=(Array&& other) noexcept;
 		~Array();
 
-		void init(Memory::Allocator* allocator);
-		void reserve(uint32 capacity);
-		void resize(uint32 size);
+		void swap(Array<T>& other) noexcept;
+		static void swap(Array<T>& a, Array<T>& b) noexcept { a.swap(b); }
 
-		void clear();
+		void init(Memory::Allocator* allocator) noexcept;
+		void reserve(soul_size capacity);
+		void resize(soul_size size);
+
+		void clear() noexcept;
 		void cleanup();
 
-		uint32 add(const T& item);
-		uint32 add(T&& item);
+		soul_size add(const T& item);
+		soul_size add(T&& item);
 
-		void append(const Array<T>& others);
+		void append(const Array<T>& other);
 
-		inline T& back() { return _buffer[_size - 1]; }
-		inline const T& back() const { return _buffer[_size - 1]; }
+		[[nodiscard]] inline T& back() noexcept { return _buffer[_size - 1]; }
+		[[nodiscard]] inline const T& back() const noexcept { return _buffer[_size - 1]; }
 
 		inline void pop() {
 			SOUL_ASSERT(0, _size != 0, "Cannot pop an empty array.");
@@ -44,71 +47,58 @@ namespace Soul {
 			((T*) _buffer + _size)->~T();
 		}
 
-		inline T* ptr(int idx) { return &_buffer[idx]; }
-		inline T* data() { return &_buffer[0]; }
-		inline const T* data() const { return &_buffer[0]; }
+		[[nodiscard]] inline T* ptr(int idx) { return &_buffer[idx]; }
+		[[nodiscard]] inline T* data() noexcept { return &_buffer[0]; }
+		[[nodiscard]] inline const T* data() const noexcept { return &_buffer[0]; }
 
-		inline T& operator[](int idx) {
+		[[nodiscard]] inline T& operator[](soul_size idx) {
 			SOUL_ASSERT(0, idx < _size, "Out of bound access to array detected. idx = %d, _size = %d", idx, _size);
 			return _buffer[idx];
 		}
 
-		inline const T& operator[](int idx) const {
+		[[nodiscard]] inline const T& operator[](soul_size idx) const {
 			SOUL_ASSERT(0, idx < _size, "Out of bound access to array detected. idx = %d, _size=%d", idx, _size);
 			return _buffer[idx];
 		}
 
-		inline int capacity() const { return _capacity; }
-		inline int size() const { return _size; }
-		inline bool empty() const {return _size == 0; }
+		[[nodiscard]] inline soul_size capacity() const noexcept { return _capacity; }
+		[[nodiscard]] inline soul_size size() const noexcept { return _size; }
+		[[nodiscard]] inline bool empty() const noexcept {return _size == 0; }
 
-		const T* begin() const { return _buffer; }
-		const T* end() const { return _buffer + _size; }
+		[[nodiscard]] const T* begin() const { return _buffer; }
+		[[nodiscard]] const T* end() const { return _buffer + _size; }
 
 		T* begin() { return _buffer; }
 		T* end() {return _buffer + _size; }
 
 	private:
-		T* _buffer = nullptr;
-		int _size = 0;
-		int _capacity = 0;
 		Memory::Allocator* _allocator = nullptr;
+		T* _buffer = nullptr;
+		soul_size _size = 0;
+		soul_size _capacity = 0;
 
 	};
 
 	template <typename T>
-	Array<T>::Array() :
-		_buffer(nullptr),
-		_capacity(0),
-		_size(0),
-		_allocator((Memory::Allocator*) Runtime::GetContextAllocator()) {}
+	Array<T>::Array() noexcept :
+		_allocator(Runtime::GetContextAllocator()),
+		_buffer(nullptr) {}
 
 	template<typename T>
 	Array<T>::Array(Memory::Allocator* const allocator) :
-		_buffer(nullptr),
-		_capacity(0),
-		_size(0),
-		_allocator(allocator) {}
-
-	template<typename T>
-	Array<T>::~Array() {
-		cleanup();
-	}
+		_allocator(allocator),
+		_buffer(nullptr) {}
 
 	template <typename T>
-	Array<T>::Array(const Array<T>& other) : _buffer(nullptr), _capacity(0), _size(0), _allocator(other._allocator) {
+	Array<T>::Array(const Array<T>& other) : _allocator(other._allocator), _buffer(nullptr) {
 		reserve(other._capacity);
 		Copy(other._buffer, other._buffer + other._size, _buffer);
 		_size = other._size;
 	}
 
 	template <typename T>
-	Array<T>& Array<T>::operator=(const Array<T>& other) {
-		cleanup();
-		_allocator = other._allocator;
-		reserve(other._capacity);
-		Copy(other._buffer, other._buffer + other._size, _buffer);
-		_size = other._size;
+	Array<T>& Array<T>::operator=(const Array<T>& rhs) {  // NOLINT(bugprone-unhandled-self-assignment)
+		Array<T>(rhs).swap(*this);
 		return *this;
 	}
 
@@ -125,44 +115,57 @@ namespace Soul {
 
 	template<typename T>
 	Array<T>& Array<T>::operator=(Array<T>&& other) noexcept {
-		Destruct(_buffer, _buffer + _size);
-		_allocator->deallocate(_buffer, sizeof(T) * _capacity);
-		new (this) Array<T>(std::move(other));
+		Array<T>(std::move(other)).swap(*this);
 		return *this;
 	}
 
 	template<typename T>
-	void Array<T>::init(Memory::Allocator* allocator)
+	Array<T>::~Array() {
+		cleanup();
+	}
+
+	template<typename T>
+	void Array<T>::swap(Array<T>& other) noexcept {
+		using std::swap;
+		swap(_allocator, other._allocator);
+		swap(_buffer, other._buffer);
+		swap(_size, other._size);
+		swap(_capacity, other.capacity);
+	}
+
+	template<typename T>
+	void Array<T>::init(Memory::Allocator* allocator) noexcept
 	{
 		SOUL_ASSERT(0, allocator != nullptr, "");
 		_allocator = allocator;
 	}
 
 	template<typename T>
-	void Array<T>::reserve(uint32 capacity) {
+	void Array<T>::reserve(soul_size capacity) {
 		T* oldBuffer = _buffer;
-		_buffer = (T*) _allocator->allocate(sizeof(T) * capacity, alignof(T));
+		_buffer = (T*) _allocator->allocate(sizeof(T) * capacity, alignof(T));  // NOLINT(bugprone-sizeof-expression)
 		if (oldBuffer != nullptr) {
 			Move(oldBuffer, oldBuffer + _capacity, _buffer);
 			Destruct(oldBuffer, oldBuffer + _capacity);
-			_allocator->deallocate(oldBuffer, sizeof(T) * _capacity);
+			_allocator->deallocate(oldBuffer, sizeof(T) * _capacity);  // NOLINT(bugprone-sizeof-expression)
 		}
 		_capacity = capacity;
 	}
 
 	template<typename T>
-	void Array<T>::resize(uint32 size) {
+	void Array<T>::resize(soul_size size) {
 		if (size > _capacity) {
 			reserve(size);
 		}
-		for (int i = _size; i < size; i++) {
+		for (soul_size i = _size; i < size; i++) {
 			new (_buffer + i) T();
 		}
 		_size = size;
 	}
 
 	template<typename T>
-	void Array<T>::clear() {
+	void Array<T>::clear() noexcept
+	{
 		Destruct(_buffer, _buffer + _size);
 		_size = 0;
 	}
@@ -175,18 +178,18 @@ namespace Soul {
 			return;
 		}
 		clear();
-		_allocator->deallocate(_buffer, sizeof(T) * _capacity);
+		_allocator->deallocate(_buffer, _capacity * sizeof(T));  // NOLINT(bugprone-sizeof-expression)
 		_buffer = nullptr;
 		_capacity = 0;
 	}
 
 	template <typename T>
-	uint32 Array<T>::add(const T& item) {
+	soul_size Array<T>::add(const T& item) {
 		if (_size == _capacity) {
 			reserve((_capacity * 2) + 8);
 		}
-		_buffer[_size] = item;
-		_size++;
+		new (_buffer + _size) T(item);
+		++_size;
 		return _size-1;
 	}
 
@@ -198,12 +201,12 @@ namespace Soul {
 	}
 
 	template <typename T>
-	uint32 Array<T>::add(T&& item) {
+	soul_size Array<T>::add(T&& item) {
 		if (_size == _capacity) {
 			reserve((_capacity * 2) + 8);
 		}
 		new (_buffer + _size) T(std::move(item));
-		_size++;
+		++_size;
 		return _size - 1;
 	}
 

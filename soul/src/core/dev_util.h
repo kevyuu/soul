@@ -1,11 +1,13 @@
+// ReSharper disable CppClangTidyCppcoreguidelinesMacroUsage
 #pragma once
 
-#define SOUL_ASSERT_PARANOIA_LEVEL 0
 #if defined(SOUL_ENV_DEBUG)
     #define SOUL_OPTION_VULKAN_VALIDATION_ENABLE
     #define SOUL_ASSERT_PARANOIA_LEVEL 1
 	#define SOUL_OPTION_LOGGING_ENABLE
 	#define SOUL_OPTION_ASSERTION_ENABLE
+#else
+    #define SOUL_ASSERT_PARANOIA_LEVEL 0
 #endif // SOUL_ENV_DEBUG
 
 #if defined(SOUL_ENV_RELEASE)
