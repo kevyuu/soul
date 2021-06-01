@@ -42,6 +42,11 @@ public:
 		fragShaderDesc.sourceSize = strlen(fragSrc);
 		_fragShaderID = system->shaderCreate(fragShaderDesc, GPU::ShaderStage::FRAGMENT);
 
+		GPU::ProgramDesc programDesc;
+		programDesc.shaderIDs[GPU::ShaderStage::VERTEX] = _vertShaderID;
+		programDesc.shaderIDs[GPU::ShaderStage::FRAGMENT] = _fragShaderID;
+		_programID = system->programRequest(programDesc);
+
 		unsigned char* fontPixels;
 		int width, height;
 		ImGuiIO io = ImGui::GetIO();
@@ -187,13 +192,6 @@ public:
 				targetAttchDesc.clear = true;
 				targetAttchDesc.clearValue = {};
 				targetAttchDesc.clearValue.color.float32 = { 1.0f, 0.0f, 0.0f, 1.0f };
-				targetAttchDesc.blendEnable = true;
-				targetAttchDesc.srcColorBlendFactor = GPU::BlendFactor::SRC_ALPHA;
-				targetAttchDesc.dstColorBlendFactor = GPU::BlendFactor::ONE_MINUS_SRC_ALPHA;
-				targetAttchDesc.colorBlendOp = GPU::BlendOp::ADD;
-				targetAttchDesc.srcAlphaBlendFactor = GPU::BlendFactor::ONE;
-				targetAttchDesc.dstAlphaBlendFactor = GPU::BlendFactor::ZERO;
-				targetAttchDesc.alphaBlendOp = GPU::BlendOp::ADD;
 				data->targetTex = builder->addColorAttachment(targetTex, targetAttchDesc);
 				data->vertexBuffer = builder->addVertexBuffer(vertexNodeID);
 				data->indexBuffer = builder->addIndexBuffer(indexNodeID);
@@ -210,24 +208,32 @@ public:
 					}
 				}
 
-				GPU::GraphicPipelineConfig config;
-				config.framebuffer.width = fbDim.x;
-				config.framebuffer.height = fbDim.y;
-
-				config.vertexShaderID = _vertShaderID;
-				config.fragmentShaderID = _fragShaderID;
-
-				config.viewport.width = fbDim.x;
-				config.viewport.height = fbDim.y;
-
-				config.scissor.dynamic = true;
-				config.scissor.width = fbDim.x;
-				config.scissor.height = fbDim.y;
-
-				builder->setPipelineConfig(config);
+				builder->setRenderTargetDimension(fbDim);
 			},
 			[drawData, this, fbDim]
-			(GPU::RenderGraphRegistry* registry, const Data& data, GPU::CommandBucket* commandBucket) {
+			(GPU::RenderGraphRegistry* registry, const Data& data, GPU::RenderCommandBucket* commandBucket) {
+
+				GPU::PipelineStateDesc pipelineDesc;
+				pipelineDesc.programID = this->_programID;
+
+				pipelineDesc.inputBindings[0] = { sizeof(ImDrawVert) };
+				pipelineDesc.inputAttributes[0] = { 0, offsetof(ImDrawVert, pos) };
+				pipelineDesc.inputAttributes[1] = { 0, offsetof(ImDrawVert, uv) };
+				pipelineDesc.inputAttributes[2] = { 0, offsetof(ImDrawVert, col) };
+
+				pipelineDesc.viewport.width = fbDim.x;
+				pipelineDesc.viewport.height = fbDim.y;
+
+				pipelineDesc.colorAttachmentCount = 1;
+				GPU::PipelineStateDesc::ColorAttachmentDesc& targetAttchDesc = pipelineDesc.colorAttachments[0];
+				targetAttchDesc.blendEnable = true;
+				targetAttchDesc.srcColorBlendFactor = GPU::BlendFactor::SRC_ALPHA;
+				targetAttchDesc.dstColorBlendFactor = GPU::BlendFactor::ONE_MINUS_SRC_ALPHA;
+				targetAttchDesc.colorBlendOp = GPU::BlendOp::ADD;
+				targetAttchDesc.srcAlphaBlendFactor = GPU::BlendFactor::ONE;
+				targetAttchDesc.dstAlphaBlendFactor = GPU::BlendFactor::ZERO;
+				targetAttchDesc.alphaBlendOp = GPU::BlendOp::ADD;
+
 				// Will project scissor/clipping rectangles into framebuffer space
 				ImVec2 clip_off = drawData.DisplayPos;         // (0,0) unless using multi-viewports
 				ImVec2 clip_scale = drawData.FramebufferScale; // (1,1) unless using retina display which are often (2,2)
@@ -235,15 +241,8 @@ public:
 				int global_vtx_offset = 0;
 				int global_idx_offset = 0;
 
-				GPU::Descriptor transformDescriptor = {};
-				transformDescriptor.type = GPU::DescriptorType::UNIFORM_BUFFER;
-				transformDescriptor.uniformInfo.bufferID = registry->getBuffer(data.transformBuffer);
-				transformDescriptor.uniformInfo.unitIndex = 0;
-
-				GPU::ShaderArgSetDesc argSetDesc = {};
-				argSetDesc.bindingCount = 1;
-				argSetDesc.bindingDescriptions = &transformDescriptor;
-				GPU::ShaderArgSetID argSet0 = registry->getShaderArgSet(0, argSetDesc);
+				GPU::Descriptor transformDescriptor = GPU::Descriptor::Uniform(registry->getBuffer(data.transformBuffer), 0, GPU::SHADER_STAGE_VERTEX);
+				GPU::ShaderArgSetID argSet0 = registry->getShaderArgSet(0, { 1, &transformDescriptor });
 
 				for (int n = 0; n < drawData.CmdListsCount; n++) {
 					const ImDrawList& cmdList = *drawData.CmdLists[n];
@@ -267,33 +266,28 @@ public:
 								if (clip_rect.y < 0.0f)
 									clip_rect.y = 0.0f;
 
-								using DrawCommand = GPU::Command::DrawIndexRegion;
+								using DrawCommand = GPU::RenderCommandDrawIndex;
 								DrawCommand* command = commandBucket->add<DrawCommand>(n);
-								command->scissor.offsetX = (int32_t)(clip_rect.x);
-								command->scissor.offsetY = (int32_t)(clip_rect.y);
-								command->scissor.width = (uint32_t)(clip_rect.z - clip_rect.x);
-								command->scissor.height = (uint32_t)(clip_rect.w - clip_rect.y);
 
+								pipelineDesc.scissor.offsetX = (int32_t)(clip_rect.x);
+								pipelineDesc.scissor.offsetY = (int32_t)(clip_rect.y);
+								pipelineDesc.scissor.width = (uint32_t)(clip_rect.z - clip_rect.x);
+								pipelineDesc.scissor.height = (uint32_t)(clip_rect.w - clip_rect.y);
+
+								command->pipelineStateID = registry->getPipelineState(pipelineDesc);
 								command->vertexBufferID = registry->getBuffer(data.vertexBuffer);
 								command->vertexOffset = cmd.VtxOffset + global_vtx_offset;
 								command->indexBufferID = registry->getBuffer(data.indexBuffer);
 								command->indexCount = cmd.ElemCount;
 								command->indexOffset = cmd.IdxOffset + global_idx_offset;
 
-								command->shaderArgSets[0] = argSet0;
+								command->shaderArgSetIDs[0] = argSet0;
 
-								GPU::Descriptor imageDescriptor = {};
-								imageDescriptor.type = GPU::DescriptorType::SAMPLED_IMAGE;
 								UI::SoulImTexture soulImTexture(cmd.TextureId);
-								imageDescriptor.sampledImageInfo.textureID = registry->getTexture(soulImTexture.getTextureNodeID());
-								imageDescriptor.sampledImageInfo.samplerID = _fontSampler;
+								GPU::Descriptor imageDescriptor = GPU::Descriptor::SampledImage(registry->getTexture(soulImTexture.getTextureNodeID()), _fontSampler, GPU::SHADER_STAGE_FRAGMENT);
 
-								GPU::ShaderArgSetDesc argSet1Desc = {};
-								argSet1Desc.bindingCount = 1;
-								argSet1Desc.bindingDescriptions = &imageDescriptor;
-
-								GPU::ShaderArgSetID argSet1 = registry->getShaderArgSet(1, argSet1Desc);
-								command->shaderArgSets[1] = argSet1;
+								GPU::ShaderArgSetID argSet1 = registry->getShaderArgSet(1, { 1, &imageDescriptor });
+								command->shaderArgSetIDs[1] = argSet1;
 							}
 						}
 					}
@@ -308,6 +302,7 @@ public:
 private:
 	GPU::ShaderID _vertShaderID;
 	GPU::ShaderID _fragShaderID;
+	GPU::ProgramID _programID;
 
 	GPU::SamplerID _fontSampler;
 

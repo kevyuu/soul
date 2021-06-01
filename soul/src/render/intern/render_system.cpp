@@ -1421,7 +1421,7 @@ namespace Soul { namespace Render {
 
                 for (int k = 0; k < 8; k++) {
                     Vec4f frustumCorner = invProjectionViewMat * Vec4f(frustumCorners[k], 1.0f);
-                    frustumCorners[k] = frustumCorner.xyz() / frustumCorner.w;
+                    frustumCorners[k] = frustumCorner.xyz / frustumCorner.w;
                     worldFrustumCenter += frustumCorners[k];
                 }
                 worldFrustumCenter *= (1.0f / 8.0f);

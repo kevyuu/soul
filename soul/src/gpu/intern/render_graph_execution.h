@@ -60,8 +60,6 @@ namespace Soul { namespace GPU {
 	};
 
 	struct _RGExecPassInfo {
-		ProgramID programID;
-
 		Array<_BufferBarrier> bufferFlushes;
 		Array<_BufferBarrier> bufferInvalidates;
 		Array<_TextureBarrier> textureFlushes;

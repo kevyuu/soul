@@ -17,6 +17,11 @@ void ShadowMapGenRenderModule::init(GPU::System* system)
 	fragShaderDesc.source = fragSrc;
 	fragShaderDesc.sourceSize = strlen(fragSrc);
 	_fragShaderID = system->shaderCreate(fragShaderDesc, GPU::ShaderStage::FRAGMENT);
+
+	GPU::ProgramDesc programDesc;
+	programDesc.shaderIDs[GPU::ShaderStage::VERTEX] = _vertShaderID;
+	programDesc.shaderIDs[GPU::ShaderStage::FRAGMENT] = _fragShaderID;
+	_programID = system->programRequest(programDesc);
 }
 
 ShadowMapGenRenderModule::Parameter ShadowMapGenRenderModule::addPass(GPU::System* system, GPU::RenderGraph* renderGraph, const ShadowMapGenRenderModule::Parameter& data, const DeferredPipeline::Scene& scene) {
@@ -26,7 +31,7 @@ ShadowMapGenRenderModule::Parameter ShadowMapGenRenderModule::addPass(GPU::Syste
 		passData = renderGraph->addGraphicPass<Parameter>(
 			"Shadow map gen pass",
 			[this, &passData, scene = &scene, i]
-		(GPU::GraphicNodeBuilder* builder, Parameter* data) -> void
+			(GPU::GraphicNodeBuilder* builder, Parameter* data) -> void
 			{
 				data->modelBuffer = builder->addShaderBuffer(passData.modelBuffer, GPU::SHADER_STAGE_VERTEX, GPU::ShaderBufferReadUsage::UNIFORM);
 				data->shadowMatrixesBuffer = builder->addShaderBuffer(passData.shadowMatrixesBuffer, GPU::SHADER_STAGE_VERTEX, GPU::ShaderBufferReadUsage::UNIFORM);
@@ -44,11 +49,15 @@ ShadowMapGenRenderModule::Parameter ShadowMapGenRenderModule::addPass(GPU::Syste
 				depthAttchDesc.clear = i == 0;
 				depthAttchDesc.clearValue.depthStencil = { 1.0f, 0 };
 				depthAttchDesc.depthWriteEnable = true;
-				depthAttchDesc.depthTestEnable = true;
-				depthAttchDesc.depthCompareOp = GPU::CompareOp::LESS;
 				data->depthTarget = builder->setDepthStencilAttachment(passData.depthTarget, depthAttchDesc);
 
+				uint16 resolution = DeferredPipeline::DirectionalLight::SHADOW_MAP_RESOLUTION;
+				builder->setRenderTargetDimension({ resolution, resolution });
 
+			},
+			[this, scene = &scene, i]
+			(GPU::RenderGraphRegistry* registry, const Parameter& data, GPU::RenderCommandBucket* commandBucket) -> void
+			{
 				uint16 resolution = DeferredPipeline::DirectionalLight::SHADOW_MAP_RESOLUTION;
 				uint16 halfResolution = resolution / 2;
 				struct ViewRegion
@@ -62,51 +71,43 @@ ShadowMapGenRenderModule::Parameter ShadowMapGenRenderModule::addPass(GPU::Syste
 					{ halfResolution, halfResolution, halfResolution, halfResolution}
 				};
 				ViewRegion scissorRegion = scissorRegions[i];
-				GPU::GraphicPipelineConfig pipelineConfig;
-				pipelineConfig.viewport = { 0, 0, resolution, resolution };
-				pipelineConfig.scissor = { false,  scissorRegion.offsetX, scissorRegion.offsetY, scissorRegion.width, scissorRegion.height };
-				pipelineConfig.framebuffer = { uint16(resolution), uint16(resolution) };
-				pipelineConfig.vertexShaderID = this->_vertShaderID;
-				pipelineConfig.fragmentShaderID = this->_fragShaderID;
-				pipelineConfig.raster.cullMode = GPU::CullMode::NONE;
+				GPU::PipelineStateDesc pipelineDesc;
 
-				builder->setPipelineConfig(pipelineConfig);
+				pipelineDesc.inputBindings[0] = { sizeof(DeferredPipeline::Vertex) };
+				pipelineDesc.inputAttributes[0] = { 0, offsetof(DeferredPipeline::Vertex, pos) };
+				pipelineDesc.inputAttributes[1] = { 0, offsetof(DeferredPipeline::Vertex, normal) };
+				pipelineDesc.inputAttributes[2] = { 0, offsetof(DeferredPipeline::Vertex, texUV) };
+				pipelineDesc.inputAttributes[3] = { 0, offsetof(DeferredPipeline::Vertex, binormal) };
+				pipelineDesc.inputAttributes[4] = { 0, offsetof(DeferredPipeline::Vertex, tangent) };
 
-			},
-			[scene = &scene, i]
-			(GPU::RenderGraphRegistry* registry, const Parameter& data, GPU::CommandBucket* commandBucket) -> void
-			{
-				GPU::Descriptor set1Descriptor = {};
-				set1Descriptor.type = GPU::DescriptorType::UNIFORM_BUFFER;
-				set1Descriptor.uniformInfo.bufferID = registry->getBuffer(data.shadowMatrixesBuffer);
-				set1Descriptor.uniformInfo.unitIndex = i;
-				GPU::ShaderArgSetDesc set1Desc;
-				set1Desc.bindingCount = 1;
-				set1Desc.bindingDescriptions = &set1Descriptor;
-				GPU::ShaderArgSetID set1 = registry->getShaderArgSet(1, set1Desc);
+				pipelineDesc.viewport = { 0, 0, resolution, resolution };
+				pipelineDesc.scissor = { false,  scissorRegion.offsetX, scissorRegion.offsetY, scissorRegion.width, scissorRegion.height };
+				pipelineDesc.programID = this->_programID;
+				pipelineDesc.colorAttachmentCount = 1;
+				pipelineDesc.depthStencilAttachment = { true, true, GPU::CompareOp::LESS };
+				pipelineDesc.raster.cullMode = GPU::CullMode::NONE;
+				GPU::PipelineStateID pipelineStateID = registry->getPipelineState(pipelineDesc);
+
+				GPU::Descriptor set1Descriptor = GPU::Descriptor::Uniform(registry->getBuffer(data.shadowMatrixesBuffer), i, GPU::SHADER_STAGE_VERTEX);
+				GPU::ShaderArgSetID set1 = registry->getShaderArgSet(1, { 1, &set1Descriptor });
 
 				commandBucket->reserve(scene->meshEntities.size());
 
 				for (int j = 0; j < scene->meshEntities.size(); j++)
 				{
-					GPU::Descriptor set3Descriptor = {};
-					set3Descriptor.type = GPU::DescriptorType::UNIFORM_BUFFER;
-					set3Descriptor.uniformInfo.bufferID = registry->getBuffer(data.modelBuffer);
-					set3Descriptor.uniformInfo.unitIndex = j;
-					GPU::ShaderArgSetDesc set3Desc;
-					set3Desc.bindingCount = 1;
-					set3Desc.bindingDescriptions = &set3Descriptor;
-					GPU::ShaderArgSetID set3 = registry->getShaderArgSet(3, set3Desc);
+					GPU::Descriptor set3Descriptor = GPU::Descriptor::Uniform(registry->getBuffer(data.modelBuffer), j, GPU::SHADER_STAGE_VERTEX);
+					GPU::ShaderArgSetID set3 = registry->getShaderArgSet(3, { 1, &set3Descriptor });
 
 					const DeferredPipeline::MeshEntity& meshEntity = scene->meshEntities[j];
 					const DeferredPipeline::Mesh& mesh = scene->meshes[meshEntity.meshID];
-					using DrawCommand = GPU::Command::DrawIndex;
+					using DrawCommand = GPU::RenderCommandDrawIndex;
 					DrawCommand* command = commandBucket->put<DrawCommand>(j, j);
+					command->pipelineStateID = pipelineStateID;
 					command->vertexBufferID = registry->getBuffer(data.vertexBuffers[meshEntity.meshID]);
 					command->indexBufferID = registry->getBuffer(data.indexBuffers[meshEntity.meshID]);
 					command->indexCount = mesh.indexCount;
-					command->shaderArgSets[1] = set1;
-					command->shaderArgSets[3] = set3;
+					command->shaderArgSetIDs[1] = set1;
+					command->shaderArgSetIDs[3] = set3;
 				}
 
 			});

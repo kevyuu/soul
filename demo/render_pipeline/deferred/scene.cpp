@@ -77,7 +77,7 @@ void DeferredPipeline::Scene::importFromGLTF(const char* path) {
 		texDesc.depth = 1;
 		texDesc.type = GPU::TextureType::D2;
 		texDesc.format = GPU::TextureFormat::RGBA8;
-		texDesc.mipLevels = 1;
+		texDesc.mipLevels = static_cast<uint32_t>(std::floor(std::log2(std::max(image.width, image.height)))) + 1;
 		texDesc.usageFlags = GPU::TEXTURE_USAGE_SAMPLED_BIT;
 		texDesc.queueFlags = GPU::QUEUE_GRAPHIC_BIT;
 
@@ -360,15 +360,6 @@ void DeferredPipeline::Scene::importFromGLTF(const char* path) {
 		Memory::ScopeAllocator<> loadMeshAllocator("Load mesh allocator");
 		SOUL_MEMORY_ALLOCATOR_ZONE(&loadMeshAllocator);
 
-		struct Vertex
-		{
-			Vec3f pos;
-			Vec3f normal;
-			Vec2f texUV;
-			Vec3f binormal;
-			Vec3f tangent;
-		};
-
 		Array<Vertex> vertexes;
 		vertexes.reserve(100000);
 
@@ -502,8 +493,8 @@ void DeferredPipeline::Scene::importFromGLTF(const char* path) {
 				vertexPositionTransform * position,
 				normal,
 				texCoord0,
-				cross(normal, tangent.xyz()),
-				tangent.xyz()
+				cross(normal, tangent.xyz),
+				tangent.xyz
 				});
 		}
 

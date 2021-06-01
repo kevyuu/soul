@@ -13,7 +13,7 @@ namespace DeferredPipeline {
 	class Renderer : public Demo::Renderer {
 	public:
 
-		Renderer(GPU::System* gpuSystem) : _gpuSystem(gpuSystem), _scene(gpuSystem) {}
+		explicit Renderer(GPU::System* gpuSystem) : _gpuSystem(gpuSystem), _scene(gpuSystem) {}
 		
 		virtual void init();
 		virtual Demo::Scene* getScene() { return (Demo::Scene*) & _scene; }

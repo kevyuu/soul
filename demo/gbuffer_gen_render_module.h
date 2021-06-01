@@ -13,6 +13,7 @@ class GBufferGenRenderModule
 private:
     GPU::ShaderID _vertShaderID;
     GPU::ShaderID _fragShaderID;
+    GPU::ProgramID _programID;
 
 public:
     struct Parameter

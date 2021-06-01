@@ -19,6 +19,10 @@ namespace Soul {namespace GPU {
 	}
 
 	ShaderArgSetID RenderGraphRegistry::getShaderArgSet(uint32 set, const ShaderArgSetDesc &desc) {
-		return _system->_shaderArgSetRequest(desc, _programID, set);
+		return _system->_shaderArgSetRequest(desc);
+	}
+
+	PipelineStateID RenderGraphRegistry::getPipelineState(const PipelineStateDesc& desc) {
+		return _system->_pipelineStateRequest(desc, _renderPass);
 	}
 }}

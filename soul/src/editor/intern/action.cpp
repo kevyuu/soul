@@ -364,8 +364,8 @@ namespace Soul {
 						vertexPositionTransform * position,
 						normal,
 						texCoord0,
-						Soul::cross(normal, tangent.xyz()),
-						tangent.xyz()
+						Soul::cross(normal, tangent.xyz),
+						tangent.xyz
 					});
 
 				}

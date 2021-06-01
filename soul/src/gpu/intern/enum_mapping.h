@@ -128,8 +128,8 @@ namespace Soul { namespace GPU {
 	}
 
 	static VkSamplerMipmapMode MIPMAP_FILTER_MAP[] = {
-		VK_SAMPLER_MIPMAP_MODE_LINEAR,
-		VK_SAMPLER_MIPMAP_MODE_NEAREST
+		VK_SAMPLER_MIPMAP_MODE_NEAREST,
+		VK_SAMPLER_MIPMAP_MODE_LINEAR
 	};
 	static_assert(SOUL_ARRAY_LEN(MIPMAP_FILTER_MAP) == uint64(TextureFilter::COUNT), "");
 
@@ -201,11 +201,6 @@ namespace Soul { namespace GPU {
 		return Util::CastFlags(usageFlags, BIT_MAPPING);
 	}
 
-	static VkPipelineStageFlags vkCast(uint32 pipelineStages) {
-		// TODO: do proper casting
-		return pipelineStages;
-	}
-
 	static VkBufferUsageFlags vkCastBufferUsageFlags(BufferUsageFlags usageFlags) {
 		static VkBufferUsageFlags BIT_MAPPING[] = {
 			VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
@@ -228,6 +223,27 @@ namespace Soul { namespace GPU {
 			VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
 		};
 		return Util::CastFlags(stageFlags, BIT_MAPPING);
+	}
+
+	static VkShaderStageFlags vkCast(ShaderStageFlags stageFlags) {
+		static VkShaderStageFlags BIT_MAPPING[] = {
+			VK_SHADER_STAGE_VERTEX_BIT,
+			VK_SHADER_STAGE_GEOMETRY_BIT,
+			VK_SHADER_STAGE_FRAGMENT_BIT,
+			VK_SHADER_STAGE_COMPUTE_BIT,
+		};
+		return Util::CastFlags(stageFlags, BIT_MAPPING);
+	}
+
+	static VkShaderStageFlags vkCast(ShaderStage stageFlag) {
+		static VkShaderStageFlags MAPPING[] = {
+			0,
+			VK_SHADER_STAGE_VERTEX_BIT,
+			VK_SHADER_STAGE_GEOMETRY_BIT,
+			VK_SHADER_STAGE_FRAGMENT_BIT,
+			VK_SHADER_STAGE_COMPUTE_BIT,
+		};
+		return MAPPING[uint64(stageFlag)];
 	}
 
 }}

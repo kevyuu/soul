@@ -84,6 +84,16 @@ namespace Soul {
 
 		constexpr Vec3f() : x(0), y(0), z(0) {}
 		constexpr Vec3f(float x, float y, float z) : x(x), y(y), z(z) {}
+		constexpr Vec3f(float* val) : x(val[0]), y(val[1]), z(val[2]) {}
+	};
+
+	struct Vec3ui16 {
+		uint16 x;
+		uint16 y;
+		uint16 z;
+
+		constexpr Vec3ui16() : x(0), y(0), z(0) {}
+		constexpr Vec3ui16(uint32 x, uint32 y, uint32 z) : x(x), y(y), z(z) {}
 	};
 
 	struct Vec3ui32 {
@@ -93,18 +103,21 @@ namespace Soul {
 
 	    constexpr Vec3ui32() : x(0), y(0), z(0) {}
         constexpr Vec3ui32(uint32 x, uint32 y, uint32 z) : x(x), y(y), z(z) {}
+		constexpr Vec3ui32(Vec3ui16 v) : x(v.x), y(v.y), z(v.z) {}
 	};
 
 	struct Vec4f {
-		float x;
-		float y;
-		float z;
-		float w;
+		union {
+			struct { float x, y, z, w; };
+			Vec3f xyz;
+			Vec2f xy;
+			float mem[4];
+		};
 
 		Vec4f() : x(0), y(0), z(0), w(0) {}
+		Vec4f(float val[4]) : x(val[0]), y(val[1]), z(val[2]), w(val[3]) {}
 		Vec4f(float x, float y, float z, float w) : x(x), y(y), z(z), w(w) {}
 		Vec4f(Vec3f xyz, float w) : x(xyz.x), y(xyz.y), z(xyz.z), w(w) {}
-		Vec3f xyz() const { return Vec3f(x, y, z); }
 	};
 
     struct Vec4i32 {
@@ -118,30 +131,36 @@ namespace Soul {
     };
 
     struct Vec4ui32 {
-        float x;
-        float y;
-        float z;
-        float w;
+        uint32 x;
+        uint32 y;
+        uint32 z;
+        uint32 w;
 
         Vec4ui32() : x(0), y(0), z(0), w(0) {}
         Vec4ui32(uint32 x, uint32 y, uint32 z, uint32 w) : x(x), y(y), z(z), w(w) {}
     };
 
 	struct Quaternion {
-		float x;
-		float y;
-		float z;
-		float w;
-
+		union {
+			struct { float x, y, z, w;  };
+			Vec4f xyzw;
+			Vec3f xyz;
+			Vec2f xy;
+			float mem[4];
+		};
+		
 		Quaternion() : x(0), y(0), z(0), w(1) {}
 		Quaternion(float x, float y, float z, float w) : x(x), y(y), z(z), w(w) {}
 		Quaternion(Vec3f xyz, float w) : x(xyz.x), y(xyz.y), z(xyz.z), w(w) {}
-		Vec3f xyz() const { return Vec3f(x, y, z); }
+		Quaternion(float* val) : x(val[0]), y(val[1]), z(val[2]), w(val[3]) {}
 	};
 
 	struct Mat3 {
 
-		float elem[3][3];
+		union {
+			float elem[3][3];
+			float mem[9];
+		};
 
 		Mat3() {
 			for (int i = 0; i < 3; i++) {
@@ -272,4 +291,4 @@ namespace Soul {
 
 #define SOUL_ARRAY_LEN(arr) (sizeof(arr) / sizeof(*arr))
 #define SOUL_BIT_COUNT(type) (sizeof(type) * 8)
-#define SOUL_UTYPE_MAX(type) ((1u << (SOUL_BIT_COUNT(type) - 1)) - 1)
+#define SOUL_UTYPE_MAX(type) ((1u << SOUL_BIT_COUNT(type)) - 1)

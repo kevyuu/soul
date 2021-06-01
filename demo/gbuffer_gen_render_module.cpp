@@ -17,9 +17,14 @@ void GBufferGenRenderModule::init(GPU::System* system)
     fragShaderDesc.source = fragSrc;
     fragShaderDesc.sourceSize = strlen(fragSrc);
     _fragShaderID = system->shaderCreate(fragShaderDesc, GPU::ShaderStage::FRAGMENT);
+
+    GPU::ProgramDesc programDesc;
+    programDesc.shaderIDs[GPU::ShaderStage::VERTEX] = _vertShaderID;
+    programDesc.shaderIDs[GPU::ShaderStage::FRAGMENT] = _fragShaderID;
+    _programID = system->programRequest(programDesc);
 }
 
-GBufferGenRenderModule::Parameter GBufferGenRenderModule::addPass(GPU::System* system, GPU::RenderGraph* renderGraph, const GBufferGenRenderModule::Parameter& inputParams, const DeferredPipeline::Scene& scene) {
+GBufferGenRenderModule::Parameter GBufferGenRenderModule::addPass(GPU::System* system, GPU::RenderGraph* renderGraph, const Parameter& inputParams, const DeferredPipeline::Scene& scene) {
     Parameter passParam = renderGraph->addGraphicPass<Parameter>(
         "G-Buffer Gen Pass",
         [this, &inputParams, &scene]
@@ -46,7 +51,6 @@ GBufferGenRenderModule::Parameter GBufferGenRenderModule::addPass(GPU::System* s
             params->shadowMap = builder->addShaderTexture(inputParams.shadowMap, GPU::SHADER_STAGE_FRAGMENT, GPU::ShaderTextureReadUsage::UNIFORM);
 
             GPU::ColorAttachmentDesc colorAttchDesc;
-            colorAttchDesc.blendEnable = false;
             colorAttchDesc.clear = true;
             colorAttchDesc.clearValue.color.float32 = { 1.0f, 0.0f, 0.0f, 1.0f };
             for (int i = 0; i < 4; i++) {
@@ -57,24 +61,42 @@ GBufferGenRenderModule::Parameter GBufferGenRenderModule::addPass(GPU::System* s
             depthAttchDesc.clear = true;
             depthAttchDesc.clearValue.depthStencil = { 1.0f, 0 };
             depthAttchDesc.depthWriteEnable = true;
-            depthAttchDesc.depthTestEnable = true;
-            depthAttchDesc.depthCompareOp = GPU::CompareOp::LESS;
             params->depthTarget = builder->setDepthStencilAttachment(inputParams.depthTarget, depthAttchDesc);
 
-            Vec2f sceneResolution = Vec2f(scene.camera.viewportWidth, scene.camera.viewportHeight);
-            GPU::GraphicPipelineConfig pipelineConfig;
-            pipelineConfig.viewport = { 0, 0, uint16(sceneResolution.x), uint16(sceneResolution.y) };
-            pipelineConfig.scissor = { false, 0, 0, uint16(sceneResolution.x), uint16(sceneResolution.y) };
-            pipelineConfig.framebuffer = { uint16(sceneResolution.x), uint16(sceneResolution.y) };
-            pipelineConfig.vertexShaderID = this->_vertShaderID;
-            pipelineConfig.fragmentShaderID = this->_fragShaderID;
-            pipelineConfig.raster.cullMode = GPU::CullMode::NONE;
+            Vec2ui32 sceneResolution = Vec2ui32(scene.camera.viewportWidth, scene.camera.viewportHeight);
+            builder->setRenderTargetDimension(sceneResolution);
 
-            builder->setPipelineConfig(pipelineConfig);
         },
-        [&scene, system]
-        (GPU::RenderGraphRegistry* registry, const Parameter& params, GPU::CommandBucket* commandBucket) {
+        [&scene, system, this]
+        (GPU::RenderGraphRegistry* registry, const Parameter& params, GPU::RenderCommandBucket* commandBucket) {
             SOUL_PROFILE_ZONE_WITH_NAME("Execute GBuffer Gen Passs");
+
+            Vec2f sceneResolution = Vec2f(scene.camera.viewportWidth, scene.camera.viewportHeight);
+            
+            struct _GBufferGenInput {
+                Vec3f aPos;
+                Vec3f aNormal;
+                Vec2f aTexCoord;
+                Vec3f aBinormal;
+                Vec3f aTangent;
+            };
+            
+            GPU::PipelineStateDesc pipelineDesc;
+            pipelineDesc.inputBindings[0].stride = sizeof(_GBufferGenInput);
+            
+            pipelineDesc.inputAttributes[0] = { 0, offsetof(_GBufferGenInput, aPos) };
+            pipelineDesc.inputAttributes[1] = { 0, offsetof(_GBufferGenInput, aNormal) };
+            pipelineDesc.inputAttributes[2] = { 0, offsetof(_GBufferGenInput, aTexCoord) };
+            pipelineDesc.inputAttributes[3] = { 0, offsetof(_GBufferGenInput, aBinormal) };
+            pipelineDesc.inputAttributes[4] = { 0, offsetof(_GBufferGenInput, aTangent) };
+
+            pipelineDesc.viewport = { 0, 0, uint16(sceneResolution.x), uint16(sceneResolution.y) };
+            pipelineDesc.scissor = { false, 0, 0, uint16(sceneResolution.x), uint16(sceneResolution.y) };
+            pipelineDesc.programID = this->_programID;
+            pipelineDesc.raster.cullMode = GPU::CullMode::NONE;
+            pipelineDesc.colorAttachmentCount = 4;
+            pipelineDesc.depthStencilAttachment = { true, true, GPU::CompareOp::LESS };
+            GPU::PipelineStateID pipelineStateID = registry->getPipelineState(pipelineDesc);
 
             GPU::SamplerDesc samplerDesc = {};
             samplerDesc.minFilter = GPU::TextureFilter::LINEAR;
@@ -90,26 +112,28 @@ GBufferGenRenderModule::Parameter GBufferGenRenderModule::addPass(GPU::System* s
             commandBucket->reserve(scene.meshEntities.size());
 
             GPU::Descriptor set0Descriptors[3] = {
-                    GPU::Descriptor::Uniform(registry->getBuffer(params.camera), 0),
-                    GPU::Descriptor::Uniform(registry->getBuffer(params.light), 0),
-                    GPU::Descriptor::SampledImage(registry->getTexture(params.shadowMap), samplerID)
+                GPU::Descriptor::Uniform(registry->getBuffer(params.camera), 0, GPU::SHADER_STAGE_VERTEX | GPU::SHADER_STAGE_FRAGMENT),
+                GPU::Descriptor::Uniform(registry->getBuffer(params.light), 0, GPU::SHADER_STAGE_FRAGMENT),
+                GPU::Descriptor::SampledImage(registry->getTexture(params.shadowMap), samplerID, GPU::SHADER_STAGE_FRAGMENT)
             };
             GPU::ShaderArgSetID set0 = registry->getShaderArgSet(0, { 3, set0Descriptors });
 
             struct JobData {
                 GPU::RenderGraphRegistry* registry;
-                GPU::CommandBucket* commandBucket;
+                GPU::RenderCommandBucket* commandBucket;
                 const Parameter& param;
                 GPU::ShaderArgSetID set0;
                 GPU::SamplerID samplerID;
+                GPU::PipelineStateID pipelineStateID;
             };
 
             JobData jobData = {
-                    registry,
-                    commandBucket,
-                    params,
-                    set0,
-                    samplerID
+                registry,
+                commandBucket,
+                params,
+                set0,
+                samplerID,
+                pipelineStateID
             };
 
             Runtime::TaskID commandCreateTask = Runtime::ParallelForTaskCreate(
@@ -118,7 +142,7 @@ GBufferGenRenderModule::Parameter GBufferGenRenderModule::addPass(GPU::System* s
                     SOUL_PROFILE_ZONE_WITH_NAME(
                         "Record G-Buffer Generation Commands");
                     GPU::RenderGraphRegistry* registry = jobData.registry;
-                    GPU::CommandBucket* commandBucket = jobData.commandBucket;
+                    GPU::RenderCommandBucket* commandBucket = jobData.commandBucket;
                     const Parameter& data = jobData.param;
                     GPU::ShaderArgSetID set0 = jobData.set0;
                     GPU::SamplerID samplerID = jobData.samplerID;
@@ -128,35 +152,36 @@ GBufferGenRenderModule::Parameter GBufferGenRenderModule::addPass(GPU::System* s
 
                     GPU::TextureID stubTexture = registry->getTexture(data.stubTexture);
 
-                    GPU::Descriptor materialBufferDescriptor = GPU::Descriptor::Uniform(registry->getBuffer(data.material), meshEntity.materialID);
+                    GPU::Descriptor materialBufferDescriptor = GPU::Descriptor::Uniform(registry->getBuffer(data.material), meshEntity.materialID, GPU::SHADER_STAGE_FRAGMENT);
                     GPU::ShaderArgSetID set1 = registry->getShaderArgSet(1, { 1, &materialBufferDescriptor });
 
                     GPU::Descriptor materialMapDescriptor[6] = {
-                            GPU::Descriptor::SampledImage(material.useAlbedoTex ? registry->getTexture(data.sceneTextures[material.albedoTexID]) : stubTexture, samplerID),
-                            GPU::Descriptor::SampledImage(material.useNormalTex ? registry->getTexture(data.sceneTextures[material.normalTexID]) : stubTexture, samplerID),
-                            GPU::Descriptor::SampledImage(material.useMetallicTex ? registry->getTexture(data.sceneTextures[material.metallicTexID]) : stubTexture, samplerID),
-                            GPU::Descriptor::SampledImage(material.useRoughnessTex ? registry->getTexture(data.sceneTextures[material.roughnessTexID]) : stubTexture, samplerID),
-                            GPU::Descriptor::SampledImage(material.useAOTex ? registry->getTexture(data.sceneTextures[material.aoTexID]) : stubTexture, samplerID),
-                            GPU::Descriptor::SampledImage(material.useEmissiveTex ? registry->getTexture(data.sceneTextures[material.emissiveTexID]) : stubTexture, samplerID)
+                        GPU::Descriptor::SampledImage(material.useAlbedoTex ? registry->getTexture(data.sceneTextures[material.albedoTexID]) : stubTexture, samplerID, GPU::SHADER_STAGE_FRAGMENT),
+                        GPU::Descriptor::SampledImage(material.useNormalTex ? registry->getTexture(data.sceneTextures[material.normalTexID]) : stubTexture, samplerID, GPU::SHADER_STAGE_FRAGMENT),
+                        GPU::Descriptor::SampledImage(material.useMetallicTex ? registry->getTexture(data.sceneTextures[material.metallicTexID]) : stubTexture, samplerID, GPU::SHADER_STAGE_FRAGMENT),
+                        GPU::Descriptor::SampledImage(material.useRoughnessTex ? registry->getTexture(data.sceneTextures[material.roughnessTexID]) : stubTexture, samplerID, GPU::SHADER_STAGE_FRAGMENT),
+                        GPU::Descriptor::SampledImage(material.useAOTex ? registry->getTexture(data.sceneTextures[material.aoTexID]) : stubTexture, samplerID, GPU::SHADER_STAGE_FRAGMENT),
+                        GPU::Descriptor::SampledImage(material.useEmissiveTex ? registry->getTexture(data.sceneTextures[material.emissiveTexID]) : stubTexture, samplerID, GPU::SHADER_STAGE_FRAGMENT)
                     };
                     GPU::ShaderArgSetID set2 = registry->getShaderArgSet(2, { 6, materialMapDescriptor });
 
-                    GPU::Descriptor modelDescriptor = GPU::Descriptor::Uniform(registry->getBuffer(data.model), index);
+                    GPU::Descriptor modelDescriptor = GPU::Descriptor::Uniform(registry->getBuffer(data.model), index, GPU::SHADER_STAGE_VERTEX);
                     GPU::ShaderArgSetID set3 = registry->getShaderArgSet(3, { 1, &modelDescriptor });
 
                     const DeferredPipeline::Mesh& mesh = scene.meshes[meshEntity.meshID];
-                    using DrawCommand = GPU::Command::DrawIndex;
+                    using DrawCommand = GPU::RenderCommandDrawIndex;
                     DrawCommand* command = commandBucket->put<DrawCommand>(
                         index, index);
+                    command->pipelineStateID = jobData.pipelineStateID;
                     command->vertexBufferID = registry->getBuffer(
                         data.vertexBuffers[meshEntity.meshID]);
                     command->indexBufferID = registry->getBuffer(
                         data.indexBuffers[meshEntity.meshID]);
                     command->indexCount = mesh.indexCount;
-                    command->shaderArgSets[0] = set0;
-                    command->shaderArgSets[1] = set1;
-                    command->shaderArgSets[2] = set2;
-                    command->shaderArgSets[3] = set3;
+                    command->shaderArgSetIDs[0] = set0;
+                    command->shaderArgSetIDs[1] = set1;
+                    command->shaderArgSetIDs[2] = set2;
+                    command->shaderArgSetIDs[3] = set3;
                 });
 
             Runtime::RunTask(commandCreateTask);

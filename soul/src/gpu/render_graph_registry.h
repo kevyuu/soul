@@ -14,8 +14,8 @@ namespace Soul { namespace GPU {
 	public:
 
 		RenderGraphRegistry() = delete;
-		RenderGraphRegistry(System* system, const _RenderGraphExecution* execution, ProgramID programID) :
-			_system(system), _execution(execution), _programID(programID) {}
+		RenderGraphRegistry(System* system, const _RenderGraphExecution* execution, VkRenderPass renderPass) :
+			_system(system), _execution(execution), _renderPass(renderPass) {}
 
 		RenderGraphRegistry(const RenderGraphRegistry& other) = delete;
 		RenderGraphRegistry& operator=(const RenderGraphRegistry& other) = delete;
@@ -28,10 +28,11 @@ namespace Soul { namespace GPU {
 		BufferID getBuffer(BufferNodeID bufferNodeID) const;
 		TextureID getTexture(TextureNodeID textureNodeId) const;
 		ShaderArgSetID  getShaderArgSet(uint32 set, const ShaderArgSetDesc& desc);
+		PipelineStateID getPipelineState(const PipelineStateDesc& desc);
 
 	private:
 		System* _system;
 		const _RenderGraphExecution* _execution;
-		ProgramID _programID;
+		VkRenderPass _renderPass;
 	};
 }}

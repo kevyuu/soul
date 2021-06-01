@@ -20,7 +20,7 @@ layout (location = 0) out VS_OUT {
 } vs_out;
 
 layout(set = 0, binding = 0, std140) uniform CameraData{
-	mat4 _camera_projection;
+	 mat4 _camera_projection;
 	mat4 _camera_view;
 	mat4 _camera_projectionView;
 	mat4 _camera_invProjectionView;

@@ -11,6 +11,13 @@ namespace Soul {
 		return f1 > f2 ? f1 : f2;
 	}
 
+
+	uint32 floorLog2(uint32 val) {
+		uint32 level = 0;
+		while (val >>= 1) ++level;
+		return level;
+	}
+
 	Vec2f operator+(const Vec2f & lhs, const Vec2f & rhs)
 	{
 		return Vec2f(lhs.x + rhs.x, lhs.y + rhs.y);
@@ -100,6 +107,13 @@ namespace Soul {
 		return (lhs.x != rhs.x) || (lhs.y != rhs.y) || (lhs.z != rhs.z);
 	}
 
+	void operator/=(Vec4f& lhs, const float rhs) {
+		lhs.x /= rhs;
+		lhs.y /= rhs;
+		lhs.z /= rhs;
+		lhs.w /= rhs;
+	}
+
 	Vec3f cross(const Vec3f & lhs, const Vec3f & rhs)
 	{
 		Vec3f res;
@@ -167,6 +181,67 @@ namespace Soul {
 		return unit(res);
 	}
 
+	Quaternion quaternionFromMat4(const Mat4& mat) {
+		Quaternion quat;
+
+		float trace = mat.elem[0][0] + mat.elem[1][1] + mat.elem[2][2];
+
+		if (trace > 0) {
+			float s = sqrt(trace + 1);
+			quat.w = 0.5f * s;
+			s = 0.5f / s;
+			quat.x = (mat.elem[2][1] - mat.elem[1][2]) * s;
+			quat.y = (mat.elem[0][2] - mat.elem[2][0]) * s;
+			quat.z = (mat.elem[1][0] - mat.elem[0][1]) * s;
+		}
+		else {
+
+			// Find the index of the greatest diagonal
+			size_t i = 0;
+			if (mat.elem[1][1] > mat.elem[0][0]) { i = 1; }
+			if (mat.elem[2][2] > mat.elem[i][i]) { i = 2; }
+
+			// Get the next indices: (n+1)%3
+			static constexpr size_t next_ijk[3] = { 1, 2, 0 };
+			size_t j = next_ijk[i];
+			size_t k = next_ijk[j];
+			float s = sqrt((mat.elem[i][i] - (mat.elem[j][j] + mat.elem[k][k])) + 1);
+			quat.mem[i] = 0.5f * s;
+			if (s != 0) {
+				s = 0.5f / s;
+			}
+			quat.w = (mat.elem[j][k] - mat.elem[j][k]) * s;
+			quat.mem[j] = (mat.elem[j][i] + mat.elem[i][j]) * s;
+			quat.mem[k] = (mat.elem[k][i] + mat.elem[i][k]) * s;
+		}
+		return quat;
+	}
+
+	Quaternion qtangent(Vec3f tbn[3], uint64 storageSize) {
+		Vec4f columns[4] = { Vec4f(tbn[0], 0.0f), Vec4f(tbn[1], 0.0f), Vec4f(tbn[2], 0.0f), Vec4f(0, 0, 0, 1.0f) };
+	
+		Quaternion q = quaternionFromMat4(mat4FromColumns(columns));
+		q = unit(q);
+		q = q.w > 0 ? q * -1 : q;
+
+		// Ensure w is never 0.0
+		// Bias is 2^(nb_bits - 1) - 1
+		const float bias = 1.0f / float((1 << (storageSize * CHAR_BIT - 1)) - 1);
+		if (q.w < bias) {
+			q.w = bias;
+
+			const float factor = sqrt(1.0 - (double)bias * (double)bias);
+			q.xyz *= factor;
+		}
+
+		// If there's a reflection ((n x t) . b <= 0), make sure w is negative
+		if (dot(cross(tbn[0], tbn[2]), tbn[1]) < 0.0f) {
+			q = q * -1;
+		}
+
+		return q;
+	}
+
 	Quaternion quaternionIdentity()
 	{
 		return { 0.0f, 0.0f, 0.0f, 1.0f };
@@ -201,11 +276,9 @@ namespace Soul {
 	}
 
 	Vec3f operator*(const Quaternion& lhs, const Vec3f& rhs) {
-		
-		return (lhs.xyz() * 2 * (dot(lhs.xyz(), rhs))) +
-			(rhs * (lhs.w * lhs.w - dot(lhs.xyz(), lhs.xyz()))) +
-			cross(lhs.xyz(), rhs) * 2 * lhs.w;
-	
+		return (lhs.xyz * 2 * (dot(lhs.xyz, rhs))) +
+			(rhs * (lhs.w * lhs.w - dot(lhs.xyz, lhs.xyz))) +
+			cross(lhs.xyz, rhs) * 2 * lhs.w;
 	}
 
 	Quaternion unit(const Quaternion& quaternion) {
@@ -323,6 +396,16 @@ namespace Soul {
 			res.mem[i] = data[i];
 		}
 		return res;
+	}
+
+	Mat4 mat4FromColumns(Vec4f columns[4]) {
+		Mat4 mat4;
+		for (int i = 0; i < 4; i++) {
+			for (int j = 0; j < 4; j++) {
+				mat4.elem[i][j] = columns[j].mem[i];
+			}
+		}
+		return mat4;
 	}
 
 	Mat4 mat4Quaternion(const Quaternion& quaternion) {
