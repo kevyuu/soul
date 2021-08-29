@@ -1,3 +1,5 @@
+#pragma once
+
 #include "core/type.h"
 
 namespace Soul {
@@ -19,7 +21,7 @@ namespace Soul {
 
     struct IntersectPointResult
     {
-        Soul::Vec3f point;
+        Vec3f point;
         bool intersect = false;
     };
 

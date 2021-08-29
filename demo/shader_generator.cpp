@@ -1,14 +1,15 @@
-#include "shader_generator.h"
-#include "runtime/runtime.h"
-#include "gpu/system.h"
+#include <filesystem>
+#include <cinttypes>
+
 #include "core/math.h"
 #include "core/string.h"
-#include "memory/allocators/scope_allocator.h"
 
-#include <filesystem>
+#include "runtime/runtime.h"
+#include "runtime/scope_allocator.h"
+#include "gpu/system.h"
+
+#include "shader_generator.h"
 #include "utils.h"
-#include <inttypes.h>
-#include <iostream>
 
 namespace Demo {
 
@@ -176,7 +177,7 @@ namespace Demo {
 			if (!std::filesystem::is_regular_file(path)) continue;
 			std::string filename = entry.path().filename().string();
 
-			Soul::Memory::ScopeAllocator<> scopeAllocator("AddShderTemplates");
+			Soul::Runtime::ScopeAllocator<> scopeAllocator("AddShderTemplates");
 			uint64 templateKeyLength = strlen(groupName) + strlen("::") + strlen(filename.c_str());
 			Soul::String templateKey(&scopeAllocator, templateKeyLength + 1);
 			templateKey.appendf("%s::%s", groupName, filename.c_str());
@@ -245,6 +246,7 @@ namespace Demo {
 			SOUL_NOT_IMPLEMENTED();
 			return Soul::GPU::ShaderStage::NONE;
 		};
+		SOUL_LOG_INFO("Code:\n%s\n", stringBuilder.data());
 
 		return _gpuSystem->shaderCreate({ "default", stringBuilder.data(), uint32(stringBuilder.size())}, _getShaderStage(shaderDesc.type));
 	}

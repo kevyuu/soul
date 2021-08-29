@@ -44,15 +44,16 @@ int main()
 
 	Memory::MallocAllocator mallocAllocator("Default");
 	Runtime::DefaultAllocator defaultAllocator(&mallocAllocator,
-		Runtime::DefaultAllocatorProxy(
-			Memory::CounterProxy(),
-			Memory::ClearValuesProxy(0xFA, 0xFF),
-			Memory::BoundGuardProxy()));
+		Runtime::DefaultAllocatorProxy::Config(
+			Memory::MutexProxy::Config(),
+			Memory::CounterProxy::Config(),
+			Memory::ClearValuesProxy::Config{ char(0xFA), char(0xFF) },
+			Memory::BoundGuardProxy::Config()));
 
 	Memory::PageAllocator pageAllocator("Page Allocator");
 	Memory::LinearAllocator linearAllocator("Main Thread Temp Allocator", 10 * Soul::Memory::ONE_MEGABYTE, &pageAllocator);
 	Runtime::TempAllocator tempAllocator(&linearAllocator,
-		Runtime::TempProxy());
+		Runtime::TempProxy::Config());
 
 	Runtime::Init({
 		0,
@@ -69,7 +70,7 @@ int main()
 	config.swapchainWidth = 3360;
 	config.swapchainHeight = 2010;
 	config.maxFrameInFlight = 3;
-	config.threadCount = Runtime::ThreadCount();
+	config.threadCount = Runtime::GetThreadCount();
 
 	gpuSystem.init(config);
 

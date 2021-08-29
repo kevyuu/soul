@@ -1,4 +1,3 @@
-#include "core/math.h"
 #include "runtime/data.h"
 #include "runtime/system.h"
 

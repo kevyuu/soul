@@ -1,9 +1,9 @@
-#include "string.h"
-#include "runtime/runtime.h"
-
 #include <algorithm>
-#include <stdio.h>
-#include <stdarg.h>
+#include <cstdarg>
+#include <cstdio>
+
+#include "core/string.h"
+#include "runtime/runtime.h"
 
 namespace Soul {
 
@@ -36,6 +36,11 @@ namespace Soul {
 		std::copy(rhs._data, rhs._data + rhs._capacity, _data);
 	}
 
+	String& String::operator=(const String& other) {
+		String(other).swap(*this);
+		return *this;
+	}
+
 	String::String(String&& rhs) noexcept {
 		_allocator = std::exchange(rhs._allocator, nullptr);
 		_data = std::exchange(rhs._data, nullptr);
@@ -43,8 +48,8 @@ namespace Soul {
 		_size = std::exchange(rhs._size, 0);
 	}
 
-	String& String::operator=(String copy) {
-		copy.swap(*this);
+	String& String::operator=(String&& other) noexcept {
+		String(std::move(other)).swap(*this);
 		return *this;
 	}
 
@@ -72,8 +77,8 @@ namespace Soul {
 		swap(_data, rhs._data);
 	}
 
-	void String::reserve(uint64 newCapacity) {
-		char* newData = (char*)_allocator->allocate(newCapacity, alignof(char));
+	void String::reserve(soul_size newCapacity) {
+		const auto newData = (char*)_allocator->allocate(newCapacity, alignof(char));
 		if (_data != nullptr) {
 			memcpy(newData, _data, _capacity * sizeof(char));
 			_allocator->deallocate(_data, _capacity);
@@ -86,11 +91,11 @@ namespace Soul {
 		va_list args;
 
 		va_start(args, format);
-		uint64 needed = vsnprintf(nullptr, 0, format, args);
+		const soul_size needed = vsnprintf(nullptr, 0, format, args);
 		va_end(args);
 
 		if (needed + 1 > _capacity - _size) {
-			uint64 newCapacity = _capacity >= (needed + 1) ? 2 * _capacity : _capacity + (needed + 1);
+			const soul_size newCapacity = _capacity >= (needed + 1) ? 2 * _capacity : _capacity + (needed + 1);
 			reserve(newCapacity);
 		}
 

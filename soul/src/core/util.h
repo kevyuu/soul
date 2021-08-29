@@ -1,15 +1,14 @@
 #pragma once
 
-#include "core/dev_util.h"
+#include <numeric>
+
 #include "core/type.h"
-#include <functional>
+#include "core/type_traits.h"
 
 #define SOUL_TRAILING_ZEROES(x) ctz(x)
-#define SOUL_TEMPLATE_ARG_LAMBDA(T, F) typename T, typename std::enable_if_t<std::is_convertible<T, std::function<F>>::value, T>* = nullptr
-#define SOUL_TEMPLATE_ARG_TRIVIALLY_DESTRUCTIBLE(T) typename T, std::enable_if_t<std::is_trivially_destructible<T>::value, T>* = nullptr
-#define SOUL_TEMPLATE_ARG_NOT_TRIVIALLY_DESTRUCTIBLE(T) typename T, std::enable_if_t<!std::is_trivially_destructible<T>::value, T>* = nullptr
 
-namespace Soul { namespace Util {
+namespace Soul::Util
+{
 
 	// From google's filament
 	template<typename T>
@@ -17,7 +16,7 @@ namespace Soul { namespace Util {
 		static_assert(sizeof(T) <= sizeof(uint64_t), "ctz() only support up to 64 bits");
 		T c = sizeof(T) * 8;
 		x &= -signed(x);
-		if (x) c--;
+		if (x) --c;
 		if (sizeof(T) * 8 > 32) { // if() only needed to quash compiler warnings
 			if (x & 0x00000000FFFFFFFF) c -= 32;
 		}
@@ -29,7 +28,11 @@ namespace Soul { namespace Util {
 		return c;
 	}
 
-	template <SOUL_TEMPLATE_ARG_LAMBDA(T, void(uint32_t))>
+
+	template<
+		typename T,
+		SOUL_REQUIRE(is_lambda_v<T, void(uint32)>)
+	>
 	void ForEachBit (uint32 value, const T& func) {
 		while (value)
 		{
@@ -51,7 +54,17 @@ namespace Soul { namespace Util {
 		return dstFlags;
 	}
 
-	
+	template<
+		typename IntegralDst,
+		typename IntegralSrc,
+		SOUL_REQUIRE(is_integral_v<IntegralDst>),
+		SOUL_REQUIRE(is_integral_v<IntegralSrc>)
+	>
+	IntegralDst Cast(IntegralSrc src)
+	{
+		SOUL_ASSERT(0, src < std::numeric_limits<IntegralDst>::max());
+		return IntegralDst(src);
+	}
 
-}};
+};
 

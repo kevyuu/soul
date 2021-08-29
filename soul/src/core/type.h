@@ -9,7 +9,9 @@
 #include <cstddef>
 #include <cstdint>
 #include <limits>
-#include <type_traits>
+
+#include "core/compiler.h"
+#include "core/type_traits.h"
 
 typedef int8_t int8;
 typedef int16_t int16;
@@ -36,7 +38,10 @@ typedef uint64_t soul_size;
 
 namespace Soul {
 
-	template <typename T>
+	template <
+		typename T,
+		typename = require<is_numeric_v<T>>
+	>
 	struct Vec2 {
 		T x = 0;
 		T y = 0;
@@ -45,7 +50,10 @@ namespace Soul {
 		constexpr Vec2(T x, T y) noexcept : x(x), y(y) {}
 	};
 
-	template <typename T>
+	template <
+		typename T,
+		typename = require<is_numeric_v<T>>
+	>
 	struct Vec3 {
 		union {
 			struct { T x, y, z; };
@@ -58,7 +66,10 @@ namespace Soul {
 		constexpr explicit Vec3(const T* val) noexcept : x(val[0]), y(val[1]), z(val[2]) {}
 	};
 
-	template <typename T>
+	template <
+		typename T,
+		typename = require<is_numeric_v<T>>
+	>
 	struct Vec4 {
 		union {
 			struct { T x, y, z, w; };
@@ -88,7 +99,10 @@ namespace Soul {
 	using Vec3i32 = Vec3<int32>;
 	using Vec4i32 = Vec4<int32>;
 
-	template <typename T>
+	template <
+		typename T,
+		typename = require<is_numeric_v<T>>
+	>
 	struct Quaternion {
 		union {
 			struct { T x, y, z, w; };
@@ -105,7 +119,7 @@ namespace Soul {
 		constexpr Quaternion() noexcept : x(0), y(0), z(0), w(1) {}
 		constexpr Quaternion(T x, T y, T z, T w) noexcept : x(x), y(y), z(z), w(w) {}
 		constexpr Quaternion(Vec3<T> xyz, T w) noexcept : x(xyz.x), y(xyz.y), z(xyz.z), w(w) {}
-		constexpr explicit Quaternion(T* val) noexcept : x(val[0]), y(val[1]), z(val[2]), w(val[3]) {}
+		constexpr explicit Quaternion(const T* val) noexcept : x(val[0]), y(val[1]), z(val[2]), w(val[3]) {}
 	};
 	using Quaternionf = Quaternion<float>;
 
@@ -185,17 +199,21 @@ namespace Soul {
 
 	};
 
-	template <typename ResourceType, typename IDType, IDType NULLVAL = std::numeric_limits<IDType>::max()>
+	template <
+		typename ResourceType,
+		typename IDType,
+		IDType NULLVAL = std::numeric_limits<IDType>::max()
+	>
 	struct ID {
 		IDType id;
 
 		constexpr ID() : id(NULLVAL) {}
 		constexpr explicit ID(IDType id) : id(id) {}
-		inline bool operator==(const ID& other) const { return other.id == id; }
-		inline bool operator!=(const ID& other) const { return other.id != id; }
-		inline bool operator<(const ID& other) const { return id < other.id; }
-		inline bool operator<=(const ID& other) const { return id <= other.id; }
-		[[nodiscard]] inline bool isNull() const { return id == NULLVAL; }
+		bool operator==(const ID& other) const { return other.id == id; }
+		bool operator!=(const ID& other) const { return other.id != id; }
+		bool operator<(const ID& other) const { return id < other.id; }
+		bool operator<=(const ID& other) const { return id <= other.id; }
+		SOUL_NODISCARD bool isNull() const { return id == NULLVAL; }
 	};
 
 	template<typename T>
@@ -211,8 +229,8 @@ namespace Soul {
 		private:
 			uint64 _index;
 		};
-		[[nodiscard]] Iterator begin() const { return Iterator(0);}
-		[[nodiscard]] Iterator end() const { return Iterator(uint64(T::COUNT)); }
+		SOUL_NODISCARD Iterator begin() const { return Iterator(0);}
+		SOUL_NODISCARD Iterator end() const { return Iterator(uint64(T::COUNT)); }
 
 		static EnumIter Iterates() {
 			return EnumIter();
@@ -228,46 +246,40 @@ namespace Soul {
 	};
 
 	template<typename InputIt, typename OutputIt>
-	inline void Copy(InputIt first, InputIt last, OutputIt output)
+	void Copy(InputIt first, InputIt last, OutputIt output)
 	{
 		std::copy(first, last, output);
 	}
 
-	/*template <typename ElemType,
-	          std::enable_if_t<std::is_trivially_copy_constructible_v<ElemType>>* = nullptr>
-	inline void Copy(const ElemType* begin, const ElemType* end, ElemType* dst) {
-		memcpy((void*)dst, (void*)begin, uint64(end - begin) * sizeof(ElemType));
-	}
-
-	template <typename ElemType,
-	          std::enable_if_t<!std::is_trivially_copy_constructible_v<ElemType>>* = nullptr>
-	inline void Copy(const ElemType* begin, const ElemType* end, ElemType* dst) {
-		for (const ElemType* iter = begin; iter != end; ++iter, ++dst) {
-			new (dst) ElemType(*iter);
-		}
-	}*/
-
-	template <typename ElemType,
-	          std::enable_if_t<std::is_trivially_move_constructible_v<ElemType>>* = nullptr>
-	inline void Move(ElemType* begin, ElemType* end, ElemType* dst) {
+	template <
+		typename ElemType,
+		SOUL_REQUIRE(is_trivially_move_constructible_v<ElemType>)
+	>
+	void Move(ElemType* begin, ElemType* end, ElemType* dst) {
 		memcpy((void*)dst, (void*)begin, uint64(end - begin) * sizeof(ElemType));  // NOLINT(bugprone-sizeof-expression)
 	}
 
-	template<typename ElemType,
-	         std::enable_if_t<!std::is_trivially_move_constructible_v<ElemType>>* = nullptr>
-	inline void Move(ElemType* begin, ElemType* end, ElemType* dst) {
+	template<
+		typename ElemType,
+		SOUL_REQUIRE(!is_trivially_move_constructible_v<ElemType>)
+	>
+	void Move(ElemType* begin, ElemType* end, ElemType* dst) {
 		for (ElemType* iter = begin; iter != end; ++iter, ++dst) {
 			new (dst) ElemType(std::move(*iter));
 		}
 	}
 
-	template<typename ElemType,
-	         std::enable_if_t<std::is_trivially_destructible_v<ElemType>>* = nullptr>
-	inline void Destruct(ElemType* begin, ElemType* end) {}
+	template<
+		typename ElemType,
+		SOUL_REQUIRE(is_trivially_destructible_v<ElemType>)
+	>
+	void Destruct(ElemType* begin, ElemType* end) {}
 
-	template<typename ElemType,
-	         std::enable_if_t<!std::is_trivially_destructible_v<ElemType>>* = nullptr>
-	inline void Destruct(ElemType* begin, ElemType* end) {
+	template<
+		typename ElemType,
+		SOUL_REQUIRE(!is_trivially_destructible_v<ElemType>)
+	>
+	void Destruct(ElemType* begin, ElemType* end) {
 		for (ElemType* iter = begin; iter != end; ++iter) {
 			iter->~ElemType();
 		}

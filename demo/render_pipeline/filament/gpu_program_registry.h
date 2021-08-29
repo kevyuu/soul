@@ -36,35 +36,35 @@ namespace SoulFila {
         union {
             struct {
                 bool hasMetallicRoughnessTexture : 1;
-                uint8_t metallicRoughnessUV : 7;
+                uint8 metallicRoughnessUV : 7;
             };
             struct {
                 bool hasSpecularGlossinessTexture : 1;
-                uint8_t specularGlossinessUV : 7;
+                uint8 specularGlossinessUV : 7;
             };
         };
-        uint8_t baseColorUV;
+        uint8 baseColorUV;
         // -- 32 bit boundary --
         bool hasClearCoatTexture : 1;
-        uint8_t clearCoatUV : 7;
+        uint8 clearCoatUV : 7;
         bool hasClearCoatRoughnessTexture : 1;
-        uint8_t clearCoatRoughnessUV : 7;
+        uint8 clearCoatRoughnessUV : 7;
         bool hasClearCoatNormalTexture : 1;
-        uint8_t clearCoatNormalUV : 7;
+        uint8 clearCoatNormalUV : 7;
         bool hasClearCoat : 1;
         bool hasTransmission : 1;
         bool hasTextureTransforms : 6;
         // -- 32 bit boundary --
-        uint8_t emissiveUV;
-        uint8_t aoUV;
-        uint8_t normalUV;
+        uint8 emissiveUV;
+        uint8 aoUV;
+        uint8 normalUV;
         bool hasTransmissionTexture : 1;
-        uint8_t transmissionUV : 7;
+        uint8 transmissionUV : 7;
         // -- 32 bit boundary --
         bool hasSheenColorTexture : 1;
-        uint8_t sheenColorUV : 7;
+        uint8 sheenColorUV : 7;
         bool hasSheenRoughnessTexture : 1;
-        uint8_t sheenRoughnessUV : 7;
+        uint8 sheenRoughnessUV : 7;
         bool hasSheen : 1;
 
         uint64 hash() const {
@@ -77,7 +77,7 @@ namespace SoulFila {
     // from filament::Variant
     struct GPUProgramVariant {
         GPUProgramVariant() noexcept = default;
-        constexpr explicit GPUProgramVariant(uint8_t key) noexcept : key(key) { }
+        constexpr explicit GPUProgramVariant(uint8 key) noexcept : key(key) { }
 
 
         // DIR: Directional Lighting
@@ -104,32 +104,32 @@ namespace SoulFila {
         //      Vertex shader            0     0     0     X     X     X     X
         //    Fragment shader            X     X     0     0     X     X     X
 
-        uint8_t key = 0;
+        uint8 key = 0;
 
         // when adding more bits, update FRenderer::CommandKey::draw::materialVariant as needed
         // when adding more bits, update VARIANT_COUNT
-        static constexpr uint8_t DIRECTIONAL_LIGHTING = 0x01; // directional light present, per frame/world position
-        static constexpr uint8_t DYNAMIC_LIGHTING = 0x02; // point, spot or area present, per frame/world position
-        static constexpr uint8_t SHADOW_RECEIVER = 0x04; // receives shadows, per renderable
-        static constexpr uint8_t SKINNING_OR_MORPHING = 0x08; // GPU skinning and/or morphing
-        static constexpr uint8_t DEPTH = 0x10; // depth only variants
-        static constexpr uint8_t FOG = 0x20; // fog
-        static constexpr uint8_t VSM = 0x40; // variance shadow maps
+        static constexpr uint8 DIRECTIONAL_LIGHTING = 0x01; // directional light present, per frame/world position
+        static constexpr uint8 DYNAMIC_LIGHTING = 0x02; // point, spot or area present, per frame/world position
+        static constexpr uint8 SHADOW_RECEIVER = 0x04; // receives shadows, per renderable
+        static constexpr uint8 SKINNING_OR_MORPHING = 0x08; // GPU skinning and/or morphing
+        static constexpr uint8 DEPTH = 0x10; // depth only variants
+        static constexpr uint8 FOG = 0x20; // fog
+        static constexpr uint8 VSM = 0x40; // variance shadow maps
 
-        static constexpr uint8_t VERTEX_MASK = DIRECTIONAL_LIGHTING |
+        static constexpr uint8 VERTEX_MASK = DIRECTIONAL_LIGHTING |
             DYNAMIC_LIGHTING |
             SHADOW_RECEIVER |
             SKINNING_OR_MORPHING |
             DEPTH;
 
-        static constexpr uint8_t FRAGMENT_MASK = DIRECTIONAL_LIGHTING |
+        static constexpr uint8 FRAGMENT_MASK = DIRECTIONAL_LIGHTING |
             DYNAMIC_LIGHTING |
             SHADOW_RECEIVER |
             FOG |
             DEPTH |
             VSM;
 
-        static constexpr uint8_t DEPTH_MASK = DIRECTIONAL_LIGHTING |
+        static constexpr uint8 DEPTH_MASK = DIRECTIONAL_LIGHTING |
             DYNAMIC_LIGHTING |
             SHADOW_RECEIVER |
             DEPTH |
@@ -137,10 +137,10 @@ namespace SoulFila {
 
         // the depth variant deactivates all variants that make no sense when writing the depth
         // only -- essentially, all fragment-only variants.
-        static constexpr uint8_t DEPTH_VARIANT = DEPTH;
+        static constexpr uint8 DEPTH_VARIANT = DEPTH;
 
         // this mask filters out the lighting variants
-        static constexpr uint8_t UNLIT_MASK = SKINNING_OR_MORPHING | FOG;
+        static constexpr uint8 UNLIT_MASK = SKINNING_OR_MORPHING | FOG;
 
         inline bool hasSkinningOrMorphing() const noexcept { return key & SKINNING_OR_MORPHING; }
         inline bool hasDirectionalLighting() const noexcept { return key & DIRECTIONAL_LIGHTING; }
@@ -160,13 +160,13 @@ namespace SoulFila {
             return isValidDepthVariant(key);
         }
 
-        inline static constexpr bool isValidDepthVariant(uint8_t variantKey) noexcept {
+        inline static constexpr bool isValidDepthVariant(uint8 variantKey) noexcept {
             // For a variant to be a valid depth variant, all of the bits in DEPTH_MASK must be 0,
             // except for DEPTH.
             return (variantKey & DEPTH_MASK) == DEPTH_VARIANT;
         }
 
-        static constexpr bool isReserved(uint8_t variantKey) noexcept {
+        static constexpr bool isReserved(uint8 variantKey) noexcept {
             // reserved variants that should just be skipped
             // 1. If the DEPTH bit is set, then it must be a valid depth variant. Otherwise, the
             // variant is reserved.
@@ -179,7 +179,7 @@ namespace SoulFila {
                 (variantKey & 0b1010100u) == 0b1000000u;
         }
 
-        static constexpr uint8_t filterVariantVertex(uint8_t variantKey) noexcept {
+        static constexpr uint8 filterVariantVertex(uint8 variantKey) noexcept {
             // filter out vertex variants that are not needed. For e.g. fog doesn't affect the
             // vertex shader.
             if (variantKey & DEPTH) {
@@ -189,13 +189,13 @@ namespace SoulFila {
             return variantKey & VERTEX_MASK;
         }
 
-        static constexpr uint8_t filterVariantFragment(uint8_t variantKey) noexcept {
+        static constexpr uint8 filterVariantFragment(uint8 variantKey) noexcept {
             // filter out fragment variants that are not needed. For e.g. skinning doesn't
             // affect the fragment shader.
             return variantKey & FRAGMENT_MASK;
         }
 
-        static constexpr uint8_t filterVariant(uint8_t variantKey, bool isLit) noexcept {
+        static constexpr uint8 filterVariant(uint8 variantKey, bool isLit) noexcept {
             // special case for depth variant
             if (isValidDepthVariant(variantKey)) {
                 return variantKey;
@@ -205,8 +205,8 @@ namespace SoulFila {
         }
 
     private:
-        inline void set(bool v, uint8_t mask) noexcept {
-            key = (key & ~mask) | (v ? mask : uint8_t(0));
+        inline void set(bool v, uint8 mask) noexcept {
+            key = (key & ~mask) | (v ? mask : uint8(0));
         }
     };
 

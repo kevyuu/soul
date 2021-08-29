@@ -96,6 +96,7 @@ namespace SoulFila {
 		frameUBO.resolution = Soul::Vec4f(viewport.x, viewport.y, 1.0f / viewport.x, 1.0f / viewport.y);
 		frameUBO.origin = Soul::Vec2f(0, 0);
 		Soul::GPU::BufferID frameGPUBuffer = _gpuSystem->bufferCreate(frameUBODesc, &frameUBO);
+		_gpuSystem->bufferDestroy(frameGPUBuffer);
 		inputParam.frameUniformBuffer = renderGraph->importBuffer("Frame Uniform Buffer", frameGPUBuffer);
 
 		Soul::GPU::BufferDesc lightUBODesc;
@@ -117,7 +118,7 @@ namespace SoulFila {
 		materialUBODesc.usageFlags = GPU::BUFFER_USAGE_UNIFORM_BIT;
 		materialUBODesc.queueFlags = GPU::QUEUE_GRAPHIC_BIT;
 		Soul::GPU::BufferID materialGPUBuffer = _gpuSystem->bufferCreate(materialUBODesc,
-			[this](int i, byte* data) {
+			[this](int i, void* data) {
 				auto materialData = (MaterialUBO*)data;
 				*materialData = _scene.materials()[i].buffer;
 			});

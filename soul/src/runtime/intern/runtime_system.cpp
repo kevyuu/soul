@@ -7,7 +7,7 @@
 
 #include <thread>
 
-static unsigned long randXORSHF96() {
+static unsigned long randXorshf96() {
 	static thread_local unsigned long x = 123456789, y = 362436069, z = 521288629;
 	unsigned long t;
 	x ^= x << 16;
@@ -24,7 +24,7 @@ static unsigned long randXORSHF96() {
 
 namespace Soul::Runtime {
 
-	thread_local _ThreadContext* Database::gThreadContext = nullptr;
+	thread_local ThreadContext* Database::gThreadContext = nullptr;
 	
 	void System::_execute(TaskID taskID) {
 		{
@@ -36,7 +36,7 @@ namespace Soul::Runtime {
 		_taskFinish(task);
 	}
 
-	void System::_loop(_ThreadContext* threadContext) {
+	void System::_loop(ThreadContext* threadContext) {
 		Database::gThreadContext = threadContext;
 
 		char threadName[512];
@@ -44,8 +44,8 @@ namespace Soul::Runtime {
 		SOUL_PROFILE_THREAD_SET_NAME(threadName);
 
 		char tempAllocatorName[512];
-		Memory::LinearAllocator linearAllocator(tempAllocatorName, 20 * Memory::ONE_MEGABYTE, Runtime::GetContextAllocator());
-		Runtime::TempAllocator tempAllocator(&linearAllocator, Runtime::TempProxy());
+		Memory::LinearAllocator linearAllocator(tempAllocatorName, 20 * Memory::ONE_MEGABYTE, getContextAllocator());
+		TempAllocator tempAllocator(&linearAllocator, Runtime::TempProxy::Config());
 		threadContext->tempAllocator = &tempAllocator;
 
 		while (true) {
@@ -63,7 +63,7 @@ namespace Soul::Runtime {
 					break;
 				}
 
-				int threadIndex = (randXORSHF96() % _db.threadCount);
+				soul_size threadIndex = (randXorshf96() % _db.threadCount);
 				taskID = _db.threadContexts[threadIndex].taskDeque.steal();
 			}
 
@@ -92,7 +92,7 @@ namespace Soul::Runtime {
 
 		_db.threadContexts[0].tempAllocator->reset();
 
-		for (int i = 1; i < _db.threadCount; i++) {
+		for (soul_size i = 1; i < _db.threadCount; i++) {
 			_db.threadContexts[i].taskCount = 0;
 			_db.threadContexts[i].taskDeque.reset();
 			_db.threadContexts[i].tempAllocator->reset();
@@ -100,11 +100,11 @@ namespace Soul::Runtime {
 	}
 
 	TaskID System::_taskCreate(TaskID parent, TaskFunc func) {
-		_ThreadContext* threadState = Database::gThreadContext;
+		ThreadContext* threadState = Database::gThreadContext;
 
-		uint16 threadIndex = threadState->threadIndex;
-		uint16 taskIndex = threadState->taskCount;
-		TaskID taskID = TaskID(threadIndex, taskIndex);
+		const uint16 threadIndex = threadState->threadIndex;
+		const uint16 taskIndex = threadState->taskCount;
+		const TaskID taskID = TaskID(threadIndex, taskIndex);
 
 		threadState->taskCount += 1;
 		Task& task = threadState->taskPool[taskIndex];
@@ -127,7 +127,8 @@ namespace Soul::Runtime {
 
 	}
 
-	bool System::_taskIsComplete(Task* task) const {
+	bool System::_taskIsComplete(Task* task)
+	{
 		// NOTE(kevinyu): Synchronize with fetch_sub in _finishTask() to make sure the task is executed before we return true.
 		return task->unfinishedCount.load(std::memory_order_acquire) == 0;
 	}
@@ -135,7 +136,7 @@ namespace Soul::Runtime {
 	// TODO(kevinyu) : Implement stealing from other deque when waiting for task. 
 	// Currently we only try to pop task from our thread local deque.
 	void System::taskWait(TaskID taskID) {
-		_ThreadContext* threadState = Database::gThreadContext;
+		ThreadContext* threadState = Database::gThreadContext;
 		Task* taskToWait = _taskPtr(taskID);
 		while (!_taskIsComplete(taskToWait)) {
 
@@ -165,10 +166,10 @@ namespace Soul::Runtime {
 		_db.defaultAllocator = config.defaultAllocator;
 		_db.tempAllocatorSize = config.workerTempAllocatorSize;
 
-		int threadCount = config.threadCount;
+		ThreadCount threadCount = config.threadCount;
 		if (threadCount == 0) {
 #ifdef SOUL_USE_STD_HARDWARE_THREAD_COUNT
-			threadCount = std::thread::hardware_concurrency();
+			threadCount = Util::Cast<ThreadCount>(std::thread::hardware_concurrency());
 #endif
 			if (threadCount == 0) {
 				threadCount = SOUL_HARDWARE_THREAD_COUNT;
@@ -183,7 +184,7 @@ namespace Soul::Runtime {
 		// NOTE(kevinyu): i == 0 is for main thread
 		Database::gThreadContext = &_db.threadContexts[0];
 
-		for (int i = 0; i < threadCount; i++) {
+		for (uint16 i = 0; i < threadCount; ++i) {
 			_db.threadContexts[i].taskCount = 0;
 			_db.threadContexts[i].threadIndex = i;
 			_db.threadContexts[i].taskDeque.init();
@@ -191,7 +192,7 @@ namespace Soul::Runtime {
 		}
 
 		_db.isTerminated.store(false, std::memory_order_relaxed);
-		for (int i = 1; i < threadCount; i++) {
+		for (uint16 i = 1; i < threadCount; ++i) {
 			_db.threads[i] = std::thread(&System::_loop, this, _db.threadContexts.ptr(i));
 		}
 		_db.activeTaskCount = 0;
@@ -253,7 +254,7 @@ namespace Soul::Runtime {
 		return Database::gThreadContext->threadIndex;
 	}
 
-	_ThreadContext& System::_threadContext() {
+	ThreadContext& System::_threadContext() {
 		return _db.threadContexts[getThreadID()];
 	}
 

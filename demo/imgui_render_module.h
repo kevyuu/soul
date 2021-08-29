@@ -7,7 +7,6 @@
 #include "core/type.h"
 #include "gpu/gpu.h"
 #include "utils.h"
-#include <stdio.h>
 #include <map>
 
 #include "ui/ui.h"
@@ -114,14 +113,15 @@ public:
 			}
 		};
 		VertexIterator vertIterator(drawData);
-		GPU::BufferID _vertexBuffer = system->bufferCreate(vertexBufferDesc,
-			[&vertIterator]
-			(int i, byte* data){
-			auto vertex = (ImDrawVert*) data;
-			*vertex = vertIterator.get();
-			vertIterator.next();
-		});
-		GPU::BufferNodeID vertexNodeID = renderGraph->importBuffer("Vertex buffers", _vertexBuffer);
+		const GPU::BufferID vertexBuffer = system->bufferCreate(vertexBufferDesc,
+		                                                         [&vertIterator]
+	                                                         (int i, void* data){
+			                                                         auto vertex = (ImDrawVert*) data;
+			                                                         *vertex = vertIterator.get();
+			                                                         vertIterator.next();
+		                                                         });
+		system->bufferDestroy(vertexBuffer);
+		GPU::BufferNodeID vertexNodeID = renderGraph->importBuffer("Vertex buffers", vertexBuffer);
 
 		GPU::BufferDesc indexBufferDesc;
 		indexBufferDesc.typeSize = sizeof(ImDrawIdx);
@@ -149,14 +149,15 @@ public:
 			}
 		};
 		IndexIterator idxIterator(drawData);
-		GPU::BufferID _indexBuffer = system->bufferCreate(indexBufferDesc,
-			[&idxIterator]
-			(int i, byte* data) {
-			auto index = (ImDrawIdx*) data;
-			*index = idxIterator.get();
-			idxIterator.next();
-		});
-		GPU::BufferNodeID indexNodeID = renderGraph->importBuffer("Index Buffer", _indexBuffer);
+		const GPU::BufferID indexBuffer = system->bufferCreate(indexBufferDesc,
+		                                                        [&idxIterator]
+	                                                        (int i, void* data) {
+			                                                        auto index = (ImDrawIdx*) data;
+			                                                        *index = idxIterator.get();
+			                                                        idxIterator.next();
+		                                                        });
+		system->bufferDestroy(indexBuffer);
+		GPU::BufferNodeID indexNodeID = renderGraph->importBuffer("Index Buffer", indexBuffer);
 
 		struct TransformUBO {
 			float scale[2];
@@ -174,14 +175,11 @@ public:
 		transformBufferDesc.queueFlags = GPU::QUEUE_GRAPHIC_BIT;
 		GPU::BufferID transformBufferID = system->bufferCreate(transformBufferDesc,
 			[&transformUBO]
-			(int i, byte* data) {
+			(int i, void* data) {
 			auto transform = (TransformUBO*) data;
 			*transform = transformUBO;
 		});
 		GPU::BufferNodeID transformNodeID = renderGraph->importBuffer("Transform uBO", transformBufferID);
-
-		system->bufferDestroy(_vertexBuffer);
-		system->bufferDestroy(_indexBuffer);
 		system->bufferDestroy(transformBufferID);
 
 		return renderGraph->addGraphicPass<Data>(

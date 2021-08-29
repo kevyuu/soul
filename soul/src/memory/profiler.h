@@ -48,11 +48,6 @@ namespace Soul::Memory {
 				allocations.reserve(8);
 			}
 
-			AllocatorData(const AllocatorData& other) :
-				index(other.index),
-                regionAddrs(other.regionAddrs), regions(other.regions),
-                allocations(other.allocations), allocationTags(other.allocationTags) {}
-
 			const Region& getRegion(const void* regionAddr) const;
 
 			const Allocation& getAllocation(const char* allocationName) const;
@@ -85,7 +80,7 @@ namespace Soul::Memory {
 
 		struct Frame {
 			Array<Snapshot> snapshots;
-			Frame(Allocator* allocator) : snapshots(allocator) {}
+			explicit Frame(Allocator* allocator) : snapshots(allocator) {}
 		};
 
 		explicit Profiler(Allocator* allocator):
@@ -105,7 +100,7 @@ namespace Soul::Memory {
 		void endFrame() {}
 		void snapshot(const char* name);
 
-		const Array<Frame>& getFrames() const { return _frames; }
+		SOUL_NODISCARD const Array<Frame>& getFrames() const { return _frames; }
 
 	private:
 		Allocator* _allocator;

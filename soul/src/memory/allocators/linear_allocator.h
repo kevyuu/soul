@@ -17,7 +17,7 @@ namespace Soul::Memory {
 		void reset() final;
 		Allocation tryAllocate(soul_size size, soul_size alignment, const char* tag) override;
 		void deallocate(void* addr, soul_size size) override;
-		[[nodiscard]] void* getMarker() const noexcept;
+		SOUL_NODISCARD void* getMarker() const noexcept;
 		void rewind(void* addr) noexcept;
 
 	private:

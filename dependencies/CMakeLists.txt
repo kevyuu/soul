@@ -25,7 +25,7 @@ add_library(tracy STATIC ${TRACY_SOURCES})
 target_include_directories(tracy
 	PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_compile_definitions(tracy
-	PUBLIC TRACY_ENABLE)
+	PUBLIC TRACY_ENABLE NOMINMAX)
 
 # Imgui
 set(IMGUI_SOURCES

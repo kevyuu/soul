@@ -1,88 +1,351 @@
 #pragma once
 
-#include "type.h"
+#include "core/compiler.h"
+#include "core/type.h"
 
 namespace Soul {
 
-	namespace DCONST {
-		constexpr const double E = 2.71828182845904523536028747135266250;
-		constexpr const double LOG2E = 1.44269504088896340735992468100189214;
-		constexpr const double LOG10E = 0.434294481903251827651128918916605082;
-		constexpr const double LN2 = 0.693147180559945309417232121458176568;
-		constexpr const double LN10 = 2.30258509299404568401799145468436421;
-		constexpr const double PI = 3.14159265358979323846264338327950288;
-		constexpr const double PI_2 = 1.57079632679489661923132169163975144;
-		constexpr const double PI_4 = 0.785398163397448309615660845819875721;
-		constexpr const double ONE_OVER_PI = 0.318309886183790671537767526745028724;
-		constexpr const double TWO_OVER_PI = 0.636619772367581343075535053490057448;
-		constexpr const double TWO_OVER_SQRTPI = 1.12837916709551257389615890312154517;
-		constexpr const double SQRT2 = 1.41421356237309504880168872420969808;
-		constexpr const double SQRT1_2 = 0.707106781186547524400844362104849039;
-		constexpr const double TAU = 2.0 * DCONST::PI;
-		constexpr const double DEG_TO_RAD = DCONST::PI / 180.0;
-		constexpr const double RAD_TO_DEG = 180.0 / DCONST::PI;
+	namespace Dconst {
+		constexpr double E = 2.71828182845904523536028747135266250;
+		constexpr double LOG2_E = 1.44269504088896340735992468100189214;
+		constexpr double LOG10_E = 0.434294481903251827651128918916605082;
+		constexpr double LN2 = 0.693147180559945309417232121458176568;
+		constexpr double LN10 = 2.30258509299404568401799145468436421;
+		constexpr double PI = 3.14159265358979323846264338327950288;
+		constexpr double PI_2 = 1.57079632679489661923132169163975144;
+		constexpr double PI_4 = 0.785398163397448309615660845819875721;
+		constexpr double ONE_OVER_PI = 0.318309886183790671537767526745028724;
+		constexpr double TWO_OVER_PI = 0.636619772367581343075535053490057448;
+		constexpr double TWO_OVER_SQRTPI = 1.12837916709551257389615890312154517;
+		constexpr double SQRT2 = 1.41421356237309504880168872420969808;
+		constexpr double SQRT1_2 = 0.707106781186547524400844362104849039;
+		constexpr double TAU = 2.0 * Dconst::PI;
+		constexpr double DEG_TO_RAD = Dconst::PI / 180.0;
+		constexpr double RAD_TO_DEG = 180.0 / Dconst::PI;
 	}
 
-	namespace FCONST {
-		constexpr const float E = (float)DCONST::E;
-		constexpr const float LOG2E = (float)DCONST::LOG2E;
-		constexpr const float LOG10E = (float)DCONST::LOG10E;
-		constexpr const float LN2 = (float)DCONST::LN2;
-		constexpr const float LN10 = (float)DCONST::LN10;
-		constexpr const float PI = (float)DCONST::PI;
-		constexpr const float PI_2 = (float)DCONST::PI_2;
-		constexpr const float PI_4 = (float)DCONST::PI_4;
-		constexpr const float ONE_OVER_PI = (float)DCONST::ONE_OVER_PI;
-		constexpr const float TWO_OVER_PI = (float)DCONST::TWO_OVER_PI;
-		constexpr const float TWO_OVER_SQRTPI = (float)DCONST::TWO_OVER_SQRTPI;
-		constexpr const float SQRT2 = (float)DCONST::SQRT2;
-		constexpr const float SQRT1_2 = (float)DCONST::SQRT1_2;
-		constexpr const float TAU = (float)DCONST::TAU;
-		constexpr const float DEG_TO_RAD = (float)DCONST::DEG_TO_RAD;
-		constexpr const float RAD_TO_DEG = (float)DCONST::RAD_TO_DEG;
+	namespace Fconst {
+		constexpr float E = (float)Dconst::E;
+		constexpr float LOG2_E = (float)Dconst::LOG2_E;
+		constexpr float LOG10_E = (float)Dconst::LOG10_E;
+		constexpr float LN2 = (float)Dconst::LN2;
+		constexpr float LN10 = (float)Dconst::LN10;
+		constexpr float PI = (float)Dconst::PI;
+		constexpr float PI_2 = (float)Dconst::PI_2;
+		constexpr float PI_4 = (float)Dconst::PI_4;
+		constexpr float ONE_OVER_PI = (float)Dconst::ONE_OVER_PI;
+		constexpr float TWO_OVER_PI = (float)Dconst::TWO_OVER_PI;
+		constexpr float TWO_OVER_SQRTPI = (float)Dconst::TWO_OVER_SQRTPI;
+		constexpr float SQRT2 = (float)Dconst::SQRT2;
+		constexpr float SQRT1_2 = (float)Dconst::SQRT1_2;
+		constexpr float TAU = (float)Dconst::TAU;
+		constexpr float DEG_TO_RAD = (float)Dconst::DEG_TO_RAD;
+		constexpr float RAD_TO_DEG = (float)Dconst::RAD_TO_DEG;
+	}
+
+	uint32 floorLog2(uint32 val);
+
+	template<typename T>
+	SOUL_NODISCARD constexpr Vec2<T> operator+(const Vec2<T>& lhs, const Vec2<T>& rhs) {
+		return Vec2<T>(lhs.x + rhs.x, lhs.y + rhs.y);
+	}
+
+	template<typename T>
+	SOUL_NODISCARD constexpr Vec2<T> operator-(const Vec2<T>& lhs, const Vec2<T>& rhs) {
+		return Vec2<T>(lhs.x - rhs.x, lhs.y - rhs.y);
+	}
+
+	template<typename T>
+	SOUL_NODISCARD constexpr Vec2<T> operator*(const Vec2<T>& lhs, const Vec2<T>& rhs) {
+		return Vec2<T>(lhs.x * rhs.x, lhs.y * rhs.y);
+	}
+
+	template<typename T>
+	SOUL_NODISCARD constexpr Vec2<T> operator*(const Vec2<T>& lhs, T rhs) {
+		return Vec2<T>(lhs.x * rhs, lhs.y * rhs);
+	}
+
+	template<typename T>
+	SOUL_NODISCARD constexpr Vec2<T> operator*(T lhs, const Vec2<T>& rhs) {
+		return Vec2<T>(lhs * rhs.x, lhs * rhs.y);
+	}
+
+	template<typename T>
+	SOUL_NODISCARD constexpr Vec2<T> operator/(const Vec2<T>& lhs, const Vec2<T>& rhs) {
+		return Vec2<T>(lhs.x / rhs.x, lhs.y / rhs.y);
+	}
+
+	template<typename T>
+	SOUL_NODISCARD constexpr Vec2<T> operator/(const Vec2<T>& lhs, const T rhs) {
+		return Vec2<T>(lhs.x / rhs, lhs.y / rhs);
+	}
+
+	template<typename T>
+	void operator+=(Vec2<T>& lhs, const Vec2<T>& rhs) {
+		lhs.x += rhs.x;
+		lhs.y += rhs.y;
+	}
+
+	template<typename T>
+	void operator-=(Vec2<T>& lhs, const Vec2<T>& rhs) {
+		lhs.x -= rhs.x;
+		lhs.y -= rhs.y;
+	}
+
+	template<typename T>
+	void operator*=(Vec2<T>& lhs, const Vec2<T>& rhs) {
+		lhs.x *= rhs.x;
+		lhs.y *= rhs.y;
+	}
+
+	template<typename T>
+	void operator*=(Vec2<T>& lhs, T rhs) {
+		lhs.x *= rhs;
+		lhs.y *= rhs;
+	}
+
+	template<typename T>
+	void operator/=(Vec2<T>& lhs, const Vec2<T>& rhs) {
+		lhs.x /= rhs.x;
+		lhs.y /= rhs.y;
+	}
+
+	template<typename T>
+	bool operator==(const Vec2<T>& lhs, const Vec2<T>& rhs) {
+		return lhs.x == rhs.x && lhs.y == rhs.y;
+	}
+
+	template<typename T>
+	bool operator!=(const Vec2<T>& lhs, const Vec2<T>& rhs) {
+		return !(lhs == rhs);
+	}
+
+	template<typename T>
+	SOUL_NODISCARD T squareLength(const Vec2<T>& vec) {
+		return vec.x * vec.x + vec.y * vec.y;
+	}
+
+	template<typename T>
+	SOUL_NODISCARD T length(const Vec2<T>& vec) {
+		return std::sqrt(vec.x * vec.x + vec.y * vec.y);
+	}
+
+	template<typename T>
+	SOUL_NODISCARD constexpr Vec2<T> unit(const Vec2<T>& vec) {
+		return vec / length;
+	}
+
+	// Vec3
+	template<typename T>
+	SOUL_NODISCARD constexpr Vec3<T> operator+(const Vec3<T>& lhs, const Vec3<T>& rhs) {
+		return Vec3<T>(lhs.x + rhs.x, lhs.y + rhs.y, lhs.z + rhs.z);
+	}
+
+	template<typename T>
+	SOUL_NODISCARD constexpr Vec3<T> operator-(const Vec3<T>& lhs, const Vec3<T>& rhs) {
+		return Vec3<T>(lhs.x - rhs.x, lhs.y - rhs.y, lhs.z - rhs.z);
+	}
+
+	template<typename T>
+	SOUL_NODISCARD constexpr Vec3<T> operator-(const Vec3<T>& rhs) {
+		return Vec3<T>(-rhs.x, -rhs.y, -rhs.z);
+	}
+
+	template<typename T>
+	SOUL_NODISCARD Vec3<T> constexpr operator*(const Vec3<T>& lhs, T rhs) {
+		return Vec3<T>(lhs.x * rhs, lhs.y * rhs, lhs.z * rhs);
+	}
+
+	template<typename T>
+	SOUL_NODISCARD Vec3<T> constexpr operator*(T lhs, const Vec3<T>& rhs) {
+		return Vec3<T>(lhs * rhs.x, lhs * rhs.y, lhs * rhs.z);
+	}
+
+	template<typename T>
+	SOUL_NODISCARD constexpr Vec3<T> operator/(const Vec3<T>& lhs, T rhs) {
+		return Vec3<T>(lhs.x / rhs, lhs.y / rhs, lhs.z / rhs);
+	}
+
+	template<typename T>
+	void operator+=(Vec3<T>& lhs, const Vec3<T>& rhs) {
+		lhs.x += rhs.x;
+		lhs.y += rhs.y;
+		lhs.z += rhs.z;
+	}
+
+	template<typename T>
+	void operator-=(Vec3<T>& lhs, const Vec3<T>& rhs) {
+		lhs.x -= rhs.x;
+		lhs.y -= rhs.y;
+		lhs.z -= rhs.z;
+	}
+
+	template<typename T>
+	void operator*=(Vec3<T> lhs, T rhs) {
+		lhs.x *= rhs;
+		lhs.y *= rhs;
+		lhs.z *= rhs;
+	}
+
+	template<typename T>
+	void operator/=(Vec3<T> lhs, T rhs) {
+		lhs.x /= rhs;
+		lhs.y /= rhs;
+		lhs.z /= rhs;
+	}
+
+	template<typename T>
+	bool operator==(const Vec3<T>& lhs, const Vec3<T>& rhs) {
+		return lhs.x == rhs.x && lhs.y == rhs.y && lhs.z == rhs.z;  // NOLINT(clang-diagnostic-float-equal)
+	}
+
+	template<typename T>
+	bool operator!=(const Vec3<T>& lhs, const Vec3<T>& rhs) {
+		return !(lhs == rhs);
+	}
+
+	template<typename T>
+	SOUL_NODISCARD Vec3<T> cross(const Vec3<T>& lhs, const Vec3<T>& rhs)
+	{
+		return Vec3<T>(
+			lhs.y * rhs.z - lhs.z * rhs.y,
+			lhs.z * rhs.x - lhs.x * rhs.z,
+			lhs.x * rhs.y - lhs.y * rhs.x);
+	}
+
+	template<typename T>
+	SOUL_NODISCARD float dot(const Vec3<T>& lhs, const Vec3<T>& rhs)
+	{
+		return lhs.x * rhs.x + lhs.y * rhs.y + lhs.z * rhs.z;
+	}
+
+	template<typename T>
+	SOUL_NODISCARD Vec3<T> unit(const Vec3<T>& vec)
+	{
+		float magnitude = sqrt(vec.x * vec.x + vec.y * vec.y + vec.z * vec.z);
+		return Vec3f(vec.x / magnitude, vec.y / magnitude, vec.z / magnitude);
+	}
+
+	template<typename T>
+	SOUL_NODISCARD T squareLength(const Vec3<T>& vec)
+	{
+		return vec.x * vec.x + vec.y * vec.y + vec.z * vec.z;
+	}
+
+	template<typename T>
+	SOUL_NODISCARD T length(const Vec3<T>& vec)
+	{
+		return std::sqrt(vec.x * vec.x + vec.y * vec.y + vec.z * vec.z);
+	}
+
+	template<typename T>
+	SOUL_NODISCARD Vec3<T> componentMin(const Vec3<T>& v1, const Vec3<T>& v2)
+	{
+		return { std::min(v1.x, v2.x), std::min(v1.y, v2.y), std::min(v1.z, v2.z) };
+	}
+
+	template<typename T>
+	SOUL_NODISCARD Vec3<T> componentMax(const Vec3<T>& v1, const Vec3<T>& v2)
+	{
+		return { std::max(v1.x, v2.x), std::max(v1.y, v2.y), std::max(v1.z, v2.z) };
+	}
+
+	// Vec4
+	template<typename T>
+	SOUL_NODISCARD constexpr Vec4<T> operator+(const Vec4<T>& lhs, const Vec4<T>& rhs) {
+		return Vec4<T>(lhs.x + rhs.x, lhs.y + rhs.y, lhs.z + rhs.z, lhs.w + rhs.w);
+	}
+
+	template<typename T>
+	SOUL_NODISCARD constexpr Vec4<T> operator-(const Vec4<T>& lhs, const Vec4<T>& rhs) {
+		return Vec4<T>(lhs.x - rhs.x, lhs.y - rhs.y, lhs.z - rhs.z, lhs.w - rhs.w);
+	}
+
+	template<typename T>
+	SOUL_NODISCARD constexpr Vec4<T> operator-(const Vec4<T>& rhs) {
+		return Vec4<T>(-rhs.x, -rhs.y, -rhs.z, -rhs.w);
+	}
+
+	template<typename T>
+	SOUL_NODISCARD Vec4<T> constexpr operator*(const Vec4<T>& lhs, T rhs) {
+		return Vec4<T>(lhs.x * rhs, lhs.y * rhs, lhs.z * rhs, lhs.w * rhs);
+	}
+
+	template<typename T>
+	SOUL_NODISCARD Vec4<T> constexpr operator*(T lhs, const Vec4<T>& rhs) {
+		return Vec4<T>(lhs * rhs.x, lhs * rhs.y, lhs * rhs.z, lhs * rhs.w);
+	}
+
+	template<typename T>
+	SOUL_NODISCARD constexpr Vec4<T> operator/(const Vec4<T>& lhs, T rhs) {
+		return Vec4<T>(lhs.x / rhs, lhs.y / rhs, lhs.z / rhs, lhs.w / rhs);
+	}
+
+	template<typename T>
+	void operator+=(Vec4<T>& lhs, const Vec4<T>& rhs) {
+		lhs.x += rhs.x;
+		lhs.y += rhs.y;
+		lhs.z += rhs.z;
+		lhs.w += rhs.w;
+	}
+
+	template<typename T>
+	void operator-=(Vec4<T>& lhs, const Vec4<T>& rhs) {
+		lhs.x -= rhs.x;
+		lhs.y -= rhs.y;
+		lhs.z -= rhs.z;
+		lhs.w -= rhs.w;
+	}
+
+	template<typename T>
+	void operator*=(Vec4<T> lhs, T rhs) {
+		lhs.x *= rhs;
+		lhs.y *= rhs;
+		lhs.z *= rhs;
+		lhs.w *= rhs;
+	}
+
+	template<typename T>
+	void operator/=(Vec4<T> lhs, T rhs) {
+		lhs.x /= rhs;
+		lhs.y /= rhs;
+		lhs.z /= rhs;
+		lhs.w /= rhs;
+	}
+
+	template<typename T>
+	bool operator==(const Vec4<T>& lhs, const Vec4<T>& rhs) {
+		return lhs.x == rhs.x && lhs.y == rhs.y && lhs.z == rhs.z && lhs.w == rhs.w;  // NOLINT(clang-diagnostic-float-equal)
+	}
+
+	template<typename T>
+	bool operator!=(const Vec4<T>& lhs, const Vec4<T>& rhs) {
+		return !(lhs == rhs);
+	}
+
+	template<typename T>
+	SOUL_NODISCARD float dot(const Vec4<T>& lhs, const Vec4<T>& rhs) {
+		return lhs.x * rhs.x + lhs.y * rhs.y + lhs.z * rhs.z + lhs.w * rhs.w;
+	}
+
+	template<typename T>
+	SOUL_NODISCARD Vec4<T> unit(const Vec4<T>& vec) {
+		float magnitude = sqrt(vec.x * vec.x + vec.y * vec.y + vec.z * vec.z, + vec.w * vec.w);
+		return Vec3f(vec.x / magnitude, vec.y / magnitude, vec.z / magnitude, vec.w / magnitude);
+	}
+
+	template<typename T>
+	SOUL_NODISCARD T squareLength(const Vec4<T>& vec) {
+		return vec.x * vec.x + vec.y * vec.y + vec.z * vec.z + vec.w * vec.w;
+	}
+
+	template<typename T>
+	SOUL_NODISCARD T length(const Vec4<T>& vec) {
+		return std::sqrt(vec.x * vec.x + vec.y * vec.y + vec.z * vec.z + vec.w * vec.w);
 	}
 
 
-	float clamp(float f, float min, float max);
-
-	uint32 floorLog2(uint32 val);	
-
-	Vec2f operator+(const Vec2f& lhs, const Vec2f& rhs);
-	Vec2f operator-(const Vec2f& lhs, const Vec2f& rhs);
-	Vec2f operator*(const Vec2f& lhs, const float rhs);
-	inline Vec2f operator*(const float lhs, const Vec2f& rhs) { return rhs * lhs; }
-	void operator+=(Vec2f& lhs, const Vec2f& rhs);
-	void operator-=(Vec2f& lhs, const Vec2f& rhs);
-	void operator*=(Vec2f& lhs, const float rhs);
-	Vec2f unit(Vec2f unit);
-
-	Vec3f operator+(const Vec3f& lhs, const Vec3f& rhs);
-	Vec3f operator-(const Vec3f& lhs, const Vec3f& rhs);
-	Vec3f operator*(const Vec3f& lhs, const float rhs);
-	inline Vec3f operator*(float lhs, const Vec3f& rhs) { return rhs * lhs; }
-	Vec3f operator/(const Vec3f& lhs, const float rhs);
-	void operator+=(Vec3f& lhs, const Vec3f& rhs);
-	void operator-=(Vec3f& lhs, const Vec3f& rhs);
-	void operator*=(Vec3f& lhs, const float rhs);
-	void operator/=(Vec3f& lhs, const float rhs);
-	bool operator==(const Vec3f& lhs, const Vec3f& rhs);
-	bool operator!=(const Vec3f& lhs, const Vec3f& rhs);	
-	Vec3f cross(const Vec3f& lhs, const Vec3f& rhs);
-	float dot(const Vec3f& lhs, const Vec3f& rhs);
-	Vec3f componentMul(const Vec3f& lhs, const Vec3f& rhs);
-	Vec3f unit(const Vec3f& vec);
-	float squareLength(const Vec3f& vec);
-	float length(const Vec3f& vec);
-	Vec3f componentMin(const Vec3f& v1, const Vec3f& v2);
-	Vec3f componentMax(const Vec3f& v1, const Vec3f& v2);
-
-	Vec4f operator/(const Vec4f& lhs, const float rhs);
-	void operator*=(Vec4f& lhs, const float rhs);
-	void operator/=(Vec4f& lhs, const float rhs);
-	float squareLength(const Vec4f& vec);
-	float length(const Vec4f& vec);
-	
-	Quaternionf quaternionFromVec3f(const Vec3f& source, const Vec3f& dst);
+	Quaternionf quaternionFromVec3f(const Vec3f& src, const Vec3f& dst);
 	Quaternionf quaternionFromMat4(const Mat4f& mat);
 	Quaternionf qtangent(Vec3f tbn[3], uint64 storageSize = sizeof(int16));
 	Quaternionf quaternionIdentity();
@@ -131,8 +394,8 @@ namespace Soul {
 	void operator*=(Mat3f& lhs, const Mat3f& rhs);
 	Mat3f cofactor(const Mat3f& mat);
 
-	AABB AABBCombine(AABB aabb1, AABB aabb2);
-	AABB AABBTransform(AABB aabb, const Mat4f& transform);
+	AABB aabbCombine(AABB aabb1, AABB aabb2);
+	AABB aabbTransform(AABB aabb, const Mat4f& transform);
 
 	Transformf transformIdentity();
 	Transformf transformMat4(const Mat4f& mat4);
@@ -145,10 +408,10 @@ namespace Soul {
 	float radians(float angle);
 
 	inline bool isPowerOfTwo(int64 num) { return (num & -num) == num;}
-	int roundToNextPowOfTwo(uint32 num);
+	uint64 roundToNextPowOfTwo(uint64 num);
 
-	uint32 hashMurmur32(const uint8* data, uint32 size);
-	constexpr uint64 hashFNV1(const uint8* data, uint32 size, uint64 initial  = 0xcbf29ce484222325ull) {
+	uint32 hashMurmur32(const uint8* data, soul_size size);
+	constexpr uint64 hashFNV1(const uint8* data, soul_size size, uint64 initial  = 0xcbf29ce484222325ull) {
 		uint64 hash = initial;
 		for (uint32 i = 0; i < size; i++) {
 			hash = (hash * 0x100000001b3ull) ^ data[i];
@@ -157,7 +420,7 @@ namespace Soul {
 	}
 
 	template <typename T>
-	T cubicSpline(const T& vert0, const T& tang0, const T& vert1, const T& tang1, float t) {
+	T cubicSpline(const T& vert0, const T& tang0, const T vert1, const T& tang1, float t) {
 		float tt = t * t, ttt = tt * t;
 		float s2 = -2 * ttt + 3 * tt, s3 = ttt - tt;
 		float s0 = 1 - s2, s1 = s3 - tt + t;

@@ -29,7 +29,7 @@ namespace Soul::Memory {
 		Allocator& operator=(Allocator&& other) = delete;
 		virtual ~Allocator() = default;
 
-		[[nodiscard]] const char* name() const { return _name; }
+		SOUL_NODISCARD const char* name() const { return _name; }
 
 		
 		virtual Allocation tryAllocate(soul_size size, soul_size alignment, const char* tag) = 0;

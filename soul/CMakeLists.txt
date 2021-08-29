@@ -7,6 +7,7 @@ set (SOUL_HEADERS
 	
 	src/core/architecture.h
 	src/core/array.h
+	src/core/config.h
 	src/core/dev_util.h
 	src/core/uint64_hash_map.h
 	src/core/hash_map.h
@@ -33,6 +34,7 @@ set (SOUL_HEADERS
 	src/runtime/data.h
 	src/runtime/system.h
 	src/runtime/runtime.h
+	src/runtime/scope_allocator.h
 
 	src/memory/allocator.h
 	src/memory/allocators/page_allocator.h
@@ -40,7 +42,6 @@ set (SOUL_HEADERS
 	src/memory/allocators/malloc_allocator.h
 	src/memory/allocators/linear_allocator.h
 	src/memory/allocators/mt_linear_allocator.h
-	src/memory/allocators/scope_allocator.h
 )
 
 set (SOUL_SOURCES_OSX
@@ -51,6 +52,7 @@ set (SOUL_SOURCES_WINDOWS
 
 set (SOUL_SOURCES
 
+	src/core/config.cpp
 	src/core/dev_util.cpp
 	src/core/math.cpp
 	src/core/bitset.cpp
@@ -71,15 +73,14 @@ set (SOUL_SOURCES
 	src/memory/intern/profiler.cpp
 	src/memory/intern/linear_allocator.cpp
 	
-	src/memory/intern/scope_allocator.cpp
-
 	src/runtime/intern/runtime_system.cpp
 	src/runtime/intern/task_deque.cpp src/memory/intern/profiler.cpp
+	
 
 	"$<$<STREQUAL:${CMAKE_SYSTEM_NAME},Darwin>:${SOUL_SOURCES_OSX}>"
 	"$<$<STREQUAL:${CMAKE_SYSTEM_NAME},Windows>:${SOUL_SOURCES_WINDOWS}>")
 
-add_library(soul STATIC ${SOUL_SOURCES} )
+add_library(soul STATIC ${SOUL_SOURCES} "src/core/compiler.h" "src/core/type_traits.h")
 target_link_libraries(soul
 	PUBLIC glfw ${GLFW_LIBRARIES} vk_mem_alloc ${NVTX}
 	PRIVATE volk shaderc spirv-cross-core tracy)

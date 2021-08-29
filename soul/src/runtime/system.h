@@ -1,6 +1,7 @@
 #pragma once
+
 #include "core/type.h"
-#include "core/util.h"
+#include "core/type_traits.h"
 #include "runtime/data.h"
 
 #define SOUL_ASSERT_MAIN_THREAD() SOUL_ASSERT(0, Runtime::System::Get().getThreadID() == 0, "This method is not thread safe. Please only call it only from main thread!")
@@ -9,6 +10,13 @@ namespace Soul { namespace Runtime {
 
 	class System {
 	public:
+
+		System() = default;
+		System(const System&) = delete;
+		System& operator=(const System&) = delete;
+		System(System&&) = delete;
+		System& operator=(System&&) = delete;
+		~System() = default;
 
 		/*
 			Initialize the Runtime System. Only call this from the main thread.
@@ -22,28 +30,31 @@ namespace Soul { namespace Runtime {
 
 		void beginFrame(); 
 
-		template <SOUL_TEMPLATE_ARG_LAMBDA(Execute, void(TaskID))>
-		TaskID taskCreate(TaskID parent, Execute&& lambda) {
+		template<
+			typename EXECUTE,
+			typename = require<is_lambda_v<EXECUTE, void(TaskID)>>
+		>
+		TaskID taskCreate(TaskID parent, EXECUTE&& lambda) {
 			static_assert(sizeof lambda <= sizeof(Task::storage),
 						  "Lambda size is too big."
 						  "Consider increase the storage size of the"
 						  "task or dynamically allocate the memory.");
 
 			static auto call = [](TaskID taskID, void* data) {
-				Execute& lambda = *((Execute*)data);
+				EXECUTE& lambda = *((EXECUTE*)data);
 				lambda(taskID);
 				lambda.~Execute();
 			};
 
 			TaskID taskID = _taskCreate(parent, call);
 			Task* task = _taskPtr(taskID);
-			new(task->storage) Execute(std::forward<Execute>(lambda));
+			new(task->storage) EXECUTE(std::forward<EXECUTE>(lambda));
 			return taskID;
 		}
 
-		template <typename Func>
-		TaskID _parallelForTaskCreateRecursive(TaskID parent, uint32 start, uint32 dataCount, uint32 blockSize, Func&& func) {
-			using TaskData = ParallelForTaskData<Func>;
+		template <typename FUNC>
+		TaskID _parallelForTaskCreateRecursive(TaskID parent, uint32 start, uint32 dataCount, uint32 blockSize, FUNC&& func) {
+			using TaskData = ParallelForTaskData<FUNC>;
 
 			static_assert(sizeof(TaskData) <= sizeof(Task::storage),
 						  "ParallelForTaskData size is too big. TaskData = %d"
@@ -69,13 +80,16 @@ namespace Soul { namespace Runtime {
 
 			TaskID taskID = _taskCreate(parent, std::move(parallelFunc));
 			Task* task = _taskPtr(taskID);
-			new(task->storage) TaskData(start, dataCount, blockSize, std::forward<Func>(func));
+			new(task->storage) TaskData(start, dataCount, blockSize, std::forward<FUNC>(func));
 			return taskID;
 		}
 
-		template <SOUL_TEMPLATE_ARG_LAMBDA(Func, void(int))>
-		inline TaskID parallelForTaskCreate(TaskID parent, uint32 count, uint32 blockSize, Func&& func) {
-			return _parallelForTaskCreateRecursive(parent, 0, count, blockSize, std::forward<Func>(func));
+		template<
+			typename FUNC,
+			typename = require<is_lambda_v<FUNC, void(int)>>
+		>
+		TaskID parallelForTaskCreate(TaskID parent, uint32 count, uint32 blockSize, FUNC&& func) {
+			return _parallelForTaskCreateRecursive(parent, 0, count, blockSize, std::forward<FUNC>(func));
 		}
 
 		void taskWait(TaskID taskID);
@@ -83,10 +97,10 @@ namespace Soul { namespace Runtime {
 
 		uint16 getThreadCount() const;
 		uint16 getThreadID() const;
-		_ThreadContext& _threadContext();
+		ThreadContext& _threadContext();
 
-		inline static System& Get() {
-			static System instance;
+		static System& Get() {
+			[[clang::no_destroy]] static System instance;
 			return instance;
 		}
 
@@ -102,9 +116,9 @@ namespace Soul { namespace Runtime {
 		TaskID _taskCreate(TaskID parent, TaskFunc func);
 		Task* _taskPtr(TaskID taskID);
 		void _taskFinish(Task* task);
-		bool _taskIsComplete(Task* task) const;
+		static bool _taskIsComplete(Task* task);
 
-		void _loop(_ThreadContext* threadContext);
+		void _loop(ThreadContext* threadContext);
 		void _execute(TaskID task);
 
 		void _terminate();

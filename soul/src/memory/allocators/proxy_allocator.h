@@ -1,5 +1,9 @@
 #pragma once
 
+#include <mutex>
+
+#include "core/compiler.h"
+
 #include "memory/allocator.h"
 #include "memory/util.h"
 
@@ -47,6 +51,11 @@ namespace Soul::Memory {
 
 	class NoOpProxy final : public Proxy {
 	public:
+
+		struct Config{};
+
+		explicit NoOpProxy(const Config& config) {}
+
 		void onPreInit(const char* name) override {}
 		void onPostInit() override {}
 
@@ -76,25 +85,30 @@ namespace Soul::Memory {
 
 	public:
 
-		MultiProxy() = default;
+		struct Config
+		{
+			typename PROXY1::Config config1;
+			typename PROXY2::Config config2;
+			typename PROXY3::Config config3;
+			typename PROXY4::Config config4;
+			typename PROXY5::Config config5;
+			
+			explicit Config(
+				typename PROXY1::Config config1,
+				typename PROXY2::Config config2 = NoOpProxy::Config(),
+				typename PROXY3::Config config3 = NoOpProxy::Config(),
+				typename PROXY4::Config config4 = NoOpProxy::Config(),
+				typename PROXY5::Config config5 = NoOpProxy::Config()
+			) : config1(config1), config2(config2), config3(config3), config4(config4), config5(config5) {}
+		};
 
-		template <
-			typename CPROXY1 = PROXY1,
-			typename CPROXY2 = PROXY2,
-			typename CPROXY3 = PROXY3,
-			typename CPROXY4 = PROXY4,
-			typename CPROXY5 = PROXY5>
-		explicit MultiProxy(
-			CPROXY1&& proxy1,
-			CPROXY2&& proxy2,
-			CPROXY3&& proxy3 = NoOpProxy(),
-			CPROXY4&& proxy4 = NoOpProxy(),
-			CPROXY5&& proxy5 = NoOpProxy()) :
-			_proxy1(std::forward<CPROXY1>(proxy1)),
-			_proxy2(std::forward<CPROXY2>(proxy2)),
-			_proxy3(std::forward<CPROXY3>(proxy3)),
-			_proxy4(std::forward<CPROXY4>(proxy4)),
-			_proxy5(std::forward<CPROXY5>(proxy5)) {}
+		explicit MultiProxy(const Config& config) :
+			_proxy1(config.config1),
+			_proxy2(config.config2),
+			_proxy3(config.config3),
+			_proxy4(config.config4),
+			_proxy5(config.config5)
+		{}
 
 		void onPreInit(const char* name) override {
 			_proxy1.onPreInit(name);
@@ -175,6 +189,9 @@ namespace Soul::Memory {
 	class CounterProxy final: public Proxy {
 
 	public:
+		struct Config {};
+
+		explicit CounterProxy(const Config& config) {}
 
 		CounterProxy() = default;
 		void onPreInit(const char* name) override { _counter = 0; }
@@ -197,8 +214,15 @@ namespace Soul::Memory {
 	class ClearValuesProxy final: public Proxy {
 
 	public:
-		explicit ClearValuesProxy(const char onAllocatedClearValue, const char onFreeClearValue)
-			: _onAllocClearValue(onAllocatedClearValue), _onDeallocClearValue(onFreeClearValue) {}
+
+		struct Config
+		{
+			char allocateClearValue;
+			char freeClearValue;
+		};
+
+		explicit ClearValuesProxy(const Config& config)
+			: _onAllocClearValue(config.allocateClearValue), _onDeallocClearValue(config.freeClearValue) {}
 
 		void onPreInit(const char* name) override {}
 		void onPostInit() override {}
@@ -208,6 +232,7 @@ namespace Soul::Memory {
 			return allocParam;
 		}
 		Allocation onPostAllocate(Allocation allocation) override {
+			SOUL_ASSERT(0, allocation.size == _currentAllocSize, "");
 			memset(allocation.addr, _onAllocClearValue, _currentAllocSize);
 			return allocation;
 		}
@@ -224,14 +249,17 @@ namespace Soul::Memory {
 	private:
 		const char _onAllocClearValue;
 		const char _onDeallocClearValue;
-
+		
 		soul_size _currentAllocSize = 0;
-
 	};
 
 	class BoundGuardProxy final: public Proxy {
 
 	public:
+
+		struct Config{};
+
+		explicit BoundGuardProxy(const Config& config) {}
 
 		void onPreInit(const char* name) final{}
 		void onPostInit() final {}
@@ -243,7 +271,8 @@ namespace Soul::Memory {
 
 		Allocation onPostAllocate(Allocation allocation) final {
 			memset(allocation.addr, GUARD_FLAG, GUARD_SIZE);
-			memset(Util::Add(allocation.addr, uint64(GUARD_SIZE) + uint64(_currentAllocSize)), GUARD_FLAG, GUARD_SIZE);
+			memset(Util::Add(allocation.addr, GUARD_SIZE + _currentAllocSize), GUARD_FLAG, GUARD_SIZE);
+			SOUL_ASSERT(0, allocation.size > 2 * GUARD_SIZE, "");
 			return Allocation(Util::Add(allocation.addr, GUARD_SIZE), allocation.size - 2 * GUARD_SIZE);
 		}
 
@@ -272,6 +301,10 @@ namespace Soul::Memory {
 	class ProfileProxy final: public Proxy {
 
 	public:
+
+		struct Config{};
+		explicit ProfileProxy(const Config& config) {}
+
 		void onPreInit(const char* name) override;
 		void onPostInit() override {}
 
@@ -290,6 +323,27 @@ namespace Soul::Memory {
 
 	};
 
+	class MutexProxy final: public Proxy {
+	public:
+		struct Config{};
+		explicit MutexProxy(const Config& config) {}
+
+		void onPreInit(const char* name) override{}
+		void onPostInit() override{}
+
+		AllocateParam onPreAllocate(const AllocateParam& allocParam) override { mutex.lock(); return allocParam; }
+		Allocation onPostAllocate(Allocation allocation) override { mutex.unlock(); return allocation; }
+
+		DeallocateParam onPreDeallocate(const DeallocateParam& deallocParam) override { mutex.lock(); return deallocParam; }
+		void onPostDeallocate() override { mutex.unlock(); }
+
+		void onPreCleanup() override {}
+		void onPostCleanup() override {}
+
+	private:
+		std::mutex mutex;
+	};
+
 	template<typename BACKING_ALLOCATOR,
 	         typename PROXY = NoOpProxy>
 	class ProxyAllocator final: public Allocator {
@@ -299,11 +353,10 @@ namespace Soul::Memory {
 		BACKING_ALLOCATOR* allocator;
 
 		ProxyAllocator() = delete;
-		template <typename CPROXY>
-		explicit ProxyAllocator(BACKING_ALLOCATOR* allocator, CPROXY&& proxy) :
+		explicit ProxyAllocator(BACKING_ALLOCATOR* allocator, typename PROXY::Config proxyConfig) :
 			Allocator(allocator->name()),
 			allocator(allocator),
-			_proxy(std::forward<CPROXY>(proxy)) {
+			_proxy(proxyConfig) {
 			_proxy.onPreInit(name());
 			_proxy.onPostInit();
 		}
@@ -336,7 +389,7 @@ namespace Soul::Memory {
 			return _proxy.onPostAllocate(allocation);
 		}
 
-		virtual void deallocate(void* addr, soul_size size) override {
+		void deallocate(void* addr, soul_size size) override {
 			if (addr == nullptr || size == 0) return;
 			DeallocateParam param = { addr, size };
 			param = _proxy.onPreDeallocate(param);
@@ -344,8 +397,17 @@ namespace Soul::Memory {
 			_proxy.onPostDeallocate();
 		}
 
+		SOUL_NODISCARD void* getMarker() const noexcept
+		{
+			return allocator->getMarker();
+		}
+
+		void rewind(void* addr) noexcept
+		{
+			allocator->rewind(addr);
+		}
+
 	private:
 		PROXY _proxy;
-
 	};
 }

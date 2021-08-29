@@ -1,7 +1,6 @@
 #pragma once
-#include "core/util.h"
-#include "runtime/runtime.h"
 
+#include "core/type_traits.h"
 #include "gpu/data.h"
 #include "gpu/render_graph.h"
 
@@ -41,8 +40,11 @@ namespace Soul { namespace GPU {
 			return bufferID;
 		}
 
-		template <SOUL_TEMPLATE_ARG_LAMBDA(DataGenFunc, void(int, byte*))>
-		BufferID bufferCreate(const BufferDesc& desc, DataGenFunc dataGenFunc) {
+		template<
+			typename Func,
+			SOUL_REQUIRE(is_lambda_v<Func, void(int, void*)>)
+		>
+		BufferID bufferCreate(const BufferDesc& desc, Func dataGenFunc) {
 			SOUL_PROFILE_ZONE();
 			BufferDesc desc2 = desc;
 			desc2.usageFlags |= BUFFER_USAGE_TRANSFER_DST_BIT;
@@ -82,8 +84,11 @@ namespace Soul { namespace GPU {
 			buffer.owner = ResourceOwner::TRANSFER_QUEUE;
 		}
 
-		template <SOUL_TEMPLATE_ARG_LAMBDA(DataGenFunc, void(int, byte*))>
-		void bufferLoad(BufferID bufferID, DataGenFunc dataGenFunc) {
+		template<
+			typename Func,
+			SOUL_REQUIRE(is_lambda_v<Func, void(int, void*)>)
+		>
+		void bufferLoad(BufferID bufferID, Func dataGenFunc) {
 			_Buffer& buffer = *_bufferPtr(bufferID);
 
 			SOUL_ASSERT(0, buffer.usageFlags & BUFFER_USAGE_TRANSFER_DST_BIT, "");
@@ -103,7 +108,8 @@ namespace Soul { namespace GPU {
 			void* mappedData;
 			vmaMapMemory(_db.gpuAllocator, stagingBuffer.allocation, &mappedData);
 			for (int i = 0; i < buffer.unitCount; i++) {
-				dataGenFunc(i, (byte*)mappedData + i * buffer.unitSize);
+				auto unitData = (void*)((byte*)mappedData + i * buffer.unitSize);
+				dataGenFunc(i, unitData);
 			}
 			vmaUnmapMemory(_db.gpuAllocator, stagingBuffer.allocation);
 

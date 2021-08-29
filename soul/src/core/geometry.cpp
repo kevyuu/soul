@@ -1,8 +1,8 @@
+#include <limits>
+
 #include "core/geometry.h"
 #include "core/math.h"
-#include "memory/allocators/scope_allocator.h"
-
-#include <limits>
+#include "runtime/scope_allocator.h"
 
 namespace Soul {
 
@@ -37,7 +37,7 @@ namespace Soul {
 	static bool ComputeTangentFrameWithTangents(const TangentFrameComputeInput& input, Quaternionf* qtangents) {
 		const uint64 vertexCount = input.vertexCount;
 
-		for (uint64 i = 0; i < vertexCount; i++) {
+		for (soul_size i = 0; i < vertexCount; ++i) {
 			Vec3f normal = input.normals[i];
 			auto tangent = Vec3f(input.tangents[i].xyz);
 			const float tandir = input.tangents[i].w;
@@ -54,7 +54,7 @@ namespace Soul {
 
 	static bool ComputeTangentFrameWithNormalsOnly(const TangentFrameComputeInput& input, Quaternionf* qtangents) {
 
-		for (uint64 i = 0; i < input.vertexCount; i++) {
+		for (soul_size i = 0; i < input.vertexCount; ++i) {
 			Vec3f normal = input.normals[i];
 			Vec3f bitangent = RandomPerp(normal);
 			Vec3f tbn[3] = { cross(normal, bitangent), bitangent, normal };
@@ -65,8 +65,9 @@ namespace Soul {
 	}
 
 	static bool ComputeTangentFrameWithFlatNormals(const TangentFrameComputeInput& input, Quaternionf* qtangents) {
-		Memory::ScopeAllocator<> scopeAllocator("ComputeTangentWithFlatNormals");
-		const auto normals = (Vec3f*) scopeAllocator.allocate(input.triangleCount * sizeof(Vec3f), alignof(Vec3f));
+		Runtime::ScopeAllocator<> scopeAllocator("ComputeTangentWithFlatNormals");
+		Array<Vec3f> normals(&scopeAllocator);
+		normals.resize(input.triangleCount);
 		const uint64 vertexCount = input.vertexCount;
 		const Vec3f* positions = input.positions;
 		for (size_t a = 0; a < input.triangleCount; ++a) {
@@ -82,19 +83,19 @@ namespace Soul {
 		}
 
 		TangentFrameComputeInput input2 = input;
-		input2.normals = normals;
+		input2.normals = normals.data();
 		ComputeTangentFrameWithNormalsOnly(input2, qtangents);
 		return true;
 	}
 
 	static bool ComputeTangentFrameWithUVs(const TangentFrameComputeInput& input, Quaternionf* qtangents) {
-		Memory::ScopeAllocator<> scopeAllocator("ComputeTangentWithUVs");
-		auto tan1 = (Vec3f*)scopeAllocator.allocate(input.vertexCount * sizeof(Vec3f), alignof(Vec3f));
-		auto tan2 = (Vec3f*)scopeAllocator.allocate(input.vertexCount * sizeof(Vec3f), alignof(Vec3f));
-		memset(tan1, 0, sizeof(Vec3f) * input.vertexCount);
-		memset(tan2, 0, sizeof(Vec3f) * input.vertexCount);
+		Runtime::ScopeAllocator<> scopeAllocator("ComputeTangentWithUVs");
+		Array<Vec3f> tan1(&scopeAllocator);
+		tan1.resize(input.vertexCount);
+		Array<Vec3f> tan2(&scopeAllocator);
+		tan2.resize(input.vertexCount);
 		
-		static auto _randomPerp = [](const Vec3f& n) -> Vec3f {
+		static auto randomPerp = [](const Vec3f& n) -> Vec3f {
 			Vec3f perp = cross(n, Vec3f{ 1, 0, 0 });
 			float sqrlen = dot(perp, perp);
 			if (sqrlen <= std::numeric_limits<float>::epsilon()) {
@@ -105,7 +106,7 @@ namespace Soul {
 		};
 
 
-		for (size_t a = 0; a < input.triangleCount; ++a) {
+		for (soul_size a = 0; a < input.triangleCount; ++a) {
 			Vec3ui32 tri = input.triangles32[a];
 			SOUL_ASSERT(0, tri.x < input.vertexCount&& tri.y < input.vertexCount && tri.z < input.vertexCount, "");
 			const Vec3f& v1 = input.positions[tri.x];
@@ -130,7 +131,7 @@ namespace Soul {
 			// least avoid divide-by-zero and fall back to normals-only method.
 			if (d == 0.0f) {
 				const Vec3f& n1 = input.normals[tri.x];
-				sdir = _randomPerp(n1);
+				sdir = randomPerp(n1);
 				tdir = cross(n1, sdir);
 			}
 			else {

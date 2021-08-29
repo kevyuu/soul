@@ -19,8 +19,8 @@ public:
 	void setCameraTarget(Soul::Vec3f target);
 
 	void zoom(float delta);
-	void orbit(int dx, int dy);
-	void pan(int dx, int dy);
+	void orbit(float dx, float dy);
+	void pan(float dx, float dy);
 
 	Soul::Mat4f getTransformMatrix();
 

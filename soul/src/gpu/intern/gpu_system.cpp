@@ -5,7 +5,7 @@
 
 #include "runtime/system.h"
 
-#include "memory/allocators/scope_allocator.h"
+#include "runtime/scope_allocator.h"
 
 #include "core/array.h"
 #include "core/dev_util.h"
@@ -24,7 +24,29 @@
 #include <sstream>
 
 namespace Soul { namespace GPU {
-	
+
+	static void* VmaAllocCallback(void* userData, size_t size, size_t alignment, VkSystemAllocationScope allocationScope)
+	{
+		void* addr = malloc(size);
+		SOUL_MEMPROFILE_REGISTER_ALLOCATION("vma", "", addr, size);
+		return addr;
+	}
+
+	static void* VmaReallocationCallback(void* userData, void* addr, size_t size, size_t alignment, VkSystemAllocationScope scope)
+	{
+		free(addr);
+		SOUL_MEMPROFILE_REGISTER_DEALLOCATION("vma", addr,  0);
+		void* newAddr = malloc(size);
+		SOUL_MEMPROFILE_REGISTER_ALLOCATION("vma", "", newAddr, size);
+		return newAddr;
+	}
+
+	static void VmaFreeCallback(void* userData, void* addr)
+	{
+		SOUL_MEMPROFILE_REGISTER_ALLOCATION("vma", "", addr, 0);
+		free(addr);
+	}
+
 	static VKAPI_ATTR VkBool32 VKAPI_CALL _debugCallback(
 			VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
 			VkDebugUtilsMessageTypeFlagsEXT messageType,
@@ -60,7 +82,7 @@ namespace Soul { namespace GPU {
 
 	void System::init(const Config &config) {
 		SOUL_ASSERT_MAIN_THREAD();
-		Memory::ScopeAllocator<> scopeAllocator("GPU::System::Init");
+		Runtime::ScopeAllocator<> scopeAllocator("GPU::System::Init");
 		SOUL_MEMORY_ALLOCATOR_ZONE(&scopeAllocator);
 
 		_db.currentFrame = 0;
@@ -553,7 +575,7 @@ namespace Soul { namespace GPU {
 			static const auto
 					pickSurfaceFormat = [](VkPhysicalDevice physicalDevice,
 										   VkSurfaceKHR surface) -> VkSurfaceFormatKHR {
-				Memory::ScopeAllocator<> scopeAllocator("GPU::System::init::pickSurfaceFormat");
+				Runtime::ScopeAllocator<> scopeAllocator("GPU::System::init::pickSurfaceFormat");
 				SOUL_LOG_INFO("Picking surface format.");
 				Array<VkSurfaceFormatKHR> formats(&scopeAllocator);
 				uint32 formatCount;
@@ -713,6 +735,15 @@ namespace Soul { namespace GPU {
 			vulkanFunctions.vkBindBufferMemory2KHR = vkBindBufferMemory2KHR;
 			vulkanFunctions.vkBindImageMemory2KHR = vkBindImageMemory2KHR;
 			vulkanFunctions.vkGetPhysicalDeviceMemoryProperties2KHR = vkGetPhysicalDeviceMemoryProperties2KHR;
+
+			VkAllocationCallbacks allocationCallbacks = {
+				nullptr,
+				VmaAllocCallback,
+				VmaReallocationCallback,
+				VmaFreeCallback,
+				nullptr,
+				nullptr
+			};
 
 			VmaAllocatorCreateInfo allocatorInfo = {};
 			allocatorInfo.physicalDevice = db->physicalDevice;
@@ -1219,7 +1250,7 @@ namespace Soul { namespace GPU {
 		SOUL_ASSERT_MAIN_THREAD();
 		_FrameContext &frameContext = _frameContext();
 		for (const _Buffer &buffer : frameContext.stagingBuffers) {
-			vkDestroyBuffer(_db.device, buffer.vkHandle, nullptr);
+			vmaDestroyBuffer(_db.gpuAllocator, buffer.vkHandle, buffer.allocation);
 		}
 		_frameContext().stagingBuffers.resize(0);
 	}
@@ -1437,7 +1468,7 @@ namespace Soul { namespace GPU {
 	}
 
 	_ThreadContext &System::_threadContext() {
-		return _frameContext().threadContexts[Runtime::ThreadID()];
+		return _frameContext().threadContexts[Runtime::GetThreadId()];
 	}
 
 	static std::string _FormatGLSLErrorMessage(const char* source, const std::string& errorMessage) {
@@ -1502,7 +1533,7 @@ namespace Soul { namespace GPU {
 		SOUL_ASSERT(0, desc.name != nullptr, "");
 		SOUL_ASSERT(0, strlen(desc.name) != 0, "Shader name cannot be empty");
 
-		Memory::ScopeAllocator<> scopeAllocator("shaderCreate");
+		Runtime::ScopeAllocator<> scopeAllocator("shaderCreate");
 		SOUL_MEMORY_ALLOCATOR_ZONE(&scopeAllocator);
 
 		ShaderID shaderID = ShaderID(_db.shaders.add({}));
@@ -1728,7 +1759,7 @@ namespace Soul { namespace GPU {
 
 	VkDescriptorSetLayout System::_descriptorSetLayoutRequest(const _DescriptorSetLayoutKey& key) {
 		SOUL_PROFILE_ZONE_WITH_NAME("GPU::System::_descriptorSetLayoutRequest");
-		Memory::ScopeAllocator<> scopeAllocator("GPU::System::_descriptorSetLayoutRequest");
+		Runtime::ScopeAllocator<> scopeAllocator("GPU::System::_descriptorSetLayoutRequest");
 
 		if (_db.descriptorSetLayoutMaps.isExist(key)) {
 			return _db.descriptorSetLayoutMaps[key];
@@ -1770,7 +1801,7 @@ namespace Soul { namespace GPU {
 			return _db.pipelineStateMaps[desc];
 		}
 
-		Memory::ScopeAllocator<> scopeAllocator("GPU::System::pipelineStateRequest");
+		Runtime::ScopeAllocator<> scopeAllocator("GPU::System::pipelineStateRequest");
 
 		_Program* program = _programPtr(desc.programID);
 
@@ -1969,7 +2000,7 @@ namespace Soul { namespace GPU {
 	ProgramID System::programRequest(const ProgramDesc& programDesc) {
         SOUL_ASSERT_MAIN_THREAD();
         SOUL_PROFILE_ZONE_WITH_NAME("GPU::System::programRequest");
-        Memory::ScopeAllocator<> scopeAllocator("GPU::System::programCreate");
+        Runtime::ScopeAllocator<> scopeAllocator("GPU::System::programCreate");
 
         if (_db.programMaps.isExist(programDesc)) {
             return _db.programMaps[programDesc];
@@ -2060,7 +2091,7 @@ namespace Soul { namespace GPU {
 	VkPipeline System::_pipelineCreate(const ComputeBaseNode &node, ProgramID programID) {
 	    SOUL_ASSERT_MAIN_THREAD();
 	    SOUL_PROFILE_ZONE_WITH_NAME("GPU::System::_pipelineCreate");
-	    Memory::ScopeAllocator<> scopeAllocator("GPU::System::_pipelineCreate");
+	    Runtime::ScopeAllocator<> scopeAllocator("GPU::System::_pipelineCreate");
 
 	    const ComputePipelineConfig& pipelineConfig = node.pipelineConfig;
 	    SOUL_ASSERT(0, pipelineConfig.computeShaderID!=SHADER_ID_NULL, "");

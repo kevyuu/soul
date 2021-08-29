@@ -898,7 +898,7 @@ namespace Soul {
 			std::mutex pipelineStateRequestMutex;
 
 			explicit _Database(Memory::Allocator* backingAllocator):
-				cpuAllocator("GPU System", backingAllocator, CPUAllocatorProxy(Memory::CounterProxy(), Memory::NoOpProxy())),
+				cpuAllocator("GPU System", backingAllocator, CPUAllocatorProxy::Config{ Memory::CounterProxy::Config()}),
 				allocatorInitializer(&cpuAllocator) {
 				allocatorInitializer.end();
 			}

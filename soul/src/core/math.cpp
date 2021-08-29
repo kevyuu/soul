@@ -30,174 +30,6 @@ namespace Soul {
 		return level;
 	}
 
-	Vec2f operator+(const Vec2f & lhs, const Vec2f & rhs)
-	{
-		return Vec2f(lhs.x + rhs.x, lhs.y + rhs.y);
-	}
-
-	Vec2f operator-(const Vec2f & lhs, const Vec2f & rhs)
-	{
-		return Vec2f(lhs.x - rhs.x, lhs.y - rhs.y);
-	}
-
-	Vec2f operator*(const Vec2f & lhs, const float rhs)
-	{
-		return Vec2f(lhs.x * rhs, lhs.y * rhs);
-	}
-
-	void operator+=(Vec2f & lhs, const Vec2f & rhs)
-	{
-		lhs.x += rhs.x;
-		lhs.y += rhs.y;
-	}
-
-	void operator-=(Vec2f & lhs, const Vec2f & rhs)
-	{
-		lhs.x -= rhs.x;
-		lhs.y -= rhs.y;
-	}
-
-	void operator*=(Vec2f & lhs, const float rhs)
-	{
-		lhs.x *= rhs;
-		lhs.y *= rhs;
-	}
-
-	Vec2f unit(Vec2f vec)
-	{
-		float magnitude = sqrt(vec.x * vec.x + vec.y * vec.y);
-		return Vec2f(vec.x / magnitude, vec.y / magnitude);
-	}
-
-	Vec3f operator+(const Vec3f & lhs, const Vec3f & rhs)
-	{
-		return Vec3f(lhs.x + rhs.x, lhs.y + rhs.y, lhs.z + rhs.z);
-	}
-
-	Vec3f operator-(const Vec3f & lhs, const Vec3f & rhs)
-	{
-		return Vec3f(lhs.x - rhs.x, lhs.y - rhs.y, lhs.z - rhs.z);
-	}
-
-	Vec3f operator*(const Vec3f & lhs, const float rhs)
-	{
-		return Vec3f(lhs.x * rhs, lhs.y * rhs, lhs.z * rhs);
-	}
-
-	Vec3f operator/(const Vec3f & lhs, const float rhs)
-	{
-		return Vec3f(lhs.x/rhs, lhs.y/rhs, lhs.z/rhs);
-	}
-
-	void operator+=(Vec3f & lhs, const Vec3f & rhs)
-	{
-		lhs.x += rhs.x;
-		lhs.y += rhs.y;
-		lhs.z += rhs.z;
-	}
-
-	void operator-=(Vec3f & lhs, const Vec3f & rhs)
-	{
-		lhs.x -= rhs.x;
-		lhs.y -= rhs.y;
-		lhs.z -= rhs.z;
-	}
-
-	void operator*=(Vec3f & lhs, const float rhs)
-	{
-		lhs.x *= rhs;
-		lhs.y *= rhs;
-		lhs.z *= rhs;
-	}
-
-	void operator/=(Vec3f & lhs, const float rhs)
-	{
-		lhs.x /= rhs;
-		lhs.y /= rhs;
-		lhs.z /= rhs;
-	}
-
-	bool operator==(const Vec3f& lhs, const Vec3f& rhs) {
-		return (lhs.x == rhs.x) && (lhs.y == rhs.y) && (lhs.z == rhs.z);
-	}
-
-	bool operator!=(const Vec3f& lhs, const Vec3f& rhs) {
-		return (lhs.x != rhs.x) || (lhs.y != rhs.y) || (lhs.z != rhs.z);
-	}
-
-	Vec3f cross(const Vec3f & lhs, const Vec3f & rhs)
-	{
-		Vec3f res;
-
-		res.x = lhs.y * rhs.z - lhs.z * rhs.y;
-		res.y = lhs.z * rhs.x - lhs.x * rhs.z;
-		res.z = lhs.x * rhs.y - lhs.y * rhs.x;
-
-		return res;
-	}
-
-	float dot(const Vec3f & lhs, const Vec3f & rhs)
-	{
-		return lhs.x * rhs.x + lhs.y * rhs.y + lhs.z * rhs.z;
-	}
-
-	Vec3f componentMul(const Vec3f& lhs, const Vec3f& rhs) {
-		return {
-			lhs.x * rhs.x,
-			lhs.y * rhs.y,
-			lhs.z * rhs.z
-		};
-	}
-
-	Vec3f unit(const Vec3f & vec)
-	{
-		float magnitude = sqrt(vec.x * vec.x + vec.y * vec.y + vec.z * vec.z);
-		return Vec3f(vec.x / magnitude, vec.y / magnitude, vec.z / magnitude);
-	}
-
-	float squareLength(const Vec3f& vec) {
-		return vec.x * vec.x + vec.y * vec.y + vec.z * vec.z;
-	}
-
-	float length(const Vec3f & vec)
-	{
-		return sqrt(vec.x * vec.x + vec.y * vec.y + vec.z * vec.z);
-	}
-
-	Vec3f componentMin(const Vec3f& v1, const Vec3f& v2) {
-		return { min(v1.x, v2.x), min(v1.y, v2.y), min(v1.z, v2.z) };
-	}
-
-	Vec3f componentMax(const Vec3f& v1, const Vec3f& v2) {
-		return { max(v1.x, v2.x), max(v1.y, v2.y), max(v1.z, v2.z) };
-	}
-
-	Vec4f operator/(const Vec4f& lhs, const float rhs) {
-		return { lhs.x / rhs, lhs.y / rhs, lhs.z / rhs, lhs.w / rhs };
-	}
-
-	void operator*=(Vec4f& lhs, const float rhs) {
-		lhs.x *= rhs;
-		lhs.y *= rhs;
-		lhs.z *= rhs;
-		lhs.w *= rhs;
-	}
-
-	void operator/=(Vec4f& lhs, const float rhs) {
-		lhs.x /= rhs;
-		lhs.y /= rhs;
-		lhs.z /= rhs;
-		lhs.w /= rhs;
-	}
-
-	float squareLength(const Vec4f& vec) {
-		return vec.x * vec.x + vec.y * vec.y + vec.z * vec.z + vec.w * vec.w;
-	}
-
-	float length(const Vec4f& vec) {
-		return sqrt(vec.x * vec.x + vec.y * vec.y + vec.z * vec.z + vec.w * vec.w);
-	}
-
 	Quaternionf quaternionFromVec3f(const Vec3f& source, const Vec3f& destination) {
 		Quaternionf res;
 		Vec3f src = unit(source);
@@ -244,7 +76,7 @@ namespace Soul {
 			size_t k = next_ijk[j];
 			float s = sqrt((mat.elem[i][i] - (mat.elem[j][j] + mat.elem[k][k])) + 1);
 			quat.mem[i] = 0.5f * s;
-			if (s != 0) {
+			if (s != 0.0f) {
 				s = 0.5f / s;
 			}
 			quat.w = (mat.elem[k][j] - mat.elem[j][k]) * s;
@@ -267,7 +99,7 @@ namespace Soul {
 		if (q.w < bias) {
 			q.w = bias;
 
-			const float factor = float(std::sqrt(1.0 - float((double)bias * (double)bias)));
+			const float factor = float(std::sqrt(1.0 - double(bias) * double(bias)));
 			q.xyz *= factor;
 		}
 
@@ -373,9 +205,9 @@ namespace Soul {
 	}
 
 	Vec3f rotate(const Quaternionf& lhs, const Vec3f& rhs) {
-		return (lhs.xyz * 2 * (dot(lhs.xyz, rhs))) +
+		return (lhs.xyz * 2.0f * (dot(lhs.xyz, rhs))) +
 			(rhs * (lhs.w * lhs.w - dot(lhs.xyz, lhs.xyz))) +
-			cross(lhs.xyz, rhs) * 2 * lhs.w;
+			cross(lhs.xyz, rhs) * 2.0f * lhs.w;
 	}
 
 	Quaternionf unit(const Quaternionf& quaternion) {
@@ -608,7 +440,7 @@ namespace Soul {
 		Mat4f res;
 
 		Vec3f direction = unit(target - position);
-		Vec3f zAxis = direction * -1;
+		Vec3f zAxis = -direction;
 		Vec3f xAxis = unit(cross(direction , up));
 		Vec3f yAxis = unit(cross(xAxis, direction));
 		
@@ -627,7 +459,7 @@ namespace Soul {
 
 		res.elem[3][3] = 1;
 
-		Mat4f translateMat = mat4Translate(position * -1);
+		Mat4f translateMat = mat4Translate(-position);
 		res = res * translateMat;
 
 		return res;
@@ -695,12 +527,12 @@ namespace Soul {
 
 		det = matrix.mem[0] * res.mem[0] + matrix.mem[1] * res.mem[4] + matrix.mem[2] * res.mem[8] + matrix.mem[3] * res.mem[12];
 
-		if (det == 0)
+		if (det == 0.0f)
 			return Mat4f();
 
 		det = 1.f / det;
 
-		for (int i = 0; i < 16; i++)
+		for (int i = 0; i < 16; ++i)
 			res.mem[i] = res.mem[i] * det;
 
 		return res;
@@ -795,10 +627,7 @@ namespace Soul {
 	}
 
 	bool operator!=(const Mat4f& lhs, const Mat4f& rhs) {
-		for (int i = 0; i < 16; i++) {
-			if (lhs.mem[i] != rhs.mem[i]) return true;
-		}
-		return false;
+		return !(lhs == rhs);
 	}
 
 	Mat3f mat3FromMat4UpperLeft(const Mat4f& mat4) {
@@ -809,11 +638,11 @@ namespace Soul {
 		return res;
 	}
 
-	AABB AABBCombine(AABB aabb1, AABB aabb2) {
+	AABB aabbCombine(AABB aabb1, AABB aabb2) {
 		return AABB(min(aabb1.min, aabb2.min), max(aabb1.max, aabb2.max));
 	}
 
-	AABB AABBTransform(AABB aabb, const Mat4f& transform) {
+	AABB aabbTransform(AABB aabb, const Mat4f& transform) {
 		return AABB(transform * aabb.min, transform * aabb.max);
 	}
 
@@ -899,10 +728,10 @@ namespace Soul {
 	}
 
 	float radians(float angle) {
-		return (angle / 180) * FCONST::PI;
+		return (angle / 180) * Fconst::PI;
 	}
 
-	int roundToNextPowOfTwo(uint32 num) {
+	uint64 roundToNextPowOfTwo(uint64 num) {
 		
 		num -= 1;
 		num |= (num >> 1);
@@ -914,13 +743,13 @@ namespace Soul {
 		return num + 1;
 	}
 
-	uint32 hashMurmur32(const uint8* data, uint32 size) {
+	uint32 hashMurmur32(const uint8* data, soul_size size) {
 		uint32 h = 0;
 		if (size > 3) {
-			const uint32* key_x4 = (const uint32*)data;
+			auto keyX4 = (const uint32*)data;
 			size_t i = size >> 2;
 			do {
-				uint32 k = *key_x4++;
+				uint32 k = *keyX4++;
 				k *= 0xcc9e2d51;
 				k = (k << 15) | (k >> 17);
 				k *= 0x1b873593;
@@ -928,7 +757,7 @@ namespace Soul {
 				h = (h << 13) | (h >> 19);
 				h = (h * 5) + 0xe6546b64;
 			} while (--i);
-			data = (const uint8*)key_x4;
+			data = (const uint8*)keyX4;
 		}
 		if (size & 3) {
 			uint32 i = size & 3;

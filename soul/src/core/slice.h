@@ -2,7 +2,9 @@
 // Created by Kevin Yudi Utama on 23/12/19.
 //
 #pragma once
+
 #include "core/array.h"
+#include "core/compiler.h"
 #include "core/type.h"
 
 namespace Soul {
@@ -12,43 +14,43 @@ namespace Soul {
 	{
 	public:
 
-		Slice(): _array(nullptr), _beginIdx(0), _endIdx(0), _size(0) {}
-		Slice(Array<T>* array, int begin, int end): _array(array), _beginIdx(begin), _endIdx(end), _size(_endIdx - _beginIdx) {}
-
+		Slice() = default;
+		Slice(Array<T>* array, soul_size begin, soul_size end): _array(array), _beginIdx(begin), _endIdx(end), _size(_endIdx - _beginIdx) {}
 		Slice(const Slice& other) = delete;
 		Slice& operator=(const Slice& other) = delete;
 		Slice(Slice&& other) = delete;
 		Slice& operator=(const Slice&& other) = delete;
+		~Slice() = default;
 
-		void set(Array<T>* array, int begin, int end) {
+		void set(Array<T>* array, soul_size begin, soul_size end) {
 			_array = array;
 			_beginIdx = begin;
 			_endIdx = end;
 			_size = _endIdx - _beginIdx;
 		}
 
-		inline T& operator[](uint64 idx) {
+		SOUL_NODISCARD T& operator[](soul_size idx) {
 			SOUL_ASSERT(0, idx < _size, "");
 			return (*_array)[_beginIdx + idx];
 		}
 
-		inline const T& operator[](uint64 idx) const {
+		SOUL_NODISCARD const T& operator[](soul_size idx) const {
 			SOUL_ASSERT(0, idx < _size, "");
 			return this->operator[](idx);
 		}
 
-		inline int size() const { return _size; }
+		SOUL_NODISCARD int size() const { return _size; }
 
-		const T* begin() const { return _array->data() + _beginIdx; }
-		const T* end() const { return _array->data() + _endIdx; }
+		SOUL_NODISCARD const T* begin() const { return _array->data() + _beginIdx; }
+		SOUL_NODISCARD const T* end() const { return _array->data() + _endIdx; }
 
-		T* begin() { return _array->data() + _beginIdx; }
-		T* end() { return _array->data() + _endIdx; }
+		SOUL_NODISCARD T* begin() { return _array->data() + _beginIdx; }
+		SOUL_NODISCARD T* end() { return _array->data() + _endIdx; }
 	private:
-		Array<T>* _array;
-		uint32 _beginIdx;
-		uint32 _endIdx;
-		uint32 _size;
+		Array<T>* _array = nullptr;
+		soul_size _beginIdx = 0;
+		soul_size _endIdx = 0;
+		soul_size _size = 0;
 	};
 
 }

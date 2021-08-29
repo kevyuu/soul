@@ -1,60 +1,58 @@
 #pragma once
 
+#include "core/compiler.h"
+#include "core/config.h"
 #include "core/type.h"
 
 namespace Soul {
-
-    namespace Runtime {
-        Memory::Allocator* GetContextAllocator();
-    }
 
 	template<typename T>
 	class StaticArray {
 	public:
 
-		StaticArray() : _allocator((Memory::Allocator*) Runtime::GetContextAllocator()) {};
-		explicit StaticArray(Memory::Allocator* allocator) : _allocator(allocator), _size(0), _buffer(nullptr) {}
-		~StaticArray() { cleanup(); }
-
+		explicit StaticArray(Memory::Allocator* allocator = GetDefaultAllocator()) : _allocator(allocator) {}
 		StaticArray(const StaticArray& other);
 		StaticArray& operator=(const StaticArray& other);
-
 		StaticArray(StaticArray&& other) noexcept;
 		StaticArray& operator=(StaticArray&& other) noexcept;
+		~StaticArray() { cleanup(); }
+
+		void swap(StaticArray& other) noexcept;
+		friend void swap(StaticArray& a, StaticArray& b) noexcept { a.swap(b); }
 
 		template<typename... ARGS>
-		void init(Memory::Allocator* allocator, uint32 size, ARGS&&... args);
+		void init(Memory::Allocator* allocator, soul_size size, ARGS&&... args);
 
 		template<typename... ARGS>
-		void init(uint32 size, ARGS&&... args);
+		void init(soul_size size, ARGS&&... args);
 		void cleanup();
 
-		inline T* ptr(int idx) { SOUL_ASSERT(0, idx < _size, ""); return &_buffer[idx]; }
-		inline T* data() { return &_buffer[0]; }
-		inline const T* data() const { return &_buffer[0];}
+		SOUL_NODISCARD T* ptr(soul_size idx) { SOUL_ASSERT(0, idx < _size, ""); return &_buffer[idx]; }
+		SOUL_NODISCARD T* data() { return &_buffer[0]; }
+		SOUL_NODISCARD const T* data() const { return &_buffer[0];}
 
-		inline T& operator[](uint64 idx) {
+		SOUL_NODISCARD T& operator[](soul_size idx) {
 			SOUL_ASSERT(0, idx < _size, "Out of bound access to array detected. idx = %d, _size = %d", idx, _size);
 			return _buffer[idx];
 		}
 
-		inline const T& operator[](uint64 idx) const {
+		SOUL_NODISCARD const T& operator[](soul_size idx) const {
 			SOUL_ASSERT(0, idx < _size, "Out of bound access to array detected. idx = %d, _size=%d", idx, _size);
 			return _buffer[idx];
 		}
 
-		inline int size() const { return _size; }
+		SOUL_NODISCARD soul_size size() const { return _size; }
 
-		const T* begin() const { return _buffer; }
-		const T* end() const { return _buffer + _size; }
+		SOUL_NODISCARD const T* begin() const { return _buffer; }
+		SOUL_NODISCARD const T* end() const { return _buffer + _size; }
 
-		T* begin() { return _buffer; }
-		T* end() {return _buffer + _size; }
+		SOUL_NODISCARD T* begin() { return _buffer; }
+		SOUL_NODISCARD T* end() {return _buffer + _size; }
 
 	private:
 		Memory::Allocator* _allocator;
 		T* _buffer = nullptr;
-		uint32 _size = 0;
+		soul_size _size = 0;
 	};
 
 	template <typename T>
@@ -64,10 +62,8 @@ namespace Soul {
 	}
 
 	template <typename T>
-	StaticArray<T>& StaticArray<T>::operator=(const StaticArray<T>& other) {
-		if (this == &other) return *this;
-		cleanup();
-		new (this) StaticArray<T>(other);
+	StaticArray<T>& StaticArray<T>::operator=(const StaticArray<T>& other) {  // NOLINT(bugprone-unhandled-self-assignment)
+		StaticArray<T>(other).swap(*this);
 		return *this;
 	}
 
@@ -81,17 +77,21 @@ namespace Soul {
 
 	template <typename T>
 	StaticArray<T>& StaticArray<T>::operator=(StaticArray&& other) noexcept {
-		cleanup();
-		_allocator = std::move(other._allocator);
-		_buffer = std::move(other._buffer);
-		_size = std::move(other._size);
-		other._buffer = nullptr;
+		StaticArray<T>(std::move(other)).swap(*this);
 		return *this;
+	}
+
+	template<typename T>
+	void StaticArray<T>::swap(StaticArray& other) noexcept {
+		using std::swap;
+		swap(_allocator, other._allocator);
+		swap(_buffer, other._buffer);
+		swap(_size, other._size);
 	}
 
     template <typename T>
     template <typename... ARGS>
-    void StaticArray<T>::init(Memory::Allocator* allocator, uint32 size, ARGS&&... args) {
+    void StaticArray<T>::init(Memory::Allocator* allocator, soul_size size, ARGS&&... args) {
         SOUL_ASSERT(0, size != 0, "");
         SOUL_ASSERT(0, _buffer == nullptr, "Array have been initialized before");
         SOUL_ASSERT(0, _allocator == nullptr, "");
@@ -101,12 +101,12 @@ namespace Soul {
 
 	template <typename T>
 	template <typename... ARGS>
-	void StaticArray<T>::init(uint32 size, ARGS&&... args) {
+	void StaticArray<T>::init(soul_size size, ARGS&&... args) {
 		SOUL_ASSERT(0, size != 0, "");
 		SOUL_ASSERT(0, _buffer == nullptr, "Array have been initialized before");
 		_size = size;
 		_buffer = (T*) _allocator->allocate(_size * sizeof(T), alignof(T));
-		for (uint64 i = 0; i < _size; i++) {
+		for (soul_size i = 0; i < _size; i++) {
 			new (_buffer + i) T(std::forward<ARGS>(args) ... );
 		}
 	}

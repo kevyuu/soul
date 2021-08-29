@@ -1,66 +1,62 @@
 #pragma once
 
+#include "core/config.h"
+#include "core/compiler.h"
 #include "core/type.h"
 #include "core/dev_util.h"
 #include "core/pool.h"
 
-#include "runtime/runtime.h"
-
 namespace Soul
 {
+	// ReSharper disable once CppInconsistentNaming
 	using PackedID = PoolID;
 
 	template<typename T>
 	class PackedPool
 	{
-	private:
-		Memory::Allocator* _allocator;
-		Pool<uint32> _internalIndexes;
-		PoolID* _poolIDs;
-		T* _buffer;
-		uint32 _capacity;
-		uint32 _size;
 
 	public:
-		PackedPool();
-		explicit PackedPool(Memory::Allocator* allocator);
+		explicit PackedPool(Memory::Allocator* allocator = GetDefaultAllocator());
 		PackedPool(const PackedPool& other);
 		PackedPool& operator=(const PackedPool& other);
 		PackedPool(PackedPool&& other) noexcept;
 		PackedPool& operator=(PackedPool&& other) noexcept;
 		~PackedPool();
 
-		void reserve(uint32 capacity);
+		void swap(PackedPool& other) noexcept;
+		static void swap(PackedPool& a, PackedPool& b) noexcept { a.swap(b); }
+
+		void reserve(soul_size capacity);
 		PackedID add(const T& datum);
 		PackedID add(T&& datum);
 		void append(const PackedPool& other);
 
 		inline void remove(PackedID id);
 
-		inline T& operator[](PackedID id) 
+		SOUL_NODISCARD T& operator[](PackedID id) 
 		{
-			uint32 internalIndex = _internalIndexes[id];
+			soul_size internalIndex = _internalIndexes[id];
 			return _buffer[internalIndex];
 		}
 
-		inline const T& get(PackedID id) const
+		SOUL_NODISCARD const T& get(PackedID id) const
 		{
-			uint32 internalIndex = _internalIndexes[id];
+			soul_size internalIndex = _internalIndexes[id];
 			return _buffer[internalIndex];
 		}
 
-		inline const T& getInternal(uint32 idx) const {
+		SOUL_NODISCARD const T& getInternal(soul_size idx) const {
 			return _buffer[idx];
 		}
 
-		inline T* ptr(PackedID id)
+		SOUL_NODISCARD T* ptr(PackedID id)
 		{
-			uint32 internalIndex = _internalIndexes[id];
+			soul_size internalIndex = _internalIndexes[id];
 			return &_buffer[internalIndex];
 		}
 
-		inline uint32 size() const { return _size; }
-		inline uint32 capacity() const { return _capacity; }
+		SOUL_NODISCARD soul_size size() const noexcept { return _size; }
+		SOUL_NODISCARD soul_size capacity() const noexcept { return _capacity; }
 
 		inline void clear()
 		{
@@ -68,30 +64,31 @@ namespace Soul
 			_size = 0;
 		}
 
-		inline void cleanup();
+		void cleanup();
 
-		T* begin() { return _buffer; }
-		T* end() { return _buffer + _size; }
+		SOUL_NODISCARD T* begin() noexcept { return _buffer; }
+		SOUL_NODISCARD T* end() noexcept { return _buffer + _size; }
 
-		const T* begin() const { return _buffer; }
-		const T* end() const { return _buffer + _size; }
+		SOUL_NODISCARD const T* begin() const { return _buffer; }
+		SOUL_NODISCARD const T* end() const { return _buffer + _size; }
+
+	private:
+
+		using IndexPool = Pool<soul_size>;
+
+		Memory::Allocator* _allocator = nullptr;
+		IndexPool _internalIndexes;
+		PoolID* _poolIDs = 0;
+		T* _buffer = nullptr;
+		soul_size _capacity = 0;
+		soul_size _size = 0;
 
 	};
 
 	template <typename T>
-	PackedPool<T>::PackedPool() :
-		_allocator((Memory::Allocator*) Runtime::GetContextAllocator()),
-		_internalIndexes(_allocator),
-		_poolIDs(nullptr), _buffer(nullptr),
-		_size(0), _capacity(0)
-		 {}
-
-	template <typename T>
 	PackedPool<T>::PackedPool(Memory::Allocator* allocator) :
 		_allocator(allocator),
-		_internalIndexes(allocator),
-		_poolIDs(nullptr), _buffer(nullptr),
-		_size(0), _capacity(0)
+		_internalIndexes(allocator)
 		{}
 
 	template<typename T>
@@ -104,17 +101,15 @@ namespace Soul
 	}
 
 	template<typename T>
-	PackedPool<T>& PackedPool<T>::operator=(const PackedPool& other) {
-		if (this == &other) return *this;
-		cleanup();
-		new (this) PackedPool<T>(other);
+	PackedPool<T>& PackedPool<T>::operator=(const PackedPool& other) {  // NOLINT(bugprone-unhandled-self-assignment)
+		PackedPool<T>(other).swap(*this);
 		return *this;
 	}
 
 	template <typename T>
 	PackedPool<T>::PackedPool(PackedPool&& other) noexcept {
 		_allocator = std::move(other._allocator);
-		new (&_internalIndexes) Pool<uint32>(std::move(other._internalIndexes));
+		new (&_internalIndexes) IndexPool(std::move(other._internalIndexes));
 		_poolIDs = std::move(other._poolIDs);
 		_buffer = std::move(other._buffer);
 		_size = std::move(other._size);
@@ -128,8 +123,7 @@ namespace Soul
 
 	template <typename T>
 	PackedPool<T>& PackedPool<T>::operator=(PackedPool&& other) noexcept {
-		cleanup();
-		new (this) PackedPool<T>(std::move(other));
+		PackedPool<T>(std::move(other)).swap(*this);
 		return *this;
 	}
 
@@ -139,7 +133,18 @@ namespace Soul
 	}
 
 	template <typename T>
-	void PackedPool<T>::reserve(uint32 capacity) {
+	void PackedPool<T>::swap(PackedPool& other) noexcept {
+		using std::swap;
+		swap(_allocator, other._allocator);
+		swap(_internalIndexes, other._internalIndexes);
+		swap(_poolIDs, other._poolIDs);
+		swap(_buffer, other._buffer);
+		swap(_capacity, other._capacity);
+		swap(_size, other._size);
+	}
+
+	template <typename T>
+	void PackedPool<T>::reserve(soul_size capacity) {
 		SOUL_ASSERT(0, capacity > _capacity, "");
 
 		T* oldBuffer = _buffer;
@@ -166,7 +171,7 @@ namespace Soul
 		}
 
 		new (_buffer + _size) T(datum);
-		PackedID id = _internalIndexes.add(_size);
+		const PackedID id = _internalIndexes.add(_size);
 		_poolIDs[_size] = id;
 		_size++;
 
@@ -178,9 +183,8 @@ namespace Soul
 		if (_size == _capacity) {
 			reserve(_capacity * 2 + 1);
 		}
-
 		new (_buffer + _size) T(std::move(datum));
-		PackedID id = _internalIndexes.add(_size);
+		const PackedID id = _internalIndexes.add(_size);
 		_poolIDs[_size] = id;
 		_size++;
 
@@ -196,7 +200,7 @@ namespace Soul
 
 	template <typename T>
 	void PackedPool<T>::remove(PackedID id) {
-		uint32 internalIndex = _internalIndexes[id];
+		soul_size internalIndex = _internalIndexes[id];
 		_buffer[internalIndex] = _buffer[_size - 1];
 		_poolIDs[internalIndex] = _poolIDs[_size - 1];
 		_internalIndexes[_poolIDs[internalIndex]] = internalIndex;

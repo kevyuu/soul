@@ -1,32 +1,31 @@
 #pragma once
 
-#include "core/type.h"
-#include "core/dev_util.h"
+#include "core/config.h"
 #include "core/bitset.h"
+#include "core/dev_util.h"
+#include "core/compiler.h"
+#include "core/type.h"
 
 #include "memory/allocator.h"
 
-#include <cstdlib>
-
 namespace Soul {
 
-    namespace Runtime {
-        Memory::Allocator* GetContextAllocator();
-    }
-
-	using PoolID = uint32;
+    // ReSharper disable once CppInconsistentNaming
+    using PoolID = uint32;
 
 	template <typename T>
 	class Pool {
 	public:
-
-		Pool() : _capacity(0), _size(0), _freelist(0), _buffer(nullptr), _allocator((Memory::Allocator*) Runtime::GetContextAllocator()), _bitSet() {}
-		explicit Pool(Memory::Allocator* allocator) : _capacity(0), _size(0), _freelist(0), _buffer(nullptr), _allocator(allocator), _bitSet(_allocator) {}
+		
+		explicit Pool(Memory::Allocator* allocator = GetDefaultAllocator()) noexcept;
 		Pool(const Pool& other);
 		Pool& operator=(const Pool& other);
 		Pool(Pool&& other) noexcept;
 		Pool& operator=(Pool&& other) noexcept;
-		~Pool() { cleanup(); }
+		~Pool();
+
+		void swap(Pool& other) noexcept;
+		friend void swap(Pool& a, Pool& b) noexcept{ a.swap(b);  }
 
 		void reserve(uint32 capacity);
 
@@ -35,28 +34,28 @@ namespace Soul {
 
 		void remove(PoolID id);
 
-		inline T& operator[](PoolID id) {
+		SOUL_NODISCARD T& operator[](PoolID id) {
 			SOUL_ASSERT(0, id < _capacity, "Pool access violation");
 			return _buffer[id].datum;
 		}
 
-		inline const T& operator[](PoolID id) const {
+		SOUL_NODISCARD const T& operator[](PoolID id) const {
 			SOUL_ASSERT(0, id < _capacity, "Pool access violation");
 			return _buffer[id].datum;
 		}
 
-		inline const T& get(PoolID id) const {
+		SOUL_NODISCARD const T& get(PoolID id) const {
 			SOUL_ASSERT(0, id < _capacity, "Pool access violation");
 			return _buffer[id].datum;
 		}
 
-		inline T* ptr(PoolID id) const {
+		SOUL_NODISCARD T* ptr(PoolID id) const {
 			SOUL_ASSERT(0, id < _capacity, "Pool access violation");
 			return &(_buffer[id].datum);
 		}
 
-		inline uint32 size() const { return _size; }
-		inline bool empty() const { return _size == 0; }
+		SOUL_NODISCARD uint32 size() const { return _size; }
+		SOUL_NODISCARD bool empty() const { return _size == 0; }
 
 		void clear();
 		void cleanup();
@@ -67,24 +66,24 @@ namespace Soul {
 
 		union Unit {
 			T datum;
-			uint32 next;
+			soul_size next;
 		};
 
 		Memory::Allocator* _allocator;
 		BitSet _bitSet;
-		Unit* _buffer;
-		uint32 _capacity;
-		uint32 _size;
-		uint32 _freelist;
+		Unit* _buffer = nullptr;
+		soul_size _capacity = 0;
+		soul_size _size = 0;
+		soul_size _freelist = 0;
 
 		template <typename U = T,
-				typename std::enable_if_t<std::is_trivially_move_constructible<U>::value>* = nullptr>
+				std::enable_if_t<std::is_trivially_move_constructible_v<U>>* = nullptr>
 		inline void _moveUnits(Unit* dst) {
 			memcpy((void*)dst, (void*)_buffer, _size * sizeof(Unit));
 		}
 
 		template <typename U = T,
-				typename std::enable_if_t<!std::is_trivially_move_constructible<U>::value>* = nullptr>
+				std::enable_if_t<!std::is_trivially_move_constructible_v<U>>* = nullptr>
 		inline void _moveUnits(Unit* dst) {
 			for (int i = 0; i < _size; i++) {
 				if (_bitSet.test(i)) {
@@ -96,13 +95,13 @@ namespace Soul {
 		}
 
 		template <typename U = T,
-				typename std::enable_if_t<std::is_trivially_copyable<U>::value>* = nullptr>
+				std::enable_if_t<std::is_trivially_copyable_v<U>>* = nullptr>
 		inline void _copyUnits(const Pool<T>& other) {
 			memcpy(_buffer, other._buffer, other._size * sizeof(Unit));
 		}
 
 		template <typename U = T,
-				typename std::enable_if_t<!std::is_trivially_destructible<U>::value>* = nullptr>
+				std::enable_if_t<!std::is_trivially_destructible_v<U>>* = nullptr>
 		inline void _copyUnits(const Pool<T>& other) {
 			for (int i = 0; i < _capacity; i++) {
 				if (_bitSet.test(i)) {
@@ -114,11 +113,11 @@ namespace Soul {
 		}
 
 		template <typename U = T,
-				typename std::enable_if_t<std::is_trivially_destructible<U>::value>* = nullptr>
+				std::enable_if_t<std::is_trivially_destructible_v<U>>* = nullptr>
 		inline void _destructUnits() {}
 
 		template <typename U = T,
-				typename std::enable_if_t<!std::is_trivially_destructible<U>::value>* = nullptr>
+				std::enable_if_t<!std::is_trivially_destructible_v<U>>* = nullptr>
 		inline void _destructUnits() {
 			for (int i = 0; i < _capacity; i++) {
 				if (!_bitSet.test(i)) continue;
@@ -127,6 +126,9 @@ namespace Soul {
 		}
 
 	};
+
+	template<typename T>
+	Pool<T>::Pool(Memory::Allocator* allocator) noexcept: _allocator(allocator), _bitSet(_allocator) {}
 
 	template <typename T>
 	Pool<T>::Pool(const Pool& other) : _allocator(other._allocator), _bitSet(other._bitSet), _buffer(nullptr), _size(0), _capacity(0), _freelist(0) {
@@ -137,12 +139,9 @@ namespace Soul {
 	}
 
 	template <typename T>
-	Pool<T>& Pool<T>::operator=(const Pool& other) {
-		cleanup();
-		reserve(other._capacity);
-		_copyUnits(other);
-		_freelist = other._freelist;
-		_size = other._size;
+	Pool<T>& Pool<T>::operator=(const Pool& other) {  // NOLINT(bugprone-unhandled-self-assignment)
+		Pool<T>(other).swap(*this);
+		return *this;
 	}
 
 	template <typename T>
@@ -160,9 +159,24 @@ namespace Soul {
 	}
 
 	template <typename T>
+	Pool<T>::~Pool() {
+		cleanup();
+	}
+
+	template <typename T>
+	void Pool<T>::swap(Pool& other) noexcept {
+		using std::swap;
+		swap(_allocator, other._allocator);
+		swap(_bitSet, other._bitSet);
+		swap(_buffer, other._buffer);
+		swap(_capacity, other._capacity);
+		swap(_size, other._size);
+		swap(_freelist, other._freelist);
+	}
+
+	template <typename T>
 	Pool<T>& Pool<T>::operator=(Pool&& other) noexcept {
-		this->cleanup();
-		new (this) Pool<T>(std::move(other));
+		Pool<T>(std::move(other)).swap(*this);
 		return *this;
 	}
 
@@ -171,7 +185,7 @@ namespace Soul {
 		Unit* newBuffer = (Unit*) _allocator->allocate(capacity * sizeof(Unit), alignof(Unit));
 		if (_buffer != nullptr) {
 			_moveUnits(newBuffer);
-			_destructUnits();
+			_destructUnits<T>();
 			_allocator->deallocate(_buffer, sizeof(Unit) * _capacity);
 		}
 		_buffer = newBuffer;
@@ -222,7 +236,7 @@ namespace Soul {
 
 	template <typename T>
 	void Pool<T>::clear() {
-		_destructUnits();
+		_destructUnits<T>();
 		_size = 0;
 		_freelist = 0;
 		for (uint64 i = 0; i < _capacity; i++) {
@@ -233,7 +247,7 @@ namespace Soul {
 
 	template <typename T>
 	void Pool<T>::cleanup() {
-		_destructUnits();
+		_destructUnits<T>();
 		_capacity = 0;
 		_size = 0;
 		_allocator->deallocate(_buffer, sizeof(T) * _capacity);

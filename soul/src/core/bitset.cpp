@@ -14,8 +14,7 @@ namespace Soul {
 		return index % 8;
 	}
 
-	BitSet::BitSet() : _allocator((Memory::Allocator*) Runtime::GetContextAllocator()), _bitTable(nullptr), _size(0) {}
-	BitSet::BitSet(Memory::Allocator* allocator) : _allocator(allocator), _bitTable(nullptr), _size(0) {}
+	BitSet::BitSet(Memory::Allocator* allocator) : _allocator(allocator) {}
 
 	BitSet::BitSet(const BitSet& other) : _allocator(other._allocator) {
 		_size = other._size;

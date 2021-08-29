@@ -1,22 +1,19 @@
 #pragma once
 
+#include "core/compiler.h"
+#include "core/config.h"
 #include "core/dev_util.h"
 #include "core/util.h"
 #include "memory/allocator.h"
 
 namespace Soul {
 
-    namespace Runtime {
-        Memory::Allocator* GetContextAllocator();
-    };
-
 	template <typename T>
 	class Array
 	{
 	public:
-
-		Array() noexcept;
-		explicit Array(Memory::Allocator* allocator);
+		
+		explicit Array(Memory::Allocator* allocator = GetDefaultAllocator());
 		Array(const Array& other);
 		Array& operator=(const Array& rhs);
 		Array(Array&& other) noexcept;
@@ -24,7 +21,7 @@ namespace Soul {
 		~Array();
 
 		void swap(Array<T>& other) noexcept;
-		static void swap(Array<T>& a, Array<T>& b) noexcept { a.swap(b); }
+		friend void swap(Array<T>& a, Array<T>& b) noexcept { a.swap(b); }
 
 		void init(Memory::Allocator* allocator) noexcept;
 		void reserve(soul_size capacity);
@@ -38,35 +35,35 @@ namespace Soul {
 
 		void append(const Array<T>& other);
 
-		[[nodiscard]] inline T& back() noexcept { return _buffer[_size - 1]; }
-		[[nodiscard]] inline const T& back() const noexcept { return _buffer[_size - 1]; }
+		SOUL_NODISCARD T& back() noexcept { return _buffer[_size - 1]; }
+		SOUL_NODISCARD const T& back() const noexcept { return _buffer[_size - 1]; }
 
-		inline void pop() {
+		void pop() {
 			SOUL_ASSERT(0, _size != 0, "Cannot pop an empty array.");
 			_size--;
 			((T*) _buffer + _size)->~T();
 		}
 
-		[[nodiscard]] inline T* ptr(int idx) { return &_buffer[idx]; }
-		[[nodiscard]] inline T* data() noexcept { return &_buffer[0]; }
-		[[nodiscard]] inline const T* data() const noexcept { return &_buffer[0]; }
+		SOUL_NODISCARD T* ptr(int idx) { return &_buffer[idx]; }
+		SOUL_NODISCARD T* data() noexcept { return &_buffer[0]; }
+		SOUL_NODISCARD const T* data() const noexcept { return &_buffer[0]; }
 
-		[[nodiscard]] inline T& operator[](soul_size idx) {
+		SOUL_NODISCARD T& operator[](soul_size idx) {
 			SOUL_ASSERT(0, idx < _size, "Out of bound access to array detected. idx = %d, _size = %d", idx, _size);
 			return _buffer[idx];
 		}
 
-		[[nodiscard]] inline const T& operator[](soul_size idx) const {
+		SOUL_NODISCARD const T& operator[](soul_size idx) const {
 			SOUL_ASSERT(0, idx < _size, "Out of bound access to array detected. idx = %d, _size=%d", idx, _size);
 			return _buffer[idx];
 		}
 
-		[[nodiscard]] inline soul_size capacity() const noexcept { return _capacity; }
-		[[nodiscard]] inline soul_size size() const noexcept { return _size; }
-		[[nodiscard]] inline bool empty() const noexcept {return _size == 0; }
+		SOUL_NODISCARD soul_size capacity() const noexcept { return _capacity; }
+		SOUL_NODISCARD soul_size size() const noexcept { return _size; }
+		SOUL_NODISCARD bool empty() const noexcept {return _size == 0; }
 
-		[[nodiscard]] const T* begin() const { return _buffer; }
-		[[nodiscard]] const T* end() const { return _buffer + _size; }
+		SOUL_NODISCARD const T* begin() const { return _buffer; }
+		SOUL_NODISCARD const T* end() const { return _buffer + _size; }
 
 		T* begin() { return _buffer; }
 		T* end() {return _buffer + _size; }
@@ -78,11 +75,6 @@ namespace Soul {
 		soul_size _capacity = 0;
 
 	};
-
-	template <typename T>
-	Array<T>::Array() noexcept :
-		_allocator(Runtime::GetContextAllocator()),
-		_buffer(nullptr) {}
 
 	template<typename T>
 	Array<T>::Array(Memory::Allocator* const allocator) :
@@ -172,11 +164,6 @@ namespace Soul {
 
 	template <typename T>
 	void Array<T>::cleanup() {
-		if (_buffer == nullptr) {
-			SOUL_ASSERT(0, _size == 0, "");
-			SOUL_ASSERT(0, _capacity == 0, "");
-			return;
-		}
 		clear();
 		_allocator->deallocate(_buffer, _capacity * sizeof(T));  // NOLINT(bugprone-sizeof-expression)
 		_buffer = nullptr;
@@ -185,19 +172,8 @@ namespace Soul {
 
 	template <typename T>
 	soul_size Array<T>::add(const T& item) {
-		if (_size == _capacity) {
-			reserve((_capacity * 2) + 8);
-		}
-		new (_buffer + _size) T(item);
-		++_size;
-		return _size-1;
-	}
-
-	template <typename T>
-	void Array<T>::append(const Array<T>& other) {
-		for (const T& datum: other) {
-			add(datum);
-		}
+		T val(item);
+		return add(std::move(val));
 	}
 
 	template <typename T>
@@ -208,6 +184,13 @@ namespace Soul {
 		new (_buffer + _size) T(std::move(item));
 		++_size;
 		return _size - 1;
+	}
+
+	template <typename T>
+	void Array<T>::append(const Array<T>& other) {
+		for (const T& datum : other) {
+			add(datum);
+		}
 	}
 
 }

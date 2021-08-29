@@ -68,10 +68,15 @@ void soul_intern_assert(int paranoia, int line, const char* file, const char* fo
 #if defined(SOUL_PROFILE_CPU_BACKEND_TRACY)
 
     #include <tracy/Tracy.hpp>
-    #include <tracy/common/TracySystem.hpp>
     #include <tracy/TracyC.h>
 
     struct FrameProfileScope {
+
+    	FrameProfileScope() = default;
+        FrameProfileScope(const FrameProfileScope&) = delete;
+        FrameProfileScope& operator=(const FrameProfileScope&) = delete;
+        FrameProfileScope(FrameProfileScope&&) = delete;
+        FrameProfileScope& operator=(FrameProfileScope&&) = delete;
         ~FrameProfileScope() {
             FrameMark
         }
@@ -134,6 +139,20 @@ void soul_intern_assert(int paranoia, int line, const char* file, const char* fo
 	#define SOUL_MEMPROFILE_REGISTER_DEALLOCATION(allocatorName, addr, size) do{ MemProfile::RegisterDeallocation(allocatorName, addr, size); } while(0)
 	#define SOUL_MEMPROFILE_SNAPSHOT(x) do{ MemProfile::Snapshot(x); } while(0)
 	#define SOUL_MEMPROFILE_FRAME() MemProfile::Scope()
+#elif defined(SOUL_MEMPROFILE_CPU_BACKEND_TRACY)
+
+	#if !defined(SOUL_PROFILE_CPU_BACKEND_TRACY)
+		static_assert(false, "Please enable tracy cpu profiler to use the memory profiler");
+	#endif
+
+	#include <tracy/Tracy.hpp>
+	#include "core/type.h"
+	#define SOUL_MEMPROFILE_REGISTER_ALLOCATOR(x) do {} while(0)
+	#define SOUL_MEMPROFILE_DEREGISTER_ALLOCATOR(x) do {} while(0)
+	#define SOUL_MEMPROFILE_REGISTER_ALLOCATION(allocatorName, tag, addr, size) do { TracyAllocNS(addr, size, 10, allocatorName); } while(0)
+	#define SOUL_MEMPROFILE_REGISTER_DEALLOCATION(allocatorName, addr, size) do{ TracyFreeNS(addr, 10, allocatorName); } while(0)
+	#define SOUL_MEMPROFILE_SNAPSHOT(x) do{} while(0)
+	#define SOUL_MEMPROFILE_FRAME() do{} while(0)
 
 #else
 
@@ -145,4 +164,3 @@ void soul_intern_assert(int paranoia, int line, const char* file, const char* fo
 	#define SOUL_MEMPROFILE_FRAME() ((void) 0)
 
 #endif // SOUL_MEMPROFILE_CPU_BACKEND
-  

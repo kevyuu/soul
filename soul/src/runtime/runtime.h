@@ -1,5 +1,6 @@
 #pragma once
 
+#include "core/type_traits.h"
 #include "runtime/data.h"
 #include "runtime/system.h"
 
@@ -17,7 +18,10 @@ namespace Soul::Runtime {
 		System::Get().beginFrame();
 	}
 
-	template <SOUL_TEMPLATE_ARG_LAMBDA(Execute, void(TaskID))>
+	template<
+		typename Execute,
+		typename = require<is_lambda_v<Execute, void(TaskID)>>
+	>
 	inline TaskID CreateTask(TaskID parent, Execute&& lambda) {
 		return System::Get().taskCreate(parent, std::forward<Execute>(lambda));
 	}
@@ -30,16 +34,19 @@ namespace Soul::Runtime {
 		System::Get().taskRun(taskID);
 	}
 
-	template <SOUL_TEMPLATE_ARG_LAMBDA(Func, void(int))>
+	template<
+		typename Func,
+		typename = require<is_lambda_v<Func, void(int)>>
+	>
 	inline TaskID ParallelForTaskCreate(TaskID parent, uint32 count, uint32 blockSize, Func&& func) {
 		return System::Get()._parallelForTaskCreateRecursive(parent, 0, count, blockSize, std::forward<Func>(func));
 	}
 
-	inline uint16 ThreadID() {
+	inline uint16 GetThreadId() {
 		return System::Get().getThreadID();
 	}
 
-	inline uint16 ThreadCount() {
+	inline uint16 GetThreadCount() {
 		return System::Get().getThreadCount();
 	}
 

@@ -1,9 +1,9 @@
+#include <cstdarg>
+#include <cstdio>
+#include <cstring>
+
 #include "core/dev_util.h"
 #include "memory/profiler.h"
-
-#include <cstdio>
-#include <cstdarg>
-#include <cstring>
 
 static const char* ProjectPath(const char* filepath) {
 	return filepath + strlen(__FILE__) - strlen("core/debug.cpp");

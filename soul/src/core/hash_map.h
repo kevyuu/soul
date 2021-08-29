@@ -1,5 +1,6 @@
 #pragma once
 
+#include "core/config.h"
 #include "core/type.h"
 #include "core/dev_util.h"
 #include "runtime/runtime.h"
@@ -10,9 +11,7 @@ namespace Soul {
 	class HashMap {
 
 	public:
-
-		HashMap() noexcept :_allocator(Runtime::GetContextAllocator()) {}
-		explicit HashMap(Memory::Allocator* allocator) : _allocator(allocator) {}
+		explicit HashMap(Memory::Allocator* allocator = GetDefaultAllocator()) : _allocator(allocator) {}
 		HashMap(const HashMap& other);
 		HashMap& operator=(const HashMap& other);
 		HashMap(HashMap&& other) noexcept;
@@ -20,7 +19,7 @@ namespace Soul {
 		~HashMap();
 
 		void swap(HashMap<KEYTYPE, VALTYPE>& other) noexcept;
-		static void swap(HashMap<KEYTYPE, VALTYPE>& a, HashMap<KEYTYPE, VALTYPE>& b) noexcept { a.swap(b); }
+		friend void swap(HashMap<KEYTYPE, VALTYPE>& a, HashMap<KEYTYPE, VALTYPE>& b) noexcept { a.swap(b); }
 
 		void clear();
 		void cleanup();
@@ -31,19 +30,19 @@ namespace Soul {
 
 		void remove(const KEYTYPE& key);
 
-		[[nodiscard]] inline bool isExist(const KEYTYPE& key) const {
+		SOUL_NODISCARD bool isExist(const KEYTYPE& key) const {
 			if (_capacity == 0) return false;
 			soul_size index = findIndex(key);
 			return (_indexes[index].key == key && _indexes[index].dib != 0);
 		}
 
-		[[nodiscard]] VALTYPE& operator[](const KEYTYPE& key);
-		[[nodiscard]] const VALTYPE& operator[](const KEYTYPE& key) const;
-		[[nodiscard]] const VALTYPE& get(const KEYTYPE& key, const VALTYPE& defaultValue) const;
+		SOUL_NODISCARD VALTYPE& operator[](const KEYTYPE& key);
+		SOUL_NODISCARD const VALTYPE& operator[](const KEYTYPE& key) const;
+		SOUL_NODISCARD const VALTYPE& get(const KEYTYPE& key, const VALTYPE& defaultValue) const;
 
-		[[nodiscard]] inline soul_size size() const { return _size; }
-		[[nodiscard]] inline soul_size capacity() const { return _capacity; }
-		[[nodiscard]] inline bool empty() const { return _size == 0; }
+		SOUL_NODISCARD soul_size size() const { return _size; }
+		SOUL_NODISCARD soul_size capacity() const { return _capacity; }
+		SOUL_NODISCARD bool empty() const { return _size == 0; }
 
 	private:
 		struct Index {
@@ -82,7 +81,7 @@ namespace Soul {
 		}
 
 		void removeByIndex(soul_size index) {
-			uint32 nextIndex = index + 1;
+			soul_size nextIndex = index + 1;
 			nextIndex %= _capacity;
 			while(_indexes[nextIndex].dib > 1) {
 				_indexes[index].key = _indexes[nextIndex].key;
@@ -95,42 +94,31 @@ namespace Soul {
 			_size--;
 		}
 
-		template <typename U = VALTYPE, std::enable_if_t<std::is_trivially_move_constructible_v<U>>* = nullptr>
-		inline void moveValues(const HashMap<KEYTYPE, VALTYPE>& other) {
+		template <
+			typename U = VALTYPE,
+			SOUL_REQUIRE(is_trivially_copyable_v<U>)>
+		void copyValues(const HashMap<KEYTYPE, VALTYPE>& other) {
 			memcpy(_values, other._values, sizeof(VALTYPE) * other._capacity);
 		}
 
-		template <typename U = VALTYPE, std::enable_if_t<!std::is_trivially_move_constructible_v<U>>* = nullptr>
-		inline void copyValues(const HashMap<KEYTYPE, VALTYPE>& other) {
-			for (soul_size i = 0; i < other._capacity; ++i) {
-				if (other._indexes[i].dib == 0) continue;
-				new (_values + i) VALTYPE(std::move(other._values[i]));
-			}
-		}
-
-		template <typename U = VALTYPE, std::enable_if_t<std::is_trivially_copyable_v<U>>* = nullptr>
-		inline void copyValues(const HashMap<KEYTYPE, VALTYPE>& other) {
-			memcpy(_values, other._values, sizeof(VALTYPE) * other._capacity);
-		}
-
-		template <typename U = VALTYPE, std::enable_if_t<!std::is_trivially_copyable_v<U>>* = nullptr>
-		inline void copyValues(const HashMap<KEYTYPE, VALTYPE>& other) {
+		template <
+			typename U = VALTYPE,
+			SOUL_REQUIRE(!is_trivially_copyable_v<U>)>
+		void copyValues(const HashMap<KEYTYPE, VALTYPE>& other) {
 			for (soul_size i = 0; i < other._capacity; ++i) {
 				if (other._indexes[i].dib == 0) continue;
 				new (_values + i) VALTYPE(other._values[i]);
 			}
 		}
 
-		template <typename U = VALTYPE, std::enable_if_t<std::is_trivially_destructible_v<VALTYPE>>* = nullptr>
-		inline void destructValues() {
-			// do nothing
-		}
-
-		template <typename U = VALTYPE, std::enable_if_t<!std::is_trivially_destructible_v<U>>* = nullptr>
-		inline void destructValues() {
-			for (int i = 0; i < _capacity; i++) {
-				if (_indexes[i].dib != 0) {
-					_values[i].~U();
+		template <typename U = VALTYPE>
+		void destructValues() {
+			if constexpr (!is_trivially_destructible_v<U>)
+			{
+				for (soul_size i = 0; i < _capacity; ++i) {
+					if (_indexes[i].dib != 0) {
+						_values[i].~U();
+					}
 				}
 			}
 		}
@@ -230,7 +218,7 @@ namespace Soul {
 		if (oldCapacity != 0) {
 			SOUL_ASSERT(0, oldIndexes != nullptr, "");
 			SOUL_ASSERT(0, oldValues != nullptr, "");
-			for (uint64 i = 0; i < oldCapacity; i++) {
+			for (soul_size i = 0; i < oldCapacity; ++i) {
 				if (oldIndexes[i].dib != 0) {
 					add(oldIndexes[i].key, std::move(oldValues[i]));
 				}
@@ -251,7 +239,7 @@ namespace Soul {
 		if (_size == _capacity) {
 			reserve((_capacity * 2) + 8);
 		}
-		const soul_size baseIndex = uint32(key.hash() % _capacity);
+		const soul_size baseIndex = key.hash() % _capacity;
 		soul_size iterIndex = baseIndex;
 		VALTYPE valueToInsert = std::move(value);
 		KEYTYPE keyToInsert = key;

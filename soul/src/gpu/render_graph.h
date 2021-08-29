@@ -1,13 +1,12 @@
 #pragma once
-#include "core/util.h"
+
+#include "core/type_traits.h"
 #include "core/slice.h"
 #include "gpu/data.h"
 
-#include "memory/allocators/scope_allocator.h"
-
 namespace Soul { namespace GPU {
 
-	struct RenderGraph;
+	class RenderGraph;
 	struct RenderGraphRegistry;
 
 	//ID
@@ -275,6 +274,14 @@ namespace Soul { namespace GPU {
 
 	class PassNode {
 	public:
+
+		PassNode() = default;
+		PassNode(const PassNode&) = delete;
+		PassNode& operator=(const PassNode&) = delete;
+		PassNode(PassNode&&) = delete;
+		PassNode& operator=(PassNode&&) = delete;
+		virtual ~PassNode() = default;
+
 		const char* name = nullptr;
 		PassType type = PassType::NONE;
 		virtual void executePass(RenderGraphRegistry* registry, RenderCommandBucket* commandBucket) const = 0;
@@ -283,6 +290,14 @@ namespace Soul { namespace GPU {
 
 	class GraphicBaseNode : public PassNode {
 	public:
+
+		GraphicBaseNode() = default;
+		GraphicBaseNode(const GraphicBaseNode&) = delete;
+		GraphicBaseNode& operator=(const GraphicBaseNode&) = delete;
+		GraphicBaseNode(GraphicBaseNode&&) = delete;
+		GraphicBaseNode& operator=(GraphicBaseNode&&) = delete;
+		~GraphicBaseNode() override {};
+
 		Vec2ui32 renderTargetDimension;
 
 		Array<ColorAttachment> colorAttachments;
@@ -334,6 +349,13 @@ namespace Soul { namespace GPU {
 		Data data;
 		Execute execute;
 
+		GraphicNode() = delete;
+		GraphicNode(const GraphicNode&) = delete;
+		GraphicNode& operator=(const GraphicNode&) = delete;
+		GraphicNode(GraphicNode&&) = delete;
+		GraphicNode& operator=(GraphicNode&&) = delete;
+		~GraphicNode() override{}
+
 		explicit GraphicNode(Execute&& execute) : execute(std::forward<Execute>(execute)){}
 		void executePass(RenderGraphRegistry* registry, RenderCommandBucket* commandBucket) const final override {
 			execute(registry, data, commandBucket);
@@ -374,7 +396,7 @@ namespace Soul { namespace GPU {
 		GraphicNodeBuilder& operator=(const GraphicNodeBuilder& other) = delete;
 		GraphicNodeBuilder& operator=(GraphicNodeBuilder&& other) = delete;
 
-		~GraphicNodeBuilder(){}
+		~GraphicNodeBuilder() = default;
 
 		BufferNodeID addVertexBuffer(BufferNodeID nodeID);
 		BufferNodeID addIndexBuffer(BufferNodeID nodeID);
@@ -407,7 +429,7 @@ namespace Soul { namespace GPU {
         ComputeNodeBuilder& operator=(const ComputeNodeBuilder& other) = delete;
         ComputeNodeBuilder& operator=(ComputeNodeBuilder&& other) = delete;
 
-        ~ComputeNodeBuilder(){}
+		~ComputeNodeBuilder() = default;
 
 		BufferNodeID addShaderBuffer(BufferNodeID nodeID, ShaderStageFlags stageFlags, ShaderBufferReadUsage usageType);
 		BufferNodeID addShaderBuffer(BufferNodeID nodeID, ShaderStageFlags stageFlags, ShaderBufferWriteUsage usageType);
@@ -440,15 +462,22 @@ namespace Soul { namespace GPU {
 		RenderGraph& operator=(const RenderGraph& other) = delete;
 		RenderGraph& operator=(RenderGraph&& other) = delete;
 
-		~RenderGraph(){}
+		~RenderGraph()
+		{
+			
+		}
 
-		template<typename Data,
-				SOUL_TEMPLATE_ARG_LAMBDA(Setup, void(GraphicNodeBuilder*, Data *)),
-				SOUL_TEMPLATE_ARG_LAMBDA(Execute, void(RenderGraphRegistry*, const Data&, RenderCommandBucket*))>
-		const Data& addGraphicPass(const char* name, Setup setup, Execute&& execute) {
-			using Node = GraphicNode<Data, Execute>;
+		template<
+			typename DATA,
+			typename SETUP,
+			typename EXECUTE,
+			SOUL_REQUIRE(is_lambda_v<SETUP, void(GraphicNodeBuilder*, DATA*)>),
+			SOUL_REQUIRE(is_lambda_v<EXECUTE, void(RenderGraphRegistry*, const DATA&, RenderCommandBucket*)>)
+		>
+		const DATA& addGraphicPass(const char* name, SETUP setup, EXECUTE&& execute) {
+			using Node = GraphicNode<DATA, EXECUTE>;
 			Node* node = (Node*) malloc(sizeof(Node));
-			new(node) Node(std::forward<Execute>(execute));
+			new(node) Node(std::forward<EXECUTE>(execute));
 			node->type = PassType::GRAPHIC;
 			node->name = name;
 			_passNodes.add(node);
@@ -457,13 +486,17 @@ namespace Soul { namespace GPU {
 			return node->data;
 		}
 
-		template<typename Data,
-		        SOUL_TEMPLATE_ARG_LAMBDA(Setup, void(ComputeNodeBuilder* , Data*)),
-		        SOUL_TEMPLATE_ARG_LAMBDA(Execute, void(RenderGraphRegistry*, const Data& , RenderCommandBucket*))>
-        const Data& addComputePass(const char* name, Setup setup, Execute&& execute) {
-            using Node = ComputeNode<Data, Execute>;
+		template<
+			typename DATA,
+			typename SETUP,
+			typename EXECUTE,
+			SOUL_REQUIRE(is_lambda_v<SETUP, void(GraphicNodeBuilder*, DATA*)>),
+			SOUL_REQUIRE(is_lambda_v<EXECUTE, void(RenderGraphRegistry*, const DATA&, RenderCommandBucket*)>)
+		>
+        const DATA& addComputePass(const char* name, SETUP setup, EXECUTE&& execute) {
+            using Node = ComputeNode<DATA, EXECUTE>;
             Node* node = (Node*) malloc(sizeof(Node));
-            new(node) Node(std::forward<Execute>(execute));
+            new(node) Node(std::forward<EXECUTE>(execute));
             node->type = PassType::COMPUTE;
             node->name = name;
             _passNodes.add(node);

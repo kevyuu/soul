@@ -7,8 +7,8 @@
 
 namespace Soul { namespace Memory {
 
-	uint64 _HashAddr(const void* addr) {
-		uint64 uintAddr = uint64(addr);
+	uint64 HashAddr(const void* addr) {
+		const auto uintAddr = uint64(addr);
 		return hashFNV1((const uint8*) &uintAddr, sizeof(void*));
 	}
 
@@ -21,7 +21,7 @@ namespace Soul { namespace Memory {
 	}
 
 	void Profiler::registerAllocator(const char* allocatorName) {
-		uint64 hashKey = _HashAddr(allocatorName);
+		uint64 hashKey = HashAddr(allocatorName);
 		SOUL_ASSERT(0, !_allocatorsData.isExist(hashKey), "");
 		PackedID packedID = _allocatorNames.add(allocatorName);
 		_allocatorsData.add(hashKey, AllocatorData(_allocator));
@@ -30,7 +30,7 @@ namespace Soul { namespace Memory {
 	};
 
 	void Profiler::unregisterAllocator(const char* allocatorName) {
-		uint64 hashKey = _HashAddr(allocatorName);
+		uint64 hashKey = HashAddr(allocatorName);
 		PackedID packedID = _allocatorsData[hashKey].index;
 		_allocatorsData[hashKey].cleanup();
 		_allocatorsData.remove(hashKey);
@@ -38,26 +38,26 @@ namespace Soul { namespace Memory {
 	}
 
 	void Profiler::registerAllocation(const char* allocatorName, const char* tag, const void* addr, uint32 size) {
-		AllocatorData& allocatorData = _allocatorsData[_HashAddr(allocatorName)];
+		AllocatorData& allocatorData = _allocatorsData[HashAddr(allocatorName)];
 		PackedID allocIndex = allocatorData.allocationTags.add(tag);
-		allocatorData.allocations.add(_HashAddr(addr), {tag, addr, size, allocIndex});
-		if (_allocatorsData.isExist(_HashAddr(tag))) {
-			AllocatorData& allocData = _allocatorsData[_HashAddr(tag)];
+		allocatorData.allocations.add(HashAddr(addr), {tag, addr, size, allocIndex});
+		if (_allocatorsData.isExist(HashAddr(tag))) {
+			AllocatorData& allocData = _allocatorsData[HashAddr(tag)];
 			PackedID regionPackID = allocData.regionAddrs.add(addr);
-			allocData.regions.add(_HashAddr(addr), {addr, size, regionPackID});
+			allocData.regions.add(HashAddr(addr), {addr, size, regionPackID});
 		}
 	}
 
 	void Profiler::registerDeallocation(const char* allocatorName, const void* addr, uint32 size) {
-		AllocatorData& allocatorData = _allocatorsData[_HashAddr(allocatorName)];
-		const Allocation& allocation = allocatorData.allocations[_HashAddr(addr)];
-		if (_allocatorsData.isExist(_HashAddr(allocation.tag))) {
-			UInt64HashMap<Region>& regions = _allocatorsData[_HashAddr(allocation.tag)].regions;
-			_allocatorsData[_HashAddr(allocation.tag)].regionAddrs.remove(regions[_HashAddr(addr)].index);
-			regions.remove(_HashAddr(addr));
+		AllocatorData& allocatorData = _allocatorsData[HashAddr(allocatorName)];
+		const Allocation& allocation = allocatorData.allocations[HashAddr(addr)];
+		if (_allocatorsData.isExist(HashAddr(allocation.tag))) {
+			UInt64HashMap<Region>& regions = _allocatorsData[HashAddr(allocation.tag)].regions;
+			_allocatorsData[HashAddr(allocation.tag)].regionAddrs.remove(regions[HashAddr(addr)].index);
+			regions.remove(HashAddr(addr));
 		}
 		allocatorData.allocationTags.remove(allocation.index);
-		allocatorData.allocations.remove(_HashAddr(addr));
+		allocatorData.allocations.remove(HashAddr(addr));
 	}
 
 	void Profiler::snapshot(const char* name) {
@@ -66,23 +66,23 @@ namespace Soul { namespace Memory {
 	}
 
 	const Profiler::Region& Profiler::AllocatorData::getRegion(const void* addr) const {
-		return regions[_HashAddr(addr)];
+		return regions[HashAddr(addr)];
 	}
 
 	bool Profiler::AllocatorData::isAllocationExist(const char *allocationName) const {
-		return allocations.isExist(_HashAddr(allocationName));
+		return allocations.isExist(HashAddr(allocationName));
 	}
 
 	const Profiler::Allocation& Profiler::AllocatorData::getAllocation(const char *allocationName) const {
-		return allocations[_HashAddr(allocationName)];
+		return allocations[HashAddr(allocationName)];
 	}
 
 	bool Profiler::Snapshot::isAllocatorDataExist (const char *allocatorNames) const {
-		return allocatorsData.isExist(_HashAddr(allocatorNames));
+		return allocatorsData.isExist(HashAddr(allocatorNames));
 	}
 
 	const Profiler::AllocatorData& Profiler::Snapshot::getAllocatorData(const char *allocatorNames) const {
-		return allocatorsData[_HashAddr(allocatorNames)];
+		return allocatorsData[HashAddr(allocatorNames)];
 	}
 
 }}

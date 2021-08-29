@@ -45,7 +45,7 @@ void CameraManipulator::zoom(float delta) {
 	_recalculateUpVector();
 }
 
-void CameraManipulator::orbit(int dx, int dy) {
+void CameraManipulator::orbit(float dx, float dy) {
 	Soul::Vec3f orbitDir = unit(_position - _target);
 	float orbitPhi = std::asin(orbitDir.y);
 	float orbitTheta = std::atan2(orbitDir.z, orbitDir.x);
@@ -53,7 +53,7 @@ void CameraManipulator::orbit(int dx, int dy) {
 	orbitPhi += (dy * _config.orbitSpeed);
 	orbitTheta += (dx * _config.orbitSpeed);
 
-	static constexpr float MAX_PHI = (Soul::FCONST::PI / 2 - 0.001);
+	static constexpr float MAX_PHI = (Soul::Fconst::PI / 2 - 0.001);
 
 	orbitPhi = std::clamp(orbitPhi, -MAX_PHI, MAX_PHI);
 
@@ -63,12 +63,11 @@ void CameraManipulator::orbit(int dx, int dy) {
 	_position = _target + orbitDir * _distance;
 	_recalculateUpVector();
 }
-
-void CameraManipulator::pan(int dx, int dy) {
+void CameraManipulator::pan(float dx, float dy) {
 	Soul::Vec3f cameraDir = unit(_target - _position);
 	Soul::Vec3f cameraRight = unit(cross(cameraDir, _config.upAxis));
 
-	Soul::Vec3f movement = 0.001f * (-dx * cameraRight + dy * _up);
+	Soul::Vec3f movement = 0.001f * (float(-dx) * cameraRight + float(dy) * _up);
 	_target += movement;
 	_position += movement;
 }
