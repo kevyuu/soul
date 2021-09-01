@@ -246,8 +246,7 @@ namespace Demo {
 			SOUL_NOT_IMPLEMENTED();
 			return Soul::GPU::ShaderStage::NONE;
 		};
-		SOUL_LOG_INFO("Code:\n%s\n", stringBuilder.data());
-
+		
 		return _gpuSystem->shaderCreate({ "default", stringBuilder.data(), uint32(stringBuilder.size())}, _getShaderStage(shaderDesc.type));
 	}
 }

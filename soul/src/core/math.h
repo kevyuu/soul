@@ -298,7 +298,7 @@ namespace Soul {
 	}
 
 	template<typename T>
-	void operator*=(Vec4<T> lhs, T rhs) {
+	void operator*=(Vec4<T>& lhs, T rhs) {
 		lhs.x *= rhs;
 		lhs.y *= rhs;
 		lhs.z *= rhs;
@@ -306,7 +306,7 @@ namespace Soul {
 	}
 
 	template<typename T>
-	void operator/=(Vec4<T> lhs, T rhs) {
+	void operator/=(Vec4<T>& lhs, T rhs) {
 		lhs.x /= rhs;
 		lhs.y /= rhs;
 		lhs.z /= rhs;

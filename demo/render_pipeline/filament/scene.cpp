@@ -1,24 +1,26 @@
-#include <algorithm>
-
-#include "imgui/imgui.h"
-#define CGLTF_IMPLEMENTATION
-#include "cgltf.h"
-#define STB_IMAGE_IMPLEMENTATION
-#include "stb_image.h"
+#include "data.h"
+#include "../../camera_manipulator.h"
 
 #include "core/math.h"
 #include "core/geometry.h"
 #include "core/enum_array.h"
-
-#include "runtime/scope_allocator.h"
-#include "gpu_program_registry.h"
-
-#include "data.h"
-#include "../../camera_manipulator.h"
+#include "imgui/imgui.h"
 #include "../../ui/widget.h"
 
+#include "gpu_program_registry.h"
+
+#include "runtime/scope_allocator.h"
+
+#define CGLTF_IMPLEMENTATION
+#include "cgltf.h"
+
+#define STB_IMAGE_IMPLEMENTATION
+#include "stb_image.h"
+
+#include <algorithm>
+
 // Define a mapping from a uv set index in the source asset to one of Filament's uv sets.
-enum UvSet : uint8 { UNUSED, UV0, UV1 };
+enum UvSet : uint8_t { UNUSED, UV0, UV1 };
 constexpr int UV_MAP_SIZE = 8;
 using UvMap = std::array<UvSet, UV_MAP_SIZE>;
 constexpr ImGuiTreeNodeFlags SCENE_TREE_FLAGS = ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_OpenOnDoubleClick | ImGuiTreeNodeFlags_SpanAvailWidth;
@@ -34,9 +36,9 @@ void ItemRowsBackground(float lineHeight = -1.0f, const ImColor& color = ImColor
     }
     lineHeight += style.ItemSpacing.y;
 
-    const float scrollOffsetH = ImGui::GetScrollX();
+    float scrollOffsetH = ImGui::GetScrollX();
     float scrollOffsetV = ImGui::GetScrollY();
-    const float scrolledOutLines = floorf(scrollOffsetV / lineHeight);
+    float scrolledOutLines = floorf(scrollOffsetV / lineHeight);
     scrollOffsetV -= lineHeight * scrolledOutLines;
 
     ImVec2 clipRectMin(ImGui::GetWindowPos().x, ImGui::GetWindowPos().y);
@@ -67,7 +69,7 @@ void ItemRowsBackground(float lineHeight = -1.0f, const ImColor& color = ImColor
     drawList->PopClipRect();
 }
 
-static void MakeBone(SoulFila::BoneUBO* out, const Soul::Mat4f& t) {
+static void _MakeBone(SoulFila::BoneUBO* out, const Soul::Mat4f& t) {
     Soul::Mat4f m = mat4Transpose(t);
 
     // figure out the scales
@@ -91,16 +93,16 @@ static void MakeBone(SoulFila::BoneUBO* out, const Soul::Mat4f& t) {
 }
 
 
-static uint8 GetNumUvSets(const UvMap& uvmap) {
+inline static uint8_t _GetNumUvSets(const UvMap& uvmap) {
     return std::max({
         uvmap[0], uvmap[1], uvmap[2], uvmap[3],
         uvmap[4], uvmap[5], uvmap[6], uvmap[7],
-    });
+        });
 };
 
-static constexpr cgltf_material GetDefaultCGLTFMaterial() {
+static constexpr cgltf_material _GetDefaultCGLTFMaterial() {
     cgltf_material kDefaultMat{};
-    kDefaultMat.name = nullptr;
+    kDefaultMat.name = (char*)"Default GLTF material";
     kDefaultMat.has_pbr_metallic_roughness = true;
     kDefaultMat.has_pbr_specular_glossiness = false;
     kDefaultMat.has_clearcoat = false;
@@ -109,18 +111,17 @@ static constexpr cgltf_material GetDefaultCGLTFMaterial() {
     kDefaultMat.has_specular = false;
     kDefaultMat.has_sheen = false;
     kDefaultMat.pbr_metallic_roughness = {
-        {},
-        {},
-        {1.0, 1.0, 1.0, 1.0},
-        1.0,
-        1.0,
-        {}
+            {},
+            {},
+            {1.0, 1.0, 1.0, 1.0},
+            1.0,
+            1.0,
     };
     return kDefaultMat;
 }
 
-static void ConstrainGPUProgramKey(SoulFila::GPUProgramKey* key, UvMap* uvmap) {
-    constexpr int MAX_INDEX = 2;
+static void _ConstrainGPUProgramKey(SoulFila::GPUProgramKey* key, UvMap* uvmap) {
+    const int MAX_INDEX = 2;
     UvMap retval {};
     int index = 1;
 
@@ -220,7 +221,7 @@ static void ConstrainGPUProgramKey(SoulFila::GPUProgramKey* key, UvMap* uvmap) {
     *uvmap = retval;
 }
 
-bool PrimitiveHasVertexColor(const cgltf_primitive* inPrim) {
+bool _PrimitiveHasVertexColor(const cgltf_primitive* inPrim) {
     for (int slot = 0; slot < inPrim->attributes_count; slot++) {
         const cgltf_attribute& inputAttribute = inPrim->attributes[slot];
         if (inputAttribute.type == cgltf_attribute_type_color) {
@@ -233,7 +234,7 @@ bool PrimitiveHasVertexColor(const cgltf_primitive* inPrim) {
 
 const uint32 GLTF_URI_MAX_LENGTH = 1000;
 
-static Soul::GLSLMat3f MatrixFromUVTransform(const cgltf_texture_transform& uvt) {
+static Soul::GLSLMat3f _MatrixFromUVTransform(const cgltf_texture_transform& uvt) {
     float tx = uvt.offset[0];
     float ty = uvt.offset[1];
     float sx = uvt.scale[0];
@@ -253,7 +254,19 @@ static Soul::GLSLMat3f MatrixFromUVTransform(const cgltf_texture_transform& uvt)
     return Soul::GLSLMat3f(matTransform);
 }
 
-static bool GetVertexAttrType (cgltf_attribute_type atype,uint32 index, const UvMap& uvmap, SoulFila::VertexAttribute* attrType, bool* hasUv0) {
+static Soul::Vec4f _GetVec4f(const cgltf_float val[4]) {
+    return Soul::Vec4f(val[0], val[1], val[2], val[3]);
+}
+
+static Soul::Vec3f _GetVec3f(const cgltf_float val[3]) {
+    return Soul::Vec3f(val[0], val[1], val[2]);
+}
+
+static Soul::Vec2f _GetVec2f(const cgltf_float val[2]) {
+    return Soul::Vec2f(val[0], val[1]);
+}
+
+static inline bool _GetVertexAttrType (cgltf_attribute_type atype,uint32 index, const UvMap& uvmap, SoulFila::VertexAttribute* attrType, bool* hasUv0) {
     using namespace SoulFila;
     switch (atype) {
     case cgltf_attribute_type_position:
@@ -270,7 +283,7 @@ static bool GetVertexAttrType (cgltf_attribute_type atype,uint32 index, const Uv
             *attrType = VertexAttribute::UV1;
             return true;
         case UvSet::UNUSED:
-            if (GetNumUvSets(uvmap) == 0) {
+            if (_GetNumUvSets(uvmap) == 0) {
                 *hasUv0 = true;
                 *attrType = VertexAttribute::UV0;
                 return true;
@@ -304,7 +317,7 @@ static bool GetVertexAttrType (cgltf_attribute_type atype,uint32 index, const Uv
 #define GL_MIRRORED_REPEAT                0x8370
 #define GL_CLAMP_TO_EDGE                  0x812F
 
-inline Soul::GPU::TextureWrap GetWrapMode(cgltf_int wrap) {
+inline Soul::GPU::TextureWrap _GetWrapMode(cgltf_int wrap) {
     switch (wrap) {
     case GL_REPEAT:
         return Soul::GPU::TextureWrap::REPEAT;
@@ -316,10 +329,10 @@ inline Soul::GPU::TextureWrap GetWrapMode(cgltf_int wrap) {
     return Soul::GPU::TextureWrap::REPEAT;
 }
 
-inline Soul::GPU::SamplerDesc GetSamplerDesc(const cgltf_sampler& srcSampler) {
+inline Soul::GPU::SamplerDesc _GetSamplerDesc(const cgltf_sampler& srcSampler) {
     Soul::GPU::SamplerDesc res;
-    res.wrapU = GetWrapMode(srcSampler.wrap_s);
-    res.wrapV = GetWrapMode(srcSampler.wrap_t);
+    res.wrapU = _GetWrapMode(srcSampler.wrap_s);
+    res.wrapV = _GetWrapMode(srcSampler.wrap_t);
     switch (srcSampler.min_filter) {
     case GL_NEAREST:
         res.minFilter = Soul::GPU::TextureFilter::NEAREST;
@@ -340,6 +353,9 @@ inline Soul::GPU::SamplerDesc GetSamplerDesc(const cgltf_sampler& srcSampler) {
         res.mipmapFilter = Soul::GPU::TextureFilter::LINEAR;
         break;
     case GL_LINEAR_MIPMAP_LINEAR:
+        res.minFilter = Soul::GPU::TextureFilter::LINEAR;
+        res.mipmapFilter = Soul::GPU::TextureFilter::LINEAR;
+        break;
     default:
         res.minFilter = Soul::GPU::TextureFilter::LINEAR;
         res.mipmapFilter = Soul::GPU::TextureFilter::LINEAR;
@@ -351,6 +367,8 @@ inline Soul::GPU::SamplerDesc GetSamplerDesc(const cgltf_sampler& srcSampler) {
         res.magFilter = Soul::GPU::TextureFilter::NEAREST;
         break;
     case GL_LINEAR:
+        res.magFilter = Soul::GPU::TextureFilter::LINEAR;
+        break;
     default:
         res.magFilter = Soul::GPU::TextureFilter::LINEAR;
         break;
@@ -360,8 +378,8 @@ inline Soul::GPU::SamplerDesc GetSamplerDesc(const cgltf_sampler& srcSampler) {
 
 }
 
-static bool GetTopology(cgltf_primitive_type in,
-                        Soul::GPU::Topology* out) {
+static inline bool _GetTopology(cgltf_primitive_type in,
+    Soul::GPU::Topology* out) {
     using namespace Soul::GPU;
     switch (in) {
     case cgltf_primitive_type_points:
@@ -382,7 +400,7 @@ static bool GetTopology(cgltf_primitive_type in,
     return false;
 }
 
-static SoulFila::LightRadiationType GetLightType(const cgltf_light_type light) {
+static SoulFila::LightRadiationType _GetLightType(const cgltf_light_type light) {
     using namespace SoulFila;
     switch (light) {
     case cgltf_light_type_invalid:
@@ -395,7 +413,7 @@ static SoulFila::LightRadiationType GetLightType(const cgltf_light_type light) {
     }
 }
 
-static SoulFila::AlphaMode GetAlphaMode(const cgltf_alpha_mode alphaMode) {
+static SoulFila::AlphaMode _GetAlphaMode(const cgltf_alpha_mode alphaMode) {
     switch (alphaMode) {
     case cgltf_alpha_mode_opaque:
         return SoulFila::AlphaMode::OPAQUE;
@@ -414,18 +432,18 @@ static SoulFila::AlphaMode GetAlphaMode(const cgltf_alpha_mode alphaMode) {
 // expected to avoid uploading data blobs that exceed this size. Since this information doesn't
 // exist in the glTF we need to compute it manually. This is a bit of a cheat, cgltf_calc_size is
 // private but its implementation file is available in this cpp file.
-uint32_t ComputeBindingSize(const cgltf_accessor& accessor) {
+uint32_t _ComputeBindingSize(const cgltf_accessor& accessor) {
     cgltf_size element_size = cgltf_calc_size(accessor.type, accessor.component_type);
     return uint32_t(accessor.stride * (accessor.count - 1) + element_size);
 }
 
-uint32 ComputeBindingOffset(const cgltf_accessor& accessor) {
+uint32 _ComputeBindingOffset(const cgltf_accessor& accessor) {
     return uint32_t(accessor.offset + accessor.buffer_view->offset);
 }
 
 template <typename DstType, typename SrcType>
-static Soul::GPU::BufferID CreateIndexBuffer(Soul::GPU::System* _gpuSystem, Soul::GPU::BufferDesc& indexBufferDesc, const cgltf_accessor& indices) {
-    const byte* bufferData = (const uint8*)indices.buffer_view->buffer->data + ComputeBindingOffset(indices);
+static Soul::GPU::BufferID _CreateIndexBuffer(Soul::GPU::System* _gpuSystem, Soul::GPU::BufferDesc& indexBufferDesc, const cgltf_accessor& indices) {
+    const byte* bufferData = (const uint8*)indices.buffer_view->buffer->data + _ComputeBindingOffset(indices);
 
     using IndexType = DstType;
     indexBufferDesc.typeSize = sizeof(IndexType);
@@ -456,7 +474,7 @@ static Soul::GPU::BufferID CreateIndexBuffer(Soul::GPU::System* _gpuSystem, Soul
 // other result is the "actual type" which requires no conversion.
 //
 // Returns false if the given component type is invalid.
-static bool GetElementType(cgltf_type type, cgltf_component_type ctype,
+static bool _GetElementType(cgltf_type type, cgltf_component_type ctype,
     Soul::GPU::VertexElementType* permitType,
     Soul::GPU::VertexElementType* actualType) {
     using namespace Soul::GPU;
@@ -575,14 +593,14 @@ static bool GetElementType(cgltf_type type, cgltf_component_type ctype,
     return false;
 }
 
-inline static bool RequiresConversion(cgltf_type type, cgltf_component_type ctype) {
+inline static bool _RequiresConversion(cgltf_type type, cgltf_component_type ctype) {
     Soul::GPU::VertexElementType permitted;
     Soul::GPU::VertexElementType actual;
-    bool supported = GetElementType(type, ctype, &permitted, &actual);
+    bool supported = _GetElementType(type, ctype, &permitted, &actual);
     return supported && permitted != actual;
 }
 
-static const char* GetNodeName(const cgltf_node* node, const char* defaultNodeName) {
+static const char* _GetNodeName(const cgltf_node* node, const char* defaultNodeName) {
 	if (node->name) return node->name;
 	if (node->mesh && node->mesh->name) return node->mesh->name;
 	if (node->light && node->light->name) return node->light->name;
@@ -590,7 +608,7 @@ static const char* GetNodeName(const cgltf_node* node, const char* defaultNodeNa
 	return defaultNodeName;
 }
 
-static void ComputeUriPath(char* uriPath, const char* gltfPath, const char* uri) {
+static void _ComputeUriPath(char* uriPath, const char* gltfPath, const char* uri) {
 	cgltf_combine_paths(uriPath, gltfPath, uri);
 
 	// after combining, the tail of the resulting path is a uri; decode_uri converts it into path
@@ -598,7 +616,7 @@ static void ComputeUriPath(char* uriPath, const char* gltfPath, const char* uri)
 }
 
 namespace SoulFila {
-    static void AddAttributeToPrimitive(Primitive* primitive, VertexAttribute attrType, Soul::GPU::BufferID gpuBuffer,
+    static void _AddAttributeToPrimitive(Primitive* primitive, VertexAttribute attrType, Soul::GPU::BufferID gpuBuffer,
         Soul::GPU::VertexElementType type, Soul::GPU::VertexElementFlags flags, uint8 attributeStride) {
         primitive->vertexBuffers[primitive->vertexBindingCount] = gpuBuffer;
         primitive->attributes[attrType] = {
@@ -679,7 +697,7 @@ void SoulFila::Scene::importFromGLTF(const char* path) {
             texDesc.height = height;
         }
         else {
-            ComputeUriPath(uriPath, path, srcTexture.image->uri);
+            _ComputeUriPath(uriPath, path, srcTexture.image->uri);
             int width, height, comp;
             texels = stbi_load(uriPath, &width, &height, &comp, 4);
             SOUL_ASSERT(0, texels != nullptr, "Fail to load texels");
@@ -695,7 +713,7 @@ void SoulFila::Scene::importFromGLTF(const char* path) {
         defaultSampler.minFilter = Soul::GPU::TextureFilter::LINEAR;
         defaultSampler.magFilter = Soul::GPU::TextureFilter::LINEAR;
         defaultSampler.mipmapFilter = Soul::GPU::TextureFilter::LINEAR;
-        Soul::GPU::SamplerDesc samplerDesc = srcTexture.sampler != nullptr ? GetSamplerDesc(*srcTexture.sampler) : defaultSampler;
+        Soul::GPU::SamplerDesc samplerDesc = srcTexture.sampler != nullptr ? _GetSamplerDesc(*srcTexture.sampler) : defaultSampler;
 
         Texture tex{_gpuSystem->textureCreate(texDesc, texels, totalSize), samplerDesc};
 
@@ -726,7 +744,7 @@ void SoulFila::Scene::importFromGLTF(const char* path) {
     };
     using MatCache = Soul::HashMap<MatCacheKey, MatCacheEntry>;
     MatCache matCache;
-    auto createMaterial = [this, &matCache, &_createTexture]
+    auto _createMaterial = [this, &matCache, &_createTexture]
         (const cgltf_material* inputMat, bool vertexColor, UvMap* uvmap) -> MaterialID {
         
         MatCacheKey key = { ((intptr_t)inputMat) ^ (vertexColor ? 1 : 0) };
@@ -740,7 +758,7 @@ void SoulFila::Scene::importFromGLTF(const char* path) {
         MaterialID materialID = MaterialID(_materials.add({}));
         Material& dstMaterial = _materials[materialID.id];
 
-        static constexpr cgltf_material kDefaultMat = GetDefaultCGLTFMaterial();
+        static constexpr cgltf_material kDefaultMat = _GetDefaultCGLTFMaterial();
         inputMat = inputMat ? inputMat : &kDefaultMat;
 
         auto mrConfig = inputMat->pbr_metallic_roughness;
@@ -767,7 +785,7 @@ void SoulFila::Scene::importFromGLTF(const char* path) {
         cgltf_texture_view baseColorTexture = mrConfig.base_color_texture;
         cgltf_texture_view metallicRoughnessTexture = mrConfig.metallic_roughness_texture;
 
-        GPUProgramKey programKey = {};
+        GPUProgramKey programKey;
         programKey.doubleSided = !!inputMat->double_sided;
         programKey.unlit = !!inputMat->unlit;
         programKey.hasVertexColors = vertexColor;
@@ -827,7 +845,7 @@ void SoulFila::Scene::importFromGLTF(const char* path) {
             break;
         }
 
-        ConstrainGPUProgramKey(&programKey, uvmap);
+        _ConstrainGPUProgramKey(&programKey, uvmap);
         dstMaterial.programSetID = _programRegistry->createProgramSet(programKey);
         
         MaterialUBO& matBuf = dstMaterial.buffer;
@@ -848,7 +866,7 @@ void SoulFila::Scene::importFromGLTF(const char* path) {
             matTexs.baseColorTexture = _createTexture(*baseColorTexture.texture, true);
             if (programKey.hasTextureTransforms) {
                 const cgltf_texture_transform& uvt = baseColorTexture.transform;
-                matBuf.baseColorUvMatrix = MatrixFromUVTransform(uvt);
+                matBuf.baseColorUvMatrix = _MatrixFromUVTransform(uvt);
             }
         }
 
@@ -857,7 +875,7 @@ void SoulFila::Scene::importFromGLTF(const char* path) {
             matTexs.metallicRoughnessTexture = _createTexture(*metallicRoughnessTexture.texture, srgb);
             if (programKey.hasTextureTransforms) {
                 const cgltf_texture_transform& uvt = metallicRoughnessTexture.transform;
-                matBuf.metallicRoughnessUvMatrix = MatrixFromUVTransform(uvt);
+                matBuf.metallicRoughnessUvMatrix = _MatrixFromUVTransform(uvt);
             }
         }
 
@@ -865,7 +883,7 @@ void SoulFila::Scene::importFromGLTF(const char* path) {
             matTexs.normalTexture = _createTexture(*inputMat->normal_texture.texture, false);
             if (programKey.hasTextureTransforms) {
                 const cgltf_texture_transform& uvt = inputMat->normal_texture.transform;
-                matBuf.normalUvMatrix = MatrixFromUVTransform(uvt);
+                matBuf.normalUvMatrix = _MatrixFromUVTransform(uvt);
             }
         }
         else {
@@ -875,7 +893,7 @@ void SoulFila::Scene::importFromGLTF(const char* path) {
         if (programKey.hasOcclusionTexture) {
             matTexs.occlusionTexture = _createTexture(*inputMat->occlusion_texture.texture, false);
             if (programKey.hasTextureTransforms) {
-                matBuf.occlusionUvMatrix = MatrixFromUVTransform(inputMat->occlusion_texture.transform);
+                matBuf.occlusionUvMatrix = _MatrixFromUVTransform(inputMat->occlusion_texture.transform);
             }
             matBuf.aoStrength = inputMat->occlusion_texture.scale;
         }
@@ -886,7 +904,7 @@ void SoulFila::Scene::importFromGLTF(const char* path) {
         if (programKey.hasEmissiveTexture) {
             matTexs.emissiveTexture = _createTexture(*inputMat->emissive_texture.texture, true);
             if (programKey.hasTextureTransforms) {
-                matBuf.emissiveUvMatrix = MatrixFromUVTransform(inputMat->emissive_texture.transform);
+                matBuf.emissiveUvMatrix = _MatrixFromUVTransform(inputMat->emissive_texture.transform);
             }
         }
 
@@ -897,21 +915,21 @@ void SoulFila::Scene::importFromGLTF(const char* path) {
             if (programKey.hasClearCoatTexture) {
                 matTexs.clearCoatTexture = _createTexture(*ccConfig.clearcoat_texture.texture, false);
                 if (programKey.hasTextureTransforms) {
-                    matBuf.clearCoatUvMatrix = MatrixFromUVTransform(ccConfig.clearcoat_texture.transform);
+                    matBuf.clearCoatUvMatrix = _MatrixFromUVTransform(ccConfig.clearcoat_texture.transform);
                 }
             }
 
             if (programKey.hasClearCoatRoughnessTexture) {
                 matTexs.clearCoatRoughnessTexture = _createTexture(*ccConfig.clearcoat_roughness_texture.texture, false);
                 if (programKey.hasTextureTransforms) {
-                    matBuf.clearCoatRoughnessMatrix = MatrixFromUVTransform(ccConfig.clearcoat_roughness_texture.transform);
+                    matBuf.clearCoatRoughnessMatrix = _MatrixFromUVTransform(ccConfig.clearcoat_roughness_texture.transform);
                 }
             }
 
             if (programKey.hasClearCoatNormalTexture) {
                 matTexs.clearCoatNormalTexture = _createTexture(*ccConfig.clearcoat_normal_texture.texture, false);
                 if (programKey.hasClearCoatNormalTexture) {
-                    matBuf.clearCoatNormalUvMatrix = MatrixFromUVTransform(ccConfig.clearcoat_normal_texture.transform);
+                    matBuf.clearCoatNormalUvMatrix = _MatrixFromUVTransform(ccConfig.clearcoat_normal_texture.transform);
                 }
                 matBuf.clearCoatNormalScale = ccConfig.clearcoat_normal_texture.scale;
             }
@@ -924,14 +942,14 @@ void SoulFila::Scene::importFromGLTF(const char* path) {
             if (programKey.hasSheenColorTexture) {
                 matTexs.sheenColorTexture = _createTexture(*shConfig.sheen_color_texture.texture, true);
                 if (programKey.hasTextureTransforms) {
-                    matBuf.sheenColorUvMatrix = MatrixFromUVTransform(shConfig.sheen_color_texture.transform);
+                    matBuf.sheenColorUvMatrix = _MatrixFromUVTransform(shConfig.sheen_color_texture.transform);
                 }
             }
 
             if (programKey.hasSheenRoughnessTexture) {
                 matTexs.sheenRoughnessTexture = _createTexture(*shConfig.sheen_roughness_texture.texture, false);
                 if (programKey.hasTextureTransforms) {
-                    matBuf.sheenRoughnessUvMatrix = MatrixFromUVTransform(shConfig.sheen_roughness_texture.transform);
+                    matBuf.sheenRoughnessUvMatrix = _MatrixFromUVTransform(shConfig.sheen_roughness_texture.transform);
                 }
             }
         }
@@ -941,7 +959,7 @@ void SoulFila::Scene::importFromGLTF(const char* path) {
             if (programKey.hasTransmissionTexture) {
                 matTexs.transmissionTexture = _createTexture(*trConfig.transmission_texture.texture, false);
                 if (programKey.hasTextureTransforms) {
-                    matBuf.transmissionUvMatrix = MatrixFromUVTransform(trConfig.transmission_texture.transform);
+                    matBuf.transmissionUvMatrix = _MatrixFromUVTransform(trConfig.transmission_texture.transform);
                 }
             }
         }
@@ -963,7 +981,7 @@ void SoulFila::Scene::importFromGLTF(const char* path) {
         indexBufferDesc.usageFlags = GPU::BUFFER_USAGE_INDEX_BIT;
 
         for (cgltf_size primitiveIndex = 0; primitiveIndex < srcMesh.primitives_count; primitiveIndex++) {
-	        Runtime::ScopeAllocator<> primitiveScopeAllocator("Loading Attribute Allocation");
+            Soul::Runtime::ScopeAllocator<> primitiveScopeAllocator("Loading Attribute Allocation");
 
             TangentFrameComputeInput qtangentComputeInput;
 
@@ -975,10 +993,10 @@ void SoulFila::Scene::importFromGLTF(const char* path) {
 
             UvMap uvmap{};
             Primitive& dstPrimitive = dstMesh.primitives[primitiveIndex];
-            bool hasVertexColor = PrimitiveHasVertexColor(&srcPrimitive);
-            dstPrimitive.materialID = createMaterial(srcPrimitive.material, hasVertexColor, &uvmap);
+            bool hasVertexColor = _PrimitiveHasVertexColor(&srcPrimitive);
+            dstPrimitive.materialID = _createMaterial(srcPrimitive.material, hasVertexColor, &uvmap);
 
-            bool getTopologySuccess = GetTopology(srcPrimitive.type, &dstPrimitive.topology);
+            bool getTopologySuccess = _GetTopology(srcPrimitive.type, &dstPrimitive.topology);
             SOUL_ASSERT(0, getTopologySuccess, "");
 
             // build index buffer
@@ -986,32 +1004,31 @@ void SoulFila::Scene::importFromGLTF(const char* path) {
 
                 const cgltf_accessor& indices = *srcPrimitive.indices;
 
+                const byte* bufferData = (const uint8*)indices.buffer_view->buffer->data + _ComputeBindingOffset(indices);
+
                 switch (srcPrimitive.indices->component_type) {
                 case cgltf_component_type_r_8u: {
-                    dstPrimitive.indexBuffer = CreateIndexBuffer<uint16, uint8>(_gpuSystem, indexBufferDesc, indices);
+                    dstPrimitive.indexBuffer = _CreateIndexBuffer<uint16, uint8>(_gpuSystem, indexBufferDesc, indices);
                     break;
                 }
                 case cgltf_component_type_r_16u: {
-                    dstPrimitive.indexBuffer = CreateIndexBuffer<uint16, uint16>(_gpuSystem, indexBufferDesc, indices);
+                    dstPrimitive.indexBuffer = _CreateIndexBuffer<uint16, uint16>(_gpuSystem, indexBufferDesc, indices);
                     break;
                 }
                 case cgltf_component_type_r_32u: {
-                    dstPrimitive.indexBuffer = CreateIndexBuffer<uint32, uint32>(_gpuSystem, indexBufferDesc, indices);
+                    dstPrimitive.indexBuffer = _CreateIndexBuffer<uint32, uint32>(_gpuSystem, indexBufferDesc, indices);
                     break;
                 }
-                case cgltf_component_type_r_8:
-                case cgltf_component_type_r_16:
-                case cgltf_component_type_r_32f:
-                case cgltf_component_type_invalid:
+                default:
                     SOUL_NOT_IMPLEMENTED();
                 }
 
                 qtangentComputeInput.triangles32 = (Vec3ui32*)primitiveScopeAllocator.allocate(indices.count * sizeof(uint32), alignof(Vec3ui32));
                 for (size_t tri = 0, indexIdx = 0; tri < indices.count / 3; ++tri) {
                     auto& triangle = qtangentComputeInput.triangles32[tri];
-                    triangle.x = Soul::Util::Cast<uint32>(cgltf_accessor_read_index(&indices, indexIdx++));
-                    triangle.y = Soul::Util::Cast<uint32>(cgltf_accessor_read_index(&indices, indexIdx++));
-                    triangle.z = Soul::Util::Cast<uint32>(cgltf_accessor_read_index(&indices, indexIdx++));
+                    triangle.x = cgltf_accessor_read_index(&indices, indexIdx++);
+                    triangle.y = cgltf_accessor_read_index(&indices, indexIdx++);
+                    triangle.z = cgltf_accessor_read_index(&indices, indexIdx++);
                 }
 
             }
@@ -1021,7 +1038,7 @@ void SoulFila::Scene::importFromGLTF(const char* path) {
                 indexBufferDesc.count = srcPrimitive.attributes[0].data->count;
 
                 const uint64 indexDataSize = indexBufferDesc.count * sizeof(IndexType);
-                auto indexData = (IndexType*)primitiveScopeAllocator.allocate(indexDataSize, alignof(IndexType));
+                IndexType* indexData = (IndexType*)primitiveScopeAllocator.allocate(indexDataSize, alignof(IndexType));
                 for (uint64 i = 0; i < indexBufferDesc.count; ++i) {
                     indexData[i] = i;
                 }
@@ -1048,15 +1065,15 @@ void SoulFila::Scene::importFromGLTF(const char* path) {
                 const cgltf_accessor& accessor = *srcAttribute.data;
 
                 if (srcAttribute.type == cgltf_attribute_type_weights) {
-                    auto normalize = [](const cgltf_accessor* data) {
+                    auto normalize = [](cgltf_accessor* data) {
                         if (data->type != cgltf_type_vec4 || data->component_type != cgltf_component_type_r_32f) {
                             SOUL_LOG_ERROR("Attribute type is not supported");
                             SOUL_NOT_IMPLEMENTED();
                         }
-                        auto bytes = (uint8*)data->buffer_view->buffer->data;
+                        uint8_t* bytes = (uint8_t*)data->buffer_view->buffer->data;
                         bytes += data->offset + data->buffer_view->offset;
                         for (cgltf_size i = 0, n = data->count; i < n; ++i, bytes += data->stride) {
-                            auto weights = (Vec4f*)bytes;
+                            Soul::Vec4f* weights = (Vec4f*)bytes;
                             const float sum = weights->x + weights->y + weights->z + weights->w;
                             *weights /= sum;
                         }
@@ -1087,7 +1104,7 @@ void SoulFila::Scene::importFromGLTF(const char* path) {
                 }
                 else {
                     const byte* bufferData = (const byte*)accessor.buffer_view->buffer->data;
-                    attributeData = bufferData + ComputeBindingOffset(accessor);
+                    attributeData = bufferData + _ComputeBindingOffset(accessor);
                     attributeDataCount = accessor.count;
                     attributeTypeSize = cgltf_calc_size(accessor.type, accessor.component_type);
                     attributeTypeAlignment = cgltf_component_size(accessor.component_type);
@@ -1134,11 +1151,11 @@ void SoulFila::Scene::importFromGLTF(const char* path) {
                     });
 
                 VertexAttribute attrType;
-                bool attrSupported = GetVertexAttrType(srcAttribute.type, srcAttribute.index, uvmap, &attrType, &hasUv0);
+                bool attrSupported = _GetVertexAttrType(srcAttribute.type, srcAttribute.index, uvmap, &attrType, &hasUv0);
                 SOUL_ASSERT(0, attrSupported, "Attribute type not supported");
                 Soul::GPU::VertexElementType permitted;
                 Soul::GPU::VertexElementType actual;
-                GetElementType(accessor.type, accessor.component_type, &permitted, &actual);
+                _GetElementType(accessor.type, accessor.component_type, &permitted, &actual);
 
                 Soul::GPU::VertexElementFlags flags;
                 if (accessor.normalized) {
@@ -1146,7 +1163,7 @@ void SoulFila::Scene::importFromGLTF(const char* path) {
                 }
                 if (attrType == VertexAttribute::BONE_INDICES) flags |= GPU::VERTEX_ELEMENT_INTEGER_TARGET;
 
-                AddAttributeToPrimitive(&dstPrimitive, attrType, attributeGPUBuffer, actual, flags, attributeTypeSize);
+                _AddAttributeToPrimitive(&dstPrimitive, attrType, attributeGPUBuffer, actual, flags, attributeTypeSize);
 
             }
 
@@ -1162,7 +1179,7 @@ void SoulFila::Scene::importFromGLTF(const char* path) {
                          GPU::QUEUE_GRAPHIC_BIT
                     };
                     Soul::GPU::BufferID qtangentsGPUBUffer = _gpuSystem->bufferCreate(qtangentsBufferDesc, qtangents);
-                    AddAttributeToPrimitive(&dstPrimitive, VertexAttribute::TANGENTS, qtangentsGPUBUffer, GPU::VertexElementType::SHORT4, GPU::VERTEX_ELEMENT_NORMALIZED, sizeof(Quaternionf));
+                    _AddAttributeToPrimitive(&dstPrimitive, VertexAttribute::TANGENTS, qtangentsGPUBUffer, GPU::VertexElementType::SHORT4, GPU::VERTEX_ELEMENT_NORMALIZED, sizeof(Quaternionf));
                 }
             }
 
@@ -1245,14 +1262,14 @@ void SoulFila::Scene::importFromGLTF(const char* path) {
 
                         Soul::GPU::VertexElementType permitted;
                         Soul::GPU::VertexElementType actual;
-                        GetElementType(accessor.type, accessor.component_type, &permitted, &actual);
+                        _GetElementType(accessor.type, accessor.component_type, &permitted, &actual);
 
                         Soul::GPU::VertexElementFlags flags;
                         if (accessor.normalized) {
                             flags |= GPU::VERTEX_ELEMENT_NORMALIZED;
                         }
 
-                        AddAttributeToPrimitive(&dstPrimitive, attrType, attributeGPUBuffer, actual, flags, attributeTypeSize);
+                        _AddAttributeToPrimitive(&dstPrimitive, attrType, attributeGPUBuffer, actual, flags, attributeTypeSize);
                         
                         dstPrimitive.aabb = aabbCombine(dstPrimitive.aabb, AABB(Vec3f(accessor.min), Vec3f(accessor.max)));
                     }
@@ -1285,7 +1302,7 @@ void SoulFila::Scene::importFromGLTF(const char* path) {
                 }
 
                 uint64 qtangentBufferSize = qtangentComputeInput.vertexCount * sizeof(Quaternionf);
-                auto qtangents = (Quaternionf*)primitiveScopeAllocator.allocate(qtangentBufferSize, alignof(Quaternionf));
+                Quaternionf* qtangents = (Quaternionf*)primitiveScopeAllocator.allocate(qtangentBufferSize, alignof(Quaternionf));
                 if (ComputeTangentFrame(qtangentComputeInput, qtangents)) {
                     GPU::BufferDesc qtangentsBufferDesc = {
                          qtangentComputeInput.vertexCount,
@@ -1295,7 +1312,7 @@ void SoulFila::Scene::importFromGLTF(const char* path) {
                          GPU::QUEUE_GRAPHIC_BIT
                     };
                     Soul::GPU::BufferID qtangentsGPUBUffer = _gpuSystem->bufferCreate(qtangentsBufferDesc, qtangents);
-                    AddAttributeToPrimitive(&dstPrimitive, (VertexAttribute)(baseTangentsAttr + targetIndex), qtangentsGPUBUffer, GPU::VertexElementType::SHORT4, GPU::VERTEX_ELEMENT_NORMALIZED ,sizeof(Quaternionf));
+                    _AddAttributeToPrimitive(&dstPrimitive, (VertexAttribute)(baseTangentsAttr + targetIndex), qtangentsGPUBUffer, GPU::VertexElementType::SHORT4, GPU::VERTEX_ELEMENT_NORMALIZED ,sizeof(Quaternionf));
                 }
 
 
@@ -1337,8 +1354,8 @@ void SoulFila::Scene::importFromGLTF(const char* path) {
             AnimationSampler& dstSampler = dstAnim.samplers[samplerIdx];
             
             const cgltf_accessor& timelineAccessor = *srcSampler.input;
-            auto timelineBlob = (const uint8*)timelineAccessor.buffer_view->buffer->data;
-            auto timelineFloats = (const float*)(timelineBlob + timelineAccessor.offset +
+            const uint8_t* timelineBlob = (const uint8_t*)timelineAccessor.buffer_view->buffer->data;
+            const float* timelineFloats = (const float*)(timelineBlob + timelineAccessor.offset +
                 timelineAccessor.buffer_view->offset);
             
             dstSampler.times.resize(timelineAccessor.count);
@@ -1381,7 +1398,7 @@ void SoulFila::Scene::importFromGLTF(const char* path) {
         for (cgltf_size channelIdx = 0; channelIdx < srcAnim.channels_count; channelIdx++) {
             const cgltf_animation_channel& srcChannel = srcAnim.channels[channelIdx];
             AnimationChannel& dstChannel = dstAnim.channels[channelIdx];
-            dstChannel.samplerIdx = Soul::Util::Cast<uint32>(srcChannel.sampler - srcAnim.samplers);
+            dstChannel.samplerIdx = srcChannel.sampler - srcAnim.samplers;
             dstChannel.entity = nodeMap[srcChannel.target_node];
             switch (srcChannel.target_path) {
             case cgltf_animation_path_type_translation:
@@ -1462,7 +1479,7 @@ void SoulFila::Scene::importFromGLTF(const char* path) {
         float scaleFactor = 2.0f / maxExtent;
         Vec3f center = (minpt + maxpt) / 2.0f;
         center.z += zoffset / scaleFactor;
-        return mat4Scale(Vec3f(scaleFactor, scaleFactor, scaleFactor)) * mat4Translate(-center);
+        return mat4Scale(Vec3f(scaleFactor, scaleFactor, scaleFactor)) * mat4Translate(center * -1.0f);
     };
 
     Mat4f fitTransform = _fitIntoUnitCube(_boundingBox, 4);
@@ -1493,12 +1510,12 @@ void SoulFila::Scene::_createEntity(Soul::HashMap<_CGLTFNodeKey, EntityID>* node
 
 	Soul::Mat4f localTransform;
 	if (node->has_matrix) {
-        localTransform = mat4Transpose(mat4(node->matrix));
+        localTransform = mat4Transpose(Soul::mat4((float*)node->matrix));
 	}
 	else {
-		const Soul::Vec3f translation(node->translation);
-		const Soul::Vec3f scale(node->scale);
-		const Soul::Quaternionf rotation(node->rotation);
+		Soul::Vec3f translation((float*)node->translation);
+		Soul::Vec3f scale((float*)node->scale);
+		Soul::Quaternionf rotation((float*)node->rotation);
 		localTransform = Soul::mat4Transform(Soul::Transformf{ translation, scale, rotation });
 	}
 
@@ -1532,7 +1549,7 @@ void SoulFila::Scene::_createEntity(Soul::HashMap<_CGLTFNodeKey, EntityID>* node
 
 void SoulFila::Scene::_createRenderable(const cgltf_data* asset, const cgltf_node* node, EntityID entity) {
 
-    Visibility visibility = {};
+    Visibility visibility;
     visibility.priority = 0x4;
     visibility.castShadows = true;
     visibility.receiveShadows = true;
@@ -1541,7 +1558,7 @@ void SoulFila::Scene::_createRenderable(const cgltf_data* asset, const cgltf_nod
     SOUL_ASSERT(0, node->mesh != nullptr, "");
 
     cgltf_mesh& srcMesh = *node->mesh;
-    auto meshID = MeshID(node->mesh - asset->meshes);
+    MeshID meshID = MeshID(node->mesh - asset->meshes);
 
     SOUL_ASSERT(0, srcMesh.primitives_count > 0, "");
 
@@ -1571,8 +1588,8 @@ void SoulFila::Scene::_createLight(const cgltf_data* asset, const cgltf_node* no
     SOUL_ASSERT(0, node->light != nullptr, "");
     const cgltf_light& light = *node->light;
     
-    LightType lightType = {};
-    lightType.type = GetLightType(light.type);
+    LightType lightType;
+    lightType.type = _GetLightType(light.type);
     lightType.shadowCaster = true;
     lightType.lightCaster = true;
     Soul::Vec3f direction(0.0f, 0.0f, -1.0f);
@@ -1585,15 +1602,15 @@ void SoulFila::Scene::_createLight(const cgltf_data* asset, const cgltf_node* no
     SpotParams spotParams;
 
     if (lightType.type == LightRadiationType::SPOT || lightType.type == LightRadiationType::FOCUSED_SPOT) {
-	    const float innerClamped = std::min(std::abs(light.spot_inner_cone_angle), Fconst::PI_2);
+        float innerClamped = std::min(std::abs(light.spot_inner_cone_angle), Fconst::PI_2);
         float outerClamped = std::min(std::abs(light.spot_outer_cone_angle), Fconst::PI_2);
 
         // outer must always be bigger than inner
         outerClamped = std::max(innerClamped, outerClamped);
 
-        const float cosOuter = std::cos(outerClamped);
-        const float cosInner = std::cos(innerClamped);
-        const float cosOuterSquared = cosOuter * cosOuter;
+        float cosOuter = std::cos(outerClamped);
+        float cosInner = std::cos(innerClamped);
+        float cosOuterSquared = cosOuter * cosOuter;
         float scale = 1 / std::max(1.0f / 1024.0f, cosInner - cosOuter);
         float offset = -cosOuter * scale;
 
@@ -1609,23 +1626,23 @@ void SoulFila::Scene::_createLight(const cgltf_data* asset, const cgltf_node* no
             // luminousPower is in lux, nothing to do.
             luminousIntensity = luminousPower;
             break;
+
         case LightRadiationType::POINT:
             luminousIntensity = luminousPower * Fconst::ONE_OVER_PI * 0.25f;
             break;
+
         case LightRadiationType::FOCUSED_SPOT: {
-            const float cosOuter = std::sqrt(spotParams.cosOuterSquared);
+
+            float cosOuter = std::sqrt(spotParams.cosOuterSquared);
             // intensity specified directly in candela, no conversion needed
             luminousIntensity = luminousPower;
-            // lp = li * (2 * pi * (1 -  cos(cone_outer / 2)))
+            // lp = li * (2 * pi * (1 - cos(cone_outer / 2)))
             luminousPower = luminousIntensity * (Fconst::TAU * (1.0f - cosOuter));
             spotParams.luminousPower = luminousPower;
             break;
         }
         case LightRadiationType::SPOT:
             luminousIntensity = luminousPower;
-            break;
-        default:
-            SOUL_NOT_IMPLEMENTED();
             break;
     }
     _registry.emplace<LightComponent>(entity, lightType, Soul::Vec3f(0, 0, 0), direction, color, ShadowParams(), spotParams, 0.0f, 0.0f, 0.0f, luminousIntensity, falloff);
@@ -1639,7 +1656,7 @@ void SoulFila::Scene::_createCamera(const cgltf_data* data, const cgltf_node* no
 
     if (srcCamera.type == cgltf_camera_type_perspective) {
         const cgltf_camera_perspective& srcPerspective = srcCamera.data.perspective;
-        const double far = srcPerspective.zfar > 0.0f ? srcPerspective.zfar : 100000000.0f;
+        const double far = srcPerspective.zfar > 0.0 ? srcPerspective.zfar : 100000000;
         cameraComponent.setPerspectiveProjection(srcPerspective.yfov, srcPerspective.aspect_ratio, srcPerspective.znear, far);
     }
     else if (srcCamera.type == cgltf_camera_type_orthographic) {
@@ -1661,7 +1678,7 @@ void SoulFila::Scene::_renderEntityTreeNode(EntityID entityID) {
     ImGuiTreeNodeFlags flags = SCENE_TREE_FLAGS;
     if (_selectedEntity == entityID) flags |= ImGuiTreeNodeFlags_Selected;
     if (transformComp.firstChild == ENTITY_ID_NULL) flags |= ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen;
-    const bool nodeOpen = ImGui::TreeNodeEx((void*)(intptr_t)entityID, flags, "%s", nameComp.name.data());
+    bool nodeOpen = ImGui::TreeNodeEx((void*)(intptr_t)entityID, flags, nameComp.name.data());
     if (ImGui::IsItemClicked()) {
         _selectedEntity = entityID;
     }
@@ -1694,8 +1711,8 @@ void SoulFila::Scene::renderPanels() {
         renderCameraList();
 
         auto renderAnimationList = [this]() {
-            static const char* noActiveAnimationLabel = "No active animation";
-            const char* comboLabel = _activeAnimation.isNull() ? noActiveAnimationLabel : _animations[_activeAnimation.id].name.data();
+            static constexpr char* noActiveAnimationLabel = "No active animation";
+            char* comboLabel = _activeAnimation.isNull() ? noActiveAnimationLabel : _animations[_activeAnimation.id].name.data();
             if (ImGui::BeginCombo("Animation List", comboLabel, 0)) {
                 for (uint64 animIdx = 0; animIdx < _animations.size(); animIdx++) {
                     const bool isSelected = (_activeAnimation.id == animIdx);
@@ -1726,7 +1743,7 @@ void SoulFila::Scene::renderPanels() {
 
     if (ImGui::Begin("Entity Components")) {
         if (_selectedEntity != ENTITY_ID_NULL) {
-            auto [transformComp, nameComp] = _registry.get<TransformComponent, NameComponent>(_selectedEntity);
+            auto& [transformComp, nameComp] = _registry.get<TransformComponent, NameComponent>(_selectedEntity);
             nameComp.renderUI();
             transformComp.renderUI();
         }
@@ -1927,7 +1944,7 @@ bool SoulFila::Scene::update(const Demo::Input& input) {
                     const float* const splineVerts = samplerValues + numMorphTargets;
                     const float* const outTangents = samplerValues + numMorphTargets * 2;
 
-                    for (soul_size comp = 0; comp < std::min(numMorphTargets, MAX_MORPH_TARGETS); ++comp) {
+                    for (int comp = 0; comp < std::min(numMorphTargets, MAX_MORPH_TARGETS); ++comp) {
                         float vert0 = splineVerts[comp + prevIndex * valuesPerKeyframe];
                         float tang0 = outTangents[comp + prevIndex * valuesPerKeyframe];
                         float tang1 = inTangents[comp + nextIndex * valuesPerKeyframe];
@@ -1937,7 +1954,7 @@ bool SoulFila::Scene::update(const Demo::Input& input) {
                 }
                 else {
                     numMorphTargets = valuesPerKeyframe;
-                    for (soul_size comp = 0; comp < std::min(valuesPerKeyframe, MAX_MORPH_TARGETS); ++comp) {
+                    for (int comp = 0; comp < std::min(valuesPerKeyframe, MAX_MORPH_TARGETS); ++comp) {
                         float previous = samplerValues[comp + prevIndex * valuesPerKeyframe];
                         float current = samplerValues[comp + nextIndex * valuesPerKeyframe];
                         weights[comp] = (1 - t) * previous + t * current;
@@ -1973,7 +1990,7 @@ bool SoulFila::Scene::update(const Demo::Input& input) {
             }
         }
 
-        if (input.keyShift) {
+        if (input.keyShift && input.mouseWheel != 0) {
             _cameraMan.zoom(input.mouseWheel);
         }
 
@@ -1982,7 +1999,7 @@ bool SoulFila::Scene::update(const Demo::Input& input) {
             transformComp.local = transformComp.world;
         }
         else {
-            const TransformComponent& parentComp = _registry.get<TransformComponent>(transformComp.parent);
+            TransformComponent& parentComp = _registry.get<TransformComponent>(transformComp.parent);
             transformComp.local = mat4Inverse(parentComp.world) * transformComp.world;
         }
     }
@@ -2019,7 +2036,7 @@ void SoulFila::Scene::_updateBones() {
             const TransformComponent* transformComp = _registry.try_get<TransformComponent>(joint);
             if (transformComp == nullptr) continue;
             Mat4f boneMat = transformComp->world * skin.invBindMatrices[boneIdx];
-            MakeBone(&skin.bones[boneIdx], boneMat);
+            _MakeBone(&skin.bones[boneIdx], boneMat);
         }
     }
 }
@@ -2051,8 +2068,8 @@ void SoulFila::CameraComponent::setPerspectiveProjection(double fovRadian, doubl
     this->far = far;
 }
 
-void SoulFila::CameraComponent::setScaling(Vec2f vec) {
-    this->scaling = vec;
+void SoulFila::CameraComponent::setScaling(Soul::Vec2f scaling) {
+    this->scaling = scaling;
 }
 
 Soul::Vec2f SoulFila::CameraComponent::getScaling() const {
