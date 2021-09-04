@@ -14,7 +14,7 @@ void soul_intern_log(int verbosity, int line, const char* file, const char* form
 // Log
 #define SOUL_LOG_VERBOSE_LEVEL SOUL_LOG_VERBOSE_INFO
 
-#if defined(SOUL_OPTION_LOGGING_ENABLE)
+#if defined(SOUL_LOG_ENABLE)
     #define SOUL_LOG(verbosity, format, ...) do {soul_intern_log(verbosity, __LINE__, __FILE__, format, ##__VA_ARGS__);} while(0)
 #else
     #define SOUL_LOG(verbosity, format, ...) ((void) 0)
@@ -35,7 +35,7 @@ void soul_intern_log(int verbosity, int line, const char* file, const char* form
 void soul_intern_assert(int paranoia, int line, const char* file, const char* format, ...);
 
 // Assert
-#if defined(SOUL_OPTION_ASSERTION_ENABLE)
+#if defined(SOUL_LOG_ENABLE)
     #define SOUL_ASSERT(paranoia, test, msg, ...) do {if (!(test)) {soul_intern_assert(paranoia, __LINE__, __FILE__, \
             "Assertion failed: %s\n\n" msg, #test,  ##__VA_ARGS__); SOUL_DEBUG_BREAK();}} while (0)
     #define SOUL_PANIC(paranoia, msg, ...) do{soul_intern_assert(paranoia, __LINE__, __FILE__, \

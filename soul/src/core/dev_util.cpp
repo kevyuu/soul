@@ -32,7 +32,7 @@ void soul_intern_log(int verbosity, int line, const char* file, const char* form
 }
 
 void soul_intern_assert(int paranoia, int line, const char* file, const char* format, ...) {
-	if (paranoia <= SOUL_ASSERTION_PARANOIA_LEVEL) {
+	if (paranoia <= SOUL_ASSERT_PARANOIA_LEVEL) {
 		printf("%s", ProjectPath(file));
 		printf(":");
 		printf("%d", line);

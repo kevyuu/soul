@@ -137,7 +137,7 @@ namespace Soul { namespace GPU {
 		instanceCreateInfo.enabledExtensionCount = requiredExtensionCount;
 		instanceCreateInfo.ppEnabledExtensionNames = requiredExtensions;
 
-#ifdef SOUL_OPTION_VULKAN_VALIDATION_ENABLE
+#ifdef SOUL_VULKAN_VALIDATION_ENABLE
 		static constexpr const char *REQUIRED_LAYERS[] = {
 				"VK_LAYER_KHRONOS_validation",
 		};
@@ -174,7 +174,7 @@ namespace Soul { namespace GPU {
 		SOUL_ASSERT(0, checkLayerSupport(), "");
 		instanceCreateInfo.enabledLayerCount = requiredLayerCount;
 		instanceCreateInfo.ppEnabledLayerNames = REQUIRED_LAYERS;
-#endif // SOUL_OPTION_VULKAN_VALIDATION_ENABLE
+#endif
 		
 		SOUL_VK_CHECK(vkCreateInstance(&instanceCreateInfo, nullptr, &_db.instance),
 					  "Vulkan instance creation fail!");
