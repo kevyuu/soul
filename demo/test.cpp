@@ -97,8 +97,6 @@ int main()
 			glfwPollEvents();
 		}
 
-		Vec2ui32 extent = gpuSystem.getSwapchainExtent();
-
 		GPU::RenderGraph renderGraph;
 		GPU::TextureNodeID imguiFontNodeID = renderGraph.importTexture("Imgui Font", imguiRenderModule.getFontTexture());
 
