@@ -46,6 +46,7 @@ int main()
 	Runtime::DefaultAllocator defaultAllocator(&mallocAllocator,
 		Runtime::DefaultAllocatorProxy::Config(
 			Memory::MutexProxy::Config(),
+			Memory::ProfileProxy::Config(),
 			Memory::CounterProxy::Config(),
 			Memory::ClearValuesProxy::Config{ char(0xFA), char(0xFF) },
 			Memory::BoundGuardProxy::Config()));

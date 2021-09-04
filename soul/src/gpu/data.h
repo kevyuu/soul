@@ -832,7 +832,7 @@ namespace Soul {
 
 		struct _Database {
 
-			using CPUAllocatorProxy = Memory::MultiProxy<Memory::CounterProxy, Memory::NoOpProxy>;
+			using CPUAllocatorProxy = Memory::MultiProxy<Memory::ProfileProxy, Memory::CounterProxy>;
 			using CPUAllocator = Memory::ProxyAllocator<
 			        Memory::Allocator,
 			        CPUAllocatorProxy>;

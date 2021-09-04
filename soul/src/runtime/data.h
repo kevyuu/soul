@@ -24,6 +24,7 @@ namespace Soul::Runtime
 
 	using DefaultAllocatorProxy = Memory::MultiProxy<
 		Memory::MutexProxy,
+		Memory::ProfileProxy,
 		Memory::CounterProxy,
 		Memory::ClearValuesProxy,
 		Memory::BoundGuardProxy>;
