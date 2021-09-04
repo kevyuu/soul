@@ -238,7 +238,11 @@ namespace Soul::Memory {
 		}
 
 		DeallocateParam onPreDeallocate(const DeallocateParam& deallocParam) override {
-			memset(deallocParam.addr, _onDeallocClearValue, deallocParam.size);
+			if (deallocParam.addr != nullptr)
+			{
+				SOUL_ASSERT(0, deallocParam.size != 0, "This proxy need size in its deallocate call");
+				memset(deallocParam.addr, _onDeallocClearValue, deallocParam.size);
+			}
 			return deallocParam;
 		}
 		void onPostDeallocate() override {}
@@ -277,14 +281,20 @@ namespace Soul::Memory {
 		}
 
 		DeallocateParam onPreDeallocate(const DeallocateParam& deallocParam) final {
-			// TODO(kevinyu): Make faster
-			auto baseFront = (byte*) Util::Sub(deallocParam.addr, GUARD_SIZE);
-			auto baseBack = (byte*) Util::Add(deallocParam.addr, deallocParam.size);
-			for (soul_size i = 0; i < GUARD_SIZE; i++) {
-				SOUL_ASSERT(0, baseFront[i] == GUARD_FLAG, "");
-				SOUL_ASSERT(0, baseBack[i] == GUARD_FLAG, "");
+
+			if (deallocParam.addr != nullptr)
+			{
+				SOUL_ASSERT(0, deallocParam.size != 0, "This proxy need size in its deallocate call");
+				auto baseFront = (byte*)Util::Sub(deallocParam.addr, GUARD_SIZE);
+				auto baseBack = (byte*)Util::Add(deallocParam.addr, deallocParam.size);
+				for (soul_size i = 0; i < GUARD_SIZE; i++) {
+					SOUL_ASSERT(0, baseFront[i] == GUARD_FLAG, "");
+					SOUL_ASSERT(0, baseBack[i] == GUARD_FLAG, "");
+				}
+				return DeallocateParam(Util::Sub(deallocParam.addr, GUARD_SIZE), deallocParam.size + 2 * GUARD_SIZE);
 			}
-			return DeallocateParam( Util::Sub(deallocParam.addr, GUARD_SIZE), deallocParam.size + 2 * GUARD_SIZE );
+			return deallocParam;
+			
 		}
 		void onPostDeallocate() override {}
 
@@ -390,7 +400,6 @@ namespace Soul::Memory {
 		}
 
 		void deallocate(void* addr, soul_size size) override {
-			if (addr == nullptr || size == 0) return;
 			DeallocateParam param = { addr, size };
 			param = _proxy.onPreDeallocate(param);
 			allocator->deallocate(param.addr, size);
