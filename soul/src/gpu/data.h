@@ -837,6 +837,14 @@ namespace Soul {
 			        Memory::Allocator,
 			        CPUAllocatorProxy>;
 			CPUAllocator cpuAllocator;
+
+			Memory::MallocAllocator vulkanCPUBackingAllocator{ "Vulkan CPU Backing Allocator" };
+			using VulkanCPUAllocatorProxy = Memory::MultiProxy<Memory::MutexProxy, Memory::ProfileProxy>;
+			using VulkanCPUAllocator = Memory::ProxyAllocator<
+				Memory::MallocAllocator,
+				VulkanCPUAllocatorProxy>;
+			VulkanCPUAllocator vulkanCPUAllocator;
+
 			Runtime::AllocatorInitializer allocatorInitializer;
 
 			VkInstance instance = VK_NULL_HANDLE;
@@ -897,8 +905,9 @@ namespace Soul {
 			std::mutex shaderArgSetRequestMutex;
 			std::mutex pipelineStateRequestMutex;
 
-			explicit _Database(Memory::Allocator* backingAllocator):
-				cpuAllocator("GPU System", backingAllocator, CPUAllocatorProxy::Config{ Memory::CounterProxy::Config()}),
+			explicit _Database(Memory::Allocator* backingAllocator) :
+				cpuAllocator("GPU System", backingAllocator, CPUAllocatorProxy::Config{ Memory::ProfileProxy::Config(), Memory::CounterProxy::Config() }),
+				vulkanCPUAllocator("Vulkan", &vulkanCPUBackingAllocator, VulkanCPUAllocatorProxy::Config{ Memory::MutexProxy::Config(), Memory::ProfileProxy::Config() }),
 				allocatorInitializer(&cpuAllocator) {
 				allocatorInitializer.end();
 			}

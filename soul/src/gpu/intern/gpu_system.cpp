@@ -27,24 +27,26 @@ namespace Soul { namespace GPU {
 
 	static void* VmaAllocCallback(void* userData, size_t size, size_t alignment, VkSystemAllocationScope allocationScope)
 	{
-		void* addr = malloc(size);
-		SOUL_MEMPROFILE_REGISTER_ALLOCATION("vma", "", addr, size);
-		return addr;
+		const auto allocator = (Memory::Allocator*)userData;
+		return allocator->allocate(size, alignment);
 	}
 
 	static void* VmaReallocationCallback(void* userData, void* addr, size_t size, size_t alignment, VkSystemAllocationScope scope)
 	{
-		free(addr);
-		SOUL_MEMPROFILE_REGISTER_DEALLOCATION("vma", addr,  0);
-		void* newAddr = malloc(size);
-		SOUL_MEMPROFILE_REGISTER_ALLOCATION("vma", "", newAddr, size);
-		return newAddr;
+		const auto allocator = (Memory::Allocator*)userData;
+
+		if (addr != nullptr)
+		{
+			allocator->deallocate(addr, 0);
+		}
+		return allocator->allocate(size, alignment);
 	}
 
 	static void VmaFreeCallback(void* userData, void* addr)
 	{
-		SOUL_MEMPROFILE_REGISTER_ALLOCATION("vma", "", addr, 0);
-		free(addr);
+		if (addr == nullptr) return;
+		const auto allocator = (Memory::Allocator*)userData;
+		allocator->deallocate(addr, 0);
 	}
 
 	static VKAPI_ATTR VkBool32 VKAPI_CALL _debugCallback(
@@ -737,7 +739,7 @@ namespace Soul { namespace GPU {
 			vulkanFunctions.vkGetPhysicalDeviceMemoryProperties2KHR = vkGetPhysicalDeviceMemoryProperties2KHR;
 
 			VkAllocationCallbacks allocationCallbacks = {
-				nullptr,
+				&(db->vulkanCPUAllocator),
 				VmaAllocCallback,
 				VmaReallocationCallback,
 				VmaFreeCallback,
@@ -750,7 +752,7 @@ namespace Soul { namespace GPU {
 			allocatorInfo.device = db->device;
 			allocatorInfo.instance = db->instance;
 			allocatorInfo.preferredLargeHeapBlockSize = 0;
-			allocatorInfo.pAllocationCallbacks = nullptr;
+			allocatorInfo.pAllocationCallbacks = &allocationCallbacks;
 			allocatorInfo.pDeviceMemoryCallbacks = nullptr;
 			allocatorInfo.frameInUseCount = 0;
 			allocatorInfo.pHeapSizeLimit = 0;
