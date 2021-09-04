@@ -1,21 +1,6 @@
 // ReSharper disable CppClangTidyCppcoreguidelinesMacroUsage
 #pragma once
 
-#if defined(SOUL_ENV_DEBUG)
-    #define SOUL_OPTION_VULKAN_VALIDATION_ENABLE
-    #define SOUL_ASSERT_PARANOIA_LEVEL 1
-	#define SOUL_OPTION_LOGGING_ENABLE
-	#define SOUL_OPTION_ASSERTION_ENABLE
-#else
-    #define SOUL_ASSERT_PARANOIA_LEVEL 0
-#endif // SOUL_ENV_DEBUG
-
-#if defined(SOUL_ENV_RELEASE)
-	#define SOUL_OPTION_LOGGING_ENABLE
-	#define SOUL_OPTION_ASSERTION_ENABLE
-	#define SOUL_PROFILE_CPU_BACKEND_TRACY
-#endif // SOUL_ENV_RELEASE
-
 #if defined(_MSC_VER)
     #define SOUL_DEBUG_BREAK() __debugbreak()
 #else
@@ -33,7 +18,7 @@ void soul_intern_log(int verbosity, int line, const char* file, const char* form
     #define SOUL_LOG(verbosity, format, ...) do {soul_intern_log(verbosity, __LINE__, __FILE__, format, ##__VA_ARGS__);} while(0)
 #else
     #define SOUL_LOG(verbosity, format, ...) ((void) 0)
-#endif // SOUL_OPTION_ASSERTION_ENABLE
+#endif
 
 // Logging
 #define SOUL_LOG_VERBOSE_COUNT 4
@@ -61,7 +46,7 @@ void soul_intern_assert(int paranoia, int line, const char* file, const char* fo
     #define SOUL_ASSERT(paranoia, test, msg, ...) ((void)0)
     #define SOUL_PANIC(paranoia, msg) ((void)0)
     #define SOUL_NOT_IMPLEMENTED() ((void)0)
-#endif // SOUL_OPTION_ASSERTION_ENABLE
+#endif
 
 // Profiling
 
@@ -149,8 +134,8 @@ void soul_intern_assert(int paranoia, int line, const char* file, const char* fo
 	#include "core/type.h"
 	#define SOUL_MEMPROFILE_REGISTER_ALLOCATOR(x) do {} while(0)
 	#define SOUL_MEMPROFILE_DEREGISTER_ALLOCATOR(x) do {} while(0)
-	#define SOUL_MEMPROFILE_REGISTER_ALLOCATION(allocatorName, tag, addr, size) do { TracyAllocNS(addr, size, 10, allocatorName); } while(0)
-	#define SOUL_MEMPROFILE_REGISTER_DEALLOCATION(allocatorName, addr, size) do{ TracyFreeNS(addr, 10, allocatorName); } while(0)
+	#define SOUL_MEMPROFILE_REGISTER_ALLOCATION(allocatorName, tag, addr, size) do { TracyAllocNS(addr, size, SOUL_TRACY_STACKTRACE_DEPTH, allocatorName); } while(0)
+	#define SOUL_MEMPROFILE_REGISTER_DEALLOCATION(allocatorName, addr, size) do{ TracyFreeNS(addr, SOUL_TRACY_STACKTRACE_DEPTH, allocatorName); } while(0)
 	#define SOUL_MEMPROFILE_SNAPSHOT(x) do{} while(0)
 	#define SOUL_MEMPROFILE_FRAME() do{} while(0)
 
