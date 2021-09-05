@@ -169,7 +169,7 @@ namespace Soul::Runtime {
 		ThreadCount threadCount = config.threadCount;
 		if (threadCount == 0) {
 #ifdef SOUL_USE_STD_HARDWARE_THREAD_COUNT
-			threadCount = Util::Cast<ThreadCount>(std::thread::hardware_concurrency());
+			threadCount = Cast<ThreadCount>(std::thread::hardware_concurrency());
 #endif
 			if (threadCount == 0) {
 				threadCount = SOUL_HARDWARE_THREAD_COUNT;

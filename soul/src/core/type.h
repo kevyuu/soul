@@ -11,6 +11,7 @@
 #include <limits>
 
 #include "core/compiler.h"
+#include "core/dev_util.h"
 #include "core/type_traits.h"
 
 typedef int8_t int8;
@@ -284,6 +285,35 @@ namespace Soul {
 			iter->~ElemType();
 		}
 	}
+
+	
+	template<
+		typename PointerDst,
+		typename PointerSrc,
+		SOUL_REQUIRE(is_pointer_v<PointerDst>),
+		SOUL_REQUIRE(is_pointer_v<PointerSrc>)
+	>
+	PointerDst Cast(PointerSrc srcPtr)
+	{
+		using Dst = std::remove_pointer_t<PointerDst>;
+		if constexpr (!is_same_v<PointerDst, void*>) {
+			SOUL_ASSERT(0, uintptr(srcPtr) % alignof(Dst) == 0, "Source pointer is not aligned in PointerDst alignment!");
+		}
+		return (PointerDst)srcPtr;
+	}
+
+	template<
+		typename IntegralDst,
+		typename IntegralSrc,
+		SOUL_REQUIRE(is_integral_v<IntegralDst>),
+		SOUL_REQUIRE(is_integral_v<IntegralSrc>)
+	>
+	IntegralDst Cast(IntegralSrc src) {
+		SOUL_ASSERT(0, src < std::numeric_limits<IntegralDst>::max(), "Source value is larger than the destintation type maximum!");
+		SOUL_ASSERT(0, src > std::numeric_limits<IntegralSrc>::min(), "Source value is smaller than the destination type minimum!");
+		return IntegralDst(src);
+	}
+
 
 }
 

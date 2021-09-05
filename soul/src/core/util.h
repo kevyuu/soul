@@ -54,17 +54,7 @@ namespace Soul::Util
 		return dstFlags;
 	}
 
-	template<
-		typename IntegralDst,
-		typename IntegralSrc,
-		SOUL_REQUIRE(is_integral_v<IntegralDst>),
-		SOUL_REQUIRE(is_integral_v<IntegralSrc>)
-	>
-	IntegralDst Cast(IntegralSrc src)
-	{
-		SOUL_ASSERT(0, src < std::numeric_limits<IntegralDst>::max());
-		return IntegralDst(src);
-	}
+
 
 };
 
