@@ -396,11 +396,11 @@ namespace SoulFila {
         COUNT
     };
     static constexpr const char* _SHADING_DEFINES[] = {
-    "SHADING_MODEL_LIT",
-    "SHADING_MODEL_UNLIT",
-    "SHADING_MODEL_SUBSURFACE",
-    "SHADING_MODEL_CLOTH",
-    "SHADING_MODEL_SPECULAR_GLOSSINESS"
+	    "SHADING_MODEL_UNLIT",
+	    "SHADING_MODEL_LIT",
+	    "SHADING_MODEL_SUBSURFACE",
+	    "SHADING_MODEL_CLOTH",
+	    "SHADING_MODEL_SPECULAR_GLOSSINESS"
     };
     static constexpr EnumArray<Shading, const char*> SHADING_DEFINES(_SHADING_DEFINES);
 
