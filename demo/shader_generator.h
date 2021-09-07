@@ -3,8 +3,6 @@
 #include "core/type.h"
 #include "core/uint64_hash_map.h"
 #include "gpu/data.h"
-#include "memory/allocators/proxy_allocator.h"
-
 
 namespace Demo {
     enum class ShaderType : uint8 {
@@ -53,21 +51,21 @@ namespace Demo {
     struct ShaderInput {
         const char* name = nullptr;
         uint32 count = 1;
-        ShaderVarType varType;
-        ShaderPrecision precision;
-        constexpr ShaderInput() : name(nullptr), count(1), varType(ShaderVarType::COUNT), precision(ShaderPrecision::COUNT) {}
+        ShaderVarType varType = ShaderVarType::COUNT;
+        ShaderPrecision precision = ShaderPrecision::COUNT;
+        constexpr ShaderInput() = default;
         constexpr ShaderInput(const char* name, ShaderVarType type, ShaderPrecision precision = ShaderPrecision::DEFAULT, uint32 count = 1) :
-            name(name), varType(type), precision(precision), count(count) {}
+            name(name), count(count), varType(type), precision(precision) {}
     };
 
     struct ShaderOutput {
         const char* name = nullptr;
-        uint32 count;
-        ShaderVarType varType;
-        ShaderPrecision precision;
-        ShaderOutput() {}
+        uint32 count = 0;
+        ShaderVarType varType = ShaderVarType::COUNT;
+        ShaderPrecision precision = ShaderPrecision::COUNT;
+        constexpr ShaderOutput() = default;
         constexpr ShaderOutput(const char* name, ShaderVarType type, ShaderPrecision precision = ShaderPrecision::DEFAULT, uint32 count = 1) :
-            name(name), varType(type), precision(precision), count(count) {}
+            name(name), count(count), varType(type), precision(precision) {}
     };
 
     struct ShaderUniformMember {
@@ -76,21 +74,19 @@ namespace Demo {
         ShaderVarType varType = ShaderVarType::COUNT;
         uint32 count = 0;
 
-        constexpr ShaderUniformMember() {}
+        ShaderUniformMember() = default;
         constexpr ShaderUniformMember(const char* name, ShaderVarType varType,
             ShaderPrecision precision = ShaderPrecision::DEFAULT, uint32 count = 1) :
-            name(name), varType(varType), precision(precision), count(count) {
-
-        }
+            name(name), precision(precision), varType(varType), count(count) {}
     };
 
     struct ShaderUniform {
         const char* typeName = nullptr;
         const char* instanceName = nullptr;
-        const ShaderUniformMember* members;
-        uint8 memberCount;
-        uint8 set;
-        uint8 binding;
+        const ShaderUniformMember* members = nullptr;
+        uint8 memberCount = 0;
+        uint8 set = 0;
+        uint8 binding = 0;
     };
 
     struct ShaderDefine {
@@ -101,9 +97,9 @@ namespace Demo {
             uint64 integer;
             const char* string;
         };
-        constexpr ShaderDefine(const char* name) : name(name), boolean(true), type(ShaderDefineType::BOOL) {}
-        constexpr ShaderDefine(const char* name, uint64 integer) : name(name), integer(integer), type(ShaderDefineType::INTEGER) {}
-        constexpr ShaderDefine(const char* name, const char* str) : name(name), string(str), type(ShaderDefineType::STRING) {}
+        explicit constexpr ShaderDefine(const char* name) : type(ShaderDefineType::BOOL), name(name), boolean(true) {}  // NOLINT(cppcoreguidelines-pro-type-member-init)
+        constexpr ShaderDefine(const char* name, uint64 integer) : type(ShaderDefineType::INTEGER), name(name), integer(integer) {}  // NOLINT(cppcoreguidelines-pro-type-member-init)
+        constexpr ShaderDefine(const char* name, const char* str) : type(ShaderDefineType::STRING), name(name), string(str) {}  // NOLINT(cppcoreguidelines-pro-type-member-init)
     };
 
     enum class SamplerType : uint8 {
@@ -138,22 +134,22 @@ namespace Demo {
     struct ShaderDesc {
         const char* name = nullptr;
 
-        ShaderType type;
+        ShaderType type = ShaderType::COUNT;
 
         ShaderInput inputs[Soul::GPU::MAX_INPUT_PER_SHADER];
         ShaderOutput outputs[Soul::GPU::MAX_INPUT_PER_SHADER];
 
-        const ShaderUniform* uniforms;
-        uint8 uniformCount;
+        const ShaderUniform* uniforms = nullptr;
+        uint8 uniformCount = 0;
 
-        const ShaderSampler* samplers;
-        uint8 samplerCount;
+        const ShaderSampler* samplers = nullptr;
+        uint8 samplerCount = 0;
 
-        const ShaderDefine* defines;
-        uint8 defineCount;
+        const ShaderDefine* defines = nullptr;
+        uint8 defineCount = 0;
 
-        const char** templateCodes;
-        uint8 templateCodeCount;
+        const char** templateCodes = nullptr;
+        uint8 templateCodeCount = 0;
 
         const char* customCode = nullptr;
     };

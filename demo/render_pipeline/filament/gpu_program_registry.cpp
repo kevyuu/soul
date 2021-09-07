@@ -564,7 +564,7 @@ namespace SoulFila {
         if (litVariants && variant.hasShadowReceiver()) defines.add(Demo::ShaderDefine("HAS_SHADOWING"));
         if (info.hasShadowMultiplier) defines.add(Demo::ShaderDefine("HAS_SHADOW_MULTIPLIER"));
         if (variant.hasVsm()) defines.add(Demo::ShaderDefine("HAS_VSM"));
-        Util::ForEachBit(info.properties, [&defines](uint32 index) { defines.add(PROPERTY_DEFINES[Property(index)]); });
+        Util::ForEachBit(info.properties, [&defines](uint32 index) { defines.add(Demo::ShaderDefine(PROPERTY_DEFINES[Property(index)])); });
         if (IsPropertyNeedTBN_(info.properties)) defines.add(Demo::ShaderDefine("MATERIAL_NEEDS_TBN"));
         // generate attribute defines
         Util::ForEachBit(info.requiredAttributes,
@@ -739,29 +739,29 @@ namespace SoulFila {
         bool multiBounceAO = info.multiBounceAOSet ? info.multiBounceAO : true;
         defines.add(Demo::ShaderDefine("MULTI_BOUNCE_AMBIENT_OCCLUSION", multiBounceAO ? 1u : 0u));
         if (variant.hasFog()) defines.add(Demo::ShaderDefine("HAS_FOG"));
-        if (info.hasDoubleSidedCapability) defines.add("MATERIAL_HAS_DOUBLE_SIDED_CAPABILITY");
+        if (info.hasDoubleSidedCapability) defines.add(Demo::ShaderDefine("MATERIAL_HAS_DOUBLE_SIDED_CAPABILITY"));
         switch (info.blendingMode) {
         case BlendingMode::OPAQUE:
-            defines.add("BLEND_MODE_OPAQUE");
+            defines.add(Demo::ShaderDefine("BLEND_MODE_OPAQUE"));
             break;
         case BlendingMode::TRANSPARENT:
-            defines.add("BLEND_MODE_TRANSPARENT");
+            defines.add(Demo::ShaderDefine("BLEND_MODE_TRANSPARENT"));
             break;
         case BlendingMode::ADD:
-            defines.add("BLEND_MODE_ADD");
+            defines.add(Demo::ShaderDefine("BLEND_MODE_ADD"));
             break;
         case BlendingMode::MASKED:
-            defines.add("BLEND_MODE_MASKED");
+            defines.add(Demo::ShaderDefine("BLEND_MODE_MASKED"));
             break;
         case BlendingMode::FADE:
-            defines.add("BLEND_MODE_TRANSPARENT");
-            defines.add("BLEND_MODE_FADE");
+            defines.add(Demo::ShaderDefine("BLEND_MODE_TRANSPARENT"));
+            defines.add(Demo::ShaderDefine("BLEND_MODE_FADE"));
             break;
         case BlendingMode::MULTIPLY:
-            defines.add("BLEND_MODE_MULTIPLY");
+            defines.add(Demo::ShaderDefine("BLEND_MODE_MULTIPLY"));
             break;
         case BlendingMode::SCREEN:
-            defines.add("BLEND_MODE_SCREEN");
+            defines.add(Demo::ShaderDefine("BLEND_MODE_SCREEN"));
             break;
         case BlendingMode::COUNT:
         default:
@@ -770,19 +770,19 @@ namespace SoulFila {
         }
         switch (info.postLightingBlendingMode) {
         case BlendingMode::OPAQUE:
-            defines.add("POST_LIGHTING_BLEND_MODE_OPAQUE");
+            defines.add(Demo::ShaderDefine("POST_LIGHTING_BLEND_MODE_OPAQUE"));
             break;
         case BlendingMode::TRANSPARENT:
-            defines.add("POST_LIGHTING_BLEND_MODE_TRANSPARENT");
+            defines.add(Demo::ShaderDefine("POST_LIGHTING_BLEND_MODE_TRANSPARENT"));
             break;
         case BlendingMode::ADD:
-            defines.add("POST_LIGHTNG_BLEND_MODE_ADD");
+            defines.add(Demo::ShaderDefine("POST_LIGHTNG_BLEND_MODE_ADD"));
             break;
         case BlendingMode::MULTIPLY:
-            defines.add("POST_LIGHTING_BLEND_MODE_MULTIPLY");
+            defines.add(Demo::ShaderDefine("POST_LIGHTING_BLEND_MODE_MULTIPLY"));
             break;
         case BlendingMode::SCREEN:
-            defines.add("POST_LIGHTING_BLEND_MODE_SCREEN");
+            defines.add(Demo::ShaderDefine("POST_LIGHTING_BLEND_MODE_SCREEN"));
             break;
         case BlendingMode::MASKED:
         case BlendingMode::FADE:
@@ -791,7 +791,7 @@ namespace SoulFila {
             SOUL_NOT_IMPLEMENTED();
             break;
         }
-        defines.add(SHADING_DEFINES[info.shading]);
+        defines.add(Demo::ShaderDefine(SHADING_DEFINES[info.shading]));
         desc.defines = defines.data();
         desc.defineCount = Soul::Cast<uint8>(defines.size());
 
