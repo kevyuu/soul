@@ -27,4 +27,13 @@ namespace Soul {
 
 	template<typename T>
 	inline bool constexpr is_trivially_destructible_v = std::is_trivially_destructible_v<T>;
+
+	template<typename T>
+	inline bool constexpr is_void_v = std::is_void_v<T>;
+
+	template<typename T, typename U>
+	inline bool constexpr is_same_v = std::is_same_v<T, U>;
+
+	template<typename T>
+	inline bool constexpr is_pointer_v = std::is_pointer_v<T>;
 }
