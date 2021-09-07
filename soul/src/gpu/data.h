@@ -471,7 +471,7 @@ namespace Soul {
 		};
 
 		struct BufferDesc {
-			uint16 count = 0;
+			soul_size count = 0;
 			uint16 typeSize = 0;
 			uint16 typeAlignment = 0;
 			BufferUsageFlags usageFlags = 0;
@@ -489,14 +489,14 @@ namespace Soul {
 		};
 
 		struct SamplerDesc {
-			TextureFilter minFilter;
-			TextureFilter magFilter;
-			TextureFilter mipmapFilter;
-			TextureWrap wrapU;
-			TextureWrap wrapV;
-			TextureWrap wrapW;
-			bool anisotropyEnable;
-			float maxAnisotropy;
+			TextureFilter minFilter = TextureFilter::COUNT;
+			TextureFilter magFilter = TextureFilter::COUNT;
+			TextureFilter mipmapFilter = TextureFilter::COUNT;
+			TextureWrap wrapU = TextureWrap::COUNT;
+			TextureWrap wrapV = TextureWrap::COUNT;
+			TextureWrap wrapW = TextureWrap::COUNT;
+			bool anisotropyEnable = false;
+			float maxAnisotropy = 0;
 		};
 
 		struct ShaderDesc {

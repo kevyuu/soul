@@ -24,7 +24,7 @@ namespace Soul {
 		return { max(v1.x, v2.x), max(v1.y, v2.y), max(v1.z, v2.z) };
 	}
 
-	uint32 floorLog2(uint32 val) {
+	uint64 floorLog2(uint64 val) {
 		uint32 level = 0;
 		while (val >>= 1) ++level;
 		return level;

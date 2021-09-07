@@ -9,9 +9,7 @@
 #include <algorithm>
 
 namespace SoulFila {
-
-    static constexpr const char* SHADER_AMBIENT_OCCLUSION_FRAG = "filament::ambient_occlusion.frag.glsl";
-    static constexpr const char* SHADER_BLOOM_FRAG = "filament::blool.frag.glsl";
+    
     static constexpr const char* SHADER_BRDF_FRAG = "filament::brdf.frag.glsl";
     static constexpr const char* SHADER_COMMON_GETTERS = "filament::common_getters.glsl";
     static constexpr const char* SHADER_COMMON_GRAPHICS = "filament::common_graphics.glsl";
@@ -26,8 +24,6 @@ namespace SoulFila {
     static constexpr const char* SHADER_FOG_FRAG = "filament::fog.frag.glsl";
     static constexpr const char* SHADER_GETTERS_FRAG = "filament::getters.frag.glsl";
     static constexpr const char* SHADER_GETTERS_VERT = "filament::getters.vert.glsl";
-    static constexpr const char* SHADER_INPUT_FRAG = "filament::input.frag.glsl";
-    static constexpr const char* SHADER_INPUT_VERT = "filament::input.vert.glsl";
     static constexpr const char* SHADER_LIGHT_DIRECTIONAL_FRAG = "filament::light_directional.frag.glsl";
     static constexpr const char* SHADER_LIGHT_INDIRECT_FRAG = "filament::light_indirect.frag.glsl";
     static constexpr const char* SHADER_LIGHT_PUNCTUAL_FRAG = "filament::light_punctual.frag.glsl";
@@ -45,7 +41,7 @@ namespace SoulFila {
 
     static constexpr const char* EMPTY_VERTEX_CODE = "void materialVertex(inout MaterialVertexInputs m) {\n}\n";
 
-    static constexpr Demo::ShaderDefine _COMMON_DEFINES[] = {
+    static constexpr Demo::ShaderDefine COMMON_DEFINES_[] = {
         Demo::ShaderDefine("TARGET_VULKAN_ENVIRONMENT"),
         Demo::ShaderDefine("FILAMENT_VULKAN_SEMANTICS"),
         Demo::ShaderDefine("FILAMENT_HAS_FEATURE_TEXTURE_GATHER"),
@@ -87,7 +83,7 @@ namespace SoulFila {
         COUNT,
     };
 
-    static constexpr const char* _PROPERTY_NAMES[] = {
+    static constexpr const char* PROPERTY_NAMES_[] = {
         "baseColor",
         "roughness",
         "metallic",
@@ -115,9 +111,9 @@ namespace SoulFila {
         "microThickness",
         "bentNormal"
     };
-    static constexpr EnumArray<Property, const char*> PROPERTY_NAMES(_PROPERTY_NAMES);
+    [[maybe_unused]] static constexpr EnumArray<Property, const char*> PROPERTY_NAMES(PROPERTY_NAMES_);
 
-    static constexpr const char* _PROPERTY_DEFINES[] = {
+    static constexpr const char* PROPERTY_DEFINES_[] = {
         "MATERIAL_HAS_BASE_COLOR",
         "MATERIAL_HAS_ROUGHNESS",
         "MATERIAL_HAS_METALLIC",
@@ -145,18 +141,18 @@ namespace SoulFila {
         "MATERIAL_HAS_MICRO_THICKNESS",
         "MATERIAL_HAS_BENT_NORMAL"
     };
-    static constexpr EnumArray<Property, const char*> PROPERTY_DEFINES(_PROPERTY_DEFINES);
+    static constexpr EnumArray<Property, const char*> PROPERTY_DEFINES(PROPERTY_DEFINES_);
     using PropertyBitSet = uint32;
 
-    static bool _TestProperty(PropertyBitSet properties, Property property) {
+    static bool TestProperty_(PropertyBitSet properties, Property property) {
         return (properties & (1 << uint64(property)));
     }
 
-    static bool _IsPropertyNeedTBN(PropertyBitSet properties) {
-        return _TestProperty(properties, Property::ANISOTROPY) ||
-            _TestProperty(properties, Property::NORMAL) ||
-            _TestProperty(properties, Property::BENT_NORMAL) ||
-            _TestProperty(properties, Property::CLEAR_COAT_NORMAL);
+    static bool IsPropertyNeedTBN_(PropertyBitSet properties) {
+        return TestProperty_(properties, Property::ANISOTROPY) ||
+            TestProperty_(properties, Property::NORMAL) ||
+            TestProperty_(properties, Property::BENT_NORMAL) ||
+            TestProperty_(properties, Property::CLEAR_COAT_NORMAL);
     }
 
     static constexpr Demo::ShaderUniformMember FRAME_UNIFORM_MEMBER[] = {
@@ -347,7 +343,7 @@ namespace SoulFila {
 
     using AttributeBitSet = uint32;
 
-    static constexpr const char* _ATTRIBUTE_DEFINES[] = {
+    static constexpr const char* ATTRIBUTE_DEFINES_[] = {
         nullptr,
         "HAS_ATTRIBUTE_TANGENTS",
         "HAS_ATTRIBUTE_COLOR",
@@ -365,9 +361,9 @@ namespace SoulFila {
         "HAS_ATTRIBUTE_CUSTOM6",
         "HAS_ATTRIBUTE_CUSTOM7"
     };
-    static constexpr EnumArray<VertexAttribute, const char*> ATTRIBUTE_DEFINES(_ATTRIBUTE_DEFINES);
+    static constexpr EnumArray<VertexAttribute, const char*> ATTRIBUTE_DEFINES(ATTRIBUTE_DEFINES_);
 
-    static constexpr const char* _ATTRIBUTE_LOCATION_DEFINES[] = {
+    static constexpr const char* ATTRIBUTE_LOCATION_DEFINES_[] = {
         "LOCATION_POSITION",
         "LOCATION_TANGENTS",
         "LOCATION_COLOR",
@@ -385,7 +381,7 @@ namespace SoulFila {
         "LOCATION_CUSTOM6",
         "LOCATION_CUSTOM7"
     };
-    static constexpr EnumArray<VertexAttribute, const char*> ATTRIBUTE_LOCATION_DEFINES(_ATTRIBUTE_LOCATION_DEFINES);
+    static constexpr EnumArray<VertexAttribute, const char*> ATTRIBUTE_LOCATION_DEFINES(ATTRIBUTE_LOCATION_DEFINES_);
 
     enum class Shading : uint8 {
         UNLIT,                  //!< no lighting applied, emissive possible
@@ -395,14 +391,14 @@ namespace SoulFila {
         SPECULAR_GLOSSINESS,    //!< legacy lighting model
         COUNT
     };
-    static constexpr const char* _SHADING_DEFINES[] = {
+    static constexpr const char* SHADING_DEFINES_[] = {
 	    "SHADING_MODEL_UNLIT",
 	    "SHADING_MODEL_LIT",
 	    "SHADING_MODEL_SUBSURFACE",
 	    "SHADING_MODEL_CLOTH",
 	    "SHADING_MODEL_SPECULAR_GLOSSINESS"
     };
-    static constexpr EnumArray<Shading, const char*> SHADING_DEFINES(_SHADING_DEFINES);
+    static constexpr EnumArray<Shading, const char*> SHADING_DEFINES(SHADING_DEFINES_);
 
     enum class MaterialDomain : uint8 {
         SURFACE = 0, //!< shaders applied to renderables
@@ -496,8 +492,8 @@ namespace SoulFila {
             (k1.hasEmissiveTexture == k2.hasEmissiveTexture) &&
             (k1.useSpecularGlossiness == k2.useSpecularGlossiness) &&
             (k1.alphaMode == k2.alphaMode) &&
-            (k1.hasMetallicRoughnessTexture == k2.hasMetallicRoughnessTexture) &&
-            (k1.metallicRoughnessUV == k2.metallicRoughnessUV) &&
+            (k1.brdf.metallicRoughness.hasTexture == k2.brdf.metallicRoughness.hasTexture) &&
+            (k1.brdf.metallicRoughness.hasTexture == k2.brdf.metallicRoughness.UV) &&
             (k1.baseColorUV == k2.baseColorUV) &&
             (k1.hasClearCoatTexture == k2.hasClearCoatTexture) &&
             (k1.clearCoatUV == k2.clearCoatUV) &&
@@ -531,11 +527,11 @@ namespace SoulFila {
         Stage stage;
     };
 
-    static bool _TestAttribute(AttributeBitSet attributes, VertexAttribute vertexAttribute) {
+    static bool TestAttribute_(AttributeBitSet attributes, VertexAttribute vertexAttribute) {
         return attributes & (1 << vertexAttribute);
     };
 
-    static Soul::Array<VariantStagePair> _GetSurfaceVariants(uint8 variantFilter, bool isLit, bool shadowMultiplier) {
+    static Soul::Array<VariantStagePair> GetSurfaceVariants_(uint8 variantFilter, bool isLit, bool shadowMultiplier) {
         Soul::Array<VariantStagePair> variants;
         uint8_t variantMask = ~variantFilter;
         for (uint8_t k = 0; k < VARIANT_COUNT; k++) {
@@ -558,8 +554,8 @@ namespace SoulFila {
         return variants;
     }
 
-    static void _GenerateCommonDefines(Soul::Array<Demo::ShaderDefine>& defines, GPUProgramVariant variant, const ProgramSetInfo& info) {
-        for (auto define : _COMMON_DEFINES) {
+    static void GenerateCommonDefines_(Soul::Array<Demo::ShaderDefine>& defines, GPUProgramVariant variant, const ProgramSetInfo& info) {
+        for (auto define : COMMON_DEFINES_) {
             defines.add(define);
         }
         bool litVariants = info.isLit || info.hasShadowMultiplier;
@@ -569,7 +565,7 @@ namespace SoulFila {
         if (info.hasShadowMultiplier) defines.add(Demo::ShaderDefine("HAS_SHADOW_MULTIPLIER"));
         if (variant.hasVsm()) defines.add(Demo::ShaderDefine("HAS_VSM"));
         Util::ForEachBit(info.properties, [&defines](uint32 index) { defines.add(PROPERTY_DEFINES[Property(index)]); });
-        if (_IsPropertyNeedTBN(info.properties)) defines.add(Demo::ShaderDefine("MATERIAL_NEEDS_TBN"));
+        if (IsPropertyNeedTBN_(info.properties)) defines.add(Demo::ShaderDefine("MATERIAL_NEEDS_TBN"));
         // generate attribute defines
         Util::ForEachBit(info.requiredAttributes,
             [&defines](uint32 index) {
@@ -578,7 +574,7 @@ namespace SoulFila {
             });
     }
 
-    static Soul::GPU::ShaderID _GenerateVertexShader(const Demo::ShaderGenerator& generator, GPUProgramVariant variant, const ProgramSetInfo& info) {
+    static Soul::GPU::ShaderID GenerateVertexShader_(const Demo::ShaderGenerator& generator, GPUProgramVariant variant, const ProgramSetInfo& info) {
         
         bool litVariants = info.isLit || info.hasShadowMultiplier;
 
@@ -602,7 +598,7 @@ namespace SoulFila {
 
         // generate common defines
         Soul::Array<Demo::ShaderDefine> defines;
-        _GenerateCommonDefines(defines, variant, info);
+        GenerateCommonDefines_(defines, variant, info);
         if (info.flipUV) defines.add(Demo::ShaderDefine("FLIP_UV_ATTRIBUTE"));
         if (variant.hasSkinningOrMorphing()) defines.add(Demo::ShaderDefine("HAS_SKINNING_OR_MORPHING"));
         Util::ForEachBit(info.requiredAttributes,
@@ -611,7 +607,7 @@ namespace SoulFila {
                 if (ATTRIBUTE_LOCATION_DEFINES[attr] != nullptr) defines.add(Demo::ShaderDefine(ATTRIBUTE_LOCATION_DEFINES[attr], index));
             });
         desc.defines = defines.data();
-        desc.defineCount = defines.size();
+        desc.defineCount = Soul::Cast<uint8>(defines.size());
 
         // generate inputs
         static constexpr Soul::EnumArray<VertexAttribute, Demo::ShaderInput> inputMap({
@@ -636,17 +632,17 @@ namespace SoulFila {
         
         // generate outputs
         desc.outputs[4] = Demo::ShaderOutput("vertex_worldPosition", Demo::ShaderVarType::FLOAT3);
-        if (_TestAttribute(attributes, VertexAttribute::TANGENTS)) {
+        if (TestAttribute_(attributes, VertexAttribute::TANGENTS)) {
             desc.outputs[5] = Demo::ShaderOutput("vertex_worldNormal", Demo::ShaderVarType::FLOAT3, Demo::ShaderPrecision::MEDIUM);
-            if (_IsPropertyNeedTBN(info.properties))
+            if (IsPropertyNeedTBN_(info.properties))
                 desc.outputs[6] = Demo::ShaderOutput("vertex_worldTangent", Demo::ShaderVarType::FLOAT4, Demo::ShaderPrecision::MEDIUM);
         }
         desc.outputs[7] = Demo::ShaderOutput("vertex_position", Demo::ShaderVarType::FLOAT4);
-        if (_TestAttribute(attributes, VertexAttribute::COLOR)) 
+        if (TestAttribute_(attributes, VertexAttribute::COLOR)) 
             desc.outputs[9] = Demo::ShaderOutput("vertex_color", Demo::ShaderVarType::FLOAT4, Demo::ShaderPrecision::MEDIUM);
-        if (_TestAttribute(attributes, VertexAttribute::UV0) && !_TestAttribute(attributes, VertexAttribute::UV1))
+        if (TestAttribute_(attributes, VertexAttribute::UV0) && !TestAttribute_(attributes, VertexAttribute::UV1))
             desc.outputs[10] = Demo::ShaderOutput("vertex_uv01", Demo::ShaderVarType::FLOAT2, Demo::ShaderPrecision::HIGH);
-        else if (_TestAttribute(attributes, VertexAttribute::UV1))
+        else if (TestAttribute_(attributes, VertexAttribute::UV1))
             desc.outputs[10] = Demo::ShaderOutput("vertex_uv01", Demo::ShaderVarType::FLOAT4, Demo::ShaderPrecision::HIGH);
         if (variant.hasShadowReceiver() && variant.hasDirectionalLighting())
             desc.outputs[11] = Demo::ShaderOutput("vertex_lightSpacePosition", Demo::ShaderVarType::FLOAT4, Demo::ShaderPrecision::HIGH);
@@ -663,11 +659,11 @@ namespace SoulFila {
         SOUL_ASSERT(0, info.uib.size() < SOUL_UTYPE_MAX(uint8), "");
         uniforms.add(MATERIAL_UNIFORM);
         desc.uniforms = uniforms.data();
-        desc.uniformCount = uniforms.size();
+        desc.uniformCount = Soul::Cast<uint8>(uniforms.size());
 
         // generate samplers
         desc.samplers = info.sib.data();
-        desc.samplerCount = info.sib.size();
+        desc.samplerCount = Soul::Cast<uint8>(info.sib.size());
 
         // generate codes
         Soul::Array<const char*> templateCodes;
@@ -683,7 +679,7 @@ namespace SoulFila {
             templateCodes.add(SHADER_MAIN_VERT);
         }
         desc.templateCodes = templateCodes.data();
-        desc.templateCodeCount = templateCodes.size();
+        desc.templateCodeCount = Soul::Cast<uint8>(templateCodes.size());
 
         if (!variant.isDepthPass() || (info.blendingMode == BlendingMode::MASKED)) {
             if (info.materialVertexCode.empty())
@@ -695,7 +691,7 @@ namespace SoulFila {
         return generator.createShader(desc);
     }
 
-    static Soul::GPU::ShaderID _GenerateFragmentShader(const Demo::ShaderGenerator& generator, GPUProgramVariant variant, const ProgramSetInfo& info) {
+    static Soul::GPU::ShaderID GenerateFragmentShader_(const Demo::ShaderGenerator& generator, GPUProgramVariant variant, const ProgramSetInfo& info) {
 
         Demo::ShaderDesc desc;
         desc.type = Demo::ShaderType::FRAGMENT;
@@ -703,7 +699,7 @@ namespace SoulFila {
 
         // generate defines
         Soul::Array<Demo::ShaderDefine> defines;
-        _GenerateCommonDefines(defines, variant, info);
+        GenerateCommonDefines_(defines, variant, info);
         if (info.specularAntiAliasing && info.isLit) defines.add(Demo::ShaderDefine("GEOMETRIC_SPECULAR_AA"));
         if (info.clearCoatIorChange) defines.add(Demo::ShaderDefine("CLEAR_COAT_IOR_CHANGE"));
         auto specularAO = info.specularAOSet ? info.specularAO : SpecularAmbientOcclusion::SIMPLE;
@@ -719,6 +715,8 @@ namespace SoulFila {
             case RefractionMode::SCREEN_SPACE:
                 defines.add(Demo::ShaderDefine("REFRACTION_MODE", "REFRACTION_MODE_SCREEN_SPACE"));
                 break;
+            case RefractionMode::NONE:
+            case RefractionMode::COUNT:
             default:
                 SOUL_NOT_IMPLEMENTED();
                 break;
@@ -732,6 +730,7 @@ namespace SoulFila {
             case RefractionType::THIN:
                 defines.add(Demo::ShaderDefine("REFRACTION_TYPE", "REFRACTION_TYPE_THIN"));
                 break;
+            case RefractionType::COUNT:
             default:
                 SOUL_NOT_IMPLEMENTED();
                 break;
@@ -764,6 +763,7 @@ namespace SoulFila {
         case BlendingMode::SCREEN:
             defines.add("BLEND_MODE_SCREEN");
             break;
+        case BlendingMode::COUNT:
         default:
             SOUL_NOT_IMPLEMENTED();
             break;
@@ -784,29 +784,32 @@ namespace SoulFila {
         case BlendingMode::SCREEN:
             defines.add("POST_LIGHTING_BLEND_MODE_SCREEN");
             break;
+        case BlendingMode::MASKED:
+        case BlendingMode::FADE:
+        case BlendingMode::COUNT:
         default:
             SOUL_NOT_IMPLEMENTED();
             break;
         }
         defines.add(SHADING_DEFINES[info.shading]);
         desc.defines = defines.data();
-        desc.defineCount = defines.size();
+        desc.defineCount = Soul::Cast<uint8>(defines.size());
 
         AttributeBitSet attributes = info.requiredAttributes;
 
         // defines shader inputs
         desc.inputs[4] = Demo::ShaderInput("vertex_worldPosition", Demo::ShaderVarType::FLOAT3);
-        if (_TestAttribute(info.requiredAttributes, VertexAttribute::TANGENTS)) {
+        if (TestAttribute_(info.requiredAttributes, VertexAttribute::TANGENTS)) {
             desc.inputs[5] = Demo::ShaderInput("vertex_worldNormal", Demo::ShaderVarType::FLOAT3, Demo::ShaderPrecision::MEDIUM);
-            if (_IsPropertyNeedTBN(info.properties)) {
+            if (IsPropertyNeedTBN_(info.properties)) {
                 desc.inputs[6] = Demo::ShaderInput("vertex_worldTangent", Demo::ShaderVarType::FLOAT4, Demo::ShaderPrecision::MEDIUM);
             }
         }
         desc.inputs[7] = Demo::ShaderInput("vertex_position", Demo::ShaderVarType::FLOAT4);
-        if (_TestAttribute(attributes, VertexAttribute::COLOR)) desc.inputs[9] = Demo::ShaderInput("vertex_color", Demo::ShaderVarType::FLOAT4, Demo::ShaderPrecision::MEDIUM);
-        if (_TestAttribute(attributes, VertexAttribute::UV0) && !_TestAttribute(attributes, VertexAttribute::UV1))
+        if (TestAttribute_(attributes, VertexAttribute::COLOR)) desc.inputs[9] = Demo::ShaderInput("vertex_color", Demo::ShaderVarType::FLOAT4, Demo::ShaderPrecision::MEDIUM);
+        if (TestAttribute_(attributes, VertexAttribute::UV0) && !TestAttribute_(attributes, VertexAttribute::UV1))
             desc.inputs[10] = Demo::ShaderInput("vertex_uv01", Demo::ShaderVarType::FLOAT2, Demo::ShaderPrecision::HIGH);
-        else if (_TestAttribute(attributes, VertexAttribute::UV1))
+        else if (TestAttribute_(attributes, VertexAttribute::UV1))
             desc.inputs[10] = Demo::ShaderInput("vertex_uv01", Demo::ShaderVarType::FLOAT4, Demo::ShaderPrecision::HIGH);
         if (variant.hasShadowReceiver() && variant.hasDirectionalLighting())
             desc.inputs[11] = Demo::ShaderInput("vertex_lightSpacePosition", Demo::ShaderVarType::FLOAT4, Demo::ShaderPrecision::HIGH);
@@ -821,11 +824,11 @@ namespace SoulFila {
         SOUL_ASSERT(0, info.uib.size() < SOUL_UTYPE_MAX(uint8), "");
         uniforms.add(MATERIAL_UNIFORM);
         desc.uniforms = uniforms.data();
-        desc.uniformCount = uniforms.size();
+        desc.uniformCount = Soul::Cast<decltype(desc.uniformCount)>(uniforms.size());
 
         // generate samplers
         Array<Demo::ShaderSampler> samplers = info.sib;
-        uint64 frameSamplerBinding = FRAME_SAMPLER_START_BINDING;
+        uint8 frameSamplerBinding = FRAME_SAMPLER_START_BINDING;
         if (variant.hasVsm())
             samplers.add(Demo::ShaderSampler("light_shadowMap", FRAME_SAMPLER_SET, frameSamplerBinding++, Demo::SamplerType::SAMPLER_2D_ARRAY, Demo::SamplerFormat::FLOAT, Demo::ShaderPrecision::HIGH));
         else
@@ -836,9 +839,10 @@ namespace SoulFila {
         samplers.add(Demo::ShaderSampler("light_iblSpecular", FRAME_SAMPLER_SET, frameSamplerBinding++, Demo::SamplerType::SAMPLER_CUBEMAP, Demo::SamplerFormat::FLOAT, Demo::ShaderPrecision::MEDIUM));
         samplers.add(Demo::ShaderSampler("light_ssao", FRAME_SAMPLER_SET, frameSamplerBinding++, Demo::SamplerType::SAMPLER_2D, Demo::SamplerFormat::FLOAT, Demo::ShaderPrecision::MEDIUM));
         samplers.add(Demo::ShaderSampler("light_ssr", FRAME_SAMPLER_SET, frameSamplerBinding++, Demo::SamplerType::SAMPLER_2D, Demo::SamplerFormat::FLOAT, Demo::ShaderPrecision::MEDIUM));
+        // ReSharper disable once CppAssignedValueIsNeverUsed
         samplers.add(Demo::ShaderSampler("light_structure", FRAME_SAMPLER_SET, frameSamplerBinding++, Demo::SamplerType::SAMPLER_2D, Demo::SamplerFormat::FLOAT, Demo::ShaderPrecision::MEDIUM));
         desc.samplers = samplers.data();
-        desc.samplerCount = samplers.size();
+        desc.samplerCount = Soul::Cast<decltype(desc.samplerCount)>(samplers.size());
        
         // generate code
         Array<const char*> templateCodes;
@@ -882,6 +886,10 @@ namespace SoulFila {
                 case Shading::CLOTH:
                     templateCodes.add(SHADER_SHADING_MODEL_CLOTH_FRAG);
                     break;
+                case Shading::COUNT:
+                default:
+                    SOUL_NOT_IMPLEMENTED();
+                    break;
                 }
 
                 if (info.shading != Shading::UNLIT) {
@@ -906,26 +914,26 @@ namespace SoulFila {
             templateCodes.add(SHADER_MAIN_FRAG);
         }
         desc.templateCodes = templateCodes.data();
-        desc.templateCodeCount = templateCodes.size();
+        desc.templateCodeCount = Soul::Cast<decltype(desc.templateCodeCount)>(templateCodes.size());
 
         return generator.createShader(desc);
     }
 
-    static bool _GenerateProgramSet(GPUProgramSet& programSet, const Demo::ShaderGenerator& generator, const Soul::Array<VariantStagePair>& variants, const ProgramSetInfo& info) {
+    static bool GenerateProgramSet_(GPUProgramSet& programSet, const Demo::ShaderGenerator& generator, const Soul::Array<VariantStagePair>& variants, const ProgramSetInfo& info) {
         for (const auto& variantPair : variants) {
             if (variantPair.stage == Demo::ShaderType::VERTEX) {
-                Soul::GPU::ShaderID shaderID = _GenerateVertexShader(generator, GPUProgramVariant(variantPair.variant), info);
+                Soul::GPU::ShaderID shaderID = GenerateVertexShader_(generator, GPUProgramVariant(variantPair.variant), info);
                 programSet.vertShaderIDs[variantPair.variant] = shaderID;
             }
             else {
-                Soul::GPU::ShaderID shaderID = _GenerateFragmentShader(generator, GPUProgramVariant(variantPair.variant), info);
+                Soul::GPU::ShaderID shaderID = GenerateFragmentShader_(generator, GPUProgramVariant(variantPair.variant), info);
                 programSet.fragShaderIDs[variantPair.variant] = shaderID;
             }
         }
         return true;
     }
 
-	static std::string _MaterialCodeFromKey(const GPUProgramKey& programKey, PropertyBitSet& properties) {
+	static std::string MaterialCodeFromKey_(const GPUProgramKey& programKey, PropertyBitSet& properties) {
         std::string shader = "void material(inout MaterialInputs material) {\n";
 
         auto _setProperty = [&properties](Property property) {
@@ -1010,7 +1018,7 @@ namespace SoulFila {
                     material.emissive = vec4(materialParams.emissiveFactor.rgb, 0.0);
                 )SHADER";
             }
-            if (programKey.hasMetallicRoughnessTexture) {
+            if (programKey.brdf.metallicRoughness.hasTexture) {
                 shader += "highp float2 metallicRoughnessUV = ${metallic};\n";
                 if (programKey.hasTextureTransforms) {
                     shader += "metallicRoughnessUV = (vec3(metallicRoughnessUV, 1.0) * "
@@ -1165,10 +1173,10 @@ namespace SoulFila {
             }
         };
 
-        static const std::string uvstrings[] = { "vec2(0)", "getUV0()", "getUV1()" };
+        static constexpr char const* uvstrings[] = { "vec2(0)", "getUV0()", "getUV1()" };
         const auto& normalUV = uvstrings[programKey.normalUV];
         const auto& baseColorUV = uvstrings[programKey.baseColorUV];
-        const auto& metallicRoughnessUV = uvstrings[programKey.metallicRoughnessUV];
+        const auto& metallicRoughnessUV = uvstrings[programKey.brdf.metallicRoughness.UV];
         const auto& emissiveUV = uvstrings[programKey.emissiveUV];
         const auto& transmissionUV = uvstrings[programKey.transmissionUV];
         const auto& aoUV = uvstrings[programKey.aoUV];
@@ -1214,14 +1222,13 @@ namespace SoulFila {
         info.specularAO = SpecularAmbientOcclusion::SIMPLE;
         info.specularAntiAliasing = true;
         info.clearCoatIorChange = false;
-        info.materialCode = _MaterialCodeFromKey(config, info.properties);
+        info.materialCode = MaterialCodeFromKey_(config, info.properties);
         info.hasDoubleSidedCapability = true;
         // shading configuration
         if (config.unlit) info.shading = Shading::UNLIT;
         else if (config.useSpecularGlossiness) info.shading = Shading::SPECULAR_GLOSSINESS;
         else info.shading = Shading::LIT;
         info.isLit = (info.shading != Shading::UNLIT);
-
 
         Soul::Array<Demo::ShaderUniformMember>& matBufferMembers = info.uib;
         Soul::Array<Demo::ShaderSampler>& matSamplers = info.sib;
@@ -1230,7 +1237,7 @@ namespace SoulFila {
         // Compute required attributes
         requiredAttributes |= (1 << VertexAttribute::POSITION);
         auto _getNumUV = [](const GPUProgramKey& key) -> int {
-            return std::max({ key.baseColorUV, key.metallicRoughnessUV, key.normalUV, key.aoUV,
+            return std::max({ key.baseColorUV, key.brdf.metallicRoughness.UV, key.normalUV, key.aoUV,
                 key.emissiveUV, key.transmissionUV, key.clearCoatUV, key.clearCoatRoughnessUV,
                 key.clearCoatNormalUV, key.sheenColorUV, key.sheenRoughnessUV });
         };
@@ -1246,7 +1253,7 @@ namespace SoulFila {
 
         uint32 numSampler = 0;
         auto _addMatSampler = [&matSamplers, &numSampler](const char* name, Demo::SamplerType samplerType) {
-            matSamplers.add(Demo::ShaderSampler(name, MATERIAL_SAMPLER_SET, numSampler, samplerType, Demo::SamplerFormat::FLOAT));
+            matSamplers.add(Demo::ShaderSampler(name, MATERIAL_SAMPLER_SET, Soul::Cast<uint8>(numSampler), samplerType, Demo::SamplerFormat::FLOAT));
             numSampler++;
         };
 
@@ -1277,7 +1284,7 @@ namespace SoulFila {
         // METALLIC-ROUGHNESS
         _addMatBufferMember("metallicFactor", Demo::ShaderVarType::FLOAT);
         _addMatBufferMember("roughnessFactor", Demo::ShaderVarType::FLOAT);
-        if (config.hasMetallicRoughnessTexture) {
+        if (config.brdf.metallicRoughness.hasTexture) {
             if (config.hasTextureTransforms) {
                 _addMatBufferMember("metallicRoughnessUvMatrix", Demo::ShaderVarType::MAT3);
             }
@@ -1390,8 +1397,9 @@ namespace SoulFila {
             case AlphaMode::BLEND:
                 info.blendingMode = BlendingMode::FADE;
                 break;
+            case AlphaMode::COUNT:
             default:
-                // Ignore
+                SOUL_NOT_IMPLEMENTED();
                 break;
             }
         }
@@ -1402,10 +1410,10 @@ namespace SoulFila {
             _addMatBufferMember("_specularAntiAliasingThreshold", Demo::ShaderVarType::FLOAT);
         }
         
-        GPUProgramSetID programSetID = GPUProgramSetID(_programSets.add(GPUProgramSet()));
+        GPUProgramSetID programSetID = GPUProgramSetID(Soul::Cast<GPUProgramSetID::Type>(_programSets.add(GPUProgramSet())));
         _programSetMap.add(config, programSetID);
 
-        _GenerateProgramSet(_programSets[programSetID.id], _shaderGenerator, _GetSurfaceVariants(0, info.shading != Shading::UNLIT, info.hasShadowMultiplier), info);
+        GenerateProgramSet_(_programSets[programSetID.id], _shaderGenerator, GetSurfaceVariants_(0, info.shading != Shading::UNLIT, info.hasShadowMultiplier), info);
 
         return programSetID;
 	}

@@ -18,7 +18,8 @@ namespace SoulFila {
     enum class AlphaMode : uint8 {
         OPAQUE,
         MASK,
-        BLEND
+        BLEND,
+        COUNT
     };
 
     // from filament MaterialKey
@@ -33,16 +34,18 @@ namespace SoulFila {
         bool useSpecularGlossiness : 1;
         AlphaMode alphaMode : 4;
         bool enableDiagnostics : 4;
-        union {
+        union BRDF{
+            struct MetallicRoughness {
+                bool hasTexture : 1;
+                uint8 UV : 7;
+                MetallicRoughness() : hasTexture(false), UV(0){}
+            } metallicRoughness;
             struct {
-                bool hasMetallicRoughnessTexture : 1;
-                uint8 metallicRoughnessUV : 7;
-            };
-            struct {
-                bool hasSpecularGlossinessTexture : 1;
-                uint8 specularGlossinessUV : 7;
-            };
-        };
+                bool hasTexture : 1;
+                uint8 UV : 7;
+            } specularGlossiness;
+            BRDF(): metallicRoughness(){}
+        } brdf;
         uint8 baseColorUV;
         // -- 32 bit boundary --
         bool hasClearCoatTexture : 1;
@@ -60,16 +63,30 @@ namespace SoulFila {
         uint8 normalUV;
         bool hasTransmissionTexture : 1;
         uint8 transmissionUV : 7;
-        // -- 32 bit boundary --
+
+		// -- 32 bit boundary --
         bool hasSheenColorTexture : 1;
         uint8 sheenColorUV : 7;
         bool hasSheenRoughnessTexture : 1;
         uint8 sheenRoughnessUV : 7;
-        bool hasSheen : 1;
-
-        uint64 hash() const {
+        bool hasSheen;
+        
+        SOUL_NODISCARD uint64 hash() const {
             return Soul::hashFNV1((const uint8*) this, sizeof(GPUProgramKey));
         }
+
+        GPUProgramKey() :
+            doubleSided(false), unlit(false), hasVertexColors(false),
+            hasBaseColorTexture(false), hasNormalTexture(false), hasOcclusionTexture(false), hasEmissiveTexture(false),
+            useSpecularGlossiness(false),
+			alphaMode(AlphaMode::COUNT), enableDiagnostics(false),
+			baseColorUV(0),
+			hasClearCoatTexture(false), clearCoatUV(0), hasClearCoatRoughnessTexture(false), clearCoatRoughnessUV(0),hasClearCoatNormalTexture(false),clearCoatNormalUV(0),hasClearCoat(false),
+			hasTransmission(false), hasTextureTransforms(false), emissiveUV(0), aoUV(0) ,normalUV(0), hasTransmissionTexture(false), transmissionUV(0),
+			hasSheenColorTexture(false), sheenColorUV(0), hasSheenRoughnessTexture(false), sheenRoughnessUV(0), hasSheen(false)
+        {}
+
+        GPUProgramKey(const GPUProgramKey&) = default;
 	};
     bool operator==(const GPUProgramKey& k1, const GPUProgramKey& k2);
     bool operator!=(const GPUProgramKey& k1, const GPUProgramKey& k2);

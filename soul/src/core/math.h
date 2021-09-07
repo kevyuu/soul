@@ -43,7 +43,7 @@ namespace Soul {
 		constexpr float RAD_TO_DEG = (float)Dconst::RAD_TO_DEG;
 	}
 
-	uint32 floorLog2(uint32 val);
+	uint64 floorLog2(uint64 val);
 
 	template<typename T>
 	SOUL_NODISCARD constexpr Vec2<T> operator+(const Vec2<T>& lhs, const Vec2<T>& rhs) {

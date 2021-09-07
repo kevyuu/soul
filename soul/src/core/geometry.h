@@ -29,12 +29,16 @@ namespace Soul {
 
     struct TangentFrameComputeInput {
         uint64 vertexCount = 0;
-        Vec3f* normals = nullptr;
-        Vec4f* tangents = nullptr;
-        Vec2f* uvs = nullptr;
-        Vec3f* positions = nullptr;
-        Vec3ui32* triangles32 = nullptr;
+        const Vec3f* normals = nullptr;
+        const Vec4f* tangents = nullptr;
+        const Vec2f* uvs = nullptr;
+        const Vec3f* positions = nullptr;
+        const Vec3ui32* triangles32 = nullptr;
         uint64 triangleCount = 0;
+        TangentFrameComputeInput(uint64 vertexCount, const Vec3f* normals, const Vec4f* tangents, const Vec2f* uvs, const Vec3f* positions, const Vec3ui32* triangles32, uint64 triangleCount)
+	        :vertexCount(vertexCount), normals(normals), tangents(tangents), uvs(uvs), positions(positions), triangles32(triangles32), triangleCount(triangleCount) {
+	        
+        }
     };
 
     bool ComputeTangentFrame(const TangentFrameComputeInput& input, Quaternionf* qtangents);

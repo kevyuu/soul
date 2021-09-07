@@ -206,6 +206,7 @@ namespace Soul {
 		IDType NULLVAL = std::numeric_limits<IDType>::max()
 	>
 	struct ID {
+		using Type = IDType;
 		IDType id;
 
 		constexpr ID() : id(NULLVAL) {}

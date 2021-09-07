@@ -135,6 +135,8 @@ namespace SoulFila {
 		bool skinning : 1;
 		bool morphing : 1;
 		bool screenSpaceContactShadows : 1;
+
+        Visibility(): priority(0), castShadows(false), receiveShadows(false), culling(false), skinning(false), morphing(false), screenSpaceContactShadows(false) {}
 	};
 
 
@@ -598,12 +600,15 @@ namespace SoulFila {
         POINT,          //!< Point light, emits light from a position, in all directions.
         FOCUSED_SPOT,   //!< Physically correct spot light.
         SPOT,           //!< Spot light with coupling of outer cone and illumination disabled.
+        COUNT
     };
 
     struct LightType {
         LightRadiationType type : 3;
         bool shadowCaster : 1;
         bool lightCaster : 1;
+        LightType() : type(LightRadiationType::COUNT), shadowCaster(false), lightCaster(false){}
+        LightType(LightRadiationType type, bool shadowCaster, bool lightCaster) : type(type), shadowCaster(shadowCaster), lightCaster(lightCaster) {}
     };
 
 	struct LightComponent {
@@ -637,9 +642,9 @@ namespace SoulFila {
     public:
         static constexpr const float SENSOR_SIZE = 0.024f;    // 24mm
 
-        void setLensProjection(double focalLengthInMilimeters, double aspect, double near, double far);
-        void setOrthoProjection(double left, double right, double bottom, double top, double zNear, double zFar);
-        void setPerspectiveProjection(double fovRadian, double aspect, double near, double far);
+        void setLensProjection(float focalLengthInMilimeters, float aspect, float inNear, float inFar);
+        void setOrthoProjection(float left, float right, float bottom, float top, float inNear, float inFar);
+        void setPerspectiveProjection(float fovRadian, float aspect, float inNear, float inFar);
         Soul::Mat4f getProjectionMatrix() const;
         Soul::Mat4f getCullingProjectionMatrix() const;
         void setScaling(Vec2f scaling);
@@ -713,7 +718,7 @@ namespace SoulFila {
     struct AnimationSampler {
         Soul::Array<float> times;
         Soul::Array<float> values;
-        enum { LINEAR, STEP, CUBIC } interpolation;
+        enum { LINEAR, STEP, CUBIC } interpolation = LINEAR;
     };
 
     struct AnimationChannel {
@@ -724,7 +729,7 @@ namespace SoulFila {
 
     struct Animation {
         Soul::String name;
-        float duration;
+        float duration = 0.0f;
         Soul::Array<AnimationSampler> samplers;
         Soul::Array<AnimationChannel> channels;
     };
