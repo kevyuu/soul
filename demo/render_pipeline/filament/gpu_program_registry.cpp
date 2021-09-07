@@ -1202,7 +1202,6 @@ namespace SoulFila {
 	}
 
 	GPUProgramRegistry::GPUProgramRegistry(Soul::Memory::Allocator* allocator, Soul::GPU::System* gpuSystem) :
-		_allocator(allocator),
 		_allocatorInitializer(allocator),
 		_gpuSystem(gpuSystem),
 		_shaderGenerator(allocator, gpuSystem)

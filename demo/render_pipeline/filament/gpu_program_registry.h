@@ -256,7 +256,6 @@ namespace SoulFila {
         ~GPUProgramRegistry() = default;
 	
     private:
-		Soul::Memory::Allocator* _allocator;
         Soul::Runtime::AllocatorInitializer _allocatorInitializer;
 		Soul::GPU::System* _gpuSystem;
 		Demo::ShaderGenerator _shaderGenerator;
