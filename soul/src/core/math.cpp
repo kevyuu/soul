@@ -619,17 +619,6 @@ namespace Soul {
 		lhs = res;
 	}
 
-	bool operator==(const Mat4f& lhs, const Mat4f& rhs) {
-		for (int i = 0; i < 16; i++) {
-			if (lhs.mem[i] != rhs.mem[i]) return false;
-		}
-		return true;
-	}
-
-	bool operator!=(const Mat4f& lhs, const Mat4f& rhs) {
-		return !(lhs == rhs);
-	}
-
 	Mat3f mat3FromMat4UpperLeft(const Mat4f& mat4) {
 		Mat3f res;
 		res.rows[0] = { mat4.elem[0][0], mat4.elem[0][1], mat4.elem[0][2] };

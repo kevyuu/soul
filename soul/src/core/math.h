@@ -386,8 +386,6 @@ namespace Soul {
 	void operator+=(Mat4f& lhs, const Mat4f& rhs);
 	void operator-=(Mat4f& lhs, const Mat4f& rhs);
 	void operator*=(Mat4f& lhs, const Mat4f& rhs);
-	bool operator==(const Mat4f& lhs, const Mat4f& rhs);
-	bool operator!=(const Mat4f& lhs, const Mat4f& rhs);
 
 	Mat3f mat3Transpose(const Mat3f& matrix);
 	Mat3f operator*(const Mat3f& lhs, const Mat3f& rhs);
