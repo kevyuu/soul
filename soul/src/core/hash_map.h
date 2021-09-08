@@ -38,7 +38,6 @@ namespace Soul {
 
 		SOUL_NODISCARD VALTYPE& operator[](const KEYTYPE& key);
 		SOUL_NODISCARD const VALTYPE& operator[](const KEYTYPE& key) const;
-		SOUL_NODISCARD const VALTYPE& get(const KEYTYPE& key, const VALTYPE& defaultValue) const;
 
 		SOUL_NODISCARD soul_size size() const { return _size; }
 		SOUL_NODISCARD soul_size capacity() const { return _capacity; }
@@ -292,15 +291,6 @@ namespace Soul {
 		soul_size index = findIndex(key);
 		SOUL_ASSERT(0, _indexes[index].key == key && _indexes[index].dib != 0, "Hashmap key not found");
 		return _values[index];
-	}
-
-	template <typename KEYTYPE, typename VALTYPE>
-	const VALTYPE& HashMap<KEYTYPE, VALTYPE>::get(const KEYTYPE& key, const VALTYPE& defaultValue) const {
-		soul_size index = findIndex(key);
-		if (_indexes[index].key == key && _indexes[index].dib != 0) {
-			return _values[index];
-		}
-		return defaultValue;
 	}
 
 }
