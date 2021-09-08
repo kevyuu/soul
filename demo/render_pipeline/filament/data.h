@@ -159,7 +159,7 @@ namespace SoulFila {
     struct TextureView {
         TextureID textureID;
         Soul::Mat3f transform;
-        uint8 texCoord;
+        uint8 texCoord = 0;
     };
 
     struct FrameUBO { // NOLINT(cppcoreguidelines-pro-type-member-init)
@@ -256,10 +256,10 @@ namespace SoulFila {
         Soul::GLSLMat3f worldFromModelNormalMatrix; // this gets expanded to 48 bytes during the copy to the UBO
         alignas(16) Soul::Vec4f morphWeights;
         // TODO: we can pack all the boolean bellow
-        int32_t skinningEnabled; // 0=disabled, 1=enabled, ignored unless variant & SKINNING_OR_MORPHING
-        int32_t morphingEnabled; // 0=disabled, 1=enabled, ignored unless variant & SKINNING_OR_MORPHING
-        uint32_t screenSpaceContactShadows; // 0=disabled, 1=enabled, ignored unless variant & SKINNING_OR_MORPHING
-        float padding0;
+        int32_t skinningEnabled = 0; // 0=disabled, 1=enabled, ignored unless variant & SKINNING_OR_MORPHING
+        int32_t morphingEnabled = 0; // 0=disabled, 1=enabled, ignored unless variant & SKINNING_OR_MORPHING
+        uint32_t screenSpaceContactShadows = 0; // 0=disabled, 1=enabled, ignored unless variant & SKINNING_OR_MORPHING
+        float padding0 = 0.0f;
     };
 
     struct LightUBO {
@@ -267,8 +267,8 @@ namespace SoulFila {
         Soul::Vec4f colorIntensity;    // { float3(col), intensity }
         Soul::Vec4f directionIES;      // { float3(dir), IES index }
         Soul::Vec2f spotScaleOffset;   // { scale, offset }
-        uint32_t               shadow;            // { shadow bits (see ShadowInfo) }
-        uint32_t               type;              // { 0=point, 1=spot }
+        uint32_t    shadow = 0;            // { shadow bits (see ShadowInfo) }
+        uint32_t    type = 0;              // { 0=point, 1=spot }
     };
 
     struct LightsUBO {
@@ -525,7 +525,7 @@ namespace SoulFila {
          *          all other lights use the same value set for the directional/sun light.
          *
          */
-        float maxShadowDistance = 0.3;
+        float maxShadowDistance = 0.3f;
 
         /**
          * Options available when the View's ShadowType is set to VSM.
@@ -653,7 +653,7 @@ namespace SoulFila {
         float getAperture() const { return aperture; }
         float getShutterSpeed() const { return shutterSpeed; }
         float getSensitivity() const { return sensitivity; }
-        float getFocalLength() const { return (SENSOR_SIZE * projection.elem[1][1]) * 0.5; }
+        float getFocalLength() const { return (SENSOR_SIZE * projection.elem[1][1]) * 0.5f; }
         float getFocusDistance() const { return focusDistance; }
         Soul::Vec2f getScaling() const;
     };
@@ -710,7 +710,7 @@ namespace SoulFila {
         float A{};                      // f-number or f / aperture diameter [m]
         float d{};                      // focus distance [m]
         Soul::Vec3f worldOffset;
-        Soul::Vec3f const& getPosition() const noexcept { return Soul::Vec3f(model.elem[0][3], model.elem[1][3], model.elem[2][3]); }
+        Soul::Vec3f getPosition() const noexcept { return Soul::Vec3f(model.elem[0][3], model.elem[1][3], model.elem[2][3]); }
         Soul::Vec3f getForwardVector() const noexcept { return unit(Soul::Vec3f(model.elem[0][2], model.elem[1][2], model.elem[2][2]) * -1.0f); }
 
     };
@@ -734,22 +734,24 @@ namespace SoulFila {
         Soul::Array<AnimationChannel> channels;
     };
 
-	struct Scene : Demo::Scene {
+	struct Scene final : Demo::Scene {
         
         Scene(Soul::GPU::System* gpuSystem, GPUProgramRegistry* programRegistry) :
-            _resetAnimation(false),
-            _animationDelta(0),
             _gpuSystem(gpuSystem), _programRegistry(programRegistry),
-            _selectedEntity(ENTITY_ID_NULL), _rootEntity(ENTITY_ID_NULL), _activeCamera(ENTITY_ID_NULL), _activeAnimation(),
             _cameraMan({0.1f, 0.001f, Soul::Vec3f(0.0f, 1.0f, 0.0f)})
         {}
+        Scene(const Scene&) = delete;
+        Scene& operator=(const Scene&) = delete;
+        Scene(Scene&&) = delete;
+        Scene& operator=(Scene&&) = delete;
+        ~Scene() override = default;
 
-        virtual void importFromGLTF(const char* path);
-        virtual void cleanup() {}
-        virtual void renderPanels();
-        virtual bool update(const Demo::Input& input);
-        virtual Vec2ui32 getViewport() { return _viewport; }
-        virtual void setViewport(Vec2ui32 viewport) { _viewport = viewport; }
+        void importFromGLTF(const char* path) override;
+        void cleanup() override {}
+        void renderPanels() override;
+        bool update(const Demo::Input& input) override;
+        Vec2ui32 getViewport() override { return _viewport; }
+        void setViewport(Vec2ui32 viewport) override { _viewport = viewport; }
 
         const Soul::Array<Texture>& textures() const { return _textures; }
         const Soul::Array<Mesh>& meshes() const { return _meshes; }
@@ -772,35 +774,35 @@ namespace SoulFila {
 
     private:
 
-        struct _CGLTFNodeKey {
+        struct CGLTFNodeKey_ {
             const cgltf_node* node;
 
-            _CGLTFNodeKey(const cgltf_node* node) : node(node) {}
+            CGLTFNodeKey_(const cgltf_node* node) : node(node) {}
             
-            inline bool operator==(const _CGLTFNodeKey& other) const {
-                return (memcmp(this, &other, sizeof(_CGLTFNodeKey)) == 0);
+            inline bool operator==(const CGLTFNodeKey_& other) const {
+                return (memcmp(this, &other, sizeof(CGLTFNodeKey_)) == 0);
             }
 
-            inline bool operator!=(const _CGLTFNodeKey& other) const {
-                return (memcmp(this, &other, sizeof(_CGLTFNodeKey)) != 0);
+            inline bool operator!=(const CGLTFNodeKey_& other) const {
+                return (memcmp(this, &other, sizeof(CGLTFNodeKey_)) != 0);
             }
 
-            uint64 hash() const {
+            SOUL_NODISCARD uint64 hash() const {
                 return uint64(node);
             }
         };
 
-        void _createEntity(Soul::HashMap<_CGLTFNodeKey, EntityID>* nodeMap, const cgltf_data* asset, const cgltf_node* node, EntityID parent);
-        void _renderEntityTreeNode(EntityID entityID);
-        void _createRenderable(const cgltf_data* asset, const cgltf_node* node, EntityID entity);
-        void _createLight(const cgltf_data* asset, const cgltf_node* node, EntityID entity);
-        void _createCamera(const cgltf_data* asset, const cgltf_node* node, EntityID entity);
-        void _setActiveAnimation(AnimationID animationID);
-        void _setActiveCamera(EntityID camera);
-        void _updateWorldTransform(EntityID entityID);
-        void _updateBones();
+        void createEntity_(Soul::HashMap<CGLTFNodeKey_, EntityID>* nodeMap, const cgltf_data* asset, const cgltf_node* node, EntityID parent);
+        void renderEntityTreeNode_(EntityID entityID);
+        void createRendereable_(const cgltf_data* asset, const cgltf_node* node, EntityID entity);
+        void createLight_(const cgltf_data* asset, const cgltf_node* node, EntityID entity);
+        void createCamera_(const cgltf_data* asset, const cgltf_node* node, EntityID entity);
+        void setActiveAnimation_(AnimationID animationID);
+        void setActiveCamera_(EntityID camera);
+        void updateWorldTransform_(EntityID entityID);
+        void updateBones_();
 
-        EntityID _rootEntity;
+        EntityID _rootEntity = ENTITY_ID_NULL;
         Registry _registry;
         Soul::GPU::System* _gpuSystem;
         GPUProgramRegistry* _programRegistry;
@@ -812,12 +814,12 @@ namespace SoulFila {
         Soul::Array<Animation> _animations;
         Soul::AABB _boundingBox;
 
-        EntityID _selectedEntity;
-        EntityID _activeCamera;
+        EntityID _selectedEntity = ENTITY_ID_NULL;
+        EntityID _activeCamera = ENTITY_ID_NULL;
         AnimationID _activeAnimation;
-        float _animationDelta;
+        float _animationDelta = 0.0f;
         Array<uint64> _channelCursors;
-        bool _resetAnimation;
+        bool _resetAnimation = false;
         
         CameraManipulator _cameraMan;
 

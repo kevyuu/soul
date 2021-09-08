@@ -38,6 +38,9 @@ namespace Demo {
 
 	class Scene {	
 	public:
+
+		virtual ~Scene() = default;
+
 		virtual void importFromGLTF(const char* path) = 0;
 		virtual void cleanup() = 0;
 		virtual bool update(const Input& input) = 0;
