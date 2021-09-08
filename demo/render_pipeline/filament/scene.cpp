@@ -73,13 +73,13 @@ static void MakeBone_(SoulFila::BoneUBO* out, const Soul::Mat4f& t) {
     Soul::Mat4f m = mat4Transpose(t);
 
     // figure out the scales
-    Vec4f s = { length(m.rows[0]), length(m.rows[1]), length(m.rows[2]), 0.0f };
+    Soul::Vec4f s = { length(m.rows[0]), length(m.rows[1]), length(m.rows[2]), 0.0f };
     if (dot(cross(m.rows[0].xyz, m.rows[1].xyz), m.rows[2].xyz) < 0) {
         s.mem[2] = -s.mem[2];
     }
 
     // compute the inverse scales
-    Vec4f is = { 1.0f / s.x, 1.0f / s.y, 1.0f / s.z, 0.0f };
+    Soul::Vec4f is = { 1.0f / s.x, 1.0f / s.y, 1.0f / s.z, 0.0f };
 
     // normalize the matrix
     m.rows[0] *= is.mem[0];
@@ -609,9 +609,9 @@ namespace SoulFila {
 
 
 void SoulFila::Scene::importFromGLTF(const char* path) {
-
+    SOUL_PROFILE_ZONE();
     char* uriPath = (char*)Soul::Runtime::GetTempAllocator()->allocate(strlen(path) + GLTF_URI_MAX_LENGTH + 1, alignof(char));
-
+    
     cgltf_options options = {};
     cgltf_data* asset = nullptr;
 
@@ -722,7 +722,7 @@ void SoulFila::Scene::importFromGLTF(const char* path) {
     MatCache matCache;
     auto _createMaterial = [this, &matCache, &createTexture]
         (const cgltf_material* inputMat, bool vertexColor, UvMap* uvmap) -> MaterialID {
-        
+        SOUL_PROFILE_ZONE_WITH_NAME("Create Material");
         MatCacheKey key = { ((intptr_t)inputMat) ^ (vertexColor ? 1 : 0) };
         
         if (matCache.isExist(key)) {
@@ -824,8 +824,11 @@ void SoulFila::Scene::importFromGLTF(const char* path) {
         }
 
         ConstrainGpuProgramKey_(&programKey, uvmap);
-        dstMaterial.programSetID = _programRegistry->createProgramSet(programKey);
-        
+        {
+            SOUL_PROFILE_ZONE_WITH_NAME("Create Program Set");
+            dstMaterial.programSetID = _programRegistry->createProgramSet(programKey);
+        }
+
         MaterialUBO& matBuf = dstMaterial.buffer;
         MaterialTextures& matTexs = dstMaterial.textures;
 
@@ -946,372 +949,375 @@ void SoulFila::Scene::importFromGLTF(const char* path) {
 
         return materialID;
     };
-    
-	_meshes.clear();
-	_meshes.resize(asset->meshes_count);
-	for (cgltf_size meshIndex = 0; meshIndex < asset->meshes_count; meshIndex++) {
-		const cgltf_mesh& srcMesh = asset->meshes[meshIndex];
-        Mesh& dstMesh = _meshes[meshIndex];
-        dstMesh.primitives.resize(srcMesh.primitives_count);
 
-        GPU::BufferDesc indexBufferDesc;
-        indexBufferDesc.queueFlags = GPU::QUEUE_GRAPHIC_BIT;
-        indexBufferDesc.usageFlags = GPU::BUFFER_USAGE_INDEX_BIT;
+    {
+		SOUL_PROFILE_ZONE_WITH_NAME("Create Mesh");
+        _meshes.clear();
+        _meshes.resize(asset->meshes_count);
+        for (cgltf_size meshIndex = 0; meshIndex < asset->meshes_count; meshIndex++) {
+            const cgltf_mesh& srcMesh = asset->meshes[meshIndex];
+            Mesh& dstMesh = _meshes[meshIndex];
+            dstMesh.primitives.resize(srcMesh.primitives_count);
 
-        for (cgltf_size primitiveIndex = 0; primitiveIndex < srcMesh.primitives_count; primitiveIndex++) {
-            Soul::Runtime::ScopeAllocator<> primitiveScopeAllocator("Loading Attribute Allocation");
+            GPU::BufferDesc indexBufferDesc;
+            indexBufferDesc.queueFlags = GPU::QUEUE_GRAPHIC_BIT;
+            indexBufferDesc.usageFlags = GPU::BUFFER_USAGE_INDEX_BIT;
 
-            uint64 vertexCount = 0;
-            Vec3f* normals = nullptr;
-            Vec4f* tangents = nullptr;
-            Vec2f* uvs = nullptr;
-            Vec3f* positions = nullptr;
-            Vec3ui32* triangles32 = nullptr;
-            uint64 triangleCount = 0;
+            for (cgltf_size primitiveIndex = 0; primitiveIndex < srcMesh.primitives_count; primitiveIndex++) {
+                Soul::Runtime::ScopeAllocator<> primitiveScopeAllocator("Loading Attribute Allocation");
 
-            const cgltf_primitive& srcPrimitive = srcMesh.primitives[primitiveIndex];
+                uint64 vertexCount = 0;
+                Vec3f* normals = nullptr;
+                Vec4f* tangents = nullptr;
+                Vec2f* uvs = nullptr;
+                Vec3f* positions = nullptr;
+                Vec3ui32* triangles32 = nullptr;
+                uint64 triangleCount = 0;
 
-            if (srcPrimitive.has_draco_mesh_compression) {
-                SOUL_NOT_IMPLEMENTED();
-            }
+                const cgltf_primitive& srcPrimitive = srcMesh.primitives[primitiveIndex];
 
-            UvMap uvmap{};
-            Primitive& dstPrimitive = dstMesh.primitives[primitiveIndex];
-            bool hasVertexColor = PrimitiveHasVertexColor_(&srcPrimitive);
-            dstPrimitive.materialID = _createMaterial(srcPrimitive.material, hasVertexColor, &uvmap);
-
-            bool getTopologySuccess = GetTopology_(srcPrimitive.type, &dstPrimitive.topology);
-            SOUL_ASSERT(0, getTopologySuccess, "");
-
-            // build index buffer
-            if (srcPrimitive.indices) {
-
-                const cgltf_accessor& indices = *srcPrimitive.indices;
-
-                switch (srcPrimitive.indices->component_type) {
-                case cgltf_component_type_r_8u: {
-                    dstPrimitive.indexBuffer = CreateIndexBuffer_<uint16, uint8>(_gpuSystem, indexBufferDesc, indices);
-                    break;
-                }
-                case cgltf_component_type_r_16u: {
-                    dstPrimitive.indexBuffer = CreateIndexBuffer_<uint16, uint16>(_gpuSystem, indexBufferDesc, indices);
-                    break;
-                }
-                case cgltf_component_type_r_32u: {
-                    dstPrimitive.indexBuffer = CreateIndexBuffer_<uint32, uint32>(_gpuSystem, indexBufferDesc, indices);
-                    break;
-                }
-                case cgltf_component_type_r_8:
-                case cgltf_component_type_r_16:
-                case cgltf_component_type_r_32f:
-                case cgltf_component_type_invalid:
-                default:
+                if (srcPrimitive.has_draco_mesh_compression) {
                     SOUL_NOT_IMPLEMENTED();
-                    break;
                 }
 
-                Soul::Array<uint32> indexes(&primitiveScopeAllocator);
-                indexes.resize(indices.count);
-                for (cgltf_size indexIdx = 0; indexIdx < indices.count; ++indexIdx)
-                {
-                    indexes[indexIdx] = Soul::Cast<uint32>(cgltf_accessor_read_index(&indices, indexIdx));
-                }
-                triangles32 = Soul::Cast<Vec3ui32*>(indexes.data());
-                
+                UvMap uvmap{};
+                Primitive& dstPrimitive = dstMesh.primitives[primitiveIndex];
+                bool hasVertexColor = PrimitiveHasVertexColor_(&srcPrimitive);
+                dstPrimitive.materialID = _createMaterial(srcPrimitive.material, hasVertexColor, &uvmap);
 
-            }
-            else if (srcPrimitive.attributes_count > 0) {
+                bool getTopologySuccess = GetTopology_(srcPrimitive.type, &dstPrimitive.topology);
+                SOUL_ASSERT(0, getTopologySuccess, "");
 
-                using IndexType = uint32;
-                indexBufferDesc.count = srcPrimitive.attributes[0].data->count;
-                
-                Soul::Array<IndexType> indexes(&primitiveScopeAllocator);
-                indexes.resize(indexBufferDesc.count);
-                for (IndexType i = 0; i < indexBufferDesc.count; ++i) {
-                    indexes[i] = i;
-                }
-                indexBufferDesc.typeSize = sizeof(IndexType);
-                indexBufferDesc.typeAlignment = alignof(IndexType);
+                // build index buffer
+                if (srcPrimitive.indices) {
 
-                dstPrimitive.indexBuffer = _gpuSystem->bufferCreate(indexBufferDesc,
-                    [](int i, void* data) {
-                        const auto index = (IndexType*)data;
-                        (*index) = IndexType(i);
-                    }
-                );
+                    const cgltf_accessor& indices = *srcPrimitive.indices;
 
-                triangles32 = Soul::Cast<Vec3ui32*>(indexes.data());
-
-            }
-
-            vertexCount = srcPrimitive.attributes[0].data->count;
-            triangleCount = indexBufferDesc.count / 3;
-            bool hasNormal = false;
-            bool hasUv0 = false;
-            for (cgltf_size aindex = 0; aindex < srcPrimitive.attributes_count; aindex++) {
-                const cgltf_attribute& srcAttribute = srcPrimitive.attributes[aindex];
-                const cgltf_accessor& accessor = *srcAttribute.data;
-
-                if (srcAttribute.type == cgltf_attribute_type_weights) {
-                    auto normalize = [](cgltf_accessor* data) {
-                        if (data->type != cgltf_type_vec4 || data->component_type != cgltf_component_type_r_32f) {
-                            SOUL_LOG_ERROR("Attribute type is not supported");
-                            SOUL_NOT_IMPLEMENTED();
-                        }
-                        auto bytes = (uint8*)data->buffer_view->buffer->data;
-                        bytes += data->offset + data->buffer_view->offset;
-                        for (cgltf_size i = 0, n = data->count; i < n; ++i, bytes += data->stride) {
-                            auto weights = Soul::Cast<Vec4f*>(bytes);
-                            const float sum = weights->x + weights->y + weights->z + weights->w;
-                            *weights /= sum;
-                        }
-                    };
-
-                    normalize(srcAttribute.data);
-                }
-
-                const byte* attributeData = nullptr;
-                uint64 attributeStride = 0;
-                uint64 attributeDataCount = 0;
-                uint64 attributeTypeSize = 0;
-                uint64 attributeTypeAlignment = 0;
-                if (accessor.is_sparse || srcAttribute.type == cgltf_attribute_type_tangent ||
-                    srcAttribute.type == cgltf_attribute_type_normal ||
-                    srcAttribute.type == cgltf_attribute_type_position) {
-                    cgltf_size numFloats = accessor.count * cgltf_num_components(accessor.type);
-
-                    Array<float> generated(&primitiveScopeAllocator);
-                    generated.resize(numFloats);
-                	cgltf_accessor_unpack_floats(&accessor, generated.data(), numFloats);
-
-                    attributeData = Soul::Cast<byte*>(generated.data());
-                    attributeDataCount = accessor.count;
-                    attributeTypeSize = cgltf_num_components(accessor.type) * sizeof(float);
-                    attributeTypeAlignment = sizeof(float);
-                    attributeStride = attributeTypeSize;
-                }
-                else {
-                    auto bufferData = (const byte*)accessor.buffer_view->buffer->data;
-                    attributeData = bufferData + ComputeBindingOffset_(accessor);
-                    attributeDataCount = accessor.count;
-                    attributeTypeSize = cgltf_calc_size(accessor.type, accessor.component_type);
-                    attributeTypeAlignment = cgltf_component_size(accessor.component_type);
-                    attributeStride = accessor.stride;
-                }
-
-                if (srcAttribute.type == cgltf_attribute_type_tangent) {
-                    SOUL_ASSERT(0, sizeof(Vec4f) == attributeStride, "");
-                    tangents = Soul::Cast<Vec4f*>(attributeData);
-                    continue;
-                }
-                if (srcAttribute.type == cgltf_attribute_type_normal) {
-                    SOUL_ASSERT(0, sizeof(Vec3f) == attributeStride, "");
-                    normals = Soul::Cast<Vec3f*>(attributeData);
-                    hasNormal = true;
-                    continue;
-                }
-
-                if (srcAttribute.type == cgltf_attribute_type_texcoord && srcAttribute.index == 0) {
-                    cgltf_size numFloats = accessor.count * cgltf_num_components(accessor.type);
-                    Array<float> generated(&primitiveScopeAllocator);
-                    generated.resize(numFloats);
-                    cgltf_accessor_unpack_floats(&accessor, Soul::Cast<float*>(generated.data()), numFloats);
-                    uvs = Soul::Cast<Vec2f*>(generated.data());
-                }
-
-                if (srcAttribute.type == cgltf_attribute_type_position) {
-                    SOUL_ASSERT(0, sizeof(Vec3f) == attributeStride, "");
-                    positions = Soul::Cast<Vec3f*>(attributeData);
-                    dstPrimitive.aabb = aabbCombine(dstPrimitive.aabb, AABB(Vec3f(accessor.min), Vec3f(accessor.max)));
-                }
-
-                GPU::BufferDesc gpuDesc;
-                gpuDesc.count = attributeDataCount;
-                gpuDesc.typeSize = Soul::Cast<uint16>(attributeTypeSize);
-                gpuDesc.typeAlignment = Soul::Cast<uint16>(attributeTypeAlignment);
-                gpuDesc.queueFlags = GPU::QUEUE_GRAPHIC_BIT;
-                gpuDesc.usageFlags = GPU::BUFFER_USAGE_VERTEX_BIT;
-                GPU::BufferID attributeGPUBuffer = _gpuSystem->bufferCreate(gpuDesc,
-                    [attributeData, attributeTypeSize, attributeStride](int index, void* data)
+                    switch (srcPrimitive.indices->component_type) {
+                    case cgltf_component_type_r_8u:
                     {
-                        uint64 offset = index * attributeStride;
-                        memcpy(data, attributeData + offset, attributeTypeSize);
-                    });
-
-                VertexAttribute attrType;
-                bool attrSupported = GetVertexAttrType_(srcAttribute.type, srcAttribute.index, uvmap, &attrType, &hasUv0);
-                SOUL_ASSERT(0, attrSupported, "Attribute type not supported");
-                Soul::GPU::VertexElementType permitted;
-                Soul::GPU::VertexElementType actual;
-                GetElementType_(accessor.type, accessor.component_type, &permitted, &actual);
-
-                Soul::GPU::VertexElementFlags flags;
-                if (accessor.normalized) {
-                    flags |= GPU::VERTEX_ELEMENT_NORMALIZED;
-                }
-                if (attrType == VertexAttribute::BONE_INDICES) flags |= GPU::VERTEX_ELEMENT_INTEGER_TARGET;
-
-                AddAttributeToPrimitive_(&dstPrimitive, attrType, attributeGPUBuffer, actual, flags, Soul::Cast<uint8>(attributeTypeSize));
-
-            }
-
-            uint64 qtangentBufferSize = vertexCount * sizeof(Quaternionf);
-            auto qtangents = Soul::Cast<Quaternionf*>(primitiveScopeAllocator.allocate(qtangentBufferSize, alignof(Quaternionf)));
-            if (hasNormal || srcPrimitive.material && !srcPrimitive.material->unlit) {
-                if (ComputeTangentFrame(TangentFrameComputeInput(vertexCount, normals, tangents, uvs, positions, triangles32, triangleCount), qtangents)) {
-                    GPU::BufferDesc qtangentsBufferDesc = {
-                         vertexCount,
-                         sizeof(Quaternionf),
-                         alignof(Quaternionf),
-                         GPU::BUFFER_USAGE_VERTEX_BIT,
-                         GPU::QUEUE_GRAPHIC_BIT
-                    };
-                    Soul::GPU::BufferID qtangentsGPUBUffer = _gpuSystem->bufferCreate(qtangentsBufferDesc, qtangents);
-                    AddAttributeToPrimitive_(&dstPrimitive, VertexAttribute::TANGENTS, qtangentsGPUBUffer, GPU::VertexElementType::SHORT4, GPU::VERTEX_ELEMENT_NORMALIZED, sizeof(Quaternionf));
-                }
-            }
-
-            cgltf_size targetsCount = srcPrimitive.targets_count;
-            targetsCount = targetsCount > MAX_MORPH_TARGETS ? MAX_MORPH_TARGETS: targetsCount;
-
-            constexpr int baseTangentsAttr = (int)VertexAttribute::MORPH_TANGENTS_0;
-            constexpr int basePositionAttr = (int)VertexAttribute::MORPH_POSITION_0;
-            for (cgltf_size targetIndex = 0; targetIndex < targetsCount; targetIndex++) {
-                const cgltf_morph_target& morphTarget = srcPrimitive.targets[targetIndex];
-                
-                enum class MorphTargetType : uint8 {
-                    POSITION,
-                    NORMAL,
-                    TANGENT,
-                    COUNT
-                };
-
-                auto getMorphTargetType = [](cgltf_attribute_type atype, MorphTargetType* targetType) -> bool {
-                    switch (atype) {
-                    case cgltf_attribute_type_position:
-                        *targetType = MorphTargetType::POSITION;
-                        return true;
-                    case cgltf_attribute_type_tangent:
-                        *targetType = MorphTargetType::TANGENT;
-                        return true;
-                    case cgltf_attribute_type_normal:
-                        *targetType = MorphTargetType::NORMAL;
-                        return true;
-                    case cgltf_attribute_type_color:
-                    case cgltf_attribute_type_weights:
-                    case cgltf_attribute_type_joints:
-                    case cgltf_attribute_type_texcoord:
-                    case cgltf_attribute_type_invalid:
-                    default:
-                        return false;
+                        dstPrimitive.indexBuffer = CreateIndexBuffer_<uint16, uint8>(_gpuSystem, indexBufferDesc, indices);
+                        break;
                     }
-                };
+                    case cgltf_component_type_r_16u:
+                    {
+                        dstPrimitive.indexBuffer = CreateIndexBuffer_<uint16, uint16>(_gpuSystem, indexBufferDesc, indices);
+                        break;
+                    }
+                    case cgltf_component_type_r_32u:
+                    {
+                        dstPrimitive.indexBuffer = CreateIndexBuffer_<uint32, uint32>(_gpuSystem, indexBufferDesc, indices);
+                        break;
+                    }
+                    case cgltf_component_type_r_8:
+                    case cgltf_component_type_r_16:
+                    case cgltf_component_type_r_32f:
+                    case cgltf_component_type_invalid:
+                    default:
+                        SOUL_NOT_IMPLEMENTED();
+                        break;
+                    }
 
-                Soul::EnumArray<MorphTargetType, const byte*> morphTargetAttributes(nullptr);
-                
-                for (cgltf_size aindex = 0; aindex < morphTarget.attributes_count; aindex++) {
-                    const cgltf_attribute& srcAttribute = morphTarget.attributes[aindex];
+                    Soul::Array<uint32> indexes(&primitiveScopeAllocator);
+                    indexes.resize(indices.count);
+                    for (cgltf_size indexIdx = 0; indexIdx < indices.count; ++indexIdx) {
+                        indexes[indexIdx] = Soul::Cast<uint32>(cgltf_accessor_read_index(&indices, indexIdx));
+                    }
+                    triangles32 = Soul::Cast<Vec3ui32*>(indexes.data());
+
+
+                }
+                else if (srcPrimitive.attributes_count > 0) {
+
+                    using IndexType = uint32;
+                    indexBufferDesc.count = srcPrimitive.attributes[0].data->count;
+
+                    Soul::Array<IndexType> indexes(&primitiveScopeAllocator);
+                    indexes.resize(indexBufferDesc.count);
+                    for (IndexType i = 0; i < indexBufferDesc.count; ++i) {
+                        indexes[i] = i;
+                    }
+                    indexBufferDesc.typeSize = sizeof(IndexType);
+                    indexBufferDesc.typeAlignment = alignof(IndexType);
+
+                    dstPrimitive.indexBuffer = _gpuSystem->bufferCreate(indexBufferDesc,
+                        [](int i, void* data) {
+                            const auto index = (IndexType*)data;
+                            (*index) = IndexType(i);
+                        }
+                    );
+
+                    triangles32 = Soul::Cast<Vec3ui32*>(indexes.data());
+
+                }
+
+                vertexCount = srcPrimitive.attributes[0].data->count;
+                triangleCount = indexBufferDesc.count / 3;
+                bool hasNormal = false;
+                bool hasUv0 = false;
+                for (cgltf_size aindex = 0; aindex < srcPrimitive.attributes_count; aindex++) {
+                    const cgltf_attribute& srcAttribute = srcPrimitive.attributes[aindex];
                     const cgltf_accessor& accessor = *srcAttribute.data;
+
+                    if (srcAttribute.type == cgltf_attribute_type_weights) {
+                        auto normalize = [](cgltf_accessor* data) {
+                            if (data->type != cgltf_type_vec4 || data->component_type != cgltf_component_type_r_32f) {
+                                SOUL_LOG_ERROR("Attribute type is not supported");
+                                SOUL_NOT_IMPLEMENTED();
+                            }
+                            auto bytes = (uint8*)data->buffer_view->buffer->data;
+                            bytes += data->offset + data->buffer_view->offset;
+                            for (cgltf_size i = 0, n = data->count; i < n; ++i, bytes += data->stride) {
+                                auto weights = Soul::Cast<Vec4f*>(bytes);
+                                const float sum = weights->x + weights->y + weights->z + weights->w;
+                                *weights /= sum;
+                            }
+                        };
+
+                        normalize(srcAttribute.data);
+                    }
 
                     const byte* attributeData = nullptr;
                     uint64 attributeStride = 0;
                     uint64 attributeDataCount = 0;
-                    uint8 attributeTypeSize = 0;
-                    uint16 attributeTypeAlignment = 0;
+                    uint64 attributeTypeSize = 0;
+                    uint64 attributeTypeAlignment = 0;
+                    if (accessor.is_sparse || srcAttribute.type == cgltf_attribute_type_tangent ||
+                        srcAttribute.type == cgltf_attribute_type_normal ||
+                        srcAttribute.type == cgltf_attribute_type_position) {
+                        cgltf_size numFloats = accessor.count * cgltf_num_components(accessor.type);
 
-                    MorphTargetType morphTargetType;
-                    bool success = getMorphTargetType(srcAttribute.type, &morphTargetType);
-                    SOUL_ASSERT(0, success, "");
+                        Array<float> generated(&primitiveScopeAllocator);
+                        generated.resize(numFloats);
+                        cgltf_accessor_unpack_floats(&accessor, generated.data(), numFloats);
 
-                    cgltf_size numFloats = accessor.count * cgltf_num_components(accessor.type);
-                    Array<float> generated(&primitiveScopeAllocator);
-                    generated.resize(numFloats);
-                    cgltf_accessor_unpack_floats(&accessor, generated.data(), numFloats);
+                        attributeData = Soul::Cast<byte*>(generated.data());
+                        attributeDataCount = accessor.count;
+                        attributeTypeSize = cgltf_num_components(accessor.type) * sizeof(float);
+                        attributeTypeAlignment = sizeof(float);
+                        attributeStride = attributeTypeSize;
+                    }
+                    else {
+                        auto bufferData = (const byte*)accessor.buffer_view->buffer->data;
+                        attributeData = bufferData + ComputeBindingOffset_(accessor);
+                        attributeDataCount = accessor.count;
+                        attributeTypeSize = cgltf_calc_size(accessor.type, accessor.component_type);
+                        attributeTypeAlignment = cgltf_component_size(accessor.component_type);
+                        attributeStride = accessor.stride;
+                    }
 
-                    attributeData = Soul::Cast<const byte*>(generated.data());
-                    attributeDataCount = accessor.count;
-                    attributeTypeSize = Soul::Cast<uint8>(cgltf_num_components(accessor.type) * sizeof(float));
-                    attributeTypeAlignment = sizeof(float);
-                    attributeStride = attributeTypeSize;
-                    
-                    morphTargetAttributes[morphTargetType] = attributeData;
+                    if (srcAttribute.type == cgltf_attribute_type_tangent) {
+                        SOUL_ASSERT(0, sizeof(Vec4f) == attributeStride, "");
+                        tangents = Soul::Cast<Vec4f*>(attributeData);
+                        continue;
+                    }
+                    if (srcAttribute.type == cgltf_attribute_type_normal) {
+                        SOUL_ASSERT(0, sizeof(Vec3f) == attributeStride, "");
+                        normals = Soul::Cast<Vec3f*>(attributeData);
+                        hasNormal = true;
+                        continue;
+                    }
+
+                    if (srcAttribute.type == cgltf_attribute_type_texcoord && srcAttribute.index == 0) {
+                        cgltf_size numFloats = accessor.count * cgltf_num_components(accessor.type);
+                        Array<float> generated(&primitiveScopeAllocator);
+                        generated.resize(numFloats);
+                        cgltf_accessor_unpack_floats(&accessor, Soul::Cast<float*>(generated.data()), numFloats);
+                        uvs = Soul::Cast<Vec2f*>(generated.data());
+                    }
 
                     if (srcAttribute.type == cgltf_attribute_type_position) {
-                        auto attrType = (VertexAttribute)(basePositionAttr + targetIndex);
-                        GPU::BufferDesc gpuDesc;
-                        gpuDesc.count = attributeDataCount;
-                        gpuDesc.typeSize = attributeTypeSize;
-                        gpuDesc.typeAlignment = attributeTypeAlignment;
-                        gpuDesc.queueFlags = GPU::QUEUE_GRAPHIC_BIT;
-                        gpuDesc.usageFlags = GPU::BUFFER_USAGE_VERTEX_BIT;
-                        GPU::BufferID attributeGPUBuffer = _gpuSystem->bufferCreate(gpuDesc,
-                            [attributeData, attributeTypeSize, attributeStride](int index, void* data)
-                            {
-                                uint64 offset = index * attributeStride;
-                                memcpy(data, attributeData + offset, attributeTypeSize);
-                            });
-
-                        Soul::GPU::VertexElementType permitted;
-                        Soul::GPU::VertexElementType actual;
-                        GetElementType_(accessor.type, accessor.component_type, &permitted, &actual);
-
-                        Soul::GPU::VertexElementFlags flags;
-                        if (accessor.normalized) {
-                            flags |= GPU::VERTEX_ELEMENT_NORMALIZED;
-                        }
-
-                        AddAttributeToPrimitive_(&dstPrimitive, attrType, attributeGPUBuffer, actual, flags, attributeTypeSize);
-                        
+                        SOUL_ASSERT(0, sizeof(Vec3f) == attributeStride, "");
+                        positions = Soul::Cast<Vec3f*>(attributeData);
                         dstPrimitive.aabb = aabbCombine(dstPrimitive.aabb, AABB(Vec3f(accessor.min), Vec3f(accessor.max)));
                     }
+
+                    GPU::BufferDesc gpuDesc;
+                    gpuDesc.count = attributeDataCount;
+                    gpuDesc.typeSize = Soul::Cast<uint16>(attributeTypeSize);
+                    gpuDesc.typeAlignment = Soul::Cast<uint16>(attributeTypeAlignment);
+                    gpuDesc.queueFlags = GPU::QUEUE_GRAPHIC_BIT;
+                    gpuDesc.usageFlags = GPU::BUFFER_USAGE_VERTEX_BIT;
+                    GPU::BufferID attributeGPUBuffer = _gpuSystem->bufferCreate(gpuDesc,
+                        [attributeData, attributeTypeSize, attributeStride](int index, void* data) {
+                            uint64 offset = index * attributeStride;
+                            memcpy(data, attributeData + offset, attributeTypeSize);
+                        });
+
+                    VertexAttribute attrType;
+                    bool attrSupported = GetVertexAttrType_(srcAttribute.type, srcAttribute.index, uvmap, &attrType, &hasUv0);
+                    SOUL_ASSERT(0, attrSupported, "Attribute type not supported");
+                    Soul::GPU::VertexElementType permitted;
+                    Soul::GPU::VertexElementType actual;
+                    GetElementType_(accessor.type, accessor.component_type, &permitted, &actual);
+
+                    Soul::GPU::VertexElementFlags flags;
+                    if (accessor.normalized) {
+                        flags |= GPU::VERTEX_ELEMENT_NORMALIZED;
+                    }
+                    if (attrType == VertexAttribute::BONE_INDICES) flags |= GPU::VERTEX_ELEMENT_INTEGER_TARGET;
+
+                    AddAttributeToPrimitive_(&dstPrimitive, attrType, attributeGPUBuffer, actual, flags, Soul::Cast<uint8>(attributeTypeSize));
+
                 }
 
-                if (morphTargetAttributes[MorphTargetType::NORMAL]) {
-                    if (normals) {
-
-                        auto normalTarget = Soul::Cast<const Vec3f*>(morphTargetAttributes[MorphTargetType::NORMAL]);
-                        if (normalTarget != nullptr) {
-                            for (cgltf_size vertIndex = 0; vertIndex < vertexCount; vertIndex++) {
-                                normals[vertIndex] += normalTarget[vertIndex];
-                            }
-                        }
-
-                        auto tangentTarget = Soul::Cast<const Vec3f*>(morphTargetAttributes[MorphTargetType::TANGENT]);
-                        if (tangentTarget != nullptr) {
-                            for (cgltf_size vertIndex = 0; vertIndex < vertexCount; vertIndex++) {
-                                tangents[vertIndex].xyz += tangentTarget[vertIndex];
-                            }
-                        }
-
-                        auto positionTarget = Soul::Cast<const Vec3f*>(morphTargetAttributes[MorphTargetType::POSITION]);
-                        if (positionTarget != nullptr) {
-                            for (cgltf_size vertIndex = 0; vertIndex < vertexCount; vertIndex++) {
-                                positions[vertIndex] += positionTarget[vertIndex];
-                            }
-                        }
+                uint64 qtangentBufferSize = vertexCount * sizeof(Quaternionf);
+                auto qtangents = Soul::Cast<Quaternionf*>(primitiveScopeAllocator.allocate(qtangentBufferSize, alignof(Quaternionf)));
+                if (hasNormal || srcPrimitive.material && !srcPrimitive.material->unlit) {
+                    if (ComputeTangentFrame(TangentFrameComputeInput(vertexCount, normals, tangents, uvs, positions, triangles32, triangleCount), qtangents)) {
+                        GPU::BufferDesc qtangentsBufferDesc = {
+                             vertexCount,
+                             sizeof(Quaternionf),
+                             alignof(Quaternionf),
+                             GPU::BUFFER_USAGE_VERTEX_BIT,
+                             GPU::QUEUE_GRAPHIC_BIT
+                        };
+                        Soul::GPU::BufferID qtangentsGPUBUffer = _gpuSystem->bufferCreate(qtangentsBufferDesc, qtangents);
+                        AddAttributeToPrimitive_(&dstPrimitive, VertexAttribute::TANGENTS, qtangentsGPUBUffer, GPU::VertexElementType::SHORT4, GPU::VERTEX_ELEMENT_NORMALIZED, sizeof(Quaternionf));
                     }
                 }
 
-                
-            	if (ComputeTangentFrame(TangentFrameComputeInput(vertexCount, normals, tangents, uvs, positions, triangles32, triangleCount), qtangents)) {
-                    GPU::BufferDesc qtangentsBufferDesc = {
-                         vertexCount,
-                         sizeof(Quaternionf),
-                         alignof(Quaternionf),
-                         GPU::BUFFER_USAGE_VERTEX_BIT,
-                         GPU::QUEUE_GRAPHIC_BIT
+                cgltf_size targetsCount = srcPrimitive.targets_count;
+                targetsCount = targetsCount > MAX_MORPH_TARGETS ? MAX_MORPH_TARGETS : targetsCount;
+
+                constexpr int baseTangentsAttr = (int)VertexAttribute::MORPH_TANGENTS_0;
+                constexpr int basePositionAttr = (int)VertexAttribute::MORPH_POSITION_0;
+                for (cgltf_size targetIndex = 0; targetIndex < targetsCount; targetIndex++) {
+                    const cgltf_morph_target& morphTarget = srcPrimitive.targets[targetIndex];
+
+                    enum class MorphTargetType : uint8 {
+                        POSITION,
+                        NORMAL,
+                        TANGENT,
+                        COUNT
                     };
-                    Soul::GPU::BufferID qtangentsGPUBUffer = _gpuSystem->bufferCreate(qtangentsBufferDesc, qtangents);
-                    AddAttributeToPrimitive_(&dstPrimitive, (VertexAttribute)(baseTangentsAttr + targetIndex), qtangentsGPUBUffer, GPU::VertexElementType::SHORT4, GPU::VERTEX_ELEMENT_NORMALIZED ,sizeof(Quaternionf));
+
+                    auto getMorphTargetType = [](cgltf_attribute_type atype, MorphTargetType* targetType) -> bool {
+                        switch (atype) {
+                        case cgltf_attribute_type_position:
+                            *targetType = MorphTargetType::POSITION;
+                            return true;
+                        case cgltf_attribute_type_tangent:
+                            *targetType = MorphTargetType::TANGENT;
+                            return true;
+                        case cgltf_attribute_type_normal:
+                            *targetType = MorphTargetType::NORMAL;
+                            return true;
+                        case cgltf_attribute_type_color:
+                        case cgltf_attribute_type_weights:
+                        case cgltf_attribute_type_joints:
+                        case cgltf_attribute_type_texcoord:
+                        case cgltf_attribute_type_invalid:
+                        default:
+                            return false;
+                        }
+                    };
+
+                    Soul::EnumArray<MorphTargetType, const byte*> morphTargetAttributes(nullptr);
+
+                    for (cgltf_size aindex = 0; aindex < morphTarget.attributes_count; aindex++) {
+                        const cgltf_attribute& srcAttribute = morphTarget.attributes[aindex];
+                        const cgltf_accessor& accessor = *srcAttribute.data;
+
+                        const byte* attributeData = nullptr;
+                        uint64 attributeStride = 0;
+                        uint64 attributeDataCount = 0;
+                        uint8 attributeTypeSize = 0;
+                        uint16 attributeTypeAlignment = 0;
+
+                        MorphTargetType morphTargetType;
+                        bool success = getMorphTargetType(srcAttribute.type, &morphTargetType);
+                        SOUL_ASSERT(0, success, "");
+
+                        cgltf_size numFloats = accessor.count * cgltf_num_components(accessor.type);
+                        Array<float> generated(&primitiveScopeAllocator);
+                        generated.resize(numFloats);
+                        cgltf_accessor_unpack_floats(&accessor, generated.data(), numFloats);
+
+                        attributeData = Soul::Cast<const byte*>(generated.data());
+                        attributeDataCount = accessor.count;
+                        attributeTypeSize = Soul::Cast<uint8>(cgltf_num_components(accessor.type) * sizeof(float));
+                        attributeTypeAlignment = sizeof(float);
+                        attributeStride = attributeTypeSize;
+
+                        morphTargetAttributes[morphTargetType] = attributeData;
+
+                        if (srcAttribute.type == cgltf_attribute_type_position) {
+                            auto attrType = (VertexAttribute)(basePositionAttr + targetIndex);
+                            GPU::BufferDesc gpuDesc;
+                            gpuDesc.count = attributeDataCount;
+                            gpuDesc.typeSize = attributeTypeSize;
+                            gpuDesc.typeAlignment = attributeTypeAlignment;
+                            gpuDesc.queueFlags = GPU::QUEUE_GRAPHIC_BIT;
+                            gpuDesc.usageFlags = GPU::BUFFER_USAGE_VERTEX_BIT;
+                            GPU::BufferID attributeGPUBuffer = _gpuSystem->bufferCreate(gpuDesc,
+                                [attributeData, attributeTypeSize, attributeStride](int index, void* data) {
+                                    uint64 offset = index * attributeStride;
+                                    memcpy(data, attributeData + offset, attributeTypeSize);
+                                });
+
+                            Soul::GPU::VertexElementType permitted;
+                            Soul::GPU::VertexElementType actual;
+                            GetElementType_(accessor.type, accessor.component_type, &permitted, &actual);
+
+                            Soul::GPU::VertexElementFlags flags;
+                            if (accessor.normalized) {
+                                flags |= GPU::VERTEX_ELEMENT_NORMALIZED;
+                            }
+
+                            AddAttributeToPrimitive_(&dstPrimitive, attrType, attributeGPUBuffer, actual, flags, attributeTypeSize);
+
+                            dstPrimitive.aabb = aabbCombine(dstPrimitive.aabb, AABB(Vec3f(accessor.min), Vec3f(accessor.max)));
+                        }
+                    }
+
+                    if (morphTargetAttributes[MorphTargetType::NORMAL]) {
+                        if (normals) {
+
+                            auto normalTarget = Soul::Cast<const Vec3f*>(morphTargetAttributes[MorphTargetType::NORMAL]);
+                            if (normalTarget != nullptr) {
+                                for (cgltf_size vertIndex = 0; vertIndex < vertexCount; vertIndex++) {
+                                    normals[vertIndex] += normalTarget[vertIndex];
+                                }
+                            }
+
+                            auto tangentTarget = Soul::Cast<const Vec3f*>(morphTargetAttributes[MorphTargetType::TANGENT]);
+                            if (tangentTarget != nullptr) {
+                                for (cgltf_size vertIndex = 0; vertIndex < vertexCount; vertIndex++) {
+                                    tangents[vertIndex].xyz += tangentTarget[vertIndex];
+                                }
+                            }
+
+                            auto positionTarget = Soul::Cast<const Vec3f*>(morphTargetAttributes[MorphTargetType::POSITION]);
+                            if (positionTarget != nullptr) {
+                                for (cgltf_size vertIndex = 0; vertIndex < vertexCount; vertIndex++) {
+                                    positions[vertIndex] += positionTarget[vertIndex];
+                                }
+                            }
+                        }
+                    }
+
+
+                    if (ComputeTangentFrame(TangentFrameComputeInput(vertexCount, normals, tangents, uvs, positions, triangles32, triangleCount), qtangents)) {
+                        GPU::BufferDesc qtangentsBufferDesc = {
+                             vertexCount,
+                             sizeof(Quaternionf),
+                             alignof(Quaternionf),
+                             GPU::BUFFER_USAGE_VERTEX_BIT,
+                             GPU::QUEUE_GRAPHIC_BIT
+                        };
+                        Soul::GPU::BufferID qtangentsGPUBUffer = _gpuSystem->bufferCreate(qtangentsBufferDesc, qtangents);
+                        AddAttributeToPrimitive_(&dstPrimitive, (VertexAttribute)(baseTangentsAttr + targetIndex), qtangentsGPUBUffer, GPU::VertexElementType::SHORT4, GPU::VERTEX_ELEMENT_NORMALIZED, sizeof(Quaternionf));
+                    }
+
+
                 }
 
+                dstMesh.aabb = aabbCombine(dstMesh.aabb, dstPrimitive.aabb);
 
             }
-
-            dstMesh.aabb = aabbCombine(dstMesh.aabb, dstPrimitive.aabb);
-
         }
-	}
+    }
 
 	_rootEntity = _registry.create();
 
@@ -1325,100 +1331,103 @@ void SoulFila::Scene::importFromGLTF(const char* path) {
     _registry.emplace<NameComponent>(_rootEntity, "Root");
 	_registry.emplace<TransformComponent>(_rootEntity, mat4Identity(), mat4Identity(), _rootEntity, ENTITY_ID_NULL, ENTITY_ID_NULL, ENTITY_ID_NULL);
 
-    Soul::HashMap<_CGLTFNodeKey, EntityID> nodeMap;
+    Soul::HashMap<CGLTFNodeKey_, EntityID> nodeMap;
     for (cgltf_size i = 0, len = asset->nodes_count; i < len; ++i) {
         cgltf_node* nodes = asset->nodes;
-        _createEntity(&nodeMap, asset, &nodes[i], _rootEntity);
+        createEntity_(&nodeMap, asset, &nodes[i], _rootEntity);
     }
 
-    _animations.clear();
-    _animations.resize(asset->animations_count);
-    for (cgltf_size animIdx = 0; animIdx < asset->animations_count; animIdx++) {
-        const cgltf_animation& srcAnim = asset->animations[animIdx];
-        Animation& dstAnim = _animations[animIdx];
-        dstAnim.name = srcAnim.name == nullptr ? "Unnamed" : srcAnim.name;
+    {
+        SOUL_PROFILE_ZONE_WITH_NAME("Import Animations");
+        _animations.clear();
+        _animations.resize(asset->animations_count);
+        for (cgltf_size animIdx = 0; animIdx < asset->animations_count; animIdx++) {
+            const cgltf_animation& srcAnim = asset->animations[animIdx];
+            Animation& dstAnim = _animations[animIdx];
+            dstAnim.name = srcAnim.name == nullptr ? "Unnamed" : srcAnim.name;
 
-        dstAnim.samplers.resize(srcAnim.samplers_count);
-        for (cgltf_size samplerIdx = 0; samplerIdx < srcAnim.samplers_count; samplerIdx++) {
-            const cgltf_animation_sampler& srcSampler = srcAnim.samplers[samplerIdx];
-            AnimationSampler& dstSampler = dstAnim.samplers[samplerIdx];
-            
-            const cgltf_accessor& timelineAccessor = *srcSampler.input;
-            auto timelineBlob = Soul::Cast<const byte*>(timelineAccessor.buffer_view->buffer->data);
-            auto timelineFloats = Soul::Cast<const float*>(timelineBlob + timelineAccessor.offset +
-                timelineAccessor.buffer_view->offset);
-            
-            dstSampler.times.resize(timelineAccessor.count);
-            memcpy(dstSampler.times.data(), timelineFloats, timelineAccessor.count * sizeof(float));
+            dstAnim.samplers.resize(srcAnim.samplers_count);
+            for (cgltf_size samplerIdx = 0; samplerIdx < srcAnim.samplers_count; samplerIdx++) {
+                const cgltf_animation_sampler& srcSampler = srcAnim.samplers[samplerIdx];
+                AnimationSampler& dstSampler = dstAnim.samplers[samplerIdx];
 
-            const cgltf_accessor& valuesAccessor = *srcSampler.output;
-            switch (valuesAccessor.type) {
-            case cgltf_type_scalar:
-                dstSampler.values.resize(valuesAccessor.count);
-                cgltf_accessor_unpack_floats(srcSampler.output, dstSampler.values.data(), valuesAccessor.count);
-                break;
-            case cgltf_type_vec3:
-                dstSampler.values.resize(valuesAccessor.count * 3);
-                cgltf_accessor_unpack_floats(srcSampler.output, dstSampler.values.data(), valuesAccessor.count * 3);
-                break;
-            case cgltf_type_vec4:
-                dstSampler.values.resize(valuesAccessor.count * 4);
-                cgltf_accessor_unpack_floats(srcSampler.output, dstSampler.values.data(), valuesAccessor.count * 4);
-                break;
-            case cgltf_type_vec2:
-            case cgltf_type_mat2:
-            case cgltf_type_mat3:
-            case cgltf_type_mat4:
-            case cgltf_type_invalid:
-            default:
-                SOUL_LOG_WARN("Unknown animation type.");
-                return;
+                const cgltf_accessor& timelineAccessor = *srcSampler.input;
+                auto timelineBlob = Soul::Cast<const byte*>(timelineAccessor.buffer_view->buffer->data);
+                auto timelineFloats = Soul::Cast<const float*>(timelineBlob + timelineAccessor.offset +
+                    timelineAccessor.buffer_view->offset);
+
+                dstSampler.times.resize(timelineAccessor.count);
+                memcpy(dstSampler.times.data(), timelineFloats, timelineAccessor.count * sizeof(float));
+
+                const cgltf_accessor& valuesAccessor = *srcSampler.output;
+                switch (valuesAccessor.type) {
+                case cgltf_type_scalar:
+                    dstSampler.values.resize(valuesAccessor.count);
+                    cgltf_accessor_unpack_floats(srcSampler.output, dstSampler.values.data(), valuesAccessor.count);
+                    break;
+                case cgltf_type_vec3:
+                    dstSampler.values.resize(valuesAccessor.count * 3);
+                    cgltf_accessor_unpack_floats(srcSampler.output, dstSampler.values.data(), valuesAccessor.count * 3);
+                    break;
+                case cgltf_type_vec4:
+                    dstSampler.values.resize(valuesAccessor.count * 4);
+                    cgltf_accessor_unpack_floats(srcSampler.output, dstSampler.values.data(), valuesAccessor.count * 4);
+                    break;
+                case cgltf_type_vec2:
+                case cgltf_type_mat2:
+                case cgltf_type_mat3:
+                case cgltf_type_mat4:
+                case cgltf_type_invalid:
+                default:
+                    SOUL_LOG_WARN("Unknown animation type.");
+                    return;
+                }
+
+                switch (srcSampler.interpolation) {
+                case cgltf_interpolation_type_linear:
+                    dstSampler.interpolation = AnimationSampler::LINEAR;
+                    break;
+                case cgltf_interpolation_type_step:
+                    dstSampler.interpolation = AnimationSampler::STEP;
+                    break;
+                case cgltf_interpolation_type_cubic_spline:
+                    dstSampler.interpolation = AnimationSampler::CUBIC;
+                    break;
+                }
             }
 
-            switch (srcSampler.interpolation) {
-            case cgltf_interpolation_type_linear:
-                dstSampler.interpolation = AnimationSampler::LINEAR;
-                break;
-            case cgltf_interpolation_type_step:
-                dstSampler.interpolation = AnimationSampler::STEP;
-                break;
-            case cgltf_interpolation_type_cubic_spline:
-                dstSampler.interpolation = AnimationSampler::CUBIC;
-                break;
+            dstAnim.duration = 0;
+            dstAnim.channels.resize(srcAnim.channels_count);
+            for (cgltf_size channelIdx = 0; channelIdx < srcAnim.channels_count; channelIdx++) {
+                const cgltf_animation_channel& srcChannel = srcAnim.channels[channelIdx];
+                AnimationChannel& dstChannel = dstAnim.channels[channelIdx];
+                dstChannel.samplerIdx = Soul::Cast<uint32>(srcChannel.sampler - srcAnim.samplers);
+                dstChannel.entity = nodeMap[srcChannel.target_node];
+                switch (srcChannel.target_path) {
+                case cgltf_animation_path_type_translation:
+                    dstChannel.transformType = AnimationChannel::TRANSLATION;
+                    break;
+                case cgltf_animation_path_type_rotation:
+                    dstChannel.transformType = AnimationChannel::ROTATION;
+                    break;
+                case cgltf_animation_path_type_scale:
+                    dstChannel.transformType = AnimationChannel::SCALE;
+                    break;
+                case cgltf_animation_path_type_weights:
+                    dstChannel.transformType = AnimationChannel::WEIGHTS;
+                    break;
+                case cgltf_animation_path_type_invalid:
+                    SOUL_LOG_WARN("Unsupported channel path.");
+                    break;
+                }
+                float channelDuration = dstAnim.samplers[dstChannel.samplerIdx].times.back();
+                dstAnim.duration = std::max(dstAnim.duration, channelDuration);
             }
+
         }
-
-        dstAnim.duration = 0;
-        dstAnim.channels.resize(srcAnim.channels_count);
-        for (cgltf_size channelIdx = 0; channelIdx < srcAnim.channels_count; channelIdx++) {
-            const cgltf_animation_channel& srcChannel = srcAnim.channels[channelIdx];
-            AnimationChannel& dstChannel = dstAnim.channels[channelIdx];
-            dstChannel.samplerIdx = Soul::Cast<uint32>(srcChannel.sampler - srcAnim.samplers);
-            dstChannel.entity = nodeMap[srcChannel.target_node];
-            switch (srcChannel.target_path) {
-            case cgltf_animation_path_type_translation:
-                dstChannel.transformType = AnimationChannel::TRANSLATION;
-                break;
-            case cgltf_animation_path_type_rotation:
-                dstChannel.transformType = AnimationChannel::ROTATION;
-                break;
-            case cgltf_animation_path_type_scale:
-                dstChannel.transformType = AnimationChannel::SCALE;
-                break;
-            case cgltf_animation_path_type_weights:
-                dstChannel.transformType = AnimationChannel::WEIGHTS;
-                break;
-            case cgltf_animation_path_type_invalid:
-                SOUL_LOG_WARN("Unsupported channel path.");
-                break;
-            }
-            float channelDuration = dstAnim.samplers[dstChannel.samplerIdx].times.back();
-            dstAnim.duration = std::max(dstAnim.duration, channelDuration);
-        }
-
     }
 
-    auto importSkins = [this](const cgltf_data* asset, const Soul::HashMap<_CGLTFNodeKey, EntityID>& nodeMap) {
+    auto importSkins = [this](const cgltf_data* asset, const Soul::HashMap<CGLTFNodeKey_, EntityID>& nodeMap) {
         _skins.resize(asset->skins_count);
         for (cgltf_size skinIdx = 0; skinIdx < asset->skins_count; skinIdx++) {
             const cgltf_skin& srcSkin = asset->skins[skinIdx];
@@ -1454,7 +1463,10 @@ void SoulFila::Scene::importFromGLTF(const char* path) {
             }
         }
     };
-    importSkins(asset, nodeMap);
+    {
+        SOUL_PROFILE_ZONE_WITH_NAME("Import Skins");
+        importSkins(asset, nodeMap);
+    }
 
     auto view = _registry.view<TransformComponent, RenderComponent>();
     for (auto entity : view) {
@@ -1478,7 +1490,7 @@ void SoulFila::Scene::importFromGLTF(const char* path) {
     Mat4f fitTransform = _fitIntoUnitCube(_boundingBox, 4);
     TransformComponent& rootTransform = _registry.get<TransformComponent>(_rootEntity);
     rootTransform.local = fitTransform;
-    _updateWorldTransform(_rootEntity);
+    updateWorldTransform_(_rootEntity);
 
     // create default camera
     EntityID defaultCamera = _registry.create();
@@ -1489,12 +1501,12 @@ void SoulFila::Scene::importFromGLTF(const char* path) {
     Vec2ui32 viewport = getViewport();
     cameraComp.setLensProjection(28.0f, float(viewport.x) / float(viewport.y), 0.1f, 100.0f);
     _registry.emplace<NameComponent>(defaultCamera, "Default camera");
-    _setActiveCamera(defaultCamera);
+    setActiveCamera_(defaultCamera);
 
 	cgltf_free(asset);
 }
 
-void SoulFila::Scene::_createEntity(Soul::HashMap<_CGLTFNodeKey, EntityID>* nodeMap, const cgltf_data* asset, const cgltf_node* node, EntityID parent) {
+void SoulFila::Scene::createEntity_(Soul::HashMap<CGLTFNodeKey_, EntityID>* nodeMap, const cgltf_data* asset, const cgltf_node* node, EntityID parent) {
 	EntityID entity = _registry.create();
     if (nodeMap->isExist(node)) {
         return;
@@ -1525,22 +1537,22 @@ void SoulFila::Scene::_createEntity(Soul::HashMap<_CGLTFNodeKey, EntityID>* node
 	_registry.emplace<TransformComponent>(entity, localTransform, worldTransform, parent, ENTITY_ID_NULL, nextEntity, ENTITY_ID_NULL);
 
 	if (node->mesh) {
-		_createRenderable(asset, node, entity);
+		createRendereable_(asset, node, entity);
 	}
     if (node->light) {
-        _createLight(asset, node, entity);
+        createLight_(asset, node, entity);
     }
     if (node->camera) {
-        _createCamera(asset, node, entity);
+        createCamera_(asset, node, entity);
     }
 
     for (cgltf_size i = 0; i < node->children_count; i++) {
-        _createEntity(nodeMap, asset, node->children[i], entity);
+        createEntity_(nodeMap, asset, node->children[i], entity);
     }
 
 }
 
-void SoulFila::Scene::_createRenderable(const cgltf_data* asset, const cgltf_node* node, EntityID entity) {
+void SoulFila::Scene::createRendereable_(const cgltf_data* asset, const cgltf_node* node, EntityID entity) {
 
     Visibility visibility;
     visibility.priority = 0x4;
@@ -1576,7 +1588,7 @@ void SoulFila::Scene::_createRenderable(const cgltf_data* asset, const cgltf_nod
     _registry.emplace<RenderComponent>(entity, visibility, meshID, skinID, morphWeights);
 }
 
-void SoulFila::Scene::_createLight(const cgltf_data* asset, const cgltf_node* node, EntityID entity) {
+void SoulFila::Scene::createLight_(const cgltf_data* asset, const cgltf_node* node, EntityID entity) {
     
     SOUL_ASSERT(0, node->light != nullptr, "");
     const cgltf_light& light = *node->light;
@@ -1641,7 +1653,7 @@ void SoulFila::Scene::_createLight(const cgltf_data* asset, const cgltf_node* no
     _registry.emplace<LightComponent>(entity, lightType, Soul::Vec3f(0, 0, 0), direction, color, ShadowParams(), spotParams, 0.0f, 0.0f, 0.0f, luminousIntensity, falloff);
 }
 
-void SoulFila::Scene::_createCamera(const cgltf_data* data, const cgltf_node* node, EntityID entity) {
+void SoulFila::Scene::createCamera_(const cgltf_data* data, const cgltf_node* node, EntityID entity) {
     CameraComponent& cameraComponent = _registry.emplace<CameraComponent>(entity);
     
     SOUL_ASSERT(0, node->camera != nullptr, "");
@@ -1665,7 +1677,7 @@ void SoulFila::Scene::_createCamera(const cgltf_data* data, const cgltf_node* no
     }
 }
 
-void SoulFila::Scene::_renderEntityTreeNode(EntityID entityID) {
+void SoulFila::Scene::renderEntityTreeNode_(EntityID entityID) {
     if (entityID == ENTITY_ID_NULL) return;
     const auto& [transformComp, nameComp] = _registry.get<TransformComponent, NameComponent>(entityID);
     ImGuiTreeNodeFlags flags = SCENE_TREE_FLAGS;
@@ -1676,10 +1688,10 @@ void SoulFila::Scene::_renderEntityTreeNode(EntityID entityID) {
         _selectedEntity = entityID;
     }
     if (nodeOpen && transformComp.firstChild != ENTITY_ID_NULL) {
-        _renderEntityTreeNode(transformComp.firstChild);
+        renderEntityTreeNode_(transformComp.firstChild);
         ImGui::TreePop();
     }
-    _renderEntityTreeNode(transformComp.next);
+    renderEntityTreeNode_(transformComp.next);
 }
 
 void SoulFila::Scene::renderPanels() {
@@ -1693,7 +1705,7 @@ void SoulFila::Scene::renderPanels() {
                 for (const auto entity : view) {
                     const bool isSelected = (_activeCamera == entity);
                     if (ImGui::Selectable(view.get<NameComponent>(entity).name.data(), isSelected)) {
-                        _setActiveCamera(entity);
+                        setActiveCamera_(entity);
                     }
 
                     if (isSelected) ImGui::SetItemDefaultFocus();
@@ -1710,7 +1722,7 @@ void SoulFila::Scene::renderPanels() {
                 for (uint64 animIdx = 0; animIdx < _animations.size(); animIdx++) {
                     const bool isSelected = (_activeAnimation.id == animIdx);
                     if (ImGui::Selectable(_animations[animIdx].name.data(), isSelected)) {
-                        _setActiveAnimation(AnimationID(animIdx));
+                        setActiveAnimation_(AnimationID(animIdx));
                     }
 
                     if (isSelected) ImGui::SetItemDefaultFocus();
@@ -1718,7 +1730,7 @@ void SoulFila::Scene::renderPanels() {
 
                 const bool isSelected = (_activeAnimation.isNull());
                 if (ImGui::Selectable(NO_ACTIVE_ANIMATION_LABEL, isSelected)) {
-                    _setActiveAnimation(AnimationID());
+                    setActiveAnimation_(AnimationID());
                 }
                 if (isSelected) ImGui::SetItemDefaultFocus();
                 ImGui::EndCombo();
@@ -1730,7 +1742,7 @@ void SoulFila::Scene::renderPanels() {
 
     if (ImGui::Begin("Scene Tree")) {
         ItemRowsBackground();
-        _renderEntityTreeNode(_rootEntity);
+        renderEntityTreeNode_(_rootEntity);
     }
     ImGui::End();
 
@@ -1744,7 +1756,7 @@ void SoulFila::Scene::renderPanels() {
     ImGui::End();
 }
 
-void SoulFila::Scene::_setActiveAnimation(AnimationID animationID) {
+void SoulFila::Scene::setActiveAnimation_(AnimationID animationID) {
     _activeAnimation = animationID;
     _animationDelta = 0;
     _resetAnimation = true;
@@ -1755,7 +1767,7 @@ void SoulFila::Scene::_setActiveAnimation(AnimationID animationID) {
     }
 }
 
-void SoulFila::Scene::_setActiveCamera(EntityID camera) {
+void SoulFila::Scene::setActiveCamera_(EntityID camera) {
     _activeCamera = camera;
     TransformComponent& transformComp = _registry.get<TransformComponent>(camera);
     Soul::Vec3f cameraPosition = Soul::Vec3f(transformComp.world.elem[0][3], transformComp.world.elem[1][3], transformComp.world.elem[2][3]);
@@ -1997,31 +2009,31 @@ bool SoulFila::Scene::update(const Demo::Input& input) {
         }
     }
 
-    _updateWorldTransform(_rootEntity);
-    _updateBones();
+    updateWorldTransform_(_rootEntity);
+    updateBones_();
 
     return true;
 }
 
-void SoulFila::Scene::_updateWorldTransform(EntityID entityID) {
+void SoulFila::Scene::updateWorldTransform_(EntityID entityID) {
     if (entityID == ENTITY_ID_NULL) return;
     if (entityID == _rootEntity) {
         TransformComponent& comp = _registry.get<TransformComponent>(entityID);
         comp.world = comp.local;
         SOUL_ASSERT(0, std::none_of(comp.world.mem, comp.world.mem + 9, [](float i) { return std::isnan(i); }), "");
-        _updateWorldTransform(comp.firstChild);
+        updateWorldTransform_(comp.firstChild);
     }
     else {
         TransformComponent& comp = _registry.get<TransformComponent>(entityID);
         TransformComponent& parentComp = _registry.get<TransformComponent>(comp.parent);
         comp.world = parentComp.world * comp.local;
         SOUL_ASSERT(0, std::none_of(comp.world.mem, comp.world.mem + 9, [](float i) { return std::isnan(i); }), "");
-        _updateWorldTransform(comp.next);
-        _updateWorldTransform(comp.firstChild);
+        updateWorldTransform_(comp.next);
+        updateWorldTransform_(comp.firstChild);
     }
 }
 
-void SoulFila::Scene::_updateBones() {
+void SoulFila::Scene::updateBones_() {
 
     for (Skin& skin : _skins) {
         for (uint64 boneIdx = 0; boneIdx < skin.bones.size(); boneIdx++) {

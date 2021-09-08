@@ -10,9 +10,8 @@
 
 struct cgltf_data;
 struct cgltf_node;
-
 namespace SoulFila {
-
+    using namespace Soul;
 	static constexpr uint64 MAX_ENTITY_NAME_LENGTH = 512;
     static constexpr uint64 MAX_MORPH_TARGETS = 4;
     
