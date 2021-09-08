@@ -38,7 +38,6 @@ namespace Soul {
 
 		SOUL_NODISCARD T& operator[](uint64 key);
 		SOUL_NODISCARD const T& operator[](uint64 key) const;
-		SOUL_NODISCARD const T& get(uint64 key, const T& defaultValue) const noexcept;
 
 		SOUL_NODISCARD soul_size size() const noexcept { return _size; }
 		SOUL_NODISCARD soul_size capacity() const { return _capacity; }
@@ -301,16 +300,6 @@ namespace Soul {
 		uint32 index = _findIndex(key);
 		SOUL_ASSERT(0, _indexes[index].key == key && _indexes[index].dib != 0, "");
 		return _values[index];
-	}
-
-	template <typename T>
-	const T& UInt64HashMap<T>::get(uint64 key, const T& defaultValue) const noexcept
-	{
-		uint32 index = _findIndex(key);
-		if (_indexes[index].key == key && _indexes[index].dib != 0) {
-			return _values[index];
-		}
-		return defaultValue;
 	}
 
 }
