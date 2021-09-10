@@ -4,7 +4,11 @@
 #include "gpu/data.h"
 #include "gpu/render_graph.h"
 
+#if defined(SOUL_ASSERT_ENABLE)
 #define SOUL_VK_CHECK(result, message, ...) SOUL_ASSERT(0, result == VK_SUCCESS, "result = %d | " message, result, ##__VA_ARGS__)
+#else
+#define SOUL_VK_CHECK(result, message, ...) result
+#endif
 
 namespace Soul { namespace GPU {
 
