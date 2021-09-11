@@ -189,7 +189,7 @@ namespace SoulFila {
 		sceneDepthTexDesc.height = sceneResolution.y;
 		sceneDepthTexDesc.depth = 1;
 		sceneDepthTexDesc.clear = true;
-		sceneDepthTexDesc.clearValue.depthStencil = { 1.0f, 0 };
+		sceneDepthTexDesc.clearValue.depthStencil = { 0.0f, 0 };
 		sceneDepthTexDesc.format = GPU::TextureFormat::DEPTH32F;
 		sceneDepthTexDesc.mipLevels = 1;
 		sceneDepthTexDesc.type = GPU::TextureType::D2;
@@ -225,7 +225,7 @@ namespace SoulFila {
 
 				GPU::DepthStencilAttachmentDesc depthAttchDesc;
 				depthAttchDesc.clear = true;
-				depthAttchDesc.clearValue.depthStencil = { 1.0f, 0 };
+				depthAttchDesc.clearValue.depthStencil = { 0.0f, 0 };
 				depthAttchDesc.depthWriteEnable = true;
 				params->depthTarget = builder->setDepthStencilAttachment(inputParam.depthTarget, depthAttchDesc);
 
@@ -239,8 +239,9 @@ namespace SoulFila {
 				pipelineDesc.viewport = { 0, 0, uint16(sceneResolution.x), uint16(sceneResolution.y) };
 				pipelineDesc.scissor = { false, 0, 0, uint16(sceneResolution.x), uint16(sceneResolution.y) };
 				pipelineDesc.raster.cullMode = GPU::CullMode::NONE;
+				pipelineDesc.raster.frontFace = GPU::FrontFace::COUNTER_CLOCKWISE;
 				pipelineDesc.colorAttachmentCount = 1;
-				pipelineDesc.depthStencilAttachment = { true, true, GPU::CompareOp::LESS };
+				pipelineDesc.depthStencilAttachment = { true, true, GPU::CompareOp::GREATER_OR_EQUAL };
 
 				GPU::SamplerDesc samplerDesc = {};
 				samplerDesc.minFilter = GPU::TextureFilter::LINEAR;
