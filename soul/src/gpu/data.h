@@ -622,7 +622,7 @@ namespace Soul {
 		struct _Buffer {
 			VkBuffer vkHandle = VK_NULL_HANDLE;
 			VmaAllocation allocation{};
-			uint16 unitCount = 0;
+			soul_size unitCount = 0;
 			uint16 unitSize = 0;
 			BufferUsageFlags usageFlags = 0;
 			QueueFlags queueFlags = 0;
