@@ -419,7 +419,8 @@ uint32 ComputeBindingOffset_(const cgltf_accessor& accessor) {
 
 template <typename DstType, typename SrcType>
 static Soul::GPU::BufferID CreateIndexBuffer_(Soul::GPU::System* _gpuSystem, Soul::GPU::BufferDesc& indexBufferDesc, const cgltf_accessor& indices) {
-    auto bufferData = (const SrcType*)indices.buffer_view->buffer->data + ComputeBindingOffset_(indices);
+    auto bufferDataRaw = Soul::Cast<const uint8*>(indices.buffer_view->buffer->data) + ComputeBindingOffset_(indices);
+    auto bufferData = Soul::Cast<const SrcType*>(bufferDataRaw);
 
     using IndexType = DstType;
     indexBufferDesc.typeSize = sizeof(IndexType);
@@ -1040,12 +1041,7 @@ void SoulFila::Scene::importFromGLTF(const char* path) {
                     indexBufferDesc.typeSize = sizeof(IndexType);
                     indexBufferDesc.typeAlignment = alignof(IndexType);
 
-                    dstPrimitive.indexBuffer = _gpuSystem->bufferCreate(indexBufferDesc,
-                        [](int i, void* data) {
-                            const auto index = (IndexType*)data;
-                            (*index) = IndexType(i);
-                        }
-                    );
+                    dstPrimitive.indexBuffer = _gpuSystem->bufferCreate(indexBufferDesc, indexes.data());
 
                     triangles32 = Soul::Cast<Vec3ui32*>(indexes.data());
 
