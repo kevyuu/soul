@@ -43,7 +43,7 @@ namespace Soul { namespace Runtime {
 			static auto call = [](TaskID taskID, void* data) {
 				EXECUTE& lambda = *((EXECUTE*)data);
 				lambda(taskID);
-				lambda.~Execute();
+				lambda.~EXECUTE();
 			};
 
 			TaskID taskID = _taskCreate(parent, call);
