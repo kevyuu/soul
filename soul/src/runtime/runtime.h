@@ -35,6 +35,16 @@ namespace Soul::Runtime {
 	}
 
 	template<
+		typename Execute,
+		typename = require<is_lambda_v<Execute, void(TaskID)>>
+	>
+	TaskID CreateAndRunTask(TaskID parent, Execute&& lambda) {
+		const TaskID taskID = CreateTask(parent, std::forward<Execute>(lambda));
+		RunTask(taskID);
+		return taskID;
+	}
+
+	template<
 		typename Func,
 		typename = require<is_lambda_v<Func, void(int)>>
 	>
