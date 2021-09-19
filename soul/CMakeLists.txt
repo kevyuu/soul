@@ -22,6 +22,7 @@ set (SOUL_HEADERS
 	src/core/bitset.h
 	src/core/geometry.h
 	src/core/string.h
+	src/core/thread.h
 
 	src/gpu/data.h
 	src/gpu/system.h
