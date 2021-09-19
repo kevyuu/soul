@@ -575,7 +575,7 @@ namespace SoulFila {
     }
 
     static Soul::GPU::ShaderID GenerateVertexShader_(const Demo::ShaderGenerator& generator, GPUProgramVariant variant, const ProgramSetInfo& info) {
-        
+        SOUL_PROFILE_ZONE();
         bool litVariants = info.isLit || info.hasShadowMultiplier;
 
         Demo::ShaderDesc desc;
@@ -692,7 +692,7 @@ namespace SoulFila {
     }
 
     static Soul::GPU::ShaderID GenerateFragmentShader_(const Demo::ShaderGenerator& generator, GPUProgramVariant variant, const ProgramSetInfo& info) {
-
+        SOUL_PROFILE_ZONE();
         Demo::ShaderDesc desc;
         desc.type = Demo::ShaderType::FRAGMENT;
         desc.name = "";
@@ -920,16 +920,23 @@ namespace SoulFila {
     }
 
     static bool GenerateProgramSet_(GPUProgramSet& programSet, const Demo::ShaderGenerator& generator, const Soul::Array<VariantStagePair>& variants, const ProgramSetInfo& info) {
-        for (const auto& variantPair : variants) {
+        Runtime::TaskID parent = Runtime::CreateTask(Runtime::TaskID::ROOT(), [](Runtime::TaskID) {});
+    	for (const auto& variantPair : variants) {
             if (variantPair.stage == Demo::ShaderType::VERTEX) {
-                Soul::GPU::ShaderID shaderID = GenerateVertexShader_(generator, GPUProgramVariant(variantPair.variant), info);
-                programSet.vertShaderIDs[variantPair.variant] = shaderID;
+                Runtime::CreateAndRunTask(parent, [&](Runtime::TaskID) {
+                    Soul::GPU::ShaderID shaderID = GenerateVertexShader_(generator, GPUProgramVariant(variantPair.variant), info);
+                    programSet.vertShaderIDs[variantPair.variant] = shaderID;
+                });
             }
             else {
-                Soul::GPU::ShaderID shaderID = GenerateFragmentShader_(generator, GPUProgramVariant(variantPair.variant), info);
-                programSet.fragShaderIDs[variantPair.variant] = shaderID;
+                Runtime::CreateAndRunTask(parent, [&](Runtime::TaskID) {
+                    Soul::GPU::ShaderID shaderID = GenerateFragmentShader_(generator, GPUProgramVariant(variantPair.variant), info);
+                    programSet.fragShaderIDs[variantPair.variant] = shaderID;
+                });
             }
         }
+        Runtime::RunTask(parent);
+        Runtime::WaitTask(parent);
         return true;
     }
 

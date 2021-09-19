@@ -1337,8 +1337,7 @@ namespace Soul { namespace GPU {
 									  &stagingBuffer.vkHandle,
 									  &stagingBuffer.allocation,
 									  nullptr), "");
-
-		_ThreadContext &threadContext = _threadContext();
+		
 		_frameContext().stagingBuffers.add(stagingBuffer);
 
 		void *mappedData;
@@ -1529,7 +1528,7 @@ namespace Soul { namespace GPU {
 	}
 
 	ShaderID System::shaderCreate(const ShaderDesc &desc, ShaderStage stage) {
-		SOUL_ASSERT_MAIN_THREAD();
+		SOUL_PROFILE_ZONE();
 		SOUL_ASSERT(0, desc.sourceSize > 0, "");
 		SOUL_ASSERT(0, desc.source != nullptr, "");
 		SOUL_ASSERT(0, desc.name != nullptr, "");
@@ -1538,8 +1537,7 @@ namespace Soul { namespace GPU {
 		Runtime::ScopeAllocator<> scopeAllocator("shaderCreate");
 		SOUL_MEMORY_ALLOCATOR_ZONE(&scopeAllocator);
 
-		ShaderID shaderID = ShaderID(_db.shaders.add({}));
-		_Shader &shader = _db.shaders[shaderID.id];
+		_Shader shader;
 
 		shaderc::Compiler glslCompiler;
 
@@ -1658,7 +1656,7 @@ namespace Soul { namespace GPU {
 		SOUL_ASSERT(0, resources.stage_inputs.size() <= MAX_INPUT_PER_SHADER, "");
 
 		if (stage != ShaderStage::VERTEX) {
-			return shaderID;
+			return ShaderID(_db.shaders.add(shader));
 		}
 
 		struct AttrExtraInfo {
@@ -1748,7 +1746,7 @@ namespace Soul { namespace GPU {
 
 		attrExtraInfos.cleanup();
 
-		return shaderID;
+		return ShaderID(_db.shaders.add(shader));
 	}
 
 	void System::shaderDestroy(ShaderID shaderID) {
@@ -2830,11 +2828,11 @@ namespace Soul { namespace GPU {
 				&imageBarrier);
 
 			static constexpr EnumArray<ResourceOwner, QueueType> RESOURCE_ONWER_TO_QUEUE_TYPE({
-				 QueueType::NONE,
-				 QueueType::GRAPHIC,
-				 QueueType::COMPUTE,
-				 QueueType::TRANSFER,
-				 QueueType::GRAPHIC
+				QueueType::NONE,
+				QueueType::GRAPHIC,
+				QueueType::COMPUTE,
+				QueueType::TRANSFER,
+				QueueType::GRAPHIC
 			 });
 
 			auto _syncQueueToGraphic = [this](QueueType queueType) {

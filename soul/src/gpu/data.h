@@ -1,10 +1,9 @@
 #pragma once
 
 #include "core/type.h"
-#include "core/dev_util.h"
+#include "core/thread.h"
 #include "core/array.h"
 #include "core/enum_array.h"
-#include "core/slice.h"
 #include "core/pool.h"
 #include "core/uint64_hash_map.h"
 #include "core/hash_map.h"
@@ -48,7 +47,7 @@ namespace Soul {
 		using ShaderArgSetID = ID<_ShaderArgSet, uint32, 0>;
 
 		struct _Shader;
-		using ShaderID = ID<_Shader, uint16, 0>;
+		using ShaderID = ID<_Shader, uint32, 0>;
 		static constexpr ShaderID SHADER_ID_NULL = ShaderID();
 
 		struct _Program;
@@ -753,6 +752,81 @@ namespace Soul {
 			}
 		};
 
+		template <typename T>
+		class VulkanPool
+		{
+		public:
+
+			using ID = PoolID;
+
+			explicit VulkanPool(Memory::Allocator* allocator = GetDefaultAllocator()) noexcept : pool_(allocator) {}
+			VulkanPool(const VulkanPool& other) = delete;
+			VulkanPool& operator=(const VulkanPool& other) = delete;
+			VulkanPool(VulkanPool&& other) = delete;
+			VulkanPool& operator=(VulkanPool&& other) = delete;
+			~VulkanPool() = default;
+
+			void reserve(soul_size capacity)
+			{
+				lock_.lockWrite();
+				pool_.reserve(capacity);
+				lock_.unlockWrite();
+			}
+
+			ID add(const T& datum)
+			{
+				lock_.lockWrite();
+				const ID id = pool_.add(datum);
+				lock_.unlockWrite();
+				return id;
+			}
+
+			ID add(T&& datum)
+			{
+				lock_.lockWrite();
+				const ID id = pool_.add(std::move(datum));
+				lock_.unlockWrite();
+				return id;
+			}
+
+			void remove(ID id)
+			{
+				pool_.remove(id);
+			}
+
+			SOUL_NODISCARD T& operator[](ID id)
+			{
+				return pool_[id];
+			}
+
+			SOUL_NODISCARD const T& operator[](PoolID id) const
+			{
+				return pool_[id];
+			}
+
+			SOUL_NODISCARD T* ptr(PoolID id) const
+			{
+				return pool_.ptr(id);
+			}
+
+			void clear() { pool_.clear();  }
+			void cleanup() { pool_.cleanup(); }
+
+		private:
+			mutable RWSpinLock lock_;
+			Pool<T> pool_;
+		};
+
+		class TransferContext
+		{
+			Array<_Buffer> stagingBuffers;
+			VkCommandBuffer commandBuffer = VK_NULL_HANDLE;
+
+		public:
+			void transfer(soul_size dataSize, void* data, _Texture* texture);
+			void transfer(soul_size dataSize, void* data, _Buffer* buffer);
+		};
+
 		struct _FrameContext {
 
 			Runtime::AllocatorInitializer allocatorInitializer;
@@ -881,7 +955,7 @@ namespace Soul {
 
 			Pool<_Buffer> buffers;
 			Pool<_Texture> textures;
-			Pool<_Shader> shaders;
+			VulkanPool<_Shader> shaders;
 
 			HashMap<PipelineStateDesc, PipelineStateID> pipelineStateMaps;
 			Pool<_PipelineState> pipelineStates;
