@@ -27,7 +27,7 @@ namespace Soul {
 		void swap(Pool& other) noexcept;
 		friend void swap(Pool& a, Pool& b) noexcept{ a.swap(b);  }
 
-		void reserve(uint32 capacity);
+		void reserve(soul_size capacity);
 
 		PoolID add(const T& datum);
 		PoolID add(T&& datum);
@@ -181,7 +181,7 @@ namespace Soul {
 	}
 
 	template<typename T>
-	void Pool<T>::reserve(uint32 capacity) {
+	void Pool<T>::reserve(soul_size capacity) {
 		Unit* newBuffer = (Unit*) _allocator->allocate(capacity * sizeof(Unit), alignof(Unit));
 		if (_buffer != nullptr) {
 			_moveUnits(newBuffer);
