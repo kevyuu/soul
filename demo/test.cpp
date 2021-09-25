@@ -29,7 +29,7 @@ int main()
 	SOUL_PROFILE_THREAD_SET_NAME("Main Thread");
 
 	glfwSetErrorCallback(glfwPrintErrorCallback);
-	SOUL_ASSERT(0, glfwInit(), "GLFW Init Failed !");
+	SOUL_ASSERT(0, glfwInit(), "GLFW initialization failed!");
 	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 	glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
 	SOUL_LOG_INFO("GLFW initialization sucessful");
@@ -52,7 +52,7 @@ int main()
 			Memory::BoundGuardProxy::Config()));
 
 	Memory::PageAllocator pageAllocator("Page Allocator");
-	Memory::LinearAllocator linearAllocator("Main Thread Temp Allocator", 10 * Soul::Memory::ONE_MEGABYTE, &pageAllocator);
+	Memory::LinearAllocator linearAllocator("Main Thread Temporary Allocator", 10 * Soul::Memory::ONE_MEGABYTE, &pageAllocator);
 	Runtime::TempAllocator tempAllocator(&linearAllocator,
 		Runtime::TempProxy::Config());
 
@@ -99,7 +99,7 @@ int main()
 		}
 
 		GPU::RenderGraph renderGraph;
-		GPU::TextureNodeID imguiFontNodeID = renderGraph.importTexture("Imgui Font", imguiRenderModule.getFontTexture());
+		GPU::TextureNodeID imguiFontNodeID = renderGraph.importTexture("ImGui Font", imguiRenderModule.getFontTexture());
 
 		GPU::TextureNodeID renderTarget = renderer.computeRenderGraph(&renderGraph);
 

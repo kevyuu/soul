@@ -120,9 +120,9 @@ vec3 mulMat3x3Float3(const highp mat4 m, const highp vec3 v) {
  * Extracts the normal vector of the tangent frame encoded in the specified quaternion.
  */
 void toTangentFrame(const highp vec4 q, out highp vec3 n) {
-    n = vec3( 0.0,  0.0,  1.0) +
-        vec3( 2.0, -2.0, -2.0) * q.x * q.zwx +
-        vec3( 2.0,  2.0, -2.0) * q.y * q.wzy;
+    n = vec3(0.0, 0.0, 1.0) +
+        vec3(2.0, -2.0, -2.0) * q.x * q.zwx +
+        vec3(2.0, 2.0, -2.0) * q.y * q.wzy;
 }
 
 /**
@@ -131,7 +131,7 @@ void toTangentFrame(const highp vec4 q, out highp vec3 n) {
  */
 void toTangentFrame(const highp vec4 q, out highp vec3 n, out highp vec3 t) {
     toTangentFrame(q, n);
-    t = vec3( 1.0,  0.0,  0.0) +
-        vec3(-2.0,  2.0, -2.0) * q.y * q.yxw +
-        vec3(-2.0,  2.0,  2.0) * q.z * q.zwx;
+    t = vec3(1.0, 0.0, 0.0) +
+        vec3(-2.0, 2.0, -2.0) * q.y * q.yxw +
+        vec3(-2.0, 2.0, 2.0) * q.z * q.zwx;
 }

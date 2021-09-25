@@ -15,6 +15,7 @@ void blendPostLightingColor(const MaterialInputs material, inout vec4 color) {
 #endif
 }
 #endif
+
 void material(inout MaterialInputs material);
 
 void main() {
@@ -30,4 +31,5 @@ void main() {
     material(inputs);
 
     fragColor = inputs.baseColor;
+
 }

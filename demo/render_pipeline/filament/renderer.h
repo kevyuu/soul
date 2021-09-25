@@ -15,9 +15,10 @@ namespace SoulFila {
 	static constexpr BindingPoint FRAME_UNIFORM_BINDING_POINT = { 0, 0 };
 	static constexpr BindingPoint LIGHT_UNIFORM_BINDING_POINT = { 0, 1 };
 	static constexpr BindingPoint SHADOW_UNIFORM_BINDING_POINT = { 0, 2 };
+	static constexpr BindingPoint FROXEL_RECORD_UNIFORM_BINDING_POINT = { 0, 3 };
 
 	static constexpr uint8 FRAME_SAMPLER_SET = 0;
-	static constexpr uint8 FRAME_SAMPLER_START_BINDING = 3;
+	static constexpr uint8 FRAME_SAMPLER_START_BINDING = 4;
 
 	static constexpr BindingPoint MATERIAL_UNIFORM_BINDING_POINT = { 1, 0 };
 

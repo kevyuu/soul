@@ -45,7 +45,7 @@ vec3 prefilteredDFG(float perceptualRoughness, float NoV) {
 
 vec3 Irradiance_SphericalHarmonics(const vec3 n) {
     return max(
-          frameUniforms.iblSH[0]
+        frameUniforms.iblSH[0]
 #if SPHERICAL_HARMONICS_BANDS >= 2
         + frameUniforms.iblSH[1] * (n.y)
         + frameUniforms.iblSH[2] * (n.z)
@@ -83,13 +83,14 @@ vec3 diffuseIrradiance(const vec3 n) {
         vec3 m0du = m0 * du;
         vec3 m1dv = m1 * dv;
         vec3 c;
-        c  = Irradiance_RoughnessOne(n - m0du - m1dv);
+        c = Irradiance_RoughnessOne(n - m0du - m1dv);
         c += Irradiance_RoughnessOne(n + m0du - m1dv);
         c += Irradiance_RoughnessOne(n + m0du + m1dv);
         c += Irradiance_RoughnessOne(n - m0du + m1dv);
         return c * 0.25;
 #endif
-    } else {
+    }
+    else {
         return Irradiance_SphericalHarmonics(n);
     }
 }
@@ -139,10 +140,10 @@ vec3 specularDFG(const PixelParams pixel) {
 vec3 getReflectedVector(const PixelParams pixel, const vec3 v, const vec3 n) {
 #if defined(MATERIAL_HAS_ANISOTROPY)
     vec3  anisotropyDirection = pixel.anisotropy >= 0.0 ? pixel.anisotropicB : pixel.anisotropicT;
-    vec3  anisotropicTangent  = cross(anisotropyDirection, v);
-    vec3  anisotropicNormal   = cross(anisotropicTangent, anisotropyDirection);
-    float bendFactor          = abs(pixel.anisotropy) * saturate(5.0 * pixel.perceptualRoughness);
-    vec3  bentNormal          = normalize(mix(n, anisotropicNormal, bendFactor));
+    vec3  anisotropicTangent = cross(anisotropyDirection, v);
+    vec3  anisotropicNormal = cross(anisotropicTangent, anisotropyDirection);
+    float bendFactor = abs(pixel.anisotropy) * saturate(5.0 * pixel.perceptualRoughness);
+    vec3  bentNormal = normalize(mix(n, anisotropicNormal, bendFactor));
 
     vec3 r = reflect(-v, bentNormal);
 #else
@@ -216,7 +217,7 @@ vec3 importanceSamplingVNdfDggx(vec2 u, float roughness, vec3 v) {
     float p2 = r * sin(phi) * ((u.y < a) ? 1.0 : v.z);
 
     // compute normal
-    vec3 h = p1 * t + p2 * b + sqrt(max(0.0, 1.0 - p1*p1 - p2*p2)) * v;
+    vec3 h = p1 * t + p2 * b + sqrt(max(0.0, 1.0 - p1 * p1 - p2 * p2)) * v;
 
     // unstretch
     h = normalize(vec3(alpha * h.x, alpha * h.y, max(0.0, h.z)));
@@ -252,9 +253,9 @@ vec3 isEvaluateSpecularIBL(const PixelParams pixel, vec3 n, vec3 v, float NoV) {
     float c = cos(a);
     float s = sin(a);
     mat3 R;
-    R[0] = vec3( c, s, 0);
+    R[0] = vec3(c, s, 0);
     R[1] = vec3(-s, c, 0);
-    R[2] = vec3( 0, 0, 1);
+    R[2] = vec3(0, 0, 1);
     T *= R;
 
     float roughness = pixel.roughness;
@@ -311,9 +312,9 @@ vec3 isEvaluateDiffuseIBL(const PixelParams pixel, vec3 n, vec3 v) {
     float c = cos(a);
     float s = sin(a);
     mat3 R;
-    R[0] = vec3( c, s, 0);
+    R[0] = vec3(c, s, 0);
     R[1] = vec3(-s, c, 0);
-    R[2] = vec3( 0, 0, 1);
+    R[2] = vec3(0, 0, 1);
     T *= R;
 
     float dim = float(textureSize(light_iblSpecular, 0).x);
@@ -424,7 +425,7 @@ void evaluateClearCoatIBL(const PixelParams pixel, float specularAO, inout vec3 
 }
 
 void evaluateSubsurfaceIBL(const PixelParams pixel, const vec3 diffuseIrradiance,
-        inout vec3 Fd, inout vec3 Fr) {
+    inout vec3 Fd, inout vec3 Fr) {
 #if defined(SHADING_MODEL_SUBSURFACE)
     vec3 viewIndependent = diffuseIrradiance;
     vec3 viewDependent = prefilteredRadiance(-shading_view, pixel.roughness, 1.0 + pixel.thickness);
@@ -451,7 +452,7 @@ void refractionSolidSphere(const PixelParams pixel,
     ray.position = vec3(shading_position + r * d);
     ray.d = d;
     vec3 n1 = normalize(NoR * r - n * 0.5);
-    ray.direction = refract(r, n1,  pixel.etaRI);
+    ray.direction = refract(r, n1, pixel.etaRI);
 }
 
 void refractionSolidBox(const PixelParams pixel,
@@ -486,7 +487,8 @@ void refractionThinSphere(const PixelParams pixel,
     ray.d = d;
 }
 
-void applyRefraction(const PixelParams pixel,
+void applyRefraction(
+    const PixelParams pixel,
     const vec3 n0, vec3 E, vec3 Fd, vec3 Fr,
     inout vec3 color) {
 
@@ -500,7 +502,7 @@ void applyRefraction(const PixelParams pixel,
 #error invalid REFRACTION_TYPE
 #endif
 
-    /* compute transmission T */
+    // compute transmission T
 #if defined(MATERIAL_HAS_ABSORPTION)
 #if defined(MATERIAL_HAS_THICKNESS) || defined(MATERIAL_HAS_MICRO_THICKNESS)
     vec3 T = min(vec3(1.0), exp(-pixel.absorption * ray.d));
@@ -509,11 +511,11 @@ void applyRefraction(const PixelParams pixel,
 #endif
 #endif
 
-    float perceptualRoughness = pixel.perceptualRoughnessUnclamped;
+    // Roughness remapping so that an IOR of 1.0 means no microfacet refraction and an IOR
+    // of 1.5 has full microfacet refraction
+    float perceptualRoughness = mix(pixel.perceptualRoughnessUnclamped, 0.0,
+        saturate(pixel.etaIR * 3.0 - 2.0));
 #if REFRACTION_TYPE == REFRACTION_TYPE_THIN
-    // Roughness remaping for thin layers, see Burley 2012, "Physically-Based Shading at Disney"
-    perceptualRoughness = saturate((0.65 * pixel.etaRI - 0.35) * perceptualRoughness);
-
     // For thin surfaces, the light will bounce off at the second interface in the direction of
     // the reflection, effectively adding to the specular, but this process will repeat itself.
     // Each time the ray exits the surface on the front side after the first bounce,
@@ -543,10 +545,13 @@ void applyRefraction(const PixelParams pixel,
     vec3 Ft = textureLod(light_ssr, p.xy, lod).rgb;
 #endif
 
-    /* fresnel from the first interface */
+    // base color changes the amount of light passing through the boundary
+    Ft *= pixel.diffuseColor;
+
+    // fresnel from the first interface
     Ft *= 1.0 - E;
 
-    /* apply absorption */
+    // apply absorption
 #if defined(MATERIAL_HAS_ABSORPTION)
     Ft *= T;
 #endif
@@ -557,9 +562,10 @@ void applyRefraction(const PixelParams pixel,
 }
 #endif
 
-void combineDiffuseAndSpecular(const PixelParams pixel,
-        const vec3 n, const vec3 E, const vec3 Fd, const vec3 Fr,
-        inout vec3 color) {
+void combineDiffuseAndSpecular(
+    const PixelParams pixel,
+    const vec3 n, const vec3 E, const vec3 Fd, const vec3 Fr,
+    inout vec3 color) {
 #if defined(HAS_REFRACTION)
     applyRefraction(pixel, n, E, Fd, Fr, color);
 #else

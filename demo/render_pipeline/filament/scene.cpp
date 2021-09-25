@@ -825,10 +825,7 @@ void SoulFila::Scene::importFromGLTF(const char* path) {
         }
 
         ConstrainGpuProgramKey_(&programKey, uvmap);
-        {
-            SOUL_PROFILE_ZONE_WITH_NAME("Create Program Set");
-            dstMaterial.programSetID = _programRegistry->createProgramSet(programKey);
-        }
+        dstMaterial.programSetID = _programRegistry->createProgramSet(programKey);
 
         MaterialUBO& matBuf = dstMaterial.buffer;
         MaterialTextures& matTexs = dstMaterial.textures;

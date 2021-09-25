@@ -6,12 +6,6 @@ mat4 getLightFromWorldMatrix() {
     return frameUniforms.lightFromWorldMatrix[0];
 }
 
-#if defined(HAS_SHADOWING)
-mat4 getSpotLightFromWorldMatrix(uint index) {
-    return shadowUniforms.spotLightFromWorldMatrix[index];
-}
-#endif
-
 /** @public-api */
 mat4 getWorldFromModelMatrix() {
     return objectUniforms.worldFromModelMatrix;
@@ -28,7 +22,7 @@ mat3 getWorldFromModelNormalMatrix() {
 
 #if defined(HAS_SKINNING_OR_MORPHING)
 vec3 mulBoneNormal(vec3 n, uint i) {
-    vec4 q  = bonesUniforms.bones[i + 0u];
+    vec4 q = bonesUniforms.bones[i + 0u];
     vec3 is = bonesUniforms.bones[i + 3u].xyz;
 
     // apply the inverse of the non-uniform scales
@@ -55,19 +49,17 @@ vec3 mulBoneVertex(vec3 v, uint i) {
 }
 
 void skinNormal(inout vec3 n, const uvec4 ids, const vec4 weights) {
-    n =   mulBoneNormal(n, ids.x * 4u) * weights.x
+    n = mulBoneNormal(n, ids.x * 4u) * weights.x
         + mulBoneNormal(n, ids.y * 4u) * weights.y
         + mulBoneNormal(n, ids.z * 4u) * weights.z
         + mulBoneNormal(n, ids.w * 4u) * weights.w;
-    n = inverse(objectUniforms.worldFromModelNormalMatrix) * n;
 }
 
 void skinPosition(inout vec3 p, const uvec4 ids, const vec4 weights) {
-    p =   mulBoneVertex(p, ids.x * 4u) * weights.x
+    p = mulBoneVertex(p, ids.x * 4u) * weights.x
         + mulBoneVertex(p, ids.y * 4u) * weights.y
         + mulBoneVertex(p, ids.z * 4u) * weights.z
         + mulBoneVertex(p, ids.w * 4u) * weights.w;
-    p = (inverse(objectUniforms.worldFromModelMatrix) * vec4(p, 1.0)).xyz;
 }
 #endif
 

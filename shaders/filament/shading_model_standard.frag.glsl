@@ -29,7 +29,7 @@ float clearCoatLobe(const PixelParams pixel, const vec3 h, float NoH, float LoH,
 
 #if defined(MATERIAL_HAS_ANISOTROPY)
 vec3 anisotropicLobe(const PixelParams pixel, const Light light, const vec3 h,
-        float NoV, float NoL, float NoH, float LoH) {
+    float NoV, float NoL, float NoH, float LoH) {
 
     vec3 l = light.l;
     vec3 t = pixel.anisotropicT;
@@ -59,7 +59,7 @@ vec3 anisotropicLobe(const PixelParams pixel, const Light light, const vec3 h,
 #endif
 
 vec3 isotropicLobe(const PixelParams pixel, const Light light, const vec3 h,
-        float NoV, float NoL, float NoH, float LoH) {
+    float NoV, float NoL, float NoH, float LoH) {
 
     float D = distribution(pixel.roughness, NoH, h);
     float V = visibility(pixel.roughness, NoV, NoL);
@@ -69,7 +69,7 @@ vec3 isotropicLobe(const PixelParams pixel, const Light light, const vec3 h,
 }
 
 vec3 specularLobe(const PixelParams pixel, const Light light, const vec3 h,
-        float NoV, float NoL, float NoH, float LoH) {
+    float NoV, float NoL, float NoH, float LoH) {
 #if defined(MATERIAL_HAS_ANISOTROPY)
     return anisotropicLobe(pixel, light, h, NoV, NoL, NoH, LoH);
 #else
@@ -138,7 +138,7 @@ vec3 surfaceShading(const PixelParams pixel, const Light light, float occlusion)
 
     // Early exit to avoid the extra multiplication by NoL
     return (color * light.colorIntensity.rgb) *
-            (light.colorIntensity.w * light.attenuation * occlusion);
+        (light.colorIntensity.w * light.attenuation * occlusion);
 #else
     color *= attenuation;
     color += clearCoat;
@@ -146,5 +146,5 @@ vec3 surfaceShading(const PixelParams pixel, const Light light, float occlusion)
 #endif
 
     return (color * light.colorIntensity.rgb) *
-            (light.colorIntensity.w * light.attenuation * NoL * occlusion);
+        (light.colorIntensity.w * light.attenuation * NoL * occlusion);
 }

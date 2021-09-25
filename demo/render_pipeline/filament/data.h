@@ -187,8 +187,7 @@ namespace SoulFila {
 
         Soul::Vec4f sun; // cos(sunAngle), sin(sunAngle), 1/(sunAngle*HALO_SIZE-sunAngle), HALO_EXP
 
-        Soul::Vec3f lightPosition;
-        uint32 padding;
+        Soul::Vec4f padding0;
 
         Soul::Vec3f lightDirection;
         uint32 fParamsX; // stride-x
@@ -246,8 +245,13 @@ namespace SoulFila {
         Soul::Vec2f clipControl;
         Soul::Vec2f padding1;
 
+        float vsmExponent;
+        float vsmDepthScale;
+        float vsmLightBleedReduction;
+        float vsmReserved0;
+
         // bring PerViewUib to 2 KiB
-        Soul::Vec4f padding2[60];
+        Soul::Vec4f padding2[59];
     };
 
     struct alignas(256) PerRenderableUBO {
@@ -255,10 +259,17 @@ namespace SoulFila {
         Soul::GLSLMat3f worldFromModelNormalMatrix; // this gets expanded to 48 bytes during the copy to the UBO
         alignas(16) Soul::Vec4f morphWeights;
         // TODO: we can pack all the boolean bellow
-        int32_t skinningEnabled = 0; // 0=disabled, 1=enabled, ignored unless variant & SKINNING_OR_MORPHING
-        int32_t morphingEnabled = 0; // 0=disabled, 1=enabled, ignored unless variant & SKINNING_OR_MORPHING
-        uint32_t screenSpaceContactShadows = 0; // 0=disabled, 1=enabled, ignored unless variant & SKINNING_OR_MORPHING
-        float padding0 = 0.0f;
+        int32_t skinningEnabled; // 0=disabled, 1=enabled, ignored unless variant & SKINNING_OR_MORPHING
+        int32_t morphingEnabled; // 0=disabled, 1=enabled, ignored unless variant & SKINNING_OR_MORPHING
+        uint32_t screenSpaceContactShadows; // 0=disabled, 1=enabled, ignored unless variant & SKINNING_OR_MORPHING                           // 0
+        // TODO: We need a better solution, this currently holds the average local scale for the renderable
+        float userData;
+
+        static uint32_t packFlags(bool skinning, bool morphing, bool contactShadows) noexcept {
+            return (skinning ? 1 : 0) |
+                (morphing ? 2 : 0) |
+                (contactShadows ? 4 : 0);
+        }
     };
 
     struct LightUBO {
@@ -272,6 +283,10 @@ namespace SoulFila {
 
     struct LightsUBO {
         LightUBO lights[CONFIG_MAX_LIGHT_COUNT];
+    };
+
+    struct FroxelRecordsUBO {
+        Vec4ui32 records[1024];
     };
 
     // UBO for punctual (spot light) shadows.
@@ -341,6 +356,7 @@ namespace SoulFila {
         BoneUBO bones[CONFIG_MAX_BONE_COUNT];
     };
 
+
     struct MaterialTextures {
         TextureID baseColorTexture;
         TextureID metallicRoughnessTexture;
@@ -354,7 +370,7 @@ namespace SoulFila {
         TextureID sheenRoughnessTexture;
         TextureID transmissionTexture;
 
-        MaterialTextures() {}
+        MaterialTextures() = default;
     };
 
 	struct Material {

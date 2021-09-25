@@ -87,7 +87,7 @@ highp vec3 getLightSpacePosition() {
     // For VSM, do not project the Z coordinate. It remains as linear Z in light space.
     // See the computeVsmLightSpaceMatrix comments in ShadowMap.cpp.
     return vec3(vertex_lightSpacePosition.xy * (1.0 / vertex_lightSpacePosition.w),
-            vertex_lightSpacePosition.z);
+        vertex_lightSpacePosition.z);
 #else
     return vertex_lightSpacePosition.xyz * (1.0 / vertex_lightSpacePosition.w);
 #endif
@@ -107,7 +107,11 @@ highp vec3 getNormalizedViewportCoord() {
 
 #if defined(HAS_SHADOWING) && defined(HAS_DYNAMIC_LIGHTING)
 highp vec3 getSpotLightSpacePosition(uint index) {
-    highp vec4 position = vertex_spotLightSpacePosition[index];
+    vec3 dir = shadowUniforms.directionShadowBias[index].xyz;
+    float bias = shadowUniforms.directionShadowBias[index].w;
+    highp vec4 position = computeLightSpacePosition(vertex_worldPosition,
+        vertex_worldNormal, dir, bias, shadowUniforms.spotLightFromWorldMatrix[index]);
+
 #if defined(HAS_VSM)
     // For VSM, do not project the Z coordinate. It remains as linear Z in light space.
     // See the computeVsmLightSpaceMatrix comments in ShadowMap.cpp.
@@ -141,6 +145,7 @@ highp vec3 getCascadeLightSpacePosition(uint cascade) {
     // This branch will be coherent (mostly) for neighboring fragments, and it's worth avoiding
     // the matrix multiply inside computeLightSpacePosition.
     if (cascade == 0u) {
+        // Note: this branch may cause issues with derivatives
         return getLightSpacePosition();
     }
 

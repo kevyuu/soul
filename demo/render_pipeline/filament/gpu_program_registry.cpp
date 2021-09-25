@@ -173,8 +173,7 @@ namespace SoulFila {
         // directional light
         Demo::ShaderUniformMember("lightColorIntensity", Demo::ShaderVarType::FLOAT4),
         Demo::ShaderUniformMember("sun", Demo::ShaderVarType::FLOAT4),
-        Demo::ShaderUniformMember("lightPosition", Demo::ShaderVarType::FLOAT3),
-        Demo::ShaderUniformMember("padding0",Demo::ShaderVarType::UINT),
+        Demo::ShaderUniformMember("padding0",Demo::ShaderVarType::FLOAT4),
         Demo::ShaderUniformMember("lightDirection", Demo::ShaderVarType::FLOAT3),
         Demo::ShaderUniformMember("fParamsX",Demo::ShaderVarType::UINT),
         // shadow
@@ -226,8 +225,13 @@ namespace SoulFila {
         Demo::ShaderUniformMember("clipControl", Demo::ShaderVarType::FLOAT2),
         Demo::ShaderUniformMember("padding1", Demo::ShaderVarType::FLOAT2),
 
+        Demo::ShaderUniformMember("vsmExponent", Demo::ShaderVarType::FLOAT),
+        Demo::ShaderUniformMember("vsmDepthScale", Demo::ShaderVarType::FLOAT),
+        Demo::ShaderUniformMember("vsmLightBleedReduction", Demo::ShaderVarType::FLOAT),
+        Demo::ShaderUniformMember("vsmReserved0", Demo::ShaderVarType::FLOAT),
+
         // bring PerViewUib to 2 KiB
-        Demo::ShaderUniformMember("padding2", Demo::ShaderVarType::FLOAT4, Demo::ShaderPrecision::DEFAULT, 60)
+        Demo::ShaderUniformMember("padding2", Demo::ShaderVarType::FLOAT4, Demo::ShaderPrecision::DEFAULT, 59)
 
     };
     static constexpr Demo::ShaderUniform FRAME_UNIFORM = {
@@ -246,7 +250,7 @@ namespace SoulFila {
         Demo::ShaderUniformMember("skinningEnabled", Demo::ShaderVarType::INT),
         Demo::ShaderUniformMember("morphingEnabled", Demo::ShaderVarType::INT),
         Demo::ShaderUniformMember("screenSpaceContactShadows", Demo::ShaderVarType::UINT),
-        Demo::ShaderUniformMember("padding0", Demo::ShaderVarType::FLOAT)
+        Demo::ShaderUniformMember("userData", Demo::ShaderVarType::FLOAT)
     };
     static constexpr Demo::ShaderUniform OBJECT_UNIFORM = {
         "ObjectUniforms",
@@ -292,6 +296,19 @@ namespace SoulFila {
         sizeof(BONES_UNIFORM_MEMBER) / sizeof(BONES_UNIFORM_MEMBER[0]),
         RENDERABLE_BONE_UNIFORM_BINDING_POINT.set,
         RENDERABLE_BONE_UNIFORM_BINDING_POINT.binding
+    };
+
+    static constexpr Demo::ShaderUniformMember FROXEL_RECORD_UNIFORM_MEMBER[] = {
+        Demo::ShaderUniformMember("records", Demo::ShaderVarType::UINT4, Demo::ShaderPrecision::HIGH, 1024)
+    };
+
+    static constexpr Demo::ShaderUniform FROXEL_RECORD_UNIFORM = {
+        "FroxelRecordUniforms",
+        "froxelRecordUniforms",
+        FROXEL_RECORD_UNIFORM_MEMBER,
+        std::size(FROXEL_RECORD_UNIFORM_MEMBER),
+        FROXEL_RECORD_UNIFORM_BINDING_POINT.set,
+        FROXEL_RECORD_UNIFORM_BINDING_POINT.binding
     };
 
     static constexpr Demo::ShaderUniformMember MATERIAL_UNIFORM_MEMBER[] = {
@@ -461,12 +478,14 @@ namespace SoulFila {
         bool hasDoubleSidedCapability = false;
         bool hasExternalSamplers = false;
         bool hasShadowMultiplier = false;
+        bool hasTransparentShadow = false;
         bool specularAntiAliasing = false;
         bool clearCoatIorChange = true;
         bool flipUV = true;
         bool multiBounceAO = false;
         bool multiBounceAOSet = false;
         bool specularAOSet = false;
+        bool hasCustomSurfaceShading = false;
         SpecularAmbientOcclusion specularAO = SpecularAmbientOcclusion::NONE;
         RefractionMode refractionMode = RefractionMode::NONE;
         RefractionType refractionType = RefractionType::SOLID;
@@ -654,7 +673,6 @@ namespace SoulFila {
         uniforms.reserve(8);
         uniforms.add(FRAME_UNIFORM);
         uniforms.add(OBJECT_UNIFORM);
-        if (litVariants && variant.hasShadowReceiver()) uniforms.add(SHADOW_UNIFORM);
         if (variant.hasSkinningOrMorphing()) uniforms.add(BONES_UNIFORM);
         SOUL_ASSERT(0, info.uib.size() < SOUL_UTYPE_MAX(uint8), "");
         uniforms.add(MATERIAL_UNIFORM);
@@ -739,6 +757,7 @@ namespace SoulFila {
         bool multiBounceAO = info.multiBounceAOSet ? info.multiBounceAO : true;
         defines.add(Demo::ShaderDefine("MULTI_BOUNCE_AMBIENT_OCCLUSION", multiBounceAO ? 1u : 0u));
         if (variant.hasFog()) defines.add(Demo::ShaderDefine("HAS_FOG"));
+        if (info.hasTransparentShadow) defines.add(Demo::ShaderDefine("HAS_TRANSPARENT_SHADOW"));
         if (info.hasDoubleSidedCapability) defines.add(Demo::ShaderDefine("MATERIAL_HAS_DOUBLE_SIDED_CAPABILITY"));
         switch (info.blendingMode) {
         case BlendingMode::OPAQUE:
@@ -792,6 +811,7 @@ namespace SoulFila {
             break;
         }
         defines.add(Demo::ShaderDefine(SHADING_DEFINES[info.shading]));
+        if (info.hasCustomSurfaceShading) defines.add(Demo::ShaderDefine("MATERIAL_HAS_CUSTOM_SURFACE_SHADING"));
         desc.defines = defines.data();
         desc.defineCount = Soul::Cast<uint8>(defines.size());
 
@@ -821,7 +841,8 @@ namespace SoulFila {
         uniforms.add(FRAME_UNIFORM);
         uniforms.add(OBJECT_UNIFORM);
         uniforms.add(LIGHT_UNIFORM);
-        SOUL_ASSERT(0, info.uib.size() < SOUL_UTYPE_MAX(uint8), "");
+        if ((info.isLit || info.hasShadowMultiplier) && variant.hasShadowReceiver()) uniforms.add(SHADOW_UNIFORM);
+        uniforms.add(FROXEL_RECORD_UNIFORM);
         uniforms.add(MATERIAL_UNIFORM);
         desc.uniforms = uniforms.data();
         desc.uniformCount = Soul::Cast<decltype(desc.uniformCount)>(uniforms.size());
@@ -833,7 +854,6 @@ namespace SoulFila {
             samplers.add(Demo::ShaderSampler("light_shadowMap", FRAME_SAMPLER_SET, frameSamplerBinding++, Demo::SamplerType::SAMPLER_2D_ARRAY, Demo::SamplerFormat::FLOAT, Demo::ShaderPrecision::HIGH));
         else
             samplers.add(Demo::ShaderSampler("light_shadowMap", FRAME_SAMPLER_SET, frameSamplerBinding++, Demo::SamplerType::SAMPLER_2D_ARRAY, Demo::SamplerFormat::SHADOW, Demo::ShaderPrecision::MEDIUM));
-        samplers.add(Demo::ShaderSampler("light_records", FRAME_SAMPLER_SET, frameSamplerBinding++, Demo::SamplerType::SAMPLER_2D, Demo::SamplerFormat::UINT, Demo::ShaderPrecision::MEDIUM));
         samplers.add(Demo::ShaderSampler("light_froxels", FRAME_SAMPLER_SET, frameSamplerBinding++, Demo::SamplerType::SAMPLER_2D, Demo::SamplerFormat::UINT, Demo::ShaderPrecision::MEDIUM));
         samplers.add(Demo::ShaderSampler("light_iblDFG", FRAME_SAMPLER_SET, frameSamplerBinding++, Demo::SamplerType::SAMPLER_2D, Demo::SamplerFormat::FLOAT, Demo::ShaderPrecision::MEDIUM));
         samplers.add(Demo::ShaderSampler("light_iblSpecular", FRAME_SAMPLER_SET, frameSamplerBinding++, Demo::SamplerType::SAMPLER_CUBEMAP, Demo::SamplerFormat::FLOAT, Demo::ShaderPrecision::MEDIUM));

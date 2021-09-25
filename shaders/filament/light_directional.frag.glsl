@@ -14,7 +14,7 @@ vec3 sampleSunAreaLight(const vec3 lightDirection) {
         float d = frameUniforms.sun.x;
         highp vec3 s = shading_reflected - LoR * lightDirection;
         return LoR < d ?
-                normalize(lightDirection * d + normalize(s) * frameUniforms.sun.y) : shading_reflected;
+            normalize(lightDirection * d + normalize(s) * frameUniforms.sun.y) : shading_reflected;
     }
 #endif
     return lightDirection;
@@ -31,9 +31,15 @@ Light getDirectionalLight() {
 }
 
 void evaluateDirectionalLight(const MaterialInputs material,
-        const PixelParams pixel, inout vec3 color) {
+    const PixelParams pixel, inout vec3 color) {
 
     Light light = getDirectionalLight();
+
+#if defined(MATERIAL_CAN_SKIP_LIGHTING)
+    if (light.NoL <= 0.0) {
+        return;
+    }
+#endif
 
     float visibility = 1.0;
 #if defined(HAS_SHADOWING)
@@ -45,11 +51,7 @@ void evaluateDirectionalLight(const MaterialInputs material,
         bool hasDirectionalShadows = bool(frameUniforms.directionalShadows & 1u);
         if (hasDirectionalShadows && cascadeHasVisibleShadows) {
             uint layer = cascade;
-#if defined(HAS_VSM)
-            visibility = shadowVsm(light_shadowMap, layer, getCascadeLightSpacePosition(cascade));
-#else
             visibility = shadow(light_shadowMap, layer, getCascadeLightSpacePosition(cascade));
-#endif
         }
         if ((frameUniforms.directionalShadows & 0x2u) != 0u && visibility > 0.0) {
             if (objectUniforms.screenSpaceContactShadows != 0u) {
@@ -59,17 +61,20 @@ void evaluateDirectionalLight(const MaterialInputs material,
 
         visibility *= 1.0 - ssContactShadowOcclusion;
 
-        #if defined(MATERIAL_HAS_AMBIENT_OCCLUSION)
+#if defined(MATERIAL_HAS_AMBIENT_OCCLUSION)
         visibility *= computeMicroShadowing(light.NoL, material.ambientOcclusion);
-        #endif
-    } else {
+#endif
 #if defined(MATERIAL_CAN_SKIP_LIGHTING)
-        return;
+        if (visibility <= 0.0) {
+            return;
+        }
 #endif
     }
-#elif defined(MATERIAL_CAN_SKIP_LIGHTING)
-    if (light.NoL <= 0.0) return;
 #endif
 
+#if defined(MATERIAL_HAS_CUSTOM_SURFACE_SHADING)
+    color.rgb += customSurfaceShading(material, pixel, light, visibility);
+#else
     color.rgb += surfaceShading(pixel, light, visibility);
+#endif
 }

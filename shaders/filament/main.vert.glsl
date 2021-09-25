@@ -8,51 +8,51 @@ void main() {
 #if defined(HAS_ATTRIBUTE_TANGENTS)
     // If the material defines a value for the "normal" property, we need to output
     // the full orthonormal basis to apply normal mapping
-    #if defined(MATERIAL_NEEDS_TBN)
-        // Extract the normal and tangent in world space from the input quaternion
-        // We encode the orthonormal basis as a quaternion to save space in the attributes
-        toTangentFrame(mesh_tangents, material.worldNormal, vertex_worldTangent.xyz);
+#if defined(MATERIAL_NEEDS_TBN)
+    // Extract the normal and tangent in world space from the input quaternion
+    // We encode the orthonormal basis as a quaternion to save space in the attributes
+    toTangentFrame(mesh_tangents, material.worldNormal, vertex_worldTangent.xyz);
 
-        #if defined(HAS_SKINNING_OR_MORPHING)
-        if (objectUniforms.morphingEnabled == 1) {
-            vec3 normal0, normal1, normal2, normal3;
-            toTangentFrame(mesh_custom4, normal0);
-            toTangentFrame(mesh_custom5, normal1);
-            toTangentFrame(mesh_custom6, normal2);
-            toTangentFrame(mesh_custom7, normal3);
-            material.worldNormal += objectUniforms.morphWeights.x * normal0;
-            material.worldNormal += objectUniforms.morphWeights.y * normal1;
-            material.worldNormal += objectUniforms.morphWeights.z * normal2;
-            material.worldNormal += objectUniforms.morphWeights.w * normal3;
-            material.worldNormal = normalize(material.worldNormal);
-        }
+#if defined(HAS_SKINNING_OR_MORPHING)
+    if (objectUniforms.morphingEnabled == 1) {
+        vec3 normal0, normal1, normal2, normal3;
+        toTangentFrame(mesh_custom4, normal0);
+        toTangentFrame(mesh_custom5, normal1);
+        toTangentFrame(mesh_custom6, normal2);
+        toTangentFrame(mesh_custom7, normal3);
+        material.worldNormal += objectUniforms.morphWeights.x * normal0;
+        material.worldNormal += objectUniforms.morphWeights.y * normal1;
+        material.worldNormal += objectUniforms.morphWeights.z * normal2;
+        material.worldNormal += objectUniforms.morphWeights.w * normal3;
+        material.worldNormal = normalize(material.worldNormal);
+    }
 
-        if (objectUniforms.skinningEnabled == 1) {
-            skinNormal(material.worldNormal, mesh_bone_indices, mesh_bone_weights);
-            skinNormal(vertex_worldTangent.xyz, mesh_bone_indices, mesh_bone_weights);
-        }
-        #endif
+    if (objectUniforms.skinningEnabled == 1) {
+        skinNormal(material.worldNormal, mesh_bone_indices, mesh_bone_weights);
+        skinNormal(vertex_worldTangent.xyz, mesh_bone_indices, mesh_bone_weights);
+    }
+#endif
 
-        // We don't need to normalize here, even if there's a scale in the matrix
-        // because we ensure the worldFromModelNormalMatrix pre-scales the normal such that
-        // all its components are < 1.0. This prevents the bitangent to exceed the range of fp16
-        // in the fragment shader, where we renormalize after interpolation
-        vertex_worldTangent.xyz = objectUniforms.worldFromModelNormalMatrix * vertex_worldTangent.xyz;
-        vertex_worldTangent.w = mesh_tangents.w;
-        material.worldNormal = objectUniforms.worldFromModelNormalMatrix * material.worldNormal;
-    #else // MATERIAL_NEEDS_TBN
-        // Without anisotropy or normal mapping we only need the normal vector
-        toTangentFrame(mesh_tangents, material.worldNormal);
+    // We don't need to normalize here, even if there's a scale in the matrix
+    // because we ensure the worldFromModelNormalMatrix pre-scales the normal such that
+    // all its components are < 1.0. This prevents the bitangent to exceed the range of fp16
+    // in the fragment shader, where we renormalize after interpolation
+    vertex_worldTangent.xyz = objectUniforms.worldFromModelNormalMatrix * vertex_worldTangent.xyz;
+    vertex_worldTangent.w = mesh_tangents.w;
+    material.worldNormal = objectUniforms.worldFromModelNormalMatrix * material.worldNormal;
+#else // MATERIAL_NEEDS_TBN
+    // Without anisotropy or normal mapping we only need the normal vector
+    toTangentFrame(mesh_tangents, material.worldNormal);
 
-        #if defined(HAS_SKINNING_OR_MORPHING)
-            if (objectUniforms.skinningEnabled == 1) {
-                skinNormal(material.worldNormal, mesh_bone_indices, mesh_bone_weights);
-            }
-        #endif
+#if defined(HAS_SKINNING_OR_MORPHING)
+    if (objectUniforms.skinningEnabled == 1) {
+        skinNormal(material.worldNormal, mesh_bone_indices, mesh_bone_weights);
+    }
+#endif
 
-        material.worldNormal = objectUniforms.worldFromModelNormalMatrix * material.worldNormal;
+    material.worldNormal = objectUniforms.worldFromModelNormalMatrix * material.worldNormal;
 
-    #endif // MATERIAL_HAS_ANISOTROPY || MATERIAL_HAS_NORMAL || MATERIAL_HAS_CLEAR_COAT_NORMAL
+#endif // MATERIAL_HAS_ANISOTROPY || MATERIAL_HAS_NORMAL || MATERIAL_HAS_CLEAR_COAT_NORMAL
 #endif // HAS_ATTRIBUTE_TANGENTS
 
     // Invoke user code
@@ -91,16 +91,7 @@ void main() {
 
 #if defined(HAS_SHADOWING) && defined(HAS_DIRECTIONAL_LIGHTING)
     vertex_lightSpacePosition = computeLightSpacePosition(vertex_worldPosition, vertex_worldNormal,
-            frameUniforms.lightDirection, frameUniforms.shadowBias.y, getLightFromWorldMatrix());
-#endif
-
-#if defined(HAS_SHADOWING) && defined(HAS_DYNAMIC_LIGHTING)
-    for (uint l = 0u; l < uint(MAX_SHADOW_CASTING_SPOTS); l++) {
-        vec3 dir = shadowUniforms.directionShadowBias[l].xyz;
-        float bias = shadowUniforms.directionShadowBias[l].w;
-        vertex_spotLightSpacePosition[l] = computeLightSpacePosition(vertex_worldPosition,
-                vertex_worldNormal, dir, bias, getSpotLightFromWorldMatrix(l));
-    }
+        frameUniforms.lightDirection, frameUniforms.shadowBias.y, getLightFromWorldMatrix());
 #endif
 
 #if defined(VERTEX_DOMAIN_DEVICE)
@@ -123,5 +114,4 @@ void main() {
 #endif
 
     gl_Position.z = dot(gl_Position.zw, frameUniforms.clipControl.xy);
-
 }

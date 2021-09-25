@@ -60,7 +60,8 @@ float evaluateSSAO() {
         highp vec4 w = (vec4(d) - depths) * frameUniforms.aoSamplingQualityAndEdgeDistance;
         w = max(vec4(MEDIUMP_FLT_MIN), 1.0 - w * w) * b;
         return dot(ao, w) * (1.0 / (w.x + w.y + w.z + w.w));
-    } else {
+    }
+    else {
         return textureLod(light_ssao, uv, 0.0).r;
     }
 #else
@@ -80,7 +81,7 @@ float sphericalCapsIntersection(float cosCap1, float cosCap2, float cosDistance)
     // Approximation mentioned by Jimenez et al. 2016
     float r1 = acosFastPositive(cosCap1);
     float r2 = acosFastPositive(cosCap2);
-    float d  = acosFast(cosDistance);
+    float d = acosFast(cosDistance);
 
     // We work with cosine angles, replace the original paper's use of
     // cos(min(r1, r2)) with max(cosCap1, cosCap2)
@@ -89,7 +90,8 @@ float sphericalCapsIntersection(float cosCap1, float cosCap2, float cosDistance)
 
     if (min(r1, r2) <= max(r1, r2) - d) {
         return 1.0 - max(cosCap1, cosCap2);
-    } else if (r1 + r2 <= d) {
+    }
+    else if (r1 + r2 <= d) {
         return 0.0;
     }
 
@@ -111,7 +113,7 @@ float SpecularAO_Cones(float NoV, float visibility, float roughness) {
     // aperture from roughness, log(10) / log(2) = 3.321928
     float cosAs = exp2(-3.321928 * sq(roughness));
     // angle betwen bent normal and reflection direction
-    float cosB  = dot(shading_bentNormal, shading_reflected);
+    float cosB = dot(shading_bentNormal, shading_reflected);
 
     // Remove the 2 * PI term from the denominator, it cancels out the same term from
     // sphericalCapsIntersection()
@@ -145,9 +147,9 @@ float computeSpecularAO(float NoV, float visibility, float roughness) {
  */
 vec3 gtaoMultiBounce(float visibility, const vec3 albedo) {
     // Jimenez et al. 2016, "Practical Realtime Strategies for Accurate Indirect Occlusion"
-    vec3 a =  2.0404 * albedo - 0.3324;
+    vec3 a = 2.0404 * albedo - 0.3324;
     vec3 b = -4.7951 * albedo + 0.6417;
-    vec3 c =  2.7552 * albedo + 0.6903;
+    vec3 c = 2.7552 * albedo + 0.6903;
 
     return max(vec3(visibility), ((visibility * a + b) * visibility + c) * visibility);
 }

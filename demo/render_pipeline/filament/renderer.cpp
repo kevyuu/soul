@@ -47,6 +47,7 @@ namespace SoulFila {
 			Soul::Array<Soul::GPU::TextureNodeID> sceneTextures;
 			Soul::GPU::BufferNodeID frameUniformBuffer;
 			Soul::GPU::BufferNodeID lightUniformBuffer;
+			Soul::GPU::BufferNodeID froxelRecordsUniformBuffer;
 			Soul::GPU::BufferNodeID objectUniformBuffer;
 			Soul::GPU::BufferNodeID boneUniformBuffer;
 			Soul::GPU::BufferNodeID materialUniformBuffer;
@@ -110,7 +111,19 @@ namespace SoulFila {
 		_gpuSystem->bufferDestroy(lightGPUBuffer);
 		inputParam.lightUniformBuffer = renderGraph->importBuffer("Light Uniform Buffer", lightGPUBuffer);
 
-		
+
+		Soul::GPU::BufferDesc froxelRecordsBufferDesc;
+		froxelRecordsBufferDesc.typeSize = sizeof(FroxelRecordsUBO);
+		froxelRecordsBufferDesc.typeAlignment = alignof(FroxelRecordsUBO);
+		froxelRecordsBufferDesc.count = 1;
+		froxelRecordsBufferDesc.usageFlags = GPU::BUFFER_USAGE_UNIFORM_BIT;
+		froxelRecordsBufferDesc.queueFlags = GPU::QUEUE_GRAPHIC_BIT;
+		FroxelRecordsUBO froxelRecordsUBO = {};
+		Soul::GPU::BufferID froxelRecordsGPUBuffer = _gpuSystem->bufferCreate(froxelRecordsBufferDesc, &froxelRecordsUBO);
+		_gpuSystem->bufferDestroy(froxelRecordsGPUBuffer);
+		inputParam.froxelRecordsUniformBuffer = renderGraph->importBuffer("Froxel Records Uniform Buffer", froxelRecordsGPUBuffer);
+
+
 		Soul::GPU::BufferDesc materialUBODesc;
 		materialUBODesc.typeSize = sizeof(MaterialUBO);
 		materialUBODesc.typeAlignment = alignof(MaterialUBO);
@@ -213,6 +226,7 @@ namespace SoulFila {
 
 				params->frameUniformBuffer = builder->addShaderBuffer(inputParam.frameUniformBuffer, GPU::SHADER_STAGE_VERTEX | GPU::SHADER_STAGE_FRAGMENT, GPU::ShaderBufferReadUsage::UNIFORM);
 				params->lightUniformBuffer = builder->addShaderBuffer(inputParam.lightUniformBuffer, GPU::SHADER_STAGE_FRAGMENT, GPU::ShaderBufferReadUsage::UNIFORM);
+				params->froxelRecordsUniformBuffer = builder->addShaderBuffer(inputParam.froxelRecordsUniformBuffer, GPU::SHADER_STAGE_FRAGMENT, GPU::ShaderBufferReadUsage::UNIFORM);
 				params->materialUniformBuffer = builder->addShaderBuffer(inputParam.materialUniformBuffer, GPU::SHADER_STAGE_FRAGMENT, GPU::ShaderBufferReadUsage::UNIFORM);
 				params->boneUniformBuffer = builder->addShaderBuffer(inputParam.boneUniformBuffer, GPU::SHADER_STAGE_VERTEX, GPU::ShaderBufferReadUsage::UNIFORM);
 				params->objectUniformBuffer = builder->addShaderBuffer(inputParam.objectUniformBuffer, GPU::SHADER_STAGE_VERTEX | GPU::SHADER_STAGE_FRAGMENT, GPU::ShaderBufferReadUsage::UNIFORM);
@@ -258,6 +272,7 @@ namespace SoulFila {
 					GPU::Descriptor::Uniform(registry->getBuffer(params.frameUniformBuffer), 0, GPU::SHADER_STAGE_VERTEX | GPU::SHADER_STAGE_FRAGMENT),
 					GPU::Descriptor::Uniform(registry->getBuffer(params.lightUniformBuffer), 0, GPU::SHADER_STAGE_FRAGMENT),
 					{},
+					GPU::Descriptor::Uniform(registry->getBuffer(params.froxelRecordsUniformBuffer), 0, GPU::SHADER_STAGE_FRAGMENT),
 					GPU::Descriptor::SampledImage(registry->getTexture(params.stubTexture), samplerID, GPU::SHADER_STAGE_FRAGMENT),
 					GPU::Descriptor::SampledImage(registry->getTexture(params.stubTexture), samplerID, GPU::SHADER_STAGE_FRAGMENT),
 					GPU::Descriptor::SampledImage(registry->getTexture(params.stubTexture), samplerID, GPU::SHADER_STAGE_FRAGMENT),
@@ -265,7 +280,6 @@ namespace SoulFila {
 					GPU::Descriptor::SampledImage(registry->getTexture(params.stubTexture), samplerID, GPU::SHADER_STAGE_FRAGMENT),
 					GPU::Descriptor::SampledImage(registry->getTexture(params.stubTexture), samplerID, GPU::SHADER_STAGE_FRAGMENT),
 					GPU::Descriptor::SampledImage(registry->getTexture(params.stubTexture), samplerID, GPU::SHADER_STAGE_FRAGMENT),
-					GPU::Descriptor::SampledImage(registry->getTexture(params.stubTexture), samplerID, GPU::SHADER_STAGE_FRAGMENT)
 				};
 				GPU::ShaderArgSetID set0 = registry->getShaderArgSet(0, { sizeof(set0Descriptors) / sizeof(set0Descriptors[0]), set0Descriptors });
 
