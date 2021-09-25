@@ -817,15 +817,6 @@ namespace Soul {
 			Pool<T> pool_;
 		};
 
-		class TransferContext
-		{
-			Array<_Buffer> stagingBuffers;
-			VkCommandBuffer commandBuffer = VK_NULL_HANDLE;
-
-		public:
-			void transfer(soul_size dataSize, void* data, _Texture* texture);
-			void transfer(soul_size dataSize, void* data, _Buffer* buffer);
-		};
 
 		struct _FrameContext {
 
