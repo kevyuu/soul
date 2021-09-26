@@ -180,10 +180,6 @@ namespace Soul { namespace GPU {
 
 		VkCommandBuffer _requestSecondaryCommandBuffer();
 
-		void _commandPoolInit(_CommandPool* commandPool, QueueType queueType);
-		void _commandPoolReset(_CommandPool* commandPool);
-		VkCommandBuffer _commandPoolRequestCommandBuffer(_CommandPool* commandPool, VkCommandBufferLevel level);
-		
 		void frameFlush();
 		void _frameBegin();
 		void _frameEnd();

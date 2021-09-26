@@ -23,7 +23,9 @@
 #include <string>
 #include <sstream>
 
-namespace Soul { namespace GPU {
+namespace Soul::GPU
+{
+	using namespace impl;
 
 	static void* VmaAllocCallback(void* userData, size_t size, size_t alignment, VkSystemAllocationScope allocationScope)
 	{
@@ -50,34 +52,34 @@ namespace Soul { namespace GPU {
 	}
 
 	static VKAPI_ATTR VkBool32 VKAPI_CALL _debugCallback(
-			VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
-			VkDebugUtilsMessageTypeFlagsEXT messageType,
-			const VkDebugUtilsMessengerCallbackDataEXT *pCallbackData,
-			void *pUserData) {
+		VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
+		VkDebugUtilsMessageTypeFlagsEXT messageType,
+		const VkDebugUtilsMessengerCallbackDataEXT *pCallbackData,
+		void *pUserData) {
 		SOUL_LOG_INFO("debugCallback");
 		switch (messageSeverity) {
-			case VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT: {
-				SOUL_LOG_INFO("VkDebugUtils: %s", pCallbackData->pMessage);
-				break;
-			}
-			case VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT:
+		case VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT: {
+			SOUL_LOG_INFO("VkDebugUtils: %s", pCallbackData->pMessage);
+			break;
+		}
+		case VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT:
 			{
 				SOUL_LOG_INFO("VkDebugUtils: %s", pCallbackData->pMessage);
 				break;
 			}
-			case VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT: {
-				SOUL_LOG_WARN("VkDebugUtils: %s", pCallbackData->pMessage);
-				break;
-			}
-			case VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT: {
-				SOUL_LOG_ERROR("VkDebugUtils: %s", pCallbackData->pMessage);
-				SOUL_PANIC(0, "Vulkan Error!");
-				break;
-			}
-			default: {
-				SOUL_LOG_INFO("VkDebugUtils: %s", pCallbackData->pMessage);
-				break;
-			}
+		case VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT: {
+			SOUL_LOG_WARN("VkDebugUtils: %s", pCallbackData->pMessage);
+			break;
+		}
+		case VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT: {
+			SOUL_LOG_ERROR("VkDebugUtils: %s", pCallbackData->pMessage);
+			SOUL_PANIC(0, "Vulkan Error!");
+			break;
+		}
+		default: {
+			SOUL_LOG_INFO("VkDebugUtils: %s", pCallbackData->pMessage);
+			break;
+		}
 		}
 		return VK_FALSE;
 	}
@@ -103,11 +105,11 @@ namespace Soul { namespace GPU {
 
 		SOUL_ASSERT(0, config.windowHandle != nullptr, "Invalid configuration value | windowHandle = nullptr");
 		SOUL_ASSERT(0, config.threadCount > 0, "Invalid configuration value | threadCount = %d",
-					config.threadCount);
+		            config.threadCount);
 		SOUL_ASSERT(0,
-					config.maxFrameInFlight > 0,
-					"Invalid configuration value | maxFrameInFlight = %d",
-					config.maxFrameInFlight);
+		            config.maxFrameInFlight > 0,
+		            "Invalid configuration value | maxFrameInFlight = %d",
+		            config.maxFrameInFlight);
 
 		SOUL_VK_CHECK(volkInitialize(), "Volk initialization fail!");
 		SOUL_LOG_INFO("Volk initialization sucessful");
@@ -126,7 +128,7 @@ namespace Soul { namespace GPU {
 		static constexpr const char *requiredExtensions[] = {
 			VK_KHR_SURFACE_EXTENSION_NAME,
 #if defined(SOUL_OS_WINDOWS)
-				"VK_KHR_win32_surface",
+			"VK_KHR_win32_surface",
 #endif // SOUL_PLATFORM_OS_WIN32
 #ifdef SOUL_OS_APPLE
 				"VK_MVK_macos_surface",
@@ -139,7 +141,7 @@ namespace Soul { namespace GPU {
 
 #ifdef SOUL_VULKAN_VALIDATION_ENABLE
 		static constexpr const char *REQUIRED_LAYERS[] = {
-				"VK_LAYER_KHRONOS_validation",
+			"VK_LAYER_KHRONOS_validation",
 		};
 
 		static constexpr uint32_t requiredLayerCount = sizeof(REQUIRED_LAYERS) / sizeof(REQUIRED_LAYERS[0]);
@@ -177,7 +179,7 @@ namespace Soul { namespace GPU {
 #endif
 		
 		SOUL_VK_CHECK(vkCreateInstance(&instanceCreateInfo, nullptr, &_db.instance),
-					  "Vulkan instance creation fail!");
+		              "Vulkan instance creation fail!");
 		SOUL_LOG_INFO("Vulkan instance creation succesful");
 
 		volkLoadInstance(_db.instance);
@@ -186,21 +188,21 @@ namespace Soul { namespace GPU {
 		static constexpr auto createDebugUtilsMessenger = [](_Database *db) {
 			SOUL_LOG_INFO("Creating vulkan debug utils messenger");
 			VkDebugUtilsMessengerCreateInfoEXT
-					debugMessengerCreateInfo = {VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT};
+				debugMessengerCreateInfo = {VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT};
 			debugMessengerCreateInfo.messageSeverity =
-					VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT |
-					VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT |
-					VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT |
-					VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
+				VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT |
+				VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT |
+				VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT |
+				VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
 			debugMessengerCreateInfo.messageType =
-					VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT |
-					VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT |
-					VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
+				VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT |
+				VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT |
+				VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
 			debugMessengerCreateInfo.pfnUserCallback = _debugCallback;
 			debugMessengerCreateInfo.pUserData = nullptr;
 			SOUL_VK_CHECK(vkCreateDebugUtilsMessengerEXT(db->instance, &debugMessengerCreateInfo, nullptr,
-														 &db->debugMessenger),
-						  "Vulkan debug messenger creation fail!");
+				              &db->debugMessenger),
+			              "Vulkan debug messenger creation fail!");
 			SOUL_LOG_INFO("Vulkan debug messenger creation sucesfull");
 		};
 		createDebugUtilsMessenger(&_db);
@@ -208,255 +210,254 @@ namespace Soul { namespace GPU {
 		_surfaceCreate(config.windowHandle, &_db.surface);
 
 		static constexpr auto
-				pickPhysicalDevice = [](_Database *db, int requiredExtensionCount,
-										const char *requiredExtensions[]) {
-			SOUL_LOG_INFO("Picking vulkan physical device.");
-			db->physicalDevice = VK_NULL_HANDLE;
-			uint32 deviceCount = 0;
-			vkEnumeratePhysicalDevices(db->instance, &deviceCount, nullptr);
-			SOUL_ASSERT(0, deviceCount > 0, "There is no device with vulkan support!");
+			pickPhysicalDevice = [](_Database *db, int requiredExtensionCount,
+			                        const char *requiredExtensions[]) {
+				SOUL_LOG_INFO("Picking vulkan physical device.");
+				db->physicalDevice = VK_NULL_HANDLE;
+				uint32 deviceCount = 0;
+				vkEnumeratePhysicalDevices(db->instance, &deviceCount, nullptr);
+				SOUL_ASSERT(0, deviceCount > 0, "There is no device with vulkan support!");
 
-			Soul::Array<VkPhysicalDevice> devices;
-			devices.resize(deviceCount);
-			vkEnumeratePhysicalDevices(db->instance, &deviceCount, devices.data());
+				Soul::Array<VkPhysicalDevice> devices;
+				devices.resize(deviceCount);
+				vkEnumeratePhysicalDevices(db->instance, &deviceCount, devices.data());
 
-			Array<VkSurfaceFormatKHR> formats;
-			Array<VkPresentModeKHR> presentModes;
+				Array<VkSurfaceFormatKHR> formats;
+				Array<VkPresentModeKHR> presentModes;
 
-			db->physicalDevice = VK_NULL_HANDLE;
-			int bestScore = -1;
+				db->physicalDevice = VK_NULL_HANDLE;
+				int bestScore = -1;
 
-			for (int i = 0; i < devices.size(); i++) {
+				for (int i = 0; i < devices.size(); i++) {
 
-				VkPhysicalDeviceProperties physicalDeviceProperties;
-				VkPhysicalDeviceFeatures physicalDeviceFeatures;
+					VkPhysicalDeviceProperties physicalDeviceProperties;
+					VkPhysicalDeviceFeatures physicalDeviceFeatures;
 
-				vkGetPhysicalDeviceProperties(devices[i], &physicalDeviceProperties);
-				vkGetPhysicalDeviceFeatures(devices[i], &physicalDeviceFeatures);
+					vkGetPhysicalDeviceProperties(devices[i], &physicalDeviceProperties);
+					vkGetPhysicalDeviceFeatures(devices[i], &physicalDeviceFeatures);
 
 
-				const uint32_t apiVersion = physicalDeviceProperties.apiVersion;
-				const uint32_t driverVersion = physicalDeviceProperties.driverVersion;
-				const uint32_t vendorID = physicalDeviceProperties.vendorID;
-				const uint32_t deviceID = physicalDeviceProperties.deviceID;
+					const uint32_t apiVersion = physicalDeviceProperties.apiVersion;
+					const uint32_t driverVersion = physicalDeviceProperties.driverVersion;
+					const uint32_t vendorID = physicalDeviceProperties.vendorID;
+					const uint32_t deviceID = physicalDeviceProperties.deviceID;
 
-				SOUL_LOG_INFO("Devices %d\n"
-					" -- Name = %s\n"
-					" -- Vendor = 0x%.8X\n"
-					" -- Device ID = 0x%.8X\n"
-					" -- Api Version = %d.%d.%d\n"
-					" -- Driver Version = %d.%d.%d\n",
-					i, physicalDeviceProperties.deviceName, vendorID, 
-					deviceID, 
-					VK_VERSION_MAJOR(apiVersion), VK_VERSION_MINOR(apiVersion), VK_VERSION_PATCH(apiVersion),
-					VK_VERSION_MAJOR(driverVersion), VK_VERSION_MINOR(driverVersion), VK_VERSION_PATCH(driverVersion));
+					SOUL_LOG_INFO("Devices %d\n"
+					              " -- Name = %s\n"
+					              " -- Vendor = 0x%.8X\n"
+					              " -- Device ID = 0x%.8X\n"
+					              " -- Api Version = %d.%d.%d\n"
+					              " -- Driver Version = %d.%d.%d\n",
+					              i, physicalDeviceProperties.deviceName, vendorID, 
+					              deviceID, 
+					              VK_VERSION_MAJOR(apiVersion), VK_VERSION_MINOR(apiVersion), VK_VERSION_PATCH(apiVersion),
+					              VK_VERSION_MAJOR(driverVersion), VK_VERSION_MINOR(driverVersion), VK_VERSION_PATCH(driverVersion));
 
-				uint32_t extensionCount;
-				vkEnumerateDeviceExtensionProperties(devices[i], nullptr, &extensionCount, nullptr);
+					uint32_t extensionCount;
+					vkEnumerateDeviceExtensionProperties(devices[i], nullptr, &extensionCount, nullptr);
 
-				Soul::Array<VkExtensionProperties> availableExtensions;
-				availableExtensions.resize(extensionCount);
-				vkEnumerateDeviceExtensionProperties(devices[i], nullptr, &extensionCount, availableExtensions.data());
-				bool allExtensionFound = true;
+					Soul::Array<VkExtensionProperties> availableExtensions;
+					availableExtensions.resize(extensionCount);
+					vkEnumerateDeviceExtensionProperties(devices[i], nullptr, &extensionCount, availableExtensions.data());
+					bool allExtensionFound = true;
 
-				for (int j = 0; j < extensionCount; j++)
-				{
-					SOUL_LOG_INFO("Extension %d : %s", j, availableExtensions[j].extensionName);
-				}
+					for (int j = 0; j < extensionCount; j++)
+					{
+						SOUL_LOG_INFO("Extension %d : %s", j, availableExtensions[j].extensionName);
+					}
 				
-				for (int j = 0; j < requiredExtensionCount; j++) {
-					bool extensionFound = false;
-					for (int k = 0; k < extensionCount; k++) {
-						if (strcmp(availableExtensions[k].extensionName, requiredExtensions[j]) == 0) {
-							extensionFound = true;
+					for (int j = 0; j < requiredExtensionCount; j++) {
+						bool extensionFound = false;
+						for (int k = 0; k < extensionCount; k++) {
+							if (strcmp(availableExtensions[k].extensionName, requiredExtensions[j]) == 0) {
+								extensionFound = true;
+								break;
+							}
+						}
+						if (!extensionFound) {
+							SOUL_LOG_INFO(" -- Extension %s not found", requiredExtensions[j]);
+							allExtensionFound = false;
 							break;
 						}
+						SOUL_LOG_INFO(" -- Extension %s found", requiredExtensions[j]);
 					}
-					if (!extensionFound) {
-						SOUL_LOG_INFO(" -- Extension %s not found", requiredExtensions[j]);
-						allExtensionFound = false;
-						break;
+					availableExtensions.cleanup();
+					if (!allExtensionFound) {
+						continue;
 					}
-					SOUL_LOG_INFO(" -- Extension %s found", requiredExtensions[j]);
-				}
-				availableExtensions.cleanup();
-				if (!allExtensionFound) {
-					continue;
-				}
 
-				vkGetPhysicalDeviceSurfaceCapabilitiesKHR(devices[i], db->surface, &db->surfaceCaps);
+					vkGetPhysicalDeviceSurfaceCapabilitiesKHR(devices[i], db->surface, &db->surfaceCaps);
 
-				uint32 formatCount;
-				vkGetPhysicalDeviceSurfaceFormatsKHR(devices[i], db->surface, &formatCount, nullptr);
-				SOUL_LOG_INFO(" -- Format count = %d", formatCount);
-				if (formatCount == 0) {
-					continue;
-				}
-				formats.resize(formatCount);
-				vkGetPhysicalDeviceSurfaceFormatsKHR(devices[i], db->surface, &formatCount, formats.data());
-
-				uint32 presentModeCount;
-				vkGetPhysicalDeviceSurfacePresentModesKHR(devices[i], db->surface, &presentModeCount, nullptr);
-				SOUL_LOG_INFO(" -- Present mode count = %d", presentModeCount);
-				if (presentModeCount == 0) {
-					continue;
-				}
-				presentModes.resize(presentModeCount);
-				vkGetPhysicalDeviceSurfacePresentModesKHR(devices[i], db->surface, &presentModeCount,
-														  presentModes.data());
-
-				uint32 queueFamilyCount = 0;
-				vkGetPhysicalDeviceQueueFamilyProperties(devices[i], &queueFamilyCount, nullptr);
-
-				Soul::Array<VkQueueFamilyProperties> queueFamilies;
-				queueFamilies.resize(queueFamilyCount);
-				vkGetPhysicalDeviceQueueFamilyProperties(devices[i], &queueFamilyCount, queueFamilies.data());
-
-				int graphicsQueueFamilyIndex = -1;
-				int presentQueueFamilyIndex = -1;
-				int computeQueueFamilyIndex = -1;
-				int transferQueueFamilyIndex = -1;
-
-				// Try to find queue that support present, graphics and compute
-				for (int j = 0; j < queueFamilyCount; j++) {
-					VkBool32 presentSupport = false;
-					vkGetPhysicalDeviceSurfaceSupportKHR(devices[i], j, db->surface, &presentSupport);
-
-					const VkQueueFamilyProperties &queueProps = queueFamilies[j];
-					VkQueueFlags requiredFlags = VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_COMPUTE_BIT;
-					if (presentSupport && queueProps.queueCount > 0 &&
-						(queueProps.queueFlags & requiredFlags) == requiredFlags) {
-						graphicsQueueFamilyIndex = j;
-						presentQueueFamilyIndex = j;
+					uint32 formatCount;
+					vkGetPhysicalDeviceSurfaceFormatsKHR(devices[i], db->surface, &formatCount, nullptr);
+					SOUL_LOG_INFO(" -- Format count = %d", formatCount);
+					if (formatCount == 0) {
+						continue;
 					}
-				}
+					formats.resize(formatCount);
+					vkGetPhysicalDeviceSurfaceFormatsKHR(devices[i], db->surface, &formatCount, formats.data());
 
-				if (graphicsQueueFamilyIndex == -1) {
-					for (int j = 0; j < queueFamilyCount; j++) {
-						const VkQueueFamilyProperties &queueProps = queueFamilies[j];
-						VkQueueFlags requiredFlags = VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_COMPUTE_BIT;
-						if (queueProps.queueCount > 0 && (queueProps.queueFlags & requiredFlags) == requiredFlags) {
-							graphicsQueueFamilyIndex = j;
-							break;
-						}
+					uint32 presentModeCount;
+					vkGetPhysicalDeviceSurfacePresentModesKHR(devices[i], db->surface, &presentModeCount, nullptr);
+					SOUL_LOG_INFO(" -- Present mode count = %d", presentModeCount);
+					if (presentModeCount == 0) {
+						continue;
 					}
-				}
+					presentModes.resize(presentModeCount);
+					vkGetPhysicalDeviceSurfacePresentModesKHR(devices[i], db->surface, &presentModeCount,
+					                                          presentModes.data());
 
-				for (int j = 0; j < queueFamilyCount; j++) {
-					for (int j = 0; j < queueFamilyCount; j++) {
-						const VkQueueFamilyProperties &queueProps = queueFamilies[j];
-						VkQueueFlags requiredFlags = VK_QUEUE_COMPUTE_BIT;
-						if (j != graphicsQueueFamilyIndex && queueProps.queueCount > 0
-							&& (queueProps.queueFlags & requiredFlags) == requiredFlags) {
-							computeQueueFamilyIndex = j;
-							break;
-						}
-					}
-				}
-				if (computeQueueFamilyIndex == -1) computeQueueFamilyIndex = graphicsQueueFamilyIndex;
+					uint32 queueFamilyCount = 0;
+					vkGetPhysicalDeviceQueueFamilyProperties(devices[i], &queueFamilyCount, nullptr);
 
-				for (int j = 0; j < queueFamilyCount; j++) {
-					for (int j = 0; j < queueFamilyCount; j++) {
-						const VkQueueFamilyProperties &queueProps = queueFamilies[j];
-						VkQueueFlags requiredFlags = VK_QUEUE_TRANSFER_BIT;
-						if (j != graphicsQueueFamilyIndex && j != computeQueueFamilyIndex
-							&& (queueProps.queueFlags & requiredFlags) == requiredFlags) {
-							transferQueueFamilyIndex = j;
-							break;
-						}
-					}
-				}
-				if (transferQueueFamilyIndex == -1) transferQueueFamilyIndex = graphicsQueueFamilyIndex;
+					Soul::Array<VkQueueFamilyProperties> queueFamilies;
+					queueFamilies.resize(queueFamilyCount);
+					vkGetPhysicalDeviceQueueFamilyProperties(devices[i], &queueFamilyCount, queueFamilies.data());
 
-				if (presentQueueFamilyIndex == -1) {
+					int graphicsQueueFamilyIndex = -1;
+					int presentQueueFamilyIndex = -1;
+					int computeQueueFamilyIndex = -1;
+					int transferQueueFamilyIndex = -1;
+
+					// Try to find queue that support present, graphics and compute
 					for (int j = 0; j < queueFamilyCount; j++) {
 						VkBool32 presentSupport = false;
 						vkGetPhysicalDeviceSurfaceSupportKHR(devices[i], j, db->surface, &presentSupport);
-						if (presentSupport) {
+
+						const VkQueueFamilyProperties &queueProps = queueFamilies[j];
+						VkQueueFlags requiredFlags = VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_COMPUTE_BIT;
+						if (presentSupport && queueProps.queueCount > 0 &&
+							(queueProps.queueFlags & requiredFlags) == requiredFlags) {
+							graphicsQueueFamilyIndex = j;
 							presentQueueFamilyIndex = j;
-							break;
 						}
+					}
+
+					if (graphicsQueueFamilyIndex == -1) {
+						for (int j = 0; j < queueFamilyCount; j++) {
+							const VkQueueFamilyProperties &queueProps = queueFamilies[j];
+							VkQueueFlags requiredFlags = VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_COMPUTE_BIT;
+							if (queueProps.queueCount > 0 && (queueProps.queueFlags & requiredFlags) == requiredFlags) {
+								graphicsQueueFamilyIndex = j;
+								break;
+							}
+						}
+					}
+
+					for (int j = 0; j < queueFamilyCount; j++) {
+						for (int j = 0; j < queueFamilyCount; j++) {
+							const VkQueueFamilyProperties &queueProps = queueFamilies[j];
+							VkQueueFlags requiredFlags = VK_QUEUE_COMPUTE_BIT;
+							if (j != graphicsQueueFamilyIndex && queueProps.queueCount > 0
+								&& (queueProps.queueFlags & requiredFlags) == requiredFlags) {
+								computeQueueFamilyIndex = j;
+								break;
+							}
+						}
+					}
+					if (computeQueueFamilyIndex == -1) computeQueueFamilyIndex = graphicsQueueFamilyIndex;
+
+					for (int j = 0; j < queueFamilyCount; j++) {
+						for (int j = 0; j < queueFamilyCount; j++) {
+							const VkQueueFamilyProperties &queueProps = queueFamilies[j];
+							VkQueueFlags requiredFlags = VK_QUEUE_TRANSFER_BIT;
+							if (j != graphicsQueueFamilyIndex && j != computeQueueFamilyIndex
+								&& (queueProps.queueFlags & requiredFlags) == requiredFlags) {
+								transferQueueFamilyIndex = j;
+								break;
+							}
+						}
+					}
+					if (transferQueueFamilyIndex == -1) transferQueueFamilyIndex = graphicsQueueFamilyIndex;
+
+					if (presentQueueFamilyIndex == -1) {
+						for (int j = 0; j < queueFamilyCount; j++) {
+							VkBool32 presentSupport = false;
+							vkGetPhysicalDeviceSurfaceSupportKHR(devices[i], j, db->surface, &presentSupport);
+							if (presentSupport) {
+								presentQueueFamilyIndex = j;
+								break;
+							}
+						}
+					}
+
+					queueFamilies.cleanup();
+
+					if (graphicsQueueFamilyIndex == -1) {
+						SOUL_LOG_INFO(" -- Graphics queue family not found");
+						continue;
+					}
+					if (presentQueueFamilyIndex == -1) {
+						SOUL_LOG_INFO(" -- Present queue family not found");
+						continue;
+					}
+					if (computeQueueFamilyIndex == -1) {
+						SOUL_LOG_INFO(" -- Compute queue family not found");
+						continue;
+					}
+					if (transferQueueFamilyIndex == -1) {
+						SOUL_LOG_INFO("-- Transfer queue family not found");
+						continue;
+					}
+
+					int score = 0;
+					if (physicalDeviceProperties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU) {
+						score += 100;
+					}
+
+					SOUL_LOG_INFO("-- Score = %d", score);
+					if (score > bestScore) {
+						db->physicalDevice = devices[i];
+						db->graphicsQueueFamilyIndex = graphicsQueueFamilyIndex;
+						db->presentQueueFamilyIndex = presentQueueFamilyIndex;
+						db->transferQueueFamilyIndex = transferQueueFamilyIndex;
+						db->computeQueueFamilyIndex = computeQueueFamilyIndex;
+						bestScore = score;
 					}
 				}
 
-				queueFamilies.cleanup();
+				SOUL_ASSERT(0, db->physicalDevice != VK_NULL_HANDLE,
+				            "Cannot find physical device that satisfy the requirements.");
 
-				if (graphicsQueueFamilyIndex == -1) {
-					SOUL_LOG_INFO(" -- Graphics queue family not found");
-					continue;
-				}
-				if (presentQueueFamilyIndex == -1) {
-					SOUL_LOG_INFO(" -- Present queue family not found");
-					continue;
-				}
-				if (computeQueueFamilyIndex == -1) {
-					SOUL_LOG_INFO(" -- Compute queue family not found");
-					continue;
-				}
-				if (transferQueueFamilyIndex == -1) {
-					SOUL_LOG_INFO("-- Transfer queue family not found");
-					continue;
-				}
-
-				int score = 0;
-				if (physicalDeviceProperties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU) {
-					score += 100;
-				}
-
-				SOUL_LOG_INFO("-- Score = %d", score);
-				if (score > bestScore) {
-					db->physicalDevice = devices[i];
-					db->graphicsQueueFamilyIndex = graphicsQueueFamilyIndex;
-					db->presentQueueFamilyIndex = presentQueueFamilyIndex;
-					db->transferQueueFamilyIndex = transferQueueFamilyIndex;
-					db->computeQueueFamilyIndex = computeQueueFamilyIndex;
-					bestScore = score;
-				}
-			}
-
-			SOUL_ASSERT(0, db->physicalDevice != VK_NULL_HANDLE,
-						"Cannot find physical device that satisfy the requirements.");
-
-			vkGetPhysicalDeviceProperties(db->physicalDevice, &db->physicalDeviceProperties);
-			vkGetPhysicalDeviceFeatures(db->physicalDevice, &db->physicalDeviceFeatures);
+				vkGetPhysicalDeviceProperties(db->physicalDevice, &db->physicalDeviceProperties);
+				vkGetPhysicalDeviceFeatures(db->physicalDevice, &db->physicalDeviceFeatures);
 			
-			const uint32_t apiVersion = db->physicalDeviceProperties.apiVersion;
-			const uint32_t driverVersion = db->physicalDeviceProperties.driverVersion;
-			const uint32_t vendorID = db->physicalDeviceProperties.vendorID;
-			const uint32_t deviceID = db->physicalDeviceProperties.deviceID;
+				const uint32_t apiVersion = db->physicalDeviceProperties.apiVersion;
+				const uint32_t driverVersion = db->physicalDeviceProperties.driverVersion;
+				const uint32_t vendorID = db->physicalDeviceProperties.vendorID;
+				const uint32_t deviceID = db->physicalDeviceProperties.deviceID;
 
-			SOUL_LOG_INFO("Selected device\n"
-				" -- Name = %s\n"
-				" -- Vendor = 0x%.8X\n"
-				" -- Device ID = 0x%.8X\n"
-				" -- Api Version = 0x%.8X\n"
-				" -- Driver Version = 0x%.8X\n"
-				" -- Graphics queue family index = %d\n"
-				" -- Presentation queue family index = %d\n"
-				" -- Transfer queue family index = %d\n"
-				" -- Compute queue family index = %d\n",
-				db->physicalDeviceProperties.deviceName,
-				vendorID,
-				deviceID,
-				apiVersion,
-				driverVersion,
-				db->graphicsQueueFamilyIndex,
-				db->presentQueueFamilyIndex,
-				db->transferQueueFamilyIndex,
-				db->computeQueueFamilyIndex);
-			db->queueFamilyIndices[QueueType::NONE] = 0;
-			db->queueFamilyIndices[QueueType::GRAPHIC] = db->graphicsQueueFamilyIndex;
-			db->queueFamilyIndices[QueueType::TRANSFER] = db->transferQueueFamilyIndex;
-			db->queueFamilyIndices[QueueType::COMPUTE] = db->computeQueueFamilyIndex;
+				SOUL_LOG_INFO("Selected device\n"
+				              " -- Name = %s\n"
+				              " -- Vendor = 0x%.8X\n"
+				              " -- Device ID = 0x%.8X\n"
+				              " -- Api Version = 0x%.8X\n"
+				              " -- Driver Version = 0x%.8X\n"
+				              " -- Graphics queue family index = %d\n"
+				              " -- Presentation queue family index = %d\n"
+				              " -- Transfer queue family index = %d\n"
+				              " -- Compute queue family index = %d\n",
+				              db->physicalDeviceProperties.deviceName,
+				              vendorID,
+				              deviceID,
+				              apiVersion,
+				              driverVersion,
+				              db->graphicsQueueFamilyIndex,
+				              db->presentQueueFamilyIndex,
+				              db->transferQueueFamilyIndex,
+				              db->computeQueueFamilyIndex);
+				db->queueFamilyIndices[QueueType::GRAPHIC] = db->graphicsQueueFamilyIndex;
+				db->queueFamilyIndices[QueueType::TRANSFER] = db->transferQueueFamilyIndex;
+				db->queueFamilyIndices[QueueType::COMPUTE] = db->computeQueueFamilyIndex;
 
-			formats.cleanup();
-			presentModes.cleanup();
-			devices.cleanup();
+				formats.cleanup();
+				presentModes.cleanup();
+				devices.cleanup();
 
-			SOUL_ASSERT(0, db->physicalDevice != VK_NULL_HANDLE, "Fail to find a suitable GPU!");
-		};
+				SOUL_ASSERT(0, db->physicalDevice != VK_NULL_HANDLE, "Fail to find a suitable GPU!");
+			};
 		static const char* deviceRequiredExtensions[] = {
-            VK_KHR_VULKAN_MEMORY_MODEL_EXTENSION_NAME,
+			VK_KHR_VULKAN_MEMORY_MODEL_EXTENSION_NAME,
 			VK_KHR_SWAPCHAIN_EXTENSION_NAME
 		};
 		static const uint32_t deviceRequiredExtensionCount = sizeof(deviceRequiredExtensions) / sizeof(deviceRequiredExtensions[0]);
@@ -527,11 +528,11 @@ namespace Soul { namespace GPU {
 			deviceFeatures.fillModeNonSolid = VK_TRUE;
 
 			VkPhysicalDeviceVulkanMemoryModelFeatures deviceVulkan12Features = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_MEMORY_MODEL_FEATURES };
-            deviceVulkan12Features.vulkanMemoryModel = VK_TRUE;
+			deviceVulkan12Features.vulkanMemoryModel = VK_TRUE;
 
-            VkPhysicalDeviceFeatures2 deviceFeatures2 = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2 };
-            deviceFeatures2.pNext = &deviceVulkan12Features;
-            deviceFeatures2.features = deviceFeatures;
+			VkPhysicalDeviceFeatures2 deviceFeatures2 = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2 };
+			deviceFeatures2.pNext = &deviceVulkan12Features;
+			deviceFeatures2.features = deviceFeatures;
 
 			VkDeviceCreateInfo deviceCreateInfo = {VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO};
 			deviceCreateInfo.pNext = &deviceFeatures2;
@@ -545,11 +546,11 @@ namespace Soul { namespace GPU {
 			deviceCreateInfo.ppEnabledExtensionNames = deviceRequiredExtensions;
 
 			SOUL_ASSERT(0,
-						db->graphicsQueueFamilyIndex == db->presentQueueFamilyIndex,
-						"Different queue for graphics and present not supported yet!");
+			            db->graphicsQueueFamilyIndex == db->presentQueueFamilyIndex,
+			            "Different queue for graphics and present not supported yet!");
 
 			SOUL_VK_CHECK(vkCreateDevice(db->physicalDevice, &deviceCreateInfo, nullptr, &db->device),
-						  "Vulkan logical device creation fail!");
+			              "Vulkan logical device creation fail!");
 			SOUL_LOG_INFO("Vulkan logical device creation sucessful");
 
 			vkGetDeviceQueue(db->device, db->graphicsQueueFamilyIndex, graphicsQueueIndex, &db->graphicsQueue);
@@ -575,55 +576,55 @@ namespace Soul { namespace GPU {
 		static const auto createSwapchain = [this](_Database *db, uint32 swapchainWidth, uint32 swapchainHeight) {
 
 			static const auto
-					pickSurfaceFormat = [](VkPhysicalDevice physicalDevice,
-										   VkSurfaceKHR surface) -> VkSurfaceFormatKHR {
-				Runtime::ScopeAllocator<> scopeAllocator("GPU::System::init::pickSurfaceFormat");
-				SOUL_LOG_INFO("Picking surface format.");
-				Array<VkSurfaceFormatKHR> formats(&scopeAllocator);
-				uint32 formatCount;
-				vkGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice, surface, &formatCount, nullptr);
-				SOUL_ASSERT(0, formatCount != 0, "Surface format count is zero!");
-				formats.resize(formatCount);
-				vkGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice, surface, &formatCount, formats.data());
+				pickSurfaceFormat = [](VkPhysicalDevice physicalDevice,
+				                       VkSurfaceKHR surface) -> VkSurfaceFormatKHR {
+					Runtime::ScopeAllocator<> scopeAllocator("GPU::System::init::pickSurfaceFormat");
+					SOUL_LOG_INFO("Picking surface format.");
+					Array<VkSurfaceFormatKHR> formats(&scopeAllocator);
+					uint32 formatCount;
+					vkGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice, surface, &formatCount, nullptr);
+					SOUL_ASSERT(0, formatCount != 0, "Surface format count is zero!");
+					formats.resize(formatCount);
+					vkGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice, surface, &formatCount, formats.data());
 
-				for (int i = 0; i < formats.size(); i++) {
-					const VkSurfaceFormatKHR surfaceFormat = formats[0];
-					if (surfaceFormat.format == VK_FORMAT_B8G8R8A8_UNORM
-						&& surfaceFormat.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
-						formats.cleanup();
-						return surfaceFormat;
+					for (int i = 0; i < formats.size(); i++) {
+						const VkSurfaceFormatKHR surfaceFormat = formats[0];
+						if (surfaceFormat.format == VK_FORMAT_B8G8R8A8_UNORM
+							&& surfaceFormat.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
+							formats.cleanup();
+							return surfaceFormat;
+						}
 					}
-				}
-				VkSurfaceFormatKHR format = formats[0];
-				formats.cleanup();
-				return format;
-			};
+					VkSurfaceFormatKHR format = formats[0];
+					formats.cleanup();
+					return format;
+				};
 			db->swapchain.format = pickSurfaceFormat(db->physicalDevice, db->surface);
 
 			static constexpr auto pickSurfaceExtent =
-					[](VkSurfaceCapabilitiesKHR capabilities, uint32 swapchainWidth,
-					   uint32 swapchainHeight) -> VkExtent2D {
-						SOUL_LOG_INFO("Picking vulkan swap extent");
-						if (capabilities.currentExtent.width != std::numeric_limits<uint32_t>::max()) {
-							SOUL_LOG_INFO("vulkanPickSwapExtent | Extent = %d %d",
-										  capabilities.currentExtent.width,
-										  capabilities.currentExtent.height);
-							return capabilities.currentExtent;
-						}
-						else {
-							VkExtent2D actualExtent = {static_cast<uint32>(swapchainWidth),
-													   static_cast<uint32>(swapchainHeight)};
+				[](VkSurfaceCapabilitiesKHR capabilities, uint32 swapchainWidth,
+				   uint32 swapchainHeight) -> VkExtent2D {
+				SOUL_LOG_INFO("Picking vulkan swap extent");
+				if (capabilities.currentExtent.width != std::numeric_limits<uint32_t>::max()) {
+					SOUL_LOG_INFO("vulkanPickSwapExtent | Extent = %d %d",
+					              capabilities.currentExtent.width,
+					              capabilities.currentExtent.height);
+					return capabilities.currentExtent;
+				}
+				else {
+					VkExtent2D actualExtent = {static_cast<uint32>(swapchainWidth),
+						static_cast<uint32>(swapchainHeight)};
 
-							actualExtent.width =
-									std::max(capabilities.minImageExtent.width,
-										std::min(capabilities.maxImageExtent.width, actualExtent.width));
-							actualExtent.height =
-									std::max(capabilities.minImageExtent.height,
-										std::min(capabilities.maxImageExtent.height, actualExtent.height));
+					actualExtent.width =
+						std::max(capabilities.minImageExtent.width,
+						         std::min(capabilities.maxImageExtent.width, actualExtent.width));
+					actualExtent.height =
+						std::max(capabilities.minImageExtent.height,
+						         std::min(capabilities.maxImageExtent.height, actualExtent.height));
 
-							return actualExtent;
-						}
-					};
+					return actualExtent;
+				}
+			};
 			db->swapchain.extent = pickSurfaceExtent(db->surfaceCaps, swapchainWidth, swapchainHeight);
 
 			uint32 imageCount = db->surfaceCaps.minImageCount + 1;
@@ -634,8 +635,8 @@ namespace Soul { namespace GPU {
 
 			uint32_t queueFamily = db->presentQueueFamilyIndex;
 			SOUL_ASSERT(0, db->presentQueueFamilyIndex == db->graphicsQueueFamilyIndex,
-						"Currently we create swapchain with sharing mode exclusive."
-						"If present and graphic queue is different we need to update sharingMode and queueFamilyIndices.");
+			            "Currently we create swapchain with sharing mode exclusive."
+			            "If present and graphic queue is different we need to update sharingMode and queueFamilyIndices.");
 			VkSwapchainCreateInfoKHR swapchainInfo = {VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR};
 			swapchainInfo.surface = db->surface;
 			swapchainInfo.minImageCount = imageCount;
@@ -653,7 +654,7 @@ namespace Soul { namespace GPU {
 			swapchainInfo.clipped = VK_TRUE;
 
 			SOUL_VK_CHECK(vkCreateSwapchainKHR(db->device, &swapchainInfo, nullptr, &db->swapchain.vkHandle),
-						  "Fail to create vulkan swapchain!");
+			              "Fail to create vulkan swapchain!");
 
 			vkGetSwapchainImagesKHR(db->device, db->swapchain.vkHandle, &imageCount, nullptr);
 			db->swapchain.images.resize(imageCount);
@@ -666,10 +667,10 @@ namespace Soul { namespace GPU {
 				imageViewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
 				imageViewInfo.format = db->swapchain.format.format;
 				imageViewInfo.components =
-						{VK_COMPONENT_SWIZZLE_IDENTITY, 
-						 VK_COMPONENT_SWIZZLE_IDENTITY,
-						 VK_COMPONENT_SWIZZLE_IDENTITY,
-						 VK_COMPONENT_SWIZZLE_IDENTITY};
+				{VK_COMPONENT_SWIZZLE_IDENTITY, 
+					VK_COMPONENT_SWIZZLE_IDENTITY,
+					VK_COMPONENT_SWIZZLE_IDENTITY,
+					VK_COMPONENT_SWIZZLE_IDENTITY};
 				imageViewInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 				imageViewInfo.subresourceRange.baseMipLevel = 0;
 				imageViewInfo.subresourceRange.levelCount = 1;
@@ -677,8 +678,8 @@ namespace Soul { namespace GPU {
 				imageViewInfo.subresourceRange.layerCount = 1;
 
 				SOUL_VK_CHECK(vkCreateImageView(db->device, &imageViewInfo, nullptr, &db->swapchain.imageViews[i]),
-							  "Fail to create swapchain imageview %d",
-							  i);
+				              "Fail to create swapchain imageview %d",
+				              i);
 			}
 
 			db->swapchain.textures.resize(imageCount);
@@ -709,8 +710,8 @@ namespace Soul { namespace GPU {
 		createSwapchain(&_db, config.swapchainWidth, config.swapchainHeight);
 
 		SOUL_ASSERT(0,
-			_db.graphicsQueueFamilyIndex == _db.presentQueueFamilyIndex,
-			"Current implementation does not support different queue family for graphics and presentation yet!");
+		            _db.graphicsQueueFamilyIndex == _db.presentQueueFamilyIndex,
+		            "Current implementation does not support different queue family for graphics and presentation yet!");
 		_frameContextInit(config);
 
 		static constexpr auto initAllocator = [](_Database *db) {
@@ -781,20 +782,16 @@ namespace Soul { namespace GPU {
 			frameContext.threadContexts.reserve(config.threadCount);
 
 			for (int j = 0; j < config.threadCount; j++) {
-				frameContext.threadContexts.add(_ThreadContext(&_db.cpuAllocator));
+				frameContext.threadContexts.add(_ThreadContext(&_db.cpuAllocator, _db.device));
 				_ThreadContext &threadContext = frameContext.threadContexts[j];
-				_commandPoolInit(&threadContext.secondaryCommandPool, QueueType::GRAPHIC);
+				threadContext.secondaryCommandPool.init(_db.device, VK_COMMAND_BUFFER_LEVEL_SECONDARY, _db.queueFamilyIndices[QueueType::GRAPHIC]);
 			}
 
-			for (int j = 0; j < uint64(QueueType::COUNT); j++) {
-				QueueType queueType = QueueType(j);
-				if (queueType == QueueType::NONE) continue;
-				VkCommandPoolCreateInfo cmdPoolCreateInfo = {VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO};
-				cmdPoolCreateInfo.flags =
-						VK_COMMAND_POOL_CREATE_TRANSIENT_BIT;
-				cmdPoolCreateInfo.queueFamilyIndex = _db.queueFamilyIndices[queueType];
-				vkCreateCommandPool(_db.device, &cmdPoolCreateInfo, nullptr, &frameContext.commandPools[queueType]);
+			for (QueueType queueType : EnumIter<QueueType>::Iterates())
+			{
+				frameContext.commandPools[queueType].init(_db.device, VK_COMMAND_BUFFER_LEVEL_PRIMARY, _db.queueFamilyIndices[queueType]);
 			}
+
 
 			VkFenceCreateInfo fenceInfo = {VK_STRUCTURE_TYPE_FENCE_CREATE_INFO};
 			fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
@@ -824,9 +821,9 @@ namespace Soul { namespace GPU {
 	_QueueData System::_getQueueDataFromQueueFlags(QueueFlags flags) {
 		_QueueData queueData;
 		const uint32 queueIndexMapping[] = {
-				_db.graphicsQueueFamilyIndex,
-				_db.computeQueueFamilyIndex,
-				_db.transferQueueFamilyIndex
+			_db.graphicsQueueFamilyIndex,
+			_db.computeQueueFamilyIndex,
+			_db.transferQueueFamilyIndex
 		};
 		Util::ForEachBit(flags, [&queueData, &queueIndexMapping](uint32 bit) {
 			SOUL_ASSERT(0, bit < SOUL_ARRAY_LEN(queueIndexMapping), "");
@@ -864,8 +861,8 @@ namespace Soul { namespace GPU {
 		allocInfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
 
 		SOUL_VK_CHECK(vmaCreateImage(_db.gpuAllocator,
-									 &imageInfo, &allocInfo, &texture.vkHandle,
-									 &texture.allocation, nullptr), "");
+			              &imageInfo, &allocInfo, &texture.vkHandle,
+			              &texture.allocation, nullptr), "");
 
 		VkImageAspectFlags imageAspect = vkCastFormatToAspectFlags(desc.format);
 		if (imageAspect & VK_IMAGE_ASPECT_STENCIL_BIT)
@@ -880,14 +877,14 @@ namespace Soul { namespace GPU {
 		imageViewInfo.format = format;
 		imageViewInfo.components = {};
 		imageViewInfo.subresourceRange = {
-				imageAspect,
-				0,
-				VK_REMAINING_MIP_LEVELS,
-				0,
-				1
+			imageAspect,
+			0,
+			VK_REMAINING_MIP_LEVELS,
+			0,
+			1
 		};
 		SOUL_VK_CHECK(vkCreateImageView(_db.device,
-			&imageViewInfo, nullptr, &texture.view), "Create Image View fail");
+			              &imageViewInfo, nullptr, &texture.view), "Create Image View fail");
 		
 		texture.layout = VK_IMAGE_LAYOUT_UNDEFINED;
 		texture.extent = imageInfo.extent;
@@ -902,15 +899,15 @@ namespace Soul { namespace GPU {
 		if (desc.name != nullptr) {
 			char texName[1024];
 			sprintf(texName, "%s(%d)", desc.name, _db.frameCounter);
-            VkDebugUtilsObjectNameInfoEXT imageNameInfo = {
-                VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT, // sType
-                nullptr,                                               // pNext
-                VK_OBJECT_TYPE_IMAGE,                               // objectType
-                (uint64_t) texture.vkHandle,                         // object
-                texName,                            // pObjectName
-            };
+			VkDebugUtilsObjectNameInfoEXT imageNameInfo = {
+				VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT, // sType
+				nullptr,                                               // pNext
+				VK_OBJECT_TYPE_IMAGE,                               // objectType
+				(uint64_t) texture.vkHandle,                         // object
+				texName,                            // pObjectName
+			};
 
-            vkSetDebugUtilsObjectNameEXT(_db.device, &imageNameInfo);
+			vkSetDebugUtilsObjectNameEXT(_db.device, &imageNameInfo);
 		}
 		return textureID;
 	}
@@ -958,18 +955,18 @@ namespace Soul { namespace GPU {
 			VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT, // sType
 			nullptr,                                  // pNext
 			texName,                           // pLabelName
-		{color.x, color.y, color.z, color.w},             // color
+			{color.x, color.y, color.z, color.w},             // color
 		};
 		vkCmdBeginDebugUtilsLabelEXT(_frameContext().stagingCommandBuffer, &passLabel);
 
 
 		vkCmdPipelineBarrier(
-				_frameContext().stagingCommandBuffer,
-				VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
-				0,
-				0, nullptr,
-				0, nullptr,
-				1, &beforeTransferBarrier);
+			_frameContext().stagingCommandBuffer,
+			VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
+			0,
+			0, nullptr,
+			0, nullptr,
+			1, &beforeTransferBarrier);
 
 		_stagingTransferToTexture(dataSize, data, desc, textureID);
 
@@ -986,70 +983,70 @@ namespace Soul { namespace GPU {
 	}
 
 	TextureID System::textureCreate(const TextureDesc& desc, ClearValue clearValue) {
-        TextureDesc newDesc = desc;
-        newDesc.usageFlags |= TEXTURE_USAGE_TRANSFER_DST_BIT;
-        newDesc.queueFlags |= QUEUE_GRAPHIC_BIT;
+		TextureDesc newDesc = desc;
+		newDesc.usageFlags |= TEXTURE_USAGE_TRANSFER_DST_BIT;
+		newDesc.queueFlags |= QUEUE_GRAPHIC_BIT;
 
-        TextureID textureID = textureCreate(newDesc);
-        _Texture &texture = *_texturePtr(textureID);
+		TextureID textureID = textureCreate(newDesc);
+		_Texture &texture = *_texturePtr(textureID);
 
-        VkImageMemoryBarrier beforeTransferBarrier = {VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER};
-        beforeTransferBarrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-        beforeTransferBarrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-        beforeTransferBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-        beforeTransferBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-        beforeTransferBarrier.image = texture.vkHandle;
-        beforeTransferBarrier.subresourceRange.aspectMask = vkCastFormatToAspectFlags(desc.format);
-        beforeTransferBarrier.subresourceRange.baseMipLevel = 0;
-        beforeTransferBarrier.subresourceRange.levelCount = VK_REMAINING_MIP_LEVELS;
-        beforeTransferBarrier.subresourceRange.baseArrayLayer = 0;
-        beforeTransferBarrier.subresourceRange.layerCount = VK_REMAINING_ARRAY_LAYERS;
-        beforeTransferBarrier.srcAccessMask = 0;
-        beforeTransferBarrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+		VkImageMemoryBarrier beforeTransferBarrier = {VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER};
+		beforeTransferBarrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+		beforeTransferBarrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+		beforeTransferBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+		beforeTransferBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+		beforeTransferBarrier.image = texture.vkHandle;
+		beforeTransferBarrier.subresourceRange.aspectMask = vkCastFormatToAspectFlags(desc.format);
+		beforeTransferBarrier.subresourceRange.baseMipLevel = 0;
+		beforeTransferBarrier.subresourceRange.levelCount = VK_REMAINING_MIP_LEVELS;
+		beforeTransferBarrier.subresourceRange.baseArrayLayer = 0;
+		beforeTransferBarrier.subresourceRange.layerCount = VK_REMAINING_ARRAY_LAYERS;
+		beforeTransferBarrier.srcAccessMask = 0;
+		beforeTransferBarrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
 
-        if (!_frameContext().stagingAvailable) _stagingSetup();
-        vkCmdPipelineBarrier(
-                _frameContext().clearCommandBuffer,
-                VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
-                0,
-                0, nullptr,
-                0, nullptr,
-                1, &beforeTransferBarrier);
+		if (!_frameContext().stagingAvailable) _stagingSetup();
+		vkCmdPipelineBarrier(
+			_frameContext().clearCommandBuffer,
+			VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
+			0,
+			0, nullptr,
+			0, nullptr,
+			1, &beforeTransferBarrier);
 
-        VkImageSubresourceRange range;
-        range.baseMipLevel = 0;
-        range.levelCount = desc.mipLevels;
-        range.baseArrayLayer = 0;
-        range.layerCount = 1;
+		VkImageSubresourceRange range;
+		range.baseMipLevel = 0;
+		range.levelCount = desc.mipLevels;
+		range.baseArrayLayer = 0;
+		range.layerCount = 1;
 
-        range.aspectMask = vkCastFormatToAspectFlags(desc.format);
-        if (range.aspectMask & VK_IMAGE_ASPECT_DEPTH_BIT) {
-            VkClearDepthStencilValue  vkClearValue;
-            vkClearValue = { clearValue.depthStencil.depth, clearValue.depthStencil.stencil };
-            SOUL_ASSERT(0, !(range.aspectMask & VK_IMAGE_ASPECT_COLOR_BIT), "");
-            vkCmdClearDepthStencilImage(
-                _frameContext().clearCommandBuffer,
-                texture.vkHandle,
-                VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-                &vkClearValue,
-                1,
-                &range);
-        } else {
+		range.aspectMask = vkCastFormatToAspectFlags(desc.format);
+		if (range.aspectMask & VK_IMAGE_ASPECT_DEPTH_BIT) {
+			VkClearDepthStencilValue  vkClearValue;
+			vkClearValue = { clearValue.depthStencil.depth, clearValue.depthStencil.stencil };
+			SOUL_ASSERT(0, !(range.aspectMask & VK_IMAGE_ASPECT_COLOR_BIT), "");
+			vkCmdClearDepthStencilImage(
+				_frameContext().clearCommandBuffer,
+				texture.vkHandle,
+				VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+				&vkClearValue,
+				1,
+				&range);
+		} else {
 
-            VkClearColorValue vkClearValue;
-            memcpy(&vkClearValue, &clearValue, sizeof(vkClearValue));
-            vkCmdClearColorImage(
-                _frameContext().clearCommandBuffer,
-                texture.vkHandle,
-                VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-                &vkClearValue,
-                1,
-                &range);
-        }
-        texture.layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-        texture.owner = ResourceOwner::GRAPHIC_QUEUE;
+			VkClearColorValue vkClearValue;
+			memcpy(&vkClearValue, &clearValue, sizeof(vkClearValue));
+			vkCmdClearColorImage(
+				_frameContext().clearCommandBuffer,
+				texture.vkHandle,
+				VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+				&vkClearValue,
+				1,
+				&range);
+		}
+		texture.layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+		texture.owner = ResourceOwner::GRAPHIC_QUEUE;
 
-        return textureID;
+		return textureID;
 	}
 
 	void System::_generateMipmaps(TextureID textureID) {
@@ -1082,10 +1079,10 @@ namespace Soul { namespace GPU {
 			barrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
 
 			vkCmdPipelineBarrier(commandBuffer,
-				VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0,
-				0, nullptr,
-				0, nullptr,
-				1, &barrier);
+			                     VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0,
+			                     0, nullptr,
+			                     0, nullptr,
+			                     1, &barrier);
 
 			VkImageBlit blit{};
 			blit.srcOffsets[0] = { 0, 0, 0 };
@@ -1102,10 +1099,10 @@ namespace Soul { namespace GPU {
 			blit.dstSubresource.layerCount = 1;
 
 			vkCmdBlitImage(commandBuffer,
-				texture.vkHandle, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-				texture.vkHandle, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-				1, &blit,
-				VK_FILTER_LINEAR);
+			               texture.vkHandle, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+			               texture.vkHandle, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+			               1, &blit,
+			               VK_FILTER_LINEAR);
 
 			barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
 			barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
@@ -1113,10 +1110,10 @@ namespace Soul { namespace GPU {
 			barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
 
 			vkCmdPipelineBarrier(commandBuffer,
-				VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0,
-				0, nullptr,
-				0, nullptr,
-				1, &barrier);
+			                     VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0,
+			                     0, nullptr,
+			                     0, nullptr,
+			                     1, &barrier);
 
 			if (mipWidth > 1) mipWidth /= 2;
 			if (mipHeight > 1) mipHeight /= 2;
@@ -1129,10 +1126,10 @@ namespace Soul { namespace GPU {
 		barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
 
 		vkCmdPipelineBarrier(commandBuffer,
-			VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0,
-			0, nullptr,
-			0, nullptr,
-			1, &barrier);
+		                     VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0,
+		                     0, nullptr,
+		                     0, nullptr,
+		                     1, &barrier);
 
 		texture.layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 		texture.owner = ResourceOwner::GRAPHIC_QUEUE;
@@ -1168,8 +1165,8 @@ namespace Soul { namespace GPU {
 		allocInfo.requiredFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
 
 		SOUL_VK_CHECK(vmaCreateImage(_db.gpuAllocator,
-			&imageInfo, &allocInfo, &texture.vkHandle,
-			&texture.allocation, nullptr), "");
+			              &imageInfo, &allocInfo, &texture.vkHandle,
+			              &texture.allocation, nullptr), "");
 
 		VkImageAspectFlags imageAspect = vkCastFormatToAspectFlags(srcTexture->format);
 		if (imageAspect & VK_IMAGE_ASPECT_STENCIL_BIT)
@@ -1216,35 +1213,35 @@ namespace Soul { namespace GPU {
 		return _db.textures[textureID.id];
 	}
 
-    VkImageView System::_textureGetMipView(TextureID textureID, uint32 level) {
-	    _Texture* texture = _texturePtr(textureID);
-        SOUL_ASSERT(0, level < texture->mipCount, "");
-	    if (texture->mipCount == 1) return texture->view;
-	    if (texture->mipViews == nullptr) {
-	        texture->mipViews = (VkImageView*) _db.cpuAllocator.allocate(sizeof(VkImageView) * texture->mipCount, alignof(VkImageView));
-	        for (int i = 0; i < texture->mipCount; i++) {
-	            texture->mipViews[i] = VK_NULL_HANDLE;
-	        }
-	    }
-	    if (texture->mipViews[level] == VK_NULL_HANDLE) {
-            VkImageViewCreateInfo imageViewInfo = {VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO};
-            imageViewInfo.image = texture->vkHandle;
-            imageViewInfo.viewType = vkCastToImageViewType(texture->type);
-            imageViewInfo.format = vkCast(texture->format);
-            imageViewInfo.components = {};
-            imageViewInfo.subresourceRange = {
-                    vkCastFormatToAspectFlags(texture->format),
-                    level,
-                    1,
-                    0,
-                    1
-            };
-            VkImageView imageView;
-            SOUL_VK_CHECK(vkCreateImageView(_db.device,
-                                            &imageViewInfo, nullptr, &imageView), "Create Image View fail");
-            texture->mipViews[level] = imageView;
-	    }
-	    return texture->mipViews[level];
+	VkImageView System::_textureGetMipView(TextureID textureID, uint32 level) {
+		_Texture* texture = _texturePtr(textureID);
+		SOUL_ASSERT(0, level < texture->mipCount, "");
+		if (texture->mipCount == 1) return texture->view;
+		if (texture->mipViews == nullptr) {
+			texture->mipViews = (VkImageView*) _db.cpuAllocator.allocate(sizeof(VkImageView) * texture->mipCount, alignof(VkImageView));
+			for (int i = 0; i < texture->mipCount; i++) {
+				texture->mipViews[i] = VK_NULL_HANDLE;
+			}
+		}
+		if (texture->mipViews[level] == VK_NULL_HANDLE) {
+			VkImageViewCreateInfo imageViewInfo = {VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO};
+			imageViewInfo.image = texture->vkHandle;
+			imageViewInfo.viewType = vkCastToImageViewType(texture->type);
+			imageViewInfo.format = vkCast(texture->format);
+			imageViewInfo.components = {};
+			imageViewInfo.subresourceRange = {
+				vkCastFormatToAspectFlags(texture->format),
+				level,
+				1,
+				0,
+				1
+			};
+			VkImageView imageView;
+			SOUL_VK_CHECK(vkCreateImageView(_db.device,
+				              &imageViewInfo, nullptr, &imageView), "Create Image View fail");
+			texture->mipViews[level] = imageView;
+		}
+		return texture->mipViews[level];
 	}
 
 	void System::_stagingFrameBegin() {
@@ -1278,14 +1275,14 @@ namespace Soul { namespace GPU {
 
 		SemaphoreID mipmapSemaphore = _semaphoreCreate();
 		_queueSubmitCommandBuffer(QueueType::TRANSFER, frameContext.stagingCommandBuffer,
-			1, &mipmapSemaphore,
-			VK_NULL_HANDLE);
+		                          1, &mipmapSemaphore,
+		                          VK_NULL_HANDLE);
 		_queueSubmitCommandBuffer(QueueType::GRAPHIC, frameContext.clearCommandBuffer,
-			0, nullptr, VK_NULL_HANDLE);
+		                          0, nullptr, VK_NULL_HANDLE);
 
 		_queueWaitSemaphore(QueueType::GRAPHIC, mipmapSemaphore, VK_PIPELINE_STAGE_TRANSFER_BIT);
 		_queueSubmitCommandBuffer(QueueType::GRAPHIC, frameContext.genMipmapCommandBuffer,
-			0, nullptr, VK_NULL_HANDLE);
+		                          0, nullptr, VK_NULL_HANDLE);
 		_semaphoreDestroy(mipmapSemaphore);
 
 		frameContext.stagingCommandBuffer = VK_NULL_HANDLE;
@@ -1332,11 +1329,11 @@ namespace Soul { namespace GPU {
 		VmaAllocationCreateInfo allocInfo = {};
 		allocInfo.usage = VMA_MEMORY_USAGE_CPU_ONLY;
 		SOUL_VK_CHECK(vmaCreateBuffer(_db.gpuAllocator,
-									  &bufferInfo,
-									  &allocInfo,
-									  &stagingBuffer.vkHandle,
-									  &stagingBuffer.allocation,
-									  nullptr), "");
+			              &bufferInfo,
+			              &allocInfo,
+			              &stagingBuffer.vkHandle,
+			              &stagingBuffer.allocation,
+			              nullptr), "");
 		
 		_frameContext().stagingBuffers.add(stagingBuffer);
 
@@ -1378,11 +1375,11 @@ namespace Soul { namespace GPU {
 		_ThreadContext &threadContext = _threadContext();
 
 		vkCmdCopyBufferToImage(_frameContext().stagingCommandBuffer,
-			stagingBuffer.vkHandle,
-			_texturePtr(textureID)->vkHandle,
-			VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-			1,
-			&copyRegion);
+		                       stagingBuffer.vkHandle,
+		                       _texturePtr(textureID)->vkHandle,
+		                       VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+		                       1,
+		                       &copyRegion);
 	}
 
 	BufferID System::bufferCreate(const BufferDesc &desc) {
@@ -1398,9 +1395,9 @@ namespace Soul { namespace GPU {
 		int queueCount = 0;
 		uint32 queueIndices[3] = {};
 		const uint32 queueIndexMapping[] = {
-				_db.graphicsQueueFamilyIndex,
-				_db.computeQueueFamilyIndex,
-				_db.transferQueueFamilyIndex
+			_db.graphicsQueueFamilyIndex,
+			_db.computeQueueFamilyIndex,
+			_db.transferQueueFamilyIndex
 		};
 
 		Util::ForEachBit(desc.queueFlags, [&queueCount, &queueIndices, &queueIndexMapping](uint32 bit) {
@@ -1437,9 +1434,9 @@ namespace Soul { namespace GPU {
 		allocInfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
 
 		SOUL_VK_CHECK(
-				vmaCreateBuffer(_db.gpuAllocator, &bufferInfo, &allocInfo, &buffer.vkHandle, &buffer.allocation,
-								nullptr),
-				"");
+			vmaCreateBuffer(_db.gpuAllocator, &bufferInfo, &allocInfo, &buffer.vkHandle, &buffer.allocation,
+				nullptr),
+			"");
 
 		buffer.unitCount = desc.count;
 		buffer.unitSize = alignment;
@@ -1552,11 +1549,11 @@ namespace Soul { namespace GPU {
 		shaderc::CompileOptions options;
 		options.SetTargetSpirv(shaderc_spirv_version_1_3);
 		shaderc::SpvCompilationResult glslCompileResult = glslCompiler.CompileGlslToSpv(
-				desc.source,
-				desc.sourceSize,
-				(shaderc_shader_kind) shadercShaderStageMap[(uint32) stage],
-				desc.name,
-				options);
+			desc.source,
+			desc.sourceSize,
+			(shaderc_shader_kind) shadercShaderStageMap[(uint32) stage],
+			desc.name,
+			options);
 
 		std::string errorMessage = glslCompileResult.GetErrorMessage();
 
@@ -1570,8 +1567,8 @@ namespace Soul { namespace GPU {
 		static constexpr EnumArray<ShaderStage, const char*> STAGE_NAMES(_STAGE_NAMES);
 
 		SOUL_ASSERT(0, glslCompileResult.GetCompilationStatus() == shaderc_compilation_status_success,
-					"Fail when compiling pass : %d, shader_type = %s.\n"
-					"Error : \n%s\n", desc.name, STAGE_NAMES[stage], _FormatGLSLErrorMessage(desc.source, errorMessage).c_str());
+		            "Fail when compiling pass : %d, shader_type = %s.\n"
+		            "Error : \n%s\n", desc.name, STAGE_NAMES[stage], _FormatGLSLErrorMessage(desc.source, errorMessage).c_str());
 
 		VkShaderModuleCreateInfo moduleInfo = {VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO};
 		const uint32 *spirvCode = glslCompileResult.begin();
@@ -1580,7 +1577,7 @@ namespace Soul { namespace GPU {
 		moduleInfo.codeSize = spirvCodeSize * sizeof(uint32);
 
 		SOUL_VK_CHECK(vkCreateShaderModule(_db.device, &moduleInfo, nullptr, &shader.module),
-					  "Fail creating vertex shader module");
+		              "Fail creating vertex shader module");
 
 		spirv_cross::Compiler spirvCompiler(spirvCode, spirvCodeSize);
 		spirv_cross::ShaderResources resources = spirvCompiler.get_shader_resources();
@@ -1601,37 +1598,37 @@ namespace Soul { namespace GPU {
 		}
 
 		for (spirv_cross::Resource &resource : resources.subpass_inputs) {
-            unsigned set = spirvCompiler.get_decoration(resource.id, spv::DecorationDescriptorSet);
-            unsigned binding = spirvCompiler.get_decoration(resource.id, spv::DecorationBinding);
-            unsigned attachmentIndex = spirvCompiler.get_decoration(resource.id, spv::DecorationInputAttachmentIndex);
+			unsigned set = spirvCompiler.get_decoration(resource.id, spv::DecorationDescriptorSet);
+			unsigned binding = spirvCompiler.get_decoration(resource.id, spv::DecorationBinding);
+			unsigned attachmentIndex = spirvCompiler.get_decoration(resource.id, spv::DecorationInputAttachmentIndex);
 
-            const spirv_cross::SPIRType &type = spirvCompiler.get_type(resource.type_id);
-            shader.bindings[set][binding].type = DescriptorType::INPUT_ATTACHMENT;
-            shader.bindings[set][binding].attachmentIndex = attachmentIndex;
-            if (type.array.empty()) {
-                shader.bindings[set][binding].count = 1;
-            }
-            else {
-                SOUL_ASSERT(0, type.array.size() == 1, "Array must be one dimensional");
-                SOUL_ASSERT(0, type.array_size_literal.front(), "Array size must be literal");
-                shader.bindings[set][binding].count = type.array[0];
-            }
+			const spirv_cross::SPIRType &type = spirvCompiler.get_type(resource.type_id);
+			shader.bindings[set][binding].type = DescriptorType::INPUT_ATTACHMENT;
+			shader.bindings[set][binding].attachmentIndex = attachmentIndex;
+			if (type.array.empty()) {
+				shader.bindings[set][binding].count = 1;
+			}
+			else {
+				SOUL_ASSERT(0, type.array.size() == 1, "Array must be one dimensional");
+				SOUL_ASSERT(0, type.array_size_literal.front(), "Array size must be literal");
+				shader.bindings[set][binding].count = type.array[0];
+			}
 		}
 
 		for (spirv_cross::Resource &resource : resources.storage_images) {
-		    unsigned set = spirvCompiler.get_decoration(resource.id, spv::DecorationDescriptorSet);
-		    unsigned binding = spirvCompiler.get_decoration(resource.id, spv::DecorationBinding);
+			unsigned set = spirvCompiler.get_decoration(resource.id, spv::DecorationDescriptorSet);
+			unsigned binding = spirvCompiler.get_decoration(resource.id, spv::DecorationBinding);
 
-            const spirv_cross::SPIRType &type = spirvCompiler.get_type(resource.type_id);
-            shader.bindings[set][binding].type = DescriptorType::STORAGE_IMAGE;
-            if (type.array.empty()) {
-                shader.bindings[set][binding].count = 1;
-            }
-            else {
-                SOUL_ASSERT(0, type.array.size() == 1, "Array must be one dimensional");
-                SOUL_ASSERT(0, type.array_size_literal.front(), "Array size must be literal");
-                shader.bindings[set][binding].count = type.array[0];
-            }
+			const spirv_cross::SPIRType &type = spirvCompiler.get_type(resource.type_id);
+			shader.bindings[set][binding].type = DescriptorType::STORAGE_IMAGE;
+			if (type.array.empty()) {
+				shader.bindings[set][binding].count = 1;
+			}
+			else {
+				SOUL_ASSERT(0, type.array.size() == 1, "Array must be one dimensional");
+				SOUL_ASSERT(0, type.array_size_literal.front(), "Array size must be literal");
+				shader.bindings[set][binding].count = type.array[0];
+			}
 		}
 
 		SOUL_ASSERT(0, resources.separate_images.empty(), "texture<Dimension> is not supported yet!");
@@ -1679,54 +1676,54 @@ namespace Soul { namespace GPU {
 			SOUL_ASSERT(0, type.columns <= 1, "");
 
 			VkFormat floatVecSizeToVkFormat[4] = {
-					VK_FORMAT_R32_SFLOAT,
-					VK_FORMAT_R32G32_SFLOAT,
-					VK_FORMAT_R32G32B32_SFLOAT,
-					VK_FORMAT_R32G32B32A32_SFLOAT
+				VK_FORMAT_R32_SFLOAT,
+				VK_FORMAT_R32G32_SFLOAT,
+				VK_FORMAT_R32G32B32_SFLOAT,
+				VK_FORMAT_R32G32B32A32_SFLOAT
 			};
 			VkFormat doubleVecSizeToVkFormat[4] = {
-					VK_FORMAT_R64_SFLOAT,
-					VK_FORMAT_R64G64_SFLOAT,
-					VK_FORMAT_R64G64B64_SFLOAT,
-					VK_FORMAT_R64G64B64A64_SFLOAT
+				VK_FORMAT_R64_SFLOAT,
+				VK_FORMAT_R64G64_SFLOAT,
+				VK_FORMAT_R64G64B64_SFLOAT,
+				VK_FORMAT_R64G64B64A64_SFLOAT
 			};
 			VkFormat intVecSizeToVkFormat[4] = {
-					VK_FORMAT_R32_SINT,
-					VK_FORMAT_R32G32_SINT,
-					VK_FORMAT_R32G32B32_SINT,
-					VK_FORMAT_R32G32B32A32_SINT
+				VK_FORMAT_R32_SINT,
+				VK_FORMAT_R32G32_SINT,
+				VK_FORMAT_R32G32B32_SINT,
+				VK_FORMAT_R32G32B32A32_SINT
 			};
 			VkFormat uintVecSizeToVkFormat[4] = {
-					VK_FORMAT_R32_UINT,
-					VK_FORMAT_R32G32_UINT,
-					VK_FORMAT_R32G32B32_UINT,
-					VK_FORMAT_R32G32B32A32_UINT
+				VK_FORMAT_R32_UINT,
+				VK_FORMAT_R32G32_UINT,
+				VK_FORMAT_R32G32B32_UINT,
+				VK_FORMAT_R32G32B32A32_UINT
 			};
 
 			VkFormat *vecSizeToVkFormat = nullptr;
 			switch (type.basetype) {
-				case spirv_cross::SPIRType::Float:
-					vecSizeToVkFormat = floatVecSizeToVkFormat;
-					extraInfo.alignment = alignof(float);
-					extraInfo.size = sizeof(float) * type.vecsize;
-					break;
-				case spirv_cross::SPIRType::UInt:
-					vecSizeToVkFormat = uintVecSizeToVkFormat;
-					extraInfo.alignment = alignof(uint32);
-					extraInfo.size = sizeof(uint32) * type.vecsize;
-					break;
-				case spirv_cross::SPIRType::Int:
-					vecSizeToVkFormat = intVecSizeToVkFormat;
-					extraInfo.alignment = alignof(int32);
-					extraInfo.size = sizeof(int32) * type.vecsize;
-					break;
-				case spirv_cross::SPIRType::Double:
-					vecSizeToVkFormat = doubleVecSizeToVkFormat;
-					extraInfo.alignment = alignof(double);
-					extraInfo.size = sizeof(double) * type.vecsize;
-					break;
-				default:
-					SOUL_PANIC(0, "Basetype %d is not supported", type.basetype);
+			case spirv_cross::SPIRType::Float:
+				vecSizeToVkFormat = floatVecSizeToVkFormat;
+				extraInfo.alignment = alignof(float);
+				extraInfo.size = sizeof(float) * type.vecsize;
+				break;
+			case spirv_cross::SPIRType::UInt:
+				vecSizeToVkFormat = uintVecSizeToVkFormat;
+				extraInfo.alignment = alignof(uint32);
+				extraInfo.size = sizeof(uint32) * type.vecsize;
+				break;
+			case spirv_cross::SPIRType::Int:
+				vecSizeToVkFormat = intVecSizeToVkFormat;
+				extraInfo.alignment = alignof(int32);
+				extraInfo.size = sizeof(int32) * type.vecsize;
+				break;
+			case spirv_cross::SPIRType::Double:
+				vecSizeToVkFormat = doubleVecSizeToVkFormat;
+				extraInfo.alignment = alignof(double);
+				extraInfo.size = sizeof(double) * type.vecsize;
+				break;
+			default:
+				SOUL_PANIC(0, "Basetype %d is not supported", type.basetype);
 			}
 			shader.inputs[location].format = vecSizeToVkFormat[type.vecsize - 1];
 		}
@@ -1832,12 +1829,12 @@ namespace Soul { namespace GPU {
 		}
 
 		static VkPrimitiveTopology primitiveTopologyMap[(uint32)Topology::COUNT] = {
-				VK_PRIMITIVE_TOPOLOGY_POINT_LIST,
-				VK_PRIMITIVE_TOPOLOGY_LINE_LIST,
-				VK_PRIMITIVE_TOPOLOGY_LINE_STRIP,
-				VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
-				VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP,
-				VK_PRIMITIVE_TOPOLOGY_TRIANGLE_FAN
+			VK_PRIMITIVE_TOPOLOGY_POINT_LIST,
+			VK_PRIMITIVE_TOPOLOGY_LINE_LIST,
+			VK_PRIMITIVE_TOPOLOGY_LINE_STRIP,
+			VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
+			VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP,
+			VK_PRIMITIVE_TOPOLOGY_TRIANGLE_FAN
 		};
 		VkPipelineInputAssemblyStateCreateInfo
 			inputAssemblyState = { VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO };
@@ -1869,7 +1866,7 @@ namespace Soul { namespace GPU {
 		};
 
 		VkPipelineRasterizationStateCreateInfo rasterizerState = {
-				VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO };
+			VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO };
 		rasterizerState.depthClampEnable = VK_FALSE;
 		rasterizerState.rasterizerDiscardEnable = VK_FALSE;
 		rasterizerState.polygonMode = polygonModeMap[(uint32)desc.raster.polygonMode];
@@ -1877,7 +1874,7 @@ namespace Soul { namespace GPU {
 
 		// TODO(kevinyu) : Enable multisampling configuration
 		VkPipelineMultisampleStateCreateInfo multisampleState = {
-				VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO };
+			VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO };
 		multisampleState.sampleShadingEnable = VK_FALSE;
 		multisampleState.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
 
@@ -1906,7 +1903,7 @@ namespace Soul { namespace GPU {
 		}
 
 		VkPipelineVertexInputStateCreateInfo inputStateInfo = {
-				VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO };
+			VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO };
 		inputStateInfo.vertexAttributeDescriptionCount = attrDescCount;
 		inputStateInfo.pVertexAttributeDescriptions = attrDescs;
 		inputStateInfo.vertexBindingDescriptionCount = attrDescCount > 0 ? inputBindingDescCount : 0;
@@ -1949,7 +1946,7 @@ namespace Soul { namespace GPU {
 		pipelineInfo.pColorBlendState = &colorBlending;
 
 		VkPipelineDepthStencilStateCreateInfo depthStencilInfo = {
-				VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO };
+			VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO };
 		depthStencilInfo.depthTestEnable = desc.depthStencilAttachment.depthTestEnable;
 		depthStencilInfo.depthWriteEnable = desc.depthStencilAttachment.depthWriteEnable;
 		depthStencilInfo.depthCompareOp = vkCast(desc.depthStencilAttachment.depthCompareOp);
@@ -1962,7 +1959,7 @@ namespace Soul { namespace GPU {
 		pipelineInfo.pDepthStencilState = &depthStencilInfo;
 
 		VkPipelineDynamicStateCreateInfo dynamicStateInfo = {
-					VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO };
+			VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO };
 		VkDynamicState dynamicStates[] = { VK_DYNAMIC_STATE_SCISSOR };
 		if (desc.scissor.dynamic) {
 			dynamicStateInfo.dynamicStateCount = 1;
@@ -1998,29 +1995,29 @@ namespace Soul { namespace GPU {
 	}
 
 	ProgramID System::programRequest(const ProgramDesc& programDesc) {
-        SOUL_ASSERT_MAIN_THREAD();
-        SOUL_PROFILE_ZONE_WITH_NAME("GPU::System::programRequest");
-        Runtime::ScopeAllocator<> scopeAllocator("GPU::System::programCreate");
+		SOUL_ASSERT_MAIN_THREAD();
+		SOUL_PROFILE_ZONE_WITH_NAME("GPU::System::programRequest");
+		Runtime::ScopeAllocator<> scopeAllocator("GPU::System::programCreate");
 
-        if (_db.programMaps.isExist(programDesc)) {
-            return _db.programMaps[programDesc];
-        }
+		if (_db.programMaps.isExist(programDesc)) {
+			return _db.programMaps[programDesc];
+		}
 
-        ProgramID programID = ProgramID(_db.programs.add({}));
-        _Program &program = _db.programs[programID.id];
+		ProgramID programID = ProgramID(_db.programs.add({}));
+		_Program &program = _db.programs[programID.id];
 
 		for (int i = 0; i < uint64(ShaderStage::COUNT); i++) {
 			program.shaderIDs[ShaderStage(i)] = programDesc.shaderIDs[ShaderStage(i)];
 		}
 
-        const EnumArray<ShaderStage, ShaderID>& shaderIDs = programDesc.shaderIDs;
-        for (int i = 0; i < MAX_SET_PER_SHADER_PROGRAM; i++) {
-            for (int j = 0; j < uint64(ShaderStage::COUNT); j++) {
-                ShaderID shaderID = shaderIDs[ShaderStage(j)];
-                if (shaderID == SHADER_ID_NULL) continue;
-                const _Shader &shader = *_shaderPtr(shaderID);
+		const EnumArray<ShaderStage, ShaderID>& shaderIDs = programDesc.shaderIDs;
+		for (int i = 0; i < MAX_SET_PER_SHADER_PROGRAM; i++) {
+			for (int j = 0; j < uint64(ShaderStage::COUNT); j++) {
+				ShaderID shaderID = shaderIDs[ShaderStage(j)];
+				if (shaderID == SHADER_ID_NULL) continue;
+				const _Shader &shader = *_shaderPtr(shaderID);
 
-                for (int k = 0; k < MAX_BINDING_PER_SET; k++) {
+				for (int k = 0; k < MAX_BINDING_PER_SET; k++) {
 
 					static VkPipelineStageFlags vulkanPipelineStageBitsMap[] = {
 						0,
@@ -2031,26 +2028,26 @@ namespace Soul { namespace GPU {
 					};
 					static_assert(SOUL_ARRAY_LEN(vulkanPipelineStageBitsMap) == uint64(ShaderStage::COUNT), "");
 
-                    _ProgramDescriptorBinding &progBinding = program.bindings[i][k];
-                    const _ShaderDescriptorBinding &shaderBinding = shader.bindings[i][k];
+					_ProgramDescriptorBinding &progBinding = program.bindings[i][k];
+					const _ShaderDescriptorBinding &shaderBinding = shader.bindings[i][k];
 
-                    if (shader.bindings[i][k].count == 0) continue;
+					if (shader.bindings[i][k].count == 0) continue;
 
-                    if (progBinding.shaderStageFlags == 0) {
-                        progBinding.type = shaderBinding.type;
-                        progBinding.count = shaderBinding.count;
-                        progBinding.attachmentIndex = shaderBinding.attachmentIndex;
-                    }
-                    else {
-                        SOUL_ASSERT(0, program.bindings[i][k].type == shader.bindings[i][k].type, "");
-                        SOUL_ASSERT(0, program.bindings[i][k].count == shader.bindings[i][k].count, "");
-                        SOUL_ASSERT(0, program.bindings[i][k].attachmentIndex == shader.bindings[i][k].attachmentIndex, "");
-                    }
-                    progBinding.shaderStageFlags |= vkCast(ShaderStage(j));
-                    progBinding.pipelineStageFlags |= vulkanPipelineStageBitsMap[j];
-                }
-            }
-        }
+					if (progBinding.shaderStageFlags == 0) {
+						progBinding.type = shaderBinding.type;
+						progBinding.count = shaderBinding.count;
+						progBinding.attachmentIndex = shaderBinding.attachmentIndex;
+					}
+					else {
+						SOUL_ASSERT(0, program.bindings[i][k].type == shader.bindings[i][k].type, "");
+						SOUL_ASSERT(0, program.bindings[i][k].count == shader.bindings[i][k].count, "");
+						SOUL_ASSERT(0, program.bindings[i][k].attachmentIndex == shader.bindings[i][k].attachmentIndex, "");
+					}
+					progBinding.shaderStageFlags |= vkCast(ShaderStage(j));
+					progBinding.pipelineStageFlags |= vulkanPipelineStageBitsMap[j];
+				}
+			}
+		}
 
 		for (int i = 0; i < MAX_SET_PER_SHADER_PROGRAM; i++) {
 			_DescriptorSetLayoutKey descriptorSetLayoutKey = {};
@@ -2068,18 +2065,18 @@ namespace Soul { namespace GPU {
 			program.descriptorLayouts[i] = _descriptorSetLayoutRequest(descriptorSetLayoutKey);
 		}
 
-        VkPipelineLayoutCreateInfo pipelineLayoutInfo = {VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO};
-        pipelineLayoutInfo.setLayoutCount = MAX_SET_PER_SHADER_PROGRAM;
-        pipelineLayoutInfo.pSetLayouts = program.descriptorLayouts;
+		VkPipelineLayoutCreateInfo pipelineLayoutInfo = {VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO};
+		pipelineLayoutInfo.setLayoutCount = MAX_SET_PER_SHADER_PROGRAM;
+		pipelineLayoutInfo.pSetLayouts = program.descriptorLayouts;
 
-        SOUL_VK_CHECK(vkCreatePipelineLayout(_db.device, &pipelineLayoutInfo, nullptr, &program.pipelineLayout),"");
+		SOUL_VK_CHECK(vkCreatePipelineLayout(_db.device, &pipelineLayoutInfo, nullptr, &program.pipelineLayout),"");
 
-        _db.programMaps.add(programDesc, programID);
-        return programID;
+		_db.programMaps.add(programDesc, programID);
+		return programID;
 	}
 
 	_Program *System::_programPtr(ProgramID programID) {
-	    SOUL_ASSERT(0, programID != PROGRAM_ID_NULL, "");
+		SOUL_ASSERT(0, programID != PROGRAM_ID_NULL, "");
 		return &_db.programs[programID.id];
 	}
 
@@ -2089,31 +2086,31 @@ namespace Soul { namespace GPU {
 	}
 
 	VkPipeline System::_pipelineCreate(const ComputeBaseNode &node, ProgramID programID) {
-	    SOUL_ASSERT_MAIN_THREAD();
-	    SOUL_PROFILE_ZONE_WITH_NAME("GPU::System::_pipelineCreate");
-	    Runtime::ScopeAllocator<> scopeAllocator("GPU::System::_pipelineCreate");
+		SOUL_ASSERT_MAIN_THREAD();
+		SOUL_PROFILE_ZONE_WITH_NAME("GPU::System::_pipelineCreate");
+		Runtime::ScopeAllocator<> scopeAllocator("GPU::System::_pipelineCreate");
 
-	    const ComputePipelineConfig& pipelineConfig = node.pipelineConfig;
-	    SOUL_ASSERT(0, pipelineConfig.computeShaderID!=SHADER_ID_NULL, "");
+		const ComputePipelineConfig& pipelineConfig = node.pipelineConfig;
+		SOUL_ASSERT(0, pipelineConfig.computeShaderID!=SHADER_ID_NULL, "");
 
-	    const _Shader &computeShader = *_shaderPtr(pipelineConfig.computeShaderID);
+		const _Shader &computeShader = *_shaderPtr(pipelineConfig.computeShaderID);
 
-        VkComputePipelineCreateInfo pipelineInfo = {
-            VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO,
-            0, 0,
-            {
-                VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
-                0, 0, VK_SHADER_STAGE_COMPUTE_BIT, computeShader.module, "main", 0
-            },
-            _programPtr(programID)->pipelineLayout, 0, 0
-        };
+		VkComputePipelineCreateInfo pipelineInfo = {
+			VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO,
+			0, 0,
+			{
+				VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+				0, 0, VK_SHADER_STAGE_COMPUTE_BIT, computeShader.module, "main", 0
+			},
+			_programPtr(programID)->pipelineLayout, 0, 0
+		};
 
-        VkPipeline pipeline;
-        {
-            SOUL_PROFILE_ZONE_WITH_NAME("vkCreateGraphicsPipelines");
-            SOUL_VK_CHECK(vkCreateComputePipelines(_db.device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &pipeline),"");
-        }
-        return pipeline;
+		VkPipeline pipeline;
+		{
+			SOUL_PROFILE_ZONE_WITH_NAME("vkCreateGraphicsPipelines");
+			SOUL_VK_CHECK(vkCreateComputePipelines(_db.device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &pipeline),"");
+		}
+		return pipeline;
 	}
 
 	SamplerID System::samplerRequest(const SamplerDesc &desc) {
@@ -2153,10 +2150,10 @@ namespace Soul { namespace GPU {
 			Descriptor& descriptorDesc = desc.bindingDescriptions[i];
 			switch (descriptorDesc.type) {
 			case DescriptorType::NONE:
-			{
-				hash = hashFNV1((uint8*)&descriptorDesc.type, sizeof(descriptorDesc.type), hash);
-				break;
-			}
+				{
+					hash = hashFNV1((uint8*)&descriptorDesc.type, sizeof(descriptorDesc.type), hash);
+					break;
+				}
 			case DescriptorType::UNIFORM_BUFFER: {
 				const UniformDescriptor& uniformDescriptor = descriptorDesc.uniformInfo;
 				hash = hashFNV1((uint8*)&descriptorDesc.type, sizeof(descriptorDesc.type), hash);
@@ -2231,9 +2228,9 @@ namespace Soul { namespace GPU {
 					VkDescriptorImageInfo imageInfo;
 					switch (descriptorDesc.type) {
 					case DescriptorType::NONE:
-					{
-						continue;
-					}
+						{
+							continue;
+						}
 					case DescriptorType::UNIFORM_BUFFER: {
 						bufferInfo.buffer = _bufferPtr(descriptorDesc.uniformInfo.bufferID)->vkHandle;
 						_Buffer* buffer = _bufferPtr(descriptorDesc.uniformInfo.bufferID);
@@ -2328,7 +2325,7 @@ namespace Soul { namespace GPU {
 		};
 
 		VkAttachmentDescription attachments[MAX_COLOR_ATTACHMENT_PER_SHADER + MAX_INPUT_ATTACHMENT_PER_SHADER + 1] = {};
-        VkAttachmentReference attachmentRefs[MAX_COLOR_ATTACHMENT_PER_SHADER + 1];
+		VkAttachmentReference attachmentRefs[MAX_COLOR_ATTACHMENT_PER_SHADER + 1];
 		uint8 attachmentCount = 0;
 		for (int i = 0; i < MAX_COLOR_ATTACHMENT_PER_SHADER; i++)
 		{
@@ -2348,37 +2345,37 @@ namespace Soul { namespace GPU {
 				attachment.initialLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 				attachment.finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
-                attachmentRefs[attachmentCount].attachment = attachmentCount;
-                attachmentRefs[attachmentCount].layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+				attachmentRefs[attachmentCount].attachment = attachmentCount;
+				attachmentRefs[attachmentCount].layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
-                attachmentCount++;
-            }
+				attachmentCount++;
+			}
 		}
 		uint8 colorAttachmentCount = attachmentCount;
 
 		for (int i = 0; i < MAX_INPUT_ATTACHMENT_PER_SHADER; i++) {
-		    const Attachment& attachmentKey = key.inputAttachments[i];
-		    if (attachmentKey.flags & ATTACHMENT_ACTIVE_BIT) {
-                VkAttachmentDescription& attachment = attachments[attachmentCount];
-                attachment.format = vkCast(attachmentKey.format);
-                attachment.samples = VK_SAMPLE_COUNT_1_BIT;
+			const Attachment& attachmentKey = key.inputAttachments[i];
+			if (attachmentKey.flags & ATTACHMENT_ACTIVE_BIT) {
+				VkAttachmentDescription& attachment = attachments[attachmentCount];
+				attachment.format = vkCast(attachmentKey.format);
+				attachment.samples = VK_SAMPLE_COUNT_1_BIT;
 
-                AttachmentFlags flags = attachmentKey.flags;
+				AttachmentFlags flags = attachmentKey.flags;
 
-                attachment.loadOp = attachmentFlagToLoadOp(flags);
-                attachment.storeOp = attachmentFlagToStoreOp(flags);
+				attachment.loadOp = attachmentFlagToLoadOp(flags);
+				attachment.storeOp = attachmentFlagToStoreOp(flags);
 
-                attachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-                attachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+				attachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+				attachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
 
-                attachment.initialLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-                attachment.finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+				attachment.initialLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+				attachment.finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
-                attachmentRefs[attachmentCount].attachment = attachmentCount;
-                attachmentRefs[attachmentCount].layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+				attachmentRefs[attachmentCount].attachment = attachmentCount;
+				attachmentRefs[attachmentCount].layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
-                attachmentCount++;
-		    }
+				attachmentCount++;
+			}
 		}
 		uint8 inputAttachmentCount = attachmentCount - colorAttachmentCount;
 
@@ -2491,8 +2488,8 @@ namespace Soul { namespace GPU {
 	}
 
 	void System::_queueFlush(QueueType queueType,
-							 uint32 semaphoreCount, SemaphoreID *semaphoreID,
-							 VkFence fence) {
+	                         uint32 semaphoreCount, SemaphoreID *semaphoreID,
+	                         VkFence fence) {
 		SOUL_ASSERT_MAIN_THREAD();
 		SOUL_PROFILE_ZONE();
 
@@ -2525,35 +2522,16 @@ namespace Soul { namespace GPU {
 
 	VkCommandBuffer System::_queueRequestCommandBuffer(QueueType queueType) {
 		SOUL_ASSERT_MAIN_THREAD();
-
 		_FrameContext &frameContext = _frameContext();
-
-		Array<VkCommandBuffer> &cmdBuffers = frameContext.commandBuffers[queueType];
-
-		if (frameContext.usedCommandBuffers[queueType] == cmdBuffers.size()) {
-			VkCommandBuffer cmdBuffer;
-			VkCommandBufferAllocateInfo allocInfo = {VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO};
-			allocInfo.commandPool = frameContext.commandPools[queueType];
-			allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-			allocInfo.commandBufferCount = 1;
-
-			SOUL_VK_CHECK(vkAllocateCommandBuffers(_db.device, &allocInfo, &cmdBuffer), "");
-			cmdBuffers.add(cmdBuffer);
-		}
-
-		VkCommandBuffer cmdBuffer = cmdBuffers[frameContext.usedCommandBuffers[queueType]];
-
-		VkCommandBufferBeginInfo beginInfo = {VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO};
+		VkCommandBuffer cmdBuffer = frameContext.commandPools[queueType].request();
+		VkCommandBufferBeginInfo beginInfo = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
 		beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
 		SOUL_VK_CHECK(vkBeginCommandBuffer(cmdBuffer, &beginInfo), "");
-
-		frameContext.usedCommandBuffers[queueType] = frameContext.usedCommandBuffers[queueType] + 1;
-
 		return cmdBuffer;
 	}
 
 	void System::_queueSubmitCommandBuffer(QueueType queueType, VkCommandBuffer commandBuffer,
-										   uint32 semaphoreCount, SemaphoreID *semaphoreID, VkFence fence) {
+	                                       uint32 semaphoreCount, SemaphoreID *semaphoreID, VkFence fence) {
 		SOUL_ASSERT_MAIN_THREAD();
 		SOUL_ASSERT(0, semaphoreCount <= MAX_SIGNAL_SEMAPHORE, "");
 		SOUL_PROFILE_ZONE();
@@ -2564,9 +2542,9 @@ namespace Soul { namespace GPU {
 		submission.commands.add(commandBuffer);
 
 		for (int i = 0; i < semaphoreCount; i++) {
-		    _Semaphore* semaphore = _semaphorePtr(semaphoreID[i]);
-		    SOUL_ASSERT(0, semaphore->state == _SemaphoreState::INITIAL, "");
-		    semaphore->state = _SemaphoreState::SUBMITTED;
+			_Semaphore* semaphore = _semaphorePtr(semaphoreID[i]);
+			SOUL_ASSERT(0, semaphore->state == _SemaphoreState::INITIAL, "");
+			semaphore->state = _SemaphoreState::SUBMITTED;
 		}
 
 		// TODO : Fix this
@@ -2578,64 +2556,27 @@ namespace Soul { namespace GPU {
 
 	void System::_queueWaitSemaphore(QueueType queueType, SemaphoreID ID, VkPipelineStageFlags waitStages) {
 		SOUL_ASSERT_MAIN_THREAD();
-		SOUL_ASSERT(0, queueType != QueueType::NONE, "");
 		SOUL_ASSERT(0, waitStages != 0, "");
 
 		_Semaphore *semaphore = _semaphorePtr(ID);
 
 		SOUL_ASSERT(0, semaphore->state == _SemaphoreState::SUBMITTED, "");
-        semaphore->state = _SemaphoreState::PENDING;
+		semaphore->state = _SemaphoreState::PENDING;
 
 		_Submission &submission = _db.submissions[queueType];
 
-        if (submission.commands.size() != 0) {
-            _queueFlush(queueType, 0, nullptr, VK_NULL_HANDLE);
-        }
-        submission.waitSemaphores.add(semaphore->vkHandle);
-        submission.waitStages.add(waitStages);
-	}
 
-	VkCommandBuffer System::_requestSecondaryCommandBuffer()
-	{
-		_ThreadContext& threadContext = _threadContext();
-		VkCommandBuffer commandBuffer = _commandPoolRequestCommandBuffer(&threadContext.secondaryCommandPool, VK_COMMAND_BUFFER_LEVEL_SECONDARY);
-		return commandBuffer;
-	}
-
-	void System::_commandPoolInit(_CommandPool* commandPool, QueueType queueType)
-	{
-		VkCommandPoolCreateInfo cmdPoolCreateInfo = { VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO };
-		cmdPoolCreateInfo.flags =
-			VK_COMMAND_POOL_CREATE_TRANSIENT_BIT;
-		cmdPoolCreateInfo.queueFamilyIndex = _db.queueFamilyIndices[queueType];
-		vkCreateCommandPool(_db.device, &cmdPoolCreateInfo, nullptr, &commandPool->vkHandle);
-		commandPool->count = 0;
-	}
-
-	void System::_commandPoolReset(_CommandPool* commandPool)
-	{
-		vkResetCommandPool(_db.device, commandPool->vkHandle, 0);
-		commandPool->count = 0;
-	}
-
-	VkCommandBuffer System::_commandPoolRequestCommandBuffer(_CommandPool* commandPool, VkCommandBufferLevel level)
-	{
-		if (commandPool->allocatedBuffers.size() == commandPool->count) {
-			VkCommandBuffer cmdBuffer;
-			VkCommandBufferAllocateInfo allocInfo = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO };
-			allocInfo.commandPool = commandPool->vkHandle;
-			allocInfo.level = level;
-			allocInfo.commandBufferCount = 1;
-
-			SOUL_VK_CHECK(vkAllocateCommandBuffers(_db.device, &allocInfo, &cmdBuffer), "");
-			commandPool->allocatedBuffers.add(cmdBuffer);
+		if (submission.commands.size() != 0) {
+			_queueFlush(queueType, 0, nullptr, VK_NULL_HANDLE);
 		}
-
-		VkCommandBuffer cmdBuffer = commandPool->allocatedBuffers[commandPool->count];
-		commandPool->count++;
-		return cmdBuffer;
+		submission.waitSemaphores.add(semaphore->vkHandle);
+		submission.waitStages.add(waitStages);
 	}
 
+	VkCommandBuffer System::_requestSecondaryCommandBuffer() {
+		_ThreadContext& threadContext = _threadContext();
+		return threadContext.secondaryCommandPool.request();
+	}
 
 	void System::renderGraphExecute(const RenderGraph &renderGraph) {
 		SOUL_ASSERT_MAIN_THREAD();
@@ -2643,7 +2584,7 @@ namespace Soul { namespace GPU {
 
 		_RenderGraphExecution execution(&renderGraph, this, Runtime::GetContextAllocator());
 		execution.init();
-        if (!_frameContext().stagingSynced) _stagingFlush();
+		if (!_frameContext().stagingSynced) _stagingFlush();
 		execution.run();
 		execution.cleanup();
 	}
@@ -2667,18 +2608,13 @@ namespace Soul { namespace GPU {
 		
 		{
 			SOUL_PROFILE_ZONE_WITH_NAME("Reset command pools");
-			for (int i = 0; i < uint64(QueueType::COUNT); i++) {
-				QueueType queueType = QueueType(i);
-				if (queueType == QueueType::NONE) continue;
-				vkResetCommandPool(_db.device, frameContext.commandPools[queueType], 0);
-			}
-			for (uint16& usedCommandBuffer : frameContext.usedCommandBuffers) {
-				usedCommandBuffer = 0;
-			}
-
-			for (int i = 0; i < frameContext.threadContexts.size(); i++)
+			for (CommandPool& pool : frameContext.commandPools)
 			{
-				_commandPoolReset(&frameContext.threadContexts[i].secondaryCommandPool);
+				pool.reset();
+			}
+			for (_ThreadContext& threadContext : frameContext.threadContexts)
+			{
+				threadContext.secondaryCommandPool.reset();
 			}
 		}
 		
@@ -2691,8 +2627,8 @@ namespace Soul { namespace GPU {
 		{
 			SOUL_PROFILE_ZONE_WITH_NAME("Acquire Next Image KHR");
 			vkAcquireNextImageKHR(_db.device, _db.swapchain.vkHandle, UINT64_MAX,
-				_semaphorePtr(frameContext.imageAvailableSemaphore)->vkHandle, VK_NULL_HANDLE,
-				&swapchainIndex);
+			                      _semaphorePtr(frameContext.imageAvailableSemaphore)->vkHandle, VK_NULL_HANDLE,
+			                      &swapchainIndex);
 		}
 		
 		_semaphorePtr(frameContext.imageAvailableSemaphore)->state = _SemaphoreState::SUBMITTED;
@@ -2796,9 +2732,9 @@ namespace Soul { namespace GPU {
 			_stagingFrameEnd();
 
 			SOUL_ASSERT(0,
-						swapchainTexture.owner == ResourceOwner::GRAPHIC_QUEUE
-						|| swapchainTexture.owner == ResourceOwner::PRESENTATION_ENGINE,
-						"");
+			            swapchainTexture.owner == ResourceOwner::GRAPHIC_QUEUE
+			            || swapchainTexture.owner == ResourceOwner::PRESENTATION_ENGINE,
+			            "");
 			// TODO: Handle when swapchain texture is untouch (ResourceOwner is PRESENTATION_ENGINE)
 			VkCommandBuffer cmdBuffer = _queueRequestCommandBuffer(QueueType::GRAPHIC);
 
@@ -2817,23 +2753,23 @@ namespace Soul { namespace GPU {
 			imageBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 
 			vkCmdPipelineBarrier(cmdBuffer,
-				VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
-				VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
-				0,
-				0,
-				nullptr,
-				0,
-				nullptr,
-				1,
-				&imageBarrier);
+			                     VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+			                     VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
+			                     0,
+			                     0,
+			                     nullptr,
+			                     0,
+			                     nullptr,
+			                     1,
+			                     &imageBarrier);
 
 			static constexpr EnumArray<ResourceOwner, QueueType> RESOURCE_ONWER_TO_QUEUE_TYPE({
-				QueueType::NONE,
+				QueueType::COUNT,
 				QueueType::GRAPHIC,
 				QueueType::COMPUTE,
 				QueueType::TRANSFER,
 				QueueType::GRAPHIC
-			 });
+			});
 
 			auto _syncQueueToGraphic = [this](QueueType queueType) {
 				SemaphoreID semaphoreID = _semaphoreCreate();
@@ -2855,16 +2791,17 @@ namespace Soul { namespace GPU {
 
 			if (swapchainTexture.owner == ResourceOwner::PRESENTATION_ENGINE) {
 				_queueWaitSemaphore(QueueType::GRAPHIC,
-									_frameContext().imageAvailableSemaphore,
-									VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT);
+				                    _frameContext().imageAvailableSemaphore,
+				                    VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT);
 			}
 
 			_queueSubmitCommandBuffer(RESOURCE_ONWER_TO_QUEUE_TYPE[swapchainTexture.owner], cmdBuffer,
-									  1, &_frameContext().renderFinishedSemaphore, frameContext.fence);
+			                          1, &_frameContext().renderFinishedSemaphore, frameContext.fence);
 			swapchainTexture.layout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
 		}
 
-		VkPresentInfoKHR presentInfo = {VK_STRUCTURE_TYPE_PRESENT_INFO_KHR};
+		VkPresentInfoKHR presentInfo = {};
+		presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
 		presentInfo.waitSemaphoreCount = 1;
 		presentInfo.pWaitSemaphores = &_semaphorePtr(frameContext.renderFinishedSemaphore)->vkHandle;
 		presentInfo.swapchainCount = 1;
@@ -2892,5 +2829,42 @@ namespace Soul { namespace GPU {
 		return _db.swapchain.textures[_frameContext().swapchainIndex];
 	}
 
+	void impl::CommandPool::init(VkDevice inDevice, VkCommandBufferLevel inLevel, uint32 queueFamilyIndex)
+	{
+		device = inDevice;
+		level = inLevel;
+		VkCommandPoolCreateInfo cmdPoolCreateInfo = {};
+		cmdPoolCreateInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+		cmdPoolCreateInfo.flags =
+			VK_COMMAND_POOL_CREATE_TRANSIENT_BIT;
+		cmdPoolCreateInfo.queueFamilyIndex = queueFamilyIndex;
+		vkCreateCommandPool(device, &cmdPoolCreateInfo, nullptr, &vkHandle);
+		count = 0;
 	}
+
+	VkCommandBuffer CommandPool::request()
+	{
+		if (allocatedBuffers.size() == count) {
+			VkCommandBuffer cmdBuffer;
+			VkCommandBufferAllocateInfo allocInfo = {};
+			allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+			allocInfo.commandPool = vkHandle;
+			allocInfo.level = level;
+			allocInfo.commandBufferCount = 1;
+
+			SOUL_VK_CHECK(vkAllocateCommandBuffers(device, &allocInfo, &cmdBuffer), "");
+			allocatedBuffers.add(cmdBuffer);
+		}
+
+		VkCommandBuffer cmdBuffer = allocatedBuffers[count];
+		count++;
+		return cmdBuffer;
+	}
+
+	void impl::CommandPool::reset()
+	{
+		vkResetCommandPool(device, vkHandle, 0);
+		count = 0;
+	}
+
 }

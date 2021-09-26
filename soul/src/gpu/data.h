@@ -138,7 +138,6 @@ namespace Soul {
 		};
 
 		enum class QueueType : uint8 {
-			NONE,
 			GRAPHIC,
 			COMPUTE,
 			TRANSFER,
@@ -735,21 +734,35 @@ namespace Soul {
             bool isPending() { return state == _SemaphoreState::PENDING; }
 		};
 
-		struct _CommandPool
+		namespace impl
 		{
-			VkCommandPool vkHandle = VK_NULL_HANDLE;
-			Array<VkCommandBuffer> allocatedBuffers;
-			uint16 count = 0;
-		};
+			class CommandPool {
+			public:
+
+				explicit CommandPool(Memory::Allocator* allocator = GetDefaultAllocator()) : allocatorInitializer(allocator)
+				{
+					allocatorInitializer.end();
+				}
+
+				void init(VkDevice device, VkCommandBufferLevel level, uint32 queueFamilyIndex);
+				void reset();
+				VkCommandBuffer request();
+
+			private:
+				Runtime::AllocatorInitializer allocatorInitializer;
+				VkDevice device = VK_NULL_HANDLE;
+				VkCommandPool vkHandle = VK_NULL_HANDLE;
+				Array<VkCommandBuffer> allocatedBuffers;
+				VkCommandBufferLevel level = VK_COMMAND_BUFFER_LEVEL_MAX_ENUM;
+				uint16 count = 0;
+			};
+
+		}
 
 		struct alignas(SOUL_CACHELINE_SIZE) _ThreadContext {
-			Runtime::AllocatorInitializer allocatorInitializer;
-			_CommandPool secondaryCommandPool;
+			impl::CommandPool secondaryCommandPool;
 
-			_ThreadContext(Memory::Allocator* allocator) : allocatorInitializer(allocator)
-			{
-				allocatorInitializer.end();
-			}
+			_ThreadContext(Memory::Allocator* allocator, VkDevice device) : secondaryCommandPool(allocator) {}
 		};
 
 		template <typename T>
@@ -824,9 +837,7 @@ namespace Soul {
 
 			Array<_ThreadContext> threadContexts;
 
-			EnumArray<QueueType, VkCommandPool> commandPools;
-			EnumArray<QueueType, Array<VkCommandBuffer> > commandBuffers;
-			EnumArray<QueueType, uint16> usedCommandBuffers;
+			EnumArray<QueueType, impl::CommandPool > commandPools;
 
 			VkFence fence = VK_NULL_HANDLE;
 			SemaphoreID imageAvailableSemaphore = SEMAPHORE_ID_NULL;
@@ -855,9 +866,7 @@ namespace Soul {
 			bool stagingAvailable = false;
 			bool stagingSynced = false;
 
-			_FrameContext(Memory::Allocator* allocator) : allocatorInitializer(allocator),
-				commandPools(VK_NULL_HANDLE),
-				usedCommandBuffers(0)
+			_FrameContext(Memory::Allocator* allocator) : allocatorInitializer(allocator)
 			{
 				allocatorInitializer.end();
 			}
@@ -893,6 +902,27 @@ namespace Soul {
 			Array<VkSemaphore> waitSemaphores;
 			Array<VkPipelineStageFlags> waitStages;
 			Array<VkCommandBuffer> commands;
+		};
+
+		class CommandQueue
+		{
+			EnumArray<QueueType, VkQueue> queues;
+			EnumArray<QueueType, uint32> queueFamilyIndices;
+			EnumArray<QueueType, _Submission> submissions;
+
+			struct FrameContext
+			{
+				EnumArray<QueueType, VkCommandPool> commandPools;
+				EnumArray<QueueType, Array<VkCommandBuffer> > commandBuffers;
+				EnumArray<QueueType, uint16> usedCommandBuffers;
+
+				struct ThreadContext
+				{
+					
+				};
+			};
+
+			Array<FrameContext> frameContexts;
 		};
 
 		struct _Database {

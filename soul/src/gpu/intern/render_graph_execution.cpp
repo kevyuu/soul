@@ -17,7 +17,7 @@
 namespace Soul {namespace GPU {
 
 	static constexpr EnumArray<PassType, QueueType> PASS_TYPE_TO_QUEUE_TYPE_MAP({
-		QueueType::NONE,
+		QueueType::COUNT,
 		QueueType::GRAPHIC,
 		QueueType::COMPUTE,
 		QueueType::TRANSFER,
