@@ -53,6 +53,7 @@ void skinNormal(inout vec3 n, const uvec4 ids, const vec4 weights) {
         + mulBoneNormal(n, ids.y * 4u) * weights.y
         + mulBoneNormal(n, ids.z * 4u) * weights.z
         + mulBoneNormal(n, ids.w * 4u) * weights.w;
+    n = inverse(objectUniforms.worldFromModelNormalMatrix) * n;
 }
 
 void skinPosition(inout vec3 p, const uvec4 ids, const vec4 weights) {
@@ -60,6 +61,7 @@ void skinPosition(inout vec3 p, const uvec4 ids, const vec4 weights) {
         + mulBoneVertex(p, ids.y * 4u) * weights.y
         + mulBoneVertex(p, ids.z * 4u) * weights.z
         + mulBoneVertex(p, ids.w * 4u) * weights.w;
+    p = (inverse(objectUniforms.worldFromModelMatrix) * vec4(p, 1.0)).xyz;
 }
 #endif
 
