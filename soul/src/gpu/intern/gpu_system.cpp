@@ -2829,8 +2829,9 @@ namespace Soul::GPU
 		return _db.swapchain.textures[_frameContext().swapchainIndex];
 	}
 
-	void impl::CommandPool::init(VkDevice inDevice, VkCommandBufferLevel inLevel, uint32 queueFamilyIndex)
+	void CommandPool::init(VkDevice inDevice, VkCommandBufferLevel inLevel, uint32 queueFamilyIndex)
 	{
+		SOUL_ASSERT(0, inDevice != VK_NULL_HANDLE, "Device is invalid!");
 		device = inDevice;
 		level = inLevel;
 		VkCommandPoolCreateInfo cmdPoolCreateInfo = {};
@@ -2861,7 +2862,7 @@ namespace Soul::GPU
 		return cmdBuffer;
 	}
 
-	void impl::CommandPool::reset()
+	void CommandPool::reset()
 	{
 		vkResetCommandPool(device, vkHandle, 0);
 		count = 0;
