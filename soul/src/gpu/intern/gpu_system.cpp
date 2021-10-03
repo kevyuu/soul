@@ -56,10 +56,8 @@ namespace Soul::GPU
 		VkDebugUtilsMessageTypeFlagsEXT messageType,
 		const VkDebugUtilsMessengerCallbackDataEXT *pCallbackData,
 		void *pUserData) {
-		SOUL_LOG_INFO("debugCallback");
 		switch (messageSeverity) {
 		case VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT: {
-			SOUL_LOG_INFO("VkDebugUtils: %s", pCallbackData->pMessage);
 			break;
 		}
 		case VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT:
@@ -261,11 +259,6 @@ namespace Soul::GPU
 					vkEnumerateDeviceExtensionProperties(devices[i], nullptr, &extensionCount, availableExtensions.data());
 					bool allExtensionFound = true;
 
-					for (int j = 0; j < extensionCount; j++)
-					{
-						SOUL_LOG_INFO("Extension %d : %s", j, availableExtensions[j].extensionName);
-					}
-				
 					for (int j = 0; j < requiredExtensionCount; j++) {
 						bool extensionFound = false;
 						for (int k = 0; k < extensionCount; k++) {
