@@ -1,6 +1,7 @@
 #include "core/util.h"
 
 #include "runtime/runtime.h"
+#include "runtime/scope_allocator.h"
 
 #include "core/math.h"
 
@@ -507,20 +508,21 @@ namespace Soul {namespace GPU {
 	void _RenderGraphExecution::_submitExternalSyncPrimitive() {
 
 		// Sync semaphores
-		for(PassType srcPassType : EnumIter<PassType>::Iterates()) {
-			SemaphoreID semaphoreIDs[uint64(PassType::COUNT)];
-			uint32 semaphoreCount = 0;
+		for(const auto srcPassType : EnumIter<PassType>::Iterates()) {
+			Runtime::ScopeAllocator scopeAllocator("Sync semaphore allocator", Runtime::GetTempAllocator());
+			Array<_Semaphore*> semaphores(&scopeAllocator);
+			semaphores.reserve(uint64(PassType::COUNT));
 
-			QueueType srcQueueType = PASS_TYPE_TO_QUEUE_TYPE_MAP[srcPassType];
+			const QueueType srcQueueType = PASS_TYPE_TO_QUEUE_TYPE_MAP[srcPassType];
 
-			for (PassType dstPassType : EnumIter<PassType>::Iterates()) {
+			for (const auto dstPassType : EnumIter<PassType>::Iterates()) {
 				if (_externalSemaphores[srcPassType][dstPassType] != SEMAPHORE_ID_NULL) {
-					semaphoreIDs[semaphoreCount++] = _externalSemaphores[srcPassType][dstPassType];
+					semaphores.add(_gpuSystem->_semaphorePtr(_externalSemaphores[srcPassType][dstPassType]));
 				}
 			}
-			if (semaphoreCount != 0) {
+			if (!semaphores.empty()) {
 				VkCommandBuffer syncSemaphoreCmdBuffer = _gpuSystem->_queueRequestCommandBuffer(srcQueueType);
-				_gpuSystem->_queueSubmitCommandBuffer(srcQueueType, syncSemaphoreCmdBuffer, semaphoreCount, semaphoreIDs);
+				commandQueues[srcQueueType].submit(syncSemaphoreCmdBuffer, semaphores);
 			}
 		}
 
@@ -530,7 +532,7 @@ namespace Soul {namespace GPU {
 			if (_externalEvents[passType] != VK_NULL_HANDLE && passType != PassType::NONE) {
 				VkCommandBuffer syncEventCmdBuffer = _gpuSystem->_queueRequestCommandBuffer(queueType);
 				vkCmdSetEvent(syncEventCmdBuffer, _externalEvents[passType], VK_PIPELINE_STAGE_ALL_COMMANDS_BIT);
-				_gpuSystem->_queueSubmitCommandBuffer(queueType, syncEventCmdBuffer, 0, nullptr);
+				commandQueues[queueType].submit(syncEventCmdBuffer);
 			}
 		}
 
@@ -740,6 +742,7 @@ namespace Soul {namespace GPU {
 		};
 
 		for (int i = 0; i < _renderGraph->_passNodes.size(); i++) {
+			Runtime::ScopeAllocator passNodeScopeAllocator("Pass Node Scope Allocator", Runtime::GetTempAllocator());
 			PassNode* passNode = _renderGraph->_passNodes[i];
 			QueueType queueType = PASS_TYPE_TO_QUEUE_TYPE_MAP[passNode->type];
 			_RGExecPassInfo& passInfo = passInfos[i];
@@ -795,7 +798,7 @@ namespace Soul {namespace GPU {
                     _Semaphore& semaphore = *_gpuSystem->_semaphorePtr(bufferInfo.pendingSemaphore);
 
                     if (!semaphore.isPending()) {
-                        _gpuSystem->_queueWaitSemaphore(queueType, bufferInfo.pendingSemaphore, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT);
+						commandQueues[queueType].wait(_gpuSystem->_semaphorePtr(bufferInfo.pendingSemaphore), VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT);
                     }
 
                     bufferInfo.pendingSemaphore = SEMAPHORE_ID_NULL;
@@ -858,7 +861,7 @@ namespace Soul {namespace GPU {
 					}
 					_Semaphore& semaphore = *_gpuSystem->_semaphorePtr(textureInfo.pendingSemaphore);
                     if (!semaphore.isPending()) {
-                        _gpuSystem->_queueWaitSemaphore(queueType, textureInfo.pendingSemaphore, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT);
+						commandQueues[queueType].wait(_gpuSystem->_semaphorePtr(textureInfo.pendingSemaphore), VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT);
                     }
 					textureInfo.pendingSemaphore = SEMAPHORE_ID_NULL;
 				} else if (textureInfo.pendingEvent != VK_NULL_HANDLE){
@@ -1004,12 +1007,11 @@ namespace Soul {namespace GPU {
 				vkCmdSetEvent(cmdBuffer, event, eventStageFlags);
 			}
 
-			SemaphoreID semaphores[MAX_SIGNAL_SEMAPHORE];
-			uint32 semaphoreCount = 0;
+			Array<_Semaphore*> semaphores(&passNodeScopeAllocator);
+			semaphores.reserve(uint64(PassType::COUNT));
 			for (SemaphoreID semaphoreID : semaphoresMap) {
 				if (semaphoreID != SEMAPHORE_ID_NULL) {
-					semaphores[semaphoreCount] = semaphoreID;
-					semaphoreCount++;
+					semaphores.add(_gpuSystem->_semaphorePtr(semaphoreID));
 				}
 			}
 
@@ -1046,7 +1048,7 @@ namespace Soul {namespace GPU {
 				}
 			}
             vkCmdEndDebugUtilsLabelEXT(cmdBuffer);
-			_gpuSystem->_queueSubmitCommandBuffer(queueType, cmdBuffer, semaphoreCount, semaphores);
+			commandQueues[queueType].submit(cmdBuffer, semaphores);
 		}
 
 		for (const TextureExport& texExport : _renderGraph->_textureExports) {
@@ -1210,7 +1212,7 @@ namespace Soul {namespace GPU {
 			VkFence exportFence;
 			VkFenceCreateInfo fenceInfo = { VK_STRUCTURE_TYPE_FENCE_CREATE_INFO };
 			SOUL_VK_CHECK(vkCreateFence(_gpuSystem->_db.device, &fenceInfo, nullptr, &exportFence), "");
-			_gpuSystem->_queueSubmitCommandBuffer(queueType, cmdBuffer, 0, nullptr, exportFence);
+			commandQueues[queueType].submit(cmdBuffer, 0, nullptr, exportFence);
 			SOUL_VK_CHECK(vkWaitForFences(_gpuSystem->_db.device, 1, &exportFence, VK_TRUE, 100000000000));
 			auto t2 = std::chrono::high_resolution_clock::now();
 

@@ -209,7 +209,7 @@ namespace Soul::GPU
 
 		static constexpr auto
 			pickPhysicalDevice = [](_Database *db, int requiredExtensionCount,
-			                        const char *requiredExtensions[]) {
+			                        const char *requiredExtensions[])-> EnumArray<QueueType, uint32> {
 				SOUL_LOG_INFO("Picking vulkan physical device.");
 				db->physicalDevice = VK_NULL_HANDLE;
 				uint32 deviceCount = 0;
@@ -225,6 +225,8 @@ namespace Soul::GPU
 
 				db->physicalDevice = VK_NULL_HANDLE;
 				int bestScore = -1;
+
+				EnumArray<QueueType, uint32> queueFamilyIndices;
 
 				for (int i = 0; i < devices.size(); i++) {
 
@@ -399,12 +401,11 @@ namespace Soul::GPU
 					}
 
 					SOUL_LOG_INFO("-- Score = %d", score);
-					if (score > bestScore) {
+					if (score > bestScore && presentQueueFamilyIndex == graphicsQueueFamilyIndex) {
 						db->physicalDevice = devices[i];
-						db->graphicsQueueFamilyIndex = graphicsQueueFamilyIndex;
-						db->presentQueueFamilyIndex = presentQueueFamilyIndex;
-						db->transferQueueFamilyIndex = transferQueueFamilyIndex;
-						db->computeQueueFamilyIndex = computeQueueFamilyIndex;
+						queueFamilyIndices[QueueType::GRAPHIC] = graphicsQueueFamilyIndex;
+						queueFamilyIndices[QueueType::TRANSFER] = transferQueueFamilyIndex;
+						queueFamilyIndices[QueueType::COMPUTE] = computeQueueFamilyIndex;
 						bestScore = score;
 					}
 				}
@@ -427,7 +428,6 @@ namespace Soul::GPU
 				              " -- Api Version = 0x%.8X\n"
 				              " -- Driver Version = 0x%.8X\n"
 				              " -- Graphics queue family index = %d\n"
-				              " -- Presentation queue family index = %d\n"
 				              " -- Transfer queue family index = %d\n"
 				              " -- Compute queue family index = %d\n",
 				              db->physicalDeviceProperties.deviceName,
@@ -435,43 +435,39 @@ namespace Soul::GPU
 				              deviceID,
 				              apiVersion,
 				              driverVersion,
-				              db->graphicsQueueFamilyIndex,
-				              db->presentQueueFamilyIndex,
-				              db->transferQueueFamilyIndex,
-				              db->computeQueueFamilyIndex);
-				db->queueFamilyIndices[QueueType::GRAPHIC] = db->graphicsQueueFamilyIndex;
-				db->queueFamilyIndices[QueueType::TRANSFER] = db->transferQueueFamilyIndex;
-				db->queueFamilyIndices[QueueType::COMPUTE] = db->computeQueueFamilyIndex;
+				              queueFamilyIndices[QueueType::GRAPHIC],
+				              queueFamilyIndices[QueueType::TRANSFER],
+				              queueFamilyIndices[QueueType::COMPUTE]);
 
 				formats.cleanup();
 				presentModes.cleanup();
 				devices.cleanup();
 
 				SOUL_ASSERT(0, db->physicalDevice != VK_NULL_HANDLE, "Fail to find a suitable GPU!");
+				return queueFamilyIndices;
 			};
 		static const char* deviceRequiredExtensions[] = {
 			VK_KHR_VULKAN_MEMORY_MODEL_EXTENSION_NAME,
 			VK_KHR_SWAPCHAIN_EXTENSION_NAME
 		};
 		static const uint32_t deviceRequiredExtensionCount = sizeof(deviceRequiredExtensions) / sizeof(deviceRequiredExtensions[0]);
-		pickPhysicalDevice(&_db, deviceRequiredExtensionCount, deviceRequiredExtensions);
+		EnumArray<QueueType, uint32> queueFamilyIndices = pickPhysicalDevice(&_db, deviceRequiredExtensionCount, deviceRequiredExtensions);
 
-		static constexpr auto createDevice = [](_Database *db) {
+		static constexpr auto createDeviceAndQueue = 
+			[](VkPhysicalDevice physicalDevice, EnumArray<QueueType, uint32>& queueFamilyIndices)
+				-> std::tuple<VkDevice, EnumArray<QueueType, uint32>> {
 			SOUL_LOG_INFO("Creating vulkan logical device");
 
 			int graphicsQueueCount = 1;
-			int graphicsQueueIndex = 0;
-			int computeQueueIndex = 0;
-			int transferQueueIndex = 0;
-			int presentQueueIndex = 0;
+			EnumArray<QueueType, uint32> queueIndex(0);
 
-			if (db->computeQueueFamilyIndex == db->graphicsQueueFamilyIndex) {
+			if (queueFamilyIndices[QueueType::COMPUTE] == queueFamilyIndices[QueueType::GRAPHIC]) {
 				graphicsQueueCount++;
-				computeQueueIndex = graphicsQueueIndex + 1;
+				queueIndex[QueueType::COMPUTE] = queueIndex[QueueType::GRAPHIC] + 1;
 			}
-			if (db->transferQueueFamilyIndex == db->graphicsQueueFamilyIndex) {
+			if (queueFamilyIndices[QueueType::TRANSFER] == queueFamilyIndices[QueueType::GRAPHIC]) {
 				graphicsQueueCount++;
-				transferQueueIndex = computeQueueIndex + 1;
+				queueIndex[QueueType::TRANSFER] = queueIndex[QueueType::COMPUTE] + 1;
 			}
 
 			VkDeviceQueueCreateInfo queueCreateInfo[4] = {};
@@ -479,31 +475,21 @@ namespace Soul::GPU
 			int queueCreateInfoCount = 1;
 
 			queueCreateInfo[0].sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-			queueCreateInfo[0].queueFamilyIndex = db->graphicsQueueFamilyIndex;
+			queueCreateInfo[0].queueFamilyIndex = queueFamilyIndices[QueueType::GRAPHIC];
 			queueCreateInfo[0].queueCount = graphicsQueueCount;
 			queueCreateInfo[0].pQueuePriorities = priorities;
 
-			if (db->computeQueueFamilyIndex != db->graphicsQueueFamilyIndex) {
+			if (queueFamilyIndices[QueueType::GRAPHIC] != queueFamilyIndices[QueueType::COMPUTE]) {
 				queueCreateInfo[queueCreateInfoCount].sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-				queueCreateInfo[queueCreateInfoCount].queueFamilyIndex = db->computeQueueFamilyIndex;
+				queueCreateInfo[queueCreateInfoCount].queueFamilyIndex = queueFamilyIndices[QueueType::COMPUTE];
 				queueCreateInfo[queueCreateInfoCount].queueCount = 1;
 				queueCreateInfo[queueCreateInfoCount].pQueuePriorities = priorities + queueCreateInfoCount;
 				queueCreateInfoCount++;
 			}
 
-			if (db->transferQueueFamilyIndex != db->graphicsQueueFamilyIndex) {
+			if (queueFamilyIndices[QueueType::TRANSFER] != queueFamilyIndices[QueueType::GRAPHIC]) {
 				queueCreateInfo[queueCreateInfoCount].sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-				queueCreateInfo[queueCreateInfoCount].queueFamilyIndex = db->transferQueueFamilyIndex;
-				queueCreateInfo[queueCreateInfoCount].queueCount = 1;
-				queueCreateInfo[queueCreateInfoCount].pQueuePriorities = priorities + queueCreateInfoCount;
-				queueCreateInfoCount++;
-			}
-
-			if (db->presentQueueFamilyIndex != db->graphicsQueueFamilyIndex &&
-				db->presentQueueFamilyIndex != db->computeQueueFamilyIndex &&
-				db->presentQueueFamilyIndex != db->transferQueueFamilyIndex) {
-				queueCreateInfo[queueCreateInfoCount].sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-				queueCreateInfo[queueCreateInfoCount].queueFamilyIndex = db->presentQueueFamilyIndex;
+				queueCreateInfo[queueCreateInfoCount].queueFamilyIndex = queueFamilyIndices[QueueType::TRANSFER];
 				queueCreateInfo[queueCreateInfoCount].queueCount = 1;
 				queueCreateInfo[queueCreateInfoCount].pQueuePriorities = priorities + queueCreateInfoCount;
 				queueCreateInfoCount++;
@@ -533,40 +519,26 @@ namespace Soul::GPU
 			deviceCreateInfo.queueCreateInfoCount = queueCreateInfoCount;
 			deviceCreateInfo.pEnabledFeatures = nullptr;
 
-			const uint32 deviceExtensionCount = deviceRequiredExtensionCount;
+			constexpr uint32 deviceExtensionCount = deviceRequiredExtensionCount;
 
 			deviceCreateInfo.enabledExtensionCount = deviceExtensionCount;
 			deviceCreateInfo.ppEnabledExtensionNames = deviceRequiredExtensions;
 
-			SOUL_ASSERT(0,
-			            db->graphicsQueueFamilyIndex == db->presentQueueFamilyIndex,
-			            "Different queue for graphics and present not supported yet!");
-
-			SOUL_VK_CHECK(vkCreateDevice(db->physicalDevice, &deviceCreateInfo, nullptr, &db->device),
+			VkDevice device;
+			SOUL_VK_CHECK(vkCreateDevice(physicalDevice, &deviceCreateInfo, nullptr, &device),
 			              "Vulkan logical device creation fail!");
 			SOUL_LOG_INFO("Vulkan logical device creation sucessful");
-
-			vkGetDeviceQueue(db->device, db->graphicsQueueFamilyIndex, graphicsQueueIndex, &db->graphicsQueue);
-			SOUL_LOG_INFO("Vulkan retrieve graphics queue successful");
-			db->presentQueue = db->graphicsQueue;
-
-			vkGetDeviceQueue(db->device, db->computeQueueFamilyIndex, computeQueueIndex, &db->computeQueue);
-			SOUL_LOG_INFO("Vulkan retrieve compute queue successful");
-
-			vkGetDeviceQueue(db->device, db->transferQueueFamilyIndex, transferQueueIndex, &db->transferQueue);
-			SOUL_LOG_INFO("Vulkan retrieve transfer queue successful");
-
-
-			db->queues[QueueType::GRAPHIC] = db->graphicsQueue;
-			db->queues[QueueType::COMPUTE] = db->computeQueue;
-			db->queues[QueueType::TRANSFER] = db->transferQueue;
-
-			SOUL_LOG_INFO("Vulkan device queue retrieval sucessful");
+			return std::make_tuple(device, queueIndex);
 
 		};
-		createDevice(&_db);
+		auto [device, queueIndex] = createDeviceAndQueue(_db.physicalDevice, queueFamilyIndices);
+		_db.device = device;
+		for (const auto queueType : EnumIter<QueueType>::Iterates())
+		{
+			_db.queues[queueType].init(device, queueFamilyIndices[queueType], queueIndex[queueType]);
+		}
 
-		static const auto createSwapchain = [this](_Database *db, uint32 swapchainWidth, uint32 swapchainHeight) {
+		static const auto createSwapchain = [this, &queueFamilyIndices](_Database *db, uint32 swapchainWidth, uint32 swapchainHeight) {
 
 			static const auto
 				pickSurfaceFormat = [](VkPhysicalDevice physicalDevice,
@@ -626,10 +598,6 @@ namespace Soul::GPU
 			}
 			SOUL_LOG_INFO("Swapchain image count = %d", imageCount);
 
-			uint32_t queueFamily = db->presentQueueFamilyIndex;
-			SOUL_ASSERT(0, db->presentQueueFamilyIndex == db->graphicsQueueFamilyIndex,
-			            "Currently we create swapchain with sharing mode exclusive."
-			            "If present and graphic queue is different we need to update sharingMode and queueFamilyIndices.");
 			VkSwapchainCreateInfoKHR swapchainInfo = {VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR};
 			swapchainInfo.surface = db->surface;
 			swapchainInfo.minImageCount = imageCount;
@@ -640,7 +608,7 @@ namespace Soul::GPU
 			swapchainInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
 			swapchainInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
 			swapchainInfo.queueFamilyIndexCount = 1;
-			swapchainInfo.pQueueFamilyIndices = &queueFamily;
+			swapchainInfo.pQueueFamilyIndices = &queueFamilyIndices[QueueType::GRAPHIC];
 			swapchainInfo.preTransform = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR;
 			swapchainInfo.presentMode = VK_PRESENT_MODE_MAILBOX_KHR;
 			swapchainInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
@@ -702,9 +670,6 @@ namespace Soul::GPU
 		};
 		createSwapchain(&_db, config.swapchainWidth, config.swapchainHeight);
 
-		SOUL_ASSERT(0,
-		            _db.graphicsQueueFamilyIndex == _db.presentQueueFamilyIndex,
-		            "Current implementation does not support different queue family for graphics and presentation yet!");
 		_frameContextInit(config);
 
 		static constexpr auto initAllocator = [](_Database *db) {
@@ -759,10 +724,7 @@ namespace Soul::GPU
 		initAllocator(&_db);
 
 		_frameBegin();
-		
 	}
-
-
 
 	void System::_frameContextInit(const System::Config &config) {
 		SOUL_ASSERT_MAIN_THREAD();
@@ -777,12 +739,12 @@ namespace Soul::GPU
 			for (int j = 0; j < config.threadCount; j++) {
 				frameContext.threadContexts.add(_ThreadContext(&_db.cpuAllocator, _db.device));
 				_ThreadContext &threadContext = frameContext.threadContexts[j];
-				threadContext.secondaryCommandPool.init(_db.device, VK_COMMAND_BUFFER_LEVEL_SECONDARY, _db.queueFamilyIndices[QueueType::GRAPHIC]);
+				threadContext.secondaryCommandPool.init(_db.device, VK_COMMAND_BUFFER_LEVEL_SECONDARY, _db.queues[QueueType::GRAPHIC].getFamilyIndex());
 			}
 
-			for (QueueType queueType : EnumIter<QueueType>::Iterates())
+			for (auto queueType : EnumIter<QueueType>::Iterates())
 			{
-				frameContext.commandPools[queueType].init(_db.device, VK_COMMAND_BUFFER_LEVEL_PRIMARY, _db.queueFamilyIndices[queueType]);
+				frameContext.commandPools[queueType].init(_db.device, VK_COMMAND_BUFFER_LEVEL_PRIMARY, _db.queues[queueType].getFamilyIndex());
 			}
 
 
@@ -813,14 +775,15 @@ namespace Soul::GPU
 
 	_QueueData System::_getQueueDataFromQueueFlags(QueueFlags flags) {
 		_QueueData queueData;
-		const uint32 queueIndexMapping[] = {
-			_db.graphicsQueueFamilyIndex,
-			_db.computeQueueFamilyIndex,
-			_db.transferQueueFamilyIndex
-		};
-		Util::ForEachBit(flags, [&queueData, &queueIndexMapping](uint32 bit) {
-			SOUL_ASSERT(0, bit < SOUL_ARRAY_LEN(queueIndexMapping), "");
-			queueData.indices[queueData.count++] = queueIndexMapping[bit];
+		
+		static_assert(QUEUE_GRAPHIC_BIT == 1 << uint64(QueueType::GRAPHIC));
+		static_assert(QUEUE_COMPUTE_BIT == 1 << uint64(QueueType::COMPUTE));
+		static_assert(QUEUE_TRANSFER_BIT == 1 << uint64(QueueType::TRANSFER));
+
+		const auto& queues = _db.queues;
+
+		Util::ForEachBit(flags, [&queueData, queues](uint32 bit) {
+			queueData.indices[queueData.count++] = queues[QueueType(bit)].getFamilyIndex();
 		});
 		return queueData;
 	}
@@ -1267,15 +1230,11 @@ namespace Soul::GPU
 		_FrameContext &frameContext = _frameContext();
 
 		SemaphoreID mipmapSemaphore = _semaphoreCreate();
-		_queueSubmitCommandBuffer(QueueType::TRANSFER, frameContext.stagingCommandBuffer,
-		                          1, &mipmapSemaphore,
-		                          VK_NULL_HANDLE);
-		_queueSubmitCommandBuffer(QueueType::GRAPHIC, frameContext.clearCommandBuffer,
-		                          0, nullptr, VK_NULL_HANDLE);
-
-		_queueWaitSemaphore(QueueType::GRAPHIC, mipmapSemaphore, VK_PIPELINE_STAGE_TRANSFER_BIT);
-		_queueSubmitCommandBuffer(QueueType::GRAPHIC, frameContext.genMipmapCommandBuffer,
-		                          0, nullptr, VK_NULL_HANDLE);
+		_Semaphore* mipmapSemaphorePtr = _semaphorePtr(mipmapSemaphore);
+		_db.queues[QueueType::TRANSFER].submit(frameContext.stagingCommandBuffer, 1, &mipmapSemaphorePtr);
+		_db.queues[QueueType::GRAPHIC].submit(frameContext.clearCommandBuffer);
+		_db.queues[QueueType::GRAPHIC].wait(mipmapSemaphorePtr, VK_PIPELINE_STAGE_TRANSFER_BIT);
+		_db.queues[QueueType::GRAPHIC].submit(frameContext.genMipmapCommandBuffer);
 		_semaphoreDestroy(mipmapSemaphore);
 
 		frameContext.stagingCommandBuffer = VK_NULL_HANDLE;
@@ -1384,21 +1343,11 @@ namespace Soul::GPU
 
 		BufferID bufferID = BufferID(_db.buffers.add({}));
 		_Buffer &buffer = *_bufferPtr(bufferID);
+		
 
-		int queueCount = 0;
-		uint32 queueIndices[3] = {};
-		const uint32 queueIndexMapping[] = {
-			_db.graphicsQueueFamilyIndex,
-			_db.computeQueueFamilyIndex,
-			_db.transferQueueFamilyIndex
-		};
+		_QueueData queueData = _getQueueDataFromQueueFlags(desc.queueFlags);
 
-		Util::ForEachBit(desc.queueFlags, [&queueCount, &queueIndices, &queueIndexMapping](uint32 bit) {
-			SOUL_ASSERT(0, bit < SOUL_ARRAY_LEN(queueIndexMapping), "");
-			queueIndices[queueCount++] = queueIndexMapping[bit];
-		});
-
-		SOUL_ASSERT(0, queueCount > 0, "");
+		SOUL_ASSERT(0, queueData.count > 0, "");
 
 		uint64 alignment = desc.typeSize;
 
@@ -1419,9 +1368,9 @@ namespace Soul::GPU
 		VkBufferCreateInfo bufferInfo = {VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO};
 		bufferInfo.size = alignment * desc.count;
 		bufferInfo.usage = vkCastBufferUsageFlags(desc.usageFlags);
-		bufferInfo.sharingMode = queueCount > 1 ? VK_SHARING_MODE_CONCURRENT : VK_SHARING_MODE_EXCLUSIVE;
-		bufferInfo.queueFamilyIndexCount = queueCount;
-		bufferInfo.pQueueFamilyIndices = queueIndices;
+		bufferInfo.sharingMode = queueData.count > 1 ? VK_SHARING_MODE_CONCURRENT : VK_SHARING_MODE_EXCLUSIVE;
+		bufferInfo.queueFamilyIndexCount = queueData.count;
+		bufferInfo.pQueueFamilyIndices = queueData.indices;
 		
 		VmaAllocationCreateInfo allocInfo = {};
 		allocInfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
@@ -2480,37 +2429,93 @@ namespace Soul::GPU
 		_frameContext().garbages.semaphores.add(ID);
 	}
 
-	void System::_queueFlush(QueueType queueType,
-	                         uint32 semaphoreCount, SemaphoreID *semaphoreID,
-	                         VkFence fence) {
+	void CommandQueue::init(VkDevice inDevice, uint32 inFamilyIndex, uint32 queueIndex)
+	{
+		device = inDevice;
+		familyIndex = inFamilyIndex;
+		vkGetDeviceQueue(device, familyIndex, queueIndex, &vkHandle);
+	}
+
+	void CommandQueue::wait(_Semaphore* semaphore, VkPipelineStageFlags waitStage)
+	{
 		SOUL_ASSERT_MAIN_THREAD();
+		SOUL_ASSERT(0, waitStage != 0, "");
+
+		SOUL_ASSERT(0, semaphore->state == _SemaphoreState::SUBMITTED, "");
+		semaphore->state = _SemaphoreState::PENDING;
+
+		if (!commands.empty()) {
+			flush(0, nullptr, VK_NULL_HANDLE);
+		}
+		waitSemaphores.add(semaphore->vkHandle);
+		waitStages.add(waitStage);
+	}
+
+	void CommandQueue::submit(VkCommandBuffer commandBuffer, const Array<_Semaphore*>& semaphores, VkFence fence)
+	{
+		submit(commandBuffer, Soul::Cast<uint32>(semaphores.size()), semaphores.data(), fence);
+	}
+
+	void CommandQueue::submit(VkCommandBuffer commandBuffer, _Semaphore* semaphore, VkFence fence)
+	{
+		submit(commandBuffer, 1, &semaphore, fence);
+	}
+
+	void CommandQueue::submit(VkCommandBuffer commandBuffer, uint32 semaphoreCount, _Semaphore* const* semaphores, VkFence fence)
+	{
+		SOUL_ASSERT_MAIN_THREAD();
+		SOUL_ASSERT(0, semaphoreCount <= MAX_SIGNAL_SEMAPHORE, "");
 		SOUL_PROFILE_ZONE();
 
-		VkSubmitInfo submitInfo = {VK_STRUCTURE_TYPE_SUBMIT_INFO};
+		SOUL_VK_CHECK(vkEndCommandBuffer(commandBuffer), "");
+
+		commands.add(commandBuffer);
+
+		for (soul_size semaphoreIdx = 0; semaphoreIdx < semaphoreCount; semaphoreIdx++) {
+			_Semaphore* semaphore = semaphores[semaphoreIdx];
+			SOUL_ASSERT(0, semaphore->state == _SemaphoreState::INITIAL, "");
+			semaphore->state = _SemaphoreState::SUBMITTED;
+		}
+
+		// TODO : Fix this
+		if (semaphoreCount != 0 || fence != VK_NULL_HANDLE) {
+			flush(semaphoreCount, semaphores, fence);
+		}
+	}
+
+	void CommandQueue::flush(uint32 semaphoreCount, _Semaphore* const* semaphores, VkFence fence)
+	{
+		SOUL_ASSERT_MAIN_THREAD();
+		SOUL_PROFILE_ZONE();
+		VkSubmitInfo submitInfo = {};
 		submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-		_Submission &submission = _db.submissions[queueType];
-		submitInfo.commandBufferCount = submission.commands.size();
-		submitInfo.pCommandBuffers = submission.commands.data();
+		submitInfo.commandBufferCount = Soul::Cast<uint32>(commands.size());
+		submitInfo.pCommandBuffers = commands.data();
 
 
-		SOUL_ASSERT(0, submission.waitSemaphores.size() == submission.waitStages.size(), "");
-		submitInfo.waitSemaphoreCount = submission.waitSemaphores.size();
-		submitInfo.pWaitSemaphores = submission.waitSemaphores.data();
-		submitInfo.pWaitDstStageMask = submission.waitStages.data();
+		SOUL_ASSERT(0, waitSemaphores.size() == waitStages.size(), "");
+		submitInfo.waitSemaphoreCount = Soul::Cast<uint32>(waitSemaphores.size());
+		submitInfo.pWaitSemaphores = waitSemaphores.data();
+		submitInfo.pWaitDstStageMask = waitStages.data();
 
 		VkSemaphore signalSemaphores[MAX_SIGNAL_SEMAPHORE];
-		for (int i = 0; i < semaphoreCount; i++) {
-			signalSemaphores[i] = _semaphorePtr(semaphoreID[i])->vkHandle;
+		for (soul_size i = 0; i < semaphoreCount; i++) {
+			signalSemaphores[i] = semaphores[i]->vkHandle;
 		}
 
 		submitInfo.signalSemaphoreCount = semaphoreCount;
 		submitInfo.pSignalSemaphores = signalSemaphores;
 
-		SOUL_VK_CHECK(vkQueueSubmit(_db.queues[queueType], 1, &submitInfo, fence), "");
+		SOUL_VK_CHECK(vkQueueSubmit(vkHandle, 1, &submitInfo, fence), "");
 
-		submission.commands.resize(0);
-		submission.waitSemaphores.resize(0);
-		submission.waitStages.resize(0);
+		commands.resize(0);
+		waitSemaphores.resize(0);
+		waitStages.resize(0);
+	}
+
+	void CommandQueue::present(const VkPresentInfoKHR& presentInfo)
+	{
+		SOUL_VK_CHECK(vkQueuePresentKHR(vkHandle, &presentInfo), "");
 	}
 
 	VkCommandBuffer System::_queueRequestCommandBuffer(QueueType queueType) {
@@ -2523,49 +2528,6 @@ namespace Soul::GPU
 		return cmdBuffer;
 	}
 
-	void System::_queueSubmitCommandBuffer(QueueType queueType, VkCommandBuffer commandBuffer,
-	                                       uint32 semaphoreCount, SemaphoreID *semaphoreID, VkFence fence) {
-		SOUL_ASSERT_MAIN_THREAD();
-		SOUL_ASSERT(0, semaphoreCount <= MAX_SIGNAL_SEMAPHORE, "");
-		SOUL_PROFILE_ZONE();
-
-		SOUL_VK_CHECK(vkEndCommandBuffer(commandBuffer), "");
-
-		_Submission &submission = _db.submissions[queueType];
-		submission.commands.add(commandBuffer);
-
-		for (int i = 0; i < semaphoreCount; i++) {
-			_Semaphore* semaphore = _semaphorePtr(semaphoreID[i]);
-			SOUL_ASSERT(0, semaphore->state == _SemaphoreState::INITIAL, "");
-			semaphore->state = _SemaphoreState::SUBMITTED;
-		}
-
-		// TODO : Fix this
-		if (semaphoreCount != 0 || fence != VK_NULL_HANDLE) {
-			_queueFlush(queueType, semaphoreCount, semaphoreID, fence);
-		}
-
-	}
-
-	void System::_queueWaitSemaphore(QueueType queueType, SemaphoreID ID, VkPipelineStageFlags waitStages) {
-		SOUL_ASSERT_MAIN_THREAD();
-		SOUL_ASSERT(0, waitStages != 0, "");
-
-		_Semaphore *semaphore = _semaphorePtr(ID);
-
-		SOUL_ASSERT(0, semaphore->state == _SemaphoreState::SUBMITTED, "");
-		semaphore->state = _SemaphoreState::PENDING;
-
-		_Submission &submission = _db.submissions[queueType];
-
-
-		if (submission.commands.size() != 0) {
-			_queueFlush(queueType, 0, nullptr, VK_NULL_HANDLE);
-		}
-		submission.waitSemaphores.add(semaphore->vkHandle);
-		submission.waitStages.add(waitStages);
-	}
-
 	VkCommandBuffer System::_requestSecondaryCommandBuffer() {
 		_ThreadContext& threadContext = _threadContext();
 		return threadContext.secondaryCommandPool.request();
@@ -2575,7 +2537,7 @@ namespace Soul::GPU
 		SOUL_ASSERT_MAIN_THREAD();
 		SOUL_PROFILE_ZONE();
 
-		_RenderGraphExecution execution(&renderGraph, this, Runtime::GetContextAllocator());
+		_RenderGraphExecution execution(&renderGraph, this, Runtime::GetContextAllocator(), _db.queues);
 		execution.init();
 		if (!_frameContext().stagingSynced) _stagingFlush();
 		execution.run();
@@ -2767,8 +2729,9 @@ namespace Soul::GPU
 			auto _syncQueueToGraphic = [this](QueueType queueType) {
 				SemaphoreID semaphoreID = _semaphoreCreate();
 				VkCommandBuffer cmdBuffer = _queueRequestCommandBuffer(queueType);
-				_queueSubmitCommandBuffer(queueType, cmdBuffer, 1, &semaphoreID, VK_NULL_HANDLE);
-				_queueWaitSemaphore(QueueType::GRAPHIC, semaphoreID, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT);
+				_Semaphore* semaphorePtr = _semaphorePtr(semaphoreID);
+				_db.queues[queueType].submit(cmdBuffer, 1, &semaphorePtr);
+				_db.queues[QueueType::GRAPHIC].wait(semaphorePtr, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT);
 				_semaphoreDestroy(semaphoreID);
 			};
 
@@ -2783,13 +2746,10 @@ namespace Soul::GPU
 			}
 
 			if (swapchainTexture.owner == ResourceOwner::PRESENTATION_ENGINE) {
-				_queueWaitSemaphore(QueueType::GRAPHIC,
-				                    _frameContext().imageAvailableSemaphore,
-				                    VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT);
+				_db.queues[QueueType::GRAPHIC].wait(_semaphorePtr(_frameContext().imageAvailableSemaphore), VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT);
 			}
 
-			_queueSubmitCommandBuffer(RESOURCE_ONWER_TO_QUEUE_TYPE[swapchainTexture.owner], cmdBuffer,
-			                          1, &_frameContext().renderFinishedSemaphore, frameContext.fence);
+			_db.queues[RESOURCE_ONWER_TO_QUEUE_TYPE[swapchainTexture.owner]].submit(cmdBuffer, _semaphorePtr(_frameContext().renderFinishedSemaphore), frameContext.fence);
 			swapchainTexture.layout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
 		}
 
@@ -2800,11 +2760,9 @@ namespace Soul::GPU
 		presentInfo.swapchainCount = 1;
 		presentInfo.pSwapchains = &_db.swapchain.vkHandle;
 		presentInfo.pImageIndices = &frameContext.swapchainIndex;
-
-
 		{
 			SOUL_PROFILE_ZONE_WITH_NAME("GPU::System::QueuePresent");
-			SOUL_VK_CHECK(vkQueuePresentKHR(_db.presentQueue, &presentInfo), "");
+			_db.queues[QueueType::GRAPHIC].present(presentInfo);
 		}
 		
 		_db.frameCounter++;

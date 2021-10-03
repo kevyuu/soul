@@ -168,14 +168,7 @@ namespace Soul { namespace GPU {
 		void _eventDestroy(VkEvent event);
 
 		void renderGraphExecute(const RenderGraph& renderGraph);
-
-		void _queueFlush(QueueType queueType,
-						 uint32 semaphoreCount, SemaphoreID* semaphoreID,
-						 VkFence fence);
-		void _queueWaitSemaphore(QueueType queueType, SemaphoreID ID, VkPipelineStageFlags waitStages);
-		void _queueSubmitCommandBuffer(QueueType queueType, VkCommandBuffer commandBuffer,
-									   uint32 semaphoreCount, SemaphoreID *semaphoreID,
-									   VkFence = VK_NULL_HANDLE);
+		 
 		VkCommandBuffer _queueRequestCommandBuffer(QueueType queueType);
 
 		VkCommandBuffer _requestSecondaryCommandBuffer();

@@ -24,6 +24,7 @@
 
 namespace Soul {
 	namespace GPU {
+		struct _Submission;
 
 		struct System;
 		struct RenderGraph;
@@ -757,6 +758,26 @@ namespace Soul {
 				uint16 count = 0;
 			};
 
+			class CommandQueue {
+
+			public:
+				void init(VkDevice device, uint32 familyIndex, uint32 queueIndex);
+				void wait(_Semaphore* semaphore, VkPipelineStageFlags waitStages);
+				void submit(VkCommandBuffer commandBuffer, const Array<_Semaphore*>& semaphores, VkFence fence = VK_NULL_HANDLE);
+				void submit(VkCommandBuffer commandBuffer, _Semaphore* semaphore, VkFence fence = VK_NULL_HANDLE);
+				void submit(VkCommandBuffer commandBuffer, uint32 semaphoreCount = 0, _Semaphore* const* semaphores = nullptr, VkFence fence = VK_NULL_HANDLE);
+				void flush(uint32 semaphoreCount, _Semaphore* const* semaphores, VkFence fence);
+				void present(const VkPresentInfoKHR& presentInfo);
+				SOUL_NODISCARD uint32 getFamilyIndex() const { return familyIndex; }
+			private:
+				VkDevice device = VK_NULL_HANDLE;
+				VkQueue vkHandle = VK_NULL_HANDLE;
+				uint32 familyIndex = 0;
+				Array<VkSemaphore> waitSemaphores;
+				Array<VkPipelineStageFlags> waitStages;
+				Array<VkCommandBuffer> commands;
+			};
+
 		}
 
 		struct alignas(SOUL_CACHELINE_SIZE) _ThreadContext {
@@ -904,27 +925,6 @@ namespace Soul {
 			Array<VkCommandBuffer> commands;
 		};
 
-		class CommandQueue
-		{
-			EnumArray<QueueType, VkQueue> queues;
-			EnumArray<QueueType, uint32> queueFamilyIndices;
-			EnumArray<QueueType, _Submission> submissions;
-
-			struct FrameContext
-			{
-				EnumArray<QueueType, VkCommandPool> commandPools;
-				EnumArray<QueueType, Array<VkCommandBuffer> > commandBuffers;
-				EnumArray<QueueType, uint16> usedCommandBuffers;
-
-				struct ThreadContext
-				{
-					
-				};
-			};
-
-			Array<FrameContext> frameContexts;
-		};
-
 		struct _Database {
 
 			using CPUAllocatorProxy = Memory::MultiProxy<Memory::ProfileProxy, Memory::CounterProxy>;
@@ -950,18 +950,7 @@ namespace Soul {
 			VkPhysicalDeviceProperties physicalDeviceProperties;
 			VkPhysicalDeviceFeatures physicalDeviceFeatures;
 
-			uint32 graphicsQueueFamilyIndex;
-			uint32 presentQueueFamilyIndex;
-			uint32 computeQueueFamilyIndex;
-			uint32 transferQueueFamilyIndex;
-			EnumArray<QueueType, uint32> queueFamilyIndices;
-
-			VkQueue graphicsQueue = VK_NULL_HANDLE;
-			VkQueue presentQueue = VK_NULL_HANDLE;
-			VkQueue computeQueue = VK_NULL_HANDLE;
-			VkQueue transferQueue = VK_NULL_HANDLE;
-
-			EnumArray<QueueType, VkQueue> queues;
+			EnumArray<QueueType, impl::CommandQueue> queues;
 
 			VkSurfaceKHR surface;
 			VkSurfaceCapabilitiesKHR surfaceCaps;

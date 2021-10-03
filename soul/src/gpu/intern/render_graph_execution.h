@@ -70,9 +70,11 @@ namespace Soul::GPU
 
 	class _RenderGraphExecution {
 	public:
-		_RenderGraphExecution(const RenderGraph* renderGraph, System* system, Memory::Allocator* allocator):
-			_renderGraph(renderGraph), _gpuSystem(system), _externalEvents(), _externalSemaphores(),
-			bufferInfos(allocator), textureInfos(allocator), passInfos(allocator) {}
+		_RenderGraphExecution(const RenderGraph* renderGraph, System* system, Memory::Allocator* allocator, 
+			EnumArray<QueueType, impl::CommandQueue>& commandQueues):
+			_renderGraph(renderGraph), _gpuSystem(system),
+			bufferInfos(allocator), textureInfos(allocator), passInfos(allocator), commandQueues(commandQueues)
+		{}
 
 		_RenderGraphExecution(const _RenderGraphExecution& other) = delete;
 		_RenderGraphExecution& operator=(const _RenderGraphExecution& other) = delete;
@@ -113,6 +115,7 @@ namespace Soul::GPU
 
 		EnumArray<PassType, VkEvent> _externalEvents;
 		EnumArray<PassType, EnumArray<PassType, SemaphoreID>> _externalSemaphores;
+		EnumArray<QueueType, impl::CommandQueue>& commandQueues;
 
 		VkRenderPass _renderPassCreate(uint32 passIndex);
 		VkFramebuffer _framebufferCreate(uint32 passIndex, VkRenderPass renderPass);
