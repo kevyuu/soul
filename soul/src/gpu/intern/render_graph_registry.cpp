@@ -9,7 +9,11 @@
 #include "gpu/system.h"
 #include "gpu/intern/render_graph_execution.h"
 
-namespace Soul {namespace GPU {
+namespace Soul::GPU
+{
+
+	using namespace impl;
+
 	BufferID RenderGraphRegistry::getBuffer(BufferNodeID bufferNodeID) const {
 		return _execution->getBufferID(bufferNodeID);
 	}
@@ -25,4 +29,4 @@ namespace Soul {namespace GPU {
 	PipelineStateID RenderGraphRegistry::getPipelineState(const PipelineStateDesc& desc) {
 		return _system->_pipelineStateRequest(desc, _renderPass);
 	}
-}}
+}

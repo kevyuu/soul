@@ -183,7 +183,7 @@ namespace Soul::GPU
 		volkLoadInstance(_db.instance);
 		SOUL_LOG_INFO("Instance version = %d, %d", VK_VERSION_MAJOR(volkGetInstanceVersion()), VK_VERSION_MINOR(volkGetInstanceVersion()));
 
-		static constexpr auto createDebugUtilsMessenger = [](_Database *db) {
+		static constexpr auto createDebugUtilsMessenger = [](Database *db) {
 			SOUL_LOG_INFO("Creating vulkan debug utils messenger");
 			VkDebugUtilsMessengerCreateInfoEXT
 				debugMessengerCreateInfo = {VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT};
@@ -208,7 +208,7 @@ namespace Soul::GPU
 		_surfaceCreate(config.windowHandle, &_db.surface);
 
 		static constexpr auto
-			pickPhysicalDevice = [](_Database *db, int requiredExtensionCount,
+			pickPhysicalDevice = [](Database *db, int requiredExtensionCount,
 			                        const char *requiredExtensions[])-> EnumArray<QueueType, uint32> {
 				SOUL_LOG_INFO("Picking vulkan physical device.");
 				db->physicalDevice = VK_NULL_HANDLE;
@@ -538,7 +538,7 @@ namespace Soul::GPU
 			_db.queues[queueType].init(device, queueFamilyIndices[queueType], queueIndex[queueType]);
 		}
 
-		static const auto createSwapchain = [this, &queueFamilyIndices](_Database *db, uint32 swapchainWidth, uint32 swapchainHeight) {
+		static const auto createSwapchain = [this, &queueFamilyIndices](Database *db, uint32 swapchainWidth, uint32 swapchainHeight) {
 
 			static const auto
 				pickSurfaceFormat = [](VkPhysicalDevice physicalDevice,
@@ -645,8 +645,8 @@ namespace Soul::GPU
 
 			db->swapchain.textures.resize(imageCount);
 			for (int i = 0; i < imageCount; i++) {
-				db->swapchain.textures[i] = TextureID(db->textures.add(_Texture()));
-				_Texture &texture = *_texturePtr(db->swapchain.textures[i]);
+				db->swapchain.textures[i] = TextureID(db->textures.add(Texture()));
+				Texture &texture = *_texturePtr(db->swapchain.textures[i]);
 				texture.vkHandle = db->swapchain.images[i];
 				texture.view = db->swapchain.imageViews[i];
 				texture.layout = VK_IMAGE_LAYOUT_UNDEFINED;
@@ -672,7 +672,7 @@ namespace Soul::GPU
 
 		_frameContextInit(config);
 
-		static constexpr auto initAllocator = [](_Database *db) {
+		static constexpr auto initAllocator = [](Database *db) {
 			VmaVulkanFunctions vulkanFunctions = {};
 			vulkanFunctions.vkGetPhysicalDeviceProperties = vkGetPhysicalDeviceProperties;
 			vulkanFunctions.vkGetPhysicalDeviceMemoryProperties = vkGetPhysicalDeviceMemoryProperties;
@@ -734,19 +734,8 @@ namespace Soul::GPU
 		for (int i = 0; i < _db.frameContexts.capacity(); i++) {
 			_db.frameContexts.add(_FrameContext(&_db.cpuAllocator));
 			_FrameContext &frameContext = _db.frameContexts[i];
-			frameContext.threadContexts.reserve(config.threadCount);
 
-			for (int j = 0; j < config.threadCount; j++) {
-				frameContext.threadContexts.add(_ThreadContext(&_db.cpuAllocator, _db.device));
-				_ThreadContext &threadContext = frameContext.threadContexts[j];
-				threadContext.secondaryCommandPool.init(_db.device, VK_COMMAND_BUFFER_LEVEL_SECONDARY, _db.queues[QueueType::GRAPHIC].getFamilyIndex());
-			}
-
-			for (auto queueType : EnumIter<QueueType>::Iterates())
-			{
-				frameContext.commandPools[queueType].init(_db.device, VK_COMMAND_BUFFER_LEVEL_PRIMARY, _db.queues[queueType].getFamilyIndex());
-			}
-
+			frameContext.commandPools.init(_db.device, _db.queues, config.threadCount);
 
 			VkFenceCreateInfo fenceInfo = {VK_STRUCTURE_TYPE_FENCE_CREATE_INFO};
 			fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
@@ -773,8 +762,8 @@ namespace Soul::GPU
 		}
 	}
 
-	_QueueData System::_getQueueDataFromQueueFlags(QueueFlags flags) {
-		_QueueData queueData;
+	QueueData System::_getQueueDataFromQueueFlags(QueueFlags flags) {
+		QueueData queueData;
 		
 		static_assert(QUEUE_GRAPHIC_BIT == 1 << uint64(QueueType::GRAPHIC));
 		static_assert(QUEUE_COMPUTE_BIT == 1 << uint64(QueueType::COMPUTE));
@@ -792,8 +781,8 @@ namespace Soul::GPU
 		SOUL_PROFILE_ZONE();
 		SOUL_ASSERT_MAIN_THREAD();
 
-		TextureID textureID = TextureID(_db.textures.add(_Texture()));
-		_Texture &texture = *_texturePtr(textureID);
+		TextureID textureID = TextureID(_db.textures.add(Texture()));
+		Texture &texture = *_texturePtr(textureID);
 
 		VkFormat format = vkCast(desc.format);
 
@@ -806,7 +795,7 @@ namespace Soul::GPU
 		imageInfo.samples = VK_SAMPLE_COUNT_1_BIT;
 		imageInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
 		imageInfo.usage = vkCastImageUsageFlags(desc.usageFlags);
-		_QueueData queueData = _getQueueDataFromQueueFlags(desc.queueFlags);
+		QueueData queueData = _getQueueDataFromQueueFlags(desc.queueFlags);
 		imageInfo.sharingMode = queueData.count == 1 ? VK_SHARING_MODE_EXCLUSIVE : VK_SHARING_MODE_CONCURRENT;
 		imageInfo.queueFamilyIndexCount = queueData.count;
 		imageInfo.pQueueFamilyIndices = queueData.indices;
@@ -883,7 +872,7 @@ namespace Soul::GPU
 		}
 
 		TextureID textureID = textureCreate(newDesc);
-		_Texture &texture = *_texturePtr(textureID);
+		Texture &texture = *_texturePtr(textureID);
 
 		VkImageMemoryBarrier beforeTransferBarrier = {VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER};
 		beforeTransferBarrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
@@ -944,7 +933,7 @@ namespace Soul::GPU
 		newDesc.queueFlags |= QUEUE_GRAPHIC_BIT;
 
 		TextureID textureID = textureCreate(newDesc);
-		_Texture &texture = *_texturePtr(textureID);
+		Texture &texture = *_texturePtr(textureID);
 
 		VkImageMemoryBarrier beforeTransferBarrier = {VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER};
 		beforeTransferBarrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
@@ -1006,7 +995,7 @@ namespace Soul::GPU
 	}
 
 	void System::_generateMipmaps(TextureID textureID) {
-		_Texture& texture = *_texturePtr(textureID);
+		Texture& texture = *_texturePtr(textureID);
 
 		SOUL_ASSERT(0, texture.layout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, "");
 		SOUL_ASSERT(0, texture.owner == ResourceOwner::TRANSFER_QUEUE, "");
@@ -1097,10 +1086,10 @@ namespace Soul::GPU
 		SOUL_PROFILE_ZONE();
 		SOUL_ASSERT_MAIN_THREAD();
 
-		TextureID textureID = TextureID(_db.textures.add(_Texture()));
-		_Texture& texture = *_texturePtr(textureID);
+		TextureID textureID = TextureID(_db.textures.add(Texture()));
+		Texture& texture = *_texturePtr(textureID);
 
-		_Texture* srcTexture = _texturePtr(srcTextureID);
+		Texture* srcTexture = _texturePtr(srcTextureID);
 
 		VkImageCreateInfo imageInfo = { VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO };
 		imageInfo.imageType = vkCast(srcTexture->type);
@@ -1111,7 +1100,7 @@ namespace Soul::GPU
 		imageInfo.samples = VK_SAMPLE_COUNT_1_BIT;
 		imageInfo.tiling = VK_IMAGE_TILING_LINEAR;
 		imageInfo.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT;;
-		_QueueData queueData = _getQueueDataFromQueueFlags(QUEUE_GRAPHIC_BIT);
+		QueueData queueData = _getQueueDataFromQueueFlags(QUEUE_GRAPHIC_BIT);
 		imageInfo.sharingMode = queueData.count == 1 ? VK_SHARING_MODE_EXCLUSIVE : VK_SHARING_MODE_CONCURRENT;
 		imageInfo.queueFamilyIndexCount = queueData.count;
 		imageInfo.pQueueFamilyIndices = queueData.indices;
@@ -1161,16 +1150,16 @@ namespace Soul::GPU
 		_frameContext().garbages.textures.add(id);
 	}
 
-	_Texture *System::_texturePtr(TextureID textureID) {
+	Texture *System::_texturePtr(TextureID textureID) {
 		return &_db.textures[textureID.id];
 	}
 
-	const _Texture& System::_textureRef(TextureID textureID) {
+	const Texture& System::_textureRef(TextureID textureID) {
 		return _db.textures[textureID.id];
 	}
 
 	VkImageView System::_textureGetMipView(TextureID textureID, uint32 level) {
-		_Texture* texture = _texturePtr(textureID);
+		Texture* texture = _texturePtr(textureID);
 		SOUL_ASSERT(0, level < texture->mipCount, "");
 		if (texture->mipCount == 1) return texture->view;
 		if (texture->mipViews == nullptr) {
@@ -1204,7 +1193,7 @@ namespace Soul::GPU
 		SOUL_PROFILE_ZONE();
 		SOUL_ASSERT_MAIN_THREAD();
 		_FrameContext &frameContext = _frameContext();
-		for (const _Buffer &buffer : frameContext.stagingBuffers) {
+		for (const Buffer &buffer : frameContext.stagingBuffers) {
 			vmaDestroyBuffer(_db.gpuAllocator, buffer.vkHandle, buffer.allocation);
 		}
 		_frameContext().stagingBuffers.resize(0);
@@ -1218,9 +1207,9 @@ namespace Soul::GPU
 		SOUL_ASSERT_MAIN_THREAD();
 
 		_FrameContext &frameContext = _frameContext();
-		frameContext.stagingCommandBuffer = _queueRequestCommandBuffer(QueueType::TRANSFER);
-		frameContext.clearCommandBuffer = _queueRequestCommandBuffer(QueueType::GRAPHIC);
-		frameContext.genMipmapCommandBuffer = _queueRequestCommandBuffer(QueueType::GRAPHIC);
+		frameContext.stagingCommandBuffer = frameContext.commandPools.requestCommandBuffer(QueueType::TRANSFER);
+		frameContext.clearCommandBuffer = frameContext.commandPools.requestCommandBuffer(QueueType::GRAPHIC);
+		frameContext.genMipmapCommandBuffer = frameContext.commandPools.requestCommandBuffer(QueueType::GRAPHIC);
 		frameContext.stagingAvailable = true;
 		frameContext.stagingSynced = false;
 	}
@@ -1230,7 +1219,7 @@ namespace Soul::GPU
 		_FrameContext &frameContext = _frameContext();
 
 		SemaphoreID mipmapSemaphore = _semaphoreCreate();
-		_Semaphore* mipmapSemaphorePtr = _semaphorePtr(mipmapSemaphore);
+		Semaphore* mipmapSemaphorePtr = _semaphorePtr(mipmapSemaphore);
 		_db.queues[QueueType::TRANSFER].submit(frameContext.stagingCommandBuffer, 1, &mipmapSemaphorePtr);
 		_db.queues[QueueType::GRAPHIC].submit(frameContext.clearCommandBuffer);
 		_db.queues[QueueType::GRAPHIC].wait(mipmapSemaphorePtr, VK_PIPELINE_STAGE_TRANSFER_BIT);
@@ -1253,8 +1242,6 @@ namespace Soul::GPU
 		copyRegion.dstOffset = 0;
 		copyRegion.size = size;
 
-		_ThreadContext &threadContext = _threadContext();
-
 		const char* name = "Unknown texture";
 		Vec4f color = { (rand() % 125) / 255.0f, (rand() % 125) / 255.0f, (rand() % 125) / 255.0f, 1.0f };
 		const VkDebugUtilsLabelEXT passLabel = {
@@ -1269,11 +1256,11 @@ namespace Soul::GPU
 		vkCmdEndDebugUtilsLabelEXT(_frameContext().stagingCommandBuffer);
 	}
 
-	_Buffer System::_stagingBufferRequest(const byte *data, uint32 size) {
+	Buffer System::_stagingBufferRequest(const byte *data, uint32 size) {
 		SOUL_ASSERT_MAIN_THREAD();
 
 		SOUL_ASSERT(0, data != nullptr, "");
-		_Buffer stagingBuffer = {};
+		Buffer stagingBuffer = {};
 		VkBufferCreateInfo bufferInfo = {VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO};
 		bufferInfo.size = size;
 		bufferInfo.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
@@ -1300,14 +1287,14 @@ namespace Soul::GPU
 	void System::_stagingTransferToBuffer(const byte *data, uint32 size, BufferID bufferID) {
 		SOUL_ASSERT_MAIN_THREAD();
 
-		_Buffer stagingBuffer = _stagingBufferRequest(data, size);
+		Buffer stagingBuffer = _stagingBufferRequest(data, size);
 		_transferBufferToBuffer(stagingBuffer.vkHandle, _bufferPtr(bufferID)->vkHandle, size);
 	}
 
 	void System::_stagingTransferToTexture(uint32 size, const byte *data, const TextureDesc &desc, TextureID textureID) {
 		SOUL_ASSERT_MAIN_THREAD();
 
-		_Buffer stagingBuffer = _stagingBufferRequest(data, size);
+		Buffer stagingBuffer = _stagingBufferRequest(data, size);
 
 		VkBufferImageCopy copyRegion = {};
 		copyRegion.bufferOffset = 0;
@@ -1323,8 +1310,6 @@ namespace Soul::GPU
 		copyRegion.imageExtent.width = desc.width;
 		copyRegion.imageExtent.height = desc.height;
 		copyRegion.imageExtent.depth = 1;
-
-		_ThreadContext &threadContext = _threadContext();
 
 		vkCmdCopyBufferToImage(_frameContext().stagingCommandBuffer,
 		                       stagingBuffer.vkHandle,
@@ -1342,10 +1327,10 @@ namespace Soul::GPU
 		SOUL_ASSERT(0, desc.usageFlags != 0, "");
 
 		BufferID bufferID = BufferID(_db.buffers.add({}));
-		_Buffer &buffer = *_bufferPtr(bufferID);
+		Buffer &buffer = *_bufferPtr(bufferID);
 		
 
-		_QueueData queueData = _getQueueDataFromQueueFlags(desc.queueFlags);
+		QueueData queueData = _getQueueDataFromQueueFlags(desc.queueFlags);
 
 		SOUL_ASSERT(0, queueData.count > 0, "");
 
@@ -1394,21 +1379,17 @@ namespace Soul::GPU
 		_frameContext().garbages.buffers.add(id);
 	}
 
-	_Buffer *System::_bufferPtr(BufferID bufferID) {
+	Buffer *System::_bufferPtr(BufferID bufferID) {
 		return &_db.buffers[bufferID.id];
 	}
 
-	const _Buffer& System::_bufferRef(BufferID bufferID) {
+	const Buffer& System::_bufferRef(BufferID bufferID) {
 		SOUL_ASSERT(!bufferID.isNull(), "");
 		return _db.buffers[bufferID.id];
 	}
 
 	_FrameContext &System::_frameContext() {
 		return _db.frameContexts[_db.currentFrame % _db.frameContexts.size()];
-	}
-
-	_ThreadContext &System::_threadContext() {
-		return _frameContext().threadContexts[Runtime::GetThreadId()];
 	}
 
 	static std::string _FormatGLSLErrorMessage(const char* source, const std::string& errorMessage) {
@@ -1476,7 +1457,7 @@ namespace Soul::GPU
 		Runtime::ScopeAllocator<> scopeAllocator("shaderCreate");
 		SOUL_MEMORY_ALLOCATOR_ZONE(&scopeAllocator);
 
-		_Shader shader;
+		Shader shader;
 
 		shaderc::Compiler glslCompiler;
 
@@ -1692,11 +1673,11 @@ namespace Soul::GPU
 		_frameContext().garbages.shaders.add(shaderID);
 	}
 
-	_Shader *System::_shaderPtr(ShaderID shaderID) {
+	Shader *System::_shaderPtr(ShaderID shaderID) {
 		return &_db.shaders[shaderID.id];
 	}
 
-	VkDescriptorSetLayout System::_descriptorSetLayoutRequest(const _DescriptorSetLayoutKey& key) {
+	VkDescriptorSetLayout System::_descriptorSetLayoutRequest(const DescriptorSetLayoutKey& key) {
 		SOUL_PROFILE_ZONE_WITH_NAME("GPU::System::_descriptorSetLayoutRequest");
 		Runtime::ScopeAllocator<> scopeAllocator("GPU::System::_descriptorSetLayoutRequest");
 
@@ -1708,7 +1689,7 @@ namespace Soul::GPU
 
 		Array<VkDescriptorSetLayoutBinding> bindings(&scopeAllocator);
 		for (int i = 0; i < MAX_BINDING_PER_SET; i++) {
-			const _DescriptorSetLayoutBinding& binding = key.bindings[i];
+			const DescriptorSetLayoutBinding& binding = key.bindings[i];
 			if (binding.stageFlags == 0) continue;
 			bindings.add({});
 
@@ -1742,18 +1723,18 @@ namespace Soul::GPU
 
 		Runtime::ScopeAllocator<> scopeAllocator("GPU::System::pipelineStateRequest");
 
-		_Program* program = _programPtr(desc.programID);
+		Program* program = _programPtr(desc.programID);
 
 		Array<VkPipelineShaderStageCreateInfo> shaderStageInfos(&scopeAllocator);
 
-		const _Shader& vertShader = *_shaderPtr(program->shaderIDs[ShaderStage::VERTEX]);
+		const Shader& vertShader = *_shaderPtr(program->shaderIDs[ShaderStage::VERTEX]);
 		VkPipelineShaderStageCreateInfo vertShaderStageInfo = { VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO };
 		vertShaderStageInfo.module = vertShader.module;
 		vertShaderStageInfo.stage = VK_SHADER_STAGE_VERTEX_BIT;
 		vertShaderStageInfo.pName = "main";
 		shaderStageInfos.add(vertShaderStageInfo);
 
-		const _Shader& fragShader = *_shaderPtr(program->shaderIDs[ShaderStage::FRAGMENT]);
+		const Shader& fragShader = *_shaderPtr(program->shaderIDs[ShaderStage::FRAGMENT]);
 		VkPipelineShaderStageCreateInfo fragShaderStageInfo = { VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO };
 		fragShaderStageInfo.module = fragShader.module;
 		fragShaderStageInfo.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
@@ -1762,7 +1743,7 @@ namespace Soul::GPU
 
 		ShaderID geomShaderID = program->shaderIDs[ShaderStage::GEOMETRY];
 		if (geomShaderID != SHADER_ID_NULL) {
-			const _Shader& geomShader = *_shaderPtr(geomShaderID);
+			const Shader& geomShader = *_shaderPtr(geomShaderID);
 			VkPipelineShaderStageCreateInfo geomShaderStageInfo = { VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO };
 			geomShaderStageInfo.module = geomShader.module;
 			geomShaderStageInfo.stage = VK_SHADER_STAGE_GEOMETRY_BIT;
@@ -1928,11 +1909,11 @@ namespace Soul::GPU
 
 	}
 
-	_PipelineState* System::_pipelineStatePtr(PipelineStateID pipelineStateID) {
+	PipelineState* System::_pipelineStatePtr(PipelineStateID pipelineStateID) {
 		return &_db.pipelineStates[pipelineStateID.id];
 	}
 
-	const _PipelineState& System::_pipelineStateRef(PipelineStateID ID) {
+	const PipelineState& System::_pipelineStateRef(PipelineStateID ID) {
 		return _db.pipelineStates[ID.id];
 	}
 
@@ -1946,7 +1927,7 @@ namespace Soul::GPU
 		}
 
 		ProgramID programID = ProgramID(_db.programs.add({}));
-		_Program &program = _db.programs[programID.id];
+		Program &program = _db.programs[programID.id];
 
 		for (int i = 0; i < uint64(ShaderStage::COUNT); i++) {
 			program.shaderIDs[ShaderStage(i)] = programDesc.shaderIDs[ShaderStage(i)];
@@ -1957,7 +1938,7 @@ namespace Soul::GPU
 			for (int j = 0; j < uint64(ShaderStage::COUNT); j++) {
 				ShaderID shaderID = shaderIDs[ShaderStage(j)];
 				if (shaderID == SHADER_ID_NULL) continue;
-				const _Shader &shader = *_shaderPtr(shaderID);
+				const Shader &shader = *_shaderPtr(shaderID);
 
 				for (int k = 0; k < MAX_BINDING_PER_SET; k++) {
 
@@ -1970,8 +1951,8 @@ namespace Soul::GPU
 					};
 					static_assert(SOUL_ARRAY_LEN(vulkanPipelineStageBitsMap) == uint64(ShaderStage::COUNT), "");
 
-					_ProgramDescriptorBinding &progBinding = program.bindings[i][k];
-					const _ShaderDescriptorBinding &shaderBinding = shader.bindings[i][k];
+					ProgramDescriptorBinding &progBinding = program.bindings[i][k];
+					const ShaderDescriptorBinding &shaderBinding = shader.bindings[i][k];
 
 					if (shader.bindings[i][k].count == 0) continue;
 
@@ -1992,13 +1973,13 @@ namespace Soul::GPU
 		}
 
 		for (int i = 0; i < MAX_SET_PER_SHADER_PROGRAM; i++) {
-			_DescriptorSetLayoutKey descriptorSetLayoutKey = {};
+			DescriptorSetLayoutKey descriptorSetLayoutKey = {};
 
 			for (int j = 0; j < MAX_BINDING_PER_SET; j++) {
-				const _ProgramDescriptorBinding& progBinding = program.bindings[i][j];
+				const ProgramDescriptorBinding& progBinding = program.bindings[i][j];
 				if (progBinding.shaderStageFlags == 0) continue;
 
-				_DescriptorSetLayoutBinding& binding = descriptorSetLayoutKey.bindings[j];
+				DescriptorSetLayoutBinding& binding = descriptorSetLayoutKey.bindings[j];
 
 				binding.stageFlags = progBinding.shaderStageFlags;
 				binding.descriptorType = vkCast(progBinding.type);
@@ -2017,12 +1998,12 @@ namespace Soul::GPU
 		return programID;
 	}
 
-	_Program *System::_programPtr(ProgramID programID) {
+	Program *System::_programPtr(ProgramID programID) {
 		SOUL_ASSERT(0, programID != PROGRAM_ID_NULL, "");
 		return &_db.programs[programID.id];
 	}
 
-	const _Program& System::_programRef(ProgramID programID) {
+	const Program& System::_programRef(ProgramID programID) {
 		SOUL_ASSERT(0, programID != PROGRAM_ID_NULL, "");
 		return _db.programs[programID.id];
 	}
@@ -2035,7 +2016,7 @@ namespace Soul::GPU
 		const ComputePipelineConfig& pipelineConfig = node.pipelineConfig;
 		SOUL_ASSERT(0, pipelineConfig.computeShaderID!=SHADER_ID_NULL, "");
 
-		const _Shader &computeShader = *_shaderPtr(pipelineConfig.computeShaderID);
+		const Shader &computeShader = *_shaderPtr(pipelineConfig.computeShaderID);
 
 		VkComputePipelineCreateInfo pipelineInfo = {
 			VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO,
@@ -2099,7 +2080,7 @@ namespace Soul::GPU
 			case DescriptorType::UNIFORM_BUFFER: {
 				const UniformDescriptor& uniformDescriptor = descriptorDesc.uniformInfo;
 				hash = hashFNV1((uint8*)&descriptorDesc.type, sizeof(descriptorDesc.type), hash);
-				_Buffer* buffer = _bufferPtr(descriptorDesc.uniformInfo.bufferID);
+				Buffer* buffer = _bufferPtr(descriptorDesc.uniformInfo.bufferID);
 				hash = hashFNV1((uint8*)&descriptorDesc.uniformInfo.bufferID, sizeof(BufferID), hash);
 				offset[offsetCount++] =
 					uniformDescriptor.unitIndex * _bufferPtr(uniformDescriptor.bufferID)->unitSize;
@@ -2138,7 +2119,7 @@ namespace Soul::GPU
 			}
 			else {
 
-				_DescriptorSetLayoutKey setLayoutKey = {};
+				DescriptorSetLayoutKey setLayoutKey = {};
 
 				for (int i = 0; i < desc.bindingCount; i++) {
 					Descriptor& descriptorDesc = desc.bindingDescriptions[i];
@@ -2175,7 +2156,7 @@ namespace Soul::GPU
 						}
 					case DescriptorType::UNIFORM_BUFFER: {
 						bufferInfo.buffer = _bufferPtr(descriptorDesc.uniformInfo.bufferID)->vkHandle;
-						_Buffer* buffer = _bufferPtr(descriptorDesc.uniformInfo.bufferID);
+						Buffer* buffer = _bufferPtr(descriptorDesc.uniformInfo.bufferID);
 						bufferInfo.offset = 0;
 						bufferInfo.range = buffer->unitSize;
 						descriptorWrite.pBufferInfo = &bufferInfo;
@@ -2213,11 +2194,11 @@ namespace Soul::GPU
 				}
 				_db.descriptorSets.add(hash, descriptorSet);
 			}
-			argSetID = ShaderArgSetID(_db.shaderArgSetIDs.add(_ShaderArgSet()));
+			argSetID = ShaderArgSetID(_db.shaderArgSetIDs.add(ShaderArgSet()));
 
 		}
 
-		_ShaderArgSet& argSet = _db.shaderArgSetIDs[argSetID.id];
+		ShaderArgSet& argSet = _db.shaderArgSetIDs[argSetID.id];
 
 		argSet.vkHandle = descriptorSet;
 		argSet.offsetCount = offsetCount;
@@ -2228,12 +2209,12 @@ namespace Soul::GPU
 		return argSetID;
 	}
 
-	const _ShaderArgSet& System::_shaderArgSetRef(ShaderArgSetID argSetID) {
+	const ShaderArgSet& System::_shaderArgSetRef(ShaderArgSetID argSetID) {
 		SOUL_ASSERT(!argSetID.isNull(), "");
 		return _db.shaderArgSetIDs[argSetID.id];
 	}
 
-	VkRenderPass System::_renderPassRequest(const _RenderPassKey& key)
+	VkRenderPass System::_renderPassRequest(const RenderPassKey& key)
 	{
 		SOUL_PROFILE_ZONE();
 		SOUL_ASSERT_MAIN_THREAD();
@@ -2405,8 +2386,8 @@ namespace Soul::GPU
 
 	SemaphoreID System::_semaphoreCreate() {
 		SOUL_ASSERT_MAIN_THREAD();
-		SemaphoreID semaphoreID = SemaphoreID(_db.semaphores.add(_Semaphore()));
-		_Semaphore &semaphore = _db.semaphores[semaphoreID.id];
+		SemaphoreID semaphoreID = SemaphoreID(_db.semaphores.add(Semaphore()));
+		Semaphore &semaphore = _db.semaphores[semaphoreID.id];
 		semaphore = {};
 		VkSemaphoreCreateInfo semaphoreInfo = {VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO};
 		SOUL_VK_CHECK(vkCreateSemaphore(_db.device, &semaphoreInfo, nullptr, &semaphore.vkHandle), "");
@@ -2416,10 +2397,10 @@ namespace Soul::GPU
 	void System::_semaphoreReset(SemaphoreID ID) {
 		SOUL_ASSERT_MAIN_THREAD();
 		_semaphorePtr(ID)->stageFlags = 0;
-		_semaphorePtr(ID)->state = _SemaphoreState::INITIAL;
+		_semaphorePtr(ID)->state = semaphore_state::INITIAL;
 	}
 
-	_Semaphore *System::_semaphorePtr(SemaphoreID ID) {
+	Semaphore *System::_semaphorePtr(SemaphoreID ID) {
 		SOUL_ASSERT_MAIN_THREAD();
 		return &_db.semaphores[ID.id];
 	}
@@ -2436,13 +2417,13 @@ namespace Soul::GPU
 		vkGetDeviceQueue(device, familyIndex, queueIndex, &vkHandle);
 	}
 
-	void CommandQueue::wait(_Semaphore* semaphore, VkPipelineStageFlags waitStage)
+	void CommandQueue::wait(Semaphore* semaphore, VkPipelineStageFlags waitStage)
 	{
 		SOUL_ASSERT_MAIN_THREAD();
 		SOUL_ASSERT(0, waitStage != 0, "");
 
-		SOUL_ASSERT(0, semaphore->state == _SemaphoreState::SUBMITTED, "");
-		semaphore->state = _SemaphoreState::PENDING;
+		SOUL_ASSERT(0, semaphore->state == semaphore_state::SUBMITTED, "");
+		semaphore->state = semaphore_state::PENDING;
 
 		if (!commands.empty()) {
 			flush(0, nullptr, VK_NULL_HANDLE);
@@ -2451,17 +2432,17 @@ namespace Soul::GPU
 		waitStages.add(waitStage);
 	}
 
-	void CommandQueue::submit(VkCommandBuffer commandBuffer, const Array<_Semaphore*>& semaphores, VkFence fence)
+	void CommandQueue::submit(VkCommandBuffer commandBuffer, const Array<Semaphore*>& semaphores, VkFence fence)
 	{
 		submit(commandBuffer, Soul::Cast<uint32>(semaphores.size()), semaphores.data(), fence);
 	}
 
-	void CommandQueue::submit(VkCommandBuffer commandBuffer, _Semaphore* semaphore, VkFence fence)
+	void CommandQueue::submit(VkCommandBuffer commandBuffer, Semaphore* semaphore, VkFence fence)
 	{
 		submit(commandBuffer, 1, &semaphore, fence);
 	}
 
-	void CommandQueue::submit(VkCommandBuffer commandBuffer, uint32 semaphoreCount, _Semaphore* const* semaphores, VkFence fence)
+	void CommandQueue::submit(VkCommandBuffer commandBuffer, uint32 semaphoreCount, Semaphore* const* semaphores, VkFence fence)
 	{
 		SOUL_ASSERT_MAIN_THREAD();
 		SOUL_ASSERT(0, semaphoreCount <= MAX_SIGNAL_SEMAPHORE, "");
@@ -2472,9 +2453,9 @@ namespace Soul::GPU
 		commands.add(commandBuffer);
 
 		for (soul_size semaphoreIdx = 0; semaphoreIdx < semaphoreCount; semaphoreIdx++) {
-			_Semaphore* semaphore = semaphores[semaphoreIdx];
-			SOUL_ASSERT(0, semaphore->state == _SemaphoreState::INITIAL, "");
-			semaphore->state = _SemaphoreState::SUBMITTED;
+			Semaphore* semaphore = semaphores[semaphoreIdx];
+			SOUL_ASSERT(0, semaphore->state == semaphore_state::INITIAL, "");
+			semaphore->state = semaphore_state::SUBMITTED;
 		}
 
 		// TODO : Fix this
@@ -2483,7 +2464,7 @@ namespace Soul::GPU
 		}
 	}
 
-	void CommandQueue::flush(uint32 semaphoreCount, _Semaphore* const* semaphores, VkFence fence)
+	void CommandQueue::flush(uint32 semaphoreCount, Semaphore* const* semaphores, VkFence fence)
 	{
 		SOUL_ASSERT_MAIN_THREAD();
 		SOUL_PROFILE_ZONE();
@@ -2517,27 +2498,12 @@ namespace Soul::GPU
 	{
 		SOUL_VK_CHECK(vkQueuePresentKHR(vkHandle, &presentInfo), "");
 	}
-
-	VkCommandBuffer System::_queueRequestCommandBuffer(QueueType queueType) {
-		SOUL_ASSERT_MAIN_THREAD();
-		_FrameContext &frameContext = _frameContext();
-		VkCommandBuffer cmdBuffer = frameContext.commandPools[queueType].request();
-		VkCommandBufferBeginInfo beginInfo = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
-		beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-		SOUL_VK_CHECK(vkBeginCommandBuffer(cmdBuffer, &beginInfo), "");
-		return cmdBuffer;
-	}
-
-	VkCommandBuffer System::_requestSecondaryCommandBuffer() {
-		_ThreadContext& threadContext = _threadContext();
-		return threadContext.secondaryCommandPool.request();
-	}
-
+	
 	void System::renderGraphExecute(const RenderGraph &renderGraph) {
 		SOUL_ASSERT_MAIN_THREAD();
 		SOUL_PROFILE_ZONE();
 
-		_RenderGraphExecution execution(&renderGraph, this, Runtime::GetContextAllocator(), _db.queues);
+		RenderGraphExecution execution(&renderGraph, this, Runtime::GetContextAllocator(), _db.queues, _frameContext().commandPools);
 		execution.init();
 		if (!_frameContext().stagingSynced) _stagingFlush();
 		execution.run();
@@ -2563,14 +2529,7 @@ namespace Soul::GPU
 		
 		{
 			SOUL_PROFILE_ZONE_WITH_NAME("Reset command pools");
-			for (CommandPool& pool : frameContext.commandPools)
-			{
-				pool.reset();
-			}
-			for (_ThreadContext& threadContext : frameContext.threadContexts)
-			{
-				threadContext.secondaryCommandPool.reset();
-			}
+			frameContext.commandPools.reset();
 		}
 		
 		_stagingFrameBegin();
@@ -2586,10 +2545,10 @@ namespace Soul::GPU
 			                      &swapchainIndex);
 		}
 		
-		_semaphorePtr(frameContext.imageAvailableSemaphore)->state = _SemaphoreState::SUBMITTED;
+		_semaphorePtr(frameContext.imageAvailableSemaphore)->state = semaphore_state::SUBMITTED;
 		frameContext.swapchainIndex = swapchainIndex;
 		TextureID swapchainTextureID = _db.swapchain.textures[swapchainIndex];
-		_Texture *swapchainTexture = _texturePtr(swapchainTextureID);
+		Texture *swapchainTexture = _texturePtr(swapchainTextureID);
 		swapchainTexture->owner = ResourceOwner::PRESENTATION_ENGINE;
 		swapchainTexture->layout = VK_IMAGE_LAYOUT_UNDEFINED;
 
@@ -2601,7 +2560,7 @@ namespace Soul::GPU
 		{
 			SOUL_PROFILE_ZONE_WITH_NAME("Destroy images");
 			for (TextureID textureID : frameContext.garbages.textures) {
-				_Texture& texture = *_texturePtr(textureID);
+				Texture& texture = *_texturePtr(textureID);
 				vmaDestroyImage(_db.gpuAllocator, texture.vkHandle, texture.allocation);
 				vkDestroyImageView(_db.device, texture.view, nullptr);
 				if (texture.mipViews != nullptr) {
@@ -2620,7 +2579,7 @@ namespace Soul::GPU
 		{
 			SOUL_PROFILE_ZONE_WITH_NAME("Destroy buffers");
 			for (BufferID bufferID : frameContext.garbages.buffers) {
-				_Buffer& buffer = *_bufferPtr(bufferID);
+				Buffer& buffer = *_bufferPtr(bufferID);
 				vmaDestroyBuffer(_db.gpuAllocator, buffer.vkHandle, buffer.allocation);
 				_db.buffers.remove(bufferID.id);
 			}
@@ -2628,7 +2587,7 @@ namespace Soul::GPU
 		}
 
 		for (ShaderID shaderID : frameContext.garbages.shaders) {
-			_Shader &shader = _db.shaders[shaderID.id];
+			Shader &shader = _db.shaders[shaderID.id];
 			vkDestroyShaderModule(_db.device, shader.module, nullptr);
 			_db.shaders.remove(shaderID.id);
 		}
@@ -2680,7 +2639,7 @@ namespace Soul::GPU
 		}
 		_db.swapchain.fences[swapchainIndex] = frameContext.fence;
 
-		_Texture &swapchainTexture = *_texturePtr(_db.swapchain.textures[swapchainIndex]);
+		Texture &swapchainTexture = *_texturePtr(_db.swapchain.textures[swapchainIndex]);
 		SOUL_VK_CHECK(vkResetFences(_db.device, 1, &frameContext.fence), "");
 		{
 			SOUL_PROFILE_ZONE_WITH_NAME("GPU::System::LastSubmission");
@@ -2691,9 +2650,10 @@ namespace Soul::GPU
 			            || swapchainTexture.owner == ResourceOwner::PRESENTATION_ENGINE,
 			            "");
 			// TODO: Handle when swapchain texture is untouch (ResourceOwner is PRESENTATION_ENGINE)
-			VkCommandBuffer cmdBuffer = _queueRequestCommandBuffer(QueueType::GRAPHIC);
+			VkCommandBuffer cmdBuffer = frameContext.commandPools.requestCommandBuffer(QueueType::GRAPHIC);
 
-			VkImageMemoryBarrier imageBarrier = {VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER};
+			VkImageMemoryBarrier imageBarrier = {};
+			imageBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
 			imageBarrier.srcAccessMask = VK_ACCESS_MEMORY_WRITE_BIT;
 			imageBarrier.dstAccessMask = 0;
 			imageBarrier.oldLayout = swapchainTexture.layout;
@@ -2728,8 +2688,8 @@ namespace Soul::GPU
 
 			auto _syncQueueToGraphic = [this](QueueType queueType) {
 				SemaphoreID semaphoreID = _semaphoreCreate();
-				VkCommandBuffer cmdBuffer = _queueRequestCommandBuffer(queueType);
-				_Semaphore* semaphorePtr = _semaphorePtr(semaphoreID);
+				VkCommandBuffer cmdBuffer = _frameContext().commandPools.requestCommandBuffer(queueType);
+				Semaphore* semaphorePtr = _semaphorePtr(semaphoreID);
 				_db.queues[queueType].submit(cmdBuffer, 1, &semaphorePtr);
 				_db.queues[QueueType::GRAPHIC].wait(semaphorePtr, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT);
 				_semaphoreDestroy(semaphoreID);
@@ -2818,5 +2778,51 @@ namespace Soul::GPU
 		vkResetCommandPool(device, vkHandle, 0);
 		count = 0;
 	}
+	
+	void CommandPools::init(VkDevice device, const CommandQueues& queues, soul_size threadCount)
+	{
+		Runtime::PushAllocator(allocator);
+		secondaryPools.resize(threadCount);
+		for (auto& pool: secondaryPools)
+		{
+			pool.init(device, VK_COMMAND_BUFFER_LEVEL_SECONDARY, queues[QueueType::GRAPHIC].getFamilyIndex());
+		}
+
+		for (const auto queueType : EnumIter<QueueType>::Iterates())
+		{
+			primaryPools[queueType].init(device, VK_COMMAND_BUFFER_LEVEL_PRIMARY, queues[queueType].getFamilyIndex());
+		}
+		Runtime::PopAllocator();
+	}
+
+	void CommandPools::reset()
+	{
+		for (auto& pool : primaryPools)
+		{
+			pool.reset();
+		}
+
+		for (auto& pool : secondaryPools)
+		{
+			pool.reset();
+		}
+	}
+
+	VkCommandBuffer CommandPools::requestCommandBuffer(QueueType queueType)
+	{
+		SOUL_ASSERT_MAIN_THREAD();
+		VkCommandBuffer cmdBuffer = primaryPools[queueType].request();
+		VkCommandBufferBeginInfo beginInfo = {};
+		beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+		beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+		SOUL_VK_CHECK(vkBeginCommandBuffer(cmdBuffer, &beginInfo), "");
+		return cmdBuffer;
+	}
+
+	VkCommandBuffer CommandPools::requestSecondaryCommandBuffer()
+	{
+		return secondaryPools[Runtime::GetThreadId()].request();
+	}
+
 
 }

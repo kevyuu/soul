@@ -2,28 +2,31 @@
 
 #include "gpu/render_graph.h"
 
-namespace Soul { namespace GPU {
+namespace Soul::GPU
+{
+
+	using namespace impl;
 
 	TextureNodeID RenderGraph::importTexture(const char* name, TextureID textureID) {
-		TextureNodeID nodeID = TextureNodeID(_textureNodes.add(_TextureNode()));
-		_TextureNode& node = _textureNodes.back();
+		TextureNodeID nodeID = TextureNodeID(_textureNodes.add(TextureNode()));
+		TextureNode& node = _textureNodes.back();
 
-		uint32 resourceIndex = _externalTextures.add(_RGExternalTexture());
-		_RGExternalTexture& externalTexture = _externalTextures.back();
+		uint32 resourceIndex = _externalTextures.add(RGExternalTexture());
+		RGExternalTexture& externalTexture = _externalTextures.back();
 		externalTexture.name = name;
 		externalTexture.textureID = textureID;
 
-		node.resourceID = _RGResourceID::ExternalID(resourceIndex);
+		node.resourceID = RGResourceID::ExternalID(resourceIndex);
 
 		return nodeID;
 	}
 
 	TextureNodeID RenderGraph::createTexture(const char* name, const RGTextureDesc& desc) {
-		TextureNodeID nodeID = TextureNodeID(_textureNodes.add(_TextureNode()));
-		_TextureNode& node = _textureNodes.back();
+		TextureNodeID nodeID = TextureNodeID(_textureNodes.add(TextureNode()));
+		TextureNode& node = _textureNodes.back();
 
-		uint32 resourceIndex = _internalTextures.add(_RGInternalTexture());
-		_RGInternalTexture& internalTexture = _internalTextures.back();
+		uint32 resourceIndex = _internalTextures.add(RGInternalTexture());
+		RGInternalTexture& internalTexture = _internalTextures.back();
 		internalTexture.name = name;
 		internalTexture.type = desc.type;
 		internalTexture.width = desc.width;
@@ -31,40 +34,40 @@ namespace Soul { namespace GPU {
 		internalTexture.depth = desc.depth;
 		internalTexture.mipLevels = desc.mipLevels;
 		internalTexture.format = desc.format;
-        internalTexture.clear = desc.clear;
-        internalTexture.clearValue = desc.clearValue;
+		internalTexture.clear = desc.clear;
+		internalTexture.clearValue = desc.clearValue;
 
-		node.resourceID = _RGResourceID::InternalID(resourceIndex);
+		node.resourceID = RGResourceID::InternalID(resourceIndex);
 
 		return nodeID;
 	}
 
 	BufferNodeID RenderGraph::importBuffer(const char* name, BufferID bufferID) {
-		BufferNodeID nodeID = BufferNodeID(_bufferNodes.add(_BufferNode()));
-		_BufferNode& node = _bufferNodes.back();
+		BufferNodeID nodeID = BufferNodeID(_bufferNodes.add(BufferNode()));
+		BufferNode& node = _bufferNodes.back();
 
-		uint32 resourceIndex = _externalBuffers.add(_RGExternalBuffer());
-		_RGExternalBuffer& externalBuffer = _externalBuffers.back();
+		uint32 resourceIndex = _externalBuffers.add(RGExternalBuffer());
+		RGExternalBuffer& externalBuffer = _externalBuffers.back();
 		externalBuffer.name = name;
 		externalBuffer.bufferID = bufferID;
 
-		node.resourceID = _RGResourceID::ExternalID(resourceIndex);
+		node.resourceID = RGResourceID::ExternalID(resourceIndex);
 
 		return nodeID;
 	}
 
 	BufferNodeID RenderGraph::createBuffer(const char* name, const RGBufferDesc& desc) {
-		BufferNodeID nodeID = BufferNodeID(_bufferNodes.add(_BufferNode()));
-		_BufferNode& node = _bufferNodes.back();
+		BufferNodeID nodeID = BufferNodeID(_bufferNodes.add(BufferNode()));
+		BufferNode& node = _bufferNodes.back();
 
-		uint32 resourceIndex = _internalBuffers.add(_RGInternalBuffer());
-		_RGInternalBuffer& internalBuffer = _internalBuffers.back();
+		uint32 resourceIndex = _internalBuffers.add(RGInternalBuffer());
+		RGInternalBuffer& internalBuffer = _internalBuffers.back();
 		internalBuffer.name = name;
 		internalBuffer.count = desc.count;
 		internalBuffer.typeSize = desc.typeSize;
 		internalBuffer.typeAlignment = desc.typeAlignment;
 
-		node.resourceID = _RGResourceID::InternalID(resourceIndex);
+		node.resourceID = RGResourceID::InternalID(resourceIndex);
 
 		return nodeID;
 	}
@@ -97,8 +100,8 @@ namespace Soul { namespace GPU {
 
 	BufferNodeID RenderGraph::_bufferNodeWrite(BufferNodeID bufferNodeID, PassNodeID passNodeID) {
 		_bufferNodeRead(bufferNodeID, passNodeID);
-		BufferNodeID dstBufferNodeID = BufferNodeID(_bufferNodes.add(_BufferNode()));
-		_BufferNode* dstBufferNode = _bufferNodePtr(dstBufferNodeID);
+		BufferNodeID dstBufferNodeID = BufferNodeID(_bufferNodes.add(BufferNode()));
+		BufferNode* dstBufferNode = _bufferNodePtr(dstBufferNodeID);
 		dstBufferNode->resourceID = _bufferNodePtr(bufferNodeID)->resourceID;
 		dstBufferNode->writer = passNodeID;
 		return dstBufferNodeID;
@@ -110,26 +113,26 @@ namespace Soul { namespace GPU {
 
 	TextureNodeID RenderGraph::_textureNodeWrite(TextureNodeID textureNodeID, PassNodeID passNodeID) {
 		_textureNodeRead(textureNodeID, passNodeID);
-		TextureNodeID dstTextureNodeID = TextureNodeID(_textureNodes.add(_TextureNode()));
-		_TextureNode* dstTextureNode = _textureNodePtr(dstTextureNodeID);
+		TextureNodeID dstTextureNodeID = TextureNodeID(_textureNodes.add(TextureNode()));
+		TextureNode* dstTextureNode = _textureNodePtr(dstTextureNodeID);
 		dstTextureNode->resourceID = _textureNodePtr(textureNodeID)->resourceID;
 		dstTextureNode->writer = passNodeID;
 		return dstTextureNodeID;
 	}
 
-	const _BufferNode* RenderGraph::_bufferNodePtr(BufferNodeID nodeID) const {
+	const BufferNode* RenderGraph::_bufferNodePtr(BufferNodeID nodeID) const {
 		return &_bufferNodes[nodeID.id];
 	}
 
-	_BufferNode* RenderGraph::_bufferNodePtr(BufferNodeID nodeID) {
+	BufferNode* RenderGraph::_bufferNodePtr(BufferNodeID nodeID) {
 		return &_bufferNodes[nodeID.id];
 	}
 
-	const _TextureNode* RenderGraph::_textureNodePtr(TextureNodeID nodeID) const {
+	const TextureNode* RenderGraph::_textureNodePtr(TextureNodeID nodeID) const {
 		return &_textureNodes[nodeID.id];
 	}
 
-	_TextureNode* RenderGraph::_textureNodePtr(TextureNodeID nodeID) {
+	TextureNode* RenderGraph::_textureNodePtr(TextureNodeID nodeID) {
 		return &_textureNodes[nodeID.id];
 	}
 
@@ -220,7 +223,7 @@ namespace Soul { namespace GPU {
 		return outNodeID;
 	}
 
-    void ComputeNodeBuilder::setPipelineConfig(const ComputePipelineConfig &config) {
-	    _computeNode->pipelineConfig = config;
+	void ComputeNodeBuilder::setPipelineConfig(const ComputePipelineConfig &config) {
+		_computeNode->pipelineConfig = config;
 	}
-}}
+}

@@ -7,14 +7,18 @@
 #include "gpu/data.h"
 #include "gpu/render_graph.h"
 
-namespace Soul { namespace GPU {
-	class _RenderGraphExecution;
+namespace Soul::GPU
+{
+	namespace impl
+	{
+		class RenderGraphExecution;
+	}
 
 	class RenderGraphRegistry {
 	public:
 
 		RenderGraphRegistry() = delete;
-		RenderGraphRegistry(System* system, const _RenderGraphExecution* execution, VkRenderPass renderPass) :
+		RenderGraphRegistry(System* system, const impl::RenderGraphExecution* execution, VkRenderPass renderPass) :
 			_system(system), _execution(execution), _renderPass(renderPass) {}
 
 		RenderGraphRegistry(const RenderGraphRegistry& other) = delete;
@@ -32,7 +36,7 @@ namespace Soul { namespace GPU {
 
 	private:
 		System* _system;
-		const _RenderGraphExecution* _execution;
+		const impl::RenderGraphExecution* _execution;
 		VkRenderPass _renderPass;
 	};
-}}
+}

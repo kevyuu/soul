@@ -4,56 +4,58 @@
 #include "core/slice.h"
 #include "gpu/data.h"
 
-namespace Soul { namespace GPU {
+namespace Soul::GPU
+{
+
+	namespace impl
+	{
+		struct TextureNode;
+		struct BufferNode;
+		struct RGResourceID;
+		struct RGResourceID {
+			uint32 index = SOUL_UTYPE_MAX(uint32);
+
+			static constexpr uint8 EXTERNAL_BIT_POSITION = 31;
+
+			static RGResourceID InternalID(uint32 index) { return { index }; }
+			static RGResourceID ExternalID(uint32 index) { return { index | 1 << EXTERNAL_BIT_POSITION }; }
+
+			bool isExternal() const {
+				return index & (1u << EXTERNAL_BIT_POSITION);
+			}
+
+			uint32 getIndex() const {
+				return index & ~(1u << EXTERNAL_BIT_POSITION);
+			}
+
+		};
+		static constexpr RGResourceID RG_RESOURCE_ID_NULL = { SOUL_UTYPE_MAX(uint32) };
+
+		using RGBufferID = RGResourceID;
+		static constexpr RGBufferID RG_BUFFER_ID_NULL = RG_RESOURCE_ID_NULL;
+
+		using RGTextureID = RGResourceID;
+		static constexpr RGTextureID RG_TEXTURE_ID_NULL = RG_RESOURCE_ID_NULL;
+		
+		struct RGInternalTexture;
+		struct RGExternalTexture;
+		struct RGInternalBuffer;
+		struct RGExternalBuffer;
+	}
 
 	class RenderGraph;
 	struct RenderGraphRegistry;
+	class PassNode;
 
 	//ID
-	struct PassNode;
 	using PassNodeID = ID<PassNode, uint16>;
 	static constexpr PassNodeID PASS_NODE_ID_NULL = PassNodeID(SOUL_UTYPE_MAX(PassNodeID::id));
-
-	struct _TextureNode;
-	using TextureNodeID = ID<_TextureNode, uint16>;
+	
+	using TextureNodeID = ID<impl::TextureNode, uint16>;
 	static constexpr TextureNodeID TEXTURE_NODE_ID_NULL = TextureNodeID(SOUL_UTYPE_MAX(TextureNodeID::id));
 
-	struct _BufferNode;
-	using BufferNodeID = ID<_BufferNode, uint16>;
+	using BufferNodeID = ID<impl::BufferNode, uint16>;
 	static constexpr BufferNodeID  BUFFER_NODE_ID_NULL = BufferNodeID(SOUL_UTYPE_MAX(BufferNodeID));
-
-	struct _TextureGroupNode;
-	using TextureGroupNodeID = ID<_TextureGroupNode, uint16>;
-	static constexpr TextureGroupNodeID TEXTURE_GROUP_NODE_ID_NULL = TextureGroupNodeID(SOUL_UTYPE_MAX(TextureGroupNodeID));
-
-	struct _BufferGroupNode;
-	using BufferGroupNodeID = ID<_BufferGroupNode, uint16>;
-	static constexpr BufferGroupNodeID BUFFER_GROUP_NODE_ID_NULL = BufferGroupNodeID(SOUL_UTYPE_MAX(BufferGroupNodeID));
-
-	struct _RGResourceID {
-		uint32 index = SOUL_UTYPE_MAX(uint32);
-
-		static constexpr uint8 EXTERNAL_BIT_POSITION = 31;
-
-		static _RGResourceID InternalID(uint32 index) {return { index }; }
-		static _RGResourceID ExternalID(uint32 index) {return { index | 1 << EXTERNAL_BIT_POSITION }; }
-
-		bool isExternal() const {
-			return index & (1u << EXTERNAL_BIT_POSITION);
-		}
-
-		uint32 getIndex() const {
-			return index & ~(1u << EXTERNAL_BIT_POSITION);
-		}
-
-	};
-	static constexpr _RGResourceID _RG_RESOURCE_ID_NULL = { SOUL_UTYPE_MAX(uint32) };
-
-	using _RGBufferID = _RGResourceID;
-	static constexpr _RGBufferID _RG_BUFFER_ID_NULL = _RG_RESOURCE_ID_NULL;
-
-	using _RGTextureID = _RGResourceID;
-	static constexpr _RGTextureID _RG_TEXTURE_ID_NULL = _RG_RESOURCE_ID_NULL;
 
 	enum class PassType : uint8 {
 		NONE,
@@ -74,65 +76,10 @@ namespace Soul { namespace GPU {
 		ClearValue clearValue;
 	};
 
-	struct _RGInternalTexture {
-		const char* name = nullptr;
-		TextureType type = TextureType::D2;
-		uint16 width = 0;
-		uint16 height = 0;
-		uint16 depth = 0;
-		uint16 mipLevels = 0;
-		TextureFormat format;
-		bool clear = false;
-		ClearValue clearValue = {};
-	};
-
-	struct _RGExternalTexture {
-		const char* name = nullptr;
-		TextureID textureID;
-		bool clear = false;
-		ClearValue clearValue = {};
-	};
-
 	struct RGBufferDesc {
 		uint16 count = 0;
 		uint16 typeSize = 0;
 		uint16 typeAlignment = 0;
-	};
-
-	struct _RGInternalBuffer {
-		const char* name = nullptr;
-		uint16 count = 0;
-		uint16 typeSize = 0;
-		uint16 typeAlignment= 0;
-		bool clear = false;
-	};
-
-	struct _RGExternalBuffer {
-		const char* name = nullptr;
-		BufferID bufferID;
-		bool clear = false;
-	};
-
-	struct _TextureNode {
-		_RGBufferID resourceID = _RG_BUFFER_ID_NULL;
-		PassNodeID writer = PASS_NODE_ID_NULL;
-	};
-
-	struct _BufferNode {
-		_RGBufferID resourceID = _RG_BUFFER_ID_NULL;
-		PassNodeID writer = PASS_NODE_ID_NULL;
-	};
-
-	struct _BufferGroupNode {
-		const char* name;
-		Slice<BufferID> bufferIDs;
-		PassNodeID writer = PASS_NODE_ID_NULL;
-	};
-
-	struct _TextureGroupNode {
-		const char* name;
-		Slice<TextureID> textureIDs;
-		PassNodeID writer = PASS_NODE_ID_NULL;
 	};
 
 	class RenderCommandBucket {
@@ -195,13 +142,13 @@ namespace Soul { namespace GPU {
 		DepthStencilAttachment(TextureNodeID nodeID, const DepthStencilAttachmentDesc& desc) : nodeID(nodeID), desc(desc) {}
 	};
 
-    struct InputAttachment {
-        TextureNodeID nodeID = TEXTURE_NODE_ID_NULL;
+	struct InputAttachment {
+		TextureNodeID nodeID = TEXTURE_NODE_ID_NULL;
 		ShaderStageFlags stageFlags;
 
-        InputAttachment() = default;
-        InputAttachment(TextureNodeID nodeID, ShaderStageFlags stageFlags) : nodeID(nodeID), stageFlags(stageFlags) {}
-    };
+		InputAttachment() = default;
+		InputAttachment(TextureNodeID nodeID, ShaderStageFlags stageFlags) : nodeID(nodeID), stageFlags(stageFlags) {}
+	};
 
 	enum class ShaderBufferReadUsage : uint8 {
 		UNIFORM,
@@ -269,7 +216,7 @@ namespace Soul { namespace GPU {
 	};
 
 	struct ComputePipelineConfig {
-	    ShaderID computeShaderID = SHADER_ID_NULL;
+		ShaderID computeShaderID = SHADER_ID_NULL;
 	};
 
 	class PassNode {
@@ -311,28 +258,22 @@ namespace Soul { namespace GPU {
 		Array<ShaderTextureWriteAccess> shaderTextureWriteAccesses;
 		Array<InputAttachment> inputAttachments;
 
-		Array<BufferGroupNodeID> vertexBufferGroups;
-		Array<BufferGroupNodeID> indexBufferGroups;
-		Array<BufferGroupNodeID> inShaderBufferGroups;
-		Array<TextureGroupNodeID> inShaderTextureGroups;
 
 		void cleanup() override {}
 	};
 
 	class ComputeBaseNode : public PassNode {
 	public:
-	    ComputePipelineConfig pipelineConfig;
+		ComputePipelineConfig pipelineConfig;
 		Array<ShaderBufferReadAccess> shaderBufferReadAccesses;
 		Array<ShaderBufferWriteAccess> shaderBufferWriteAccesses;
 		Array<ShaderTextureReadAccess> shaderTextureReadAccesses;
 		Array<ShaderTextureWriteAccess> shaderTextureWriteAccesses;
 
-		Array<BufferGroupNodeID> inShaderBufferGroups;
-		Array<TextureGroupNodeID> inShaderTextureGroups;
 
-	    void cleanup() override {
-	        //
-	    }
+		void cleanup() override {
+			//
+		}
 	};
 
 	class TransferBaseNode : public PassNode {
@@ -365,13 +306,13 @@ namespace Soul { namespace GPU {
 	template<typename Data, typename Execute>
 	class ComputeNode : public ComputeBaseNode {
 	public:
-	    Data data;
-	    Execute execute;
+		Data data;
+		Execute execute;
 
-        explicit ComputeNode(Execute&& execute) : execute(std::forward<Execute>(execute)){}
-        void executePass(RenderGraphRegistry* registry, RenderCommandBucket* commandBucket) const final override {
-            execute(registry, data, commandBucket);
-        }
+		explicit ComputeNode(Execute&& execute) : execute(std::forward<Execute>(execute)){}
+		void executePass(RenderGraphRegistry* registry, RenderCommandBucket* commandBucket) const final override {
+			execute(registry, data, commandBucket);
+		}
 	};
 
 	template<typename Data, typename Execute>
@@ -416,18 +357,18 @@ namespace Soul { namespace GPU {
 
 	class ComputeNodeBuilder {
 	public:
-	    PassNodeID _passID;
-	    ComputeBaseNode* _computeNode;
-	    RenderGraph* _renderGraph;
+		PassNodeID _passID;
+		ComputeBaseNode* _computeNode;
+		RenderGraph* _renderGraph;
 
-        ComputeNodeBuilder(PassNodeID passID, ComputeBaseNode* computeNode, RenderGraph* renderGraph):
-        _passID(passID), _computeNode(computeNode), _renderGraph(renderGraph) {}
+		ComputeNodeBuilder(PassNodeID passID, ComputeBaseNode* computeNode, RenderGraph* renderGraph):
+			_passID(passID), _computeNode(computeNode), _renderGraph(renderGraph) {}
 
-        ComputeNodeBuilder(const ComputeNodeBuilder& other) = delete;
-        ComputeNodeBuilder(ComputeNodeBuilder&& other) = delete;
+		ComputeNodeBuilder(const ComputeNodeBuilder& other) = delete;
+		ComputeNodeBuilder(ComputeNodeBuilder&& other) = delete;
 
-        ComputeNodeBuilder& operator=(const ComputeNodeBuilder& other) = delete;
-        ComputeNodeBuilder& operator=(ComputeNodeBuilder&& other) = delete;
+		ComputeNodeBuilder& operator=(const ComputeNodeBuilder& other) = delete;
+		ComputeNodeBuilder& operator=(ComputeNodeBuilder&& other) = delete;
 
 		~ComputeNodeBuilder() = default;
 
@@ -437,13 +378,13 @@ namespace Soul { namespace GPU {
 		TextureNodeID addShaderTexture(TextureNodeID nodeID, ShaderStageFlags stageFlags, ShaderTextureReadUsage usageType);
 		TextureNodeID addShaderTexture(TextureNodeID nodeID, ShaderStageFlags stageFlags, ShaderTextureWriteUsage usageType);
 
-        BufferNodeID addInShaderBuffer(BufferNodeID nodeID, uint8 set, uint8 binding);
-        BufferNodeID addOutShaderBuffer(BufferNodeID nodeID, uint8 set, uint8 binding);
+		BufferNodeID addInShaderBuffer(BufferNodeID nodeID, uint8 set, uint8 binding);
+		BufferNodeID addOutShaderBuffer(BufferNodeID nodeID, uint8 set, uint8 binding);
 
-        TextureNodeID addInShaderTexture(TextureNodeID nodeID, uint8 set, uint8 binding);
-        TextureNodeID addOutShaderTexture(TextureNodeID nodeID, uint8 set, uint8 binding);
+		TextureNodeID addInShaderTexture(TextureNodeID nodeID, uint8 set, uint8 binding);
+		TextureNodeID addOutShaderTexture(TextureNodeID nodeID, uint8 set, uint8 binding);
 
-        void setPipelineConfig(const ComputePipelineConfig& config);
+		void setPipelineConfig(const ComputePipelineConfig& config);
 	};
 
 	struct TextureExport {
@@ -493,16 +434,16 @@ namespace Soul { namespace GPU {
 			SOUL_REQUIRE(is_lambda_v<SETUP, void(GraphicNodeBuilder*, DATA*)>),
 			SOUL_REQUIRE(is_lambda_v<EXECUTE, void(RenderGraphRegistry*, const DATA&, RenderCommandBucket*)>)
 		>
-        const DATA& addComputePass(const char* name, SETUP setup, EXECUTE&& execute) {
-            using Node = ComputeNode<DATA, EXECUTE>;
-            Node* node = (Node*) malloc(sizeof(Node));
-            new(node) Node(std::forward<EXECUTE>(execute));
-            node->type = PassType::COMPUTE;
-            node->name = name;
-            _passNodes.add(node);
-            ComputeNodeBuilder builder(PassNodeID(_passNodes.size() - 1), node, this);
-            setup(&builder, &node->data);
-            return node->data;
+		const DATA& addComputePass(const char* name, SETUP setup, EXECUTE&& execute) {
+			using Node = ComputeNode<DATA, EXECUTE>;
+			Node* node = (Node*) malloc(sizeof(Node));
+			new(node) Node(std::forward<EXECUTE>(execute));
+			node->type = PassType::COMPUTE;
+			node->name = name;
+			_passNodes.add(node);
+			ComputeNodeBuilder builder(PassNodeID(_passNodes.size() - 1), node, this);
+			setup(&builder, &node->data);
+			return node->data;
 		}
 
 		TextureNodeID importTexture(const char* name, TextureID textureID);
@@ -510,9 +451,6 @@ namespace Soul { namespace GPU {
 
 		BufferNodeID importBuffer(const char* name, BufferID bufferID);
 		BufferNodeID createBuffer(const char* name, const RGBufferDesc& desc);
-
-		TextureGroupNodeID importTextureGroup(const char* name, Slice<TextureID> textureIDs);
-		BufferGroupNodeID importBufferGroup(const char* name, Slice<BufferID> bufferIDs);
 
 		void exportTexture(TextureNodeID tex, char* pixels);
 
@@ -524,25 +462,72 @@ namespace Soul { namespace GPU {
 		void _textureNodeRead(TextureNodeID textureNodeID, PassNodeID passNodeID);
 		TextureNodeID _textureNodeWrite(TextureNodeID textureNodeID, PassNodeID passNodeID);
 
-		const _BufferNode* _bufferNodePtr(BufferNodeID nodeID) const ;
-		_BufferNode* _bufferNodePtr(BufferNodeID nodeID);
+		const impl::BufferNode* _bufferNodePtr(BufferNodeID nodeID) const ;
+		impl::BufferNode* _bufferNodePtr(BufferNodeID nodeID);
 
-		const _TextureNode* _textureNodePtr(TextureNodeID nodeID) const;
-		_TextureNode* _textureNodePtr(TextureNodeID nodeID);
+		const impl::TextureNode* _textureNodePtr(TextureNodeID nodeID) const;
+		impl::TextureNode* _textureNodePtr(TextureNodeID nodeID);
 
 		Array<PassNode*> _passNodes;
 
-		Array<_BufferNode> _bufferNodes;
-		Array<_TextureNode> _textureNodes;
+		Array<impl::BufferNode> _bufferNodes;
+		Array<impl::TextureNode> _textureNodes;
 
-		Array<_RGInternalBuffer> _internalBuffers;
-		Array<_RGInternalTexture> _internalTextures;
+		Array<impl::RGInternalBuffer> _internalBuffers;
+		Array<impl::RGInternalTexture> _internalTextures;
 
-		Array<_RGExternalBuffer> _externalBuffers;
-		Array<_RGExternalTexture> _externalTextures;
+		Array<impl::RGExternalBuffer> _externalBuffers;
+		Array<impl::RGExternalTexture> _externalTextures;
 
 		Array<TextureExport> _textureExports;
 
 	};
 
-}}
+	namespace impl
+	{
+
+		struct RGInternalTexture {
+			const char* name = nullptr;
+			TextureType type = TextureType::D2;
+			uint16 width = 0;
+			uint16 height = 0;
+			uint16 depth = 0;
+			uint16 mipLevels = 0;
+			TextureFormat format = TextureFormat::COUNT;
+			bool clear = false;
+			ClearValue clearValue = {};
+		};
+
+		struct RGExternalTexture {
+			const char* name = nullptr;
+			TextureID textureID;
+			bool clear = false;
+			ClearValue clearValue = {};
+		};
+
+		struct RGInternalBuffer {
+			const char* name = nullptr;
+			uint16 count = 0;
+			uint16 typeSize = 0;
+			uint16 typeAlignment = 0;
+			bool clear = false;
+		};
+
+		struct RGExternalBuffer {
+			const char* name = nullptr;
+			BufferID bufferID;
+			bool clear = false;
+		};
+
+		struct TextureNode {
+			impl::RGBufferID resourceID = impl::RG_BUFFER_ID_NULL;
+			PassNodeID writer = PASS_NODE_ID_NULL;
+		};
+
+		struct BufferNode {
+			impl::RGBufferID resourceID = impl::RG_BUFFER_ID_NULL;
+			PassNodeID writer = PASS_NODE_ID_NULL;
+		};
+	}
+
+}

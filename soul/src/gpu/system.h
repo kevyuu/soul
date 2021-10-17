@@ -10,10 +10,10 @@
 #define SOUL_VK_CHECK(result, message, ...) result
 #endif
 
-namespace Soul { namespace GPU {
+namespace Soul::GPU
+{
 
-	struct GraphicBaseNode;
-	struct RenderGraph;
+	class GraphicBaseNode;
 
 	class System {
 	public:
@@ -62,10 +62,10 @@ namespace Soul { namespace GPU {
 		void bufferDestroy(BufferID bufferID);
 
 		void bufferLoad(BufferID bufferID, void* data) {
-			_Buffer& buffer = *_bufferPtr(bufferID);
+			impl::Buffer& buffer = *_bufferPtr(bufferID);
 
 			SOUL_ASSERT(0, buffer.usageFlags & BUFFER_USAGE_TRANSFER_DST_BIT, "");
-			_Buffer stagingBuffer = {};
+			impl::Buffer stagingBuffer = {};
 			size_t size = buffer.unitCount * buffer.unitSize;
 			VkBufferCreateInfo stagingBufferInfo = { VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
 			stagingBufferInfo.size = size;
@@ -74,7 +74,7 @@ namespace Soul { namespace GPU {
 			VmaAllocationCreateInfo stagingAllocInfo = {};
 			stagingAllocInfo.usage = VMA_MEMORY_USAGE_CPU_ONLY;
 			SOUL_VK_CHECK(vmaCreateBuffer(_db.gpuAllocator, &stagingBufferInfo, &stagingAllocInfo, &stagingBuffer.vkHandle,
-				&stagingBuffer.allocation, nullptr), "");
+				              &stagingBuffer.allocation, nullptr), "");
 
 			_frameContext().stagingBuffers.add(stagingBuffer);
 
@@ -93,10 +93,10 @@ namespace Soul { namespace GPU {
 			SOUL_REQUIRE(is_lambda_v<Func, void(int, void*)>)
 		>
 		void bufferLoad(BufferID bufferID, Func dataGenFunc) {
-			_Buffer& buffer = *_bufferPtr(bufferID);
+			impl::Buffer& buffer = *_bufferPtr(bufferID);
 
 			SOUL_ASSERT(0, buffer.usageFlags & BUFFER_USAGE_TRANSFER_DST_BIT, "");
-			_Buffer stagingBuffer = {};
+			impl::Buffer stagingBuffer = {};
 			size_t size = buffer.unitCount * buffer.unitSize;
 			VkBufferCreateInfo stagingBufferInfo = { VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
 			stagingBufferInfo.size = size;
@@ -105,7 +105,7 @@ namespace Soul { namespace GPU {
 			VmaAllocationCreateInfo stagingAllocInfo = {};
 			stagingAllocInfo.usage = VMA_MEMORY_USAGE_CPU_ONLY;
 			SOUL_VK_CHECK(vmaCreateBuffer(_db.gpuAllocator, &stagingBufferInfo, &stagingAllocInfo, &stagingBuffer.vkHandle,
-				&stagingBuffer.allocation, nullptr), "");
+				              &stagingBuffer.allocation, nullptr), "");
 
 			_frameContext().stagingBuffers.add(stagingBuffer);
 
@@ -122,8 +122,8 @@ namespace Soul { namespace GPU {
 			buffer.owner = ResourceOwner::TRANSFER_QUEUE;
 		}
 
-		_Buffer* _bufferPtr(BufferID bufferID);
-		const _Buffer& _bufferRef(BufferID bufferID);
+		impl::Buffer* _bufferPtr(BufferID bufferID);
+		const impl::Buffer& _bufferRef(BufferID bufferID);
 
 		TextureID textureCreate(const TextureDesc& desc);
 		TextureID textureCreate(const TextureDesc& desc, const byte* data, uint32 dataSize);
@@ -132,46 +132,42 @@ namespace Soul { namespace GPU {
 
 		TextureID _textureExportCreate(TextureID srcTextureID);
 		void textureDestroy(TextureID textureID);
-		_Texture* _texturePtr(TextureID textureID);
-		const _Texture& _textureRef(TextureID textureID);
+		impl::Texture* _texturePtr(TextureID textureID);
+		const impl::Texture& _textureRef(TextureID textureID);
 		VkImageView _textureGetMipView(TextureID textureID, uint32 level);
 
 		ShaderID shaderCreate(const ShaderDesc& desc, ShaderStage stage);
 		void shaderDestroy(ShaderID shaderID);
-		_Shader* _shaderPtr(ShaderID shaderID);
+		impl::Shader* _shaderPtr(ShaderID shaderID);
 
-		VkDescriptorSetLayout _descriptorSetLayoutRequest(const _DescriptorSetLayoutKey& key);
+		VkDescriptorSetLayout _descriptorSetLayoutRequest(const impl::DescriptorSetLayoutKey& key);
 
 		ProgramID programRequest(const ProgramDesc& key);
-		_Program* _programPtr(ProgramID programID);
-		const _Program& _programRef(ProgramID programID);
+		impl::Program* _programPtr(ProgramID programID);
+		const impl::Program& _programRef(ProgramID programID);
 
 		VkPipeline _pipelineCreate(const ComputeBaseNode& node, ProgramID programID);
 		VkPipeline _pipelineCreate(const GraphicBaseNode& node, ProgramID programID, VkRenderPass renderPass);
 		void _pipelineDestroy(VkPipeline pipeline);
 
 		PipelineStateID _pipelineStateRequest(const PipelineStateDesc& key, VkRenderPass renderPass);
-		_PipelineState* _pipelineStatePtr(PipelineStateID pipelineStateID);
-		const _PipelineState& _pipelineStateRef(PipelineStateID pipelineStateID);
+		impl::PipelineState* _pipelineStatePtr(PipelineStateID pipelineStateID);
+		const impl::PipelineState& _pipelineStateRef(PipelineStateID pipelineStateID);
 
 		SamplerID samplerRequest(const SamplerDesc& desc);
 
 		ShaderArgSetID _shaderArgSetRequest(const ShaderArgSetDesc& desc);
-		const _ShaderArgSet& _shaderArgSetRef(ShaderArgSetID argSetID);
+		const impl::ShaderArgSet& _shaderArgSetRef(ShaderArgSetID argSetID);
 
 		SemaphoreID _semaphoreCreate();
 		void _semaphoreReset(SemaphoreID ID);
 		void _semaphoreDestroy(SemaphoreID id);
-		_Semaphore* _semaphorePtr(SemaphoreID id);
+		impl::Semaphore* _semaphorePtr(SemaphoreID id);
 
 		VkEvent _eventCreate();
 		void _eventDestroy(VkEvent event);
 
 		void renderGraphExecute(const RenderGraph& renderGraph);
-		 
-		VkCommandBuffer _queueRequestCommandBuffer(QueueType queueType);
-
-		VkCommandBuffer _requestSecondaryCommandBuffer();
 
 		void frameFlush();
 		void _frameBegin();
@@ -191,21 +187,20 @@ namespace Soul { namespace GPU {
 
 		void _surfaceCreate(void* windowHandle, VkSurfaceKHR* surface);
 
-		_Buffer _stagingBufferRequest(const byte *data, uint32 size);
+		impl::Buffer _stagingBufferRequest(const byte *data, uint32 size);
 
-		_FrameContext& _frameContext();
-		_ThreadContext& _threadContext();
+		impl::_FrameContext& _frameContext();
 
-		VkRenderPass _renderPassRequest(const _RenderPassKey& key);
+		VkRenderPass _renderPassRequest(const impl::RenderPassKey& key);
 		VkRenderPass _renderPassCreate(const VkRenderPassCreateInfo& info);
 		void _renderPassDestroy(VkRenderPass renderPass);
 
 		VkFramebuffer _framebufferCreate(const VkFramebufferCreateInfo& info);
 		void _framebufferDestroy(VkFramebuffer framebuffer);
 
-		_QueueData _getQueueDataFromQueueFlags(QueueFlags flags);
+		impl::QueueData _getQueueDataFromQueueFlags(QueueFlags flags);
 
-		_Database _db;
+		impl::Database _db;
 	};
 
-}}
+}

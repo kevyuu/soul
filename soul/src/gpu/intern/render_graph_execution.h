@@ -6,16 +6,16 @@
 #include "gpu/data.h"
 #include "memory/allocator.h"
 
-namespace Soul::GPU
+namespace Soul::GPU::impl
 {
 
-	struct _BufferBarrier {
+	struct BufferBarrier {
 		VkPipelineStageFlags stageFlags = 0;
 		VkAccessFlags accessFlags = 0;
 		uint16 bufferInfoIdx = 0;
 	};
 
-	struct _TextureBarrier {
+	struct TextureBarrier {
 		VkPipelineStageFlags stageFlags = 0;
 		VkAccessFlags accessFlags = 0;
 
@@ -23,7 +23,7 @@ namespace Soul::GPU
 		uint16 textureInfoIdx = 0;
 	};
 
-	struct _RGBufferExecInfo {
+	struct BufferExecInfo {
 		PassNodeID firstPass = PASS_NODE_ID_NULL;
 		PassNodeID lastPass = PASS_NODE_ID_NULL;
 		BufferUsageFlags usageFlags = 0u;
@@ -41,7 +41,7 @@ namespace Soul::GPU
 		uint32 passCounter = 0;
 	};
 
-	struct _RGTextureExecInfo {
+	struct TextureExecInfo {
 		PassNodeID firstPass = PASS_NODE_ID_NULL;
 		PassNodeID lastPass = PASS_NODE_ID_NULL;
 		TextureUsageFlags usageFlags = 0u;
@@ -60,52 +60,52 @@ namespace Soul::GPU
 
 	};
 
-	struct _RGExecPassInfo {
-		Array<_BufferBarrier> bufferFlushes;
-		Array<_BufferBarrier> bufferInvalidates;
-		Array<_TextureBarrier> textureFlushes;
-		Array<_TextureBarrier> textureInvalidates;
+	struct PassExecInfo {
+		Array<BufferBarrier> bufferFlushes;
+		Array<BufferBarrier> bufferInvalidates;
+		Array<TextureBarrier> textureFlushes;
+		Array<TextureBarrier> textureInvalidates;
 
 	};
 
-	class _RenderGraphExecution {
+	class RenderGraphExecution {
 	public:
-		_RenderGraphExecution(const RenderGraph* renderGraph, System* system, Memory::Allocator* allocator, 
-			EnumArray<QueueType, impl::CommandQueue>& commandQueues):
+		RenderGraphExecution(const RenderGraph* renderGraph, System* system, Memory::Allocator* allocator, 
+			CommandQueues& commandQueues, CommandPools& commandPools):
 			_renderGraph(renderGraph), _gpuSystem(system),
-			bufferInfos(allocator), textureInfos(allocator), passInfos(allocator), commandQueues(commandQueues)
+			bufferInfos(allocator), textureInfos(allocator), passInfos(allocator), commandQueues(commandQueues), commandPools(commandPools)
 		{}
 
-		_RenderGraphExecution(const _RenderGraphExecution& other) = delete;
-		_RenderGraphExecution& operator=(const _RenderGraphExecution& other) = delete;
+		RenderGraphExecution(const RenderGraphExecution& other) = delete;
+		RenderGraphExecution& operator=(const RenderGraphExecution& other) = delete;
 
-		_RenderGraphExecution(_RenderGraphExecution&& other) = delete;
-		_RenderGraphExecution& operator=(_RenderGraphExecution&& other) = delete;
+		RenderGraphExecution(RenderGraphExecution&& other) = delete;
+		RenderGraphExecution& operator=(RenderGraphExecution&& other) = delete;
 
-		~_RenderGraphExecution() = default;
+		~RenderGraphExecution() = default;
 
 		void init();
 		void run();
 		void cleanup();
 
-		Array<_RGBufferExecInfo> bufferInfos;
-		Slice<_RGBufferExecInfo> internalBufferInfos;
-		Slice<_RGBufferExecInfo> externalBufferInfos;
+		Array<BufferExecInfo> bufferInfos;
+		Slice<BufferExecInfo> internalBufferInfos;
+		Slice<BufferExecInfo> externalBufferInfos;
 
-		Array<_RGTextureExecInfo> textureInfos;
-		Slice<_RGTextureExecInfo> internalTextureInfos;
-		Slice<_RGTextureExecInfo> externalTextureInfos;
+		Array<TextureExecInfo> textureInfos;
+		Slice<TextureExecInfo> internalTextureInfos;
+		Slice<TextureExecInfo> externalTextureInfos;
 
-		Array<_RGExecPassInfo> passInfos;
+		Array<PassExecInfo> passInfos;
 
-		explicit _RenderGraphExecution() = default;
+		explicit RenderGraphExecution() = default;
 
-		bool isExternal(const _RGBufferExecInfo& info) const;
-		bool isExternal(const _RGTextureExecInfo& info) const;
+		bool isExternal(const BufferExecInfo& info) const;
+		bool isExternal(const TextureExecInfo& info) const;
 		BufferID getBufferID(BufferNodeID nodeID) const;
 		TextureID getTextureID(TextureNodeID nodeID) const;
-		_Buffer* getBuffer(BufferNodeID nodeID) const;
-		_Texture* getTexture(TextureNodeID nodeID) const;
+		Buffer* getBuffer(BufferNodeID nodeID) const;
+		Texture* getTexture(TextureNodeID nodeID) const;
 		uint32 getBufferInfoIndex(BufferNodeID nodeID) const;
 		uint32 getTextureInfoIndex(TextureNodeID nodeID) const;
 
@@ -115,15 +115,14 @@ namespace Soul::GPU
 
 		EnumArray<PassType, VkEvent> _externalEvents;
 		EnumArray<PassType, EnumArray<PassType, SemaphoreID>> _externalSemaphores;
-		EnumArray<QueueType, impl::CommandQueue>& commandQueues;
+		CommandQueues& commandQueues;
+		CommandPools& commandPools;
 
 		VkRenderPass _renderPassCreate(uint32 passIndex);
 		VkFramebuffer _framebufferCreate(uint32 passIndex, VkRenderPass renderPass);
 		void _submitExternalSyncPrimitive();
 		void _executePass(uint32 passIndex, VkCommandBuffer commandBuffer);
 
-		void _initInShaderBuffers(const Array<ShaderBuffer>& shaderBuffers, int index, QueueFlagBits queueFlags);
-		void _initOutShaderBuffers(const Array<ShaderBuffer>& shaderBuffers, int index, QueueFlagBits queueFlags);
 		void _initInShaderBuffers(const Array<ShaderBufferReadAccess>& accessList, int index, QueueFlagBits queueFlags);
 		void _initOutShaderBuffers(const Array<ShaderBufferWriteAccess>& accessList, int index, QueueFlagBits queueFlags);
 		void _initShaderTextures(const Array<ShaderTextureReadAccess>& shaderAccessList, int index, QueueFlagBits queueFlags);
