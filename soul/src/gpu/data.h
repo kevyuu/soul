@@ -896,7 +896,38 @@ namespace Soul::GPU
 			EnumArray<QueueType, CommandPool> primaryPools;
 			Array<CommandPool> secondaryPools;
 		};
-		
+
+		class GPUResourceInitializer
+		{
+		public:
+			void init(VmaAllocator gpuAllocator, CommandPools* commandPools);
+			void load(Buffer& buffer, const void* data, soul_size size);
+			void load(Texture& texture, const void* data, soul_size size);
+			void clear(Texture& texture, ClearValue clearValue);
+			void generateMipmap(Texture& texture);
+			void flush(CommandQueues& commandQueues, System& gpuSystem);
+			void reset();
+		private:
+
+			struct StagingBuffer
+			{
+				VkBuffer vkHandle;
+				VmaAllocation allocation;
+			};
+
+			VmaAllocator gpuAllocator_ = nullptr;
+			CommandPools* commandPools_ = nullptr;
+
+			void setup();
+			StagingBuffer getStagingBuffer(soul_size size);
+			void loadStagingBuffer(const StagingBuffer&, const void* data, soul_size size);
+
+			VkCommandBuffer transferCommandBuffer_ = VK_NULL_HANDLE;
+			VkCommandBuffer clearCommandBuffer_ = VK_NULL_HANDLE;
+			VkCommandBuffer mipmapGenCommandBuffer_ = VK_NULL_HANDLE;
+			Array<StagingBuffer> stagingBuffers;
+		};
+
 
 		struct _FrameContext {
 
@@ -922,13 +953,7 @@ namespace Soul::GPU
 
 			VkDescriptorPool descriptorPool = VK_NULL_HANDLE;
 
-			Array<Buffer> stagingBuffers;
-			VkCommandBuffer stagingCommandBuffer = VK_NULL_HANDLE;
-			VkCommandBuffer clearCommandBuffer = VK_NULL_HANDLE;
-			VkCommandBuffer genMipmapCommandBuffer = VK_NULL_HANDLE;
-
-			bool stagingAvailable = false;
-			bool stagingSynced = false;
+			GPUResourceInitializer gpuResourceInitializer;
 
 			_FrameContext(Memory::Allocator* allocator) : allocatorInitializer(allocator)
 			{

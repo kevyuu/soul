@@ -1,6 +1,7 @@
 #include "renderer.h"
 #include "core/dev_util.h"
 #include "gpu_program_registry.h"
+#include "runtime/scope_allocator.h"
 
 using namespace Soul;
 
@@ -22,6 +23,8 @@ namespace SoulFila {
 	}
 
 	GPU::TextureNodeID Renderer::computeRenderGraph(GPU::RenderGraph* renderGraph) {
+
+		Runtime::ScopeAllocator<> scopeAllocator("computeRenderGraph");
 
 		Vec2ui32 sceneResolution = _scene.getViewport();
 
@@ -130,11 +133,15 @@ namespace SoulFila {
 		materialUBODesc.count = _scene.materials().size();
 		materialUBODesc.usageFlags = GPU::BUFFER_USAGE_UNIFORM_BIT;
 		materialUBODesc.queueFlags = GPU::QUEUE_GRAPHIC_BIT;
-		Soul::GPU::BufferID materialGPUBuffer = _gpuSystem->bufferCreate(materialUBODesc,
-			[this](int i, void* data) {
-				auto materialData = (MaterialUBO*)data;
-				*materialData = _scene.materials()[i].buffer;
-			});
+
+		Array<MaterialUBO> materialUBOs(&scopeAllocator);
+		materialUBOs.resize(materialUBODesc.count);
+		for (soul_size materialIdx = 0; materialIdx < _scene.materials().size(); materialIdx++)
+		{
+			materialUBOs[materialIdx] = _scene.materials()[materialIdx].buffer;
+		}
+
+		Soul::GPU::BufferID materialGPUBuffer = _gpuSystem->bufferCreate(materialUBODesc,materialUBOs.data());
 		_gpuSystem->bufferDestroy(materialGPUBuffer);
 		inputParam.materialUniformBuffer = renderGraph->importBuffer("Material Uniform Buffer", materialGPUBuffer);
 

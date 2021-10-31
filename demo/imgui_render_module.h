@@ -11,6 +11,8 @@
 
 #include "ui/ui.h"
 
+#include "runtime/scope_allocator.h"
+
 using namespace Soul;
 using namespace Demo;
 
@@ -80,6 +82,8 @@ public:
 
 	const Data& addPass(GPU::System* system, GPU::RenderGraph* renderGraph, const ImDrawData& drawData, GPU::TextureID targetTextureID) {
 		if (drawData.TotalVtxCount == 0) return Data();
+		Runtime::ScopeAllocator<> scopeAllocator("imgui::addPass");
+
 		int fb_width = (int)(drawData.DisplaySize.x * drawData.FramebufferScale.x);
 		int fb_height = (int)(drawData.DisplaySize.y * drawData.FramebufferScale.y);
 		Vec2ui32 fbDim;
@@ -94,32 +98,18 @@ public:
 		vertexBufferDesc.count = drawData.TotalVtxCount;
 		vertexBufferDesc.usageFlags = GPU::BUFFER_USAGE_VERTEX_BIT;
 		vertexBufferDesc.queueFlags = GPU::QUEUE_GRAPHIC_BIT;
-		struct VertexIterator {
-			const ImDrawData& _drawData;
-			uint32 _cmdListIndex;
-			uint32 _vertexIndex;
-
-			VertexIterator(const ImDrawData& drawData) : _drawData(drawData), _cmdListIndex(0), _vertexIndex(0) {}
-			const ImDrawVert& get() {
-				while (_vertexIndex >= _drawData.CmdLists[_cmdListIndex]->VtxBuffer.size()) {
-					_cmdListIndex++;
-					_vertexIndex = 0;
-				}
-				return _drawData.CmdLists[_cmdListIndex]->VtxBuffer[_vertexIndex];
+		Array<ImDrawVert> imDrawVerts(&scopeAllocator);
+		imDrawVerts.reserve(drawData.TotalVtxCount);
+		for (soul_size cmdListIdx = 0; cmdListIdx < drawData.CmdListsCount; cmdListIdx++)
+		{
+			ImDrawList* cmdList = drawData.CmdLists[cmdListIdx];
+			for (ImDrawVert& vertexBuffer : cmdList->VtxBuffer)
+			{
+				imDrawVerts.add(vertexBuffer);
 			}
+		}
 
-			void next() {
-				_vertexIndex++;
-			}
-		};
-		VertexIterator vertIterator(drawData);
-		const GPU::BufferID vertexBuffer = system->bufferCreate(vertexBufferDesc,
-		                                                         [&vertIterator]
-	                                                         (int i, void* data){
-			                                                         auto vertex = (ImDrawVert*) data;
-			                                                         *vertex = vertIterator.get();
-			                                                         vertIterator.next();
-		                                                         });
+		const GPU::BufferID vertexBuffer = system->bufferCreate(vertexBufferDesc, imDrawVerts.data());
 		system->bufferDestroy(vertexBuffer);
 		GPU::BufferNodeID vertexNodeID = renderGraph->importBuffer("Vertex buffers", vertexBuffer);
 
@@ -129,33 +119,17 @@ public:
 		indexBufferDesc.count = drawData.TotalIdxCount;
 		indexBufferDesc.usageFlags = GPU::BUFFER_USAGE_INDEX_BIT;
 		indexBufferDesc.queueFlags = GPU::QUEUE_GRAPHIC_BIT;
-		struct IndexIterator {
-			const ImDrawData& _drawData;
-			uint32 _cmdListIndex;
-			uint32 _indexIndex;
-
-			IndexIterator(const ImDrawData& drawData) : _drawData(drawData), _cmdListIndex(0), _indexIndex(0) {}
-			const ImDrawIdx& get() {
-
-				while (_indexIndex >= _drawData.CmdLists[_cmdListIndex]->IdxBuffer.size()) {
-					_cmdListIndex++;
-					_indexIndex = 0;
-				}
-				return _drawData.CmdLists[_cmdListIndex]->IdxBuffer[_indexIndex];
-
+		Array<ImDrawIdx> imDrawIndexes(&scopeAllocator);
+		imDrawIndexes.reserve(drawData.TotalIdxCount);
+		for (soul_size cmdListIdx = 0; cmdListIdx < drawData.CmdListsCount; cmdListIdx++)
+		{
+			ImDrawList* cmdList = drawData.CmdLists[cmdListIdx];
+			for (ImDrawIdx& indexBuffer : cmdList->IdxBuffer)
+			{
+				imDrawIndexes.add(indexBuffer);
 			}
-			void next() {
-				_indexIndex++;
-			}
-		};
-		IndexIterator idxIterator(drawData);
-		const GPU::BufferID indexBuffer = system->bufferCreate(indexBufferDesc,
-		                                                        [&idxIterator]
-	                                                        (int i, void* data) {
-			                                                        auto index = (ImDrawIdx*) data;
-			                                                        *index = idxIterator.get();
-			                                                        idxIterator.next();
-		                                                        });
+		}
+		const GPU::BufferID indexBuffer = system->bufferCreate(indexBufferDesc ,imDrawIndexes.data());
 		system->bufferDestroy(indexBuffer);
 		GPU::BufferNodeID indexNodeID = renderGraph->importBuffer("Index Buffer", indexBuffer);
 
@@ -173,12 +147,7 @@ public:
 		transformBufferDesc.count = 1;
 		transformBufferDesc.usageFlags = GPU::BUFFER_USAGE_UNIFORM_BIT;
 		transformBufferDesc.queueFlags = GPU::QUEUE_GRAPHIC_BIT;
-		GPU::BufferID transformBufferID = system->bufferCreate(transformBufferDesc,
-			[&transformUBO]
-			(int i, void* data) {
-			auto transform = (TransformUBO*) data;
-			*transform = transformUBO;
-		});
+		GPU::BufferID transformBufferID = system->bufferCreate(transformBufferDesc, &transformUBO);
 		GPU::BufferNodeID transformNodeID = renderGraph->importBuffer("Transform uBO", transformBufferID);
 		system->bufferDestroy(transformBufferID);
 

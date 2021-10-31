@@ -419,7 +419,9 @@ uint32 ComputeBindingOffset_(const cgltf_accessor& accessor) {
 
 template <typename DstType, typename SrcType>
 static Soul::GPU::BufferID CreateIndexBuffer_(Soul::GPU::System* _gpuSystem, Soul::GPU::BufferDesc& indexBufferDesc, const cgltf_accessor& indices) {
-    auto bufferDataRaw = Soul::Cast<const uint8*>(indices.buffer_view->buffer->data) + ComputeBindingOffset_(indices);
+    Soul::Runtime::ScopeAllocator<> scopeAllocator("CreateIndexBuffer");
+
+	auto bufferDataRaw = Soul::Cast<const uint8*>(indices.buffer_view->buffer->data) + ComputeBindingOffset_(indices);
     auto bufferData = Soul::Cast<const SrcType*>(bufferDataRaw);
 
     using IndexType = DstType;
@@ -429,12 +431,14 @@ static Soul::GPU::BufferID CreateIndexBuffer_(Soul::GPU::System* _gpuSystem, Sou
     SOUL_ASSERT(0, indices.stride % sizeof(SrcType) == 0, "Stride must be multiple of source type.");
     uint64 indexStride = indices.stride / sizeof(SrcType);
 
-    return _gpuSystem->bufferCreate(indexBufferDesc,
-        [bufferData, indexStride](int i, void* data) {
-            const auto index = (IndexType*)data;
-            (*index) = IndexType(*(bufferData + indexStride * i));
-        }
-    );
+    Soul::Array<IndexType> indexes(&scopeAllocator);
+    indexes.resize(indices.count);
+    for (soul_size i = 0; i < indices.count; i++)
+    {
+        indexes[i] = IndexType(*(bufferData + indexStride * i));
+    }
+
+    return _gpuSystem->bufferCreate(indexBufferDesc, indexes.data());
 }
 
 /*static void ConvertToFloats(float* dest, const cgltf_accessor& accessor) {
@@ -1131,11 +1135,16 @@ void SoulFila::Scene::importFromGLTF(const char* path) {
                     gpuDesc.typeAlignment = Soul::Cast<uint16>(attributeTypeAlignment);
                     gpuDesc.queueFlags = GPU::QUEUE_GRAPHIC_BIT;
                     gpuDesc.usageFlags = GPU::BUFFER_USAGE_VERTEX_BIT;
-                    GPU::BufferID attributeGPUBuffer = _gpuSystem->bufferCreate(gpuDesc,
-                        [attributeData, attributeTypeSize, attributeStride](int index, void* data) {
-                            uint64 offset = index * attributeStride;
-                            memcpy(data, attributeData + offset, attributeTypeSize);
-                        });
+
+                    soul_size attributeDataSize = attributeTypeSize * attributeDataCount;
+                    void* attributeGPUData = primitiveScopeAllocator.allocate(attributeDataSize, attributeTypeAlignment);
+                    for(soul_size attributeIdx = 0; attributeIdx < attributeDataCount; attributeIdx++)
+                    {
+                        uint64 offset = attributeIdx * attributeStride;
+                        memcpy(Soul::Cast<byte*>(attributeGPUData) + (attributeIdx * attributeTypeSize), attributeData + offset, attributeTypeSize);
+                    }
+
+                    GPU::BufferID attributeGPUBuffer = _gpuSystem->bufferCreate(gpuDesc, attributeGPUData);
 
                     VertexAttribute attrType;
                     bool attrSupported = GetVertexAttrType_(srcAttribute.type, srcAttribute.index, uvmap, &attrType, &hasUv0);
@@ -1243,11 +1252,14 @@ void SoulFila::Scene::importFromGLTF(const char* path) {
                             gpuDesc.typeAlignment = attributeTypeAlignment;
                             gpuDesc.queueFlags = GPU::QUEUE_GRAPHIC_BIT;
                             gpuDesc.usageFlags = GPU::BUFFER_USAGE_VERTEX_BIT;
-                            GPU::BufferID attributeGPUBuffer = _gpuSystem->bufferCreate(gpuDesc,
-                                [attributeData, attributeTypeSize, attributeStride](int index, void* data) {
-                                    uint64 offset = index * attributeStride;
-                                    memcpy(data, attributeData + offset, attributeTypeSize);
-                                });
+                            soul_size attributeGPUDataSize = attributeDataCount * attributeTypeSize;
+                            void* attributeGPUData = primitiveScopeAllocator.allocate(attributeGPUDataSize, attributeTypeAlignment);
+                            for (soul_size attributeIdx = 0; attributeIdx < attributeDataCount; attributeIdx++)
+                            {
+                                uint64 offset = attributeIdx * attributeStride;
+                                memcpy(Soul::Cast<byte*>(attributeGPUData) + (attributeIdx * attributeTypeSize), attributeData + offset, attributeTypeSize);
+                            }
+                            GPU::BufferID attributeGPUBuffer = _gpuSystem->bufferCreate(gpuDesc, attributeGPUData);
 
                             Soul::GPU::VertexElementType permitted;
                             Soul::GPU::VertexElementType actual;
