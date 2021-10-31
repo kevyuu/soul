@@ -59,8 +59,6 @@ namespace Soul::GPU
 		const impl::Program& _programRef(ProgramID programID);
 
 		VkPipeline _pipelineCreate(const ComputeBaseNode& node, ProgramID programID);
-		VkPipeline _pipelineCreate(const GraphicBaseNode& node, ProgramID programID, VkRenderPass renderPass);
-		void _pipelineDestroy(VkPipeline pipeline);
 
 		PipelineStateID _pipelineStateRequest(const PipelineStateDesc& key, VkRenderPass renderPass);
 		impl::PipelineState* _pipelineStatePtr(PipelineStateID pipelineStateID);
