@@ -4,6 +4,14 @@
 
 namespace Soul { namespace GPU {
 
+	static constexpr EnumArray<ResourceOwner, QueueType> RESOURCE_OWNER_TO_QUEUE_TYPE({
+		QueueType::COUNT,
+		QueueType::GRAPHIC,
+		QueueType::COMPUTE,
+		QueueType::TRANSFER,
+		QueueType::GRAPHIC
+	});
+
 	static VkCompareOp vkCast(CompareOp compareOp) {
 		static VkCompareOp COMPARE_OP_MAP[] = {
 			VK_COMPARE_OP_NEVER,

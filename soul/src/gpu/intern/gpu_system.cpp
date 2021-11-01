@@ -9,6 +9,7 @@
 
 #include "core/array.h"
 #include "core/dev_util.h"
+#include "core/util.h"
 
 #include <volk/volk.h>
 
@@ -841,7 +842,7 @@ namespace Soul::GPU
 		texture.owner = ResourceOwner::NONE;
 		texture.mipCount = desc.mipLevels;
 		texture.mipViews = nullptr;
-
+		texture.queueFlags = desc.queueFlags;
 
 		if (desc.name != nullptr) {
 			char texName[1024];
@@ -895,6 +896,11 @@ namespace Soul::GPU
 		_frameContext().gpuResourceInitializer.clear(texture, clearValue);
 
 		return textureID;
+	}
+
+	void System::textureFinalize(TextureID textureID, TextureUsageFlags usageFlags)
+	{
+		_frameContext().gpuResourceFinalizer.finalize(*_texturePtr(textureID), usageFlags);
 	}
 
 	TextureID System::_textureExportCreate(TextureID srcTextureID) {
@@ -1073,6 +1079,11 @@ namespace Soul::GPU
 		_frameContext().gpuResourceInitializer.load(buffer, data, size);
 
 		return bufferID;
+	}
+
+	void System::bufferFinalize(BufferID bufferID)
+	{
+		_frameContext().gpuResourceFinalizer.finalize(*_bufferPtr(bufferID));
 	}
 
 	void System::bufferDestroy(BufferID id) {
@@ -2207,6 +2218,7 @@ namespace Soul::GPU
 		RenderGraphExecution execution(&renderGraph, this, Runtime::GetContextAllocator(), _db.queues, _frameContext().commandPools);
 		execution.init();
 		_frameContext().gpuResourceInitializer.flush(_db.queues, *this);
+		_frameContext().gpuResourceFinalizer.flush(_frameContext().commandPools, _db.queues, *this);
 		execution.run();
 		execution.cleanup();
 	}
@@ -2342,6 +2354,7 @@ namespace Soul::GPU
 		{
 			SOUL_PROFILE_ZONE_WITH_NAME("GPU::System::LastSubmission");
 			frameContext.gpuResourceInitializer.flush(_db.queues, *this);
+			frameContext.gpuResourceFinalizer.flush(_frameContext().commandPools, _db.queues, *this);
 
 			SOUL_ASSERT(0,
 			            swapchainTexture.owner == ResourceOwner::GRAPHIC_QUEUE
@@ -2824,4 +2837,128 @@ namespace Soul::GPU
 		stagingBuffers.resize(0);
 	}
 
+	void GPUResourceFinalizer::finalize(Buffer& buffer)
+	{
+		syncDstQueues[RESOURCE_OWNER_TO_QUEUE_TYPE[buffer.owner]] |= buffer.queueFlags;
+		buffer.owner = ResourceOwner::NONE;
+	}
+
+	void GPUResourceFinalizer::finalize(Texture& texture, TextureUsageFlags usageFlags)
+	{
+		if (texture.owner == ResourceOwner::NONE) {
+			return;
+		}
+
+		auto getFinalizeLayout = [](TextureUsageFlags usage) -> VkImageLayout
+		{
+			VkImageLayout result = VK_IMAGE_LAYOUT_UNDEFINED;
+			static constexpr VkImageLayout USAGE_LAYOUT_MAP[] = {
+				VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+				VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+				VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+				VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+				VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+				VK_IMAGE_LAYOUT_UNDEFINED,
+				VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+			};
+			Util::ForEachBit(usage, [&result](uint32 bit)
+			{
+				if (result != VK_IMAGE_LAYOUT_UNDEFINED && result != USAGE_LAYOUT_MAP[bit])
+				{
+					result = VK_IMAGE_LAYOUT_GENERAL;
+				} else
+				{
+					result = USAGE_LAYOUT_MAP[bit];
+				}
+			});
+			SOUL_ASSERT(0, result != VK_IMAGE_LAYOUT_UNDEFINED, "");
+			return result;
+		};
+
+		VkImageLayout finalizeLayout = getFinalizeLayout(usageFlags);
+		if (texture.layout != finalizeLayout)
+		{
+			texture.layout = finalizeLayout;
+
+			VkImageMemoryBarrier barrier = {};
+			barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+			barrier.srcAccessMask = VK_ACCESS_MEMORY_WRITE_BIT;
+			// TODO(kevinyu): Check if use specific read access (for example use VK_ACCESS_TRANSFER_SRC_BIT only for VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL) is faster
+			barrier.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
+			barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+			barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+			barrier.image = texture.vkHandle;
+			barrier.subresourceRange.aspectMask = vkCastFormatToAspectFlags(texture.format);
+			barrier.subresourceRange.baseMipLevel = 0;
+			barrier.subresourceRange.levelCount = VK_REMAINING_MIP_LEVELS;
+			barrier.subresourceRange.baseArrayLayer = 0;
+			barrier.subresourceRange.layerCount = VK_REMAINING_ARRAY_LAYERS;
+
+			imageBarriers[RESOURCE_OWNER_TO_QUEUE_TYPE[texture.owner]].add(barrier);
+		}
+
+		syncDstQueues[RESOURCE_OWNER_TO_QUEUE_TYPE[texture.owner]] |= texture.queueFlags;
+		texture.owner = ResourceOwner::NONE;
+	}
+
+	void GPUResourceFinalizer::flush(CommandPools& commandPools, CommandQueues& commandQueues, System& gpuSystem)
+	{
+
+		EnumArray<QueueType, VkCommandBuffer> commandBuffers(VK_NULL_HANDLE);
+		EnumArray<QueueType, Array<Semaphore*>> signalSemaphores;
+		EnumArray<QueueType, Array<SemaphoreID>> waitSemaphores;
+
+		// create command buffer and create semaphore
+		for (auto queueType : EnumIter<QueueType>::Iterates())
+		{
+			QueueFlags syncDstQueue = syncDstQueues[queueType];
+			Util::ForEachBit(syncDstQueue, [&](uint32 bit)
+			{
+				QueueType dstQueueType = QueueType(bit);
+				if (dstQueueType == queueType)
+				{
+					commandBuffers[queueType] = commandPools.requestCommandBuffer(queueType);
+					VkMemoryBarrier barrier = {};
+					barrier.sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER;
+					barrier.srcAccessMask = VK_ACCESS_MEMORY_WRITE_BIT;
+					barrier.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
+
+					vkCmdPipelineBarrier(commandBuffers[queueType], VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0,
+						1, &barrier,
+						0, nullptr,
+						Soul::Cast<uint32>(imageBarriers[queueType].size()), imageBarriers[queueType].data());
+					imageBarriers[queueType].resize(0);
+				} else
+				{
+					SemaphoreID semaphoreID = gpuSystem._semaphoreCreate();
+					Semaphore* semaphore = gpuSystem._semaphorePtr(semaphoreID);
+					signalSemaphores[queueType].add(semaphore);
+					waitSemaphores[dstQueueType].add(semaphoreID);
+				}
+			});
+		}
+
+		// submit command buffer
+		for (auto queueType : EnumIter<QueueType>::Iterates())
+		{
+			VkCommandBuffer commandBuffer = commandBuffers[queueType];
+			if (commandBuffer != VK_NULL_HANDLE)
+			{
+				commandQueues[queueType].submit(commandBuffer, signalSemaphores[queueType]);
+			}
+		}
+
+		// wait and destroy semaphore
+		for (auto queueType : EnumIter<QueueType>::Iterates())
+		{
+			for (SemaphoreID semaphoreID : waitSemaphores[queueType])
+			{
+				commandQueues[queueType].wait(gpuSystem._semaphorePtr(semaphoreID), VK_PIPELINE_STAGE_ALL_COMMANDS_BIT);
+				gpuSystem._semaphoreDestroy(semaphoreID);
+			}
+		}
+
+		syncDstQueues = EnumArray<QueueType, QueueFlags>(0);
+	}
+	
 }

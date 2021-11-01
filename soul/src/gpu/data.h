@@ -801,6 +801,7 @@ namespace Soul::GPU
 			ResourceOwner owner;
 			VkImageView* mipViews;
 			uint8 mipCount;
+			QueueFlags queueFlags;
 		};
 
 		struct Shader {
@@ -928,6 +929,19 @@ namespace Soul::GPU
 			Array<StagingBuffer> stagingBuffers;
 		};
 
+		class GPUResourceFinalizer
+		{
+		public:
+			void finalize(Buffer& buffer);
+			void finalize(Texture& texture, TextureUsageFlags usageFlags);
+			void flush(CommandPools& commandPools, CommandQueues& commandQueues, System& gpuSystem);
+		private:
+
+			EnumArray<QueueType, Array<VkImageMemoryBarrier>> imageBarriers;
+			EnumArray<QueueType, QueueFlags> syncDstQueues = EnumArray<QueueType, QueueFlags>(0);
+
+		};
+
 
 		struct _FrameContext {
 
@@ -954,6 +968,7 @@ namespace Soul::GPU
 			VkDescriptorPool descriptorPool = VK_NULL_HANDLE;
 
 			GPUResourceInitializer gpuResourceInitializer;
+			GPUResourceFinalizer gpuResourceFinalizer;
 
 			_FrameContext(Memory::Allocator* allocator) : allocatorInitializer(allocator)
 			{

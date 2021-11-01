@@ -5,15 +5,15 @@
 #include "core/type.h"
 #include "core/type_traits.h"
 
-#define SOUL_TRAILING_ZEROES(x) ctz(x)
+#define SOUL_TRAILING_ZEROES(x) TrailingZeroes(x)
 
 namespace Soul::Util
 {
 
 	// From google's filament
 	template<typename T>
-	constexpr inline T ctz(T x) noexcept {
-		static_assert(sizeof(T) <= sizeof(uint64_t), "ctz() only support up to 64 bits");
+	constexpr inline T TrailingZeroes(T x) noexcept {
+		static_assert(sizeof(T) <= sizeof(uint64_t), "TrailingZeroes() only support up to 64 bits");
 		T c = sizeof(T) * 8;
 		x &= -signed(x);
 		if (x) --c;
@@ -27,8 +27,7 @@ namespace Soul::Util
 		if (x & 0x55555555) c -= 1;
 		return c;
 	}
-
-
+	
 	template<
 		typename T,
 		SOUL_REQUIRE(is_lambda_v<T, void(uint32)>)

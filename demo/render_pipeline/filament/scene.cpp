@@ -438,7 +438,9 @@ static Soul::GPU::BufferID CreateIndexBuffer_(Soul::GPU::System* _gpuSystem, Sou
         indexes[i] = IndexType(*(bufferData + indexStride * i));
     }
 
-    return _gpuSystem->bufferCreate(indexBufferDesc, indexes.data());
+    Soul::GPU::BufferID bufferID = _gpuSystem->bufferCreate(indexBufferDesc, indexes.data());
+    _gpuSystem->bufferFinalize(bufferID);
+    return bufferID;
 }
 
 /*static void ConvertToFloats(float* dest, const cgltf_accessor& accessor) {
@@ -697,6 +699,7 @@ void SoulFila::Scene::importFromGLTF(const char* path) {
         Soul::GPU::SamplerDesc samplerDesc = srcTexture.sampler != nullptr ? GetSamplerDesc_(*srcTexture.sampler) : defaultSampler;
 
         Texture tex{_gpuSystem->textureCreate(texDesc, texels, totalSize), samplerDesc};
+        _gpuSystem->textureFinalize(tex.gpuHandle, Soul::GPU::TEXTURE_USAGE_SAMPLED_BIT);
 
         TextureID texID = TextureID(_textures.add(tex));
 
@@ -1043,6 +1046,7 @@ void SoulFila::Scene::importFromGLTF(const char* path) {
                     indexBufferDesc.typeAlignment = alignof(IndexType);
 
                     dstPrimitive.indexBuffer = _gpuSystem->bufferCreate(indexBufferDesc, indexes.data());
+                    _gpuSystem->bufferFinalize(dstPrimitive.indexBuffer);
 
                     triangles32 = Soul::Cast<Vec3ui32*>(indexes.data());
 
@@ -1145,6 +1149,7 @@ void SoulFila::Scene::importFromGLTF(const char* path) {
                     }
 
                     GPU::BufferID attributeGPUBuffer = _gpuSystem->bufferCreate(gpuDesc, attributeGPUData);
+                    _gpuSystem->bufferFinalize(attributeGPUBuffer);
 
                     VertexAttribute attrType;
                     bool attrSupported = GetVertexAttrType_(srcAttribute.type, srcAttribute.index, uvmap, &attrType, &hasUv0);
@@ -1175,6 +1180,7 @@ void SoulFila::Scene::importFromGLTF(const char* path) {
                              GPU::QUEUE_GRAPHIC_BIT
                         };
                         Soul::GPU::BufferID qtangentsGPUBUffer = _gpuSystem->bufferCreate(qtangentsBufferDesc, qtangents);
+                        _gpuSystem->bufferFinalize(qtangentsGPUBUffer);
                         AddAttributeToPrimitive_(&dstPrimitive, VertexAttribute::TANGENTS, qtangentsGPUBUffer, GPU::VertexElementType::SHORT4, GPU::VERTEX_ELEMENT_NORMALIZED, sizeof(Quaternionf));
                     }
                 }
@@ -1260,6 +1266,7 @@ void SoulFila::Scene::importFromGLTF(const char* path) {
                                 memcpy(Soul::Cast<byte*>(attributeGPUData) + (attributeIdx * attributeTypeSize), attributeData + offset, attributeTypeSize);
                             }
                             GPU::BufferID attributeGPUBuffer = _gpuSystem->bufferCreate(gpuDesc, attributeGPUData);
+                            _gpuSystem->bufferFinalize(attributeGPUBuffer);
 
                             Soul::GPU::VertexElementType permitted;
                             Soul::GPU::VertexElementType actual;
@@ -1311,8 +1318,9 @@ void SoulFila::Scene::importFromGLTF(const char* path) {
                              GPU::BUFFER_USAGE_VERTEX_BIT,
                              GPU::QUEUE_GRAPHIC_BIT
                         };
-                        Soul::GPU::BufferID qtangentsGPUBUffer = _gpuSystem->bufferCreate(qtangentsBufferDesc, qtangents);
-                        AddAttributeToPrimitive_(&dstPrimitive, (VertexAttribute)(baseTangentsAttr + targetIndex), qtangentsGPUBUffer, GPU::VertexElementType::SHORT4, GPU::VERTEX_ELEMENT_NORMALIZED, sizeof(Quaternionf));
+                        Soul::GPU::BufferID qtangentsGPUBuffer = _gpuSystem->bufferCreate(qtangentsBufferDesc, qtangents);
+                        _gpuSystem->bufferFinalize(qtangentsGPUBuffer);
+                        AddAttributeToPrimitive_(&dstPrimitive, (VertexAttribute)(baseTangentsAttr + targetIndex), qtangentsGPUBuffer, GPU::VertexElementType::SHORT4, GPU::VERTEX_ELEMENT_NORMALIZED, sizeof(Quaternionf));
                     }
 
 

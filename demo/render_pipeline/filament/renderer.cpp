@@ -45,9 +45,6 @@ namespace SoulFila {
 		}
 		
 		struct Parameter {
-			Soul::Array<Soul::GPU::BufferNodeID> vertexBuffers;
-			Soul::Array<Soul::GPU::BufferNodeID> indexBuffers;
-			Soul::Array<Soul::GPU::TextureNodeID> sceneTextures;
 			Soul::GPU::BufferNodeID frameUniformBuffer;
 			Soul::GPU::BufferNodeID lightUniformBuffer;
 			Soul::GPU::BufferNodeID froxelRecordsUniformBuffer;
@@ -60,20 +57,6 @@ namespace SoulFila {
 		};
 
 		Parameter inputParam;
-
-		for (const Mesh& mesh : _scene.meshes()) {
-			for (const Primitive& primitive : mesh.primitives) {
-				for (int vertBufIdx = 0; vertBufIdx < primitive.vertexBindingCount; vertBufIdx++) {
-					inputParam.vertexBuffers.add(renderGraph->importBuffer("Vertex Buffer", primitive.vertexBuffers[vertBufIdx]));
-				}
-				inputParam.indexBuffers.add(renderGraph->importBuffer("Index Buffer", primitive.indexBuffer));
-			}
-		}
-
-		inputParam.sceneTextures.reserve(_scene.textures().size());
-		for (const Texture& texture : _scene.textures()) {
-			inputParam.sceneTextures.add(renderGraph->importTexture("Scene Textures", texture.gpuHandle));
-		}
 
 		Soul::GPU::BufferDesc frameUBODesc;
 		frameUBODesc.typeSize = sizeof(FrameUBO);
@@ -219,17 +202,6 @@ namespace SoulFila {
 
 		Parameter outputParam = renderGraph->addGraphicPass<Parameter>("Test1 pass",
 			[this, &inputParam](GPU::GraphicNodeBuilder* builder, Parameter* params) {
-				for (GPU::BufferNodeID nodeID : inputParam.vertexBuffers) {
-					params->vertexBuffers.add(builder->addVertexBuffer(nodeID));
-				}
-
-				for (GPU::BufferNodeID nodeID : inputParam.indexBuffers) {
-					params->indexBuffers.add(builder->addIndexBuffer(nodeID));
-				}
-
-				for (GPU::TextureNodeID nodeID : inputParam.sceneTextures) {
-					params->sceneTextures.add(builder->addShaderTexture(nodeID, GPU::SHADER_STAGE_FRAGMENT, GPU::ShaderTextureReadUsage::UNIFORM));
-				}
 
 				params->frameUniformBuffer = builder->addShaderBuffer(inputParam.frameUniformBuffer, GPU::SHADER_STAGE_VERTEX | GPU::SHADER_STAGE_FRAGMENT, GPU::ShaderBufferReadUsage::UNIFORM);
 				params->lightUniformBuffer = builder->addShaderBuffer(inputParam.lightUniformBuffer, GPU::SHADER_STAGE_FRAGMENT, GPU::ShaderBufferReadUsage::UNIFORM);
