@@ -27,9 +27,11 @@ void main() {
     MaterialInputs inputs;
     initMaterial(inputs);
 
+    float dim = float(textureSize(light_iblSpecular, 0).x);
+
     // Invoke user code
     material(inputs);
 
-    fragColor = inputs.baseColor;
+    fragColor = vec4(dim, dim, dim, 1.0f);
 
 }

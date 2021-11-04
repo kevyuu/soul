@@ -5,6 +5,7 @@ set (DEMO_SOURCES
 	shader_generator.cpp
 	camera_manipulator.cpp
 	utils.cpp
+	ktx_bundle.cpp
 	
 	ui/widget.cpp
 	ui/menu_bar.cpp  

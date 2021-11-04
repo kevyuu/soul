@@ -784,17 +784,20 @@ namespace Soul::GPU
 		SOUL_PROFILE_ZONE();
 		SOUL_ASSERT_MAIN_THREAD();
 
+		SOUL_ASSERT(0, desc.layerCount >= 1, "");
+
 		TextureID textureID = TextureID(_db.textures.add(Texture()));
 		Texture &texture = *_texturePtr(textureID);
 
 		VkFormat format = vkCast(desc.format);
 
-		VkImageCreateInfo imageInfo = {VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO};
+		VkImageCreateInfo imageInfo = {};
+		imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
 		imageInfo.imageType = vkCast(desc.type);
 		imageInfo.format = format;
 		imageInfo.extent = {desc.width, desc.height, desc.depth};
 		imageInfo.mipLevels = desc.mipLevels;
-		imageInfo.arrayLayers = 1;
+		imageInfo.arrayLayers = desc.layerCount;
 		imageInfo.samples = VK_SAMPLE_COUNT_1_BIT;
 		imageInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
 		imageInfo.usage = vkCastImageUsageFlags(desc.usageFlags);
@@ -804,6 +807,10 @@ namespace Soul::GPU
 		imageInfo.pQueueFamilyIndices = queueData.indices;
 		imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 		imageInfo.flags |= VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT;
+		if (desc.type == TextureType::CUBE)
+		{
+			imageInfo.flags |= VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
+		}
 
 		VmaAllocationCreateInfo allocInfo = {};
 		allocInfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
@@ -819,7 +826,8 @@ namespace Soul::GPU
 			imageAspect &= ~(VK_IMAGE_ASPECT_STENCIL_BIT);
 		}
 		
-		VkImageViewCreateInfo imageViewInfo = { VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO };
+		VkImageViewCreateInfo imageViewInfo = {};
+		imageViewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
 		imageViewInfo.image = texture.vkHandle;
 		imageViewInfo.viewType = vkCastToImageViewType(desc.type);
 		imageViewInfo.format = format;
@@ -829,7 +837,7 @@ namespace Soul::GPU
 			0,
 			VK_REMAINING_MIP_LEVELS,
 			0,
-			1
+			VK_REMAINING_ARRAY_LAYERS
 		};
 		SOUL_VK_CHECK(vkCreateImageView(_db.device,
 			              &imageViewInfo, nullptr, &texture.view), "Create Image View fail");
@@ -860,25 +868,26 @@ namespace Soul::GPU
 		return textureID;
 	}
 
-	TextureID System::textureCreate(const TextureDesc &desc, const void* data, uint32 dataSize) {
+	TextureID System::textureCreate(const TextureDesc &desc, const TextureLoadDesc& loadDesc) {
 		SOUL_ASSERT_MAIN_THREAD();
-		SOUL_ASSERT(0, data != nullptr, "");
-		SOUL_ASSERT(0, dataSize != 0, "");
+		SOUL_ASSERT(0, loadDesc.data != nullptr, "");
+		SOUL_ASSERT(0, loadDesc.dataSize != 0, "");
+		SOUL_ASSERT(0, loadDesc.regionLoads != nullptr, "");
+		SOUL_ASSERT(0, loadDesc.regionLoadCount != 0, "");
+
 		TextureDesc newDesc = desc;
-		if (data != nullptr) {
-			SOUL_ASSERT(0, dataSize != 0, "");
-			newDesc.usageFlags |= TEXTURE_USAGE_TRANSFER_DST_BIT;
-			newDesc.queueFlags |= QUEUE_TRANSFER_BIT;
-			if (desc.mipLevels > 1) {
-				newDesc.usageFlags |= TEXTURE_USAGE_TRANSFER_SRC_BIT;
-			}
+		newDesc.usageFlags |= TEXTURE_USAGE_TRANSFER_DST_BIT;
+		newDesc.queueFlags |= QUEUE_TRANSFER_BIT;
+		if (loadDesc.generateMipmap) {
+			newDesc.usageFlags |= TEXTURE_USAGE_TRANSFER_SRC_BIT;
 		}
+	
 		TextureID textureID = textureCreate(newDesc);
 		Texture &texture = *_texturePtr(textureID);
 
-		_frameContext().gpuResourceInitializer.load(texture, data, dataSize);
+		_frameContext().gpuResourceInitializer.load(texture, loadDesc);
 
-		if (data != nullptr && desc.mipLevels > 1) {
+		if (loadDesc.generateMipmap && desc.mipLevels > 1) {
 			_frameContext().gpuResourceInitializer.generateMipmap(texture);
 		}
 
@@ -2581,6 +2590,7 @@ namespace Soul::GPU
 
 	void GPUResourceInitializer::load(Buffer& buffer, const void* data, soul_size size)
 	{
+		SOUL_ASSERT(0, buffer.owner == ResourceOwner::NONE, "Buffer must be uninitialized!");
 		setup();
 		StagingBuffer stagingBuffer = getStagingBuffer((size));
 		loadStagingBuffer(stagingBuffer, data, size);
@@ -2606,11 +2616,14 @@ namespace Soul::GPU
 		buffer.owner = ResourceOwner::TRANSFER_QUEUE;
 	}
 
-	void GPUResourceInitializer::load(Texture& texture, const void* data, soul_size size)
+	void GPUResourceInitializer::load(Texture& texture, const TextureLoadDesc& loadDesc)
 	{
+		SOUL_ASSERT(0, texture.layout == VK_IMAGE_LAYOUT_UNDEFINED, "Texture must be uninitialized!");
+		SOUL_ASSERT(0, texture.owner == ResourceOwner::NONE, "Texture must be uninitialized!");
+
 		setup();
-		StagingBuffer stagingBuffer = getStagingBuffer(size);
-		loadStagingBuffer(stagingBuffer, data, size);
+		StagingBuffer stagingBuffer = getStagingBuffer(loadDesc.dataSize);
+		loadStagingBuffer(stagingBuffer, loadDesc.data, loadDesc.dataSize);
 
 		VkImageMemoryBarrier beforeTransferBarrier = {};
 		beforeTransferBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
@@ -2635,28 +2648,33 @@ namespace Soul::GPU
 			0, nullptr,
 			1, &beforeTransferBarrier);
 
-		VkBufferImageCopy copyRegion;
-		copyRegion.bufferOffset = 0;
-		copyRegion.bufferRowLength = 0;
-		copyRegion.bufferImageHeight = 0;
-		copyRegion.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-		copyRegion.imageSubresource.mipLevel = 0;
-		copyRegion.imageSubresource.baseArrayLayer = 0;
-		copyRegion.imageSubresource.layerCount = 1;
-		copyRegion.imageOffset.x = 0;
-		copyRegion.imageOffset.y = 0;
-		copyRegion.imageOffset.z = 0;
-		copyRegion.imageExtent.width = texture.extent.width;
-		copyRegion.imageExtent.height = texture.extent.height;
-		SOUL_ASSERT(0, texture.extent.depth == 1, "3D texture is not supported yet");
-		copyRegion.imageExtent.depth = 1;
+		for (soul_size loadIdx = 0; loadIdx < loadDesc.regionLoadCount; loadIdx++)
+		{
+			const TextureRegionLoad& regionLoad = loadDesc.regionLoads[loadIdx];
 
-		vkCmdCopyBufferToImage(transferCommandBuffer_,
-			stagingBuffer.vkHandle,
-			texture.vkHandle,
-			VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-			1,
-			&copyRegion);
+			VkBufferImageCopy copyRegion;
+			copyRegion.bufferOffset = regionLoad.bufferOffset;
+			copyRegion.bufferRowLength = regionLoad.bufferRowLength;
+			copyRegion.bufferImageHeight = regionLoad.bufferImageHeight;
+			copyRegion.imageSubresource.aspectMask = vkCastFormatToAspectFlags(texture.format);
+			copyRegion.imageSubresource.mipLevel = regionLoad.textureRegion.mipLevel;
+			copyRegion.imageSubresource.baseArrayLayer = regionLoad.textureRegion.baseArrayLayer;
+			copyRegion.imageSubresource.layerCount = regionLoad.textureRegion.layerCount;
+			copyRegion.imageOffset.x = regionLoad.textureRegion.offset.x;
+			copyRegion.imageOffset.y = regionLoad.textureRegion.offset.y;
+			copyRegion.imageOffset.z = regionLoad.textureRegion.offset.z;
+			copyRegion.imageExtent.width = regionLoad.textureRegion.extent.x;
+			copyRegion.imageExtent.height = regionLoad.textureRegion.extent.y;
+			SOUL_ASSERT(0, regionLoad.textureRegion.extent.z == 1, "3D texture is not supported yet");
+			copyRegion.imageExtent.depth = regionLoad.textureRegion.extent.z;
+
+			vkCmdCopyBufferToImage(transferCommandBuffer_,
+				stagingBuffer.vkHandle,
+				texture.vkHandle,
+				VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+				1,
+				&copyRegion);
+		}
 
 		texture.layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
 		texture.owner = ResourceOwner::TRANSFER_QUEUE;
@@ -2878,10 +2896,10 @@ namespace Soul::GPU
 		VkImageLayout finalizeLayout = getFinalizeLayout(usageFlags);
 		if (texture.layout != finalizeLayout)
 		{
-			texture.layout = finalizeLayout;
-
 			VkImageMemoryBarrier barrier = {};
 			barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+			barrier.oldLayout = texture.layout;
+			barrier.newLayout = finalizeLayout;
 			barrier.srcAccessMask = VK_ACCESS_MEMORY_WRITE_BIT;
 			// TODO(kevinyu): Check if use specific read access (for example use VK_ACCESS_TRANSFER_SRC_BIT only for VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL) is faster
 			barrier.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
@@ -2895,6 +2913,8 @@ namespace Soul::GPU
 			barrier.subresourceRange.layerCount = VK_REMAINING_ARRAY_LAYERS;
 
 			imageBarriers[RESOURCE_OWNER_TO_QUEUE_TYPE[texture.owner]].add(barrier);
+
+			texture.layout = finalizeLayout;
 		}
 
 		syncDstQueues[RESOURCE_OWNER_TO_QUEUE_TYPE[texture.owner]] |= texture.queueFlags;

@@ -749,6 +749,15 @@ namespace SoulFila {
         Soul::Array<AnimationChannel> channels;
     };
 
+    struct IBL
+    {
+        GPU::TextureID reflectionTex;
+        GPU::TextureID irradianceTex;
+        Vec3f irradianceCoefs[9] = {{65504.0f, 65504.0f, 65504.0f}};
+        Mat3f rotation = mat3Identity();
+        float intensity = 30000.0f;
+    };
+
 	struct Scene final : Demo::Scene {
         
         Scene(Soul::GPU::System* gpuSystem, GPUProgramRegistry* programRegistry) :
@@ -772,6 +781,7 @@ namespace SoulFila {
         const Soul::Array<Mesh>& meshes() const { return _meshes; }
         const Soul::Array<Material>& materials() const { return _materials; }
         const Soul::Array<Skin>& skins() const { return _skins; }
+        const IBL getIBL() const { return ibl; }
 
         CameraInfo getActiveCamera() const {
             auto [transform, camera] = _registry.get<TransformComponent, CameraComponent>(_activeCamera);
@@ -828,6 +838,7 @@ namespace SoulFila {
         Soul::Array<Skin> _skins;
         Soul::Array<Animation> _animations;
         Soul::AABB _boundingBox;
+        IBL ibl;
 
         EntityID _selectedEntity = ENTITY_ID_NULL;
         EntityID _activeCamera = ENTITY_ID_NULL;

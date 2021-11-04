@@ -40,7 +40,7 @@ namespace Soul::GPU
 		const impl::Buffer& _bufferRef(BufferID bufferID);
 
 		TextureID textureCreate(const TextureDesc& desc);
-		TextureID textureCreate(const TextureDesc& desc, const void* data, uint32 dataSize);
+		TextureID textureCreate(const TextureDesc& desc, const TextureLoadDesc& loadDesc);
 		TextureID textureCreate(const TextureDesc& desc, ClearValue clearValue);
 		void textureFinalize(TextureID textureID, TextureUsageFlags usageFlags);
 

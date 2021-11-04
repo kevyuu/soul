@@ -187,6 +187,7 @@ namespace Soul::GPU
 		D1,
 		D2,
 		D3,
+		CUBE,
 		COUNT
 	};
 
@@ -207,6 +208,7 @@ namespace Soul::GPU
 		RGB16F,
 		RGB16UI,
 		RGB16I,
+		R11F_G11F_B10F,
 
 		COUNT
 	};
@@ -480,14 +482,75 @@ namespace Soul::GPU
 		QueueFlags  queueFlags = QUEUE_DEFAULT;
 	};
 
+	struct TextureRegion
+	{
+		Vec3i32 offset;
+		Vec3ui32 extent;
+		uint32 mipLevel = 0;
+		uint32 baseArrayLayer = 0;
+		uint32 layerCount = 0;
+	};
+
+	struct TextureRegionLoad
+	{
+		soul_size bufferOffset = 0;
+		uint32 bufferRowLength = 0;
+		uint32 bufferImageHeight = 0;
+		TextureRegion textureRegion;
+	};
+
+	struct TextureLoadDesc
+	{
+		const void* data = nullptr;
+		uint32 dataSize = 0;
+
+		uint32 regionLoadCount = 0;
+		TextureRegionLoad* regionLoads = nullptr;
+
+		bool generateMipmap = false;
+	};
+
 	struct TextureDesc {
-		TextureType type;
-		TextureFormat format;
-		uint16 width, height, depth;
-		uint16 mipLevels;
-		TextureUsageFlags usageFlags;
-		QueueFlags queueFlags;
+		TextureType type = TextureType::D2;
+		TextureFormat format = TextureFormat::COUNT;
+		uint32 width, height, depth = 0;
+		uint32 mipLevels = 1;
+		uint16 layerCount = 1;
+		TextureUsageFlags usageFlags = 0;
+		QueueFlags queueFlags = 0;
 		const char* name = nullptr;
+
+		static TextureDesc Texture2D(const char* name, TextureFormat format, uint32 mipLevels, TextureUsageFlags usageFlags, QueueFlags queueFlags, uint32 width, uint32 height)
+		{
+			TextureDesc desc;
+			desc.type = TextureType::D2;
+			desc.name = name;
+			desc.layerCount = 1;
+			desc.format = format;
+			desc.mipLevels = mipLevels;
+			desc.usageFlags = usageFlags;
+			desc.queueFlags = queueFlags;
+			desc.width = width;
+			desc.height = height;
+			desc.depth = 1;
+			return desc;
+		}
+
+		static TextureDesc TextureCube(const char* name, TextureFormat format, uint32 mipLevels, TextureUsageFlags usageFlags, QueueFlags queueFlags, uint32 width, uint32 height)
+		{
+			TextureDesc desc;
+			desc.type = TextureType::CUBE;
+			desc.name = name;
+			desc.layerCount = 6;
+			desc.format = format;
+			desc.mipLevels = mipLevels;
+			desc.usageFlags = usageFlags;
+			desc.queueFlags = queueFlags;
+			desc.width = width;
+			desc.height = height;
+			desc.depth = 1;
+			return desc;
+		}
 	};
 
 	struct SamplerDesc {
@@ -800,7 +863,7 @@ namespace Soul::GPU
 			TextureType type;
 			ResourceOwner owner;
 			VkImageView* mipViews;
-			uint8 mipCount;
+			uint32 mipCount;
 			QueueFlags queueFlags;
 		};
 
@@ -903,7 +966,7 @@ namespace Soul::GPU
 		public:
 			void init(VmaAllocator gpuAllocator, CommandPools* commandPools);
 			void load(Buffer& buffer, const void* data, soul_size size);
-			void load(Texture& texture, const void* data, soul_size size);
+			void load(Texture& texture, const TextureLoadDesc& loadDesc);
 			void clear(Texture& texture, ClearValue clearValue);
 			void generateMipmap(Texture& texture);
 			void flush(CommandQueues& commandQueues, System& gpuSystem);

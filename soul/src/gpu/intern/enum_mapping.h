@@ -74,7 +74,8 @@ namespace Soul { namespace GPU {
 		VK_FORMAT_R16G16B16_UNORM,
 		VK_FORMAT_R16G16B16_SFLOAT,
 		VK_FORMAT_R16G16B16_UINT,
-		VK_FORMAT_R16G16B16_SINT
+		VK_FORMAT_R16G16B16_SINT,
+		VK_FORMAT_B10G11R11_UFLOAT_PACK32,
 	};
 	static_assert(SOUL_ARRAY_LEN(FORMAT_MAP) == uint64(TextureFormat::COUNT), "");
 
@@ -85,7 +86,8 @@ namespace Soul { namespace GPU {
 	static constexpr VkImageType IMAGE_TYPE_MAP[] = {
 		VK_IMAGE_TYPE_1D,
 		VK_IMAGE_TYPE_2D,
-		VK_IMAGE_TYPE_3D
+		VK_IMAGE_TYPE_3D,
+		VK_IMAGE_TYPE_2D,
 	};
 	static_assert(SOUL_ARRAY_LEN(IMAGE_TYPE_MAP) == uint64(TextureType::COUNT), "");
 
@@ -97,7 +99,8 @@ namespace Soul { namespace GPU {
 		static VkImageViewType IMAGE_VIEW_TYPE_MAP[] = {
 			VK_IMAGE_VIEW_TYPE_1D,
 			VK_IMAGE_VIEW_TYPE_2D,
-			VK_IMAGE_VIEW_TYPE_3D
+			VK_IMAGE_VIEW_TYPE_3D,
+			VK_IMAGE_VIEW_TYPE_CUBE,
 		};
 		static_assert(SOUL_ARRAY_LEN(IMAGE_VIEW_TYPE_MAP) == uint64(TextureType::COUNT), "");
 		return IMAGE_VIEW_TYPE_MAP[uint64(type)];
@@ -119,7 +122,8 @@ namespace Soul { namespace GPU {
 			VK_IMAGE_ASPECT_COLOR_BIT,
 			VK_IMAGE_ASPECT_COLOR_BIT,
 			VK_IMAGE_ASPECT_COLOR_BIT,
-			VK_IMAGE_ASPECT_COLOR_BIT
+			VK_IMAGE_ASPECT_COLOR_BIT,
+			VK_IMAGE_ASPECT_COLOR_BIT,
 		};
 		static_assert(SOUL_ARRAY_LEN(IMAGE_ASPECT_FLAGS_MAP) == uint64(TextureFormat::COUNT), "");
 		return IMAGE_ASPECT_FLAGS_MAP[uint64(format)];

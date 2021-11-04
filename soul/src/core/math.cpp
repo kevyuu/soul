@@ -127,6 +127,15 @@ namespace Soul {
 	Quaternionf operator+(const Quaternionf& lhs, const Quaternionf& rhs) {
 		return Quaternionf(lhs.x + rhs.x, lhs.y + rhs.y, lhs.z + rhs.z, lhs.w + rhs.w);
 	}
+
+	Mat3f mat3Identity()
+	{
+		Mat3f res;
+		res.elem[0][0] = 1.0f;
+		res.elem[1][1] = 1.0f;
+		res.elem[2][2] = 1.0f;
+		return res;
+	}
 	
 	Mat3f mat3Transpose(const Mat3f& matrix) {
 		Mat3f res;

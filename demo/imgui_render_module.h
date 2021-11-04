@@ -61,7 +61,20 @@ public:
 		fontTexDesc.mipLevels = 1;
 		fontTexDesc.usageFlags = GPU::TEXTURE_USAGE_SAMPLED_BIT;
 		fontTexDesc.queueFlags = GPU::QUEUE_GRAPHIC_BIT;
-		_fontTex = system->textureCreate(fontTexDesc, (byte*) fontPixels, width * height * 4 * sizeof(char));
+
+		GPU::TextureRegionLoad regionLoad;
+		regionLoad.textureRegion.baseArrayLayer = 0;
+		regionLoad.textureRegion.layerCount = 1;
+		regionLoad.textureRegion.mipLevel = 0;
+		regionLoad.textureRegion.extent = { Soul::Cast<uint32>(width), Soul::Cast<uint32>(height), 1 };
+
+		GPU::TextureLoadDesc loadDesc;
+		loadDesc.data = fontPixels;
+		loadDesc.dataSize = width * height * 4 * sizeof(char);
+		loadDesc.regionLoadCount = 1;
+		loadDesc.regionLoads = &regionLoad;
+
+		_fontTex = system->textureCreate(fontTexDesc, loadDesc);
 
 		GPU::SamplerDesc samplerDesc = {};
 		samplerDesc.minFilter = GPU::TextureFilter::LINEAR;

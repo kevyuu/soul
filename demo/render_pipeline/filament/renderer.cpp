@@ -18,8 +18,7 @@ namespace SoulFila {
 		texDesc.usageFlags = GPU::TEXTURE_USAGE_SAMPLED_BIT;
 		texDesc.queueFlags = GPU::QUEUE_GRAPHIC_BIT;
 		texDesc.name = "Stub Texture";
-		uint32 stubTextureData = 0;
-		_stubTexture = _gpuSystem->textureCreate(texDesc, (byte*)&stubTextureData, sizeof(stubTextureData));
+		_stubTexture = _gpuSystem->textureCreate(texDesc, GPU::ClearValue());
 	}
 
 	GPU::TextureNodeID Renderer::computeRenderGraph(GPU::RenderGraph* renderGraph) {
@@ -247,6 +246,17 @@ namespace SoulFila {
 				samplerDesc.maxAnisotropy = 0.0f;
 				GPU::SamplerID samplerID = _gpuSystem->samplerRequest(samplerDesc);
 
+				IBL ibl = _scene.getIBL();
+				GPU::SamplerDesc iblSamplerDesc = {};
+				samplerDesc.minFilter = GPU::TextureFilter::LINEAR;
+				samplerDesc.magFilter = GPU::TextureFilter::LINEAR;
+				samplerDesc.mipmapFilter = GPU::TextureFilter::LINEAR;
+				samplerDesc.wrapU = GPU::TextureWrap::CLAMP_TO_EDGE;
+				samplerDesc.wrapV = GPU::TextureWrap::CLAMP_TO_EDGE;
+				samplerDesc.wrapW = GPU::TextureWrap::CLAMP_TO_EDGE;
+				samplerDesc.anisotropyEnable = false;
+				samplerDesc.maxAnisotropy = 0.0f;
+
 				GPU::Descriptor set0Descriptors[] = {
 					GPU::Descriptor::Uniform(registry->getBuffer(params.frameUniformBuffer), 0, GPU::SHADER_STAGE_VERTEX | GPU::SHADER_STAGE_FRAGMENT),
 					GPU::Descriptor::Uniform(registry->getBuffer(params.lightUniformBuffer), 0, GPU::SHADER_STAGE_FRAGMENT),
@@ -255,7 +265,7 @@ namespace SoulFila {
 					GPU::Descriptor::SampledImage(registry->getTexture(params.stubTexture), samplerID, GPU::SHADER_STAGE_FRAGMENT),
 					GPU::Descriptor::SampledImage(registry->getTexture(params.stubTexture), samplerID, GPU::SHADER_STAGE_FRAGMENT),
 					GPU::Descriptor::SampledImage(registry->getTexture(params.stubTexture), samplerID, GPU::SHADER_STAGE_FRAGMENT),
-					GPU::Descriptor::SampledImage(registry->getTexture(params.stubTexture), samplerID, GPU::SHADER_STAGE_FRAGMENT),
+					GPU::Descriptor::SampledImage(ibl.reflectionTex, _gpuSystem->samplerRequest(iblSamplerDesc), GPU::SHADER_STAGE_FRAGMENT),
 					GPU::Descriptor::SampledImage(registry->getTexture(params.stubTexture), samplerID, GPU::SHADER_STAGE_FRAGMENT),
 					GPU::Descriptor::SampledImage(registry->getTexture(params.stubTexture), samplerID, GPU::SHADER_STAGE_FRAGMENT),
 					GPU::Descriptor::SampledImage(registry->getTexture(params.stubTexture), samplerID, GPU::SHADER_STAGE_FRAGMENT),

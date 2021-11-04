@@ -1,5 +1,6 @@
 #include "data.h"
 #include "../../camera_manipulator.h"
+#include "../../ktx_bundle.h"
 
 #include "core/math.h"
 #include "core/geometry.h"
@@ -18,12 +19,18 @@
 #include "stb_image.h"
 
 #include <algorithm>
+#include <fstream>
 
 // Define a mapping from a uv set index in the source asset to one of Filament's uv sets.
 enum UvSet : uint8_t { UNUSED, UV0, UV1 };
 constexpr int UV_MAP_SIZE = 8;
 using UvMap = std::array<UvSet, UV_MAP_SIZE>;
 constexpr ImGuiTreeNodeFlags SCENE_TREE_FLAGS = ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_OpenOnDoubleClick | ImGuiTreeNodeFlags_SpanAvailWidth;
+static constexpr float IBL_INTENSITY = 30000.0f;
+
+inline bool isCompressed(const image::KtxInfo& info) {
+    return info.glFormat == 0;
+}
 
 void ItemRowsBackground(float lineHeight = -1.0f, const ImColor& color = ImColor(20, 20, 20, 64))
 {
@@ -698,7 +705,21 @@ void SoulFila::Scene::importFromGLTF(const char* path) {
         defaultSampler.mipmapFilter = Soul::GPU::TextureFilter::LINEAR; 
         Soul::GPU::SamplerDesc samplerDesc = srcTexture.sampler != nullptr ? GetSamplerDesc_(*srcTexture.sampler) : defaultSampler;
 
-        Texture tex{_gpuSystem->textureCreate(texDesc, texels, totalSize), samplerDesc};
+        GPU::TextureRegionLoad regionLoad;
+        regionLoad.textureRegion.baseArrayLayer = 0;
+        regionLoad.textureRegion.layerCount = 1;
+        regionLoad.textureRegion.mipLevel = 0;
+        regionLoad.textureRegion.offset = { 0, 0, 0 };
+        regionLoad.textureRegion.extent = { texDesc.width, texDesc.height, texDesc.depth };
+
+        GPU::TextureLoadDesc loadDesc;
+        loadDesc.data = texels;
+        loadDesc.dataSize = totalSize;
+        loadDesc.regionLoadCount = 1;
+        loadDesc.regionLoads = &regionLoad;
+        loadDesc.generateMipmap = true;
+
+        Texture tex{_gpuSystem->textureCreate(texDesc, loadDesc), samplerDesc};
         _gpuSystem->textureFinalize(tex.gpuHandle, Soul::GPU::TEXTURE_USAGE_SAMPLED_BIT);
 
         TextureID texID = TextureID(_textures.add(tex));
@@ -1517,6 +1538,58 @@ void SoulFila::Scene::importFromGLTF(const char* path) {
     setActiveCamera_(defaultCamera);
 
 	cgltf_free(asset);
+
+    auto createCubeMap = [this](const char* path, const char* name) -> GPU::TextureID
+    {
+        using namespace std;
+        ifstream file(path, ios::binary);
+        vector<uint8_t> contents((istreambuf_iterator<char>(file)), {});
+        image::KtxBundle ktx(contents.data(), Soul::Cast<uint32>(contents.size()));
+        const auto& ktxinfo = ktx.getInfo();
+        const uint32_t nmips = ktx.getNumMipLevels();
+
+        SOUL_ASSERT(0, ktxinfo.glType == image::KtxBundle::R11F_G11F_B10F, "");
+
+    	GPU::TextureDesc texDesc = GPU::TextureDesc::TextureCube(name, GPU::TextureFormat::R11F_G11F_B10F, nmips, GPU::TEXTURE_USAGE_SAMPLED_BIT, GPU::QUEUE_GRAPHIC_BIT, ktxinfo.pixelWidth, ktxinfo.pixelHeight);
+
+        Array<GPU::TextureRegionLoad> regionLoads;
+        regionLoads.reserve(nmips);
+
+        GPU::TextureLoadDesc loadDesc;
+        loadDesc.data = ktx.getRawData();
+        loadDesc.dataSize = ktx.getTotalSize();
+
+        for (uint32 level = 0; level < nmips; level++)
+        {
+            uint8* levelData;
+            uint32 levelSize;
+            ktx.getBlob({ level, 0, 0 }, &levelData, &levelSize);
+
+            GPU::TextureRegionLoad regionLoad;
+            regionLoad.bufferOffset = levelData - loadDesc.data;
+            regionLoad.textureRegion.baseArrayLayer = 0;
+            regionLoad.textureRegion.layerCount = 6;
+            regionLoad.textureRegion.mipLevel = level;
+
+            const uint32_t levelWidth = std::max(1u, ktxinfo.pixelWidth >> level);
+            const uint32_t levelHeight = std::max(1u, ktxinfo.pixelHeight >> level);
+
+            regionLoad.textureRegion.extent = { levelWidth, levelHeight, 1 };
+
+            regionLoads.add(regionLoad);
+        }
+
+        loadDesc.regionLoadCount = Soul::Cast<uint32>(regionLoads.size());
+        loadDesc.regionLoads = regionLoads.data();
+
+        GPU::TextureID textureID = _gpuSystem->textureCreate(texDesc, loadDesc);
+        _gpuSystem->textureFinalize(textureID, Soul::GPU::TEXTURE_USAGE_SAMPLED_BIT);
+
+        return textureID;
+    };
+
+    ibl.reflectionTex = createCubeMap("./assets/default_env/default_env_ibl.ktx", "Default env IBL");
+    ibl.intensity = IBL_INTENSITY;
 }
 
 void SoulFila::Scene::createEntity_(Soul::HashMap<CGLTFNodeKey_, EntityID>* nodeMap, const cgltf_data* asset, const cgltf_node* node, EntityID parent) {
