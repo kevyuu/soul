@@ -122,7 +122,7 @@ namespace Soul {
 		swap(_allocator, other._allocator);
 		swap(_buffer, other._buffer);
 		swap(_size, other._size);
-		swap(_capacity, other.capacity);
+		swap(_capacity, other._capacity);
 	}
 
 	template<typename T>
