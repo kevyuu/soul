@@ -19,7 +19,7 @@ set (DEMO_SOURCES
 	render_pipeline/filament/renderer.cpp
 	render_pipeline/filament/gpu_program_registry.cpp)
 
-add_executable(demo ${DEMO_SOURCES})
+add_executable(demo ${DEMO_SOURCES} "imgui_impl_glfw.cpp" "imgui_impl_glfw.h")
 
 target_link_libraries(demo
 	PRIVATE soul glfw ${GLFW_LIBRARIES} tiny_gltf imgui tracy imgui_filesystem)
