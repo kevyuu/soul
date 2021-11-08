@@ -28,6 +28,7 @@ using UvMap = std::array<UvSet, UV_MAP_SIZE>;
 constexpr ImGuiTreeNodeFlags SCENE_TREE_FLAGS = ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_OpenOnDoubleClick | ImGuiTreeNodeFlags_SpanAvailWidth;
 static constexpr float IBL_INTENSITY = 30000.0f;
 
+
 inline bool isCompressed(const image::KtxInfo& info) {
     return info.glFormat == 0;
 }
@@ -606,6 +607,12 @@ static void ComputeUriPath_(char* uriPath, const char* gltfPath, const char* uri
 }
 
 namespace SoulFila {
+
+    const uint16 DFG::LUT[] = {
+		#include "dfg.inc"
+    };
+
+
     static void AddAttributeToPrimitive_(Primitive* primitive, VertexAttribute attrType, Soul::GPU::BufferID gpuBuffer,
         Soul::GPU::VertexElementType type, Soul::GPU::VertexElementFlags flags, uint8 attributeStride) {
         primitive->vertexBuffers[primitive->vertexBindingCount] = gpuBuffer;
@@ -1590,6 +1597,39 @@ void SoulFila::Scene::importFromGLTF(const char* path) {
 
     ibl.reflectionTex = createCubeMap("./assets/default_env/default_env_ibl.ktx", "Default env IBL");
     ibl.intensity = IBL_INTENSITY;
+
+    {
+        static constexpr soul_size byteCount = DFG::LUT_SIZE * DFG::LUT_SIZE * 3 * sizeof(uint16);
+        static_assert(sizeof(DFG::LUT) == byteCount, "DFG_LUT_SIZE doesn't match size of the DFG LUT!");
+
+        GPU::TextureDesc desc = GPU::TextureDesc::Texture2D("DFG LUT", GPU::TextureFormat::RGBA16F, 1, GPU::TEXTURE_USAGE_SAMPLED_BIT, GPU::QUEUE_GRAPHIC_BIT, DFG::LUT_SIZE, DFG::LUT_SIZE);
+
+        uint32 reshapedSize = DFG::LUT_SIZE * DFG::LUT_SIZE * 4 * sizeof(uint16);
+        uint16* reshapedLut = Soul::Cast<uint16*>(Runtime::GetTempAllocator()->allocate(reshapedSize, sizeof(uint16), "DFG LUT"));
+
+    	for (soul_size i = 0; i < DFG::LUT_SIZE * DFG::LUT_SIZE; i++)
+        {
+            reshapedLut[i * 4] = DFG::LUT[i * 3];
+            reshapedLut[i * 4 + 1] = DFG::LUT[i * 3 + 1];
+            reshapedLut[i * 4 + 2] = DFG::LUT[i * 3 + 2];
+            reshapedLut[i * 4 + 3] = 0x3c00; // 0x3c00 is 1.0 in float16;
+        }
+
+        GPU::TextureLoadDesc loadDesc;
+        loadDesc.data = reshapedLut;
+        loadDesc.dataSize = reshapedSize;
+    	GPU::TextureRegionLoad regionLoad;
+        regionLoad.bufferOffset = 0;
+        regionLoad.textureRegion.baseArrayLayer = 0;
+        regionLoad.textureRegion.layerCount = 1;
+        regionLoad.textureRegion.mipLevel = 0;
+        regionLoad.textureRegion.extent = { DFG::LUT_SIZE, DFG::LUT_SIZE, 1 };
+        loadDesc.regionLoadCount = 1;
+        loadDesc.regionLoads = &regionLoad;
+
+        dfg.tex = _gpuSystem->textureCreate(desc, loadDesc);
+        _gpuSystem->textureFinalize(dfg.tex, Soul::GPU::TEXTURE_USAGE_SAMPLED_BIT);
+    }
 }
 
 void SoulFila::Scene::createEntity_(Soul::HashMap<CGLTFNodeKey_, EntityID>* nodeMap, const cgltf_data* asset, const cgltf_node* node, EntityID parent) {

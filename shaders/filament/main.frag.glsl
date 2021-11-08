@@ -27,7 +27,7 @@ void main() {
     MaterialInputs inputs;
     initMaterial(inputs);
 
-    float dim = float(textureSize(light_iblSpecular, 0).x);
+    float dim = float(textureSize(light_iblDFG, 0).x);
 
     // Invoke user code
     material(inputs);

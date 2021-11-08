@@ -513,7 +513,7 @@ namespace Soul::GPU
 	struct TextureDesc {
 		TextureType type = TextureType::D2;
 		TextureFormat format = TextureFormat::COUNT;
-		uint32 width, height, depth = 0;
+		uint32 width = 0, height = 0, depth = 0;
 		uint32 mipLevels = 1;
 		uint16 layerCount = 1;
 		TextureUsageFlags usageFlags = 0;
@@ -557,11 +557,25 @@ namespace Soul::GPU
 		TextureFilter minFilter = TextureFilter::COUNT;
 		TextureFilter magFilter = TextureFilter::COUNT;
 		TextureFilter mipmapFilter = TextureFilter::COUNT;
-		TextureWrap wrapU = TextureWrap::COUNT;
-		TextureWrap wrapV = TextureWrap::COUNT;
-		TextureWrap wrapW = TextureWrap::COUNT;
+		TextureWrap wrapU = TextureWrap::CLAMP_TO_EDGE;
+		TextureWrap wrapV = TextureWrap::CLAMP_TO_EDGE;
+		TextureWrap wrapW = TextureWrap::CLAMP_TO_EDGE;
 		bool anisotropyEnable = false;
-		float maxAnisotropy = 0;
+		float maxAnisotropy = 0.0f;
+
+		static SamplerDesc SameFilterWrap(TextureFilter filter, TextureWrap wrap, bool anisotropyEnable = false, float maxAnisotropy = 0.0f)
+		{
+			SamplerDesc desc;
+			desc.minFilter = filter;
+			desc.magFilter = filter;
+			desc.mipmapFilter = filter;
+			desc.wrapU = wrap;
+			desc.wrapV = wrap;
+			desc.wrapW = wrap;
+			desc.anisotropyEnable = anisotropyEnable;
+			desc.maxAnisotropy = maxAnisotropy;
+			return desc;
+		}
 	};
 
 	struct ShaderDesc {

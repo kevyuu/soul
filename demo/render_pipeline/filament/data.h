@@ -758,6 +758,14 @@ namespace SoulFila {
         float intensity = 30000.0f;
     };
 
+    struct DFG
+    {
+        GPU::TextureID tex;
+        static constexpr size_t LUT_SIZE = 128;
+        // this lookup table is generated with cmgen
+        static const uint16_t LUT[];
+    };
+
 	struct Scene final : Demo::Scene {
         
         Scene(Soul::GPU::System* gpuSystem, GPUProgramRegistry* programRegistry) :
@@ -781,7 +789,8 @@ namespace SoulFila {
         const Soul::Array<Mesh>& meshes() const { return _meshes; }
         const Soul::Array<Material>& materials() const { return _materials; }
         const Soul::Array<Skin>& skins() const { return _skins; }
-        const IBL getIBL() const { return ibl; }
+        const IBL& getIBL() const { return ibl; }
+        const DFG& getDFG() const { return dfg;  }
 
         CameraInfo getActiveCamera() const {
             auto [transform, camera] = _registry.get<TransformComponent, CameraComponent>(_activeCamera);
@@ -839,6 +848,7 @@ namespace SoulFila {
         Soul::Array<Animation> _animations;
         Soul::AABB _boundingBox;
         IBL ibl;
+        DFG dfg;
 
         EntityID _selectedEntity = ENTITY_ID_NULL;
         EntityID _activeCamera = ENTITY_ID_NULL;
