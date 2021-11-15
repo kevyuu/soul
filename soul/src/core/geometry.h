@@ -1,16 +1,36 @@
 #pragma once
 
 #include "core/type.h"
+#include "enum_array.h"
 
 namespace Soul {
 
-    // constant-normal form
+    // constant-normal form, (ax + by + cz - d = 0), where (a, b, c) is normal
     struct Plane {
         Vec3f normal;
         float d = 0;
 
         Plane(const Vec3f& normal, const Vec3f& point) noexcept;
         Plane(const Vec3f& normal, float d) noexcept;
+    };
+
+    struct Frustum
+    {
+        enum class Side : uint8
+        {
+	        LEFT,
+            RIGHT,
+            BOTTOM,
+            TOP,
+            FAR,
+            NEAR,
+            COUNT
+        };
+        // Note(kevinyu):
+        // normal of the planes pointing outwards
+        EnumArray<Side, Plane> planes;
+
+        explicit Frustum(Mat4f projection);
     };
 
     struct Ray {

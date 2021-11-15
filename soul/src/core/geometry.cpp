@@ -10,6 +10,33 @@ namespace Soul {
 	Plane::Plane(const Vec3f& normal, float d) noexcept : normal(normal), d(d) {};
 	Ray::Ray(const Vec3f& origin, const Vec3f& direction) noexcept : origin(origin), direction(direction) {};
 
+	Frustum::Frustum(Mat4f projection)
+	{
+		// Note(kevinyu): Gribb/Hartmann method, reference: http://www.cs.otago.ac.nz/postgrads/alexis/planeExtraction.pdf
+
+		Vec4f l = -projection.rows[3] - projection.rows[0];
+		Vec4f r = -projection.rows[3] + projection.rows[0];
+		Vec4f b = -projection.rows[3] - projection.rows[1];
+		Vec4f t = -projection.rows[3] + projection.rows[1];
+		Vec4f n = -projection.rows[3] - projection.rows[2];
+		Vec4f f = -projection.rows[3] + projection.rows[2];
+
+		l /= length(l.xyz);
+		r /= length(r.xyz);
+		b /= length(b.xyz);
+		t /= length(t.xyz);
+		n /= length(n.xyz);
+		f /= length(f.xyz);
+
+		planes[Side::LEFT] = Plane(l.xyz, -l.w);
+		planes[Side::RIGHT] = Plane(r.xyz, -r.w);
+		planes[Side::BOTTOM] = Plane(b.xyz, -b.w);
+		planes[Side::TOP] = Plane(t.xyz, t.w);
+		planes[Side::NEAR] = Plane(n.xyz, -n.w);
+		planes[Side::FAR] = Plane(f.xyz, -f.w);
+
+	}
+
 	static Vec3f RandomPerp(const Vec3f& n) {
 		Vec3f perp = cross(n, Vec3f( 1, 0, 0 ));
 		float sqrlen = dot(perp, perp);
