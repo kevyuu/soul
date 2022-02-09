@@ -4,14 +4,14 @@
 #include "core/dev_util.h"
 #include "core/type.h"
 
-namespace Soul {
+namespace soul {
 
 	template <typename T>
 	class UInt64HashMap {
 
 	public:
 
-		explicit UInt64HashMap(Memory::Allocator* allocator = GetDefaultAllocator()) : _allocator(allocator) {}
+		explicit UInt64HashMap(memory::Allocator* allocator = GetDefaultAllocator()) : _allocator(allocator) {}
 		UInt64HashMap(const UInt64HashMap& other);
 		UInt64HashMap& operator=(const UInt64HashMap& other);
 		UInt64HashMap(UInt64HashMap&& other) noexcept;
@@ -44,7 +44,7 @@ namespace Soul {
 		SOUL_NODISCARD bool empty() const noexcept { return _size == 0; }
 
 	private:
-		Memory::Allocator* _allocator = nullptr;
+		memory::Allocator* _allocator = nullptr;
 		struct Index {
 			uint64 key;
 			soul_size dib;

@@ -8,7 +8,7 @@
 
 #include "memory/allocator.h"
 
-namespace Soul {
+namespace soul {
 
     // ReSharper disable once CppInconsistentNaming
     using PoolID = uint32;
@@ -17,7 +17,7 @@ namespace Soul {
 	class Pool {
 	public:
 		
-		explicit Pool(Memory::Allocator* allocator = GetDefaultAllocator()) noexcept;
+		explicit Pool(memory::Allocator* allocator = GetDefaultAllocator()) noexcept;
 		Pool(const Pool& other);
 		Pool& operator=(const Pool& other);
 		Pool(Pool&& other) noexcept;
@@ -69,7 +69,7 @@ namespace Soul {
 			soul_size next;
 		};
 
-		Memory::Allocator* _allocator;
+		memory::Allocator* _allocator;
 		BitSet _bitSet;
 		Unit* _buffer = nullptr;
 		soul_size _capacity = 0;
@@ -128,7 +128,7 @@ namespace Soul {
 	};
 
 	template<typename T>
-	Pool<T>::Pool(Memory::Allocator* allocator) noexcept: _allocator(allocator), _bitSet(_allocator) {}
+	Pool<T>::Pool(memory::Allocator* allocator) noexcept: _allocator(allocator), _bitSet(_allocator) {}
 
 	template <typename T>
 	Pool<T>::Pool(const Pool& other) : _allocator(other._allocator), _bitSet(other._bitSet), _buffer(nullptr), _size(0), _capacity(0), _freelist(0) {

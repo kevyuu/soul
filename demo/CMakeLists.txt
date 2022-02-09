@@ -13,13 +13,19 @@ set (DEMO_SOURCES
 	 
 	ui/metric_panel.cpp  
 	
-	
-	
-	render_pipeline/filament/scene.cpp
+	render_pipeline/filament/exposure.cpp
+	render_pipeline/filament/gpu_program_registry.cpp
+	render_pipeline/filament/render_module/shadow_map.cpp
+	render_pipeline/filament/render_module/lighting_pass.cpp
+	render_pipeline/filament/render_module/structure_pass.cpp
+	render_pipeline/filament/render_module/depth_mipmap.cpp
+	render_pipeline/filament/render_module/draw_item.cpp
 	render_pipeline/filament/renderer.cpp
-	render_pipeline/filament/gpu_program_registry.cpp)
+	render_pipeline/filament/scene.cpp
+	
+)
 
-add_executable(demo ${DEMO_SOURCES} "imgui_impl_glfw.cpp" "imgui_impl_glfw.h")
+add_executable(demo ${DEMO_SOURCES})
 
 target_link_libraries(demo
 	PRIVATE soul glfw ${GLFW_LIBRARIES} tiny_gltf imgui tracy imgui_filesystem)

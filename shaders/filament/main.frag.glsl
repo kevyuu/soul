@@ -27,11 +27,25 @@ void main() {
     MaterialInputs inputs;
     initMaterial(inputs);
 
-    float dim = float(textureSize(light_iblDFG, 0).x);
-
     // Invoke user code
     material(inputs);
 
-    fragColor = vec4(dim, dim, dim, 1.0f);
+    fragColor = evaluateMaterial(inputs);
+
+#if defined(HAS_DIRECTIONAL_LIGHTING) && defined(HAS_SHADOWING)
+    bool visualizeCascades = bool(frameUniforms.cascades & 0x10u);
+    if (visualizeCascades) {
+        fragColor.rgb *= uintToColorDebug(getShadowCascade());
+    }
+#endif
+
+#if defined(HAS_FOG)
+    vec3 view = getWorldPosition() - getWorldCameraPosition();
+    fragColor = fog(fragColor, view);
+#endif
+
+#if defined(MATERIAL_HAS_POST_LIGHTING_COLOR)
+    blendPostLightingColor(inputs, fragColor);
+#endif
 
 }

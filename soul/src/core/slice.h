@@ -4,10 +4,9 @@
 #pragma once
 
 #include "core/array.h"
-#include "core/compiler.h"
 #include "core/type.h"
 
-namespace Soul {
+namespace soul {
 
 	template <typename T>
 	class Slice
@@ -29,23 +28,23 @@ namespace Soul {
 			_size = _endIdx - _beginIdx;
 		}
 
-		SOUL_NODISCARD T& operator[](soul_size idx) {
+		[[nodiscard]] T& operator[](soul_size idx) {
 			SOUL_ASSERT(0, idx < _size, "");
 			return (*_array)[_beginIdx + idx];
 		}
 
-		SOUL_NODISCARD const T& operator[](soul_size idx) const {
+		[[nodiscard]] const T& operator[](soul_size idx) const {
 			SOUL_ASSERT(0, idx < _size, "");
 			return this->operator[](idx);
 		}
 
-		SOUL_NODISCARD int size() const { return _size; }
+		[[nodiscard]] soul_size size() const { return _size; }
 
-		SOUL_NODISCARD const T* begin() const { return _array->data() + _beginIdx; }
-		SOUL_NODISCARD const T* end() const { return _array->data() + _endIdx; }
+		[[nodiscard]] const T* begin() const { return _array->data() + _beginIdx; }
+		[[nodiscard]] const T* end() const { return _array->data() + _endIdx; }
 
-		SOUL_NODISCARD T* begin() { return _array->data() + _beginIdx; }
-		SOUL_NODISCARD T* end() { return _array->data() + _endIdx; }
+		[[nodiscard]] T* begin() { return _array->data() + _beginIdx; }
+		[[nodiscard]] T* end() { return _array->data() + _endIdx; }
 	private:
 		Array<T>* _array = nullptr;
 		soul_size _beginIdx = 0;

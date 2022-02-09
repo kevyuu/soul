@@ -8,27 +8,27 @@ public:
 		float zoomSpeed;
 		float orbitSpeed;
 		
-		Soul::Vec3f upAxis;
+		soul::Vec3f upAxis;
 	};
 
 	CameraManipulator(const Config& config);
 
-	void setCamera(Soul::Vec3f cameraPosition, Soul::Vec3f cameraTarget, Soul::Vec3f cameraUp);
-	void getCamera(Soul::Vec3f* cameraPosition, Soul::Vec3f* cameraTarget, Soul::Vec3f* cameraUp);
-	Soul::Vec3f getCameraTarget();
-	void setCameraTarget(Soul::Vec3f target);
+	void setCamera(soul::Vec3f cameraPosition, soul::Vec3f cameraTarget, soul::Vec3f cameraUp);
+	void getCamera(soul::Vec3f* cameraPosition, soul::Vec3f* cameraTarget, soul::Vec3f* cameraUp);
+	soul::Vec3f getCameraTarget();
+	void setCameraTarget(soul::Vec3f target);
 
 	void zoom(float delta);
 	void orbit(float dx, float dy);
 	void pan(float dx, float dy);
 
-	Soul::Mat4f getTransformMatrix();
+	soul::Mat4f getTransformMatrix();
 
 private:
 	
-	Soul::Vec3f _position;
-	Soul::Vec3f _target;
-	Soul::Vec3f _up;
+	soul::Vec3f _position;
+	soul::Vec3f _target;
+	soul::Vec3f _up;
 	float _distance;
 	
 	float _minDistance;

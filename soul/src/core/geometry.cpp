@@ -4,22 +4,28 @@
 #include "core/math.h"
 #include "runtime/scope_allocator.h"
 
-namespace Soul {
+namespace soul {
 
 	Plane::Plane(const Vec3f& normal, const Vec3f& point) noexcept : normal(normal), d(dot(normal, point)) {};
 	Plane::Plane(const Vec3f& normal, float d) noexcept : normal(normal), d(d) {};
+	Plane::Plane(const Vec3f& p1, const Vec3f& p2, const Vec3f& p3)
+	{
+		normal = cross(p2 - p1, p3 - p1);
+		d = dot(normal, p1);
+	}
+
 	Ray::Ray(const Vec3f& origin, const Vec3f& direction) noexcept : origin(origin), direction(direction) {};
 
-	Frustum::Frustum(Mat4f projection)
+	Frustum::Frustum(const Mat4f& mat)
 	{
 		// Note(kevinyu): Gribb/Hartmann method, reference: http://www.cs.otago.ac.nz/postgrads/alexis/planeExtraction.pdf
 
-		Vec4f l = -projection.rows[3] - projection.rows[0];
-		Vec4f r = -projection.rows[3] + projection.rows[0];
-		Vec4f b = -projection.rows[3] - projection.rows[1];
-		Vec4f t = -projection.rows[3] + projection.rows[1];
-		Vec4f n = -projection.rows[3] - projection.rows[2];
-		Vec4f f = -projection.rows[3] + projection.rows[2];
+		Vec4f l = -mat.rows[3] - mat.rows[0];
+		Vec4f r = -mat.rows[3] + mat.rows[0];
+		Vec4f b = -mat.rows[3] - mat.rows[1];
+		Vec4f t = -mat.rows[3] + mat.rows[1];
+		Vec4f n = -mat.rows[3] - mat.rows[2];
+		Vec4f f = -mat.rows[3] + mat.rows[2];
 
 		l /= length(l.xyz);
 		r /= length(r.xyz);
@@ -31,10 +37,64 @@ namespace Soul {
 		planes[Side::LEFT] = Plane(l.xyz, -l.w);
 		planes[Side::RIGHT] = Plane(r.xyz, -r.w);
 		planes[Side::BOTTOM] = Plane(b.xyz, -b.w);
-		planes[Side::TOP] = Plane(t.xyz, t.w);
+		planes[Side::TOP] = Plane(t.xyz, -t.w);
 		planes[Side::NEAR] = Plane(n.xyz, -n.w);
 		planes[Side::FAR] = Plane(f.xyz, -f.w);
 
+	}
+
+	Frustum::Frustum(const Vec3f corners[8])
+	{
+		Vec3f a = corners[0];
+		Vec3f b = corners[1];
+		Vec3f c = corners[2];
+		Vec3f d = corners[3];
+		Vec3f e = corners[4];
+		Vec3f f = corners[5];
+		Vec3f g = corners[6];
+		Vec3f h = corners[7];
+
+		//     c----d
+		//    /|   /|
+		//   g----h |
+		//   | a--|-b
+		//   |/   |/
+		//   e----f
+
+		planes[Side::LEFT] = Plane(a, e, g);
+		planes[Side::RIGHT] = Plane(f, b, d);
+		planes[Side::BOTTOM] = Plane(a, b, f);
+		planes[Side::TOP] = Plane(g, h, d);
+		planes[Side::FAR] = Plane(a, c, d);
+		planes[Side::NEAR] = Plane(e, f, h);
+	}
+
+	bool FrustumCull(const Frustum& frustum, const Vec3f& center, const Vec3f& halfExtent)
+	{
+		for (auto& plane : frustum.planes)
+		{
+			const float dot =
+				plane.normal.x * center.x - std::abs(plane.normal.x) * halfExtent.x +
+				plane.normal.y * center.y - std::abs(plane.normal.y) * halfExtent.y +
+				plane.normal.z * center.z - std::abs(plane.normal.z) * halfExtent.z -
+				plane.d;
+			if (!signbit(dot)) return false;
+		}
+		return true;
+	}
+
+	bool FrustumCull(const Frustum& frustum, const Vec4f& sphere)
+	{
+		for (auto& plane : frustum.planes)
+		{
+			const float dot =
+				plane.normal.x * sphere.x +
+				plane.normal.y * sphere.y +
+				plane.normal.z * sphere.z -
+				plane.d - sphere.w;
+			if (!signbit(dot)) return false;
+		}
+		return true;
 	}
 
 	static Vec3f RandomPerp(const Vec3f& n) {
@@ -61,6 +121,48 @@ namespace Soul {
 
 	}
 
+	IntersectPointResult IntersectSegmentQuad(Vec3f s1, Vec3f s2, Vec3f q1, Vec3f q2, Vec3f q3, Vec3f q4) {
+		IntersectPointResult res = IntersectSegmentTriangle(s1, s2, q1, q2, q3);
+		if (res.intersect) return res;
+		return IntersectSegmentTriangle(s1, s2, q1, q3, q4);
+	}
+
+	IntersectPointResult IntersectSegmentTriangle(Vec3f s1, Vec3f s2, Vec3f t1, Vec3f t2, Vec3f t3)
+	{
+		// Moller-Trumbore algorithm
+		// read https://www.scratchapixel.com/lessons/3d-basic-rendering/ray-tracing-rendering-a-triangle/moller-trumbore-ray-triangle-intersection
+		// We use the notation from the page above except "T", we use s1t1 in this code
+
+		Vec3f e1 = t2 - t1;
+		Vec3f e2 = t3 - t1;
+		Vec3f d = s2 - s1;
+		Vec3f p = cross(d, e2);
+		float det = dot(e1, p);
+
+		constexpr const float EPSILON = 1.0f / 65536.0f;  // ~1e-5
+		if (std::abs(det) < EPSILON)
+		{
+			return { {}, false };
+		}
+
+		// s1t1 is T in the reference page, we need to use lower case t later
+		Vec3f s1t1 = s1 - t1;
+		Vec3f q = cross(s1t1, e1);
+
+		// Cramer's rule to get the barycentric coordinate of the point in triangle
+		// Here we calculate barycentric coordinate before divided by determinant,
+		// so when doing the point in triangle test, we check against abs(det) instead of 1, reduce expensive division computation
+		float u = dot(s1t1, p) * sign(det);
+		float v = dot(d, q) * sign(det);
+		if (u < 0 || v <  0 || u + v > std::abs(det)) return { {}, false };
+
+		float t = dot(e2, q) * sign(det);
+		if (t < 0 || t > std::abs(det)) return { {}, false };
+
+		Vec3f result = s1 + d * (t / std::abs(det));
+		return { result, true };
+	}
+		
 	static bool ComputeTangentFrameWithTangents(const TangentFrameComputeInput& input, Quaternionf* qtangents) {
 		const uint64 vertexCount = input.vertexCount;
 
@@ -92,7 +194,7 @@ namespace Soul {
 	}
 
 	static bool ComputeTangentFrameWithFlatNormals(const TangentFrameComputeInput& input, Quaternionf* qtangents) {
-		Runtime::ScopeAllocator<> scopeAllocator("ComputeTangentWithFlatNormals");
+		runtime::ScopeAllocator<> scopeAllocator("ComputeTangentWithFlatNormals");
 		Array<Vec3f> normals(&scopeAllocator);
 		normals.resize(input.triangleCount);
 		const uint64 vertexCount = input.vertexCount;
@@ -116,7 +218,7 @@ namespace Soul {
 	}
 
 	static bool ComputeTangentFrameWithUVs(const TangentFrameComputeInput& input, Quaternionf* qtangents) {
-		Runtime::ScopeAllocator<> scopeAllocator("ComputeTangentWithUVs");
+		runtime::ScopeAllocator<> scopeAllocator("ComputeTangentWithUVs");
 		Array<Vec3f> tan1(&scopeAllocator);
 		tan1.resize(input.vertexCount);
 		Array<Vec3f> tan2(&scopeAllocator);
@@ -189,9 +291,10 @@ namespace Soul {
 
 			Vec3f b = w < 0 ? cross(t, n) : cross(n, t);
 			Vec3f tbn[3] = { t, b, n };
-			qtangents[a] = qtangent(tbn);
+			Quaternionf q = qtangent(tbn);
+			qtangents[a] = q;
 		}
-		return false;
+		return true;
 	}
 
 	bool ComputeTangentFrame(const TangentFrameComputeInput& input, Quaternionf* qtangents) {

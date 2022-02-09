@@ -5,7 +5,7 @@
 
 #include "imgui/imgui.h"
 
-using namespace Soul;
+using namespace soul;
 
 namespace Demo {
 	namespace UI {

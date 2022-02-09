@@ -1,5 +1,11 @@
 #pragma once
 
+
+
+#include "gpu/id.h"
+#include "gpu/constant.h"
+#include "gpu/intern/render_compiler.h"
+
 #include "core/type.h"
 #include "core/thread.h"
 #include "core/array.h"
@@ -7,72 +13,19 @@
 #include "core/pool.h"
 #include "core/uint64_hash_map.h"
 #include "core/hash_map.h"
-#include "core/architecture.h"
+#include "core/flag_set.h"
 
 #include "runtime/runtime.h"
 #include "memory/allocators/proxy_allocator.h"
 
-// TODO: Figure out how to do it without single header library
-#define VMA_STATIC_VULKAN_FUNCTIONS 0
-#define VMA_DYNAMIC_VULKAN_FUNCTIONS 0
-#define VK_NO_PROTOTYPES
-#pragma warning(push, 0)
-#include <vk_mem_alloc.h>
-#pragma warning(pop)
-
 #include <mutex>
 
-namespace Soul::GPU
+namespace soul::gpu
 {
 	class System;
 	class RenderGraph;
 
-	namespace impl
-	{
-		struct Texture;
-		struct Buffer;
-		struct Sampler{};
-		struct Program;
-		struct Semaphore;
-		struct Database;
-		struct PipelineState;
-		struct ShaderArgSet;
-		struct Shader;
-		struct Program;
-		struct Semaphore;
-	}
-
-	// ID
-	using TextureID = ID<impl::Texture, uint32, 0>;
-	using BufferID = ID<impl::Buffer, uint32, 0>;
-	using SamplerID = ID<impl::Sampler, VkSampler, VK_NULL_HANDLE>;
-	static constexpr SamplerID SAMPLER_ID_NULL = SamplerID();
 	
-	using PipelineStateID = ID<impl::PipelineState, PoolID, 0>;
-	static constexpr PipelineStateID PIPELINE_STATE_ID_NULL = PipelineStateID();
-
-	using ShaderArgSetID = ID<impl::ShaderArgSet, uint32, 0>;
-
-	using ShaderID = ID<impl::Shader, uint32, 0>;
-	static constexpr ShaderID SHADER_ID_NULL = ShaderID();
-
-	using ProgramID = ID<impl::Program, uint16, 0>;
-	static constexpr ProgramID PROGRAM_ID_NULL = ProgramID();
-	
-	using SemaphoreID = ID<impl::Semaphore, uint32, 0>;
-	static constexpr SemaphoreID SEMAPHORE_ID_NULL = SemaphoreID();
-
-	static constexpr uint32 MAX_SET_PER_SHADER_PROGRAM = 6;
-	static constexpr unsigned int SET_COUNT = 8;
-	static constexpr uint32 MAX_BINDING_PER_SET = 16;
-	static constexpr uint32 MAX_INPUT_PER_SHADER = 16;
-	static constexpr uint32 MAX_INPUT_BINDING_PER_SHADER = 16;
-	static constexpr uint32 MAX_COLOR_ATTACHMENT_PER_SHADER = 8;
-	static constexpr uint32 MAX_INPUT_ATTACHMENT_PER_SHADER = 8;
-	static constexpr uint32 MAX_DYNAMIC_BUFFER_PER_SET = 4;
-	static constexpr uint32 MAX_SIGNAL_SEMAPHORE = 4;
-	static constexpr uint32 MAX_VERTEX_BINDING = 16;
-
 	enum class VertexElementType : uint8_t {
 		BYTE,
 		BYTE2,
@@ -114,23 +67,14 @@ namespace Soul::GPU
 	static_assert(VERTEX_ELEMENT_ENUM_END_BIT - 1 <= SOUL_UTYPE_MAX(VertexElementFlags), "");
 
 	enum class ShaderStage : uint8 {
-		NONE,
 		VERTEX,
 		GEOMETRY,
 		FRAGMENT,
 		COMPUTE,
 		COUNT
 	};
-
-	using ShaderStageFlagBits = enum {
-		SHADER_STAGE_VERTEX = 0x1,
-		SHADER_STAGE_GEOMETRY = 0x2,
-		SHADER_STAGE_FRAGMENT = 0x4,
-		SHADER_STAGE_COMPUTE = 0x8,
-		SHADER_STAGE_ENUM_END_BIT
-	};
-	using ShaderStageFlags = uint8;
-	static_assert(SHADER_STAGE_ENUM_END_BIT - 1 <= SOUL_UTYPE_MAX(ShaderStageFlags), "");
+	using ShaderStageFlags = FlagSet<ShaderStage>;
+	constexpr ShaderStageFlags SHADER_STAGES_VERTEX_FRAGMENT = ShaderStageFlags( { gpu::ShaderStage::VERTEX, gpu::ShaderStage::FRAGMENT });
 
 	enum class ResourceOwner : uint8 {
 		NONE,
@@ -147,45 +91,37 @@ namespace Soul::GPU
 		TRANSFER,
 		COUNT
 	};
-
-	using QueueFlagBits = enum {
-		QUEUE_GRAPHIC_BIT = 0x1,
-		QUEUE_COMPUTE_BIT = 0x2,
-		QUEUE_TRANSFER_BIT = 0x4,
-		QUEUE_DEFAULT = QUEUE_GRAPHIC_BIT | QUEUE_COMPUTE_BIT | QUEUE_TRANSFER_BIT,
-		QUEUE_ENUM_END_BIT
+	using QueueFlags = FlagSet<QueueType>;
+	constexpr QueueFlags QUEUE_DEFAULT = { QueueType::GRAPHIC, QueueType::COMPUTE, QueueType::TRANSFER };
+	
+	enum class BufferUsage : uint8
+	{
+		INDEX,
+		VERTEX,
+		UNIFORM,
+		STORAGE,
+		TRANSFER_SRC,
+		TRANSFER_DST,
+		COUNT
 	};
-	using QueueFlags = uint8;
-	static_assert(QUEUE_ENUM_END_BIT - 1 <= SOUL_UTYPE_MAX(QueueFlags), "");
+	using BufferUsageFlags = FlagSet<BufferUsage>;
 
-	using BufferUsageFlagBits = enum {
-		BUFFER_USAGE_INDEX_BIT = 0x1,
-		BUFFER_USAGE_VERTEX_BIT = 0x2,
-		BUFFER_USAGE_UNIFORM_BIT = 0x4,
-		BUFFER_USAGE_STORAGE_BIT = 0x8,
-		BUFFER_USAGE_TRANSFER_SRC_BIT = 0x10,
-		BUFFER_USAGE_TRANSFER_DST_BIT = 0x20,
-		BUFFER_USAGE_ENUM_END_BIT
+	enum class TextureUsage : uint8 {
+		SAMPLED,
+		COLOR_ATTACHMENT,
+		DEPTH_STENCIL_ATTACHMENT,
+		INPUT_ATTACHMENT,
+		TRANSFER_SRC,
+		TRANSFER_DST,
+		STORAGE,
+		COUNT
 	};
-	using BufferUsageFlags = uint8;
-	static_assert(BUFFER_USAGE_ENUM_END_BIT - 1 <= SOUL_UTYPE_MAX(BufferUsageFlags), "");
-
-	using TextureUsageFlagBits = enum {
-		TEXTURE_USAGE_SAMPLED_BIT = 0x1,
-		TEXTURE_USAGE_COLOR_ATTACHMENT_BIT = 0x2,
-		TEXTURE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT = 0x4,
-		TEXTURE_USAGE_INPUT_ATTACHMENT_BIT = 0x8,
-		TEXTURE_USAGE_TRANSFER_SRC_BIT = 0x10,
-		TEXTURE_USAGE_TRANSFER_DST_BIT = 0x20,
-		TEXTURE_USAGE_STORAGE_BIT = 0x40,
-		TEXTURE_USAGE_ENUM_END_BIT
-	};
-	using TextureUsageFlags = uint8;
-	static_assert(TEXTURE_USAGE_ENUM_END_BIT - 1 < SOUL_UTYPE_MAX(TextureUsageFlags), "");
-
+	using TextureUsageFlags = FlagSet<TextureUsage>;
+	
 	enum class TextureType : uint8 {
 		D1,
 		D2,
+		D2_ARRAY,
 		D3,
 		CUBE,
 		COUNT
@@ -193,12 +129,15 @@ namespace Soul::GPU
 
 	enum class TextureFormat : uint16 {
 
+		DEPTH16,
+
 		RGB8,
 		DEPTH24,
 
 		RGBA8UI,
 		RGBA8,
 		BGRA8,
+		RG16UI,
 		DEPTH24_STENCIL8UI,
 		DEPTH32F,
 		RGBA16F,
@@ -303,49 +242,6 @@ namespace Soul::GPU
 		COUNT
 	};
 
-	enum class RenderCommandType : uint8 {
-		DRAW_INDEX,
-		DRAW_VERTEX,
-		DRAW_PRIMITIVE,
-		DISPATCH,
-		COUNT
-	};
-
-	struct RenderCommand {
-		RenderCommandType type = RenderCommandType::COUNT;
-	};
-
-	template <RenderCommandType RENDER_COMMAND_TYPE>
-	struct RenderCommandTyped : RenderCommand {
-		static const RenderCommandType TYPE = RENDER_COMMAND_TYPE;
-
-		RenderCommandTyped() { type = TYPE; }
-	};
-
-	struct RenderCommandDrawVertex : RenderCommandTyped<RenderCommandType::DRAW_VERTEX> {
-		PipelineStateID pipelineStateID = PIPELINE_STATE_ID_NULL;
-		ShaderArgSetID shaderArgSetIDs[MAX_SET_PER_SHADER_PROGRAM];
-		BufferID vertexBufferID;
-		uint16 vertexCount = 0;
-	};
-
-	struct RenderCommandDrawIndex : RenderCommandTyped<RenderCommandType::DRAW_INDEX> {
-		PipelineStateID pipelineStateID = PIPELINE_STATE_ID_NULL;
-		ShaderArgSetID shaderArgSetIDs[MAX_SET_PER_SHADER_PROGRAM];
-		BufferID vertexBufferID;
-		BufferID indexBufferID;
-		uint16 indexOffset = 0;
-		uint16 vertexOffset = 0;
-		uint16 indexCount = 0;
-	};
-
-	struct RenderCommandDrawPrimitive : RenderCommandTyped<RenderCommandType::DRAW_PRIMITIVE> {
-		PipelineStateID pipelineStateID = PIPELINE_STATE_ID_NULL;
-		ShaderArgSetID shaderArgSetIDs[MAX_SET_PER_SHADER_PROGRAM];
-		BufferID vertexBufferIDs[Soul::GPU::MAX_VERTEX_BINDING];
-		BufferID indexBufferID;
-	};
-
 	enum class DescriptorType : uint8 {
 		NONE,
 		UNIFORM_BUFFER,
@@ -394,12 +290,24 @@ namespace Soul::GPU
 			Color() {
 				float32 = {};
 			}
+
+			Color(Vec4f val) : float32(val) {}
+			Color(Vec4ui32 val) : uint32(val) {}
+			Color(Vec4i32 val) : int32(val) {}
+
 		} color;
 
-		struct {
-			float depth;
-			uint32 stencil;
+		struct DepthStencil {
+			float depth = 0.0f;
+			uint32 stencil = 0;
+			DepthStencil() = default;
+			DepthStencil(float depth, uint32 stencil) : depth(depth), stencil(stencil) {}
 		} depthStencil;
+
+		ClearValue() = default;
+		ClearValue(Vec4f color, float depth, uint32 stencil) : color(color), depthStencil(depth, stencil) {}
+		ClearValue(Vec4ui32 color, float depth, uint32 stencil) : color(color), depthStencil(depth, stencil) {}
+		ClearValue(Vec4i32 color, float depth, uint32 stencil) : color(color), depthStencil(depth, stencil) {}
 
 	};
 
@@ -430,7 +338,7 @@ namespace Soul::GPU
 			StorageImageDescriptor storageImageInfo;
 			InputAttachmentDescriptor inputAttachmentInfo;
 		};
-		ShaderStageFlags stageFlags = 0;
+		ShaderStageFlags stageFlags;
 
 		inline static Descriptor Uniform(BufferID bufferID, uint32 unitIndex, ShaderStageFlags stageFlags) {
 			Descriptor descriptor = {};
@@ -478,7 +386,7 @@ namespace Soul::GPU
 		soul_size count = 0;
 		uint16 typeSize = 0;
 		uint16 typeAlignment = 0;
-		BufferUsageFlags usageFlags = 0;
+		BufferUsageFlags usageFlags;
 		QueueFlags  queueFlags = QUEUE_DEFAULT;
 	};
 
@@ -510,47 +418,73 @@ namespace Soul::GPU
 		bool generateMipmap = false;
 	};
 
+	enum class TextureSampleCount : uint8
+	{
+		COUNT_1 = 1,
+		COUNT_2 = 2,
+		COUNT_4 = 4,
+		COUNT_8 = 8,
+		COUNT_16 = 16,
+		COUNT_32 = 32,
+		COUNT_64 = 64
+	};
+
 	struct TextureDesc {
 		TextureType type = TextureType::D2;
 		TextureFormat format = TextureFormat::COUNT;
-		uint32 width = 0, height = 0, depth = 0;
+		uint32 width = 0, height = 0, depth = 1;
 		uint32 mipLevels = 1;
 		uint16 layerCount = 1;
-		TextureUsageFlags usageFlags = 0;
-		QueueFlags queueFlags = 0;
+		TextureSampleCount sampleCount = TextureSampleCount::COUNT_1;
+		TextureUsageFlags usageFlags;
+		QueueFlags queueFlags;
 		const char* name = nullptr;
 
-		static TextureDesc Texture2D(const char* name, TextureFormat format, uint32 mipLevels, TextureUsageFlags usageFlags, QueueFlags queueFlags, uint32 width, uint32 height)
+		static TextureDesc D2(const char* name, TextureFormat format, uint32 mipLevels, TextureUsageFlags usageFlags, QueueFlags queueFlags, Vec2ui32 dimension, TextureSampleCount sampleCount = TextureSampleCount::COUNT_1)
 		{
-			TextureDesc desc;
-			desc.type = TextureType::D2;
-			desc.name = name;
-			desc.layerCount = 1;
-			desc.format = format;
-			desc.mipLevels = mipLevels;
-			desc.usageFlags = usageFlags;
-			desc.queueFlags = queueFlags;
-			desc.width = width;
-			desc.height = height;
-			desc.depth = 1;
-			return desc;
+			return {
+				.type = TextureType::D2,
+				.format = format,
+				.width = dimension.x,
+				.height = dimension.y,
+				.mipLevels =mipLevels,
+				.sampleCount = sampleCount,
+				.usageFlags = usageFlags,
+				.queueFlags = queueFlags,
+				.name = name
+			};
 		}
 
-		static TextureDesc TextureCube(const char* name, TextureFormat format, uint32 mipLevels, TextureUsageFlags usageFlags, QueueFlags queueFlags, uint32 width, uint32 height)
+		static TextureDesc D2Array(const char* name, TextureFormat format, uint32 mipLevels, TextureUsageFlags usageFlags, QueueFlags queueFlags, Vec2ui32 dimension, uint16 layerCount)
 		{
-			TextureDesc desc;
-			desc.type = TextureType::CUBE;
-			desc.name = name;
-			desc.layerCount = 6;
-			desc.format = format;
-			desc.mipLevels = mipLevels;
-			desc.usageFlags = usageFlags;
-			desc.queueFlags = queueFlags;
-			desc.width = width;
-			desc.height = height;
-			desc.depth = 1;
-			return desc;
+			return {
+				.type = TextureType::D2_ARRAY,
+				.format = format,
+				.width = dimension.x,
+				.height = dimension.y,
+				.mipLevels = mipLevels,
+				.layerCount = layerCount,
+				.usageFlags = usageFlags,
+				.queueFlags = queueFlags,
+				.name = name
+			};
 		}
+
+		static TextureDesc Cube(const char* name, TextureFormat format, uint32 mipLevels, TextureUsageFlags usageFlags, QueueFlags queueFlags, Vec2ui32 dimension)
+		{
+			return {
+				.type = TextureType::CUBE,
+				.format = format,
+				.width = dimension.x,
+				.height = dimension.y,
+				.mipLevels = mipLevels,
+				.layerCount = 6,
+				.usageFlags = usageFlags,
+				.queueFlags = queueFlags,
+				.name = name
+			};
+		}
+
 	};
 
 	struct SamplerDesc {
@@ -562,8 +496,11 @@ namespace Soul::GPU
 		TextureWrap wrapW = TextureWrap::CLAMP_TO_EDGE;
 		bool anisotropyEnable = false;
 		float maxAnisotropy = 0.0f;
+		bool compareEnable = false;
+		CompareOp comapreOp = CompareOp::COUNT;
 
-		static SamplerDesc SameFilterWrap(TextureFilter filter, TextureWrap wrap, bool anisotropyEnable = false, float maxAnisotropy = 0.0f)
+		static SamplerDesc SameFilterWrap(TextureFilter filter, TextureWrap wrap, bool anisotropyEnable = false, 
+			float maxAnisotropy = 0.0f, bool compareEnable = false, CompareOp compareOp = CompareOp::ALWAYS)
 		{
 			SamplerDesc desc;
 			desc.minFilter = filter;
@@ -574,6 +511,8 @@ namespace Soul::GPU
 			desc.wrapW = wrap;
 			desc.anisotropyEnable = anisotropyEnable;
 			desc.maxAnisotropy = maxAnisotropy;
+			desc.compareEnable = compareEnable;
+			desc.comapreOp = compareOp;
 			return desc;
 		}
 	};
@@ -626,6 +565,16 @@ namespace Soul::GPU
 	};
 
 	struct PipelineStateDesc {
+
+		enum class PassType : uint8
+		{
+			GRAPHIC,
+			COMPUTE,
+			COUNT
+		};
+
+		PassType passType = PassType::GRAPHIC;
+
 		ProgramID programID = PROGRAM_ID_NULL;
 
 		InputLayoutDesc inputLayout;
@@ -665,6 +614,7 @@ namespace Soul::GPU
 
 		struct ColorAttachmentDesc {
 			bool blendEnable = false;
+			bool colorWrite = true;
 			BlendFactor srcColorBlendFactor = BlendFactor::ZERO;
 			BlendFactor dstColorBlendFactor = BlendFactor::ZERO;
 			BlendOp colorBlendOp = BlendOp::ADD;
@@ -682,6 +632,13 @@ namespace Soul::GPU
 		};
 		DepthStencilAttachmentDesc depthStencilAttachment;
 
+		struct DepthBiasDesc
+		{
+			float constant = 0.0f;
+			float slope = 0.0f;
+		};
+		DepthBiasDesc depthBias;
+
 		inline bool operator==(const PipelineStateDesc& other) const {
 			return (memcmp(this, &other, sizeof(PipelineStateDesc)) == 0);
 		}
@@ -693,10 +650,14 @@ namespace Soul::GPU
 		uint64 hash() const {
 			return hashFNV1((uint8*)(this), sizeof(PipelineStateDesc));
 		}
+
+		static PipelineStateDesc Compute(ProgramID programID) {
+			PipelineStateDesc desc;
+			desc.passType = PassType::COMPUTE;
+			desc.programID = programID;
+			return desc;
+		}
 	};
-
-
-
 
 	template <typename T>
 	class VulkanPool
@@ -705,7 +666,7 @@ namespace Soul::GPU
 
 		using ID = PoolID;
 
-		explicit VulkanPool(Memory::Allocator* allocator = GetDefaultAllocator()) noexcept : pool_(allocator) {}
+		explicit VulkanPool(memory::Allocator* allocator = GetDefaultAllocator()) noexcept : pool_(allocator) {}
 		VulkanPool(const VulkanPool& other) = delete;
 		VulkanPool& operator=(const VulkanPool& other) = delete;
 		VulkanPool(VulkanPool&& other) = delete;
@@ -763,8 +724,6 @@ namespace Soul::GPU
 		Pool<T> pool_;
 	};
 
-
-
 	namespace impl
 	{
 
@@ -785,6 +744,7 @@ namespace Soul::GPU
 		struct RenderPassKey
 		{
 			Attachment colorAttachments[MAX_COLOR_ATTACHMENT_PER_SHADER];
+			Attachment resolveAttachments[MAX_COLOR_ATTACHMENT_PER_SHADER];
 			Attachment inputAttachments[MAX_INPUT_ATTACHMENT_PER_SHADER];
 			Attachment depthAttachment;
 
@@ -802,7 +762,7 @@ namespace Soul::GPU
 		};
 
 		struct QueueData {
-			int count = 0;
+			uint32 count = 0;
 			uint32 indices[3] = {};
 		};
 
@@ -861,8 +821,8 @@ namespace Soul::GPU
 			VmaAllocation allocation{};
 			soul_size unitCount = 0;
 			uint16 unitSize = 0;
-			BufferUsageFlags usageFlags = 0;
-			QueueFlags queueFlags = 0;
+			BufferUsageFlags usageFlags;
+			QueueFlags queueFlags;
 			ResourceOwner owner = ResourceOwner::NONE;
 		};
 
@@ -876,7 +836,7 @@ namespace Soul::GPU
 			TextureFormat format;
 			TextureType type;
 			ResourceOwner owner;
-			VkImageView* mipViews;
+			VkImageView* views;
 			uint32 mipCount;
 			QueueFlags queueFlags;
 		};
@@ -933,12 +893,36 @@ namespace Soul::GPU
 			Array<VkCommandBuffer> commands;
 		};
 
+		class SecondaryCommandBuffer
+		{
+		private:
+			VkCommandBuffer vk_handle_ = VK_NULL_HANDLE;
+		public:
+			constexpr SecondaryCommandBuffer() noexcept = default;
+			explicit constexpr SecondaryCommandBuffer(VkCommandBuffer vk_handle) : vk_handle_(vk_handle) {}
+			[[nodiscard]] constexpr VkCommandBuffer get_vk_handle() const noexcept { return vk_handle_; }
+			void end();
+		};
+
+		class PrimaryCommandBuffer
+		{
+		private:
+			VkCommandBuffer vk_handle_ = VK_NULL_HANDLE;
+		public:
+			constexpr PrimaryCommandBuffer() noexcept = default;
+			explicit constexpr PrimaryCommandBuffer(VkCommandBuffer vk_handle) : vk_handle_(vk_handle) {}
+			[[nodiscard]] constexpr VkCommandBuffer get_vk_handle() const noexcept { return vk_handle_; }
+			void begin_render_pass(const VkRenderPassBeginInfo& render_pass_begin_info, VkSubpassContents subpass_contents);
+			void end_render_pass();
+			void execute_secondary_command_buffers(uint32_t count, const SecondaryCommandBuffer* secondary_command_buffers);
+		};
+
 		using CommandQueues = EnumArray<QueueType, CommandQueue>;
 
 		class CommandPool {
 		public:
 
-			explicit CommandPool(Memory::Allocator* allocator = GetDefaultAllocator()) : allocatorInitializer(allocator)
+			explicit CommandPool(memory::Allocator* allocator = GetDefaultAllocator()) : allocatorInitializer(allocator)
 			{
 				allocatorInitializer.end();
 			}
@@ -948,7 +932,7 @@ namespace Soul::GPU
 			VkCommandBuffer request();
 
 		private:
-			Runtime::AllocatorInitializer allocatorInitializer;
+			runtime::AllocatorInitializer allocatorInitializer;
 			VkDevice device = VK_NULL_HANDLE;
 			VkCommandPool vkHandle = VK_NULL_HANDLE;
 			Array<VkCommandBuffer> allocatedBuffers;
@@ -959,20 +943,23 @@ namespace Soul::GPU
 		class CommandPools
 		{
 		public:
-			explicit CommandPools(Memory::Allocator* allocator = GetDefaultAllocator()) : allocator(allocator), allocatorInitializer(allocator)
+			explicit CommandPools(memory::Allocator* allocator = GetDefaultAllocator()) : allocator_(allocator), allocator_initializer_(allocator)
 			{
-				allocatorInitializer.end();
+				allocator_initializer_.end();
 			}
 			void init(VkDevice device, const CommandQueues& queues, soul_size threadCount);
 			void reset();
 			VkCommandBuffer requestCommandBuffer(QueueType queueType);
 			VkCommandBuffer requestSecondaryCommandBuffer();
 
+			PrimaryCommandBuffer request_command_buffer(const QueueType queue_type);
+			SecondaryCommandBuffer request_secondary_command_buffer(VkRenderPass render_pass, const uint32_t subpass, VkFramebuffer framebuffer);
+
 		private:
-			Memory::Allocator* allocator;
-			Runtime::AllocatorInitializer allocatorInitializer;
-			EnumArray<QueueType, CommandPool> primaryPools;
-			Array<CommandPool> secondaryPools;
+			memory::Allocator* allocator_;
+			runtime::AllocatorInitializer allocator_initializer_;
+			EnumArray<QueueType, CommandPool> primary_pools_;
+			Array<CommandPool> secondary_pools_;
 		};
 
 		class GPUResourceInitializer
@@ -1013,16 +1000,14 @@ namespace Soul::GPU
 			void finalize(Texture& texture, TextureUsageFlags usageFlags);
 			void flush(CommandPools& commandPools, CommandQueues& commandQueues, System& gpuSystem);
 		private:
-
 			EnumArray<QueueType, Array<VkImageMemoryBarrier>> imageBarriers;
-			EnumArray<QueueType, QueueFlags> syncDstQueues = EnumArray<QueueType, QueueFlags>(0);
-
+			EnumArray<QueueType, QueueFlags> syncDstQueues = EnumArray<QueueType, QueueFlags>(QueueFlags());
 		};
 
 
 		struct _FrameContext {
 
-			Runtime::AllocatorInitializer allocatorInitializer;
+			runtime::AllocatorInitializer allocatorInitializer;
 			CommandPools commandPools;
 			
 			VkFence fence = VK_NULL_HANDLE;
@@ -1047,7 +1032,7 @@ namespace Soul::GPU
 			GPUResourceInitializer gpuResourceInitializer;
 			GPUResourceFinalizer gpuResourceFinalizer;
 
-			_FrameContext(Memory::Allocator* allocator) : allocatorInitializer(allocator)
+			_FrameContext(memory::Allocator* allocator) : allocatorInitializer(allocator)
 			{
 				allocatorInitializer.end();
 			}
@@ -1055,20 +1040,20 @@ namespace Soul::GPU
 
 		struct Database {
 
-			using CPUAllocatorProxy = Memory::MultiProxy<Memory::ProfileProxy, Memory::CounterProxy>;
-			using CPUAllocator = Memory::ProxyAllocator<
-				Memory::Allocator,
+			using CPUAllocatorProxy = memory::MultiProxy<memory::ProfileProxy, memory::CounterProxy>;
+			using CPUAllocator = memory::ProxyAllocator<
+				memory::Allocator,
 				CPUAllocatorProxy>;
 			CPUAllocator cpuAllocator;
 
-			Memory::MallocAllocator vulkanCPUBackingAllocator{ "Vulkan CPU Backing Allocator" };
-			using VulkanCPUAllocatorProxy = Memory::MultiProxy<Memory::MutexProxy, Memory::ProfileProxy>;
-			using VulkanCPUAllocator = Memory::ProxyAllocator<
-				Memory::MallocAllocator,
+			memory::MallocAllocator vulkanCPUBackingAllocator{ "Vulkan CPU Backing Allocator" };
+			using VulkanCPUAllocatorProxy = memory::MultiProxy<memory::MutexProxy, memory::ProfileProxy>;
+			using VulkanCPUAllocator = memory::ProxyAllocator<
+				memory::MallocAllocator,
 				VulkanCPUAllocatorProxy>;
 			VulkanCPUAllocator vulkanCPUAllocator;
 
-			Runtime::AllocatorInitializer allocatorInitializer;
+			runtime::AllocatorInitializer allocatorInitializer;
 
 			VkInstance instance = VK_NULL_HANDLE;
 			VkDebugUtilsMessengerEXT debugMessenger;
@@ -1116,15 +1101,152 @@ namespace Soul::GPU
 			std::mutex shaderArgSetRequestMutex;
 			std::mutex pipelineStateRequestMutex;
 
-			explicit Database(Memory::Allocator* backingAllocator) :
-				cpuAllocator("GPU System", backingAllocator, CPUAllocatorProxy::Config{ Memory::ProfileProxy::Config(), Memory::CounterProxy::Config() }),
-				vulkanCPUAllocator("Vulkan", &vulkanCPUBackingAllocator, VulkanCPUAllocatorProxy::Config{ Memory::MutexProxy::Config(), Memory::ProfileProxy::Config() }),
+			explicit Database(memory::Allocator* backingAllocator) :
+				cpuAllocator("GPU System", backingAllocator, CPUAllocatorProxy::Config{ memory::ProfileProxy::Config(), memory::CounterProxy::Config() }),
+				vulkanCPUAllocator("Vulkan", &vulkanCPUBackingAllocator, VulkanCPUAllocatorProxy::Config{ memory::MutexProxy::Config(), memory::ProfileProxy::Config() }),
 				allocatorInitializer(&cpuAllocator) {
 				allocatorInitializer.end();
 			}
 		};
 
 	}
+
+
+	// Render Command API
+	enum class RenderCommandType : uint8 {
+		DRAW_INDEX,
+		DRAW_PRIMITIVE,
+		DISPATCH,
+		COUNT
+	};
+
+	struct RenderCommand {
+		RenderCommandType type = RenderCommandType::COUNT;
+	};
+
+	template <RenderCommandType RENDER_COMMAND_TYPE>
+	struct RenderCommandTyped : RenderCommand {
+		static const RenderCommandType TYPE = RENDER_COMMAND_TYPE;
+
+		RenderCommandTyped() { type = TYPE; }
+	};
+
+	struct RenderCommandDrawIndex : RenderCommandTyped<RenderCommandType::DRAW_INDEX> {
+		PipelineStateID pipelineStateID = PIPELINE_STATE_ID_NULL;
+		ShaderArgSetID shaderArgSetIDs[MAX_SET_PER_SHADER_PROGRAM];
+		BufferID vertexBufferID;
+		BufferID indexBufferID;
+		uint16 indexOffset = 0;
+		uint16 vertexOffset = 0;
+		uint16 indexCount = 0;
+	};
+
+	struct RenderCommandDrawPrimitive : RenderCommandTyped<RenderCommandType::DRAW_PRIMITIVE> {
+		PipelineStateID pipelineStateID = PIPELINE_STATE_ID_NULL;
+		ShaderArgSetID shaderArgSetIDs[MAX_SET_PER_SHADER_PROGRAM];
+		BufferID vertexBufferIDs[soul::gpu::MAX_VERTEX_BINDING];
+		BufferID indexBufferID;
+	};
+
+	struct RenderCommandDispatch : RenderCommandTyped<RenderCommandType::DISPATCH>
+	{
+		PipelineStateID pipelineStateID = PIPELINE_STATE_ID_NULL;
+		ShaderArgSetID shaderArgSetIDs[MAX_SET_PER_SHADER_PROGRAM];
+		Vec3ui32 groupCount;
+	};
+
+	class RenderGraphicCommandList
+	{
+	private:
+		impl::PrimaryCommandBuffer primary_command_buffer_;
+		const VkRenderPassBeginInfo& render_pass_begin_info_;
+		impl::CommandPools& command_pools_;
+		System& gpu_system_;
+
+		static constexpr uint32 SECONDARY_COMMAND_BUFFER_THRESHOLD = 10;
+
+	public:
+		constexpr RenderGraphicCommandList(impl::PrimaryCommandBuffer primary_command_buffer,
+			const VkRenderPassBeginInfo& render_pass_begin_info, impl::CommandPools& command_pools, System& gpu_system) :
+			primary_command_buffer_(primary_command_buffer), render_pass_begin_info_(render_pass_begin_info), command_pools_(command_pools),
+			gpu_system_(gpu_system) {}
+
+		template<typename RenderCommandType, typename CommandGenerator>
+		void push(soul_size count, CommandGenerator&& commandGenerator)
+		{
+			if (count > SECONDARY_COMMAND_BUFFER_THRESHOLD)
+			{
+				primary_command_buffer_.begin_render_pass(render_pass_begin_info_, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
+				const uint32 thread_count = runtime::get_thread_count();
+
+				Array<impl::SecondaryCommandBuffer> secondary_command_buffers;
+				secondary_command_buffers.resize(thread_count);
+
+				struct TaskData
+				{
+					Array<VkCommandBuffer>& cmdBuffers;
+					uint32& commandCount;
+					VkRenderPass renderPass;
+					VkFramebuffer framebuffer;
+					impl::CommandPools& commandPools;
+					gpu::System* gpuSystem;
+				};
+				const TaskData task_data = {
+					secondary_command_buffers,
+					&count,
+					render_pass_begin_info_.renderPass,
+					render_pass_begin_info_.framebuffer,
+					command_pools_,
+					gpu_system_
+				};
+
+				runtime::parallel_for_task_create(
+					runtime::TaskID::ROOT(), thread_count, 1,
+					[&task_data](int index)
+					{
+						auto&& [secondary_command_buffers, command_count, render_pass, frame_buffer, command_pools, gpu_system] = task_data;
+						impl::SecondaryCommandBuffer command_buffer = command_pools.request_secondary_command_buffer(task_data.renderPass, 0, task_data.framebuffer);
+						const uint32 div = command_count / secondary_command_buffers.size();
+						const uint32 mod = command_count % secondary_command_buffers.size();
+
+						impl::RenderCompiler render_compiler(gpu_system, command_buffer.get_vk_handle());
+						if (index < mod)
+						{
+							int start = index * (div + 1);
+
+							for (int i = 0; i < div + 1; i++)
+							{
+								render_compiler.compileCommand(CommandGenerator(start + i));
+							}
+						}
+						else
+						{
+							int start = mod * (div + 1) + (index - mod) * div;
+							for (int i = 0; i < div; i++)
+							{
+								render_compiler.compileCommand(CommandGenerator(start + i));
+							}
+						}
+						command_buffer.end();
+						secondary_command_buffers[index] = command_buffer;
+
+					});
+				primary_command_buffer_.execute_secondary_command_buffers(secondary_command_buffers.size(), secondary_command_buffers.data());
+				primary_command_buffer_.end_render_pass();
+			}
+			else
+			{
+				primary_command_buffer_.begin_render_pass(render_pass_begin_info_, VK_SUBPASS_CONTENTS_INLINE);
+				impl::RenderCompiler render_compiler(gpu_system_, primary_command_buffer_.get_vk_handle());
+				for (soul_size command_idx = 0; command_idx < count; command_idx++)
+				{
+					render_compiler.compileCommand(CommandGenerator(command_idx));
+				}
+				primary_command_buffer_.end_render_pass();
+			}
+		}
+	};
+
 }
 
 

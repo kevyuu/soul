@@ -16,7 +16,7 @@
 
 #include "data.h"
 
-using namespace Soul;
+using namespace soul;
 using namespace Demo;
 
 void glfwPrintErrorCallback(int code, const char* message)
@@ -42,36 +42,36 @@ int main()
 	glfwMaximizeWindow(window);
 	SOUL_LOG_INFO("GLFW window creation sucessful");
 
-	Memory::MallocAllocator mallocAllocator("Default");
-	Runtime::DefaultAllocator defaultAllocator(&mallocAllocator,
-		Runtime::DefaultAllocatorProxy::Config(
-			Memory::MutexProxy::Config(),
-			Memory::ProfileProxy::Config(),
-			Memory::CounterProxy::Config(),
-			Memory::ClearValuesProxy::Config{ char(0xFA), char(0xFF) },
-			Memory::BoundGuardProxy::Config()));
+	memory::MallocAllocator mallocAllocator("Default");
+	runtime::DefaultAllocator defaultAllocator(&mallocAllocator,
+		runtime::DefaultAllocatorProxy::Config(
+			memory::MutexProxy::Config(),
+			memory::ProfileProxy::Config(),
+			memory::CounterProxy::Config(),
+			memory::ClearValuesProxy::Config{ char(0xFA), char(0xFF) },
+			memory::BoundGuardProxy::Config()));
 
-	Memory::PageAllocator pageAllocator("Page Allocator");
-	Memory::LinearAllocator linearAllocator("Main Thread Temporary Allocator", 10 * Soul::Memory::ONE_MEGABYTE, &pageAllocator);
-	Runtime::TempAllocator tempAllocator(&linearAllocator,
-		Runtime::TempProxy::Config());
+	memory::PageAllocator pageAllocator("Page Allocator");
+	memory::LinearAllocator linearAllocator("Main Thread Temporary Allocator", 10 * soul::memory::ONE_MEGABYTE, &pageAllocator);
+	runtime::TempAllocator tempAllocator(&linearAllocator,
+		runtime::TempProxy::Config());
 
-	Runtime::Init({
+	runtime::init({
 		0,
 		4096,
 		&tempAllocator,
-		20 * Soul::Memory::ONE_MEGABYTE,
+		20 * soul::memory::ONE_MEGABYTE,
 		&defaultAllocator
 		});
 
 
-	GPU::System gpuSystem(Runtime::GetContextAllocator());
-	GPU::System::Config config = {};
+	gpu::System gpuSystem(runtime::get_context_allocator());
+	gpu::System::Config config = {};
 	config.windowHandle = window;
 	config.swapchainWidth = 3360;
 	config.swapchainHeight = 2010;
 	config.maxFrameInFlight = 3;
-	config.threadCount = Runtime::GetThreadCount();
+	config.threadCount = runtime::get_thread_count();
 
 	gpuSystem.init(config);
 
@@ -82,7 +82,7 @@ int main()
 
     SoulFila::Renderer renderer(&gpuSystem);
 	renderer.init();
-	renderer.getScene()->setViewport({ 614, 640 });
+	renderer.getScene()->setViewport({ 1448, 1057 });
 
 	UI::Store store;
 	store.scene = renderer.getScene();
@@ -91,17 +91,17 @@ int main()
 	while (!glfwWindowShouldClose(window))
 	{
 		SOUL_PROFILE_FRAME();
-		Runtime::System::Get().beginFrame();
+		runtime::System::Get().beginFrame();
 
 		{
 			SOUL_PROFILE_ZONE_WITH_NAME("GLFW Poll Events");
 			glfwPollEvents();
 		}
 
-		GPU::RenderGraph renderGraph;
-		GPU::TextureNodeID imguiFontNodeID = renderGraph.importTexture("ImGui Font", imguiRenderModule.getFontTexture());
+		gpu::RenderGraph renderGraph;
+		gpu::TextureNodeID imguiFontNodeID = renderGraph.import_texture("ImGui Font", imguiRenderModule.getFontTexture());
 
-		GPU::TextureNodeID renderTarget = renderer.computeRenderGraph(&renderGraph);
+		gpu::TextureNodeID renderTarget = renderer.computeRenderGraph(&renderGraph);
 
 		store.fontTex = UI::SoulImTexture(imguiFontNodeID);
 		store.sceneTex = UI::SoulImTexture(renderTarget);
@@ -109,7 +109,7 @@ int main()
 
 		imguiRenderModule.addPass(&gpuSystem, &renderGraph, *ImGui::GetDrawData(), gpuSystem.getSwapchainTexture());
 
-		gpuSystem.renderGraphExecute(renderGraph);
+		gpuSystem.execute(renderGraph);
 
 		gpuSystem.frameFlush();
 

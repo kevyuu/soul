@@ -2,7 +2,7 @@
 
 #include "core/math.h"
 
-namespace Soul::Memory::Util
+namespace soul::memory::Util
 {
 	inline static uint64 PageSizeRound(uint64 size, uint64 pageSize)
 	{

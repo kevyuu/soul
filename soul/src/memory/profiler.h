@@ -4,7 +4,7 @@
 #include "core/packed_pool.h"
 #include "core/uint64_hash_map.h"
 
-namespace Soul::Memory {
+namespace soul::memory {
 
 	class Allocator;
 	class Profiler {

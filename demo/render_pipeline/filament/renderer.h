@@ -2,8 +2,14 @@
 
 #include "data.h"
 #include "../../data.h"
+#include "render_module/shadow_map.h"
+#include "render_module/lighting_pass.h"
+#include "render_module/structure_pass.h"
+#include "render_module/depth_mipmap.h"
 
-using namespace Soul;
+#include <chrono>
+
+using namespace soul;
 
 namespace SoulFila {
 
@@ -24,26 +30,40 @@ namespace SoulFila {
 
 	static constexpr uint8 MATERIAL_SAMPLER_SET = 2;
 
-
 	static constexpr BindingPoint RENDERABLE_UNIFORM_BINDING_POINT = { 3, 0 };
 	static constexpr BindingPoint RENDERABLE_BONE_UNIFORM_BINDING_POINT = { 3, 1 };
-
 
 	class Renderer : public Demo::Renderer {
 	public:
 
-		explicit Renderer(GPU::System* gpuSystem) : 
-			_gpuSystem(gpuSystem), _programRegistry(Soul::Runtime::GetContextAllocator(), gpuSystem), 
-			_scene(gpuSystem, &_programRegistry) {}
+		explicit Renderer(gpu::System* gpuSystem) : 
+			gpuSystem(gpuSystem), programRegistry(soul::runtime::get_context_allocator(), gpuSystem), 
+			scene(gpuSystem, &programRegistry), epoch(std::chrono::steady_clock::now()) {}
 
 		virtual void init();
-		virtual Demo::Scene* getScene() { return (Demo::Scene*)&_scene; }
-		virtual GPU::TextureNodeID computeRenderGraph(GPU::RenderGraph* renderGraph);
+		virtual Demo::Scene* getScene() { return (Demo::Scene*)&scene; }
+		virtual gpu::TextureNodeID computeRenderGraph(gpu::RenderGraph* renderGraph);
 
 	private:
-		GPU::System* _gpuSystem;
-		GPUProgramRegistry _programRegistry;
-		Scene _scene;
-		Soul::GPU::TextureID _stubTexture;
+
+		void prepareRenderData();
+
+		RenderData renderData;
+		gpu::System* gpuSystem;
+		GPUProgramRegistry programRegistry;
+		ShadowMapGenPass shadowMapPass;
+		LightingPass lightingPass;
+		StructurePass structurePass;
+		DepthMipmapPass depthMipmapPass;
+		
+		Scene scene;
+
+		using clock = std::chrono::steady_clock;
+		using Epoch = clock::time_point;
+		using duration = clock::duration;
+
+		Epoch epoch;
 	};
+
+	void Cull(Renderables& renderables, const Frustum& frustum, soul_size bit);
 }

@@ -1,7 +1,7 @@
 #pragma once
 #include <atomic>
 
-namespace Soul
+namespace soul
 {
 	class RWSpinLock {
 	public:

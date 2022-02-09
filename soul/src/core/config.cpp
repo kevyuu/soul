@@ -1,9 +1,9 @@
 #include "core/config.h"
 #include "runtime/runtime.h"
 
-namespace Soul {
-	Memory::Allocator* GetDefaultAllocator()
+namespace soul {
+	memory::Allocator* GetDefaultAllocator()
 	{
-		return Runtime::GetContextAllocator();
+		return runtime::get_context_allocator();
 	}
 }

@@ -6,7 +6,7 @@
 #include "core/dev_util.h"
 
 
-namespace Soul {
+namespace soul {
 
 	float min(float f1, float f2) {
 		return f1 < f2 ? f1 : f2;
@@ -87,11 +87,11 @@ namespace Soul {
 	}
 
 	Quaternionf qtangent(Vec3f tbn[3], uint64 storageSize) {
-		Vec4f columns[4] = { Vec4f(tbn[0], 0.0f), Vec4f(tbn[1], 0.0f), Vec4f(tbn[2], 0.0f), Vec4f(0, 0, 0, 1.0f) };
+		Vec4f columns[4] = { Vec4f(tbn[0], 0.0f), Vec4f(cross(tbn[2], tbn[0]), 0.0f), Vec4f(tbn[2], 0.0f), Vec4f(0, 0, 0, 1.0f) };
 	
 		Quaternionf q = quaternionFromMat4(mat4FromColumns(columns));
 		q = unit(q);
-		q = q.w > 0 ? q * -1 : q;
+		q = q.w > 0 ? q : q * -1;
 
 		// Ensure w is never 0.0
 		// Bias is 2^(nb_bits - 1) - 1
@@ -148,6 +148,63 @@ namespace Soul {
 		return res;
 	}
 
+	Mat3f mat3UpperLeft(const Mat4f& matrix)
+	{
+		Mat3f res;
+
+		res.elem[0][0] = matrix.elem[0][0];
+		res.elem[0][1] = matrix.elem[0][1];
+		res.elem[0][2] = matrix.elem[0][2];
+
+		res.elem[1][0] = matrix.elem[1][0];
+		res.elem[1][1] = matrix.elem[1][1];
+		res.elem[1][2] = matrix.elem[1][2];
+
+		res.elem[2][0] = matrix.elem[2][0];
+		res.elem[2][1] = matrix.elem[2][1];
+		res.elem[2][2] = matrix.elem[2][2];
+
+		return res;
+	}
+
+	Mat3f mat3Inverse(const Mat3f& x)
+	{
+		Mat3f inverted;
+
+		const float a = x.elem[0][0];
+		const float b = x.elem[0][1];
+		const float c = x.elem[0][2];
+		const float d = x.elem[1][0];
+		const float e = x.elem[1][1];
+		const float f = x.elem[1][2];
+		const float g = x.elem[2][0];
+		const float h = x.elem[2][1];
+		const float i = x.elem[2][2];
+
+		// Do the full analytic inverse
+		const float A = e * i - f * h;
+		const float B = f * g - d * i;
+		const float C = d * h - e * g;
+		inverted.elem[0][0] = A;                 // A
+		inverted.elem[0][1] = c * h - b * i;     // D
+		inverted.elem[0][2] = b * f - c * e;     // G
+		inverted.elem[1][0] = B;                 // B
+		inverted.elem[1][1] = a * i - c * g;     // E
+		inverted.elem[1][2] = c * d - a * f;     // H
+		inverted.elem[2][0] = C;                 // C
+		inverted.elem[2][2] = b * g - a * h;     // F
+		inverted.elem[2][2] = a * e - b * d;     // I
+
+		const float det(a * A + b * B + c * C);
+		for (soul_size row = 0; row < 3; ++row) {
+			for (soul_size col = 0; col < 3; ++col) {
+				inverted.elem[row][col] /= det;
+			}
+		}
+
+		return inverted;
+	}
+
 	Mat3f operator*(const Mat3f& lhs, const Mat3f& rhs) {
 		Mat3f res;
 		for (int i = 0; i < 3; i++) {
@@ -159,6 +216,11 @@ namespace Soul {
 			}
 		}
 		return res;	
+	}
+
+
+	Vec3f operator*(const Mat3f& lhs, const Vec3f& rhs) {
+		return Vec3f(dot(lhs.rows[0], rhs), dot(lhs.rows[1], rhs), dot(lhs.rows[2], rhs));
 	}
 
 	void operator*=(Mat3f& lhs, const Mat3f& rhs)
@@ -191,6 +253,13 @@ namespace Soul {
 		cof.elem[2][2] = a * e - b * d;  // I
 
 		return cof;
+	}
+
+	float determinant(const Mat3f& m)
+	{
+		return (m.elem[0][0] * (m.elem[1][1] * m.elem[2][2] - m.elem[1][2] * m.elem[2][1])
+			- m.elem[0][1] * (m.elem[1][0] * m.elem[2][2] - m.elem[1][2] * m.elem[2][0])
+			+ m.elem[0][2] * (m.elem[1][0] * m.elem[2][1] - m.elem[1][1] * m.elem[2][0]));
 	}
 
 	Quaternionf operator*(const Quaternionf& lhs, float scalar) {
@@ -354,6 +423,16 @@ namespace Soul {
 		return res;
 	}
 
+	Mat4f mat4FromMat3(const Mat3f& srcMat)
+	{
+		Mat4f mat;
+		mat.rows[0] = Vec4f(srcMat.rows[0], 0.0f);
+		mat.rows[1] = Vec4f(srcMat.rows[1], 0.0f);
+		mat.rows[2] = Vec4f(srcMat.rows[2], 0.0f);
+		mat.rows[3] = Vec4f(0.0f, 0.0f, 0.0f, 1.0f);
+		return mat;
+	}
+
 	Mat4f mat4FromColumns(Vec4f columns[4]) {
 		Mat4f mat4;
 		for (int i = 0; i < 4; i++) {
@@ -361,6 +440,16 @@ namespace Soul {
 				mat4.elem[i][j] = columns[j].mem[i];
 			}
 		}
+		return mat4;
+	}
+
+	Mat4f mat4FromRows(Vec4f rows[4])
+	{
+		Mat4f mat4;
+		mat4.rows[0] = rows[0];
+		mat4.rows[1] = rows[1];
+		mat4.rows[2] = rows[2];
+		mat4.rows[3] = rows[3];
 		return mat4;
 	}
 
@@ -485,6 +574,14 @@ namespace Soul {
 		return res;
 	}
 
+	Mat4f mat4Perspective(const Mat4f& baseMat, float zNear, float zFar)
+	{
+		Mat4f res = baseMat;
+		res.elem[2][2] = (zNear + zFar) * -1 / (zFar - zNear);
+		res.elem[2][3] = (-2 * zFar * zNear) / (zFar - zNear);
+		return res;
+	}
+
 	Mat4f mat4Ortho(float left, float right, float bottom, float top, float zNear, float zFar)
 	{
 		Mat4f res;
@@ -545,6 +642,24 @@ namespace Soul {
 			res.mem[i] = res.mem[i] * det;
 
 		return res;
+	}
+
+	Mat4f mat4RigidTransformInverse(const Mat4f& matrix)
+	{
+		Mat3f rt = mat3Transpose(mat3UpperLeft(matrix));
+		const Vec3f t = rt * matrix.columns(3).xyz;
+		Mat4f res;
+		res.rows[0] = Vec4f(rt.rows[0], t.x);
+		res.rows[1] = Vec4f(rt.rows[1], t.y);
+		res.rows[2] = Vec4f(rt.rows[2], t.z);
+		res.rows[3] = Vec4f(0, 0, 0, 1.0f);
+		return res;
+	}
+
+	Vec3f project(const Mat4f& mat, const Vec3f& vec)
+	{
+		Vec4f res = mat * Vec4f(vec, 1.0f);
+		return res.xyz / res.w;
 	}
 
 	Mat4f operator+(const Mat4f & lhs, const Mat4f & rhs)
@@ -641,7 +756,17 @@ namespace Soul {
 	}
 
 	AABB aabbTransform(AABB aabb, const Mat4f& transform) {
-		return AABB(transform * aabb.min, transform * aabb.max);
+		Vec3f translation = Vec3f(transform.elem[0][3], transform.elem[1][3], transform.elem[2][3]);
+		AABB result = { translation, translation };
+		for (size_t col = 0; col < 3; ++col) {
+			for (size_t row = 0; row < 3; ++row) {
+				const float a = transform.elem[row][col] * aabb.min.mem[col];
+				const float b = transform.elem[row][col] * aabb.max.mem[col];
+				result.min.mem[row] += a < b ? a : b;
+				result.max.mem[row] += a < b ? b : a;
+			}
+		}
+		return result;
 	}
 
 	Transformf transformIdentity() {

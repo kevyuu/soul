@@ -2,7 +2,7 @@
 
 #include "memory/allocator.h"
 
-namespace Soul::Memory {
+namespace soul::memory {
 
 	class LinearAllocator final : public Allocator {
 	public:

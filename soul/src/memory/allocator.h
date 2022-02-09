@@ -1,15 +1,13 @@
 #pragma once
 
-#include <tuple>
-
 #include "core/type.h"
 #include "core/dev_util.h"
 
-namespace Soul::Memory {
+namespace soul::memory {
 
-	static constexpr soul_size ONE_KILOBYTE = 1024;
-	static constexpr soul_size ONE_MEGABYTE = 1024 * ONE_KILOBYTE;
-	static constexpr soul_size ONE_GIGABYTE = 1024 * ONE_MEGABYTE;
+	constexpr soul_size ONE_KILOBYTE = 1024;
+	constexpr soul_size ONE_MEGABYTE = 1024 * ONE_KILOBYTE;
+	constexpr soul_size ONE_GIGABYTE = 1024 * ONE_MEGABYTE;
 
 	struct Allocation {
 		void* addr = nullptr;
@@ -37,6 +35,7 @@ namespace Soul::Memory {
 			const Allocation allocation = tryAllocate(size, alignment, "untagged");
 			return allocation.addr;
 		}
+
 		virtual void* allocate(soul_size size, soul_size alignment, const char* tag) final {
 			const Allocation allocation = tryAllocate(size, alignment, tag);
 			return allocation.addr;
@@ -55,7 +54,7 @@ namespace Soul::Memory {
 		{
 			SOUL_ASSERT(0, ptr != nullptr, "");
 			ptr->~TYPE();
-			deallocate(ptr, sizeof(TYPE));
+			deallocate(ptr, ptr->class_size());
 		}
 
 		virtual void reset() = 0;

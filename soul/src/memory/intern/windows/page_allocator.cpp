@@ -3,7 +3,7 @@
 #include "memory/allocators/page_allocator.h"
 #include "memory/util.h"
 
-namespace Soul::Memory {
+namespace soul::memory {
 
 	PageAllocator::PageAllocator(const char* name) : Allocator(name) {
 		SYSTEM_INFO sSysInfo;

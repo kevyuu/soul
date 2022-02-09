@@ -22,7 +22,7 @@ static unsigned long randXorshf96() {
 	return z;
 }
 
-namespace Soul::Runtime {
+namespace soul::runtime {
 
 	thread_local ThreadContext* Database::gThreadContext = nullptr;
 	
@@ -44,8 +44,8 @@ namespace Soul::Runtime {
 		SOUL_PROFILE_THREAD_SET_NAME(threadName);
 
 		char tempAllocatorName[512];
-		Memory::LinearAllocator linearAllocator(tempAllocatorName, 20 * Memory::ONE_MEGABYTE, getContextAllocator());
-		TempAllocator tempAllocator(&linearAllocator, Runtime::TempProxy::Config());
+		memory::LinearAllocator linearAllocator(tempAllocatorName, 20 * memory::ONE_MEGABYTE, getContextAllocator());
+		TempAllocator tempAllocator(&linearAllocator, runtime::TempProxy::Config());
 		threadContext->tempAllocator = &tempAllocator;
 
 		while (true) {
@@ -169,7 +169,7 @@ namespace Soul::Runtime {
 		ThreadCount threadCount = config.threadCount;
 		if (threadCount == 0) {
 #ifdef SOUL_USE_STD_HARDWARE_THREAD_COUNT
-			threadCount = Cast<ThreadCount>(std::thread::hardware_concurrency());
+			threadCount = cast<ThreadCount>(std::thread::hardware_concurrency());
 #endif
 			if (threadCount == 0) {
 				threadCount = SOUL_HARDWARE_THREAD_COUNT;
@@ -258,7 +258,7 @@ namespace Soul::Runtime {
 		return _db.threadContexts[getThreadID()];
 	}
 
-	void System::pushAllocator(Memory::Allocator *allocator) {
+	void System::pushAllocator(memory::Allocator *allocator) {
 		SOUL_ASSERT(0, _db.defaultAllocator != nullptr, "");
 		_threadContext().allocatorStack.add(allocator);
 	}
@@ -268,7 +268,7 @@ namespace Soul::Runtime {
 		_threadContext().allocatorStack.pop();
 	}
 
-	Memory::Allocator* System::getContextAllocator() {
+	memory::Allocator* System::getContextAllocator() {
 		if (_threadContext().allocatorStack.empty()) return _db.defaultAllocator;
 		return _threadContext().allocatorStack.back();
 	}

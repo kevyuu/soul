@@ -1,8 +1,8 @@
 #include "runtime/data.h"
 #include "runtime/system.h"
 
-namespace Soul {
-	namespace Runtime {
+namespace soul {
+	namespace runtime {
 
 		void TaskDeque::init() {
 			SOUL_ASSERT_MAIN_THREAD();

@@ -5,11 +5,11 @@
 #include "core/math.h"
 #include "memory/profiler.h"
 
-namespace Soul { namespace Memory {
+namespace soul { namespace memory {
 
 	uint64 HashAddr(const void* addr) {
 		const auto uintAddr = uint64(addr);
-		return hashFNV1((const uint8*) &uintAddr, sizeof(void*));
+		return hash_fnv1((const uint8*) &uintAddr, sizeof(void*));
 	}
 
 	void Profiler::init() {

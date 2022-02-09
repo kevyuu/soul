@@ -6,7 +6,7 @@
 #include "core/dev_util.h"
 #include "core/pool.h"
 
-namespace Soul
+namespace soul
 {
 	// ReSharper disable once CppInconsistentNaming
 	using PackedID = PoolID;
@@ -16,7 +16,7 @@ namespace Soul
 	{
 
 	public:
-		explicit PackedPool(Memory::Allocator* allocator = GetDefaultAllocator());
+		explicit PackedPool(memory::Allocator* allocator = GetDefaultAllocator());
 		PackedPool(const PackedPool& other);
 		PackedPool& operator=(const PackedPool& other);
 		PackedPool(PackedPool&& other) noexcept;
@@ -76,7 +76,7 @@ namespace Soul
 
 		using IndexPool = Pool<soul_size>;
 
-		Memory::Allocator* _allocator = nullptr;
+		memory::Allocator* _allocator = nullptr;
 		IndexPool _internalIndexes;
 		PoolID* _poolIDs = 0;
 		T* _buffer = nullptr;
@@ -86,7 +86,7 @@ namespace Soul
 	};
 
 	template <typename T>
-	PackedPool<T>::PackedPool(Memory::Allocator* allocator) :
+	PackedPool<T>::PackedPool(memory::Allocator* allocator) :
 		_allocator(allocator),
 		_internalIndexes(allocator)
 		{}

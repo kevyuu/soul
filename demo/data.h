@@ -8,7 +8,7 @@
 #include "gpu/gpu.h"
 
 namespace Demo {
-	using namespace Soul;
+	using namespace soul;
 
 	struct Input {
 
@@ -22,7 +22,7 @@ namespace Demo {
 		bool mouseDown[5] = {};
 		bool mouseDragging[5] = {};
 		float mouseWheel = 0.0f;
-		Soul::Vec2f mouseDelta;
+		soul::Vec2f mouseDelta;
 
 		bool keyCtrl = false;
 		bool keyShift = false;
@@ -47,7 +47,7 @@ namespace Demo {
 		virtual void cleanup() = 0;
 		virtual bool update(const Input& input) = 0;
 		virtual void renderPanels() = 0;
-		virtual Vec2ui32 getViewport() = 0;
+		virtual Vec2ui32 getViewport() const = 0;
 		virtual void setViewport(Vec2ui32 viewport) = 0;
 	};
 
@@ -62,7 +62,7 @@ namespace Demo {
 
 		virtual void init() = 0;
 		virtual Scene* getScene() = 0;
-		virtual GPU::TextureNodeID computeRenderGraph(GPU::RenderGraph* renderGraph) = 0;
+		virtual gpu::TextureNodeID computeRenderGraph(gpu::RenderGraph* renderGraph) = 0;
 	};
 
 }

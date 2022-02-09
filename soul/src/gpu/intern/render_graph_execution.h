@@ -3,16 +3,16 @@
 //
 
 #pragma once
-#include "gpu/data.h"
+#include "gpu/type.h"
 #include "memory/allocator.h"
 
-namespace Soul::GPU::impl
+namespace soul::gpu::impl
 {
 
 	struct BufferBarrier {
 		VkPipelineStageFlags stageFlags = 0;
 		VkAccessFlags accessFlags = 0;
-		uint16 bufferInfoIdx = 0;
+		uint32 bufferInfoIdx = 0;
 	};
 
 	struct TextureBarrier {
@@ -20,18 +20,19 @@ namespace Soul::GPU::impl
 		VkAccessFlags accessFlags = 0;
 
 		VkImageLayout layout = VK_IMAGE_LAYOUT_UNDEFINED;
-		uint16 textureInfoIdx = 0;
+		uint32 textureInfoIdx = 0;
+		SubresourceIndex view;
 	};
 
 	struct BufferExecInfo {
 		PassNodeID firstPass = PASS_NODE_ID_NULL;
 		PassNodeID lastPass = PASS_NODE_ID_NULL;
-		BufferUsageFlags usageFlags = 0u;
-		QueueFlags queueFlags = 0;
+		BufferUsageFlags usageFlags;
+		QueueFlags queueFlags;
 		BufferID bufferID;
 
 		VkEvent pendingEvent = VK_NULL_HANDLE;
-		SemaphoreID pendingSemaphore = SEMAPHORE_ID_NULL;
+		SemaphoreID pendingSemaphore = SemaphoreID::Null();
 		VkPipelineStageFlags unsyncWriteStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
 		VkAccessFlags unsyncWriteAccess = 0;
 
@@ -39,43 +40,71 @@ namespace Soul::GPU::impl
 
 		Array<PassNodeID> passes;
 		uint32 passCounter = 0;
+	};
+
+	struct TextureViewExecInfo {
+		VkEvent pendingEvent = VK_NULL_HANDLE;
+		SemaphoreID pendingSemaphore = SemaphoreID::Null();
+		VkPipelineStageFlags unsyncWriteStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+		VkAccessFlags unsyncWriteAccess = 0;
+		VkAccessFlags visibleAccessMatrix[32] = {};
+		Array<PassNodeID> passes;
+		uint32 passCounter = 0;
+		VkImageLayout layout = VK_IMAGE_LAYOUT_UNDEFINED;
 	};
 
 	struct TextureExecInfo {
-		PassNodeID firstPass = PASS_NODE_ID_NULL;
-		PassNodeID lastPass = PASS_NODE_ID_NULL;
-		TextureUsageFlags usageFlags = 0u;
-		QueueFlags queueFlags = 0;
+		PassNodeID firstPass;
+		PassNodeID lastPass;
+		TextureUsageFlags usageFlags;
+		QueueFlags queueFlags;
 		TextureID textureID;
+		TextureViewExecInfo* view = nullptr;
+		uint32 mipLevels = 0;
+		uint32 layers = 0;
 
-		VkEvent pendingEvent = VK_NULL_HANDLE;
-		SemaphoreID pendingSemaphore = SEMAPHORE_ID_NULL;
-		VkPipelineStageFlags unsyncWriteStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-		VkAccessFlags unsyncWriteAccess = 0;
+		[[nodiscard]] soul_size get_view_count() const
+		{
+			return mipLevels * layers;
+		}
 
-		VkAccessFlags visibleAccessMatrix[32] = {};
+		[[nodiscard]] soul_size get_view_index(const SubresourceIndex index) const
+		{
+			return index.get_layer() * mipLevels + index.get_level();
+		}
 
-		Array<PassNodeID> passes;
-		uint32 passCounter = 0;
+		[[nodiscard]] TextureViewExecInfo* get_view(const SubresourceIndex index) const
+		{
+			return view + get_view_index(index);
+		}
+	};
 
+	class PassAdjacencyList
+	{
+
+	private:
+		Array<Array<PassNodeID>> dependencies_;
+		Array<Array<PassNodeID>> dependents_;
+		Array<soul_size> dependency_levels_;
 	};
 
 	struct PassExecInfo {
+		PassNode* passNode = nullptr;
 		Array<BufferBarrier> bufferFlushes;
 		Array<BufferBarrier> bufferInvalidates;
 		Array<TextureBarrier> textureFlushes;
 		Array<TextureBarrier> textureInvalidates;
-
 	};
 
 	class RenderGraphExecution {
 	public:
-		RenderGraphExecution(const RenderGraph* renderGraph, System* system, Memory::Allocator* allocator, 
+		RenderGraphExecution(const RenderGraph* renderGraph, System* system, memory::Allocator* allocator, 
 			CommandQueues& commandQueues, CommandPools& commandPools):
-			_renderGraph(renderGraph), _gpuSystem(system),
-			bufferInfos(allocator), textureInfos(allocator), passInfos(allocator), commandQueues(commandQueues), commandPools(commandPools)
+			render_graph_(renderGraph), gpu_system_(system),
+			buffer_infos_(allocator), texture_infos_(allocator), pass_infos_(allocator), command_queues_(commandQueues), command_pools_(commandPools)
 		{}
 
+		RenderGraphExecution() = delete;
 		RenderGraphExecution(const RenderGraphExecution& other) = delete;
 		RenderGraphExecution& operator=(const RenderGraphExecution& other) = delete;
 
@@ -88,44 +117,46 @@ namespace Soul::GPU::impl
 		void run();
 		void cleanup();
 
-		Array<BufferExecInfo> bufferInfos;
-		Slice<BufferExecInfo> internalBufferInfos;
-		Slice<BufferExecInfo> externalBufferInfos;
-
-		Array<TextureExecInfo> textureInfos;
-		Slice<TextureExecInfo> internalTextureInfos;
-		Slice<TextureExecInfo> externalTextureInfos;
-
-		Array<PassExecInfo> passInfos;
-
-		explicit RenderGraphExecution() = default;
-
-		bool isExternal(const BufferExecInfo& info) const;
-		bool isExternal(const TextureExecInfo& info) const;
-		BufferID getBufferID(BufferNodeID nodeID) const;
-		TextureID getTextureID(TextureNodeID nodeID) const;
-		Buffer* getBuffer(BufferNodeID nodeID) const;
-		Texture* getTexture(TextureNodeID nodeID) const;
-		uint32 getBufferInfoIndex(BufferNodeID nodeID) const;
-		uint32 getTextureInfoIndex(TextureNodeID nodeID) const;
+		[[nodiscard]] bool is_external(const BufferExecInfo& info) const;
+		[[nodiscard]] bool is_external(const TextureExecInfo& info) const;
+		[[nodiscard]] BufferID get_buffer_id(BufferNodeID node_id) const;
+		[[nodiscard]] TextureID get_texture_id(TextureNodeID node_id) const;
+		[[nodiscard]] Buffer* get_buffer(BufferNodeID node_id) const;
+		[[nodiscard]] Texture* get_texture(TextureNodeID node_id) const;
+		[[nodiscard]] uint32 get_buffer_info_index(BufferNodeID node_id) const;
+		[[nodiscard]] uint32 get_texture_info_index(TextureNodeID nodeID) const;
 
 	private:
-		const RenderGraph* _renderGraph;
-		System* _gpuSystem;
+		const RenderGraph* render_graph_;
+		System* gpu_system_;
 
-		EnumArray<PassType, VkEvent> _externalEvents;
-		EnumArray<PassType, EnumArray<PassType, SemaphoreID>> _externalSemaphores;
-		CommandQueues& commandQueues;
-		CommandPools& commandPools;
+		EnumArray<PassType, VkEvent> external_events_;
+		EnumArray<PassType, EnumArray<PassType, SemaphoreID>> external_semaphores_;
+		CommandQueues& command_queues_;
+		CommandPools& command_pools_;
 
-		VkRenderPass _renderPassCreate(uint32 passIndex);
-		VkFramebuffer _framebufferCreate(uint32 passIndex, VkRenderPass renderPass);
-		void _submitExternalSyncPrimitive();
-		void _executePass(uint32 passIndex, VkCommandBuffer commandBuffer);
+		Array<BufferExecInfo> buffer_infos_;
+		Slice<BufferExecInfo> internal_buffer_infos_;
+		Slice<BufferExecInfo> external_buffer_infos_;
 
-		void _initInShaderBuffers(const Array<ShaderBufferReadAccess>& accessList, int index, QueueFlagBits queueFlags);
-		void _initOutShaderBuffers(const Array<ShaderBufferWriteAccess>& accessList, int index, QueueFlagBits queueFlags);
-		void _initShaderTextures(const Array<ShaderTextureReadAccess>& shaderAccessList, int index, QueueFlagBits queueFlags);
-		void _initShaderTextures(const Array<ShaderTextureWriteAccess>& shaderAccessList, int index, QueueFlagBits queueFlags);
+		Array<TextureExecInfo> texture_infos_;
+		Slice<TextureExecInfo> internal_texture_infos_;
+		Slice<TextureExecInfo> external_texture_infos_;
+		Array<TextureViewExecInfo> texture_view_infos_;
+
+		Array<PassExecInfo> pass_infos_;
+		
+		
+
+		[[nodiscard]] VkRenderPass create_render_pass(uint32 pass_index);
+		[[nodiscard]] VkFramebuffer create_framebuffer(uint32 pass_index, VkRenderPass render_pass);
+		void submit_external_sync_primitive();
+		void execute_pass(const uint32 pass_index, VkCommandBuffer command_buffer);
+
+		void init_shader_buffers(const Array<ShaderBufferReadAccess>& access_list, soul_size index, QueueType queue_type);
+		void init_shader_buffers(const Array<ShaderBufferWriteAccess>& access_list, soul_size index, QueueType queue_type);
+		void init_shader_textures(const Array<ShaderTextureReadAccess>& access_list, soul_size index, QueueType queue_type);
+		void init_shader_textures(const Array<ShaderTextureWriteAccess>& access_list, soul_size index, QueueType queue_type);
+
 	};
 }

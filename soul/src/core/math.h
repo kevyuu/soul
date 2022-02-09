@@ -1,9 +1,11 @@
 #pragma once
 
+#include <algorithm>
+
 #include "core/compiler.h"
 #include "core/type.h"
 
-namespace Soul {
+namespace soul {
 
 	namespace Dconst {
 		constexpr double E = 2.71828182845904523536028747135266250;
@@ -56,6 +58,12 @@ namespace Soul {
 	}
 
 	template<typename T>
+	SOUL_NODISCARD constexpr Vec2<T> operator-(const Vec2<T>& vec)
+	{
+		return Vec2<T>(-vec.x, -vec.y);
+	}
+
+	template<typename T>
 	SOUL_NODISCARD constexpr Vec2<T> operator*(const Vec2<T>& lhs, const Vec2<T>& rhs) {
 		return Vec2<T>(lhs.x * rhs.x, lhs.y * rhs.y);
 	}
@@ -78,6 +86,12 @@ namespace Soul {
 	template<typename T>
 	SOUL_NODISCARD constexpr Vec2<T> operator/(const Vec2<T>& lhs, const T rhs) {
 		return Vec2<T>(lhs.x / rhs, lhs.y / rhs);
+	}
+
+	template<typename T>
+	SOUL_NODISCARD constexpr Vec2<T> operator/(const T lhs, const Vec2<T>& rhs)
+	{
+		return Vec2<T>(lhs / rhs.x, lhs / rhs.y);
 	}
 
 	template<typename T>
@@ -181,14 +195,14 @@ namespace Soul {
 	}
 
 	template<typename T>
-	void operator*=(Vec3<T> lhs, T rhs) {
+	void operator*=(Vec3<T>& lhs, T rhs) {
 		lhs.x *= rhs;
 		lhs.y *= rhs;
 		lhs.z *= rhs;
 	}
 
 	template<typename T>
-	void operator/=(Vec3<T> lhs, T rhs) {
+	void operator/=(Vec3<T>& lhs, T rhs) {
 		lhs.x /= rhs;
 		lhs.y /= rhs;
 		lhs.z /= rhs;
@@ -365,7 +379,9 @@ namespace Soul {
 	Quaternionf lerp(const Quaternionf& q1, const Quaternionf& q2, float t);
 
 	Mat4f mat4(const float* data);
+	Mat4f mat4FromMat3(const Mat3f& mat3);
 	Mat4f mat4FromColumns(Vec4f columns[4]);
+	Mat4f mat4FromRows(Vec4f rows[4]);
 	Mat4f mat4Quaternion(const Quaternionf& quaternion);
 	Mat4f mat4Identity();
 	Mat4f mat4Scale(Vec3f scale);
@@ -375,9 +391,12 @@ namespace Soul {
 	Mat4f mat4Transform(const Transformf& transform);
 	Mat4f mat4View(Vec3f position, Vec3f target, Vec3f up);
 	Mat4f mat4Perspective(float fov, float aspectRatio, float near, float far);
+	Mat4f mat4Perspective(const Mat4f& baseMat, float near, float far);
 	Mat4f mat4Ortho(float left, float right, float bottom, float top, float near, float far);
 	Mat4f mat4Transpose(const Mat4f& matrix);
 	Mat4f mat4Inverse(const Mat4f& matrix);
+	Mat4f mat4RigidTransformInverse(const Mat4f& matrix);
+	Vec3f project(const Mat4f& mat, const Vec3f& vec);
 	Mat4f operator+(const Mat4f& lhs, const Mat4f& rhs);
 	Mat4f operator-(const Mat4f& lhs, const Mat4f& rhs);
 	Mat4f operator*(const Mat4f& lhs, const Mat4f& rhs);
@@ -389,9 +408,13 @@ namespace Soul {
 
 	Mat3f mat3Identity();
 	Mat3f mat3Transpose(const Mat3f& matrix);
+	Mat3f mat3UpperLeft(const Mat4f& matrix);
+	Mat3f mat3Inverse(const Mat3f& matrix);
 	Mat3f operator*(const Mat3f& lhs, const Mat3f& rhs);
+	Vec3f operator*(const Mat3f& lhs, const Vec3f& rhs);
 	void operator*=(Mat3f& lhs, const Mat3f& rhs);
 	Mat3f cofactor(const Mat3f& mat);
+	float determinant(const Mat3f& mat);
 
 	AABB aabbCombine(AABB aabb1, AABB aabb2);
 	AABB aabbTransform(AABB aabb, const Mat4f& transform);
@@ -410,12 +433,19 @@ namespace Soul {
 	uint64 roundToNextPowOfTwo(uint64 num);
 
 	uint32 hashMurmur32(const uint8* data, soul_size size);
-	constexpr uint64 hashFNV1(const uint8* data, soul_size size, uint64 initial  = 0xcbf29ce484222325ull) {
+
+	constexpr uint64 hash_fnv1(const uint8* data, soul_size size, uint64 initial  = 0xcbf29ce484222325ull) {
 		uint64 hash = initial;
 		for (uint32 i = 0; i < size; i++) {
 			hash = (hash * 0x100000001b3ull) ^ data[i];
 		}
 		return hash;
+	}
+
+	template <typename T>
+	constexpr uint64 hash_fnv1(const T* data, uint64 initial = 0xcbf29ce484222325ull)
+	{
+		return hash_fnv1(reinterpret_cast<const uint8*>(data), sizeof(data), initial);
 	}
 
 	template <typename T>
@@ -428,6 +458,19 @@ namespace Soul {
 		T p1 = vert1;
 		T m1 = tang1;
 		return s0 * p0 + s1 * m0 * t + s2 * p1 + s3 * m1 * t;
+	}
+
+	template<typename T>
+	inline constexpr T sign(T x) noexcept {
+		return x < T(0) ? T(-1) : T(1);
+	}
+
+	inline int16_t packSnorm16(float v) noexcept {
+		return static_cast<int16_t>(std::round(std::clamp(v, -1.0f, 1.0f) * 32767.0f));
+	}
+
+	inline Vec4i16 packSnorm16(Vec4f v) noexcept {
+		return Vec4i16{ packSnorm16(v.x), packSnorm16(v.y), packSnorm16(v.z), packSnorm16(v.w) };
 	}
 
 };

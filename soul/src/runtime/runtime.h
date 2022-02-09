@@ -4,94 +4,85 @@
 #include "runtime/data.h"
 #include "runtime/system.h"
 
-namespace Soul::Runtime {
+namespace soul::runtime {
 
-	inline void Init(const Config& config) {
+	inline void init(const Config& config) {
 		System::Get().init(config);
 	}
 
-	inline void Shutdown() {
+	inline void shutdown() {
 		System::Get().shutdown();
 	}
 
-	inline void BeginFrame() {
+	inline void begin_frame() {
 		System::Get().beginFrame();
 	}
 
-	template<
-		typename Execute,
-		typename = require<is_lambda_v<Execute, void(TaskID)>>
-	>
-	inline TaskID CreateTask(TaskID parent, Execute&& lambda) {
+	template<execution Execute>
+	inline TaskID create_task(TaskID parent, Execute&& lambda) {
 		return System::Get().taskCreate(parent, std::forward<Execute>(lambda));
 	}
 
-	inline void WaitTask(TaskID taskID) {
+	inline void wait_task(TaskID taskID) {
 		System::Get().taskWait(taskID);
 	}
 
-	inline void RunTask(TaskID taskID) {
+	inline void run_task(TaskID taskID) {
 		System::Get().taskRun(taskID);
 	}
 
-	template<
-		typename Execute,
-		typename = require<is_lambda_v<Execute, void(TaskID)>>
-	>
-	TaskID CreateAndRunTask(TaskID parent, Execute&& lambda) {
-		const TaskID taskID = CreateTask(parent, std::forward<Execute>(lambda));
-		RunTask(taskID);
+	template<execution Execute>
+	TaskID create_and_run_task(TaskID parent, Execute&& lambda) {
+		const TaskID taskID = create_task(parent, std::forward<Execute>(lambda));
+		run_task(taskID);
 		return taskID;
 	}
 
-	template<
-		typename Func,
-		typename = require<is_lambda_v<Func, void(int)>>
-	>
-	inline TaskID ParallelForTaskCreate(TaskID parent, uint32 count, uint32 blockSize, Func&& func) {
+	template<typename Func> requires is_lambda_v<Func, void(int)>
+	inline TaskID parallel_for_task_create(TaskID parent, uint32 count, uint32 blockSize, Func&& func) {
 		return System::Get()._parallelForTaskCreateRecursive(parent, 0, count, blockSize, std::forward<Func>(func));
 	}
 
-	inline uint16 GetThreadId() {
+	inline uint16 get_thread_id() {
 		return System::Get().getThreadID();
 	}
 
-	inline uint16 GetThreadCount() {
+	inline uint16 get_thread_count() {
 		return System::Get().getThreadCount();
 	}
 
-	inline void PushAllocator(Memory::Allocator* allocator) {
+	inline void push_allocator(memory::Allocator* allocator) {
 		System::Get().pushAllocator(allocator);
 	}
 
-	inline void PopAllocator() {
+	inline void pop_allocator() {
 		System::Get().popAllocator();
 	}
 
-	inline Memory::Allocator* GetContextAllocator() {
+	inline memory::Allocator* get_context_allocator() {
 		return System::Get().getContextAllocator();
 	}
 
-	inline TempAllocator* GetTempAllocator() {
+	inline TempAllocator* get_temp_allocator() {
 		return System::Get().getTempAllocator();
 	}
 
-	inline void* Allocate(uint32 size, uint32 alignment) {
+	inline void* allocate(uint32 size, uint32 alignment) {
 		return System::Get().allocate(size, alignment);
 	}
 
-	inline void Deallocate(void* addr, uint32 size) {
+	inline void deallocate(void* addr, uint32 size) {
 		return System::Get().deallocate(addr, size);
 	}
 
 	struct AllocatorInitializer {
 		AllocatorInitializer() = delete;
-		explicit AllocatorInitializer(Memory::Allocator* allocator) {
-			PushAllocator(allocator);
+		explicit AllocatorInitializer(memory::Allocator* allocator) {
+			push_allocator(allocator);
 		}
 
 		void end() {
-			PopAllocator();
+			pop_allocator();
 		}
 	};
 
@@ -99,17 +90,17 @@ namespace Soul::Runtime {
 
 		AllocatorZone() = delete;
 
-		explicit AllocatorZone(Memory::Allocator* allocator) {
-			PushAllocator(allocator);
+		explicit AllocatorZone(memory::Allocator* allocator) {
+			push_allocator(allocator);
 		}
 
 		~AllocatorZone() {
-			PopAllocator();
+			pop_allocator();
 		}
 	};
 
 #define STRING_JOIN2(arg1, arg2) DO_STRING_JOIN2(arg1, arg2)
 #define DO_STRING_JOIN2(arg1, arg2) arg1 ## arg2
 #define SOUL_MEMORY_ALLOCATOR_ZONE(allocator) \
-                Soul::Runtime::AllocatorZone STRING_JOIN2(allocatorZone, __LINE__)(allocator)
+                soul::runtime::AllocatorZone STRING_JOIN2(allocatorZone, __LINE__)(allocator)
 }

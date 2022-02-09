@@ -7,7 +7,7 @@
 #include "memory/allocator.h"
 #include "memory/util.h"
 
-namespace Soul::Memory {
+namespace soul::memory {
 
 	struct AllocateParam {
 		soul_size size = 0;

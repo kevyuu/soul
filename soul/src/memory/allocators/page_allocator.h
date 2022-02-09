@@ -2,7 +2,7 @@
 
 #include "memory/allocator.h"
 
-namespace Soul::Memory {
+namespace soul::memory {
 
 	class PageAllocator final : public Allocator {
 	public:

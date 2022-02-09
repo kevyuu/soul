@@ -15,21 +15,21 @@
 #include "memory/allocators/proxy_allocator.h"
 #include "memory/allocators/malloc_allocator.h"
 
-namespace Soul::Runtime
+namespace soul::runtime
 {
 	using ThreadCount = uint16;
 
-	using TempProxy = Memory::NoOpProxy;
-	using TempAllocator = Memory::ProxyAllocator<Memory::LinearAllocator, TempProxy>;
+	using TempProxy = memory::NoOpProxy;
+	using TempAllocator = memory::ProxyAllocator<memory::LinearAllocator, TempProxy>;
 
-	using DefaultAllocatorProxy = Memory::MultiProxy<
-		Memory::MutexProxy,
-		Memory::ProfileProxy,
-		Memory::CounterProxy,
-		Memory::ClearValuesProxy,
-		Memory::BoundGuardProxy>;
-	using DefaultAllocator = Memory::ProxyAllocator<
-		Memory::MallocAllocator,
+	using DefaultAllocatorProxy = memory::MultiProxy<
+		memory::MutexProxy,
+		memory::ProfileProxy,
+		memory::CounterProxy,
+		memory::ClearValuesProxy,
+		memory::BoundGuardProxy>;
+	using DefaultAllocator = memory::ProxyAllocator<
+		memory::MallocAllocator,
 		DefaultAllocatorProxy>;
 
 	struct Config {
@@ -120,7 +120,7 @@ namespace Soul::Runtime
 
 		uint16 threadIndex = 0;
 
-		Array<Memory::Allocator*> allocatorStack{nullptr};
+		Array<memory::Allocator*> allocatorStack{nullptr};
 		TempAllocator* tempAllocator = nullptr;
 	};
 
@@ -140,7 +140,7 @@ namespace Soul::Runtime
 		soul_size activeTaskCount = 0;
 		ThreadCount threadCount = 0;
 
-		Memory::Allocator* defaultAllocator = nullptr;
+		memory::Allocator* defaultAllocator = nullptr;
 		soul_size tempAllocatorSize = 0;
 
 		Database() : threadContexts(nullptr) {}
@@ -162,5 +162,9 @@ namespace Soul::Runtime
 		uint32 minCount;
 		ParallelForFunc func;
 	};
+
+
+	template<typename T>
+	concept execution = is_lambda_v<T, void(TaskID)>;
 
 }

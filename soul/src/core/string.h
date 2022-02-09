@@ -4,15 +4,15 @@
 #include "core/type.h"
 #include "memory/allocator.h"
 
-namespace Soul {
+namespace soul {
 
 	class String {
 
 	public:
 
-		String(Memory::Allocator* allocator, uint64 initialCapacity);
-		String(Memory::Allocator* allocator, char*);
-		String(Memory::Allocator* allocator, const char*);
+		String(memory::Allocator* allocator, uint64 initialCapacity);
+		String(memory::Allocator* allocator, char*);
+		String(memory::Allocator* allocator, const char*);
 
 		String();
 		String(char*);
@@ -38,7 +38,7 @@ namespace Soul {
 		SOUL_NODISCARD char* data() const { return _data; }
 
 	private:
-		Memory::Allocator* _allocator;
+		memory::Allocator* _allocator;
 		soul_size _capacity;
 		soul_size _size; // string size, not counting NULL
 		char* _data;

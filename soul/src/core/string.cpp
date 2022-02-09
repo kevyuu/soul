@@ -5,28 +5,28 @@
 #include "core/string.h"
 #include "runtime/runtime.h"
 
-namespace Soul {
+namespace soul {
 
-	String::String(Memory::Allocator* allocator, uint64 initialCapacity) :
+	String::String(memory::Allocator* allocator, uint64 initialCapacity) :
 		_allocator(allocator), _capacity(0),
 		_size(0), _data(nullptr)
 	{
 		reserve(initialCapacity);
 	}
 
-	String::String(Memory::Allocator* allocator, char* str) : String(allocator, strlen(str) + 1) {
+	String::String(memory::Allocator* allocator, char* str) : String(allocator, strlen(str) + 1) {
 		_size = _capacity - 1;
 		memcpy(_data, str, _capacity * sizeof(char));
 	}
 
-	String::String(Memory::Allocator* allocator, const char* str) : String(allocator, strlen(str) + 1) {
+	String::String(memory::Allocator* allocator, const char* str) : String(allocator, strlen(str) + 1) {
 		_size = _capacity - 1;
 		memcpy(_data, str, _capacity * sizeof(char));
 	}
 
-	String::String() : String(Runtime::GetContextAllocator(), uint64(0)) {}
-	String::String(char* str) : String(Runtime::GetContextAllocator(), str) {}
-	String::String(const char* str) : String(Runtime::GetContextAllocator(), str) {}
+	String::String() : String(runtime::get_context_allocator(), uint64(0)) {}
+	String::String(char* str) : String(runtime::get_context_allocator(), str) {}
+	String::String(const char* str) : String(runtime::get_context_allocator(), str) {}
 
 	String::String(const String& rhs) {
 		_allocator = rhs._allocator;

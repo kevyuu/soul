@@ -1,6 +1,6 @@
 #include "memory/allocators/malloc_allocator.h"
 
-namespace Soul::Memory {
+namespace soul::memory {
 
 	MallocAllocator::MallocAllocator(const char* name) noexcept : Allocator(name) {}
 

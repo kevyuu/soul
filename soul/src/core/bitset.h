@@ -5,11 +5,11 @@
 #include "core/type.h"
 #include "memory/allocator.h"
 
-namespace Soul {
+namespace soul {
 
 	class BitSet {
 	public:
-		explicit BitSet(Memory::Allocator* allocator = GetDefaultAllocator());
+		explicit BitSet(memory::Allocator* allocator = GetDefaultAllocator());
 		BitSet(const BitSet& other);
 		BitSet& operator=(const BitSet& other);
 		BitSet(BitSet&& other) noexcept;
@@ -26,15 +26,15 @@ namespace Soul {
 
 	private:
 	    using BitUnit = uint8;
-		Memory::Allocator* _allocator;
-		BitUnit* _bitTable = nullptr;
-		soul_size _size = 0;
+		memory::Allocator* allocator_;
+		BitUnit* bit_table_ = nullptr;
+		soul_size size_ = 0;
 
 		static constexpr soul_size BIT_TABLE_SHIFT = 3;
-		static_assert(sizeof(*_bitTable) * 8 == 1 << BIT_TABLE_SHIFT);
+		static_assert(sizeof(*bit_table_) * 8 == 1 << BIT_TABLE_SHIFT);
 
-		SOUL_NODISCARD static soul_size ByteCount(soul_size size);
-		SOUL_NODISCARD static soul_size TableIndex(soul_size index);
-		SOUL_NODISCARD static soul_size TableOffset(soul_size index);
+		SOUL_NODISCARD static soul_size byte_count(soul_size size);
+		SOUL_NODISCARD static soul_size table_index(soul_size index);
+		SOUL_NODISCARD static soul_size table_offset(soul_size index);
 	};
 }

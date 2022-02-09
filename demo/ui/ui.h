@@ -189,7 +189,7 @@ namespace Demo {
 			if (isMouseHoverScene) {
 				memcpy(input.mouseDown, io.MouseDown, sizeof(io.MouseDown));
 				input.mouseWheel = io.MouseWheel;
-				input.mouseDelta = Soul::Vec2f(io.MouseDelta.x, io.MouseDelta.y);
+				input.mouseDelta = soul::Vec2f(io.MouseDelta.x, io.MouseDelta.y);
 				for (uint64 buttonIdx = 0; buttonIdx < Input::MOUSE_BUTTON_COUNT; buttonIdx++) {
 					input.mouseDragging[buttonIdx] = ImGui::IsMouseDragging(buttonIdx);
 				}

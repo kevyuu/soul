@@ -1,7 +1,7 @@
 #pragma once
 
 #include "core/type_traits.h"
-#include "gpu/data.h"
+#include "gpu/type.h"
 #include "gpu/render_graph.h"
 
 #if defined(SOUL_ASSERT_ENABLE)
@@ -10,14 +10,14 @@
 #define SOUL_VK_CHECK(result, message, ...) result
 #endif
 
-namespace Soul::GPU
+namespace soul::gpu
 {
 
 	class GraphicBaseNode;
 
 	class System {
 	public:
-		explicit System(Memory::Allocator* allocator) : _db(allocator) {}
+		explicit System(memory::Allocator* allocator) : _db(allocator) {}
 
 		struct Config {
 			void* windowHandle = nullptr;
@@ -28,58 +28,63 @@ namespace Soul::GPU
 		};
 
 		void init(const Config& config);
-		void _frameContextInit(const System::Config& config);
+		void init_frame_context(const System::Config& config);
 
 		void shutdown();
 
-		BufferID bufferCreate(const BufferDesc& desc);
-		BufferID bufferCreate(const BufferDesc& desc, const void* data);
-		void bufferFinalize(BufferID bufferID);
-		void bufferDestroy(BufferID bufferID);
-		impl::Buffer* _bufferPtr(BufferID bufferID);
-		const impl::Buffer& _bufferRef(BufferID bufferID);
+		BufferID create_buffer(const BufferDesc& desc);
+		BufferID create_buffer(const BufferDesc& desc, const void* data);
+		void finalize_buffer(BufferID buffer_id);
+		void destroy_buffer(BufferID bufferID);
+		impl::Buffer* get_buffer_ptr(BufferID bufferID);
+		const impl::Buffer& get_buffer(BufferID bufferID) const;
 
-		TextureID textureCreate(const TextureDesc& desc);
-		TextureID textureCreate(const TextureDesc& desc, const TextureLoadDesc& loadDesc);
-		TextureID textureCreate(const TextureDesc& desc, ClearValue clearValue);
-		void textureFinalize(TextureID textureID, TextureUsageFlags usageFlags);
+		TextureID create_texture(const TextureDesc& desc);
+		TextureID create_texture(const TextureDesc& desc, const TextureLoadDesc& load_desc);
+		TextureID create_texture(const TextureDesc& desc, ClearValue clear_value);
+		void finalize_texture(TextureID texture_id, TextureUsageFlags usage_flags);
+		uint32 get_texture_mip_levels(TextureID texture_id) const;
+		const TextureDesc& get_texture_desc(const TextureID texture_id) const;
+		
+		void destroy_texture(TextureID textureID);
+		impl::Texture* get_texture_ptr(TextureID texture_id);
+		const impl::Texture& get_texture(TextureID texture_id) const;
+		VkImageView get_texture_view(TextureID texture_id, uint32 level, uint32 layer = 0);
+		VkImageView get_texture_view(TextureID texture_id, SubresourceIndex subresource_index);
+		VkImageView get_texture_view(TextureID texture_id, const std::optional<SubresourceIndex> subresource);
 
-		TextureID _textureExportCreate(TextureID srcTextureID);
-		void textureDestroy(TextureID textureID);
-		impl::Texture* _texturePtr(TextureID textureID);
-		const impl::Texture& _textureRef(TextureID textureID);
-		VkImageView _textureGetMipView(TextureID textureID, uint32 level);
+		ShaderID create_shader(const ShaderDesc& desc, ShaderStage stage);
+		void destroy_shader(ShaderID shader_id);
+		impl::Shader* get_shader_ptr(ShaderID shader_id);
 
-		ShaderID shaderCreate(const ShaderDesc& desc, ShaderStage stage);
-		void shaderDestroy(ShaderID shaderID);
-		impl::Shader* _shaderPtr(ShaderID shaderID);
+		VkDescriptorSetLayout request_descriptor_layout(const impl::DescriptorSetLayoutKey& key);
 
-		VkDescriptorSetLayout _descriptorSetLayoutRequest(const impl::DescriptorSetLayoutKey& key);
+		ProgramID request_program(const ProgramDesc& key);
+		impl::Program* get_program_ptr(ProgramID program_id);
+		const impl::Program& get_program(ProgramID program_id);
 
-		ProgramID programRequest(const ProgramDesc& key);
-		impl::Program* _programPtr(ProgramID programID);
-		const impl::Program& _programRef(ProgramID programID);
 
-		VkPipeline _pipelineCreate(const ComputeBaseNode& node, ProgramID programID);
+		PipelineStateID request_pipeline_state(const GraphicPipelineStateDesc& key, VkRenderPass renderPass, const TextureSampleCount sample_count);
+		PipelineStateID request_pipeline_state(const ComputePipelineStateDesc& key);
+		impl::PipelineState* get_pipeline_state_ptr(PipelineStateID pipeline_state_id);
+		const impl::PipelineState& get_pipeline_state_ref(PipelineStateID pipeline_state_id);
+		[[nodiscard]] impl::PipelineState get_pipeline_state(PipelineStateID pipeline_state_id);
 
-		PipelineStateID _pipelineStateRequest(const PipelineStateDesc& key, VkRenderPass renderPass);
-		impl::PipelineState* _pipelineStatePtr(PipelineStateID pipelineStateID);
-		const impl::PipelineState& _pipelineStateRef(PipelineStateID pipelineStateID);
+		SamplerID request_sampler(const SamplerDesc& desc);
 
-		SamplerID samplerRequest(const SamplerDesc& desc);
+		ShaderArgSetID request_shader_arg_set(const ShaderArgSetDesc& desc);
+		const impl::ShaderArgSet& get_shader_arg_set_ref(ShaderArgSetID argSetID);
+		impl::ShaderArgSet get_shader_arg_set(ShaderArgSetID arg_set_id);
 
-		ShaderArgSetID _shaderArgSetRequest(const ShaderArgSetDesc& desc);
-		const impl::ShaderArgSet& _shaderArgSetRef(ShaderArgSetID argSetID);
+		SemaphoreID create_semaphore();
+		void reset_semaphore(SemaphoreID ID);
+		void destroy_semaphore(SemaphoreID id);
+		impl::Semaphore* get_semaphore_ptr(SemaphoreID id);
 
-		SemaphoreID _semaphoreCreate();
-		void _semaphoreReset(SemaphoreID ID);
-		void _semaphoreDestroy(SemaphoreID id);
-		impl::Semaphore* _semaphorePtr(SemaphoreID id);
+		VkEvent create_event();
+		void destroy_event(VkEvent event);
 
-		VkEvent _eventCreate();
-		void _eventDestroy(VkEvent event);
-
-		void renderGraphExecute(const RenderGraph& renderGraph);
+		void execute(const RenderGraph& renderGraph);
 
 		void frameFlush();
 		void _frameBegin();
@@ -88,18 +93,16 @@ namespace Soul::GPU
 		Vec2ui32 getSwapchainExtent();
 		TextureID getSwapchainTexture();
 
-		void _surfaceCreate(void* windowHandle, VkSurfaceKHR* surface);
+		void create_surface(void* windowHandle, VkSurfaceKHR* surface);
 
-		impl::_FrameContext& _frameContext();
+		impl::_FrameContext& get_frame_context();
 
-		VkRenderPass _renderPassRequest(const impl::RenderPassKey& key);
-		VkRenderPass _renderPassCreate(const VkRenderPassCreateInfo& info);
-		void _renderPassDestroy(VkRenderPass renderPass);
+		VkRenderPass request_render_pass(const impl::RenderPassKey& key);
 
-		VkFramebuffer _framebufferCreate(const VkFramebufferCreateInfo& info);
-		void _framebufferDestroy(VkFramebuffer framebuffer);
+		VkFramebuffer create_framebuffer(const VkFramebufferCreateInfo& info);
+		void destroy_framebuffer(VkFramebuffer framebuffer);
 
-		impl::QueueData _getQueueDataFromQueueFlags(QueueFlags flags);
+		impl::QueueData get_queue_data_from_queue_flags(QueueFlags flags) const;
 
 		impl::Database _db;
 	};

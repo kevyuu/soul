@@ -5,7 +5,6 @@
 // ReSharper disable CppInconsistentNaming
 #pragma once
 
-#include <algorithm>
 #include <cstddef>
 #include <cstdint>
 #include <limits>
@@ -37,12 +36,9 @@ typedef uint64_t soul_size;
 #define SOUL_BIT_COUNT(type) (sizeof(type) * 8)
 #define SOUL_UTYPE_MAX(type) ((1u << SOUL_BIT_COUNT(type)) - 1)
 
-namespace Soul {
+namespace soul {
 
-	template <
-		typename T,
-		typename = require<is_numeric_v<T>>
-	>
+	template <arithmetic T>
 	struct Vec2 {
 		T x = 0;
 		T y = 0;
@@ -51,10 +47,7 @@ namespace Soul {
 		constexpr Vec2(T x, T y) noexcept : x(x), y(y) {}
 	};
 
-	template <
-		typename T,
-		typename = require<is_numeric_v<T>>
-	>
+	template <arithmetic T>
 	struct Vec3 {
 		union {
 			struct { T x, y, z; };
@@ -63,14 +56,12 @@ namespace Soul {
 		};
 
 		constexpr Vec3() noexcept : x(0), y(0), z(0) {}
+		constexpr Vec3(T val) noexcept : x(val), y(val), z(val) {}
 		constexpr Vec3(T x, T y, T z) noexcept : x(x), y(y), z(z) {}
 		constexpr explicit Vec3(const T* val) noexcept : x(val[0]), y(val[1]), z(val[2]) {}
 	};
 
-	template <
-		typename T,
-		typename = require<is_numeric_v<T>>
-	>
+	template <arithmetic T>
 	struct Vec4 {
 		union {
 			struct { T x, y, z, w; };
@@ -80,8 +71,9 @@ namespace Soul {
 		};
 
 		constexpr Vec4() noexcept : x(0), y(0), z(0), w(0) {}
+		constexpr Vec4(T val) noexcept : x(val), y(val), z(val), w(val) {}
 		constexpr Vec4(T x, T y, T z, T w) noexcept : x(x), y(y), z(z), w(w) {}
-		constexpr Vec4(Vec3<T> xyz, T w) noexcept : xyz(xyz), w(w) {}
+		constexpr Vec4(Vec3<T> xyz, T w) noexcept : x(xyz.x), y(xyz.y), z(xyz.z), w(w) {}
 		constexpr explicit Vec4(const T* val) noexcept : x(val[0]), y(val[1]), z(val[2]), w(val[3]) {}
 	};
 
@@ -89,8 +81,13 @@ namespace Soul {
 	using Vec3f = Vec3<float>;
 	using Vec4f = Vec4<float>;
 
+	using Vec2ui8 = Vec2<uint8>;
+	using Vec4ui8 = Vec4<uint8>;
+
 	using Vec2ui16 = Vec2<uint16>;
 	using Vec3ui16 = Vec3<uint16>;
+
+	using Vec4i16 = Vec4<int16>;
 
 	using Vec2ui32 = Vec2<uint32>;
 	using Vec3ui32 = Vec3<uint32>;
@@ -100,10 +97,7 @@ namespace Soul {
 	using Vec3i32 = Vec3<int32>;
 	using Vec4i32 = Vec4<int32>;
 
-	template <
-		typename T,
-		typename = require<is_numeric_v<T>>
-	>
+	template <arithmetic T>
 	struct Quaternion {
 		union {
 			struct { T x, y, z, w; };
@@ -137,6 +131,8 @@ namespace Soul {
 			Vec4f rows[4];
 		};
 		constexpr Mat4f() noexcept : mem() {}
+
+		Vec4f columns(soul_size idx) const { return Vec4f(elem[0][idx], elem[1][idx], elem[2][idx], elem[3][idx]); }
 	};
 
 	struct Mat3f {
@@ -150,9 +146,11 @@ namespace Soul {
 			srcMat.elem[0][0], srcMat.elem[0][1], srcMat.elem[0][2],
 			srcMat.elem[1][0], srcMat.elem[1][1], srcMat.elem[1][2],
 			srcMat.elem[2][0], srcMat.elem[2][1], srcMat.elem[2][2] } {}
+
+		Vec3f columns(soul_size idx) const { return Vec3f(elem[0][idx], elem[1][idx], elem[2][idx]); }
 	};
 
-	struct GLSLMat3f {
+	struct alignas(16) GLSLMat3f {
 		
 		static constexpr int FLOAT_COUNT = 12;
 		union {
@@ -192,58 +190,127 @@ namespace Soul {
 	};
 
 	struct AABB {
-		Vec3f min = Vec3f(FLT_MAX, FLT_MAX, FLT_MAX);
-		Vec3f max = Vec3f(FLT_MIN, FLT_MIN, FLT_MIN);
+		Vec3f min = Vec3f(std::numeric_limits<float>::max());
+		Vec3f max = Vec3f(std::numeric_limits<float>::lowest());
 
 		AABB() = default;
 		AABB(const Vec3f& min, const Vec3f& max) noexcept : min{min}, max{max} {}
+		bool isEmpty() const { return (min.x >= max.x || min.y >= max.y || min.z >= max.z); }
+		bool isInside(const Vec3f& point) const
+		{
+			return (point.x >= min.x && point.x <= max.x) && (point.y >= min.y && point.y <= max.y) && (point.z >= min.z && point.z <= max.z);
+		}
+
+		struct Corners
+		{
+			static constexpr soul_size COUNT = 8;
+			Vec3f vertices[COUNT];
+		};
+
+		Corners getCorners() const
+		{
+			return {
+				Vec3f(min.x, min.y, min.z),
+				Vec3f(min.x, min.y, max.z),
+				Vec3f(min.x, max.y, min.z),
+				Vec3f(min.x, max.y, max.z),
+				Vec3f(max.x, min.y, min.z),
+				Vec3f(max.x, min.y, max.z),
+				Vec3f(max.x, max.y, min.z),
+				Vec3f(max.x, max.y, max.z)
+			};
+		}
 
 	};
+
+	template<
+		typename PointerDst,
+		typename PointerSrc,
+		SOUL_REQUIRE(is_pointer_v<PointerDst>),
+		SOUL_REQUIRE(is_pointer_v<PointerSrc>)
+	>
+	constexpr PointerDst cast(PointerSrc srcPtr)
+	{
+		using Dst = std::remove_pointer_t<PointerDst>;
+		if constexpr (!is_same_v<PointerDst, void*>) {
+			SOUL_ASSERT(0, reinterpret_cast<uintptr>(srcPtr) % alignof(Dst) == 0, "Source pointer is not aligned in PointerDst alignment!");
+		}
+		return (PointerDst)srcPtr;
+	}
+
+	template<
+		typename IntegralDst,
+		typename IntegralSrc,
+		SOUL_REQUIRE(is_integral_v<IntegralDst>),
+		SOUL_REQUIRE(is_integral_v<IntegralSrc>)
+	>
+	constexpr IntegralDst cast(IntegralSrc src) {
+		SOUL_ASSERT(0, static_cast<uint64>(src) <= std::numeric_limits<IntegralDst>::max(), "Source value is larger than the destintation type maximum!");
+		SOUL_ASSERT(0, static_cast<int64>(src) >= std::numeric_limits<IntegralDst>::min(), "Source value is smaller than the destination type minimum!");
+		return IntegralDst(src);
+	}
+
+	template <scoped_enum E>
+	constexpr auto to_underlying(E e) noexcept
+	{
+		return static_cast<std::underlying_type_t<E>>(e);
+	}
 
 	template <
 		typename ResourceType,
 		typename IDType,
-		IDType NULLVAL = std::numeric_limits<IDType>::max()
+		IDType NullValue = std::numeric_limits<IDType>::max()
 	>
 	struct ID {
-		using Type = IDType;
+
+		using store_type = IDType;
 		IDType id;
 
-		constexpr ID() : id(NULLVAL) {}
+		constexpr ID() : id(NullValue) {}
 		constexpr explicit ID(IDType id) : id(id) {}
+
+		template<std::integral Integral>
+		constexpr explicit ID(Integral id) : id(soul::cast<IDType>(id)) {}
+
 		bool operator==(const ID& other) const { return other.id == id; }
 		bool operator!=(const ID& other) const { return other.id != id; }
 		bool operator<(const ID& other) const { return id < other.id; }
 		bool operator<=(const ID& other) const { return id <= other.id; }
-		SOUL_NODISCARD bool isNull() const { return id == NULLVAL; }
+		[[nodiscard]] bool is_null() const { return id == NullValue; }
+		[[nodiscard]] bool is_valid() const { return id != NullValue; }
+
+		static constexpr ID Null() {
+			return ID(NullValue);
+		}
 	};
 
-	template<typename T>
+	template<counted_scoped_enum Enum>
 	class EnumIter {
+
+		using store_type = std::underlying_type_t<Enum>;
 
 	public:
 		class Iterator {
 		public:
-			explicit Iterator(uint64 index): _index(index) {}
-			Iterator operator++() { ++_index; return *this; }
-			bool operator!=(const Iterator& other) const { return _index != other._index; }
-			T operator*() const { return T(_index); }
+			constexpr explicit Iterator(store_type index): index_(index) {}
+			constexpr Iterator operator++() { ++index_; return *this; }
+			constexpr bool operator!=(const Iterator& other) const { return index_ != other.index_; }
+			constexpr Enum operator*() const { return Enum(index_); }
 		private:
-			uint64 _index;
+			store_type index_;
 		};
 		SOUL_NODISCARD Iterator begin() const { return Iterator(0);}
-		SOUL_NODISCARD Iterator end() const { return Iterator(uint64(T::COUNT)); }
+		SOUL_NODISCARD Iterator end() const { return Iterator(to_underlying(Enum::COUNT)); }
+
+		constexpr EnumIter() = default;
 
 		static EnumIter Iterates() {
 			return EnumIter();
 		}
 
 		static uint64 Count() {
-			return uint64(T::COUNT);
+			return to_underlying(Enum::COUNT);
 		}
-
-	private:
-		EnumIter() = default;
 
 	};
 
@@ -287,34 +354,11 @@ namespace Soul {
 		}
 	}
 
-	
-	template<
-		typename PointerDst,
-		typename PointerSrc,
-		SOUL_REQUIRE(is_pointer_v<PointerDst>),
-		SOUL_REQUIRE(is_pointer_v<PointerSrc>)
-	>
-	PointerDst Cast(PointerSrc srcPtr)
+	template <std::integral Integral, counted_scoped_enum Enum>
+	constexpr auto operator<<(Integral integral, Enum e)
 	{
-		using Dst = std::remove_pointer_t<PointerDst>;
-		if constexpr (!is_same_v<PointerDst, void*>) {
-			SOUL_ASSERT(0, uintptr(srcPtr) % alignof(Dst) == 0, "Source pointer is not aligned in PointerDst alignment!");
-		}
-		return (PointerDst)srcPtr;
+		using ReturnType = min_uint_t<1u << to_underlying(Enum::COUNT)>;
+		return static_cast<ReturnType>(1u << to_underlying(e));
 	}
-
-	template<
-		typename IntegralDst,
-		typename IntegralSrc,
-		SOUL_REQUIRE(is_integral_v<IntegralDst>),
-		SOUL_REQUIRE(is_integral_v<IntegralSrc>)
-	>
-	IntegralDst Cast(IntegralSrc src) {
-		SOUL_ASSERT(0, uint64(src) <= std::numeric_limits<IntegralDst>::max(), "Source value is larger than the destintation type maximum!");
-		SOUL_ASSERT(0, int64(src) >= std::numeric_limits<IntegralDst>::min(), "Source value is smaller than the destination type minimum!");
-		return IntegralDst(src);
-	}
-
-
 }
 

@@ -5,13 +5,13 @@
 #include "core/dev_util.h"
 #include "runtime/runtime.h"
 
-namespace Soul {
+namespace soul {
 	
 	template <typename KEYTYPE, typename VALTYPE>
 	class HashMap {
 
 	public:
-		explicit HashMap(Memory::Allocator* allocator = GetDefaultAllocator()) : _allocator(allocator) {}
+		explicit HashMap(memory::Allocator* allocator = GetDefaultAllocator()) : _allocator(allocator) {}
 		HashMap(const HashMap& other);
 		HashMap& operator=(const HashMap& other);
 		HashMap(HashMap&& other) noexcept;
@@ -51,7 +51,7 @@ namespace Soul {
 
 		static constexpr soul_size VALTYPE_SIZE = sizeof(VALTYPE);  // NOLINT(bugprone-sizeof-expression)
 
-		Memory::Allocator* _allocator = nullptr;
+		memory::Allocator* _allocator = nullptr;
 		Index * _indexes = nullptr;
 		VALTYPE* _values = nullptr;
 

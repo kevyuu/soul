@@ -20,7 +20,7 @@ inline char* LoadFile(const char* filepath) {
 	return string;
 }
 
-inline char* LoadFile(const char* filepath, Soul::Memory::Allocator* allocator) {
+inline char* LoadFile(const char* filepath, soul::memory::Allocator* allocator) {
 	FILE* f = fopen(filepath, "rb");
 	fseek(f, 0, SEEK_END);
 	long fsize = ftell(f);
@@ -34,3 +34,9 @@ inline char* LoadFile(const char* filepath, Soul::Memory::Allocator* allocator) 
 
 	return string;
 }
+
+// Returns the max number of levels for a texture of given dimensions
+static inline uint8 MaxLevelCount(uint32 width, uint32 height) noexcept {
+	return std::max(1, std::ilogbf(std::max(width, height)) + 1);
+}
+

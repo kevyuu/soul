@@ -16,7 +16,7 @@ namespace Demo {
 
 			union Val {
 
-				Soul::GPU::TextureNodeID renderGraphTex = Soul::GPU::TEXTURE_NODE_ID_NULL;
+				soul::gpu::TextureNodeID renderGraphTex = soul::gpu::TEXTURE_NODE_ID_NULL;
 				ImTextureID imTextureID;
 
 				Val() {};
@@ -27,7 +27,7 @@ namespace Demo {
 			SoulImTexture() = default;
 
 
-			SoulImTexture(Soul::GPU::TextureNodeID texNodeID) {
+			SoulImTexture(soul::gpu::TextureNodeID texNodeID) {
 				val.renderGraphTex = texNodeID;
 			}
 
@@ -39,7 +39,7 @@ namespace Demo {
 				return val.imTextureID;
 			}
 
-			Soul::GPU::TextureNodeID getTextureNodeID() {
+			soul::gpu::TextureNodeID getTextureNodeID() {
 				return val.renderGraphTex;
 			}
 
@@ -48,7 +48,7 @@ namespace Demo {
 
 		struct Store {
 			Scene* scene;
-			Soul::GPU::System* gpuSystem;
+			soul::gpu::System* gpuSystem;
 
 			SoulImTexture sceneTex;
 			SoulImTexture fontTex;

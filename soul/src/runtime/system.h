@@ -4,9 +4,10 @@
 #include "core/type_traits.h"
 #include "runtime/data.h"
 
-#define SOUL_ASSERT_MAIN_THREAD() SOUL_ASSERT(0, Runtime::System::Get().getThreadID() == 0, "This method is not thread safe. Please only call it only from main thread!")
+#define SOUL_ASSERT_MAIN_THREAD() SOUL_ASSERT(0, runtime::System::Get().getThreadID() == 0, "This method is not thread safe. Please only call it only from main thread!")
 
-namespace Soul { namespace Runtime {
+namespace soul::runtime
+{
 
 	class System {
 	public:
@@ -30,15 +31,12 @@ namespace Soul { namespace Runtime {
 
 		void beginFrame(); 
 
-		template<
-			typename EXECUTE,
-			typename = require<is_lambda_v<EXECUTE, void(TaskID)>>
-		>
+		template<execution EXECUTE>
 		TaskID taskCreate(TaskID parent, EXECUTE&& lambda) {
 			static_assert(sizeof lambda <= sizeof(Task::storage),
-						  "Lambda size is too big."
-						  "Consider increase the storage size of the"
-						  "task or dynamically allocate the memory.");
+				"Lambda size is too big."
+				"Consider increase the storage size of the"
+				"task or dynamically allocate the memory.");
 
 			static auto call = [](TaskID taskID, void* data) {
 				EXECUTE& lambda = *((EXECUTE*)data);
@@ -57,8 +55,8 @@ namespace Soul { namespace Runtime {
 			using TaskData = ParallelForTaskData<FUNC>;
 
 			static_assert(sizeof(TaskData) <= sizeof(Task::storage),
-						  "ParallelForTaskData size is too big. TaskData = %d"
-						  "Consider to increase the storage size of the task.");
+				"ParallelForTaskData size is too big. TaskData = %d"
+				"Consider to increase the storage size of the task.");
 
 			static auto parallelFunc = [](TaskID taskID, void* data) {
 				TaskData& taskData = (*(TaskData*)data);
@@ -84,10 +82,7 @@ namespace Soul { namespace Runtime {
 			return taskID;
 		}
 
-		template<
-			typename FUNC,
-			typename = require<is_lambda_v<FUNC, void(int)>>
-		>
+		template<typename FUNC> requires is_lambda_v<FUNC, void(int)>
 		TaskID parallelForTaskCreate(TaskID parent, uint32 count, uint32 blockSize, FUNC&& func) {
 			return _parallelForTaskCreateRecursive(parent, 0, count, blockSize, std::forward<FUNC>(func));
 		}
@@ -104,9 +99,9 @@ namespace Soul { namespace Runtime {
 			return instance;
 		}
 
-		void pushAllocator(Memory::Allocator* allocator);
+		void pushAllocator(memory::Allocator* allocator);
 		void popAllocator();
-		Memory::Allocator* getContextAllocator();
+		memory::Allocator* getContextAllocator();
 		void* allocate(uint32 size, uint32 alignment);
 		void deallocate(void* addr, uint32 size);
 		TempAllocator* getTempAllocator();
@@ -127,4 +122,4 @@ namespace Soul { namespace Runtime {
 
 		Database _db;
 	};
-}}
+}

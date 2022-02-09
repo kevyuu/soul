@@ -4,13 +4,13 @@
 #include "core/config.h"
 #include "core/type.h"
 
-namespace Soul {
+namespace soul {
 
 	template<typename T>
 	class StaticArray {
 	public:
 
-		explicit StaticArray(Memory::Allocator* allocator = GetDefaultAllocator()) : _allocator(allocator) {}
+		explicit StaticArray(memory::Allocator* allocator = GetDefaultAllocator()) : _allocator(allocator) {}
 		StaticArray(const StaticArray& other);
 		StaticArray& operator=(const StaticArray& other);
 		StaticArray(StaticArray&& other) noexcept;
@@ -21,7 +21,7 @@ namespace Soul {
 		friend void swap(StaticArray& a, StaticArray& b) noexcept { a.swap(b); }
 
 		template<typename... ARGS>
-		void init(Memory::Allocator* allocator, soul_size size, ARGS&&... args);
+		void init(memory::Allocator* allocator, soul_size size, ARGS&&... args);
 
 		template<typename... ARGS>
 		void init(soul_size size, ARGS&&... args);
@@ -50,7 +50,7 @@ namespace Soul {
 		SOUL_NODISCARD T* end() {return _buffer + _size; }
 
 	private:
-		Memory::Allocator* _allocator;
+		memory::Allocator* _allocator;
 		T* _buffer = nullptr;
 		soul_size _size = 0;
 	};
@@ -91,7 +91,7 @@ namespace Soul {
 
     template <typename T>
     template <typename... ARGS>
-    void StaticArray<T>::init(Memory::Allocator* allocator, soul_size size, ARGS&&... args) {
+    void StaticArray<T>::init(memory::Allocator* allocator, soul_size size, ARGS&&... args) {
         SOUL_ASSERT(0, size != 0, "");
         SOUL_ASSERT(0, _buffer == nullptr, "Array have been initialized before");
         SOUL_ASSERT(0, _allocator == nullptr, "");

@@ -13,89 +13,81 @@
 
 #include "runtime/scope_allocator.h"
 
-using namespace Soul;
+using namespace soul;
 using namespace Demo;
 
 class ImGuiRenderModule {
 
 public:
 	struct Data {
-		GPU::BufferNodeID vertexBuffer;
-		GPU::BufferNodeID indexBuffer;
-		GPU::BufferNodeID transformBuffer;
-		GPU::TextureNodeID targetTex;
-		std::map<GPU::TextureNodeID, GPU::TextureNodeID> imTextures;
+		gpu::BufferNodeID vertexBuffer;
+		gpu::BufferNodeID indexBuffer;
+		gpu::BufferNodeID transformBuffer;
+		gpu::TextureNodeID targetTex;
+		std::map<gpu::TextureNodeID, gpu::TextureNodeID> imTextures;
 	};
 
-	void init(GPU::System* system) {
+	void init(gpu::System* system) {
 
 		const char* vertSrc = LoadFile("shaders/imgui_render.vert.glsl");
-		GPU::ShaderDesc vertShaderDesc;
+		gpu::ShaderDesc vertShaderDesc;
 		vertShaderDesc.name = "Imgui vertex shader";
 		vertShaderDesc.source = vertSrc;
 		vertShaderDesc.sourceSize = strlen(vertSrc);
-		_vertShaderID = system->shaderCreate(vertShaderDesc, GPU::ShaderStage::VERTEX);
+		_vertShaderID = system->create_shader(vertShaderDesc, gpu::ShaderStage::VERTEX);
 
 		const char* fragSrc = LoadFile("shaders/imgui_render.frag.glsl");
-		GPU::ShaderDesc fragShaderDesc;
+		gpu::ShaderDesc fragShaderDesc;
 		fragShaderDesc.name = "Imgui fragment shader";
 		fragShaderDesc.source = fragSrc;
 		fragShaderDesc.sourceSize = strlen(fragSrc);
-		_fragShaderID = system->shaderCreate(fragShaderDesc, GPU::ShaderStage::FRAGMENT);
+		_fragShaderID = system->create_shader(fragShaderDesc, gpu::ShaderStage::FRAGMENT);
 
-		GPU::ProgramDesc programDesc;
-		programDesc.shaderIDs[GPU::ShaderStage::VERTEX] = _vertShaderID;
-		programDesc.shaderIDs[GPU::ShaderStage::FRAGMENT] = _fragShaderID;
-		_programID = system->programRequest(programDesc);
+		gpu::ProgramDesc programDesc;
+		programDesc.shaderIDs[gpu::ShaderStage::VERTEX] = _vertShaderID;
+		programDesc.shaderIDs[gpu::ShaderStage::FRAGMENT] = _fragShaderID;
+		_programID = system->request_program(programDesc);
 
 		unsigned char* fontPixels;
 		int width, height;
 		ImGuiIO io = ImGui::GetIO();
 		io.Fonts->GetTexDataAsRGBA32(&fontPixels, &width, &height);
-		GPU::TextureDesc fontTexDesc = {};
-		fontTexDesc.type = GPU::TextureType::D2;
-		fontTexDesc.format = GPU::TextureFormat::RGBA8;
-		fontTexDesc.width = width;
-		fontTexDesc.height = height;
-		fontTexDesc.depth = 1;
-		fontTexDesc.mipLevels = 1;
-		fontTexDesc.usageFlags = GPU::TEXTURE_USAGE_SAMPLED_BIT;
-		fontTexDesc.queueFlags = GPU::QUEUE_GRAPHIC_BIT;
+		const auto font_tex_desc = gpu::TextureDesc::D2("Font Texture", gpu::TextureFormat::RGBA8, 1, { gpu::TextureUsage::SAMPLED }, { gpu::QueueType::GRAPHIC }, Vec2ui32(width, height));
 
-		GPU::TextureRegionLoad regionLoad;
+		gpu::TextureRegionLoad regionLoad;
 		regionLoad.textureRegion.baseArrayLayer = 0;
 		regionLoad.textureRegion.layerCount = 1;
 		regionLoad.textureRegion.mipLevel = 0;
-		regionLoad.textureRegion.extent = { Soul::Cast<uint32>(width), Soul::Cast<uint32>(height), 1 };
+		regionLoad.textureRegion.extent = { soul::cast<uint32>(width), soul::cast<uint32>(height), 1 };
 
-		GPU::TextureLoadDesc loadDesc;
+		gpu::TextureLoadDesc loadDesc;
 		loadDesc.data = fontPixels;
 		loadDesc.dataSize = width * height * 4 * sizeof(char);
 		loadDesc.regionLoadCount = 1;
 		loadDesc.regionLoads = &regionLoad;
 
-		_fontTex = system->textureCreate(fontTexDesc, loadDesc);
+		_fontTex = system->create_texture(font_tex_desc, loadDesc);
 
-		GPU::SamplerDesc samplerDesc = {};
-		samplerDesc.minFilter = GPU::TextureFilter::LINEAR;
-		samplerDesc.magFilter = GPU::TextureFilter::LINEAR;
-		samplerDesc.mipmapFilter = GPU::TextureFilter::LINEAR;
-		samplerDesc.wrapU = GPU::TextureWrap::CLAMP_TO_EDGE;
-		samplerDesc.wrapV = GPU::TextureWrap::CLAMP_TO_EDGE;
-		samplerDesc.wrapW = GPU::TextureWrap::CLAMP_TO_EDGE;
+		gpu::SamplerDesc samplerDesc = {};
+		samplerDesc.minFilter = gpu::TextureFilter::LINEAR;
+		samplerDesc.magFilter = gpu::TextureFilter::LINEAR;
+		samplerDesc.mipmapFilter = gpu::TextureFilter::LINEAR;
+		samplerDesc.wrapU = gpu::TextureWrap::CLAMP_TO_EDGE;
+		samplerDesc.wrapV = gpu::TextureWrap::CLAMP_TO_EDGE;
+		samplerDesc.wrapW = gpu::TextureWrap::CLAMP_TO_EDGE;
 		samplerDesc.anisotropyEnable = false;
 		samplerDesc.maxAnisotropy = 0.0f;
-		_fontSampler = system->samplerRequest(samplerDesc);
+		_fontSampler = system->request_sampler(samplerDesc);
 
 	}
 
-	GPU::TextureID getFontTexture() {
+	gpu::TextureID getFontTexture() {
 		return _fontTex;
 	}
 
-	const Data& addPass(GPU::System* system, GPU::RenderGraph* renderGraph, const ImDrawData& drawData, GPU::TextureID targetTextureID) {
+	const Data& addPass(gpu::System* system, gpu::RenderGraph* renderGraph, const ImDrawData& drawData, gpu::TextureID targetTextureID) {
 		if (drawData.TotalVtxCount == 0) return Data();
-		Runtime::ScopeAllocator<> scopeAllocator("imgui::addPass");
+		runtime::ScopeAllocator<> scopeAllocator("imgui::addPass");
 
 		int fb_width = (int)(drawData.DisplaySize.x * drawData.FramebufferScale.x);
 		int fb_height = (int)(drawData.DisplaySize.y * drawData.FramebufferScale.y);
@@ -103,14 +95,14 @@ public:
 		fbDim.x = fb_width;
 		fbDim.y = fb_height;
 
-		GPU::TextureNodeID targetTex = renderGraph->importTexture("Color output", targetTextureID);
+		gpu::TextureNodeID targetTex = renderGraph->import_texture("Color output", targetTextureID);
 
-		GPU::BufferDesc vertexBufferDesc;
+		gpu::BufferDesc vertexBufferDesc;
 		vertexBufferDesc.typeSize = sizeof(ImDrawVert);
 		vertexBufferDesc.typeAlignment = alignof(ImDrawVert);
 		vertexBufferDesc.count = drawData.TotalVtxCount;
-		vertexBufferDesc.usageFlags = GPU::BUFFER_USAGE_VERTEX_BIT;
-		vertexBufferDesc.queueFlags = GPU::QUEUE_GRAPHIC_BIT;
+		vertexBufferDesc.usageFlags = { gpu::BufferUsage::VERTEX };
+		vertexBufferDesc.queueFlags = { gpu::QueueType::GRAPHIC };
 		Array<ImDrawVert> imDrawVerts(&scopeAllocator);
 		imDrawVerts.reserve(drawData.TotalVtxCount);
 		for (soul_size cmdListIdx = 0; cmdListIdx < drawData.CmdListsCount; cmdListIdx++)
@@ -122,16 +114,16 @@ public:
 			}
 		}
 
-		const GPU::BufferID vertexBuffer = system->bufferCreate(vertexBufferDesc, imDrawVerts.data());
-		system->bufferDestroy(vertexBuffer);
-		GPU::BufferNodeID vertexNodeID = renderGraph->importBuffer("Vertex buffers", vertexBuffer);
+		const gpu::BufferID vertexBuffer = system->create_buffer(vertexBufferDesc, imDrawVerts.data());
+		system->destroy_buffer(vertexBuffer);
+		gpu::BufferNodeID vertexNodeID = renderGraph->import_buffer("Vertex buffers", vertexBuffer);
 
-		GPU::BufferDesc indexBufferDesc;
+		gpu::BufferDesc indexBufferDesc;
 		indexBufferDesc.typeSize = sizeof(ImDrawIdx);
 		indexBufferDesc.typeAlignment = alignof(ImDrawIdx);
 		indexBufferDesc.count = drawData.TotalIdxCount;
-		indexBufferDesc.usageFlags = GPU::BUFFER_USAGE_INDEX_BIT;
-		indexBufferDesc.queueFlags = GPU::QUEUE_GRAPHIC_BIT;
+		indexBufferDesc.usageFlags ={ gpu::BufferUsage::INDEX };
+		indexBufferDesc.queueFlags = { gpu::QueueType::GRAPHIC };
 		Array<ImDrawIdx> imDrawIndexes(&scopeAllocator);
 		imDrawIndexes.reserve(drawData.TotalIdxCount);
 		for (soul_size cmdListIdx = 0; cmdListIdx < drawData.CmdListsCount; cmdListIdx++)
@@ -142,9 +134,9 @@ public:
 				imDrawIndexes.add(indexBuffer);
 			}
 		}
-		const GPU::BufferID indexBuffer = system->bufferCreate(indexBufferDesc ,imDrawIndexes.data());
-		system->bufferDestroy(indexBuffer);
-		GPU::BufferNodeID indexNodeID = renderGraph->importBuffer("Index Buffer", indexBuffer);
+		const gpu::BufferID indexBuffer = system->create_buffer(indexBufferDesc ,imDrawIndexes.data());
+		system->destroy_buffer(indexBuffer);
+		gpu::BufferNodeID indexNodeID = renderGraph->import_buffer("Index Buffer", indexBuffer);
 
 		struct TransformUBO {
 			float scale[2];
@@ -154,46 +146,50 @@ public:
 		transformUBO.scale[1] = 2.0f / drawData.DisplaySize.y;
 		transformUBO.translate[0] = -1.0f - drawData.DisplayPos.x * transformUBO.scale[0];
 		transformUBO.translate[1] = -1.0f - drawData.DisplayPos.y * transformUBO.scale[1];
-		GPU::BufferDesc transformBufferDesc;
+		gpu::BufferDesc transformBufferDesc;
 		transformBufferDesc.typeSize = sizeof(TransformUBO);
 		transformBufferDesc.typeAlignment = alignof(TransformUBO);
 		transformBufferDesc.count = 1;
-		transformBufferDesc.usageFlags = GPU::BUFFER_USAGE_UNIFORM_BIT;
-		transformBufferDesc.queueFlags = GPU::QUEUE_GRAPHIC_BIT;
-		GPU::BufferID transformBufferID = system->bufferCreate(transformBufferDesc, &transformUBO);
-		GPU::BufferNodeID transformNodeID = renderGraph->importBuffer("Transform uBO", transformBufferID);
-		system->bufferDestroy(transformBufferID);
+		transformBufferDesc.usageFlags = { gpu::BufferUsage::UNIFORM };
+		transformBufferDesc.queueFlags = { gpu::QueueType::GRAPHIC };
+		gpu::BufferID transformBufferID = system->create_buffer(transformBufferDesc, &transformUBO);
+		gpu::BufferNodeID transformNodeID = renderGraph->import_buffer("Transform uBO", transformBufferID);
+		system->destroy_buffer(transformBufferID);
 
-		return renderGraph->addGraphicPass<Data>(
+		const gpu::ColorAttachmentDesc color_desc = {
+			.nodeID = targetTex,
+			.clear = true
+		};
+
+		return renderGraph->add_graphic_pass<Data>(
 			"Imgui Pass",
-			[this, targetTex, vertexNodeID, indexNodeID, transformNodeID, drawData, fbDim]
-			(GPU::GraphicNodeBuilder* builder, Data* data) {
-				GPU::ColorAttachmentDesc targetAttchDesc;
-				targetAttchDesc.clear = true;
-				targetAttchDesc.clearValue = {};
-				targetAttchDesc.clearValue.color.float32 = { 1.0f, 0.0f, 0.0f, 1.0f };
-				data->targetTex = builder->addColorAttachment(targetTex, targetAttchDesc);
-				data->vertexBuffer = builder->addVertexBuffer(vertexNodeID);
-				data->indexBuffer = builder->addIndexBuffer(indexNodeID);
-				data->transformBuffer = builder->addShaderBuffer(transformNodeID, GPU::SHADER_STAGE_VERTEX, GPU::ShaderBufferReadUsage::UNIFORM);
+			gpu::RGRenderTargetDesc(
+				fbDim,
+				color_desc
+			),
+			[this, vertexNodeID, indexNodeID, transformNodeID, drawData]
+				(gpu::RGShaderPassDependencyBuilder& builder, Data& data) {
+
+				data.vertexBuffer = builder.add_vertex_buffer(vertexNodeID);
+				data.indexBuffer = builder.add_index_buffer(indexNodeID);
+				data.transformBuffer = builder.add_shader_buffer(transformNodeID, { gpu::ShaderStage::VERTEX }, gpu::ShaderBufferReadUsage::UNIFORM);
 
 				for (int n = 0; n < drawData.CmdListsCount; n++) {
 					const ImDrawList& cmdList = *drawData.CmdLists[n];
 					for (int cmd_i = 0; cmd_i < cmdList.CmdBuffer.Size; cmd_i++) {
 						const ImDrawCmd& cmd = cmdList.CmdBuffer[cmd_i];
-						GPU::TextureNodeID imTexture = UI::SoulImTexture(cmd.TextureId).getTextureNodeID();
-						if (data->imTextures.find(imTexture) == data->imTextures.end()) {
-							data->imTextures[imTexture] = builder->addShaderTexture(imTexture, GPU::SHADER_STAGE_FRAGMENT, GPU::ShaderTextureReadUsage::UNIFORM);
+						gpu::TextureNodeID imTexture = UI::SoulImTexture(cmd.TextureId).getTextureNodeID();
+						if (imTexture != gpu::TEXTURE_NODE_ID_NULL && data.imTextures.find(imTexture) == data.imTextures.end()) {
+							data.imTextures[imTexture] = builder.add_shader_texture(imTexture, { gpu::ShaderStage::FRAGMENT }, gpu::ShaderTextureReadUsage::UNIFORM);
 						}
 					}
 				}
-
-				builder->setRenderTargetDimension(fbDim);
+				
 			},
 			[drawData, this, fbDim]
-			(GPU::RenderGraphRegistry* registry, const Data& data, GPU::RenderCommandBucket* commandBucket) {
+			(const Data& data, gpu::RenderGraphRegistry& registry, gpu::GraphicCommandList& command_list) {
 
-				GPU::PipelineStateDesc pipelineDesc;
+				gpu::GraphicPipelineStateDesc pipelineDesc;
 				pipelineDesc.programID = this->_programID;
 
 				pipelineDesc.inputBindings[0] = { sizeof(ImDrawVert) };
@@ -205,14 +201,14 @@ public:
 				pipelineDesc.viewport.height = fbDim.y;
 
 				pipelineDesc.colorAttachmentCount = 1;
-				GPU::PipelineStateDesc::ColorAttachmentDesc& targetAttchDesc = pipelineDesc.colorAttachments[0];
+				gpu::GraphicPipelineStateDesc::ColorAttachmentDesc& targetAttchDesc = pipelineDesc.colorAttachments[0];
 				targetAttchDesc.blendEnable = true;
-				targetAttchDesc.srcColorBlendFactor = GPU::BlendFactor::SRC_ALPHA;
-				targetAttchDesc.dstColorBlendFactor = GPU::BlendFactor::ONE_MINUS_SRC_ALPHA;
-				targetAttchDesc.colorBlendOp = GPU::BlendOp::ADD;
-				targetAttchDesc.srcAlphaBlendFactor = GPU::BlendFactor::ONE;
-				targetAttchDesc.dstAlphaBlendFactor = GPU::BlendFactor::ZERO;
-				targetAttchDesc.alphaBlendOp = GPU::BlendOp::ADD;
+				targetAttchDesc.srcColorBlendFactor = gpu::BlendFactor::SRC_ALPHA;
+				targetAttchDesc.dstColorBlendFactor = gpu::BlendFactor::ONE_MINUS_SRC_ALPHA;
+				targetAttchDesc.colorBlendOp = gpu::BlendOp::ADD;
+				targetAttchDesc.srcAlphaBlendFactor = gpu::BlendFactor::ONE;
+				targetAttchDesc.dstAlphaBlendFactor = gpu::BlendFactor::ZERO;
+				targetAttchDesc.alphaBlendOp = gpu::BlendOp::ADD;
 
 				// Will project scissor/clipping rectangles into framebuffer space
 				ImVec2 clip_off = drawData.DisplayPos;         // (0,0) unless using multi-viewports
@@ -221,8 +217,11 @@ public:
 				int global_vtx_offset = 0;
 				int global_idx_offset = 0;
 
-				GPU::Descriptor transformDescriptor = GPU::Descriptor::Uniform(registry->getBuffer(data.transformBuffer), 0, GPU::SHADER_STAGE_VERTEX);
-				GPU::ShaderArgSetID argSet0 = registry->getShaderArgSet(0, { 1, &transformDescriptor });
+				gpu::Descriptor transformDescriptor = gpu::Descriptor::Uniform(registry.get_buffer(data.transformBuffer), 0, { gpu::ShaderStage::VERTEX });
+				gpu::ShaderArgSetID argSet0 = registry.get_shader_arg_set(0, { 1, &transformDescriptor });
+
+				using DrawCommand = gpu::RenderCommandDrawIndex;
+				Array<DrawCommand> commands;
 
 				for (int n = 0; n < drawData.CmdListsCount; n++) {
 					const ImDrawList& cmdList = *drawData.CmdLists[n];
@@ -246,45 +245,46 @@ public:
 								if (clip_rect.y < 0.0f)
 									clip_rect.y = 0.0f;
 
-								using DrawCommand = GPU::RenderCommandDrawIndex;
-								DrawCommand* command = commandBucket->add<DrawCommand>(n);
-
+								
 								pipelineDesc.scissor.offsetX = (int32_t)(clip_rect.x);
 								pipelineDesc.scissor.offsetY = (int32_t)(clip_rect.y);
 								pipelineDesc.scissor.width = (uint32_t)(clip_rect.z - clip_rect.x);
 								pipelineDesc.scissor.height = (uint32_t)(clip_rect.w - clip_rect.y);
 
-								command->pipelineStateID = registry->getPipelineState(pipelineDesc);
-								command->vertexBufferID = registry->getBuffer(data.vertexBuffer);
-								command->vertexOffset = cmd.VtxOffset + global_vtx_offset;
-								command->indexBufferID = registry->getBuffer(data.indexBuffer);
-								command->indexCount = cmd.ElemCount;
-								command->indexOffset = cmd.IdxOffset + global_idx_offset;
-
-								command->shaderArgSetIDs[0] = argSet0;
-
 								UI::SoulImTexture soulImTexture(cmd.TextureId);
-								GPU::Descriptor imageDescriptor = GPU::Descriptor::SampledImage(registry->getTexture(soulImTexture.getTextureNodeID()), _fontSampler, GPU::SHADER_STAGE_FRAGMENT);
+								gpu::Descriptor imageDescriptor = gpu::Descriptor::SampledImage(registry.get_texture(soulImTexture.getTextureNodeID()), _fontSampler, { gpu::ShaderStage::FRAGMENT });
 
-								GPU::ShaderArgSetID argSet1 = registry->getShaderArgSet(1, { 1, &imageDescriptor });
-								command->shaderArgSetIDs[1] = argSet1;
+								gpu::ShaderArgSetID argSet1 = registry.get_shader_arg_set(1, { 1, &imageDescriptor });
+
+								const DrawCommand command = {
+									.pipelineStateID = registry.get_pipeline_state(pipelineDesc),
+									.shaderArgSetIDs = { argSet0, argSet1 },
+									.vertexBufferID = registry.get_buffer(data.vertexBuffer),
+									.indexBufferID = registry.get_buffer(data.indexBuffer),
+									.indexOffset = soul::cast<uint16>(cmd.IdxOffset + global_idx_offset),
+									.vertexOffset = soul::cast<uint16>(cmd.VtxOffset + global_vtx_offset),
+									.indexCount = soul::cast<uint16>(cmd.ElemCount)
+								};
+								commands.add(command);
 							}
 						}
 					}
 					global_idx_offset += cmdList.IdxBuffer.Size;
 					global_vtx_offset += cmdList.VtxBuffer.Size;
 				}
+
+				command_list.push(commands.size(), commands.data());
 			}
-		);
+		).get_parameter();
 
 	}
-	GPU::TextureID _fontTex;
+	gpu::TextureID _fontTex;
 private:
-	GPU::ShaderID _vertShaderID;
-	GPU::ShaderID _fragShaderID;
-	GPU::ProgramID _programID;
+	gpu::ShaderID _vertShaderID;
+	gpu::ShaderID _fragShaderID;
+	gpu::ProgramID _programID;
 
-	GPU::SamplerID _fontSampler;
+	gpu::SamplerID _fontSampler;
 
 };
 

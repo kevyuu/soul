@@ -13,7 +13,7 @@ namespace SoulFila {
     static constexpr size_t VARIANT_COUNT = 128;
 
     struct GPUProgramSet;
-    using GPUProgramSetID = Soul::ID<GPUProgramSet, uint32>;
+    using GPUProgramSetID = soul::ID<GPUProgramSet, uint32>;
 
     enum class AlphaMode : uint8 {
         OPAQUE,
@@ -69,10 +69,14 @@ namespace SoulFila {
         uint8 sheenColorUV : 7;
         bool hasSheenRoughnessTexture : 1;
         uint8 sheenRoughnessUV : 7;
-        bool hasSheen;
+        bool hasVolumeThicknessTexture : 1;
+        uint8 volumeThicknessUV : 7;
+        bool hasSheen : 1;
+        bool hasIOR : 1;
+        bool hasVolume : 1;
         
         SOUL_NODISCARD uint64 hash() const {
-            return Soul::hashFNV1((const uint8*) this, sizeof(GPUProgramKey));
+            return soul::hash_fnv1((const uint8*) this, sizeof(GPUProgramKey));
         }
 
         GPUProgramKey() :
@@ -227,16 +231,143 @@ namespace SoulFila {
         }
     };
 
+    using AttributeBitSet = uint32;
+
+    enum class Shading : uint8 {
+        UNLIT,                  //!< no lighting applied, emissive possible
+        LIT,                    //!< default, standard lighting
+        SUBSURFACE,             //!< subsurface lighting model
+        CLOTH,                  //!< cloth lighting model
+        SPECULAR_GLOSSINESS,    //!< legacy lighting model
+        COUNT
+    };
+
+    enum class MaterialDomain : uint8 {
+        SURFACE = 0, //!< shaders applied to renderables
+        POST_PROCESS = 1, //!< shaders applied to rendered buffers
+        COUNT
+    };
+
+    /**
+     * Specular occlusion
+     */
+    enum class SpecularAmbientOcclusion : uint8 {
+        NONE = 0, //!< no specular occlusion
+        SIMPLE = 1, //!< simple specular occlusion
+        BENT_NORMALS = 2, //!< more accurate specular occlusion, requires bent normals
+        COUNT
+    };
+
+    /**
+     * Refraction
+     */
+    enum class RefractionMode : uint8 {
+        NONE = 0, //!< no refraction
+        CUBEMAP = 1, //!< refracted rays go to the ibl cubemap
+        SCREEN_SPACE = 2, //!< refracted rays go to screen space
+        COUNT
+    };
+
+    /**
+     * Refraction type
+     */
+    enum class RefractionType : uint8 {
+        SOLID = 0, //!< refraction through solid objects (e.g. a sphere)
+        THIN = 1, //!< refraction through thin objects (e.g. window)
+        COUNT
+    };
+
+    enum class BlendingMode : uint8 {
+        //! material is opaque
+        OPAQUE,
+        //! material is transparent and color is alpha-pre-multiplied, affects diffuse lighting only
+        TRANSPARENT,
+        //! material is additive (e.g.: hologram)
+        ADD,
+        //! material is masked (i.e. alpha tested)
+        MASKED,
+        /**
+         * material is transparent and color is alpha-pre-multiplied, affects specular lighting
+         * when adding more entries, change the size of FRenderer::CommandKey::blending
+         */
+         FADE,
+         //! material darkens what's behind it
+         MULTIPLY,
+         //! material brightens what's behind it
+         SCREEN,
+         COUNT
+    };
+
+    enum class Property : uint8 {
+        BASE_COLOR,              //!< float4, all shading models
+        ROUGHNESS,               //!< float,  lit shading models only
+        METALLIC,                //!< float,  all shading models, except unlit and cloth
+        REFLECTANCE,             //!< float,  all shading models, except unlit and cloth
+        AMBIENT_OCCLUSION,       //!< float,  lit shading models only, except subsurface and cloth
+        CLEAR_COAT,              //!< float,  lit shading models only, except subsurface and cloth
+        CLEAR_COAT_ROUGHNESS,    //!< float,  lit shading models only, except subsurface and cloth
+        CLEAR_COAT_NORMAL,       //!< float,  lit shading models only, except subsurface and cloth
+        ANISOTROPY,              //!< float,  lit shading models only, except subsurface and cloth
+        ANISOTROPY_DIRECTION,    //!< float3, lit shading models only, except subsurface and cloth
+        THICKNESS,               //!< float,  subsurface shading model only
+        SUBSURFACE_POWER,        //!< float,  subsurface shading model only
+        SUBSURFACE_COLOR,        //!< float3, subsurface and cloth shading models only
+        SHEEN_COLOR,             //!< float3, lit shading models only, except subsurface
+        SHEEN_ROUGHNESS,         //!< float3, lit shading models only, except subsurface and cloth
+        SPECULAR_COLOR,          //!< float3, specular-glossiness shading model only
+        GLOSSINESS,              //!< float,  specular-glossiness shading model only
+        EMISSIVE,                //!< float4, all shading models
+        NORMAL,                  //!< float3, all shading models only, except unlit
+        POST_LIGHTING_COLOR,     //!< float4, all shading models
+        CLIP_SPACE_TRANSFORM,    //!< mat4,   vertex shader only
+        ABSORPTION,              //!< float3, how much light is absorbed by the material
+        TRANSMISSION,            //!< float,  how much light is refracted through the material
+        IOR,                     //!< float,  material's index of refraction
+        MICRO_THICKNESS,         //!< float, thickness of the thin layer
+        BENT_NORMAL,             //!< float3, all shading models only, except unlit
+        COUNT,
+    };
+
+    using PropertyBitSet = uint32;
+
+    struct ProgramSetInfo {
+        bool isLit = true;
+        bool hasDoubleSidedCapability = false;
+        bool hasExternalSamplers = false;
+        bool hasShadowMultiplier = false;
+        bool hasTransparentShadow = false;
+        bool specularAntiAliasing = false;
+        bool clearCoatIorChange = true;
+        bool flipUV = true;
+        bool multiBounceAO = false;
+        bool multiBounceAOSet = false;
+        bool specularAOSet = false;
+        bool hasCustomSurfaceShading = false;
+        SpecularAmbientOcclusion specularAO = SpecularAmbientOcclusion::NONE;
+        RefractionMode refractionMode = RefractionMode::NONE;
+        RefractionType refractionType = RefractionType::SOLID;
+        AttributeBitSet requiredAttributes = 0;
+        BlendingMode blendingMode = BlendingMode::OPAQUE;
+        BlendingMode postLightingBlendingMode = BlendingMode::TRANSPARENT;
+        Shading shading = Shading::LIT;
+        soul::Array<Demo::ShaderUniformMember> uib;
+        soul::Array<Demo::ShaderSampler> sib;
+        std::string materialCode;
+        std::string materialVertexCode;
+        PropertyBitSet properties = 0;
+    };
+
     struct GPUProgramSet {
-        Soul::GPU::ProgramID programIDs[VARIANT_COUNT];
-        Soul::GPU::ShaderID vertShaderIDs[VARIANT_COUNT];
-        Soul::GPU::ShaderID fragShaderIDs[VARIANT_COUNT];
+        ProgramSetInfo info;
+        soul::gpu::ProgramID programIDs[VARIANT_COUNT];
+        soul::gpu::ShaderID vertShaderIDs[VARIANT_COUNT];
+        soul::gpu::ShaderID fragShaderIDs[VARIANT_COUNT];
 
         GPUProgramSet() {
             for (uint64 varIdx = 0; varIdx < VARIANT_COUNT; varIdx++) {
-                programIDs[varIdx] = Soul::GPU::PROGRAM_ID_NULL;
-                vertShaderIDs[varIdx] = Soul::GPU::SHADER_ID_NULL;
-                fragShaderIDs[varIdx] = Soul::GPU::SHADER_ID_NULL;
+                programIDs[varIdx] = soul::gpu::PROGRAM_ID_NULL;
+                vertShaderIDs[varIdx] = soul::gpu::SHADER_ID_NULL;
+                fragShaderIDs[varIdx] = soul::gpu::SHADER_ID_NULL;
             }
         }
     };
@@ -245,9 +376,10 @@ namespace SoulFila {
 
 	public:
 
-        GPUProgramRegistry(Soul::Memory::Allocator* allocator, Soul::GPU::System* gpuSystem);
+        GPUProgramRegistry(soul::memory::Allocator* allocator, soul::gpu::System* gpuSystem);
         GPUProgramSetID createProgramSet(const GPUProgramKey& key);
-        Soul::GPU::ProgramID getProgram(GPUProgramSetID programSetID, GPUProgramVariant variant);
+        soul::gpu::ProgramID getProgram(GPUProgramSetID programSetID, GPUProgramVariant variant);
+        const ProgramSetInfo& getProgramSetInfo(GPUProgramSetID) const;
 
         GPUProgramRegistry(const GPUProgramRegistry&) = delete;
         GPUProgramRegistry(GPUProgramRegistry&&) = delete;
@@ -256,10 +388,10 @@ namespace SoulFila {
         ~GPUProgramRegistry() = default;
 	
     private:
-        Soul::Runtime::AllocatorInitializer _allocatorInitializer;
-		Soul::GPU::System* _gpuSystem;
+        soul::runtime::AllocatorInitializer _allocatorInitializer;
+		soul::gpu::System* _gpuSystem;
 		Demo::ShaderGenerator _shaderGenerator;
-        Soul::HashMap<GPUProgramKey, GPUProgramSetID> _programSetMap;
-        Soul::Array<GPUProgramSet> _programSets;
+        soul::HashMap<GPUProgramKey, GPUProgramSetID> _programSetMap;
+        soul::Array<GPUProgramSet> _programSets;
 	};
 }

@@ -7,12 +7,12 @@
 
 #define SOUL_TRAILING_ZEROES(x) TrailingZeroes(x)
 
-namespace Soul::Util
+namespace soul::Util
 {
 
 	// From google's filament
 	template<typename T>
-	constexpr inline T TrailingZeroes(T x) noexcept {
+	constexpr T TrailingZeroes(T x) noexcept {
 		static_assert(sizeof(T) <= sizeof(uint64_t), "TrailingZeroes() only support up to 64 bits");
 		T c = sizeof(T) * 8;
 		x &= -signed(x);
@@ -41,9 +41,9 @@ namespace Soul::Util
 		}
 	}
 
-	template <typename FlagSrcType, typename FlagDstType>
+	template <std::integral FlagSrcType, typename FlagDstType>
 	FlagDstType CastFlags(FlagSrcType flags, FlagDstType mapping[]) {
-		FlagDstType dstFlags = 0;
+		std::remove_cv_t<FlagDstType> dstFlags = 0;
 		while (flags)
 		{
 			uint32 bit = SOUL_TRAILING_ZEROES(flags);
@@ -53,7 +53,49 @@ namespace Soul::Util
 		return dstFlags;
 	}
 
+#if __has_builtin(__builtin_expect)
+#   ifdef __cplusplus
+#      define SOUL_LIKELY( exp )    (__builtin_expect( !!(exp), true ))
+#      define SOUL_UNLIKELY( exp )  (__builtin_expect( !!(exp), false ))
+#   else
+#      define SOUL_LIKELY( exp )    (__builtin_expect( !!(exp), 1 ))
+#      define SOUL_UNLIKELY( exp )  (__builtin_expect( !!(exp), 0 ))
+#   endif
+#else
+#   define SOUL_LIKELY( exp )    (!!(exp))
+#   define SOUL_UNLIKELY( exp )  (!!(exp))
+#endif
 
+#if __has_attribute(noinline)
+#define SOUL_NOINLINE __attribute__((noinline))
+#else
+#define SOUL_NOINLINE
+#endif
+
+#if defined(_MSC_VER) && _MSC_VER >= 1900
+#    define SOUL_RESTRICT __restrict
+#elif (defined(__clang__) || defined(__GNUC__))
+#    define SOUL_RESTRICT __restrict__
+#else
+#    define SOUL_RESTRICT
+#endif
+
+#if __has_attribute(maybe_unused)
+#define SOUL_UNUSED [[maybe_unused]]
+#define SOUL_UNUSED_IN_RELEASE [[maybe_unused]]
+#elif __has_attribute(unused)
+#define SOUL_UNUSED __attribute__((unused))
+#define SOUL_UNUSED_IN_RELEASE __attribute__((unused))
+#else
+#define SOUL_UNUSED
+#define SOUL_UNUSED_IN_RELEASE
+#endif
+
+#if __has_attribute(always_inline)
+#define SOUL_ALWAYS_INLINE __attribute__((always_inline))
+#else
+#define SOUL_ALWAYS_INLINE inline
+#endif
 
 };
 

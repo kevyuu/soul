@@ -4,10 +4,10 @@
 
 #pragma once
 
-#include "gpu/data.h"
+#include "gpu/type.h"
 #include "gpu/render_graph.h"
 
-namespace Soul::GPU
+namespace soul::gpu
 {
 	namespace impl
 	{
@@ -18,8 +18,8 @@ namespace Soul::GPU
 	public:
 
 		RenderGraphRegistry() = delete;
-		RenderGraphRegistry(System* system, const impl::RenderGraphExecution* execution, VkRenderPass renderPass) :
-			_system(system), _execution(execution), _renderPass(renderPass) {}
+		RenderGraphRegistry(System* system, const impl::RenderGraphExecution* execution, VkRenderPass render_pass = VK_NULL_HANDLE, const TextureSampleCount sample_count = TextureSampleCount::COUNT_1) :
+			system_(system), execution_(execution), render_pass_(render_pass), sample_count_(sample_count) {}
 
 		RenderGraphRegistry(const RenderGraphRegistry& other) = delete;
 		RenderGraphRegistry& operator=(const RenderGraphRegistry& other) = delete;
@@ -29,14 +29,16 @@ namespace Soul::GPU
 
 		~RenderGraphRegistry() = default;
 
-		BufferID getBuffer(BufferNodeID bufferNodeID) const;
-		TextureID getTexture(TextureNodeID textureNodeId) const;
-		ShaderArgSetID  getShaderArgSet(uint32 set, const ShaderArgSetDesc& desc);
-		PipelineStateID getPipelineState(const PipelineStateDesc& desc);
+		[[nodiscard]] BufferID get_buffer(BufferNodeID bufferNodeID) const;
+		[[nodiscard]] TextureID get_texture(TextureNodeID textureNodeId) const;
+		ShaderArgSetID  get_shader_arg_set(uint32 set, const ShaderArgSetDesc& desc);
+		PipelineStateID get_pipeline_state(const GraphicPipelineStateDesc& desc);
+		PipelineStateID get_pipeline_state(const ComputePipelineStateDesc& desc);
 
 	private:
-		System* _system;
-		const impl::RenderGraphExecution* _execution;
-		VkRenderPass _renderPass;
+		System* const system_;
+		const impl::RenderGraphExecution* execution_;
+		VkRenderPass render_pass_;
+		const TextureSampleCount sample_count_;
 	};
 }

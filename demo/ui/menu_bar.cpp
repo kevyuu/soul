@@ -53,6 +53,7 @@ namespace Demo {
 
 				if (ImGui::Button("OK", ImVec2(120, 0))) {
 					store->scene->importFromGLTF(gltfFilePath);
+					
 					ImGui::CloseCurrentPopup();
 				}
 				ImGui::SameLine();

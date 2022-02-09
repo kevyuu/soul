@@ -2,7 +2,7 @@
 
 #include "memory/allocator.h"
 
-namespace Soul
+namespace soul
 {
-	Memory::Allocator* GetDefaultAllocator();
+	memory::Allocator* GetDefaultAllocator();
 }

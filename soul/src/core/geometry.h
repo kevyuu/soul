@@ -3,19 +3,22 @@
 #include "core/type.h"
 #include "enum_array.h"
 
-namespace Soul {
+namespace soul {
 
-    // constant-normal form, (ax + by + cz - d = 0), where (a, b, c) is normal
+    // constant-normal form, (ax + by + cz - d = 0), where (a, b, c) is normal and d is distance
     struct Plane {
         Vec3f normal;
         float d = 0;
 
+        Plane() = default;
         Plane(const Vec3f& normal, const Vec3f& point) noexcept;
         Plane(const Vec3f& normal, float d) noexcept;
+        Plane(const Vec3f& p1, const Vec3f& p2, const Vec3f& p3);
     };
 
     struct Frustum
     {
+
         enum class Side : uint8
         {
 	        LEFT,
@@ -26,18 +29,51 @@ namespace Soul {
             NEAR,
             COUNT
         };
+
+        using Planes = EnumArray<Side, Plane>;
+
         // Note(kevinyu):
         // normal of the planes pointing outwards
-        EnumArray<Side, Plane> planes;
+        Planes planes;
 
-        explicit Frustum(Mat4f projection);
+        // if mat is projection matrix only then the resulting frustum will be in view space
+        // if mat is view * projection matrix then the resulting frustum will be in world space
+        explicit Frustum(const Mat4f& mat);
+
+    	/**
+	    * Creates a frustum from 8 corner coordinates.
+	    * @param corners the corners of the frustum
+	    *
+	    * The corners should be specified in this order:
+	    * 0. far bottom left
+	    * 1. far bottom right
+	    * 2. far top left
+	    * 3. far top right
+	    * 4. near bottom left
+	    * 5. near bottom right
+	    * 6. near top left
+	    * 7. near top right
+	    *
+	    *     2----3
+	    *    /|   /|
+	    *   6----7 |
+	    *   | 0--|-1      far
+	    *   |/   |/       /
+	    *   4----5      near
+	    *
+	    */
+        explicit Frustum(const Vec3f corners[8]);
     };
+
+    bool FrustumCull(const Frustum& frustum, const Vec3f& center, const Vec3f& halfExtent);
+    bool FrustumCull(const Frustum& frustum, const Vec4f& sphere);
 
     struct Ray {
         Vec3f origin;
         Vec3f direction;
         Ray(const Vec3f& origin, const Vec3f& direction) noexcept;
     };
+
 
     struct IntersectPointResult
     {
@@ -46,6 +82,8 @@ namespace Soul {
     };
 
     IntersectPointResult IntersectRayPlane(const Ray& ray, const Plane& plane);
+    IntersectPointResult IntersectSegmentQuad(Vec3f s1, Vec3f s2, Vec3f q1, Vec3f q2, Vec3f q3, Vec3f q4);
+    IntersectPointResult IntersectSegmentTriangle(Vec3f s1, Vec3f s2, Vec3f t1, Vec3f t2, Vec3f t3);
 
     struct TangentFrameComputeInput {
         uint64 vertexCount = 0;
@@ -62,5 +100,14 @@ namespace Soul {
     };
 
     bool ComputeTangentFrame(const TangentFrameComputeInput& input, Quaternionf* qtangents);
+
+    struct BoundingSphere
+    {
+        Vec3f position;
+        float radius = 0.0f;
+
+        BoundingSphere() = default;
+    };
+    
 
 }

@@ -14,7 +14,7 @@
 namespace Demo {
 
 	static uint64 GetHash_(const char* templateKey, soul_size length) {
-		return Soul::hashFNV1(Soul::Cast<const uint8*>(templateKey), length * sizeof(char));
+		return soul::hash_fnv1(soul::cast<const uint8*>(templateKey), length * sizeof(char));
 	}
 
 	static const char* GetPrecisionQualifier_(ShaderPrecision precision) {
@@ -116,7 +116,7 @@ namespace Demo {
 		return Precision::HIGH;
 	}
 
-	static void GenerateProlog_(Soul::String& stringBuilder, ShaderType shaderType) {
+	static void GenerateProlog_(soul::String& stringBuilder, ShaderType shaderType) {
 		const char* defaultPrecisionQual = GetPrecisionQualifier_(GetDefaultPrecision_(shaderType));
 		stringBuilder
 			.appendf("#version 450 core\n\n")
@@ -125,7 +125,7 @@ namespace Demo {
 			.appendf("precision %s int;\n\n", defaultPrecisionQual);
 	}
 
-	static void GenerateDefine_(Soul::String& stringBuilder, const ShaderDefine& shaderDefine) {
+	static void GenerateDefine_(soul::String& stringBuilder, const ShaderDefine& shaderDefine) {
 		switch (shaderDefine.type) {
 			case ShaderDefineType::BOOL: {
 				if (shaderDefine.boolean) stringBuilder.appendf("#define %s\n", shaderDefine.name);
@@ -147,7 +147,7 @@ namespace Demo {
 		}
 	}
 
-	static void GenerateShaderInput_(Soul::String& stringBuilder, const ShaderInput& shaderInput, uint32 location) {
+	static void GenerateShaderInput_(soul::String& stringBuilder, const ShaderInput& shaderInput, uint32 location) {
 		const char* varTypeName = GetVarTypeName_(shaderInput.varType);
 		const char* precisionQual = GetPrecisionQualifier_(shaderInput.precision);
 		stringBuilder.appendf("layout(location = %" PRIu32 ") in %s %s %s", location, precisionQual, varTypeName, shaderInput.name);
@@ -157,7 +157,7 @@ namespace Demo {
 		stringBuilder.appendf(";\n");
 	}
 
-	static void GenerateShaderOutput_(Soul::String& stringBuilder, const ShaderOutput& shaderOutput, uint32 location) {
+	static void GenerateShaderOutput_(soul::String& stringBuilder, const ShaderOutput& shaderOutput, uint32 location) {
 		const char* varTypeName = GetVarTypeName_(shaderOutput.varType);
 		const char* precisionQual = GetPrecisionQualifier_(shaderOutput.precision);
 		stringBuilder.appendf("layout(location = %" PRIu32 ") out %s %s %s", location, precisionQual, varTypeName, shaderOutput.name);
@@ -167,7 +167,7 @@ namespace Demo {
 		stringBuilder.appendf(";\n");
 	}
 
-	static void GenerateUniform_(Soul::String& stringBuilder, const ShaderUniform& shaderUniform) {
+	static void GenerateUniform_(soul::String& stringBuilder, const ShaderUniform& shaderUniform) {
 		stringBuilder.appendf("layout(set = %d, binding = %d, std140) uniform %s {\n", shaderUniform.set, shaderUniform.binding, shaderUniform.typeName);
 		for (uint64 memberIndex = 0; memberIndex < shaderUniform.memberCount; memberIndex++) {
 			const ShaderUniformMember& member = shaderUniform.members[memberIndex];
@@ -182,7 +182,7 @@ namespace Demo {
 		stringBuilder.appendf("} %s;\n", shaderUniform.instanceName);
 	}
 
-	static void GenerateSampler_(Soul::String& stringBuilder, const ShaderSampler& shaderSampler) {
+	static void GenerateSampler_(soul::String& stringBuilder, const ShaderSampler& shaderSampler) {
 		stringBuilder.appendf("layout(set = %d, binding = %d) uniform %s %s %s;\n",
 			shaderSampler.set, shaderSampler.binding,
 			GetPrecisionQualifier_(shaderSampler.precision), 
@@ -199,9 +199,9 @@ namespace Demo {
 			if (!std::filesystem::is_regular_file(fpath)) continue;
 			std::string filename = entry.path().filename().string();
 
-			Soul::Runtime::ScopeAllocator<> scopeAllocator("AddShaderTemplates");
+			soul::runtime::ScopeAllocator<> scopeAllocator("AddShaderTemplates");
 			const uint64 templateKeyLength = strlen(groupName) + strlen("::") + strlen(filename.c_str());
-			Soul::String templateKey(&scopeAllocator, templateKeyLength + 1);
+			soul::String templateKey(&scopeAllocator, templateKeyLength + 1);
 			templateKey.appendf("%s::%s", groupName, filename.c_str());
 
 			const uint64 templateKeyHash = GetHash_(templateKey.data(), templateKeyLength);
@@ -211,9 +211,9 @@ namespace Demo {
 		}
 	}
 
-	Soul::GPU::ShaderID ShaderGenerator::createShader(const ShaderDesc& shaderDesc) const {
+	soul::gpu::ShaderID ShaderGenerator::createShader(const ShaderDesc& shaderDesc) const {
 		
-		Soul::String stringBuilder(_allocator, 10000);
+		soul::String stringBuilder(_allocator, 10000);
 
 		auto _generateNewline = [&stringBuilder]() {
 			stringBuilder.appendf("\n");
@@ -226,14 +226,14 @@ namespace Demo {
 		}
 		_generateNewline();
 		
-		for (uint32 inputIdx = 0; inputIdx < Soul::GPU::MAX_INPUT_PER_SHADER; inputIdx++) {
+		for (uint32 inputIdx = 0; inputIdx < soul::gpu::MAX_INPUT_PER_SHADER; inputIdx++) {
 			const ShaderInput& input = shaderDesc.inputs[inputIdx];
 			if (input.name == nullptr) continue;
 			GenerateShaderInput_(stringBuilder, input, inputIdx);
 		}
 		_generateNewline();
 
-		for (uint32 outputIdx = 0; outputIdx < Soul::GPU::MAX_INPUT_PER_SHADER; outputIdx++) {
+		for (uint32 outputIdx = 0; outputIdx < soul::gpu::MAX_INPUT_PER_SHADER; outputIdx++) {
 			const ShaderOutput& output = shaderDesc.outputs[outputIdx];
 			if (output.name == nullptr) continue;
 			GenerateShaderOutput_(stringBuilder, output, outputIdx);
@@ -260,16 +260,16 @@ namespace Demo {
 
 		if (shaderDesc.customCode != nullptr) stringBuilder.appendf("%s\n", shaderDesc.customCode);
 
-		static auto _getShaderStage = [](ShaderType shaderType) -> Soul::GPU::ShaderStage {
+		static auto _getShaderStage = [](ShaderType shaderType) -> soul::gpu::ShaderStage {
 			switch (shaderType) {
-			case ShaderType::VERTEX: return Soul::GPU::ShaderStage::VERTEX;
-			case ShaderType::FRAGMENT: return Soul::GPU::ShaderStage::FRAGMENT;
+			case ShaderType::VERTEX: return soul::gpu::ShaderStage::VERTEX;
+			case ShaderType::FRAGMENT: return soul::gpu::ShaderStage::FRAGMENT;
 			case ShaderType::COUNT:
 			default:
-				SOUL_NOT_IMPLEMENTED(); return Soul::GPU::ShaderStage::COUNT;
+				SOUL_NOT_IMPLEMENTED(); return soul::gpu::ShaderStage::COUNT;
 			}
 		};
 		
-		return _gpuSystem->shaderCreate({ "default", stringBuilder.data(), uint32(stringBuilder.size())}, _getShaderStage(shaderDesc.type));
+		return _gpuSystem->create_shader({ "default", stringBuilder.data(), uint32(stringBuilder.size())}, _getShaderStage(shaderDesc.type));
 	}
 }

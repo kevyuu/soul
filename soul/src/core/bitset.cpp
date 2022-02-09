@@ -1,90 +1,90 @@
 #include "core/bitset.h"
 #include "runtime/runtime.h"
 
-namespace Soul {
-	soul_size BitSet::ByteCount(soul_size size) {
+namespace soul {
+	soul_size BitSet::byte_count(soul_size size) {
 		return ((size + sizeof(BitUnit) - 1) >> BIT_TABLE_SHIFT) * sizeof(BitUnit);
 	}
 
-	soul_size BitSet::TableIndex(soul_size index) {
+	soul_size BitSet::table_index(soul_size index) {
 		return index >> BIT_TABLE_SHIFT;
 	}
 
-	soul_size BitSet::TableOffset(soul_size index) {
+	soul_size BitSet::table_offset(soul_size index) {
 		return index % 8;
 	}
 
-	BitSet::BitSet(Memory::Allocator* allocator) : _allocator(allocator) {}
+	BitSet::BitSet(memory::Allocator* allocator) : allocator_(allocator) {}
 
-	BitSet::BitSet(const BitSet& other) : _allocator(other._allocator) {
-		_size = other._size;
-		_bitTable = (uint8*) _allocator->allocate(ByteCount(_size), alignof(BitUnit));
-		memcpy(_bitTable, other._bitTable, ByteCount(_size));
+	BitSet::BitSet(const BitSet& other) : allocator_(other.allocator_) {
+		size_ = other.size_;
+		bit_table_ = (uint8*) allocator_->allocate(byte_count(size_), alignof(BitUnit));
+		memcpy(bit_table_, other.bit_table_, byte_count(size_));
 	}
 
 	BitSet& BitSet::operator=(const BitSet& other) {
 		if (this == &other) { return *this; }
-		_allocator->deallocate(_bitTable, ByteCount(_size));
-		_size = other._size;
-		_bitTable = (uint8*) _allocator->allocate(ByteCount(_size), alignof(BitUnit));
-		memcpy(_bitTable, other._bitTable, ByteCount(_size));
+		allocator_->deallocate(bit_table_, byte_count(size_));
+		size_ = other.size_;
+		bit_table_ = (uint8*) allocator_->allocate(byte_count(size_), alignof(BitUnit));
+		memcpy(bit_table_, other.bit_table_, byte_count(size_));
 		return *this;
 	}
 
 	BitSet::BitSet(BitSet&& other) noexcept {
-		_allocator = other._allocator;
-		_bitTable = other._bitTable;
-		_size = other._size;
+		allocator_ = other.allocator_;
+		bit_table_ = other.bit_table_;
+		size_ = other.size_;
 
-		other._bitTable = nullptr;
-		other._size = 0;
+		other.bit_table_ = nullptr;
+		other.size_ = 0;
 	}
 
 	BitSet& BitSet::operator=(BitSet&& other) noexcept {
-		_allocator->deallocate(_bitTable, ByteCount(_size));
+		allocator_->deallocate(bit_table_, byte_count(size_));
 		new (this) BitSet(std::move(other));
 		return *this;
 	}
 
 	BitSet::~BitSet() {
-		_allocator->deallocate(_bitTable, ByteCount(_size));
+		allocator_->deallocate(bit_table_, byte_count(size_));
 	}
 
 	void BitSet::clear() noexcept
 	{
-		memset(_bitTable, 0, ByteCount(_size));
+		memset(bit_table_, 0, byte_count(size_));
 	}
 
 	bool BitSet::test(soul_size index) const {
-		SOUL_ASSERT(0, index < _size, "");
-		return _bitTable[TableIndex(index)] & (1 << TableOffset(index));
+		SOUL_ASSERT(0, index < size_, "");
+		return bit_table_[table_index(index)] & (1 << table_offset(index));
 	}
 
 	void BitSet::set(soul_size index) {
-		SOUL_ASSERT(0, index < _size, "");
-		_bitTable[TableIndex(index)] |= (1 << TableOffset(index));
+		SOUL_ASSERT(0, index < size_, "");
+		bit_table_[table_index(index)] |= (1 << table_offset(index));
 	}
 
 	void BitSet::unset(soul_size index) {
-		SOUL_ASSERT(0, index < _size, "");
-		_bitTable[TableIndex(index)] &= (~(1 << TableOffset(index)));
+		SOUL_ASSERT(0, index < size_, "");
+		bit_table_[table_index(index)] &= (~(1 << table_offset(index)));
 	}
 
 	void BitSet::resize(soul_size size) {
-		uint8* oldBitTable = _bitTable;
-		_bitTable = (uint8*) _allocator->allocate(ByteCount(size), alignof(BitUnit));
+		uint8* oldBitTable = bit_table_;
+		bit_table_ = (uint8*) allocator_->allocate(byte_count(size), alignof(BitUnit));
 
-		memcpy(_bitTable, oldBitTable, std::min(ByteCount(size), ByteCount(_size)));
+		memcpy(bit_table_, oldBitTable, std::min(byte_count(size), byte_count(size_)));
 
-		_allocator->deallocate(oldBitTable, ByteCount(_size));
-		_size = size;
+		allocator_->deallocate(oldBitTable, byte_count(size_));
+		size_ = size;
 	}
 
-	soul_size BitSet::size() const noexcept {return _size;}
+	soul_size BitSet::size() const noexcept {return size_;}
 
 	void BitSet::cleanup() {
-		_allocator->deallocate(_bitTable, ByteCount(_size));
-		_bitTable = nullptr;
-		_size = 0;
+		allocator_->deallocate(bit_table_, byte_count(size_));
+		bit_table_ = nullptr;
+		size_ = 0;
 	}
 };

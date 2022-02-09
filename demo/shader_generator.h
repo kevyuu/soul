@@ -2,7 +2,7 @@
 
 #include "core/type.h"
 #include "core/uint64_hash_map.h"
-#include "gpu/data.h"
+#include "gpu/type.h"
 
 namespace Demo {
     enum class ShaderType : uint8 {
@@ -136,8 +136,8 @@ namespace Demo {
 
         ShaderType type = ShaderType::COUNT;
 
-        ShaderInput inputs[Soul::GPU::MAX_INPUT_PER_SHADER];
-        ShaderOutput outputs[Soul::GPU::MAX_INPUT_PER_SHADER];
+        ShaderInput inputs[soul::gpu::MAX_INPUT_PER_SHADER];
+        ShaderOutput outputs[soul::gpu::MAX_INPUT_PER_SHADER];
 
         const ShaderUniform* uniforms = nullptr;
         uint8 uniformCount = 0;
@@ -158,7 +158,7 @@ namespace Demo {
 
     public:
 
-        ShaderGenerator(Soul::Memory::Allocator* allocator, Soul::GPU::System* gpuSystem) :
+        ShaderGenerator(soul::memory::Allocator* allocator, soul::gpu::System* gpuSystem) :
             _allocator(allocator),
             _allocatorInitializer(_allocator),
             _gpuSystem(gpuSystem) {
@@ -172,14 +172,14 @@ namespace Demo {
         ~ShaderGenerator() = default;
 
         void addShaderTemplates(const char* groupName, const char* path);
-        Soul::GPU::ShaderID createShader(const ShaderDesc& desc) const;
+        soul::gpu::ShaderID createShader(const ShaderDesc& desc) const;
 
     private:
 
-        Soul::Memory::Allocator* _allocator;
-        Soul::Runtime::AllocatorInitializer _allocatorInitializer;
+        soul::memory::Allocator* _allocator;
+        soul::runtime::AllocatorInitializer _allocatorInitializer;
 
-        Soul::UInt64HashMap<char*> _templateMap;
-        Soul::GPU::System* _gpuSystem;
+        soul::UInt64HashMap<char*> _templateMap;
+        soul::gpu::System* _gpuSystem;
     };
 }

@@ -3,7 +3,7 @@
 #include "memory/allocator.h"
 #include "memory/allocators/proxy_allocator.h"
 
-namespace Soul::Memory
+namespace soul::memory
 {
 	void ProfileProxy::onPreInit(const char* name) {
 		SOUL_MEMPROFILE_REGISTER_ALLOCATOR(name);

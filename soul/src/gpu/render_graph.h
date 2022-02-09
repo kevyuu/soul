@@ -2,41 +2,49 @@
 
 #include "core/type_traits.h"
 #include "core/slice.h"
-#include "gpu/data.h"
 
-namespace Soul::GPU
+#include "memory/allocator.h"
+#include "runtime/runtime.h"
+
+#include "gpu/type.h"
+
+namespace soul::gpu
 {
-
+	class gpu::System;
 	namespace impl
 	{
 		struct TextureNode;
 		struct BufferNode;
 		struct RGResourceID;
-		struct RGResourceID {
-			uint32 index = SOUL_UTYPE_MAX(uint32);
+
+		struct RGResourceID
+		{
+			uint32 index = std::numeric_limits<uint32>::max();
 
 			static constexpr uint8 EXTERNAL_BIT_POSITION = 31;
 
-			static RGResourceID InternalID(uint32 index) { return { index }; }
-			static RGResourceID ExternalID(uint32 index) { return { index | 1 << EXTERNAL_BIT_POSITION }; }
+			static RGResourceID internal_id(const uint32 index) { return {index}; }
+			static RGResourceID external_id(const uint32 index) { return {index | 1u << EXTERNAL_BIT_POSITION}; }
 
-			bool isExternal() const {
+			[[nodiscard]] bool is_external() const
+			{
 				return index & (1u << EXTERNAL_BIT_POSITION);
 			}
 
-			uint32 getIndex() const {
+			[[nodiscard]] uint32 get_index() const
+			{
 				return index & ~(1u << EXTERNAL_BIT_POSITION);
 			}
-
 		};
-		static constexpr RGResourceID RG_RESOURCE_ID_NULL = { SOUL_UTYPE_MAX(uint32) };
+
+		constexpr RGResourceID RG_RESOURCE_ID_NULL = {SOUL_UTYPE_MAX(uint32)};
 
 		using RGBufferID = RGResourceID;
-		static constexpr RGBufferID RG_BUFFER_ID_NULL = RG_RESOURCE_ID_NULL;
+		constexpr RGBufferID RG_BUFFER_ID_NULL = RG_RESOURCE_ID_NULL;
 
 		using RGTextureID = RGResourceID;
-		static constexpr RGTextureID RG_TEXTURE_ID_NULL = RG_RESOURCE_ID_NULL;
-		
+		constexpr RGTextureID RG_TEXTURE_ID_NULL = RG_RESOURCE_ID_NULL;
+
 		struct RGInternalTexture;
 		struct RGExternalTexture;
 		struct RGInternalBuffer;
@@ -44,20 +52,48 @@ namespace Soul::GPU
 	}
 
 	class RenderGraph;
-	struct RenderGraphRegistry;
+	class RenderGraphRegistry;
 	class PassNode;
+	class RGShaderPassDependencyBuilder;
+	class RGCopyPassDependencyBuilder;
+
+	template <typename Func, typename Data>
+	concept graphic_pass_executable =
+		std::invocable<Func, const Data&, gpu::RenderGraphRegistry&, gpu::GraphicCommandList&> &&
+		std::same_as<void, std::invoke_result_t<Func, const Data&, gpu::RenderGraphRegistry&, gpu::GraphicCommandList&>>;
+
+	template <typename Func, typename Data>
+	concept compute_pass_executable =
+		std::invocable<Func, const Data&, gpu::RenderGraphRegistry&, gpu::ComputeCommandList&> &&
+		std::same_as<void, std::invoke_result_t<Func, const Data&, gpu::RenderGraphRegistry&, gpu::ComputeCommandList&>>;
+
+	template <typename Func, typename Data>
+	concept copy_pass_executable =
+		std::invocable<Func, const Data&, gpu::RenderGraphRegistry&, gpu::CopyCommandList&> &&
+		std::same_as<void, std::invoke_result_t<Func, const Data&, gpu::RenderGraphRegistry&, gpu::CopyCommandList&>>;
+
+	template <typename Func, typename Data>
+	concept shader_pass_setup =
+		std::invocable<Func, RGShaderPassDependencyBuilder&, Data&> &&
+		std::same_as<void, std::invoke_result_t<Func, gpu::RGShaderPassDependencyBuilder&, Data&>>;
+
+	template <typename Func, typename Data>
+	concept copy_pass_setup =
+		std::invocable<Func, RGCopyPassDependencyBuilder&, Data&> &&
+		std::same_as<void, std::invoke_result_t<Func, gpu::RGCopyPassDependencyBuilder&, Data&>>;
 
 	//ID
 	using PassNodeID = ID<PassNode, uint16>;
 	static constexpr PassNodeID PASS_NODE_ID_NULL = PassNodeID(SOUL_UTYPE_MAX(PassNodeID::id));
-	
+
 	using TextureNodeID = ID<impl::TextureNode, uint16>;
 	static constexpr TextureNodeID TEXTURE_NODE_ID_NULL = TextureNodeID(SOUL_UTYPE_MAX(TextureNodeID::id));
 
 	using BufferNodeID = ID<impl::BufferNode, uint16>;
-	static constexpr BufferNodeID  BUFFER_NODE_ID_NULL = BufferNodeID(SOUL_UTYPE_MAX(BufferNodeID));
+	static constexpr BufferNodeID BUFFER_NODE_ID_NULL = BufferNodeID(SOUL_UTYPE_MAX(BufferNodeID));
 
-	enum class PassType : uint8 {
+	enum class PassType : uint8
+	{
 		NONE,
 		GRAPHIC,
 		COMPUTE,
@@ -65,447 +101,609 @@ namespace Soul::GPU
 		COUNT
 	};
 
-	struct RGTextureDesc {
+	struct RGTextureDesc
+	{
 		TextureType type = TextureType::D2;
-		uint16 width = 0;
-		uint16 height = 0;
-		uint16 depth = 1;
-		uint16 mipLevels = 1;
 		TextureFormat format = TextureFormat::RGBA8;
+		Vec3ui32 extent;
+		uint32 mipLevels = 1;
+		uint16 layerCount = 1;
+		TextureSampleCount sampleCount = gpu::TextureSampleCount::COUNT_1;
 		bool clear = false;
 		ClearValue clearValue;
+
+		static RGTextureDesc create_d2(const TextureFormat format, const uint32 mip_levels, const Vec2ui32 dimension, bool clear = false, ClearValue clear_value = {}, const TextureSampleCount sample_count = TextureSampleCount::COUNT_1)
+		{
+			return {
+				.type = TextureType::D2,
+				.format = format,
+				.extent = Vec3ui32(dimension.x, dimension.y, 1),
+				.mipLevels = mip_levels,
+				.layerCount = 1,
+				.sampleCount = sample_count,
+				.clear = clear,
+				.clearValue = clear_value
+			};
+		}
+
+		static RGTextureDesc create_d2_array(const TextureFormat format, const uint32 mip_levels, const Vec2ui32 dimension, const uint16 layer_count, bool clear = false, ClearValue clear_value = {})
+		{
+			return {
+				.type = TextureType::D2_ARRAY,
+				.format = format,
+				.extent = Vec3ui32(dimension.x, dimension.y, 1),
+				.mipLevels = mip_levels,
+				.layerCount = layer_count,
+				.clear = clear,
+				.clearValue = clear_value
+			};
+		}
 	};
 
-	struct RGBufferDesc {
-		uint16 count = 0;
+	struct RGBufferDesc
+	{
+		soul_size count = 0;
 		uint16 typeSize = 0;
 		uint16 typeAlignment = 0;
 	};
 
-	class RenderCommandBucket {
-	public:
-		Runtime::AllocatorInitializer allocatorInitializer;
-		Array<uint64> keys;
-		Array<RenderCommand*> commands;
-
-		RenderCommandBucket(): allocatorInitializer(Runtime::GetContextAllocator())
-		{
-			allocatorInitializer.end();
-		}
-
-		void reserve(int capacity) {
-			keys.resize(capacity);
-			commands.resize(capacity);
-		}
-
-		template <typename Command>
-		Command* put(uint32 index, uint64 key) {
-			Command* command = Runtime::GetTempAllocator()->create<Command>();
-			keys[index] = key;
-			commands[index] = command;
-			return command;
-		}
-
-		template <typename Command>
-		Command* add(uint64 key) {
-			Command* command = Runtime::GetTempAllocator()->create<Command>();
-			commands.add(command);
-			return command;
-		}
-
-	};
-
-	struct ColorAttachmentDesc {
+	struct ColorAttachmentDesc
+	{
+		TextureNodeID nodeID;
+		SubresourceIndex view = SubresourceIndex();
 		bool clear = false;
 		ClearValue clearValue;
 	};
 
-	struct ColorAttachment {
-		TextureNodeID nodeID = TEXTURE_NODE_ID_NULL;
-		ColorAttachmentDesc desc;
-
-		ColorAttachment() = default;
-		ColorAttachment(TextureNodeID nodeID, const ColorAttachmentDesc& desc) : nodeID(nodeID), desc(desc) {}
-	};
-
-	struct DepthStencilAttachmentDesc {
-		bool depthWriteEnable;
+	struct DepthStencilAttachmentDesc
+	{
+		TextureNodeID nodeID;
+		SubresourceIndex view;
+		bool depthWriteEnable = true;
 		bool clear = false;
 		ClearValue clearValue;
 	};
 
-	struct DepthStencilAttachment {
-		TextureNodeID nodeID = TEXTURE_NODE_ID_NULL;
-		DepthStencilAttachmentDesc desc;
-
-		DepthStencilAttachment() = default;
-		DepthStencilAttachment(TextureNodeID nodeID, const DepthStencilAttachmentDesc& desc) : nodeID(nodeID), desc(desc) {}
+	struct ResolveAttachmentDesc
+	{
+		TextureNodeID nodeID;
+		SubresourceIndex view;
+		bool clear = false;
+		ClearValue clearValue;
 	};
 
-	struct InputAttachment {
-		TextureNodeID nodeID = TEXTURE_NODE_ID_NULL;
-		ShaderStageFlags stageFlags;
-
-		InputAttachment() = default;
-		InputAttachment(TextureNodeID nodeID, ShaderStageFlags stageFlags) : nodeID(nodeID), stageFlags(stageFlags) {}
-	};
-
-	enum class ShaderBufferReadUsage : uint8 {
+	enum class ShaderBufferReadUsage : uint8
+	{
 		UNIFORM,
 		STORAGE,
 		COUNT
 	};
 
-	struct ShaderBufferReadAccess {
+	struct ShaderBufferReadAccess
+	{
 		BufferNodeID nodeID = BUFFER_NODE_ID_NULL;
 		ShaderStageFlags stageFlags;
 		ShaderBufferReadUsage usage;
 	};
 
-	enum class ShaderBufferWriteUsage : uint8 {
+	enum class ShaderBufferWriteUsage : uint8
+	{
 		UNIFORM,
 		COUNT
 	};
 
-	struct ShaderBufferWriteAccess {
-		BufferNodeID nodeID = BUFFER_NODE_ID_NULL;
+	struct ShaderBufferWriteAccess
+	{
+		BufferNodeID inputNodeID;
+		BufferNodeID outputNodeID;
 		ShaderStageFlags stageFlags;
 		ShaderBufferWriteUsage usage;
 	};
 
-	enum class ShaderTextureReadUsage : uint8 {
+	enum class ShaderTextureReadUsage : uint8
+	{
 		UNIFORM,
 		STORAGE,
 		COUNT
 	};
 
-	struct ShaderTextureReadAccess {
+	struct ShaderTextureReadAccess
+	{
 		TextureNodeID nodeID = TEXTURE_NODE_ID_NULL;
 		ShaderStageFlags stageFlags;
 		ShaderTextureReadUsage usage;
+		SubresourceIndexRange viewRange;
 	};
 
-	enum class ShaderTextureWriteUsage : uint8 {
+	enum class ShaderTextureWriteUsage : uint8
+	{
 		STORAGE,
 		COUNT
 	};
 
-	struct ShaderTextureWriteAccess {
-		TextureNodeID nodeID = TEXTURE_NODE_ID_NULL;
+	struct ShaderTextureWriteAccess
+	{
+		TextureNodeID inputNodeID;
+		TextureNodeID outputNodeID;
 		ShaderStageFlags stageFlags;
 		ShaderTextureWriteUsage usage;
+		SubresourceIndexRange viewRange;
 	};
 
+	template <typename AttachmentDesc>
+	struct AttachmentAccess
+	{
+		TextureNodeID outNodeID;
+		AttachmentDesc desc;
+	};
+	using ColorAttachment = AttachmentAccess<ColorAttachmentDesc>;
+	using DepthStencilAttachment = AttachmentAccess<DepthStencilAttachmentDesc>;
+	using ResolveAttachment = AttachmentAccess<ResolveAttachmentDesc>;
 
-	struct ShaderBuffer {
-		BufferNodeID nodeID = BUFFER_NODE_ID_NULL;
-		uint8 set = 0;
-		uint8 binding = 0;
-
-		ShaderBuffer() = default;
-		ShaderBuffer(BufferNodeID nodeID, uint8 set, uint8 binding) : nodeID(nodeID), set(set), binding(binding) {}
+	struct TransferSrcBufferAccess
+	{
+		BufferNodeID nodeID;
 	};
 
-	struct ShaderTexture {
-		TextureNodeID nodeID = TEXTURE_NODE_ID_NULL;
-		uint8 set = 0;
-		uint8 binding = 0;
-
-		ShaderTexture() = default;
-		ShaderTexture(TextureNodeID nodeID, uint8 set, uint8 binding) : nodeID(nodeID), set(set), binding(binding) {}
+	struct TransferDstBufferAccess
+	{
+		BufferNodeID inputNodeID;
+		BufferNodeID outputNodeID;
 	};
 
-	struct ComputePipelineConfig {
-		ShaderID computeShaderID = SHADER_ID_NULL;
+	struct TransferSrcTextureAccess
+	{
+		TextureNodeID nodeID;
+		SubresourceIndexRange viewRange;
 	};
 
-	class PassNode {
+	struct TransferDstTextureAccess
+	{
+		TextureNodeID inputNodeID;
+		TextureNodeID outputNodeID;
+		SubresourceIndexRange viewRange;
+	};
+
+	struct RGRenderTargetDesc
+	{
+		RGRenderTargetDesc() = default;
+
+		RGRenderTargetDesc(Vec2ui32 dimension, const ColorAttachmentDesc& color) : dimension(dimension)
+		{
+			colorAttachments.push_back(color);
+		}
+
+		RGRenderTargetDesc(Vec2ui32 dimension, const ColorAttachmentDesc& color, const DepthStencilAttachmentDesc& depth_stencil) :
+			dimension(dimension), depthStencilAttachment(depth_stencil)
+		{
+			colorAttachments.push_back(color);
+		}
+
+		RGRenderTargetDesc(Vec2ui32 dimension, const TextureSampleCount sample_count, const ColorAttachmentDesc& color, 
+			const ResolveAttachmentDesc& resolve, const DepthStencilAttachmentDesc depth_stencil):
+			dimension(dimension), sampleCount(sample_count), depthStencilAttachment(depth_stencil)
+		{
+			colorAttachments.push_back(color);
+			resolveAttachments.push_back(resolve);
+		}
+
+		RGRenderTargetDesc(Vec2ui32 dimension, const DepthStencilAttachmentDesc& depth_stencil) :
+			dimension(dimension), depthStencilAttachment(depth_stencil)  {}
+
+		Vec2ui32 dimension;
+		TextureSampleCount sampleCount = TextureSampleCount::COUNT_1;
+		Array<ColorAttachmentDesc> colorAttachments;
+		Array<ResolveAttachmentDesc> resolveAttachments;
+		DepthStencilAttachmentDesc depthStencilAttachment;
+	};
+
+	struct RGRenderTarget
+	{
+		Vec2ui32 dimension;
+		TextureSampleCount sampleCount = TextureSampleCount::COUNT_1;
+		Array<ColorAttachment> colorAttachments;
+		Array<ResolveAttachment> resolveAttachments;
+		DepthStencilAttachment depthStencilAttachment;
+	};
+
+	class PassNode
+	{
 	public:
-
-		PassNode() = default;
+		PassNode(const PassType type, const char* name) : name_(name), type_(type) {}
 		PassNode(const PassNode&) = delete;
 		PassNode& operator=(const PassNode&) = delete;
 		PassNode(PassNode&&) = delete;
 		PassNode& operator=(PassNode&&) = delete;
 		virtual ~PassNode() = default;
 
-		const char* name = nullptr;
-		PassType type = PassType::NONE;
-		virtual void executePass(RenderGraphRegistry* registry, RenderCommandBucket* commandBucket) const = 0;
-		virtual void cleanup() = 0;
+		[[nodiscard]] PassType get_type() const { return type_; }
+		[[nodiscard]] const char* get_name() const { return name_; }
+		virtual soul_size class_size() = 0;
+
+	protected:
+		const char* name_ = nullptr;
+		const PassType type_ = PassType::NONE;
 	};
 
-	class GraphicBaseNode : public PassNode {
-	public:
+	class RGShaderPassDependencyBuilder;
+	class ShaderNode : public PassNode
+	{
+	private:
+		Array<ShaderBufferReadAccess> shader_buffer_read_accesses_;
+		Array<ShaderBufferWriteAccess> shader_buffer_write_accesses_;
+		Array<ShaderTextureReadAccess> shader_texture_read_accesses_;
+		Array<ShaderTextureWriteAccess> shader_texture_write_accesses_;
+		Array<BufferNodeID> vertex_buffers_;
+		Array<BufferNodeID> index_buffers_;
 
-		GraphicBaseNode() = default;
+		friend class RGShaderPassDependencyBuilder;
+
+	public:
+		ShaderNode(const PassType type, const char* name) : PassNode(type, name) {}
+		ShaderNode(const ShaderNode&) = delete;
+		ShaderNode& operator=(const ShaderNode&) = delete;
+		ShaderNode(ShaderNode&&) = delete;
+		ShaderNode& operator=(ShaderNode&&) = delete;
+		~ShaderNode() override = default;
+
+		[[nodiscard]] const Array<BufferNodeID>& get_vertex_buffers() const { return vertex_buffers_;  }
+		[[nodiscard]] const Array<BufferNodeID>& get_index_buffers() const { return index_buffers_; }
+		[[nodiscard]] const Array<ShaderBufferReadAccess>& get_buffer_read_accesses() const { return shader_buffer_read_accesses_; }
+		[[nodiscard]] const Array<ShaderBufferWriteAccess>& get_buffer_write_accesses() const { return shader_buffer_write_accesses_; }
+		[[nodiscard]] const Array<ShaderTextureReadAccess>& get_texture_read_accesses() const { return shader_texture_read_accesses_; }
+		[[nodiscard]] const Array<ShaderTextureWriteAccess>& get_texture_write_accesses() const { return shader_texture_write_accesses_;  }
+	};
+
+	class GraphicBaseNode : public ShaderNode
+	{
+	public:
+		explicit GraphicBaseNode(const char* name) : ShaderNode(PassType::GRAPHIC, name) {}
 		GraphicBaseNode(const GraphicBaseNode&) = delete;
 		GraphicBaseNode& operator=(const GraphicBaseNode&) = delete;
 		GraphicBaseNode(GraphicBaseNode&&) = delete;
 		GraphicBaseNode& operator=(GraphicBaseNode&&) = delete;
-		~GraphicBaseNode() override {};
-
-		Vec2ui32 renderTargetDimension;
-
-		Array<ColorAttachment> colorAttachments;
-		DepthStencilAttachment depthStencilAttachment;
-		Array<ShaderBufferReadAccess> shaderBufferReadAccesses;
-		Array<ShaderBufferWriteAccess> shaderBufferWriteAccesses;
-		Array<BufferNodeID> vertexBuffers;
-		Array<BufferNodeID> indexBuffers;
-
-		Array<ShaderTextureReadAccess> shaderTextureReadAccesses;
-		Array<ShaderTextureWriteAccess> shaderTextureWriteAccesses;
-		Array<InputAttachment> inputAttachments;
-
-
-		void cleanup() override {}
+		~GraphicBaseNode() override = default;
+		virtual void execute_pass(RenderGraphRegistry& registry, GraphicCommandList& command_list) = 0;
+		[[nodiscard]] const RGRenderTarget& get_render_target() const { return render_target_; }
+	private:
+		RGRenderTarget render_target_;
+		friend class RenderGraph;
 	};
 
-	class ComputeBaseNode : public PassNode {
+	template <typename Parameter,
+		graphic_pass_executable<Parameter> Execute>
+	class GraphicNode final : public GraphicBaseNode
+	{
+		Parameter parameter_;
+		Execute execute_;
+
 	public:
-		ComputePipelineConfig pipelineConfig;
-		Array<ShaderBufferReadAccess> shaderBufferReadAccesses;
-		Array<ShaderBufferWriteAccess> shaderBufferWriteAccesses;
-		Array<ShaderTextureReadAccess> shaderTextureReadAccesses;
-		Array<ShaderTextureWriteAccess> shaderTextureWriteAccesses;
-
-
-		void cleanup() override {
-			//
-		}
-	};
-
-	class TransferBaseNode : public PassNode {
-	public:
-
-		void cleanup() override {
-			//
-		}
-	};
-
-	template<typename Data, typename Execute>
-	class GraphicNode : public GraphicBaseNode {
-	public:
-		Data data;
-		Execute execute;
-
 		GraphicNode() = delete;
 		GraphicNode(const GraphicNode&) = delete;
 		GraphicNode& operator=(const GraphicNode&) = delete;
 		GraphicNode(GraphicNode&&) = delete;
 		GraphicNode& operator=(GraphicNode&&) = delete;
-		~GraphicNode() override{}
+		~GraphicNode() override = default;
 
-		explicit GraphicNode(Execute&& execute) : execute(std::forward<Execute>(execute)){}
-		void executePass(RenderGraphRegistry* registry, RenderCommandBucket* commandBucket) const final override {
-			execute(registry, data, commandBucket);
+		GraphicNode(const char* name, Execute&& execute) : GraphicBaseNode(name) , execute_(std::forward<Execute>(execute)) {}
+
+		void execute_pass(RenderGraphRegistry& registry, GraphicCommandList& command_list) override
+		{
+			execute_(parameter_, registry, command_list);
 		}
+
+		[[nodiscard]] const Parameter& get_parameter() const { return parameter_; }
+		Parameter& get_parameter_() { return parameter_; }
+		
+		soul_size class_size() override { return sizeof(GraphicNode<Parameter, Execute>); }
+
+		friend class RenderGraph;
+
 	};
 
-	template<typename Data, typename Execute>
-	class ComputeNode : public ComputeBaseNode {
+	class ComputeBaseNode : public ShaderNode
+	{
 	public:
-		Data data;
-		Execute execute;
+		explicit ComputeBaseNode(const char* name) : ShaderNode(PassType::COMPUTE, name) {}
+		ComputeBaseNode(const ComputeBaseNode&) = delete;
+		ComputeBaseNode& operator=(const ComputeBaseNode&) = delete;
+		ComputeBaseNode(ComputeBaseNode&&) = delete;
+		ComputeBaseNode& operator=(ComputeBaseNode&&) = delete;
+		~ComputeBaseNode() override = default;
 
-		explicit ComputeNode(Execute&& execute) : execute(std::forward<Execute>(execute)){}
-		void executePass(RenderGraphRegistry* registry, RenderCommandBucket* commandBucket) const final override {
-			execute(registry, data, commandBucket);
+		virtual void execute_pass(RenderGraphRegistry& registry, ComputeCommandList& command_list) = 0;
+	};
+
+	template <typename Parameter,
+		compute_pass_executable<Parameter> Execute>
+	class ComputeNode final : public ComputeBaseNode
+	{
+		Parameter parameter_;
+		Execute execute_;
+
+	public:
+
+		ComputeNode() = delete;
+		ComputeNode(const ComputeNode&) = delete;
+		ComputeNode& operator=(const ComputeNode&) = delete;
+		ComputeNode(ComputeNode&&) = delete;
+		ComputeNode& operator=(ComputeNode&&) = delete;
+		~ComputeNode() override = default;
+
+		ComputeNode(const char* name, Execute&& execute) : ComputeBaseNode(name) , execute_(std::forward<Execute>(execute)) {}
+
+		void execute_pass(RenderGraphRegistry& registry, ComputeCommandList& command_list) override
+		{
+			execute_(parameter_, registry, command_list);
 		}
+		[[nodiscard]] const Parameter& get_parameter() const { return parameter_; }
+		Parameter& get_parameter_() { return parameter_; }
+		soul_size class_size() override { return sizeof(ComputeNode<Parameter, Execute>); }
+		
 	};
 
-	template<typename Data, typename Execute>
-	class TransferNode : TransferBaseNode {
+	class CopyBaseNode : public ShaderNode
+	{
 	public:
-		Data data;
-		Execute execute;
+		explicit CopyBaseNode(const char* name) : ShaderNode(PassType::TRANSFER, name) {}
+		CopyBaseNode(const CopyBaseNode&) = delete;
+		CopyBaseNode& operator=(const CopyBaseNode&) = delete;
+		CopyBaseNode(CopyBaseNode&&) = delete;
+		CopyBaseNode& operator=(CopyBaseNode&&) = delete;
+		~CopyBaseNode() override = default;
+
+		const Array<TransferSrcBufferAccess>& get_source_buffers() const { return source_buffers_; }
+		const Array<TransferDstBufferAccess>& get_destination_buffers() const { return destination_buffers_; }
+		const Array<TransferSrcTextureAccess>& get_source_textures() const { return source_textures_; }
+		const Array<TransferDstTextureAccess>& get_destination_textures() const { return destination_textures_; }
+
+		virtual void execute_pass(RenderGraphRegistry& registry, CopyCommandList& command_list) = 0;
+
+		friend class RGCopyPassDependencyBuilder;
+	private:
+		Array<TransferSrcBufferAccess> source_buffers_;
+		Array<TransferDstBufferAccess> destination_buffers_;
+		Array<TransferSrcTextureAccess> source_textures_;
+		Array<TransferDstTextureAccess> destination_textures_;
 	};
 
-	class GraphicNodeBuilder {
+	template <typename Parameter,
+		copy_pass_executable<Parameter> Execute>
+	class CopyNode final : public CopyBaseNode
+	{
+		Parameter parameter_;
+		Execute execute_;
 	public:
-		PassNodeID _passID;
-		GraphicBaseNode* _graphicNode;
-		RenderGraph* _renderGraph;
+		CopyNode() = delete;
+		CopyNode(const CopyNode&) = delete;
+		CopyNode& operator=(const CopyNode&) = delete;
+		CopyNode(CopyNode&&) = delete;
+		CopyNode& operator=(CopyNode&&) = delete;
+		~CopyNode() override = default;
 
-		GraphicNodeBuilder(PassNodeID passID, GraphicBaseNode* graphicNode, RenderGraph* renderGraph):
-			_passID(passID), _graphicNode(graphicNode), _renderGraph(renderGraph) {}
+		CopyNode(const char* name, Execute&& execute) : CopyBaseNode(name), execute_(std::forward<Execute>(execute)) {}
 
-		GraphicNodeBuilder(const GraphicNodeBuilder& other) = delete;
-		GraphicNodeBuilder(GraphicNodeBuilder&& other) = delete;
-
-		GraphicNodeBuilder& operator=(const GraphicNodeBuilder& other) = delete;
-		GraphicNodeBuilder& operator=(GraphicNodeBuilder&& other) = delete;
-
-		~GraphicNodeBuilder() = default;
-
-		BufferNodeID addVertexBuffer(BufferNodeID nodeID);
-		BufferNodeID addIndexBuffer(BufferNodeID nodeID);
-
-		BufferNodeID addShaderBuffer(BufferNodeID nodeID, ShaderStageFlags stageFlags, ShaderBufferReadUsage usageType);
-		BufferNodeID addShaderBuffer(BufferNodeID nodeID, ShaderStageFlags stageFlags, ShaderBufferWriteUsage usageType);
-
-		TextureNodeID addShaderTexture(TextureNodeID nodeID, ShaderStageFlags stageFlags, ShaderTextureReadUsage usageType);
-		TextureNodeID addShaderTexture(TextureNodeID nodeID, ShaderStageFlags stageFlags, ShaderTextureWriteUsage usageType);
-
-		TextureNodeID addInputAttachment(TextureNodeID nodeID, ShaderStageFlags stageFlags);
-		TextureNodeID addColorAttachment(TextureNodeID nodeID, const ColorAttachmentDesc& desc);
-		TextureNodeID setDepthStencilAttachment(TextureNodeID nodeID, const DepthStencilAttachmentDesc& desc);
-		void setRenderTargetDimension(Vec2ui32 dimension);
-
+		void execute_pass(RenderGraphRegistry& registry, CopyCommandList& command_list) override
+		{
+			execute_(parameter_, registry, command_list);
+		}
+		const Parameter& get_parameter() const { return parameter_; }
+		Parameter& get_parameter_() { return parameter_; }
+		soul_size class_size() override { return sizeof(CopyNode<Parameter, Execute>); }
 	};
 
-	class ComputeNodeBuilder {
-	public:
-		PassNodeID _passID;
-		ComputeBaseNode* _computeNode;
-		RenderGraph* _renderGraph;
+	class RGShaderPassDependencyBuilder
+	{
+	private:
+		const PassNodeID pass_id_;
+		ShaderNode& shader_node_;
+		RenderGraph& render_graph_;
 
-		ComputeNodeBuilder(PassNodeID passID, ComputeBaseNode* computeNode, RenderGraph* renderGraph):
-			_passID(passID), _computeNode(computeNode), _renderGraph(renderGraph) {}
-
-		ComputeNodeBuilder(const ComputeNodeBuilder& other) = delete;
-		ComputeNodeBuilder(ComputeNodeBuilder&& other) = delete;
-
-		ComputeNodeBuilder& operator=(const ComputeNodeBuilder& other) = delete;
-		ComputeNodeBuilder& operator=(ComputeNodeBuilder&& other) = delete;
-
-		~ComputeNodeBuilder() = default;
-
-		BufferNodeID addShaderBuffer(BufferNodeID nodeID, ShaderStageFlags stageFlags, ShaderBufferReadUsage usageType);
-		BufferNodeID addShaderBuffer(BufferNodeID nodeID, ShaderStageFlags stageFlags, ShaderBufferWriteUsage usageType);
-
-		TextureNodeID addShaderTexture(TextureNodeID nodeID, ShaderStageFlags stageFlags, ShaderTextureReadUsage usageType);
-		TextureNodeID addShaderTexture(TextureNodeID nodeID, ShaderStageFlags stageFlags, ShaderTextureWriteUsage usageType);
-
-		BufferNodeID addInShaderBuffer(BufferNodeID nodeID, uint8 set, uint8 binding);
-		BufferNodeID addOutShaderBuffer(BufferNodeID nodeID, uint8 set, uint8 binding);
-
-		TextureNodeID addInShaderTexture(TextureNodeID nodeID, uint8 set, uint8 binding);
-		TextureNodeID addOutShaderTexture(TextureNodeID nodeID, uint8 set, uint8 binding);
-
-		void setPipelineConfig(const ComputePipelineConfig& config);
-	};
-
-	struct TextureExport {
-		TextureNodeID tex;
-		char* pixels;
-	};
-
-	class RenderGraph {
 	public:
 
-		RenderGraph() = default;
+		RGShaderPassDependencyBuilder(const PassNodeID pass_id, ShaderNode& shader_node, RenderGraph& render_graph)
+			: pass_id_(pass_id), shader_node_(shader_node), render_graph_(render_graph) {}
+		RGShaderPassDependencyBuilder(const RGShaderPassDependencyBuilder&) = delete;
+		RGShaderPassDependencyBuilder& operator=(const RGShaderPassDependencyBuilder&) = delete;
+		RGShaderPassDependencyBuilder(RGShaderPassDependencyBuilder&&) = delete;
+		RGShaderPassDependencyBuilder& operator=(RGShaderPassDependencyBuilder&&) = delete;
+		~RGShaderPassDependencyBuilder() = default;
 
+		BufferNodeID add_shader_buffer(const BufferNodeID node_id, const ShaderStageFlags stage_flags, 
+			const ShaderBufferReadUsage usage_type);
+		BufferNodeID add_shader_buffer(const BufferNodeID node_id, const ShaderStageFlags stage_flags,
+			const ShaderBufferWriteUsage usage_type);
+		TextureNodeID add_shader_texture(const TextureNodeID node_id, const ShaderStageFlags stage_flags,
+			const ShaderTextureReadUsage usage_type, const SubresourceIndexRange view = SubresourceIndexRange());
+		TextureNodeID add_shader_texture(const TextureNodeID node_id, const ShaderStageFlags stage_flags,
+			const ShaderTextureWriteUsage usage_type, const SubresourceIndexRange view = SubresourceIndexRange());
+		BufferNodeID add_vertex_buffer(const BufferNodeID node_id);
+		BufferNodeID add_index_buffer(const BufferNodeID node_id);
+	};
+	using RGGraphicPassDependencyBuilder = RGShaderPassDependencyBuilder;
+	using RGComputePassDependencyBuilder = RGShaderPassDependencyBuilder;
+
+	class RGCopyPassDependencyBuilder
+	{
+		const PassNodeID pass_id_;
+		CopyBaseNode& copy_base_node_;
+		RenderGraph& render_graph_;
+	public:
+		RGCopyPassDependencyBuilder(const PassNodeID pass_id, CopyBaseNode& copy_base_node, RenderGraph& render_graph)
+			: pass_id_(pass_id), copy_base_node_(copy_base_node), render_graph_(render_graph) {}
+		RGCopyPassDependencyBuilder(const RGCopyPassDependencyBuilder&) = delete;
+		RGCopyPassDependencyBuilder& operator=(const RGCopyPassDependencyBuilder&) = delete;
+		RGCopyPassDependencyBuilder(RGCopyPassDependencyBuilder&&) = delete;
+		RGCopyPassDependencyBuilder& operator=(RGCopyPassDependencyBuilder&&) = delete;
+		~RGCopyPassDependencyBuilder() = default;
+
+		BufferNodeID add_src_buffer(const BufferNodeID node_id);
+		BufferNodeID add_dst_buffer(const BufferNodeID node_id);
+		TextureNodeID add_src_texture(const TextureNodeID node_id);
+		TextureNodeID add_dst_texture(const TextureNodeID node_id);
+	};
+
+
+	class RenderGraph
+	{
+	public:
+		explicit RenderGraph(memory::Allocator* allocator = runtime::get_context_allocator()) : allocator_(allocator) {}
 		RenderGraph(const RenderGraph& other) = delete;
 		RenderGraph(RenderGraph&& other) = delete;
-
 		RenderGraph& operator=(const RenderGraph& other) = delete;
 		RenderGraph& operator=(RenderGraph&& other) = delete;
+		~RenderGraph();
 
-		~RenderGraph()
+		template <
+			typename Parameter,
+			shader_pass_setup<Parameter&> Setup,
+			graphic_pass_executable<Parameter&> Executable,
+			typename Node = GraphicNode<Parameter, Executable>
+		>
+		const Node& add_graphic_pass(const char* name, const RGRenderTargetDesc& render_target, Setup&& setup, Executable&& execute)
 		{
+			auto* node = allocator_->create<Node>(name, std::forward<Executable>(execute));
 			
+			pass_nodes_.add(node);
+			const auto pass_node_id = PassNodeID(pass_nodes_.size() - 1);
+			RGShaderPassDependencyBuilder builder(pass_node_id, *node, *this);
+			setup(builder, node->get_parameter_());
+
+			auto to_output_attachment = [this, pass_node_id]<typename AttachmentDesc>(const AttachmentDesc attachment_desc) -> auto
+			{
+				AttachmentAccess<AttachmentDesc> access = {
+					.outNodeID = write_texture_node(attachment_desc.nodeID, pass_node_id),
+					.desc = attachment_desc
+				};
+				return access;
+			};
+			
+			std::ranges::transform(render_target.colorAttachments,
+				std::back_inserter(node->render_target_.colorAttachments), to_output_attachment);
+			std::ranges::transform(render_target.resolveAttachments,
+				std::back_inserter(node->render_target_.resolveAttachments), to_output_attachment);
+			if (render_target.depthStencilAttachment.nodeID.is_valid())
+			{
+				const auto& depth_desc = render_target.depthStencilAttachment;
+				const TextureNodeID out_node_id = depth_desc.depthWriteEnable ? depth_desc.nodeID : write_texture_node(depth_desc.nodeID, pass_node_id);
+				node->render_target_.depthStencilAttachment = {
+					.outNodeID = out_node_id,
+					.desc = depth_desc
+				};
+			}
+			node->render_target_.dimension = render_target.dimension;
+			node->render_target_.sampleCount = render_target.sampleCount;
+
+			return *node;
+		}
+
+		template <
+			typename Parameter,
+			shader_pass_setup<Parameter&> Setup,
+			compute_pass_executable<Parameter&> Executable,
+			typename Node = ComputeNode<Parameter, Executable>
+		>
+		const Node& add_compute_pass(const char* name, Setup&& setup, Executable&& execute)
+		{
+			auto node = allocator_->create<Node>(name, std::forward<Executable>(execute));
+			pass_nodes_.add(node);
+			RGShaderPassDependencyBuilder builder(PassNodeID(pass_nodes_.size() - 1), *node, *this);
+			setup(builder, node->get_parameter_());
+			return *node;
 		}
 
 		template<
-			typename DATA,
-			typename SETUP,
-			typename EXECUTE,
-			SOUL_REQUIRE(is_lambda_v<SETUP, void(GraphicNodeBuilder*, DATA*)>),
-			SOUL_REQUIRE(is_lambda_v<EXECUTE, void(RenderGraphRegistry*, const DATA&, RenderCommandBucket*)>)
+			typename Parameter,
+			copy_pass_setup<Parameter&> Setup,
+			copy_pass_executable<Parameter&> Executable,
+			typename Node = CopyNode<Parameter, Executable>
 		>
-		const DATA& addGraphicPass(const char* name, SETUP setup, EXECUTE&& execute) {
-			using Node = GraphicNode<DATA, EXECUTE>;
-			Node* node = (Node*) malloc(sizeof(Node));
-			new(node) Node(std::forward<EXECUTE>(execute));
-			node->type = PassType::GRAPHIC;
-			node->name = name;
-			_passNodes.add(node);
-			GraphicNodeBuilder builder(PassNodeID(_passNodes.size() - 1), node, this);
-			setup(&builder, &node->data);
-			return node->data;
+		const Node& add_copy_pass(const char* name, Setup&& setup, Executable&& execute)
+		{
+			auto node = allocator_->create<Node>(name, std::forward<Executable>(execute));
+			pass_nodes_.add(node);
+			RGCopyPassDependencyBuilder builder(PassNodeID(pass_nodes_.size() - 1), *node, *this);
+			setup(builder, node->get_parameter_());
+			return *node;
 		}
-
-		template<
-			typename DATA,
-			typename SETUP,
-			typename EXECUTE,
-			SOUL_REQUIRE(is_lambda_v<SETUP, void(GraphicNodeBuilder*, DATA*)>),
-			SOUL_REQUIRE(is_lambda_v<EXECUTE, void(RenderGraphRegistry*, const DATA&, RenderCommandBucket*)>)
-		>
-		const DATA& addComputePass(const char* name, SETUP setup, EXECUTE&& execute) {
-			using Node = ComputeNode<DATA, EXECUTE>;
-			Node* node = (Node*) malloc(sizeof(Node));
-			new(node) Node(std::forward<EXECUTE>(execute));
-			node->type = PassType::COMPUTE;
-			node->name = name;
-			_passNodes.add(node);
-			ComputeNodeBuilder builder(PassNodeID(_passNodes.size() - 1), node, this);
-			setup(&builder, &node->data);
-			return node->data;
-		}
-
-		TextureNodeID importTexture(const char* name, TextureID textureID);
-		TextureNodeID createTexture(const char* name, const RGTextureDesc& desc);
-
-		BufferNodeID importBuffer(const char* name, BufferID bufferID);
-		BufferNodeID createBuffer(const char* name, const RGBufferDesc& desc);
-
-		void exportTexture(TextureNodeID tex, char* pixels);
+		
+		TextureNodeID import_texture(const char* name, TextureID texture_id);
+		TextureNodeID create_texture(const char* name, const RGTextureDesc& desc);
+		
+		BufferNodeID import_buffer(const char* name, BufferID buffer_id);
+		BufferNodeID create_buffer(const char* name, const RGBufferDesc& desc);
+		
 
 		void cleanup();
 
-		void _bufferNodeRead(BufferNodeID bufferNodeID, PassNodeID passNodeID);
-		BufferNodeID _bufferNodeWrite(BufferNodeID bufferNodeID, PassNodeID passNodeID);
+		void read_buffer_node(BufferNodeID buffer_node_id, PassNodeID pass_node_id);
+		BufferNodeID write_buffer_node(BufferNodeID buffer_node_id, PassNodeID pass_node_id);
 
-		void _textureNodeRead(TextureNodeID textureNodeID, PassNodeID passNodeID);
-		TextureNodeID _textureNodeWrite(TextureNodeID textureNodeID, PassNodeID passNodeID);
+		void read_texture_node(TextureNodeID texture_node_id, PassNodeID pass_node_id);
+		TextureNodeID write_texture_node(TextureNodeID texture_node_id, PassNodeID pass_node_id);
 
-		const impl::BufferNode* _bufferNodePtr(BufferNodeID nodeID) const ;
-		impl::BufferNode* _bufferNodePtr(BufferNodeID nodeID);
+		[[nodiscard]] const impl::BufferNode& get_buffer_node(BufferNodeID node_id) const;
+		impl::BufferNode& get_buffer_node(BufferNodeID node_id);
 
-		const impl::TextureNode* _textureNodePtr(TextureNodeID nodeID) const;
-		impl::TextureNode* _textureNodePtr(TextureNodeID nodeID);
+		[[nodiscard]] const impl::TextureNode& get_texture_node(TextureNodeID node_id) const;
+		impl::TextureNode& get_texture_node(TextureNodeID node_id);
 
-		Array<PassNode*> _passNodes;
+		[[nodiscard]] const Array<PassNode*>& get_pass_nodes() const { return pass_nodes_; }
+		[[nodiscard]] const Array<impl::BufferNode>& get_buffer_nodes() const { return buffer_nodes_; }
+		[[nodiscard]] const Array<impl::TextureNode>& get_texture_nodes() const { return texture_nodes_; }
+		[[nodiscard]] const Array<impl::RGInternalBuffer>& get_internal_buffers() const { return internal_buffers_; }
+		[[nodiscard]] const Array<impl::RGInternalTexture>& get_internal_textures() const { return internal_textures_; }
+		[[nodiscard]] const Array<impl::RGExternalBuffer>& get_external_buffers() const { return external_buffers_; }
+		[[nodiscard]] const Array<impl::RGExternalTexture>& get_external_textures() const { return external_textures_; }
 
-		Array<impl::BufferNode> _bufferNodes;
-		Array<impl::TextureNode> _textureNodes;
+		[[nodiscard]] RGTextureDesc get_texture_desc(TextureNodeID node_id, const gpu::System& gpu_system) const;
+		[[nodiscard]] RGBufferDesc get_buffer_desc(BufferNodeID node_id, const gpu::System& gpu_system) const;
 
-		Array<impl::RGInternalBuffer> _internalBuffers;
-		Array<impl::RGInternalTexture> _internalTextures;
+	private:
+		Array<PassNode*> pass_nodes_;
 
-		Array<impl::RGExternalBuffer> _externalBuffers;
-		Array<impl::RGExternalTexture> _externalTextures;
+		Array<impl::BufferNode> buffer_nodes_;
+		Array<impl::TextureNode> texture_nodes_;
 
-		Array<TextureExport> _textureExports;
+		Array<impl::RGInternalBuffer> internal_buffers_;
+		Array<impl::RGInternalTexture> internal_textures_;
 
+		Array<impl::RGExternalBuffer> external_buffers_;
+		Array<impl::RGExternalTexture> external_textures_;
+		
+		memory::Allocator* allocator_;
 	};
 
 	namespace impl
 	{
-
-		struct RGInternalTexture {
+		struct RGInternalTexture
+		{
 			const char* name = nullptr;
 			TextureType type = TextureType::D2;
-			uint16 width = 0;
-			uint16 height = 0;
-			uint16 depth = 0;
-			uint16 mipLevels = 0;
 			TextureFormat format = TextureFormat::COUNT;
+			Vec3ui32 extent;
+			uint32 mipLevels = 1;
+			uint16 layerCount = 1;
+			TextureSampleCount sampleCount = TextureSampleCount::COUNT_1;
 			bool clear = false;
 			ClearValue clearValue = {};
+
+			[[nodiscard]] soul_size get_view_count() const
+			{
+				return mipLevels * layerCount;
+			}
 		};
 
-		struct RGExternalTexture {
+		struct RGExternalTexture
+		{
 			const char* name = nullptr;
 			TextureID textureID;
 			bool clear = false;
 			ClearValue clearValue = {};
 		};
 
-		struct RGInternalBuffer {
+		struct RGInternalBuffer
+		{
 			const char* name = nullptr;
 			uint16 count = 0;
 			uint16 typeSize = 0;
@@ -513,21 +711,29 @@ namespace Soul::GPU
 			bool clear = false;
 		};
 
-		struct RGExternalBuffer {
+		struct RGExternalBuffer
+		{
 			const char* name = nullptr;
 			BufferID bufferID;
 			bool clear = false;
 		};
 
-		struct TextureNode {
+		struct TextureNode
+		{
 			impl::RGBufferID resourceID = impl::RG_BUFFER_ID_NULL;
+			PassNodeID creator = PASS_NODE_ID_NULL;
 			PassNodeID writer = PASS_NODE_ID_NULL;
+			TextureNodeID writeTargetNode;
+			Array<PassNodeID> readers;
 		};
 
-		struct BufferNode {
+		struct BufferNode
+		{
 			impl::RGBufferID resourceID = impl::RG_BUFFER_ID_NULL;
+			PassNodeID creator = PASS_NODE_ID_NULL;
 			PassNodeID writer = PASS_NODE_ID_NULL;
+			BufferNodeID writeTargetNode;
+			Array<PassNodeID> readers;
 		};
 	}
-
 }

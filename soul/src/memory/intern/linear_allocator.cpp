@@ -1,7 +1,7 @@
 #include "memory/allocators/linear_allocator.h"
 #include "memory/util.h"
 
-namespace Soul::Memory {
+namespace soul::memory {
 
 	LinearAllocator::LinearAllocator(const char* name, uint32 size, Allocator* backingAllocator): Allocator(name), _backingAllocator(backingAllocator) {
 		SOUL_ASSERT(0, _backingAllocator != nullptr, "");
