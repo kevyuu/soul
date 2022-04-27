@@ -9,6 +9,8 @@
 #include <vk_mem_alloc.h>
 #pragma warning(pop)
 
+#include "object_pool.h"
+
 namespace soul::gpu::impl
 {
 	struct Texture;
@@ -27,8 +29,9 @@ namespace soul::gpu::impl
 namespace soul::gpu
 {
 	// ID
-	using TextureID = ID<impl::Texture, impl::Texture*, nullptr>;
-	using BufferID = ID<impl::Buffer, uint32, 0>;
+	using TextureID = ID<impl::Texture, ObjectPool<impl::Texture>::ID, ObjectPool<impl::Texture>::NULLVAL>;
+	using BufferID = ID<impl::Buffer, ObjectPool<impl::Buffer>::ID, ObjectPool<impl::Buffer>::NULLVAL>;
+
 	using SamplerID = ID<impl::Sampler, VkSampler, VK_NULL_HANDLE>;
 	constexpr SamplerID SAMPLER_ID_NULL = SamplerID();
 

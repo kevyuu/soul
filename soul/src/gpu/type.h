@@ -1203,8 +1203,9 @@ namespace soul::gpu
 
 			VmaAllocator gpuAllocator;
 
-			Pool<Buffer> buffers;
-			ObjectPool<Texture> texture_pool;
+			ObjectPool<Buffer> bufferPool;
+			ObjectPool<Texture> texturePool;
+
 			VulkanPool<Shader> shaders;
 
 			HashMap<GraphicPipelineStateDesc, PipelineStateID> graphicPipelineStateMaps;

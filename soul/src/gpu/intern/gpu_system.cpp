@@ -94,15 +94,13 @@ namespace soul::gpu
 
 		_db.currentFrame = 0;
 		_db.frameCounter = 0;
-
-		_db.buffers.add({});
+		
 		_db.shaderArgSetIDs.add({});
 		_db.shaders.add({});
 		_db.programs.add({});
 		_db.pipelineStates.add({});
 		_db.semaphores.reserve(1000);
 		_db.semaphores.add({});
-		_db.textures.add({});
 		_db.descriptorSets.reserve(1024);
 		_db.samplerMap.reserve(128);
 
@@ -628,7 +626,7 @@ namespace soul::gpu
 			std::ranges::transform(db->swapchain.images, db->swapchain.imageViews, std::back_inserter(db->swapchain.textures), 
 				[db, this, image_sharing_mode = swapchain_info.imageSharingMode](VkImage image, VkImageView image_view)
 			{
-				const auto texture_id = TextureID(db->texture_pool.create());
+				const auto texture_id = TextureID(db->texturePool.create());
 				Texture& texture = *get_texture_ptr(texture_id);
 				texture.desc = TextureDesc::D2("Swapchain Texture", TextureFormat::BGRA8, 1, {}, {}, Vec2ui32(db->swapchain.extent.width, db->swapchain.extent.height));
 				texture.vkHandle = image;
@@ -755,8 +753,8 @@ namespace soul::gpu
 		SOUL_ASSERT_MAIN_THREAD();
 
 		SOUL_ASSERT(0, desc.layerCount >= 1, "");
-		const auto texture_id = TextureID(_db.texture_pool.create());
-		Texture& texture = *_db.texture_pool.get(texture_id.id);
+		const auto texture_id = TextureID(_db.texturePool.create());
+		Texture& texture = *_db.texturePool.get(texture_id.id);
 		const VkFormat format = vkCast(desc.format);
 		const QueueData queue_data = get_queue_data_from_queue_flags(desc.queueFlags);
 		const VkImageCreateFlags image_create_flags = desc.type == TextureType::CUBE ? VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT | VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT : VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT;
@@ -891,11 +889,11 @@ namespace soul::gpu
 	}
 
 	Texture *System:: get_texture_ptr(const TextureID texture_id) {
-		return _db.texture_pool.get(texture_id.id);
+		return _db.texturePool.get(texture_id.id);
 	}
 
 	const Texture& System::get_texture(const TextureID texture_id) const {
-		const Texture* texture = _db.texture_pool.get(texture_id.id);
+		const Texture* texture = _db.texturePool.get(texture_id.id);
 		return *texture;
 	}
 
@@ -953,7 +951,7 @@ namespace soul::gpu
 		SOUL_ASSERT(0, desc.typeAlignment > 0, "");
 		SOUL_ASSERT(0, desc.usageFlags.any(), "");
 
-		const BufferID buffer_id = BufferID(_db.buffers.add({}));
+		const auto buffer_id = BufferID(_db.bufferPool.create());
 		Buffer &buffer = *get_buffer_ptr(buffer_id);
 
 		const QueueData queue_data = get_queue_data_from_queue_flags(desc.queueFlags);
@@ -1020,13 +1018,13 @@ namespace soul::gpu
 		get_frame_context().garbages.buffers.add(id);
 	}
 
-	Buffer *System::get_buffer_ptr(BufferID bufferID) {
-		return &_db.buffers[bufferID.id];
+	Buffer *System::get_buffer_ptr(BufferID buffer_id) {
+		return _db.bufferPool.get(buffer_id.id);
 	}
 
-	const Buffer& System::get_buffer(BufferID bufferID) const {
+	const Buffer& System::get_buffer(BufferID buffer_id) const {
 		SOUL_ASSERT(!bufferID.is_null(), "");
-		return _db.buffers[bufferID.id];
+		return *_db.bufferPool.get(buffer_id.id);
 	}
 
 	_FrameContext &System::get_frame_context() {
@@ -2256,7 +2254,7 @@ namespace soul::gpu
 					_db.cpuAllocator.deallocate(texture.views, sizeof(VkImageView) * texture.desc.mipLevels);
 					texture.views = nullptr;
 				}
-				_db.texture_pool.destroy(texture_id.id);
+				_db.texturePool.destroy(texture_id.id);
 			}
 			frameContext.garbages.textures.resize(0);
 		}
@@ -2267,7 +2265,7 @@ namespace soul::gpu
 			for (BufferID bufferID : frameContext.garbages.buffers) {
 				Buffer& buffer = *get_buffer_ptr(bufferID);
 				vmaDestroyBuffer(_db.gpuAllocator, buffer.vkHandle, buffer.allocation);
-				_db.buffers.remove(bufferID.id);
+				_db.bufferPool.destroy(bufferID.id);
 			}
 			frameContext.garbages.buffers.resize(0);
 		}

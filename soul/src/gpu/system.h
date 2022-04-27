@@ -36,8 +36,8 @@ namespace soul::gpu
 		BufferID create_buffer(const BufferDesc& desc, const void* data);
 		void finalize_buffer(BufferID buffer_id);
 		void destroy_buffer(BufferID bufferID);
-		impl::Buffer* get_buffer_ptr(BufferID bufferID);
-		const impl::Buffer& get_buffer(BufferID bufferID) const;
+		impl::Buffer* get_buffer_ptr(BufferID buffer_id);
+		const impl::Buffer& get_buffer(BufferID buffer_id) const;
 
 		TextureID create_texture(const TextureDesc& desc);
 		TextureID create_texture(const TextureDesc& desc, const TextureLoadDesc& load_desc);

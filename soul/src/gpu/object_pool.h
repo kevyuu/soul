@@ -13,6 +13,7 @@ namespace soul::gpu
 	{
 	public:
 		using ID = T*;
+		static constexpr ID NULLVAL = nullptr;
 
 		explicit ObjectPool(soul::memory::Allocator* allocator = GetDefaultAllocator()) noexcept : allocator_(allocator)
 		{}
