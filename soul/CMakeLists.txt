@@ -81,7 +81,7 @@ set (SOUL_SOURCES
 	"$<$<STREQUAL:${CMAKE_SYSTEM_NAME},Darwin>:${SOUL_SOURCES_OSX}>"
 	"$<$<STREQUAL:${CMAKE_SYSTEM_NAME},Windows>:${SOUL_SOURCES_WINDOWS}>")
 
-add_library(soul STATIC ${SOUL_SOURCES} "src/core/compiler.h" "src/core/type_traits.h" "src/gpu/id.h" "src/gpu/constant.h")
+add_library(soul STATIC ${SOUL_SOURCES} "src/core/compiler.h" "src/core/type_traits.h" "src/gpu/id.h" "src/gpu/constant.h" "src/gpu/object_pool.h")
 target_link_libraries(soul
 	PUBLIC glfw ${GLFW_LIBRARIES} vk_mem_alloc ${NVTX}
 	PRIVATE volk shaderc spirv-cross-core tracy)

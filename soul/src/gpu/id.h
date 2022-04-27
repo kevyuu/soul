@@ -27,7 +27,7 @@ namespace soul::gpu::impl
 namespace soul::gpu
 {
 	// ID
-	using TextureID = ID<impl::Texture, uint32, 0>;
+	using TextureID = ID<impl::Texture, impl::Texture*, nullptr>;
 	using BufferID = ID<impl::Buffer, uint32, 0>;
 	using SamplerID = ID<impl::Sampler, VkSampler, VK_NULL_HANDLE>;
 	constexpr SamplerID SAMPLER_ID_NULL = SamplerID();

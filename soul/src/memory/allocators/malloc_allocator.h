@@ -17,7 +17,7 @@ namespace soul::memory {
 		~MallocAllocator() override = default;
 
 		void reset() override;
-		Allocation tryAllocate(soul_size size, soul_size alignment, const char* tag) override;
+		Allocation try_allocate(soul_size size, soul_size alignment, const char* tag) override;
 		void deallocate(void* addr, soul_size size) override;
 
 	};

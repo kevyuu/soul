@@ -391,11 +391,11 @@ namespace soul::memory {
 			_proxy.onPostCleanup();
 		}
 
-		Allocation tryAllocate(soul_size size, soul_size alignment, const char* tag) override {
+		Allocation try_allocate(soul_size size, soul_size alignment, const char* tag) override {
 			if (size == 0) return { nullptr, 0 };
 			AllocateParam param = { size, alignment, tag };
 			param = _proxy.onPreAllocate(param);
-			Allocation allocation = allocator->tryAllocate(param.size, param.alignment, name());
+			Allocation allocation = allocator->try_allocate(param.size, param.alignment, name());
 			return _proxy.onPostAllocate(allocation);
 		}
 

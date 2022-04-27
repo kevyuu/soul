@@ -8,6 +8,7 @@
 #include <vk_mem_alloc.h>
 #pragma warning(pop)
 
+#include "gpu/object_pool.h"
 #include "gpu/id.h"
 #include "gpu/constant.h"
 #include "gpu/intern/render_compiler.h"
@@ -1014,6 +1015,7 @@ namespace soul::gpu
 			constexpr PrimaryCommandBuffer() noexcept = default;
 			explicit constexpr PrimaryCommandBuffer(VkCommandBuffer vk_handle) : vk_handle_(vk_handle) {}
 			[[nodiscard]] constexpr VkCommandBuffer get_vk_handle() const noexcept { return vk_handle_; }
+			[[nodiscard]] bool is_null() const noexcept { return vk_handle_ == VK_NULL_HANDLE; }
 			void begin_render_pass(const VkRenderPassBeginInfo& render_pass_begin_info, VkSubpassContents subpass_contents);
 			void end_render_pass();
 			void execute_secondary_command_buffers(uint32_t count, const SecondaryCommandBuffer* secondary_command_buffers);
@@ -1049,10 +1051,9 @@ namespace soul::gpu
 			{
 				allocator_initializer_.end();
 			}
-			void init(VkDevice device, const CommandQueues& queues, soul_size threadCount);
+			void init(VkDevice device, const CommandQueues& queues, soul_size thread_count);
 			void reset();
 			VkCommandBuffer requestCommandBuffer(QueueType queueType);
-			VkCommandBuffer requestSecondaryCommandBuffer();
 
 			PrimaryCommandBuffer request_command_buffer(const QueueType queue_type);
 			SecondaryCommandBuffer request_secondary_command_buffer(VkRenderPass render_pass, const uint32_t subpass, VkFramebuffer framebuffer);
@@ -1060,7 +1061,7 @@ namespace soul::gpu
 		private:
 			memory::Allocator* allocator_;
 			runtime::AllocatorInitializer allocator_initializer_;
-			EnumArray<QueueType, CommandPool> primary_pools_;
+			Array<EnumArray<QueueType, CommandPool>> primary_pools_;
 			Array<CommandPool> secondary_pools_;
 		};
 
@@ -1072,7 +1073,7 @@ namespace soul::gpu
 			void load(Texture& texture, const TextureLoadDesc& loadDesc);
 			void clear(Texture& texture, ClearValue clearValue);
 			void generate_mipmap(Texture& texture);
-			void flush(CommandQueues& commandQueues, System& gpuSystem);
+			void flush(CommandQueues& command_queues, System& gpu_system);
 			void reset();
 		private:
 
@@ -1082,28 +1083,52 @@ namespace soul::gpu
 				VmaAllocation allocation;
 			};
 
-			VmaAllocator gpuAllocator_ = nullptr;
-			CommandPools* commandPools_ = nullptr;
+			struct alignas(SOUL_CACHELINE_SIZE) ThreadContext
+			{
+				PrimaryCommandBuffer transfer_command_buffer_;
+				PrimaryCommandBuffer clear_command_buffer_;
+				PrimaryCommandBuffer mipmap_gen_command_buffer_;
+				Array<StagingBuffer> staging_buffers_;
+			};
 
-			void setup();
-			StagingBuffer getStagingBuffer(soul_size size);
-			void loadStagingBuffer(const StagingBuffer&, const void* data, soul_size size);
+			VmaAllocator gpu_allocator_ = nullptr;
+			CommandPools* command_pools_ = nullptr;
+			
+			ThreadContext& get_thread_context();
+			StagingBuffer get_staging_buffer(soul_size size);
+			PrimaryCommandBuffer get_transfer_command_buffer();
+			PrimaryCommandBuffer get_mipmap_gen_command_buffer();
+			PrimaryCommandBuffer get_clear_command_buffer();
+			void load_staging_buffer(const StagingBuffer&, const void* data, soul_size size);
 
-			VkCommandBuffer transferCommandBuffer_ = VK_NULL_HANDLE;
-			VkCommandBuffer clearCommandBuffer_ = VK_NULL_HANDLE;
-			VkCommandBuffer mipmapGenCommandBuffer_ = VK_NULL_HANDLE;
-			Array<StagingBuffer> stagingBuffers;
+			Array<ThreadContext> thread_contexts_;
 		};
 
 		class GPUResourceFinalizer
 		{
 		public:
+			void init();
 			void finalize(Buffer& buffer);
-			void finalize(Texture& texture, TextureUsageFlags usageFlags);
+			void finalize(Texture& texture, TextureUsageFlags usage_flags);
 			void flush(CommandPools& command_pools, CommandQueues& command_queues, System& gpu_system);
 		private:
-			EnumArray<QueueType, Array<VkImageMemoryBarrier>> imageBarriers;
-			EnumArray<QueueType, QueueFlags> syncDstQueues = EnumArray<QueueType, QueueFlags>(QueueFlags());
+			struct alignas(SOUL_CACHELINE_SIZE) ThreadContext
+			{
+				EnumArray<QueueType, Array<VkImageMemoryBarrier>> image_barriers_;
+				EnumArray<QueueType, QueueFlags> sync_dst_queues_;
+
+				// TODO(kevinyu): Investigate why we cannot use explicitly or implicitly default constructor here.
+				// - alignas seems to be relevant
+				// - only happen on release mode
+				ThreadContext() {}
+				ThreadContext(const ThreadContext&) = default;
+				ThreadContext& operator=(const ThreadContext&) = default;
+				ThreadContext(ThreadContext&&) = default;
+				ThreadContext& operator=(ThreadContext&&) = default;
+				~ThreadContext() {}
+			};
+
+			Array<ThreadContext> thread_contexts_;
 		};
 
 
@@ -1179,7 +1204,7 @@ namespace soul::gpu
 			VmaAllocator gpuAllocator;
 
 			Pool<Buffer> buffers;
-			Pool<Texture> textures;
+			ObjectPool<Texture> texture_pool;
 			VulkanPool<Shader> shaders;
 
 			HashMap<GraphicPipelineStateDesc, PipelineStateID> graphicPipelineStateMaps;

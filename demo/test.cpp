@@ -29,10 +29,11 @@ int main()
 	SOUL_PROFILE_THREAD_SET_NAME("Main Thread");
 
 	glfwSetErrorCallback(glfwPrintErrorCallback);
-	SOUL_ASSERT(0, glfwInit(), "GLFW initialization failed!");
+	bool glfw_init_success = glfwInit();
+	SOUL_ASSERT(0, glfw_init_success, "GLFW initialization failed!");
 	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 	glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
-	SOUL_LOG_INFO("GLFW initialization sucessful");
+	SOUL_LOG_INFO("GLFW Initialization sucessful");
 
 	SOUL_ASSERT(0, glfwVulkanSupported(), "Vulkan is not supported by glfw");
 

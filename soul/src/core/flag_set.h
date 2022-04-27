@@ -27,6 +27,8 @@ namespace soul
 			}))
 		{}
 
+		constexpr explicit FlagSet(store_type val) : flags_(val) {}
+
 		bool operator [] (enum_type bit) const
 		{
 			return test(bit);
@@ -137,7 +139,7 @@ namespace soul
 				flags &= ~(1u << bit);
 			}
 		}
-
+		
 	private:
 		store_type flags_ = 0;
 	};
@@ -145,18 +147,18 @@ namespace soul
 	template<flag_scope_enum enumT>
 	FlagSet<enumT> operator & (const FlagSet<enumT> lhs, const FlagSet<enumT> rhs)
 	{
-		return FlagSet<enumT>(FlagSet<enumT>::store_type(lhs) & FlagSet<enumT>::store_type(rhs));
+		return FlagSet<enumT>(FlagSet<enumT>::store_type(lhs.val()) & FlagSet<enumT>::store_type(rhs.val()));
 	}
 
 	template<flag_scope_enum enumT>
 	FlagSet<enumT> operator | (const FlagSet<enumT> lhs, const FlagSet<enumT> rhs)
 	{
-		return FlagSet<enumT>(FlagSet<enumT>::store_type(lhs) | FlagSet<enumT>::store_type(rhs));
+		return FlagSet<enumT>(FlagSet<enumT>::store_type(lhs.val()) | FlagSet<enumT>::store_type(rhs.val()));
 	}
 
 	template<flag_scope_enum enumT>
 	FlagSet<enumT> operator ^ (const FlagSet<enumT> lhs, const FlagSet<enumT> rhs)
 	{
-		return FlagSet<enumT>(FlagSet<enumT>::store_type(lhs) ^ FlagSet<enumT>::store_type(rhs));
+		return FlagSet<enumT>(FlagSet<enumT>::store_type(lhs.val()) ^ FlagSet<enumT>::store_type(rhs.val()));
 	}
 }

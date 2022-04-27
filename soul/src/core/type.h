@@ -272,6 +272,9 @@ namespace soul {
 		template<std::integral Integral>
 		constexpr explicit ID(Integral id) : id(soul::cast<IDType>(id)) {}
 
+		template<typename Pointer> requires std::is_pointer_v<Pointer>
+		constexpr explicit ID(Pointer id): id(id) {}
+
 		bool operator==(const ID& other) const { return other.id == id; }
 		bool operator!=(const ID& other) const { return other.id != id; }
 		bool operator<(const ID& other) const { return id < other.id; }

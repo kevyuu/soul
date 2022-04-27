@@ -9,7 +9,7 @@ namespace soul::memory {
 		SOUL_NOT_IMPLEMENTED();
 	}
 
-	Allocation MallocAllocator::tryAllocate(soul_size size, soul_size alignment, const char* tag) {
+	Allocation MallocAllocator::try_allocate(soul_size size, soul_size alignment, const char* tag) {
 		return {malloc(size), size};
 	}
 

@@ -21,12 +21,14 @@ void soul_intern_log(int verbosity, int line, const char* file, const char* form
 #endif
 
 // Logging
-#define SOUL_LOG_VERBOSE_COUNT 4
+#define SOUL_LOG_VERBOSE_COUNT 5
+#define SOUL_LOG_VERBOSE_DEBUG 4
 #define SOUL_LOG_VERBOSE_INFO 3
 #define SOUL_LOG_VERBOSE_WARN 2
 #define SOUL_LOG_VERBOSE_ERROR 1
 #define SOUL_LOG_VERBOSE_FATAL 0
 
+#define SOUL_LOG_DEBUG(format, ...) SOUL_LOG (SOUL_LOG_VERBOSE_DEBUG, format, ##__VA_ARGS__)
 #define SOUL_LOG_INFO(format, ...) SOUL_LOG (SOUL_LOG_VERBOSE_INFO, format, ##__VA_ARGS__)
 #define SOUL_LOG_WARN(format, ...) SOUL_LOG (SOUL_LOG_VERBOSE_WARN, format, ##__VA_ARGS__)
 #define SOUL_LOG_ERROR(format, ...) SOUL_LOG(SOUL_LOG_VERBOSE_ERROR, format, ##__VA_ARGS__)
@@ -35,7 +37,7 @@ void soul_intern_log(int verbosity, int line, const char* file, const char* form
 void soul_intern_assert(int paranoia, int line, const char* file, const char* format, ...);
 
 // Assert
-#if defined(SOUL_LOG_ENABLE)
+#if defined(SOUL_ASSERT_ENABLE)
     #define SOUL_ASSERT(paranoia, test, msg, ...) do {if (!(test)) {soul_intern_assert(paranoia, __LINE__, __FILE__, \
             "Assertion failed: %s\n\n" msg, #test,  ##__VA_ARGS__); SOUL_DEBUG_BREAK();}} while (0)
     #define SOUL_PANIC(paranoia, msg, ...) do{soul_intern_assert(paranoia, __LINE__, __FILE__, \

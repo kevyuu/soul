@@ -22,7 +22,7 @@ namespace soul::runtime{
 		~ScopeAllocator() override;
 
 		void reset() override;
-		memory::Allocation tryAllocate(soul_size size, soul_size alignment, const char* tag) override;
+		memory::Allocation try_allocate(soul_size size, soul_size alignment, const char* tag) override;
 		void deallocate(void* addr, soul_size size) override;
 
 	private:
@@ -59,10 +59,10 @@ namespace soul::runtime{
 	}
 
 	template<typename BACKING_ALLOCATOR>
-	memory::Allocation ScopeAllocator<BACKING_ALLOCATOR>::tryAllocate(soul_size size, soul_size alignment, const char* tag) {
-		memory::Allocation allocation = _backingAllocator->tryAllocate(size, alignment, tag);
+	memory::Allocation ScopeAllocator<BACKING_ALLOCATOR>::try_allocate(soul_size size, soul_size alignment, const char* tag) {
+		memory::Allocation allocation = _backingAllocator->try_allocate(size, alignment, tag);
 		if (allocation.addr == nullptr) {
-			allocation = _fallbackAllocator->tryAllocate(size, alignment, tag);
+			allocation = _fallbackAllocator->try_allocate(size, alignment, tag);
 			_fallbackAllocations.add(allocation);
 		}
 		return allocation;

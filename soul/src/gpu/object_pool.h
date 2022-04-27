@@ -1,0 +1,71 @@
+#pragma once
+
+#include "memory/allocator.h"
+#include "core/array.h"
+#include "core/config.h"
+
+#include <mutex>
+
+namespace soul::gpu
+{
+	template <typename T, size_t BLOCK_SIZE = 512>
+	class ObjectPool
+	{
+	public:
+		using ID = T*;
+
+		explicit ObjectPool(soul::memory::Allocator* allocator = GetDefaultAllocator()) noexcept : allocator_(allocator)
+		{}
+
+		template <typename... ARGS>
+		ID create(ARGS&&... args)
+		{
+			std::lock_guard guard(mutex_);
+			if (vacants_.empty())
+			{
+				soul_size num_objects = BLOCK_SIZE / sizeof(T);
+				T* memory = static_cast<T*>(allocator_->allocate(num_objects * sizeof(T), alignof(T), ""));
+				if (!memory)
+				{
+					return nullptr;
+				}
+				for (soul_size object_idx = 0; object_idx < num_objects; object_idx++)
+				{
+					vacants_.push_back(&memory[object_idx]);
+				}
+				memories_.push_back(memory);
+			}
+			T* ptr = vacants_.back();
+			vacants_.pop();
+			new(ptr) T(std::forward<ARGS>(args)...);
+			return ptr;
+		}
+
+		void destroy(ID id)
+		{
+			id->~T();
+			std::lock_guard guard(mutex_);
+			vacants_.push_back(id);
+		}
+
+		T* get(ID id) const
+		{
+			return id;
+		}
+
+		~ObjectPool()
+		{
+			soul_size num_objects = BLOCK_SIZE / sizeof(T);
+			for (T* memory : memories_)
+			{
+				allocator_->deallocate(memory, num_objects * sizeof(T));
+			}
+		}
+
+	private:
+		mutable std::mutex mutex_;
+		Array<T*> vacants_;
+		Array<T*> memories_;
+		memory::Allocator* allocator_;
+	};
+}

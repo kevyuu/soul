@@ -5,7 +5,7 @@ namespace soul::memory {
 
 	LinearAllocator::LinearAllocator(const char* name, uint32 size, Allocator* backingAllocator): Allocator(name), _backingAllocator(backingAllocator) {
 		SOUL_ASSERT(0, _backingAllocator != nullptr, "");
-		const Allocation allocation = _backingAllocator->tryAllocate(size, 0, name);
+		const Allocation allocation = _backingAllocator->try_allocate(size, 0, name);
 		_baseAddr = allocation.addr;
 		_currentAddr = _baseAddr;
 		_size = allocation.size;
@@ -17,7 +17,7 @@ namespace soul::memory {
 
 	void LinearAllocator::reset() { _currentAddr = _baseAddr; }
 
-	Allocation LinearAllocator::tryAllocate(soul_size size, soul_size alignment, const char* tag) {
+	Allocation LinearAllocator::try_allocate(soul_size size, soul_size alignment, const char* tag) {
 		void *addr = Util::AlignForward(_currentAddr, alignment);
 		if (Util::Add(_baseAddr, _size) < Util::Add(addr, size)) {
 			return {nullptr, 0};

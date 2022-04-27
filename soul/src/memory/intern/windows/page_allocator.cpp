@@ -13,7 +13,7 @@ namespace soul::memory {
 
 	void PageAllocator::reset() {};
 
-	Allocation PageAllocator::tryAllocate(soul_size size, soul_size alignment, const char* tag) {
+	Allocation PageAllocator::try_allocate(soul_size size, soul_size alignment, const char* tag) {
 		soul_size newSize = Util::PageSizeRound(size, _pageSize);
 		void* addr = VirtualAlloc(NULL, newSize, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
 		SOUL_ASSERT(0, addr != nullptr, "");

@@ -30,14 +30,14 @@ namespace soul::memory {
 		SOUL_NODISCARD const char* name() const { return _name; }
 
 		
-		virtual Allocation tryAllocate(soul_size size, soul_size alignment, const char* tag) = 0;
+		virtual Allocation try_allocate(soul_size size, soul_size alignment, const char* tag) = 0;
 		virtual void* allocate(soul_size size, soul_size alignment) final {
-			const Allocation allocation = tryAllocate(size, alignment, "untagged");
+			const Allocation allocation = try_allocate(size, alignment, "untagged");
 			return allocation.addr;
 		}
 
 		virtual void* allocate(soul_size size, soul_size alignment, const char* tag) final {
-			const Allocation allocation = tryAllocate(size, alignment, tag);
+			const Allocation allocation = try_allocate(size, alignment, tag);
 			return allocation.addr;
 		}
 		virtual void deallocate(void* addr, soul_size size) = 0;
@@ -45,7 +45,7 @@ namespace soul::memory {
 		template <typename TYPE, typename... ARGS>
 		TYPE* create(ARGS&&... args)
 		{
-			Allocation allocation = tryAllocate(sizeof(TYPE), alignof(TYPE), "untagged");
+			Allocation allocation = try_allocate(sizeof(TYPE), alignof(TYPE), "untagged");
 			return allocation.addr ? new(allocation.addr) TYPE(std::forward<ARGS>(args)...) : nullptr;
 		}
 
