@@ -78,3 +78,7 @@ target_compile_definitions(tiny_gltf
 add_library(vk_mem_alloc INTERFACE)
 target_include_directories(vk_mem_alloc
 	INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/VulkanMemoryAllocator/src ${Vulkan_INCLUDE_DIR})
+
+add_library(argparse INTERFACE)
+target_include_directories(argparse
+	INTERFACE ${CMAKE_CURRENT_SOURCE_DIR})

@@ -1,3 +1,7 @@
+#include "argparse.h"
+
+#include <string>
+
 #include "core/type.h"
 #include "core/dev_util.h"
 #include "core/array.h"
@@ -24,8 +28,16 @@ void glfwPrintErrorCallback(int code, const char* message)
 	SOUL_LOG_INFO("GLFW Error. Error code : %d. Message = %s", code, message);
 }
 
-int main()
+struct Args : public argparse::Args
 {
+	std::optional<std::string>& path = kwarg("g,gltf", "GLTF file to show");
+};
+
+int main(int argc, char* argv[])
+{
+	auto args = argparse::parse<Args>(argc, argv);
+	args.print();
+
 	SOUL_PROFILE_THREAD_SET_NAME("Main Thread");
 
 	glfwSetErrorCallback(glfwPrintErrorCallback);
@@ -88,6 +100,9 @@ int main()
 	UI::Store store;
 	store.scene = renderer.getScene();
 	store.gpuSystem = &gpuSystem;
+
+	if (args.path)
+		renderer.getScene()->importFromGLTF(args.path.value().c_str());
 
 	while (!glfwWindowShouldClose(window))
 	{

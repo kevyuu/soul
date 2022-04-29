@@ -25,9 +25,10 @@ set (DEMO_SOURCES
 	
 )
 
-add_executable(demo ${DEMO_SOURCES})
+add_executable(demo ${DEMO_SOURCES} )
 
 target_link_libraries(demo
+	INTERFACE argparse
 	PRIVATE soul glfw ${GLFW_LIBRARIES} tiny_gltf imgui tracy imgui_filesystem)
 
 add_custom_command(
