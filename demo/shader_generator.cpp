@@ -192,7 +192,7 @@ namespace Demo {
 
 	void ShaderGenerator::addShaderTemplates(const char* groupName, const char* path) {
 		for (const auto& entry : std::filesystem::directory_iterator(path)) {
-			SOUL_LOG_INFO("Entry path = %s", entry.path().string().c_str());
+			SOUL_LOG_DEBUG("Entry path = %s", entry.path().string().c_str());
 			char* shaderCode = LoadFile(entry.path().string().c_str(), this->_allocator);
 			
 			const std::filesystem::path& fpath = entry.path();

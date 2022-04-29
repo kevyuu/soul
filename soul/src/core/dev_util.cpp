@@ -14,11 +14,12 @@ static const char* LOG_PREFIX[] = {
 	"ERROR",
 	"WARN",
 	"INFO",
+	"DEBUG",
 };
 
 void soul_intern_log(int verbosity, int line, const char* file, const char* format, ...) {
 	if (verbosity <= SOUL_LOG_VERBOSE_LEVEL) {
-		printf("%s", LOG_PREFIX[verbosity]);
+		printf("[%s] ", LOG_PREFIX[verbosity]);
 		printf(":");
 		printf("%s", ProjectPath(file));
 		printf(":");
