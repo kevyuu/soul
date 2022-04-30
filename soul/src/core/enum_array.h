@@ -31,10 +31,12 @@ namespace soul {
 		}
 
 		constexpr ValType& operator[](EnumType index) noexcept {
+			SOUL_ASSERT(0, to_underlying(index) < to_underlying(EnumType::COUNT), "");
 			return buffer_[to_underlying(index)];
 		}
 
 		constexpr const ValType& operator[](EnumType index) const {
+			SOUL_ASSERT(0, to_underlying(index) < to_underlying(EnumType::COUNT), "");
 			return buffer_[to_underlying(index)];
 		}
 
