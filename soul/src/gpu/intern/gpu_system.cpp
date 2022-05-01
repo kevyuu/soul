@@ -96,7 +96,6 @@ namespace soul::gpu
 		_db.frameCounter = 0;
 		
 		_db.shaderArgSetIDs.add({});
-		_db.shaders.add({});
 		_db.programs.add({});
 		_db.pipelineStates.add({});
 		_db.semaphores.reserve(1000);
@@ -1215,7 +1214,7 @@ namespace soul::gpu
 		SOUL_ASSERT(0, resources.stage_inputs.size() <= MAX_INPUT_PER_SHADER, "");
 
 		if (stage != ShaderStage::VERTEX) {
-			return ShaderID(_db.shaders.add(shader));
+			return ShaderID(_db.shaders.create(std::move(shader)));
 		}
 
 		struct AttrExtraInfo {
@@ -1302,7 +1301,7 @@ namespace soul::gpu
 		const uint32 vertex_size = (current_offset + vertex_alignment - 1) & ~(vertex_alignment - 1);
 		shader.inputStride = vertex_size;
 
-		return ShaderID(_db.shaders.add(shader));
+		return ShaderID(_db.shaders.create(shader));
 	}
 
 	void System::destroy_shader(const ShaderID shader_id) {
@@ -1310,7 +1309,7 @@ namespace soul::gpu
 	}
 
 	Shader *System::get_shader_ptr(const ShaderID shader_id) {
-		return &_db.shaders[shader_id.id];
+		return _db.shaders.get(shader_id.id);
 	}
 
 	VkDescriptorSetLayout System::request_descriptor_layout(const DescriptorSetLayoutKey& key) {
@@ -2274,9 +2273,9 @@ namespace soul::gpu
 		}
 
 		for (ShaderID shaderID : frameContext.garbages.shaders) {
-			Shader &shader = _db.shaders[shaderID.id];
+			Shader& shader = *_db.shaders.get(shaderID.id);
 			vkDestroyShaderModule(_db.device, shader.module, nullptr);
-			_db.shaders.remove(shaderID.id);
+			_db.shaders.destroy(shaderID.id);
 		}
 		frameContext.garbages.shaders.resize(0);
 

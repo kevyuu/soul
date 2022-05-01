@@ -269,7 +269,21 @@ namespace Demo {
 				SOUL_NOT_IMPLEMENTED(); return soul::gpu::ShaderStage::COUNT;
 			}
 		};
+
+
+		uint64 hash = soul::hash_fnv1(stringBuilder.data(), stringBuilder.size());
+		{
+			std::lock_guard shader_map_lock_guard(shader_map_mutex);
+			if (shader_map.isExist(hash))
+				return shader_map[hash];
+		}
+
+		soul::gpu::ShaderID shader_id = _gpuSystem->create_shader({ "default", stringBuilder.data(), uint32(stringBuilder.size()) }, _getShaderStage(shaderDesc.type));
+		{
+			std::lock_guard shader_map_lock_guard(shader_map_mutex);
+			shader_map.add(hash, shader_id);
+		}
+		return shader_id;
 		
-		return _gpuSystem->create_shader({ "default", stringBuilder.data(), uint32(stringBuilder.size())}, _getShaderStage(shaderDesc.type));
 	}
 }

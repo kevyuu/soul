@@ -1069,7 +1069,7 @@ namespace soul::gpu
 		{
 		public:
 			void init(VmaAllocator gpuAllocator, CommandPools* commandPools);
-			void load(Buffer& buffer, const void* data, soul_size size);
+			void load(Buffer& buffer, const void* data);
 			void load(Texture& texture, const TextureLoadDesc& loadDesc);
 			void clear(Texture& texture, ClearValue clearValue);
 			void generate_mipmap(Texture& texture);
@@ -1100,6 +1100,7 @@ namespace soul::gpu
 			PrimaryCommandBuffer get_mipmap_gen_command_buffer();
 			PrimaryCommandBuffer get_clear_command_buffer();
 			void load_staging_buffer(const StagingBuffer&, const void* data, soul_size size);
+			void load_staging_buffer(const StagingBuffer&, const void* data, soul_size count, soul_size type_size, soul_size stride);
 
 			Array<ThreadContext> thread_contexts_;
 		};
@@ -1205,8 +1206,7 @@ namespace soul::gpu
 
 			ObjectPool<Buffer> bufferPool;
 			ObjectPool<Texture> texturePool;
-
-			VulkanPool<Shader> shaders;
+			ObjectPool<Shader> shaders;
 
 			HashMap<GraphicPipelineStateDesc, PipelineStateID> graphicPipelineStateMaps;
 			HashMap<ComputePipelineStateDesc, PipelineStateID> computePipelineStateMaps;

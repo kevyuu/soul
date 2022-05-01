@@ -179,6 +179,9 @@ namespace Demo {
         soul::memory::Allocator* _allocator;
         soul::runtime::AllocatorInitializer _allocatorInitializer;
 
+        mutable std::mutex shader_map_mutex;
+        mutable soul::UInt64HashMap<soul::gpu::ShaderID> shader_map;
+
         soul::UInt64HashMap<char*> _templateMap;
         soul::gpu::System* _gpuSystem;
     };

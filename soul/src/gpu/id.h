@@ -40,7 +40,7 @@ namespace soul::gpu
 
 	using ShaderArgSetID = ID<impl::ShaderArgSet, uint32, 0>;
 
-	using ShaderID = ID<impl::Shader, uint32, 0>;
+	using ShaderID = ID<impl::Shader, ObjectPool<impl::Shader>::ID, ObjectPool<impl::Shader>::NULLVAL>;
 	constexpr ShaderID SHADER_ID_NULL = ShaderID();
 
 	using ProgramID = ID<impl::Program, uint16, 0>;

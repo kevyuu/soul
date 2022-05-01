@@ -32,6 +32,7 @@ namespace soul {
 
 		SOUL_NODISCARD bool isExist(uint64 key) const noexcept
 		{
+			if (_size == 0) return false;
 			uint32 index = _findIndex(key);
 			return (_indexes[index].key == key && _indexes[index].dib != 0);
 		}
