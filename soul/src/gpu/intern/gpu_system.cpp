@@ -943,7 +943,11 @@ namespace soul::gpu
 		}
 		return get_texture(texture_id).view;
 	}
-
+	/// <summary>
+	/// 
+	/// </summary>
+	/// <param name="desc"></param>
+	/// <returns></returns>
 	BufferID System::create_buffer(const BufferDesc &desc) {
 		SOUL_ASSERT_MAIN_THREAD();
 		SOUL_ASSERT(0, desc.count > 0, "");
@@ -1001,9 +1005,8 @@ namespace soul::gpu
 
 		const BufferID buffer_id = create_buffer(new_desc);
 		impl::Buffer& buffer = *get_buffer_ptr(buffer_id);
-		const size_t size = buffer.desc.count * buffer.unitSize;
 
-		get_frame_context().gpuResourceInitializer.load(buffer, data, size);
+		get_frame_context().gpuResourceInitializer.load(buffer, data);
 
 		return buffer_id;
 	}
@@ -1023,7 +1026,7 @@ namespace soul::gpu
 	}
 
 	const Buffer& System::get_buffer(BufferID buffer_id) const {
-		SOUL_ASSERT(!bufferID.is_null(), "");
+		SOUL_ASSERT(!buffer_id.is_null(), "");
 		return *_db.bufferPool.get(buffer_id.id);
 	}
 
@@ -1092,10 +1095,7 @@ namespace soul::gpu
 		SOUL_ASSERT(0, desc.source != nullptr, "");
 		SOUL_ASSERT(0, desc.name != nullptr, "");
 		SOUL_ASSERT(0, strlen(desc.name) != 0, "Shader name cannot be empty");
-
-		runtime::ScopeAllocator<> scope_allocator("create_shader");
-		SOUL_MEMORY_ALLOCATOR_ZONE(&scope_allocator);
-
+		
 		Shader shader;
 
 		shaderc::Compiler glsl_compiler;
@@ -1106,16 +1106,6 @@ namespace soul::gpu
 			shaderc_shader_kind::shaderc_glsl_fragment_shader,
 			shaderc_shader_kind::shaderc_glsl_compute_shader
 		});
-		
-		shaderc::CompileOptions options;
-		options.SetTargetSpirv(shaderc_spirv_version_1_3);
-		const shaderc::SpvCompilationResult glsl_compile_result = glsl_compiler.CompileGlslToSpv(
-			desc.source,
-			desc.sourceSize,
-			SHADERC_SHADER_STAGE_MAP[stage],
-			desc.name,
-			options);
-		const std::string error_message = glsl_compile_result.GetErrorMessage();
 
 		static constexpr EnumArray<ShaderStage, const char*> STAGE_NAMES({
 			"VERTEX",
@@ -1124,10 +1114,23 @@ namespace soul::gpu
 			"COMPUTE"
 		});
 
-		SOUL_ASSERT(0, glsl_compile_result.GetCompilationStatus() == shaderc_compilation_status_success,
-		            "Fail when compiling pass : %d, shader_type = %s.\n"
-		            "Error : \n%s\n", desc.name, STAGE_NAMES[stage], format_glsl_error_message(desc.source, error_message).c_str());
+		shaderc::CompileOptions options;
+		options.SetTargetSpirv(shaderc_spirv_version_1_3);
+		shaderc::SpvCompilationResult glsl_compile_result;
+		{
+			SOUL_PROFILE_ZONE_WITH_NAME("Shader compilation");
+			glsl_compile_result = glsl_compiler.CompileGlslToSpv(
+				desc.source,
+				desc.sourceSize,
+				SHADERC_SHADER_STAGE_MAP[stage],
+				desc.name,
+				options);
+			const std::string error_message = glsl_compile_result.GetErrorMessage();
 
+			SOUL_ASSERT(0, glsl_compile_result.GetCompilationStatus() == shaderc_compilation_status_success,
+				"Fail when compiling pass : %d, shader_type = %s.\n"
+				"Error : \n%s\n", desc.name, STAGE_NAMES[stage], format_glsl_error_message(desc.source, error_message).c_str());
+		}
 		const uint32 *spirv_code = glsl_compile_result.begin();
 		const size_t spirv_code_size = glsl_compile_result.end() - spirv_code;
 		const VkShaderModuleCreateInfo module_info = {
@@ -1136,9 +1139,8 @@ namespace soul::gpu
 			.pCode = spirv_code
 		};
 
-		SOUL_VK_CHECK(vkCreateShaderModule(_db.device, &module_info, nullptr, &shader.module),
-		              "Fail creating vertex shader module");
-
+		SOUL_VK_CHECK(vkCreateShaderModule(_db.device, &module_info, nullptr, &shader.module), "");
+		
 		spirv_cross::Compiler spirv_compiler(spirv_code, spirv_code_size);
 		spirv_cross::ShaderResources resources = spirv_compiler.get_shader_resources();
 
@@ -1605,6 +1607,7 @@ namespace soul::gpu
 
 	PipelineState System::get_pipeline_state(const PipelineStateID pipeline_state_id)
 	{
+		SOUL_PROFILE_ZONE();
 		std::lock_guard<std::mutex> guard(_db.pipelineStateRequestMutex);
 		return _db.pipelineStates[pipeline_state_id.id];
 	}
@@ -2626,6 +2629,19 @@ namespace soul::gpu
 		vmaUnmapMemory(gpu_allocator_, buffer.allocation);
 	}
 
+	void GPUResourceInitializer::load_staging_buffer(const StagingBuffer& buffer, const void* data, soul_size count, soul_size type_size, soul_size stride)
+	{
+		void* mapped_data;
+		vmaMapMemory(gpu_allocator_, buffer.allocation, &mapped_data);
+		const byte* src_base = soul::cast<byte*>(mapped_data);
+		const byte* dst_base = soul::cast<byte*>(data);
+		for (soul_size i = 0; i < count; i++)
+		{
+			memcpy(soul::cast<void*>(src_base + (i * stride)), soul::cast<void*>(dst_base + (i * type_size)), type_size);
+		}
+		vmaUnmapMemory(gpu_allocator_, buffer.allocation);
+	}
+
 	void GPUResourceInitializer::init(VmaAllocator gpuAllocator, CommandPools* commandPools)
 	{
 		gpu_allocator_ = gpuAllocator;
@@ -2638,14 +2654,15 @@ namespace soul::gpu
 		}
 	}
 
-	void GPUResourceInitializer::load(Buffer& buffer, const void* data, soul_size size)
+	void GPUResourceInitializer::load(Buffer& buffer, const void* data)
 	{
 		SOUL_ASSERT(0, buffer.owner == ResourceOwner::NONE, "Buffer must be uninitialized!");
-		StagingBuffer staging_buffer = get_staging_buffer((size));
-		load_staging_buffer(staging_buffer, data, size);
+		soul_size buffer_size = buffer.unitSize * buffer.desc.count;
+		StagingBuffer staging_buffer = get_staging_buffer(buffer_size);
+		load_staging_buffer(staging_buffer, data, buffer.desc.count, buffer.desc.typeSize, buffer.unitSize);
 
 		const VkBufferCopy copy_region = {
-			.size = size
+			.size = buffer_size
 		};
 
 		const char* name = "Unknown texture";

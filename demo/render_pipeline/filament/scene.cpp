@@ -764,6 +764,7 @@ void SoulFila::Scene::importFromGLTF(const char* path) {
                 const uint8* sourceData = offset + *data;
                 texels = stbi_load_from_memory(sourceData, soul::cast<int>(total_size),
                     &width, &height, &comp, 4);
+                total_size = width * height * 4;
                 SOUL_ASSERT(0, texels != nullptr, "Fail to load texels");
             }
             else {
@@ -778,7 +779,7 @@ void SoulFila::Scene::importFromGLTF(const char* path) {
                 total_size
             };
         }(srcTexture);
-        const auto mip_levels = soul::cast<uint16>(floorLog2(std::max(extent.x, extent.y)));
+        const auto mip_levels = std::max<uint16>(soul::cast<uint16>(floorLog2(std::max(extent.x, extent.y))), 1);
         const auto tex_desc = gpu::TextureDesc::D2("", gpu::TextureFormat::RGBA8, mip_levels, { gpu::TextureUsage::SAMPLED }, { gpu::QueueType::GRAPHIC }, extent);
 
         soul::gpu::SamplerDesc defaultSampler;

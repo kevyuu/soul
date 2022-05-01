@@ -496,7 +496,7 @@ namespace SoulFila {
 		soul::gpu::BufferDesc renderable_ubo_desc;
 		renderable_ubo_desc.typeSize = sizeof(PerRenderableUBO);
 		renderable_ubo_desc.typeAlignment = alignof(PerRenderableUBO);
-		renderable_ubo_desc.count = renderData.renderables.size();
+		renderable_ubo_desc.count = renderData.renderableUBOs.size();
 		renderable_ubo_desc.usageFlags = {gpu:: BufferUsage::UNIFORM };
 		renderable_ubo_desc.queueFlags = { gpu::QueueType::GRAPHIC };
 			soul::gpu::BufferID renderable_gpu_buffer = gpuSystem->create_buffer(renderable_ubo_desc, renderData.renderableUBOs.data());
