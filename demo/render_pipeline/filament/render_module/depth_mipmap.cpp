@@ -2,7 +2,7 @@
 #include "runtime/scope_allocator.h"
 #include "../../../utils.h"
 
-namespace SoulFila
+namespace soul_fila
 {
 	static constexpr char const* const DEPTH_MIPMAP_VERT_GLSL = "shaders/filament/depth_mipmap.vert.glsl";
 	static constexpr char const* const DEPTH_MIPMAP_FRAG_GLSL = "shaders/filament/depth_mipmap.frag.glsl";
@@ -20,7 +20,7 @@ namespace SoulFila
 		this->programID = gpuSystem->request_program(programDesc);
 	}
 
-	DepthMipmapPass::Output DepthMipmapPass::computeRenderGraph(soul::gpu::RenderGraph& render_graph, const Input& input, const Scene& scene)
+	DepthMipmapPass::Output DepthMipmapPass::computeRenderGraph(soul::gpu::RenderGraph& render_graph, const Input& input, const RenderData& render_data, const Scene& scene)
 	{
 
 		const gpu::RGTextureDesc depth_tex_desc = render_graph.get_texture_desc(input.depthMap, *gpuSystem);
@@ -53,7 +53,7 @@ namespace SoulFila
 				{
 					params.depthTexture = builder.add_shader_texture(depth_mipmap, { gpu::ShaderStage::VERTEX, gpu::ShaderStage::FRAGMENT }, gpu::ShaderTextureReadUsage::UNIFORM, gpu::SubresourceIndexRange(gpu::SubresourceIndex(), target_level, 1));
 				},
-				[program_id = this->programID, &scene, sampler_id, source_level, dimension](const MipmapParameter& params, gpu::RenderGraphRegistry& registry, gpu::GraphicCommandList& command_list)
+				[program_id = this->programID, &render_data, sampler_id, source_level, dimension](const MipmapParameter& params, gpu::RenderGraphRegistry& registry, gpu::GraphicCommandList& command_list)
 				{
 					const gpu::Descriptor set0_descriptors[] = {
 						gpu::Descriptor::SampledImage(registry.get_texture(params.depthTexture), sampler_id, {gpu::ShaderStage::VERTEX , gpu::ShaderStage::FRAGMENT}, gpu::SubresourceIndex(source_level, 0))
@@ -79,8 +79,8 @@ namespace SoulFila
 					const DrawCommand draw_command = {
 						.pipelineStateID =  registry.get_pipeline_state(pipeline_desc),
 						.shaderArgSetIDs = {set0},
-						.vertexBufferIDs = {scene.getFullScreenVertexBuffer()},
-						.indexBufferID = scene.getFullScreenIndexBuffer()
+						.vertexBufferIDs = {render_data.fullscreenVb},
+						.indexBufferID = render_data.fullscreenIb
 					};
 					command_list.push(draw_command);
 				}).get_render_target().depthStencilAttachment.outNodeID;

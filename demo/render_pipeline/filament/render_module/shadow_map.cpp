@@ -2,7 +2,7 @@
 #include "../renderer.h"
 #include "runtime/scope_allocator.h"
 
-namespace SoulFila
+namespace soul_fila
 {
 
 	static constexpr bool USE_DEPTH_CLAMP = false;
@@ -268,7 +268,7 @@ namespace SoulFila
 	}
 
 
-	ShadowMap ShadowMap::Create(const ShadowMapInfo& shadowMapInfo, const LightInfo& lightInfo, const SoulFila::CameraInfo& viewCamera, const SceneInfo& sceneInfo, Vec2f csNearFar)
+	ShadowMap ShadowMap::Create(const ShadowMapInfo& shadowMapInfo, const LightInfo& lightInfo, const soul_fila::CameraInfo& viewCamera, const SceneInfo& sceneInfo, Vec2f csNearFar)
 	{
 		ShadowMap shadowMap;
 		shadowMap.shadowMapInfo = shadowMapInfo;
@@ -286,7 +286,7 @@ namespace SoulFila
 			projection = mat4Perspective(projection, n, f);
 		}
 
-		SoulFila::CameraInfo cameraInfo = viewCamera;
+		soul_fila::CameraInfo cameraInfo = viewCamera;
 		cameraInfo.projection = projection;
 
 		switch (lightInfo.lightType.type)
@@ -481,7 +481,7 @@ namespace SoulFila
 		uint32 maxDimension = 0;
 		for (soul_size lightIdx = 0; lightIdx < lights.size(); lightIdx++)
 		{
-			const LightComponent& lightComp = scene.getLightComponent(entities[lightIdx]);
+			const LightComponent& lightComp = scene.get_light_component(entities[lightIdx]);
 			if (!lightComp.lightType.shadowCaster)
 			{
 				continue;
@@ -590,12 +590,12 @@ namespace SoulFila
 		cascadeShadowMaps.clear();
 		EntityID entityID = lights.elementAt<LightsIdx::ENTITY_ID>(0);
 		if (entityID == ENTITY_ID_NULL) return 0;
-		const LightComponent& lightComp = scene.getLightComponent(entityID);
+		const LightComponent& lightComp = scene.get_light_component(entityID);
 		if (!lightComp.lightType.shadowCaster) return 0;
 
 		Vec3f direction = lights.elementAt<LightsIdx::DIRECTION>(0);
 
-		ShadowMap::SceneInfo sceneInfo = ComputeSceneInfo(direction, renderables, cameraInfo, scene.getVisibleLayers());
+		ShadowMap::SceneInfo sceneInfo = ComputeSceneInfo(direction, renderables, cameraInfo, scene.get_visible_layers());
 
 		ShadowMap::ShadowMapInfo shadowMapInfo;
 		shadowMapInfo.zResolution = textureZResolution;
@@ -876,13 +876,14 @@ namespace SoulFila
 					};
 					gpu::ShaderArgSetID set0 = registry.get_shader_arg_set(0, { std::size(set0_descriptors), set0_descriptors });
 
-					auto get_material_gpu_texture = [&scene, stubTexture = scene.getStubTexture()](TextureID sceneTextureID)->soul::gpu::TextureID
+					auto get_material_gpu_texture = [&scene, stubTexture = renderData.stubTexture](TextureID sceneTextureID)->soul::gpu::TextureID
 					{
 						return sceneTextureID.is_null() ? stubTexture : scene.textures()[sceneTextureID.id].gpuHandle;
 					};
 
 					using DrawCommand = gpu::RenderCommandDrawPrimitive;
 					command_list.push<DrawCommand>(draw_items.size(), [&, sampler_id, set0](soul_size command_idx) {
+						SOUL_PROFILE_ZONE_WITH_NAME("Build Command Shadow Map");
 						const DrawItem& draw_item = draw_items[command_idx];
 						const Primitive& primitive = *draw_item.primitive;
 						const Material& material = *draw_item.material;

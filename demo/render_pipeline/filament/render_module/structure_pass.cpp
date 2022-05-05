@@ -6,7 +6,7 @@
 
 #include "draw_item.h"
 
-namespace SoulFila
+namespace soul_fila
 {
 
 	static constexpr float SCALE = 0.5f;
@@ -26,7 +26,7 @@ namespace SoulFila
 		inputParam.bonesUBO = input.bonesUb;
 		inputParam.materialsUBO = input.materialsUb;
 
-		Vec2ui32 scene_resolution = scene.getViewport();
+		Vec2ui32 scene_resolution = scene.get_viewport();
 		uint32 width = std::max(32u, (uint32_t)std::ceil(scene_resolution.x * SCALE));
 		uint32 height = std::max(32u, (uint32_t)std::ceil(scene_resolution.y * SCALE));
 		const uint32 level_count = std::min(8, MaxLevelCount(width, width) - 5);
@@ -55,8 +55,8 @@ namespace SoulFila
 			[&scene, this, &renderData, viewport = Vec2ui32(width, height)]( const Parameter& params, gpu::RenderGraphRegistry& registry, gpu::GraphicCommandList& command_list)
 			{
 				const CameraInfo& cameraInfo = renderData.cameraInfo;
-				Vec3f cameraPosition = cameraInfo.getPosition();
-				Vec3f cameraForward = cameraInfo.getForwardVector();
+				Vec3f cameraPosition = cameraInfo.get_position();
+				Vec3f cameraForward = cameraInfo.get_forward_vector();
 
 				const auto& renderables = renderData.renderables;
 				auto const* const SOUL_RESTRICT soa_world_aabb_center = renderables.data<RenderablesIdx::WORLD_AABB_CENTER>();
@@ -135,7 +135,7 @@ namespace SoulFila
 				};
 				const gpu::ShaderArgSetID set0 = registry.get_shader_arg_set(0, { std::size(set0_descriptors), set0_descriptors });
 
-				auto get_material_gpu_texture = [&scene, stubTexture = scene.getStubTexture()](TextureID sceneTextureID) -> soul::gpu::TextureID
+				auto get_material_gpu_texture = [&scene, stubTexture = renderData.stubTexture](TextureID sceneTextureID) -> soul::gpu::TextureID
 				{
 					return sceneTextureID.is_null() ? stubTexture : scene.textures()[sceneTextureID.id].gpuHandle;
 				};

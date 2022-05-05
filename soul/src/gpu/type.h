@@ -149,6 +149,7 @@ namespace soul::gpu
 		DEPTH32F,
 		RGBA16F,
 		R32UI,
+		SRGBA_8,
 
 		RGB16,
 		RGB16F,
@@ -607,7 +608,7 @@ namespace soul::gpu
 		bool compareEnable = false;
 		CompareOp comapreOp = CompareOp::COUNT;
 
-		static SamplerDesc SameFilterWrap(TextureFilter filter, TextureWrap wrap, bool anisotropyEnable = false, 
+		static constexpr SamplerDesc SameFilterWrap(TextureFilter filter, TextureWrap wrap, bool anisotropyEnable = false, 
 			float maxAnisotropy = 0.0f, bool compareEnable = false, CompareOp compareOp = CompareOp::ALWAYS)
 		{
 			SamplerDesc desc;

@@ -68,15 +68,7 @@ public:
 
 		_fontTex = system->create_texture(font_tex_desc, loadDesc);
 
-		gpu::SamplerDesc samplerDesc = {};
-		samplerDesc.minFilter = gpu::TextureFilter::LINEAR;
-		samplerDesc.magFilter = gpu::TextureFilter::LINEAR;
-		samplerDesc.mipmapFilter = gpu::TextureFilter::LINEAR;
-		samplerDesc.wrapU = gpu::TextureWrap::CLAMP_TO_EDGE;
-		samplerDesc.wrapV = gpu::TextureWrap::CLAMP_TO_EDGE;
-		samplerDesc.wrapW = gpu::TextureWrap::CLAMP_TO_EDGE;
-		samplerDesc.anisotropyEnable = false;
-		samplerDesc.maxAnisotropy = 0.0f;
+		const gpu::SamplerDesc samplerDesc = gpu::SamplerDesc::SameFilterWrap(gpu::TextureFilter::LINEAR, gpu::TextureWrap::CLAMP_TO_EDGE);
 		_fontSampler = system->request_sampler(samplerDesc);
 
 	}

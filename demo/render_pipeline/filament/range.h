@@ -2,7 +2,7 @@
 
 #include <algorithm>
 
-namespace SoulFila
+namespace soul_fila
 {
     template<typename T>
     struct Range {

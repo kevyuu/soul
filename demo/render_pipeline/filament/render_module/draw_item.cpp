@@ -1,6 +1,6 @@
 #include "draw_item.h"
 
-namespace SoulFila
+namespace soul_fila
 {
 	void DrawItem::ToPipelineStateDesc(const DrawItem& drawItem, soul::gpu::GraphicPipelineStateDesc& desc)
 	{
@@ -23,7 +23,7 @@ namespace SoulFila
 			colorAttch.dstAlphaBlendFactor = rasterState.blendFunctionDstAlpha;
 		}
 
-		desc.depthStencilAttachment.depthWriteEnable = true;
+		desc.depthStencilAttachment.depthWriteEnable = rasterState.depthWrite;
 		desc.depthStencilAttachment.depthCompareOp = rasterState.depthFunc;
 		
         gpu::GraphicPipelineStateDesc::InputBindingDesc inputBindings[gpu::MAX_INPUT_BINDING_PER_SHADER];

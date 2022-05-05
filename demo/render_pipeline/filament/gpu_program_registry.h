@@ -8,7 +8,7 @@
 
 #include "../../shader_generator.h"
 
-namespace SoulFila {
+namespace soul_fila {
 
     static constexpr size_t VARIANT_COUNT = 128;
 

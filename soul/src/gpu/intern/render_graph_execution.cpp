@@ -17,14 +17,14 @@
 namespace soul::gpu::impl
 {
 
-	constexpr EnumArray<PassType, QueueType> PASS_TYPE_TO_QUEUE_TYPE_MAP({
+	auto PASS_TYPE_TO_QUEUE_TYPE_MAP = EnumArray<PassType, QueueType>::build_from_list({
 		QueueType::COUNT,
 		QueueType::GRAPHIC,
 		QueueType::COMPUTE,
 		QueueType::TRANSFER,
 	});
 
-	constexpr EnumArray<ResourceOwner, PassType> RESOURCE_OWNER_TO_PASS_TYPE_MAP({
+	auto RESOURCE_OWNER_TO_PASS_TYPE_MAP = EnumArray<ResourceOwner, PassType>::build_from_list({
 		PassType::NONE,
 		PassType::GRAPHIC,
 		PassType::COMPUTE,
@@ -32,7 +32,7 @@ namespace soul::gpu::impl
 		PassType::NONE
 	});
 
-	constexpr EnumArray<DescriptorType, BufferUsageFlags> DESCRIPTOR_TYPE_TO_BUFFER_USAGE_FLAGS({
+	auto DESCRIPTOR_TYPE_TO_BUFFER_USAGE_FLAGS = EnumArray<DescriptorType, BufferUsageFlags>::build_from_list({
 		BufferUsageFlags(),
 		{ BufferUsage::UNIFORM },
 		{},
@@ -44,7 +44,7 @@ namespace soul::gpu::impl
 		return DESCRIPTOR_TYPE_TO_BUFFER_USAGE_FLAGS[descriptor];
 	}
 
-	constexpr EnumArray<DescriptorType, TextureUsageFlags> DESCRIPTOR_TYPE_TO_TEXTURE_USAGE_FLAGS({
+	auto DESCRIPTOR_TYPE_TO_TEXTURE_USAGE_FLAGS = EnumArray<DescriptorType, TextureUsageFlags>::build_from_list({
 		TextureUsageFlags(),
 		{},
 		{ TextureUsage::SAMPLED },
@@ -56,7 +56,7 @@ namespace soul::gpu::impl
 		return DESCRIPTOR_TYPE_TO_TEXTURE_USAGE_FLAGS[descriptor];
 	}
 
-	constexpr EnumArray<ShaderBufferReadUsage, BufferUsageFlags> SHADER_BUFFER_READ_USAGE_MAP({
+	auto SHADER_BUFFER_READ_USAGE_MAP = EnumArray<ShaderBufferReadUsage, BufferUsageFlags>::build_from_list({
 		BufferUsageFlags({ BufferUsage::UNIFORM }),
 		{ BufferUsage::STORAGE}
 	});
@@ -66,17 +66,17 @@ namespace soul::gpu::impl
 	}
 
 	using ShaderBufferWriteMap = EnumArray<ShaderBufferWriteUsage, BufferUsageFlags>;
-	constexpr ShaderBufferWriteMap SHADER_BUFFER_WRITE_USAGE_MAP(
-		ShaderBufferWriteMap::init_list({
+	auto SHADER_BUFFER_WRITE_USAGE_MAP = ShaderBufferWriteMap::build_from_list(
+{
 		{ BufferUsage::STORAGE }
-	}));
+	});
 	constexpr BufferUsageFlags get_buffer_usage_flags(ShaderBufferWriteUsage usage)
 	{
 		return SHADER_BUFFER_WRITE_USAGE_MAP[usage];
 	}
 
-	constexpr EnumArray<ShaderTextureReadUsage, TextureUsageFlags> SHADER_TEXTURE_READ_USAGE_MAP({ 
-		TextureUsageFlags({ TextureUsage::SAMPLED }),
+	auto SHADER_TEXTURE_READ_USAGE_MAP = EnumArray<ShaderTextureReadUsage, TextureUsageFlags>::build_from_list({
+		{ TextureUsage::SAMPLED },
 		{ TextureUsage::STORAGE }
 	});
 	constexpr TextureUsageFlags get_texture_usage_flags(ShaderTextureReadUsage usage)
@@ -85,9 +85,10 @@ namespace soul::gpu::impl
 	}
 
 	using ShaderTextureWriteMap = EnumArray<ShaderTextureWriteUsage, TextureUsageFlags>;
-	constexpr ShaderTextureWriteMap SHADER_TEXTURE_WRITE_USAGE_MAP(ShaderTextureWriteMap::init_list({
+	auto SHADER_TEXTURE_WRITE_USAGE_MAP = ShaderTextureWriteMap::build_from_list(
+	{
 		{ TextureUsage::STORAGE }
-	}));
+	});
 	constexpr TextureUsageFlags get_texture_usage_flags(ShaderTextureWriteUsage usage)
 	{
 		return SHADER_TEXTURE_WRITE_USAGE_MAP[usage];
@@ -1173,7 +1174,7 @@ namespace soul::gpu::impl
 		}
 
 		// Update resource owner for external resource
-		static constexpr EnumArray<PassType, ResourceOwner> PASS_TYPE_TO_RESOURCE_OWNER({
+		static auto PASS_TYPE_TO_RESOURCE_OWNER = EnumArray<PassType, ResourceOwner>::build_from_list({
 			ResourceOwner::NONE,
 			ResourceOwner::GRAPHIC_QUEUE,
 			ResourceOwner::COMPUTE_QUEUE,
@@ -1346,7 +1347,7 @@ namespace soul::gpu::impl
 			update_texture_info(queue_type, get_texture_usage_flags(shader_access.usage),PassNodeID(index), shader_access.viewRange, &texture_infos_[texture_info_id]);
 
 			auto is_writable = [](const ShaderTextureReadUsage usage) -> bool {
-				EnumArray<ShaderTextureReadUsage, bool> mapping({
+				auto mapping = EnumArray<ShaderTextureReadUsage, bool>::build_from_list({
 					false,
 					true
 				});

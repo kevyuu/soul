@@ -15,10 +15,10 @@ namespace soul {
 
 		Slice() = default;
 		Slice(Array<T>* array, soul_size begin, soul_size end): _array(array), _beginIdx(begin), _endIdx(end), _size(_endIdx - _beginIdx) {}
-		Slice(const Slice& other) = delete;
-		Slice& operator=(const Slice& other) = delete;
-		Slice(Slice&& other) = delete;
-		Slice& operator=(const Slice&& other) = delete;
+		Slice(const Slice& other) = default;
+		Slice& operator=(const Slice& other) = default;
+		Slice(Slice&& other) = default;
+		Slice& operator=(Slice&& other) = default;
 		~Slice() = default;
 
 		void set(Array<T>* array, soul_size begin, soul_size end) {

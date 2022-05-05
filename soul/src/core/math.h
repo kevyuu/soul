@@ -434,7 +434,7 @@ namespace soul {
 
 	uint32 hashMurmur32(const uint8* data, soul_size size);
 
-	constexpr uint64 hash_fnv1(const uint8* data, soul_size size, uint64 initial  = 0xcbf29ce484222325ull) {
+	constexpr uint64 hash_fnv1_bytes(const uint8* data, soul_size size, uint64 initial  = 0xcbf29ce484222325ull) {
 		uint64 hash = initial;
 		for (uint32 i = 0; i < size; i++) {
 			hash = (hash * 0x100000001b3ull) ^ data[i];
@@ -445,7 +445,7 @@ namespace soul {
 	template <typename T>
 	constexpr uint64 hash_fnv1(const T* data, uint64 initial = 0xcbf29ce484222325ull)
 	{
-		return hash_fnv1(reinterpret_cast<const uint8*>(data), sizeof(data), initial);
+		return hash_fnv1_bytes(reinterpret_cast<const uint8*>(data), sizeof(data), initial);
 	}
 
 	template <typename T>

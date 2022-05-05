@@ -14,7 +14,7 @@
 namespace Demo {
 
 	static uint64 GetHash_(const char* templateKey, soul_size length) {
-		return soul::hash_fnv1(soul::cast<const uint8*>(templateKey), length * sizeof(char));
+		return soul::hash_fnv1_bytes(soul::cast<const uint8*>(templateKey), length * sizeof(char));
 	}
 
 	static const char* GetPrecisionQualifier_(ShaderPrecision precision) {
@@ -271,7 +271,7 @@ namespace Demo {
 		};
 
 
-		uint64 hash = soul::hash_fnv1(stringBuilder.data(), stringBuilder.size());
+		uint64 hash = soul::hash_fnv1_bytes(soul::cast<const byte*>(stringBuilder.data()), stringBuilder.size());
 		{
 			std::lock_guard shader_map_lock_guard(shader_map_mutex);
 			if (shader_map.isExist(hash))

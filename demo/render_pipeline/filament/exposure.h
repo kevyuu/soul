@@ -1,6 +1,6 @@
 #pragma once
 
-namespace SoulFila::Exposure
+namespace soul_fila::Exposure
 {
 	/**
 	 * Returns the exposure value (EV at ISO 100) of the specified exposure parameters.

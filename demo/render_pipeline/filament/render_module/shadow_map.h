@@ -3,7 +3,7 @@
 #include "core/geometry.h"
 #include "../data.h"
 
-namespace SoulFila
+namespace soul_fila
 {
 
 	class ShadowMap

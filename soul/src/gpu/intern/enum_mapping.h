@@ -6,7 +6,7 @@
 namespace soul::gpu
 {
 
-	static constexpr EnumArray<ResourceOwner, QueueType> RESOURCE_OWNER_TO_QUEUE_TYPE({
+	static auto RESOURCE_OWNER_TO_QUEUE_TYPE = EnumArray<ResourceOwner, QueueType>::build_from_list({
 		QueueType::COUNT,
 		QueueType::GRAPHIC,
 		QueueType::COMPUTE,
@@ -15,7 +15,7 @@ namespace soul::gpu
 	});
 
 	SOUL_ALWAYS_INLINE VkCompareOp vkCast(CompareOp compareOp) {
-		static constexpr EnumArray<CompareOp, VkCompareOp> COMPARE_OP_MAP({
+		auto COMPARE_OP_MAP = EnumArray<CompareOp, VkCompareOp>::build_from_list({
 			VK_COMPARE_OP_NEVER,
 			VK_COMPARE_OP_LESS,
 			VK_COMPARE_OP_EQUAL,
@@ -30,7 +30,7 @@ namespace soul::gpu
 	}
 
 	SOUL_ALWAYS_INLINE VkImageLayout vkCast(TextureLayout layout) {
-		static constexpr EnumArray<TextureLayout, VkImageLayout> IMAGE_LAYOUT_MAP({
+		auto IMAGE_LAYOUT_MAP = EnumArray<TextureLayout, VkImageLayout>::build_from_list({
 			VK_IMAGE_LAYOUT_UNDEFINED,
 			VK_IMAGE_LAYOUT_UNDEFINED,
 			VK_IMAGE_LAYOUT_GENERAL,
@@ -45,7 +45,7 @@ namespace soul::gpu
 		return IMAGE_LAYOUT_MAP[layout];
 	}
 
-	static constexpr EnumArray<DescriptorType, VkDescriptorType> DESCRIPTOR_TYPE_MAP({
+	static auto DESCRIPTOR_TYPE_MAP = EnumArray<DescriptorType, VkDescriptorType>::build_from_list({
 		VK_DESCRIPTOR_TYPE_MAX_ENUM,
 		VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC,
 		VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
@@ -56,7 +56,7 @@ namespace soul::gpu
 		return DESCRIPTOR_TYPE_MAP[type];
 	}
 
-	static constexpr EnumArray<TextureFormat, VkFormat> FORMAT_MAP({
+	static auto FORMAT_MAP = EnumArray<TextureFormat, VkFormat>::build_from_list({
 		VK_FORMAT_D16_UNORM,
 
 		VK_FORMAT_R8G8B8_UNORM,
@@ -70,6 +70,7 @@ namespace soul::gpu
 		VK_FORMAT_D32_SFLOAT,
 		VK_FORMAT_R16G16B16A16_SFLOAT,
 		VK_FORMAT_R32_UINT,
+		VK_FORMAT_R8G8B8A8_SRGB,
 
 		VK_FORMAT_R16G16B16_UNORM,
 		VK_FORMAT_R16G16B16_SFLOAT,
@@ -81,7 +82,7 @@ namespace soul::gpu
 		return FORMAT_MAP[format];
 	}
 
-	static constexpr EnumArray<TextureType, VkImageType> IMAGE_TYPE_MAP({
+	static auto IMAGE_TYPE_MAP = EnumArray<TextureType, VkImageType>::build_from_list({
 		VK_IMAGE_TYPE_1D,
 		VK_IMAGE_TYPE_2D,
 		VK_IMAGE_TYPE_2D,
@@ -94,7 +95,7 @@ namespace soul::gpu
 	}
 
 	SOUL_ALWAYS_INLINE VkImageViewType vkCastToImageViewType(TextureType type) {
-		static constexpr EnumArray<TextureType, VkImageViewType> IMAGE_VIEW_TYPE_MAP({
+		static auto IMAGE_VIEW_TYPE_MAP = EnumArray<TextureType, VkImageViewType>::build_from_list({
 			VK_IMAGE_VIEW_TYPE_1D,
 			VK_IMAGE_VIEW_TYPE_2D,
 			VK_IMAGE_VIEW_TYPE_2D_ARRAY,
@@ -105,7 +106,7 @@ namespace soul::gpu
 	}
 
 	SOUL_ALWAYS_INLINE VkImageAspectFlags vkCastFormatToAspectFlags(TextureFormat format) {
-		static constexpr EnumArray<TextureFormat, VkImageAspectFlags> IMAGE_ASPECT_FLAGS_MAP({
+		static auto IMAGE_ASPECT_FLAGS_MAP = EnumArray<TextureFormat, VkImageAspectFlags>::build_from_list({
 			VK_IMAGE_ASPECT_DEPTH_BIT,
 
 			VK_IMAGE_ASPECT_COLOR_BIT,
@@ -119,6 +120,7 @@ namespace soul::gpu
 			VK_IMAGE_ASPECT_DEPTH_BIT,
 			VK_IMAGE_ASPECT_COLOR_BIT,
 			VK_IMAGE_ASPECT_COLOR_BIT,
+			VK_IMAGE_ASPECT_COLOR_BIT,
 
 			VK_IMAGE_ASPECT_COLOR_BIT,
 			VK_IMAGE_ASPECT_COLOR_BIT,
@@ -129,7 +131,7 @@ namespace soul::gpu
 		return IMAGE_ASPECT_FLAGS_MAP[format];
 	}
 
-	static constexpr EnumArray<TextureFilter, VkFilter> FILTER_MAP({
+	static auto FILTER_MAP = EnumArray<TextureFilter, VkFilter>::build_from_list({
 		VK_FILTER_NEAREST,
 		VK_FILTER_LINEAR
 	});
@@ -137,7 +139,7 @@ namespace soul::gpu
 		return FILTER_MAP[filter];
 	}
 
-	static constexpr EnumArray<TextureFilter, VkSamplerMipmapMode> MIPMAP_FILTER_MAP({
+	static auto MIPMAP_FILTER_MAP = EnumArray<TextureFilter, VkSamplerMipmapMode>::build_from_list({
 		VK_SAMPLER_MIPMAP_MODE_NEAREST,
 		VK_SAMPLER_MIPMAP_MODE_LINEAR
 	});
@@ -147,7 +149,7 @@ namespace soul::gpu
 	}
 
 	SOUL_ALWAYS_INLINE VkSamplerAddressMode vkCast(TextureWrap wrap) {
-		static constexpr EnumArray<TextureWrap, VkSamplerAddressMode> MAPPING({
+		static auto MAPPING = EnumArray<TextureWrap, VkSamplerAddressMode>::build_from_list({
 			VK_SAMPLER_ADDRESS_MODE_REPEAT,
 			VK_SAMPLER_ADDRESS_MODE_MIRRORED_REPEAT,
 			VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
@@ -158,7 +160,7 @@ namespace soul::gpu
 	}
 
 	SOUL_ALWAYS_INLINE VkBlendFactor vkCast(BlendFactor blendFactor) {
-		static constexpr EnumArray<BlendFactor, VkBlendFactor> MAPPING({
+		static auto MAPPING = EnumArray<BlendFactor, VkBlendFactor>::build_from_list({
 			VK_BLEND_FACTOR_ZERO,
 			VK_BLEND_FACTOR_ONE,
 			VK_BLEND_FACTOR_SRC_COLOR,
@@ -183,7 +185,7 @@ namespace soul::gpu
 	}
 
 	SOUL_ALWAYS_INLINE VkBlendOp vkCast(BlendOp blendOp) {
-		static constexpr EnumArray<BlendOp, VkBlendOp> MAPPING({
+		static auto MAPPING = EnumArray<BlendOp, VkBlendOp>::build_from_list({
 			VK_BLEND_OP_ADD,
 			VK_BLEND_OP_SUBTRACT,
 			VK_BLEND_OP_REVERSE_SUBTRACT,
@@ -235,7 +237,7 @@ namespace soul::gpu
 	}
 
 	SOUL_ALWAYS_INLINE VkShaderStageFlags vkCast(ShaderStage stageFlag) noexcept {
-		static constexpr EnumArray<ShaderStage, VkShaderStageFlags> MAPPING({
+		static auto MAPPING = EnumArray<ShaderStage, VkShaderStageFlags>::build_from_list({
 			VK_SHADER_STAGE_VERTEX_BIT,
 			VK_SHADER_STAGE_GEOMETRY_BIT,
 			VK_SHADER_STAGE_FRAGMENT_BIT,

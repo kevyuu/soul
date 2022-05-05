@@ -4,7 +4,7 @@
 #include "core/type_traits.h"
 #include "runtime/data.h"
 
-#define SOUL_ASSERT_MAIN_THREAD() SOUL_ASSERT(0, runtime::System::Get().getThreadID() == 0, "This method is not thread safe. Please only call it only from main thread!")
+#define SOUL_ASSERT_MAIN_THREAD() SOUL_ASSERT(0, soul::runtime::System::Get().getThreadID() == 0, "This method is not thread safe. Please only call it only from main thread!")
 
 namespace soul::runtime
 {
@@ -70,7 +70,7 @@ namespace soul::runtime
 					Get().taskRun(rightTaskID);
 				}
 				else {
-					for (int i = 0; i < taskData.count; i++) {
+					for (soul_size i = 0; i < taskData.count; i++) {
 						taskData.func(taskData.start + i);
 					}
 				}

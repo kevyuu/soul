@@ -1,4 +1,4 @@
-namespace SoulFila
+namespace soul_fila
 {
     /*
 	 * A random access iterator that wraps two other random access iterators.

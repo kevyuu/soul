@@ -11,7 +11,7 @@
 
 using namespace soul;
 
-namespace SoulFila {
+namespace soul_fila {
 
 	struct BindingPoint {
 		uint8 set;
@@ -37,26 +37,26 @@ namespace SoulFila {
 	public:
 
 		explicit Renderer(gpu::System* gpuSystem) : 
-			gpuSystem(gpuSystem), programRegistry(soul::runtime::get_context_allocator(), gpuSystem), 
-			scene(gpuSystem, &programRegistry), epoch(std::chrono::steady_clock::now()) {}
+			gpu_system_(gpuSystem), program_registry_(soul::runtime::get_context_allocator(), gpuSystem), 
+			scene_(gpuSystem, &program_registry_), epoch(std::chrono::steady_clock::now()) {}
 
 		virtual void init();
-		virtual Demo::Scene* getScene() { return (Demo::Scene*)&scene; }
+		virtual Demo::Scene* getScene() { return (Demo::Scene*)&scene_; }
 		virtual gpu::TextureNodeID computeRenderGraph(gpu::RenderGraph* renderGraph);
 
 	private:
 
-		void prepareRenderData();
+		void prepare_render_data();
 
-		RenderData renderData;
-		gpu::System* gpuSystem;
-		GPUProgramRegistry programRegistry;
-		ShadowMapGenPass shadowMapPass;
-		LightingPass lightingPass;
-		StructurePass structurePass;
-		DepthMipmapPass depthMipmapPass;
+		RenderData render_data_;
+		gpu::System* gpu_system_;
+		GPUProgramRegistry program_registry_;
+		ShadowMapGenPass shadow_map_pass_;
+		LightingPass lighting_pass_;
+		StructurePass structure_pass_;
+		DepthMipmapPass depth_mipmap_pass_;
 		
-		Scene scene;
+		Scene scene_;
 
 		using clock = std::chrono::steady_clock;
 		using Epoch = clock::time_point;

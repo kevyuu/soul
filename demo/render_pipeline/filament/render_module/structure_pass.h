@@ -4,7 +4,7 @@
 #include "gpu/type.h"
 #include "gpu/render_graph.h"
 
-namespace SoulFila
+namespace soul_fila
 {
 	class GPUProgramRegistry;
 

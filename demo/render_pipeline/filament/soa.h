@@ -4,7 +4,7 @@
 #include "core/util.h"
 #include "memory/allocator.h"
 
-namespace SoulFila
+namespace soul_fila
 {
     template <typename EnumIndex, typename ... Elements>
     class SoaPool {

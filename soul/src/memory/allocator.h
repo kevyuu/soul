@@ -40,6 +40,9 @@ namespace soul::memory {
 			const Allocation allocation = try_allocate(size, alignment, tag);
 			return allocation.addr;
 		}
+
+
+
 		virtual void deallocate(void* addr, soul_size size) = 0;
 
 		template <typename TYPE, typename... ARGS>
@@ -55,6 +58,29 @@ namespace soul::memory {
 			SOUL_ASSERT(0, ptr != nullptr, "");
 			ptr->~TYPE();
 			deallocate(ptr, ptr->class_size());
+		}
+
+		template <typename T>
+		requires (!std::is_void_v<T>)
+		T* create_raw_array(soul_size count, const char* tag = "untagged")
+		{
+			const Allocation allocation = try_allocate(count * sizeof(T), alignof(T), tag);
+			return static_cast<T*>(allocation.addr);
+		}
+
+
+		template <typename T>
+		requires (!std::is_polymorphic_v<T> && !std::is_void_v<T>)
+		void destroy_array(T* array, soul_size count)
+		{
+			if constexpr(!std::is_trivially_destructible_v<T>)
+			{
+				for (soul_size i = 0; i < count; i++)
+				{
+					array[i].~T();
+				}
+			}
+			deallocate(array, count * sizeof(T));
 		}
 
 		virtual void reset() = 0;

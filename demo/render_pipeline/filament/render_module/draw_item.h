@@ -2,7 +2,7 @@
 #include "gpu/type.h"
 #include "../data.h"
 
-namespace SoulFila
+namespace soul_fila
 {
 	/*
 		 *   Command key encoding
@@ -71,11 +71,14 @@ namespace SoulFila
 	static constexpr uint64_t BLEND_TWO_PASS_MASK = 0x1llu;
 	static constexpr unsigned BLEND_TWO_PASS_SHIFT = 0;
 
-	static constexpr uint64_t MATERIAL_VARIANT_KEY_MASK = 0x000000FFllu;
-	static constexpr unsigned MATERIAL_VARIANT_KEY_SHIFT = 0;
+	static constexpr uint64_t MATERIAL_INSTANCE_ID_MASK = 0x00000FFFllu;
+	static constexpr unsigned MATERIAL_INSTANCE_ID_SHIFT = 0;
 
-	static constexpr uint64_t MATERIAL_ID_MASK = 0xFFFFFF00llu;
-	static constexpr unsigned MATERIAL_ID_SHIFT = 8;
+	static constexpr uint64_t MATERIAL_VARIANT_KEY_MASK = 0x000FF000llu;
+	static constexpr unsigned MATERIAL_VARIANT_KEY_SHIFT = 12;
+
+	static constexpr uint64_t MATERIAL_ID_MASK = 0xFFF00000llu;
+	static constexpr unsigned MATERIAL_ID_SHIFT = 20;
 
 	static constexpr uint64_t BLEND_DISTANCE_MASK = 0xFFFFFFFF0000llu;
 	static constexpr unsigned BLEND_DISTANCE_SHIFT = 16;

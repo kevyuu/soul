@@ -43,12 +43,12 @@ namespace Demo {
 		Scene& operator=(Scene&&) = delete;
 		virtual ~Scene() = default;
 
-		virtual void importFromGLTF(const char* path) = 0;
+		virtual void import_from_gltf(const char* path) = 0;
 		virtual void cleanup() = 0;
 		virtual bool update(const Input& input) = 0;
 		virtual void renderPanels() = 0;
-		virtual Vec2ui32 getViewport() const = 0;
-		virtual void setViewport(Vec2ui32 viewport) = 0;
+		virtual Vec2ui32 get_viewport() const = 0;
+		virtual void set_viewport(Vec2ui32 viewport) = 0;
 	};
 
 	class Renderer {

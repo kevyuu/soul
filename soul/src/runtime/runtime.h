@@ -18,8 +18,12 @@ namespace soul::runtime {
 		System::Get().beginFrame();
 	}
 
+	inline TaskID create_task(const TaskID parent = TaskID::ROOT()) {
+		return System::Get().taskCreate(parent, [](TaskID){});
+	}
+
 	template<execution Execute>
-	inline TaskID create_task(TaskID parent, Execute&& lambda) {
+	inline TaskID create_task(const TaskID parent, Execute&& lambda) {
 		return System::Get().taskCreate(parent, std::forward<Execute>(lambda));
 	}
 
@@ -29,6 +33,12 @@ namespace soul::runtime {
 
 	inline void run_task(TaskID taskID) {
 		System::Get().taskRun(taskID);
+	}
+
+	inline void run_and_wait_task(TaskID task_id)
+	{
+		run_task(task_id);
+		wait_task(task_id);
 	}
 
 	template<execution Execute>

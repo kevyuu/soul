@@ -729,7 +729,7 @@ namespace soul::gpu
 			};
 			const VkDescriptorPoolCreateInfo pool_info = {
 				.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
-				.maxSets = 1000,
+				.maxSets = 1100,
 				.poolSizeCount = std::size(pool_sizes),
 				.pPoolSizes = pool_sizes
 			};
@@ -749,7 +749,6 @@ namespace soul::gpu
 
 	TextureID System::create_texture(const TextureDesc &desc) {
 		SOUL_PROFILE_ZONE();
-		SOUL_ASSERT_MAIN_THREAD();
 
 		SOUL_ASSERT(0, desc.layerCount >= 1, "");
 		const auto texture_id = TextureID(_db.texturePool.create());
@@ -829,7 +828,6 @@ namespace soul::gpu
 	}
 
 	TextureID System::create_texture(const TextureDesc &desc, const TextureLoadDesc& load_desc) {
-		SOUL_ASSERT_MAIN_THREAD();
 		SOUL_ASSERT(0, load_desc.data != nullptr, "");
 		SOUL_ASSERT(0, load_desc.dataSize != 0, "");
 		SOUL_ASSERT(0, load_desc.regionLoads != nullptr, "");
@@ -1099,14 +1097,14 @@ namespace soul::gpu
 
 		shaderc::Compiler glsl_compiler;
 
-		static constexpr EnumArray<ShaderStage, shaderc_shader_kind> SHADERC_SHADER_STAGE_MAP({
+		static auto SHADERC_SHADER_STAGE_MAP = EnumArray<ShaderStage, shaderc_shader_kind>::build_from_list({
 			shaderc_shader_kind::shaderc_glsl_vertex_shader,
 			shaderc_shader_kind::shaderc_glsl_geometry_shader,
 			shaderc_shader_kind::shaderc_glsl_fragment_shader,
 			shaderc_shader_kind::shaderc_glsl_compute_shader
 		});
 
-		static constexpr EnumArray<ShaderStage, const char*> STAGE_NAMES({
+		static auto STAGE_NAMES = EnumArray<ShaderStage, const char*>::build_from_list({
 			"VERTEX",
 			"GEOMETRY",
 			"FRAGMENT",
@@ -1350,8 +1348,6 @@ namespace soul::gpu
 	}
 
 	PipelineStateID System::request_pipeline_state(const GraphicPipelineStateDesc& desc, VkRenderPass renderPass, const TextureSampleCount sample_count) {
-		SOUL_PROFILE_ZONE_WITH_NAME("GPU::System::pipelineStateRequest");
-
 		std::lock_guard lock(_db.pipelineStateRequestMutex);
 
 		if (_db.graphicPipelineStateMaps.isExist(desc)) {
@@ -1392,7 +1388,7 @@ namespace soul::gpu
 			);
 		}
 
-		static constexpr EnumArray<Topology, VkPrimitiveTopology> PRIMITIVE_TOPOLOGY_MAP({
+		static auto PRIMITIVE_TOPOLOGY_MAP = EnumArray<Topology, VkPrimitiveTopology>::build_from_list({
 			VK_PRIMITIVE_TOPOLOGY_POINT_LIST,
 			VK_PRIMITIVE_TOPOLOGY_LINE_LIST,
 			VK_PRIMITIVE_TOPOLOGY_LINE_STRIP,
@@ -1429,7 +1425,7 @@ namespace soul::gpu
 			.pScissors = &scissor
 		};
 
-		static constexpr EnumArray<PolygonMode, VkPolygonMode> POLYGON_MODE_MAP({
+		static auto POLYGON_MODE_MAP = EnumArray<PolygonMode, VkPolygonMode>::build_from_list({
 			VK_POLYGON_MODE_FILL,
 			VK_POLYGON_MODE_LINE,
 			VK_POLYGON_MODE_POINT
@@ -1606,7 +1602,6 @@ namespace soul::gpu
 
 	PipelineState System::get_pipeline_state(const PipelineStateID pipeline_state_id)
 	{
-		SOUL_PROFILE_ZONE();
 		std::lock_guard<std::mutex> guard(_db.pipelineStateRequestMutex);
 		return _db.pipelineStates[pipeline_state_id.id];
 	}
@@ -1800,6 +1795,8 @@ namespace soul::gpu
 				};
 
 				SOUL_VK_CHECK(vkAllocateDescriptorSets(_db.device, &alloc_info, &descriptor_set), "");
+				if (descriptor_set == VK_NULL_HANDLE)
+					SOUL_LOG_WARN("Descriptor set creation fail");
 
 				for (uint32 binding_idx = 0; binding_idx < desc.bindingCount; binding_idx++) {
 					const Descriptor& descriptor_desc = desc.bindingDescriptions[binding_idx];
@@ -2362,7 +2359,7 @@ namespace soul::gpu
 			                     1,
 			                     &imageBarrier);
 
-			static constexpr EnumArray<ResourceOwner, QueueType> RESOURCE_OWNER_TO_QUEUE_TYPE({
+			static auto  RESOURCE_OWNER_TO_QUEUE_TYPE = EnumArray<ResourceOwner, QueueType>::build_from_list({
 				QueueType::COUNT,
 				QueueType::GRAPHIC,
 				QueueType::COMPUTE,
@@ -2526,7 +2523,6 @@ namespace soul::gpu
 
 	VkCommandBuffer CommandPools::requestCommandBuffer(QueueType queueType)
 	{
-		SOUL_ASSERT_MAIN_THREAD();
 		VkCommandBuffer cmdBuffer = primary_pools_[runtime::get_thread_id()][queueType].request();
 		VkCommandBufferBeginInfo beginInfo = {
 			.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
@@ -2538,9 +2534,8 @@ namespace soul::gpu
 
 	PrimaryCommandBuffer CommandPools::request_command_buffer(const QueueType queue_type)
 	{
-		SOUL_ASSERT_MAIN_THREAD();
-		VkCommandBuffer cmd_buffer = primary_pools_[runtime::get_thread_id()][queue_type].request();
-		VkCommandBufferBeginInfo beginInfo = {
+		const VkCommandBuffer cmd_buffer = primary_pools_[runtime::get_thread_id()][queue_type].request();
+		const VkCommandBufferBeginInfo beginInfo = {
 			.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
 			.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT
 		};

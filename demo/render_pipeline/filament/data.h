@@ -14,7 +14,7 @@
 struct cgltf_data;
 struct cgltf_node;
 
-namespace SoulFila {
+namespace soul_fila {
     using namespace soul;
 	static constexpr uint64 MAX_ENTITY_NAME_LENGTH = 512;
     static constexpr uint64 MAX_MORPH_TARGETS = 4;
@@ -62,7 +62,7 @@ namespace SoulFila {
 		// be read as integers in the shaders
 
 		POSITION = 0, //!< XYZ position (float3)
-		TANGENTS = 1, //!< tangent, bitangent and normal, encoded as a quaternion (float4)
+		QTANGENTS = 1, //!< tangent, bitangent and normal, encoded as a quaternion (float4)
 		COLOR = 2, //!< vertex color (float4)
 		UV0 = 3, //!< texture coordinates (float2)
 		UV1 = 4, //!< texture coordinates (float2)
@@ -88,6 +88,10 @@ namespace SoulFila {
 		MORPH_TANGENTS_1 = CUSTOM5,
 		MORPH_TANGENTS_2 = CUSTOM6,
 		MORPH_TANGENTS_3 = CUSTOM7,
+
+        MORPH_BASE = MORPH_POSITION_0,
+        MORPH_BASE_POSITION = MORPH_POSITION_0,
+        MORPH_BASE_TANGENTS = MORPH_TANGENTS_0
 
 		// this is limited by driver::MAX_VERTEX_ATTRIBUTE_COUNT
 	};
@@ -722,7 +726,7 @@ namespace SoulFila {
 
     struct CameraInfo {
 
-        static float ComputeEv100(float aperture, float shutterSpeed, float sensitivity) noexcept {
+        static float compute_ev100(float aperture, float shutterSpeed, float sensitivity) noexcept {
             // With N = aperture, t = shutter speed and S = sensitivity,
             // we can compute EV100 knowing that:
             //
@@ -743,19 +747,19 @@ namespace SoulFila {
 
         CameraInfo() noexcept = default;
 
-        CameraInfo(const TransformComponent& transform, const CameraComponent& camera, const soul::Mat4f& worldOriginTransform) {
+        CameraInfo(const TransformComponent& transform, const CameraComponent& camera, const soul::Mat4f& world_origin_transform) {
             projection = camera.getProjectionMatrix();
             cullingProjection = camera.getCullingProjectionMatrix();
-            model = worldOriginTransform * transform.world;
+            model = world_origin_transform * transform.world;
             view = mat4Inverse(model);
             zn = camera.getNear();
             zf = camera.getCullingFar();
-            ev100 = ComputeEv100(camera.getAperture(), camera.getShutterSpeed(), camera.getSensitivity());
+            ev100 = compute_ev100(camera.getAperture(), camera.getShutterSpeed(), camera.getSensitivity());
             f = camera.getFocalLength();
             A = f / camera.getAperture();
             d = std::max(zn, camera.getFocusDistance());
             worldOffset = transform.world.columns(3).xyz;
-            worldOrigin = worldOriginTransform;
+            worldOrigin = world_origin_transform;
         }
 
         soul::Mat4f projection;         // projection matrix for drawing (infinite zfar)
@@ -770,9 +774,9 @@ namespace SoulFila {
         float d{};                      // focus distance [m]
         soul::Vec3f worldOffset;
         soul::Mat4f worldOrigin;
-        soul::Vec3f getPosition() const noexcept { return soul::Vec3f(model.elem[0][3], model.elem[1][3], model.elem[2][3]); }
-        soul::Vec3f getForwardVector() const noexcept { return unit(soul::Vec3f(model.elem[0][2], model.elem[1][2], model.elem[2][2]) * -1.0f); }
-        soul::Frustum getCullingFrustum() const noexcept { return Frustum(cullingProjection * view);  }
+        soul::Vec3f get_position() const noexcept { return soul::Vec3f(model.elem[0][3], model.elem[1][3], model.elem[2][3]); }
+        soul::Vec3f get_forward_vector() const noexcept { return unit(soul::Vec3f(model.elem[0][2], model.elem[1][2], model.elem[2][2]) * -1.0f); }
+        soul::Frustum get_culling_frustum() const noexcept { return Frustum(cullingProjection * view);  }
     };
 
     struct AnimationSampler {
@@ -937,6 +941,13 @@ namespace SoulFila {
 
         RenderFlags flags;
 
+        gpu::TextureID stubTexture;
+        gpu::TextureID stubTextureUint;
+        gpu::TextureID stubTextureArray;
+
+        gpu::BufferID fullscreenVb;
+        gpu::BufferID fullscreenIb;
+
         void clear()
         {
             renderables.clear();
@@ -972,47 +983,89 @@ namespace SoulFila {
         ShadowOptions shadowOptions;
     };
 
-	struct Scene final : Demo::Scene {
+    template <typename Func>
+    concept mesh_generator = std::invocable<Func, soul_size, Mesh&> && std::same_as<void, std::invoke_result_t<Func, soul_size, Mesh&>>;
 
+    template <typename Func>
+    concept animation_generator = std::invocable<Func, soul_size, Animation&> && std::same_as<void, std::invoke_result_t<Func, soul_size, Animation&>>;
+
+
+	class Scene final : Demo::Scene {
+	public:
         static constexpr soul_size DIRECTIONAL_LIGHTS_COUNT = 1;
 
-        Scene(soul::gpu::System* gpuSystem, GPUProgramRegistry* programRegistry) :
-            gpu_system_(gpuSystem), program_registry_(programRegistry),
-            camera_man_({0.1f, 0.001f, soul::Vec3f(0.0f, 1.0f, 0.0f)})
-        {}
+        Scene(soul::gpu::System* gpuSystem, GPUProgramRegistry* programRegistry);
         Scene(const Scene&) = delete;
         Scene& operator=(const Scene&) = delete;
         Scene(Scene&&) = delete;
         Scene& operator=(Scene&&) = delete;
         ~Scene() override = default;
 
-        void importFromGLTF(const char* path) override;
+        void import_from_gltf(const char* path) override final;
         void cleanup() override {}
         void renderPanels() override;
         bool update(const Demo::Input& input) override;
-        Vec2ui32 getViewport() const override { return viewport_; }
-        void setViewport(Vec2ui32 viewport) override { viewport_ = viewport; }
+        Vec2ui32 get_viewport() const override { return viewport_; }
+        void set_viewport(Vec2ui32 viewport) override { viewport_ = viewport; }
 
         const soul::Array<Texture>& textures() const { return textures_; }
-        const soul::Array<Mesh>& meshes() const { return meshes_; }
+        const soul::Array<Mesh>& meshes() const { return meshes_; } 
         const soul::Array<Material>& materials() const { return materials_; }
         const soul::Array<Skin>& skins() const { return skins_; }
-        const IBL& getIBL() const { return ibl_; }
-        const DFG& getDFG() const { return dfg_; }
-        gpu::TextureID getStubTexture() const { return stub_texture_; }
-        gpu::TextureID getStubTextureUint() const { return stub_texture_uint_; }
-        gpu::TextureID getStubTextureArray() const { return stub_texture_array_; }
-        gpu::BufferID getFullScreenVertexBuffer() const { return fullscreen_vb_; }
-        gpu::BufferID getFullScreenIndexBuffer() const { return fullscreen_ib_; }
+        const IBL& get_ibl() const { return ibl_; }
+        const DFG& get_dfg() const { return dfg_; }
 
-        soul_size getRenderableCount() const
+        
+        template <mesh_generator MeshGenerator>
+        void create_meshes(soul_size count, MeshGenerator generator)
+        {
+            soul_size old_size = meshes_.size();
+            meshes_.resize(old_size + count);
+            Slice<Mesh> new_meshes(&meshes_, old_size, old_size + count);
+            for (soul_size idx = 0; idx < count; idx++)
+            {
+                generator(idx, new_meshes[idx]);
+            }
+
+            /*soul::runtime::TaskID mesh_gen_parent = soul::runtime::create_task(soul::runtime::TaskID::ROOT(), [](runtime::TaskID){});
+            soul::runtime::parallel_for_task_create(mesh_gen_parent, count, 8, [&new_meshes, &generator](soul_size idx)
+            {
+            	generator(idx, new_meshes[idx]);
+            });
+            soul::runtime::run_task(mesh_gen_parent);
+            soul::runtime::wait_task(mesh_gen_parent);*/
+        }
+
+        template <animation_generator AnimationGenerator>
+        void create_animations_parallel(soul_size count, AnimationGenerator generator)
+        {
+            soul_size old_size = animations_.size();
+            animations_.resize(old_size + count);
+            Slice<Animation> new_animations(&animations_, old_size, old_size + count);
+            soul::runtime::TaskID animation_gen_task = soul::runtime::parallel_for_task_create(soul::runtime::TaskID::ROOT(), count, 8, [&new_animations, &generator](soul_size idx)
+                {
+                    generator(idx, new_animations[idx]);
+                });
+            soul::runtime::run_and_wait_task(animation_gen_task);
+        }
+
+        MaterialID create_material() { return MaterialID(materials_.add({})); }
+        Material* get_material_ptr(const MaterialID material_id) { return &materials_[material_id.id]; }
+
+        TextureID create_texture() { return TextureID(textures_.add({})); }
+        Texture* get_texture_ptr(const TextureID texture_id) { return &textures_[texture_id.id]; }
+
+        SkinID create_skin() { return SkinID(skins_.add(Skin())); }
+        Skin* get_skin_ptr(const SkinID skin_id) { return &skins_[skin_id.id]; }
+
+        soul_size get_renderable_count() const
         {
             auto group = registry_.group<const TransformComponent, const RenderComponent>();
             return group.size();
         }
 
         template<typename Func>
-        void forEachRenderable(Func func) const
+        void for_each_renderable(Func func) const
         {
             auto group = registry_.group<const TransformComponent, const RenderComponent>();
 
@@ -1022,14 +1075,14 @@ namespace SoulFila {
             }
         }
 
-        soul_size getLightCount() const
+        soul_size get_light_count() const
         {
             auto group = registry_.group<const LightComponent>(entt::get<const TransformComponent>);
             return group.size();
         }
 
         template<typename Func>
-        void forEachLight(Func func) const
+        void for_each_light(Func func) const
         {
             auto group = registry_.group<const LightComponent>(entt::get<const TransformComponent>);
             for (auto entity: group)
@@ -1038,59 +1091,71 @@ namespace SoulFila {
             }
         }
 
-        CameraInfo getActiveCamera(const soul::Mat4f& worldOriginTransform) const
+        CameraInfo get_active_camera(const soul::Mat4f& world_origin_transform) const
         {
             auto [cameraTransformComp, cameraComp] = registry_.get<const TransformComponent, const CameraComponent>(active_camera_);
-            return CameraInfo(cameraTransformComp, cameraComp, worldOriginTransform);
+            return CameraInfo(cameraTransformComp, cameraComp, world_origin_transform);
         }
         
-        const LightComponent& getLightComponent(EntityID entityID) const { return registry_.get<LightComponent>(entityID);  }
-        uint8 getVisibleLayers() const { return visible_layers_; }
+        const LightComponent& get_light_component(EntityID entityID) const { return registry_.get<LightComponent>(entityID);  }
+        uint8 get_visible_layers() const { return visible_layers_; }
 
         struct FogOptions;
-        const FogOptions& getFogOptions() { return fogOptions; }
+        const FogOptions& get_fog_options() { return fogOptions; }
 
-        EntityID createLight(const LightDesc& lightDesc, EntityID parent = ENTITY_ID_NULL);
-        bool isLight(EntityID entityID) const;
-        bool isDirectionalLight(EntityID entityID) const;
-        bool isSunLight(EntityID entityID) const;
-        bool isSpotLight(EntityID entityID) const;
-        void setLightShadowOptions(EntityID entityID, const ShadowOptions& options);
-        void setLightLocalPosition(EntityID entityID, Vec3f position);
-        void setLightLocalDirection(EntityID entityID, Vec3f direction);
-        void setLightColor(EntityID entityID, Vec3f color);
-        void setLightIntensity(EntityID entityID, float intensity, IntensityUnit unit);
-        void setLightFalloff(EntityID entityID, float falloff);
-        void setLightCone(EntityID entityID, float inner, float outer);
-        void setLightSunAngularRadius(EntityID entityID, float angularRadius);
-        void setLightSunHaloSize(EntityID entityID, float haloSize);
-        void setLightSunHaloFalloff(EntityID entityID, float haloFalloff);
+        EntityID create_light(const LightDesc& light_desc, EntityID parent = ENTITY_ID_NULL);
+        void create_dfg(const char* path, const char* name);
+
+        template <typename ComponentType>
+        ComponentType& add_component(EntityID entity_id, const ComponentType& component_type)
+        {
+            return registry_.emplace<ComponentType>(entity_id, component_type);
+        }
+
+        template <typename ComponentType>
+        ComponentType& get_component(EntityID entity_id)
+        {
+            return registry_.get<ComponentType>(entity_id);
+        }
+
+        EntityID create_entity(const soul::String& name)
+        {
+            EntityID entity_id = registry_.create();
+            add_component<NameComponent>(entity_id, NameComponent(name));
+            return entity_id;
+        }
+
+        bool is_light(EntityID entity_id) const;
+        auto is_directional_light(EntityID entity_id) const -> bool;
+        bool is_sun_light(EntityID entity_id) const;
+        bool is_spot_light(EntityID entity_id) const;
+        void set_light_shadow_options(EntityID entity_id, const ShadowOptions& options);
+        void set_light_local_position(EntityID entity_id, Vec3f position);
+        void set_light_local_direction(EntityID entity_id, Vec3f direction);
+        void set_light_color(EntityID entity_id, Vec3f color);
+        void set_light_intensity(EntityID entity_id, float intensity, IntensityUnit unit);
+        void set_light_falloff(EntityID entity_id, float falloff);
+        void set_light_cone(EntityID entity_id, float inner, float outer);
+        void set_light_sun_angular_radius(EntityID entity_id, float angular_radius);
+        void set_light_sun_halo_size(EntityID entity_id, float halo_size);
+        void set_light_sun_halo_falloff(EntityID entity_id, float halo_falloff);
+
+        EntityID get_root_entity() const { return root_entity_; }
+
+        void update_bounding_box();
+        void fit_into_unit_cube();
+
+        EntityID get_default_camera() { return default_camera_; }
+
+        void create_default_sunlight();
+        void create_default_camera();
+        bool check_resources_validity();
 
     private:
 
-        struct CGLTFNodeKey_ {
-            const cgltf_node* node;
+        void create_root_entity();
 
-            CGLTFNodeKey_(const cgltf_node* node) : node(node) {}
-            
-            inline bool operator==(const CGLTFNodeKey_& other) const {
-                return (memcmp(this, &other, sizeof(CGLTFNodeKey_)) == 0);
-            }
-
-            inline bool operator!=(const CGLTFNodeKey_& other) const {
-                return (memcmp(this, &other, sizeof(CGLTFNodeKey_)) != 0);
-            }
-
-            SOUL_NODISCARD uint64 hash() const {
-                return uint64(node);
-            }
-        };
-
-        void create_entity(soul::HashMap<CGLTFNodeKey_, EntityID>* nodeMap, const cgltf_data* asset, const cgltf_node* node, EntityID parent);
         auto render_entity_tree_node(EntityID entityID) -> void;
-        auto createRendereable_(const cgltf_data* asset, const cgltf_node* node, EntityID entity) -> void;
-        void create_light(const cgltf_data* asset, const cgltf_node* node, EntityID entity);
-        void createCamera_(const cgltf_data* asset, const cgltf_node* node, EntityID entity);
         void set_active_animation(AnimationID animationID);
         void set_active_camera(EntityID camera);
         void update_world_transform(EntityID entityID);
@@ -1112,6 +1177,8 @@ namespace SoulFila {
 
         EntityID selected_entity_ = ENTITY_ID_NULL;
         EntityID active_camera_ = ENTITY_ID_NULL;
+        EntityID default_camera_ = ENTITY_ID_NULL;
+
         AnimationID active_animation_;
         float animation_delta_ = 0.0f;
         Array<uint64> channel_cursors_;
@@ -1120,13 +1187,6 @@ namespace SoulFila {
         CameraManipulator camera_man_;
 
         Vec2ui32 viewport_;
-
-        gpu::TextureID stub_texture_;
-        gpu::TextureID stub_texture_uint_;
-        gpu::TextureID stub_texture_array_;
-
-        gpu::BufferID fullscreen_vb_;
-        gpu::BufferID fullscreen_ib_;
 
         uint8 visible_layers_ = 0x1;
 

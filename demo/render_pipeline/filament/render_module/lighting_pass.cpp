@@ -2,7 +2,10 @@
 #include "../data.h"
 #include "draw_item.h"
 
-namespace SoulFila
+#include <set>
+#include <iostream>
+
+namespace soul_fila
 {
     void setup_key(const ProgramSetInfo& program_set_info, 
         const MaterialID material_id, const GPUProgramVariant base_variant, const GPUProgramSetID program_set_id,
@@ -59,7 +62,7 @@ namespace SoulFila
             .shadowMap = input.shadowMap
         };
         
-        Vec2ui32 scene_resolution = scene.getViewport();
+        Vec2ui32 scene_resolution = scene.get_viewport();
 
         Range<uint32> visible_renderables = renderData.visibleRenderables;
         
@@ -83,8 +86,10 @@ namespace SoulFila
         drawItems.resize(draw_item_count);
 
     	const CameraInfo& camera_info = renderData.cameraInfo;
-        Vec3f camera_position = camera_info.getPosition();
-        Vec3f camera_forward = camera_info.getForwardVector();
+        Vec3f camera_position = camera_info.get_position();
+        Vec3f camera_forward = camera_info.get_forward_vector();
+
+        std::set<MaterialID> blended_materials;
 
         for (soul_size renderable_idx : visible_renderables)
         {
@@ -119,7 +124,6 @@ namespace SoulFila
             // but saves a couple of instruction, because part of the math is done outside of the loop.
             float distance = dot(soaWorldAABBCenter[renderable_idx], camera_forward) - dot(camera_position, camera_forward);
 
-
             // We negate the distance to the camera in order to create a bit pattern that will
             // be sorted properly, this works because:
             // - positive distances (now negative), will still be sorted by their absolute value
@@ -145,13 +149,12 @@ namespace SoulFila
                 const ProgramSetInfo& programSetInfo = programRegistry->getProgramSetInfo(material.programSetID);
 
                 DrawItem draw_item;
-                setup_key(programSetInfo, primitive.materialID, variant, material.programSetID, *programRegistry, draw_item);
                 draw_item.key = MakeField(soaVisibility[renderable_idx].priority, PRIORITY_MASK, PRIORITY_SHIFT);
-                draw_item.index = soul::cast<uint16>(renderable_idx);
+            	setup_key(programSetInfo, primitive.materialID, variant, material.programSetID, *programRegistry, draw_item);
+            	draw_item.index = soul::cast<uint16>(renderable_idx);
                 draw_item.primitive = &primitive;
                 draw_item.material = &material;
                 SOUL_ASSERT(0, material.cullMode != gpu::CullMode::COUNT, "");
-
 
                 using BlendFunction = RasterState::BlendFunction;
                 using DepthFunc = RasterState::DepthFunc;
@@ -203,7 +206,6 @@ namespace SoulFila
                 draw_item.rasterState.culling = material.cullMode;
                 draw_item.rasterState.inverseFrontFaces = inverseFrontFaces;
                 draw_item.rasterState.colorWrite = true;
-                draw_item.rasterState.depthWrite = true;
                 draw_item.rasterState.depthFunc = gpu::CompareOp::GREATER_OR_EQUAL;
 
                 if (Pass(draw_item.key & PASS_MASK) == Pass::BLENDED)
@@ -236,7 +238,7 @@ namespace SoulFila
                         (mode == TransparencyMode::TWO_PASSES_TWO_SIDES) ?
 						gpu::CullMode::BACK : draw_item.rasterState.culling;
 
-                    uint64_t key = curr->key;
+                    uint64_t key = draw_item.key;
 
                     // draw this command AFTER THE NEXT ONE
                     key |= MakeField(1, BLEND_TWO_PASS_MASK, BLEND_TWO_PASS_SHIFT);
@@ -259,7 +261,9 @@ namespace SoulFila
                     draw_item.rasterState.depthFunc =
                         (mode == TransparencyMode::TWO_PASSES_ONE_SIDE) ?
                         gpu::CompareOp::GREATER_OR_EQUAL : draw_item.rasterState.depthFunc;
-                } else
+
+                }
+                else
                 {
                     // color pass:
                    // This will bucket objects by Z, front-to-back and then sort by material
@@ -272,18 +276,19 @@ namespace SoulFila
                     curr->key = to_underlying(Pass::SENTINEL);
                     ++curr;
                 }
-
+                
+                
                 *curr = draw_item;
                 ++curr;
             }
         }
+
         std::sort(drawItems.begin(), drawItems.end());
         DrawItem const* const last = std::partition_point(drawItems.begin(), drawItems.end(),
             [](DrawItem const& c) {
                 return c.key != to_underlying(Pass::SENTINEL);
             });
         drawItems.resize(last - drawItems.begin());
-
         const auto& items = drawItems;
 
         constexpr gpu::TextureSampleCount msaa_sample_count = gpu::TextureSampleCount::COUNT_4;
@@ -293,7 +298,7 @@ namespace SoulFila
             "Lighting Color Target",
                 gpu::RGTextureDesc::create_d2(gpu::TextureFormat::RGBA8, 1, scene_resolution, true, {}, msaa_sample_count)),
             .clear = true,
-            .clearValue = gpu::ClearValue(Vec4f(1.0f, 0.0f, 0.0f, 1.0f), 0.0f, 0)
+            .clearValue = gpu::ClearValue(Vec4f(0.0f, 0.0f, 1.0f, 1.0f), 0.0f, 0)
         };
 
         const gpu::ResolveAttachmentDesc resolve_attachment_desc = {
@@ -331,9 +336,9 @@ namespace SoulFila
 	        	params.structureTex = builder.add_shader_texture(input_param.structureTex, { gpu::ShaderStage::FRAGMENT }, gpu::ShaderTextureReadUsage::UNIFORM, gpu::SubresourceIndexRange(gpu::SubresourceIndex(0, 0), structure_mip_level));
 	            params.shadowMap = builder.add_shader_texture(input_param.shadowMap, { gpu::ShaderStage::FRAGMENT }, gpu::ShaderTextureReadUsage::UNIFORM);
 	        },
-			[&scene, this, items, &renderables](const Parameter& params, gpu::RenderGraphRegistry& registry, gpu::GraphicCommandList& command_list)
+			[&scene, &renderData, this, items](const Parameter& params, gpu::RenderGraphRegistry& registry, gpu::GraphicCommandList& command_list)
 			{
-                soul::Vec2ui16 resolution = { soul::cast<uint16>(scene.getViewport().x) , soul::cast<uint16>(scene.getViewport().y) };
+                soul::Vec2ui16 resolution = { soul::cast<uint16>(scene.get_viewport().x) , soul::cast<uint16>(scene.get_viewport().y) };
 
 	            gpu::GraphicPipelineStateDesc pipeline_base_desc;
 	            pipeline_base_desc.viewport = { 0, 0, resolution.x, resolution.y };
@@ -350,10 +355,10 @@ namespace SoulFila
 	            gpu::SamplerDesc shadow_sampler_desc = gpu::SamplerDesc::SameFilterWrap(gpu::TextureFilter::LINEAR, gpu::TextureWrap::CLAMP_TO_EDGE, false, 1.00, true, gpu::CompareOp::GREATER_OR_EQUAL);
 	            gpu::SamplerID shadow_sampler_id = gpuSystem->request_sampler(shadow_sampler_desc);
 
-	            const IBL& ibl = scene.getIBL();
-	            const DFG& dfg = scene.getDFG();
+	            const IBL& ibl = scene.get_ibl();
+	            const DFG& dfg = scene.get_dfg();
 
-	            gpu::TextureID stub_texture = scene.getStubTexture();
+	            gpu::TextureID stub_texture = renderData.stubTexture;
 
 	            gpu::Descriptor set0_descriptors[] = {
 	                gpu::Descriptor::Uniform(registry.get_buffer(params.frameUniformBuffer), 0, gpu::SHADER_STAGES_VERTEX_FRAGMENT),
@@ -361,7 +366,7 @@ namespace SoulFila
 	                gpu::Descriptor::Uniform(registry.get_buffer(params.shadowUniformBuffer), 0, { gpu::ShaderStage::FRAGMENT }),
 	                gpu::Descriptor::Uniform(registry.get_buffer(params.froxelRecordsUniformBuffer), 0, { gpu::ShaderStage::FRAGMENT }),
 	                gpu::Descriptor::SampledImage(registry.get_texture(params.shadowMap), shadow_sampler_id, { gpu::ShaderStage::FRAGMENT }),
-	                gpu::Descriptor::SampledImage(scene.getStubTexture(), sampler_id, { gpu::ShaderStage::FRAGMENT }),
+	                gpu::Descriptor::SampledImage(stub_texture, sampler_id, { gpu::ShaderStage::FRAGMENT }),
 	                gpu::Descriptor::SampledImage(
 	                    dfg.tex,
 	                    gpuSystem->request_sampler(gpu::SamplerDesc::SameFilterWrap(gpu::TextureFilter::LINEAR, gpu::TextureWrap::CLAMP_TO_EDGE)),
@@ -416,8 +421,8 @@ namespace SoulFila
 	                soul::Array<gpu::Descriptor> set3_descriptors;
 	                set3_descriptors.reserve(gpu::MAX_BINDING_PER_SET);
 	                set3_descriptors.add(gpu::Descriptor::Uniform(registry.get_buffer(params.objectUniformBuffer), draw_item.index, gpu::SHADER_STAGES_VERTEX_FRAGMENT));
-	                const SkinID skin_id = renderables.elementAt<RenderablesIdx::SKIN_ID>(draw_item.index);
-	                if (const Visibility visibility = renderables.elementAt<RenderablesIdx::VISIBILITY_STATE>(draw_item.index); visibility.skinning || visibility.morphing) {
+	                const SkinID skin_id = renderData.renderables.elementAt<RenderablesIdx::SKIN_ID>(draw_item.index);
+	                if (const Visibility visibility = renderData.renderables.elementAt<RenderablesIdx::VISIBILITY_STATE>(draw_item.index); visibility.skinning || visibility.morphing) {
 	                    uint32 skin_index = skin_id.is_null() ? 0 : soul::cast<uint32>(skin_id.id);
 	                    set3_descriptors.add(gpu::Descriptor::Uniform(registry.get_buffer(params.boneUniformBuffer), skin_index, { gpu::ShaderStage::VERTEX }));
 	                }

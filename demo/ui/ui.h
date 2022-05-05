@@ -162,7 +162,7 @@ namespace Demo {
 			_DockBegin();
 
 
-			Vec2ui32 sceneResolution = store->scene->getViewport();
+			Vec2ui32 sceneResolution = store->scene->get_viewport();
 			store->scenePanel.setResolution(sceneResolution);
 			store->scenePanel.setTexture(store->sceneTex.getImTextureID());
 			bool isMouseHoverScene = store->scenePanel.render(store);

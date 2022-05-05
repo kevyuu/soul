@@ -42,13 +42,13 @@ namespace soul::runtime
 
 	struct Constant {
 
-		static constexpr uint16 MAX_THREAD_COUNT = 16;
-		static constexpr uint16 MAX_TASK_PER_THREAD = 4096;
+		static constexpr uint32 TASK_ID_THREAD_INDEX_MASK = 0xFFFFC000;
+		static constexpr uint32 TASK_ID_THREAD_INDEX_SHIFT = 14;
+		static constexpr uint32 TASK_ID_TASK_INDEX_MASK = 0x00003FFF;
+		static constexpr uint32 TASK_ID_TASK_INDEX_SHIFT = 0;
 
-		static constexpr uint16 TASK_ID_THREAD_INDEX_MASK = 0xF000;
-		static constexpr uint16 TASK_ID_THREAD_INDEX_SHIFT = 12;
-		static constexpr uint16 TASK_ID_TASK_INDEX_MASK = 0x0FFF;
-		static constexpr uint16 TASK_ID_TASK_INDEX_SHIFT = 0;
+		static constexpr uint16 MAX_THREAD_COUNT = 16;
+		static constexpr soul_size MAX_TASK_PER_THREAD = 2u << (TASK_ID_THREAD_INDEX_SHIFT - 1);
 
 	};
 
@@ -56,19 +56,21 @@ namespace soul::runtime
 	struct Task;
 	// NOTE(kevinyu): We use id == 0 as both root and null value;
 	struct TaskID {
-		uint16 id;
+		uint32 id;
 		static constexpr TaskID NULLVAL() { return TaskID(0, 0); }
 		static constexpr TaskID ROOT() { return NULLVAL(); }
 		constexpr TaskID() : id(NULLVAL().id) {}
-		constexpr TaskID(uint16 threadIndex, uint16 taskIndex) : 
-			id(uint16(threadIndex << Constant::TASK_ID_THREAD_INDEX_SHIFT | (taskIndex << Constant::TASK_ID_TASK_INDEX_SHIFT)))
-		{}
+		constexpr TaskID(uint32 threadIndex, uint32 taskIndex) : 
+			id((threadIndex << Constant::TASK_ID_THREAD_INDEX_SHIFT) | (taskIndex << Constant::TASK_ID_TASK_INDEX_SHIFT))
+		{
+			SOUL_ASSERT(0, taskIndex < Constant::MAX_TASK_PER_THREAD, "Task Index overflow");
+		}
 
-		SOUL_NODISCARD uint16 threadIndex() const {
+		SOUL_NODISCARD uint32 threadIndex() const {
 			return (id & Constant::TASK_ID_THREAD_INDEX_MASK) >> Constant::TASK_ID_THREAD_INDEX_SHIFT;
 		}
 
-		SOUL_NODISCARD uint16 taskIndex() const {
+		SOUL_NODISCARD uint32 taskIndex() const {
 			return (id & Constant::TASK_ID_TASK_INDEX_MASK) >> Constant::TASK_ID_TASK_INDEX_SHIFT;
 		}
 

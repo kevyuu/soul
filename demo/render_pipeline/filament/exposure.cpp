@@ -1,7 +1,7 @@
 #include "exposure.h"
 #include <cmath>
 
-namespace SoulFila::Exposure {
+namespace soul_fila::Exposure {
 
     
     float ev100(float aperture, float shutterSpeed, float sensitivity) noexcept {

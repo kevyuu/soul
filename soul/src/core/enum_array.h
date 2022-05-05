@@ -13,7 +13,6 @@ namespace soul {
 	public:
 
 		static constexpr uint64 COUNT = to_underlying(EnumType::COUNT);
-		using init_list = std::array<ValType, COUNT>;
 
 		constexpr EnumArray<EnumType, ValType>() : buffer_(){}
 
@@ -23,11 +22,16 @@ namespace soul {
 			}
 		}
 
-		constexpr explicit EnumArray<EnumType, ValType>(const std::array<ValType, COUNT>& list) noexcept : buffer_() {
-			int i = 0;
-			for (auto val : list) {
-				buffer_[i++] = val;
+		template<std::size_t N>
+		static consteval EnumArray<EnumType, ValType> build_from_list(const ValType (&list)[N])
+		{
+			static_assert(N == COUNT);
+			EnumArray<EnumType, ValType> ret;
+			for (soul_size i = 0; i < N; i++)
+			{
+				ret.buffer_[i] = list[i];
 			}
+			return ret;
 		}
 
 		constexpr ValType& operator[](EnumType index) noexcept {

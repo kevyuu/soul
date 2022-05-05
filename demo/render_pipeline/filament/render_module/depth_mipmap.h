@@ -4,7 +4,7 @@
 #include "gpu/type.h"
 #include "gpu/render_graph.h"
 
-namespace SoulFila
+namespace soul_fila
 {
 	class DepthMipmapPass
 	{
@@ -21,7 +21,7 @@ namespace SoulFila
 		};
 
 		void init(soul::gpu::System* gpuSystemIn);
-		Output computeRenderGraph(soul::gpu::RenderGraph& render_graph, const Input& input, const Scene& scene);
+		Output computeRenderGraph(soul::gpu::RenderGraph& render_graph, const Input& input, const RenderData& render_data, const Scene& scene);
 		
 	private:
 		soul::gpu::ProgramID programID;

@@ -17,6 +17,7 @@
 #include "imgui_render_module.h"
 #include "render_pipeline/filament/renderer.h"
 #include "render_pipeline/filament/data.h"
+#include "render_pipeline/filament/gltf_importer.h"
 
 #include "data.h"
 
@@ -30,7 +31,7 @@ void glfwPrintErrorCallback(int code, const char* message)
 
 struct Args : public argparse::Args
 {
-	std::optional<std::string>& path = kwarg("g,gltf", "GLTF file to show");
+	std::optional<std::string>& path = kwarg(",gltf", "GLTF file to show");
 };
 
 int main(int argc, char* argv[])
@@ -93,16 +94,16 @@ int main(int argc, char* argv[])
 	ImGuiRenderModule imguiRenderModule;
 	imguiRenderModule.init(&gpuSystem);
 
-    SoulFila::Renderer renderer(&gpuSystem);
+    soul_fila::Renderer renderer(&gpuSystem);
 	renderer.init();
-	renderer.getScene()->setViewport({ 1448, 1057 });
+	renderer.getScene()->set_viewport({ 1448, 1057 });
 
 	UI::Store store;
 	store.scene = renderer.getScene();
 	store.gpuSystem = &gpuSystem;
 
 	if (args.path)
-		renderer.getScene()->importFromGLTF(args.path.value().c_str());
+		renderer.getScene()->import_from_gltf(args.path.value().c_str());
 
 	while (!glfwWindowShouldClose(window))
 	{

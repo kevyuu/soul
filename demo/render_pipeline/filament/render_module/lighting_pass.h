@@ -5,7 +5,7 @@
 #include "gpu/render_graph.h"
 #include "draw_item.h"
 
-namespace SoulFila
+namespace soul_fila
 {
 	struct LightingPass
 	{

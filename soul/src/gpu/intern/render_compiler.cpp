@@ -12,6 +12,7 @@ namespace soul::gpu::impl
 	using namespace impl;
 
 	void RenderCompiler::compile_command(const RenderCommand& command) {
+		SOUL_PROFILE_ZONE();
 		#define COMPILE_PACKET(TYPE_STRUCT) \
 			case TYPE_STRUCT::TYPE: \
 				compile_command(*static_cast<const TYPE_STRUCT*>(&command)); \

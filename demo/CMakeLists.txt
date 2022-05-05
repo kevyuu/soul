@@ -15,17 +15,18 @@ set (DEMO_SOURCES
 	
 	render_pipeline/filament/exposure.cpp
 	render_pipeline/filament/gpu_program_registry.cpp
+	render_pipeline/filament/gltf_importer.cpp
+	render_pipeline/filament/renderer.cpp
+	render_pipeline/filament/scene.cpp
 	render_pipeline/filament/render_module/shadow_map.cpp
 	render_pipeline/filament/render_module/lighting_pass.cpp
 	render_pipeline/filament/render_module/structure_pass.cpp
 	render_pipeline/filament/render_module/depth_mipmap.cpp
 	render_pipeline/filament/render_module/draw_item.cpp
-	render_pipeline/filament/renderer.cpp
-	render_pipeline/filament/scene.cpp
-	
+
 )
 
-add_executable(demo ${DEMO_SOURCES} )
+add_executable(demo ${DEMO_SOURCES})
 
 target_link_libraries(demo
 	INTERFACE argparse

@@ -120,8 +120,8 @@ namespace soul::runtime {
 
 	Task* System::_taskPtr(TaskID taskID) {
 		
-		uint16 threadIndex = taskID.threadIndex();
-		uint16 taskIndex = taskID.taskIndex();
+		soul_size threadIndex = taskID.threadIndex();
+		soul_size taskIndex = taskID.taskIndex();
 
 		return &_db.threadContexts[threadIndex].taskPool[taskIndex];
 

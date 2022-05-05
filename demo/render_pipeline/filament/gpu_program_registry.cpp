@@ -8,7 +8,7 @@
 #include <string>
 #include <algorithm>
 
-namespace SoulFila {
+namespace soul_fila {
     
     static constexpr const char* SHADER_BRDF_FRAG = "filament::brdf.frag.glsl";
     static constexpr const char* SHADER_COMMON_GETTERS = "filament::common_getters.glsl";
@@ -53,7 +53,7 @@ namespace SoulFila {
         Demo::ShaderDefine("VERTEX_DOMAIN_OBJECT")
     };
 
-    [[maybe_unused]] static constexpr EnumArray<Property, const char*> PROPERTY_NAMES({
+    [[maybe_unused]] static auto PROPERTY_NAMES = EnumArray<Property, const char*>::build_from_list({
         "baseColor",
         "roughness",
         "metallic",
@@ -82,7 +82,7 @@ namespace SoulFila {
         "bentNormal"
         });
 
-    static constexpr EnumArray<Property, const char*> PROPERTY_DEFINES({
+    static auto PROPERTY_DEFINES = EnumArray<Property, const char*>::build_from_list({
         "MATERIAL_HAS_BASE_COLOR",
         "MATERIAL_HAS_ROUGHNESS",
         "MATERIAL_HAS_METALLIC",
@@ -338,16 +338,17 @@ namespace SoulFila {
         MATERIAL_UNIFORM_BINDING_POINT.binding
     };
 
+    static constexpr char* NULL_STRING = nullptr;
 
-    static constexpr EnumArray<VertexAttribute, const char*> ATTRIBUTE_DEFINES({
-        nullptr,
+    static auto ATTRIBUTE_DEFINES = EnumArray<VertexAttribute, const char*>::build_from_list({
+        NULL_STRING,
         "HAS_ATTRIBUTE_TANGENTS",
         "HAS_ATTRIBUTE_COLOR",
         "HAS_ATTRIBUTE_UV0",
         "HAS_ATTRIBUTE_UV1",
         "HAS_ATTRIBUTE_BONE_INDICES",
         "HAS_ATTRIBUTE_BONE_WEIGHTS",
-        nullptr,
+        NULL_STRING,
         "HAS_ATTRIBUTE_CUSTOM0",
         "HAS_ATTRIBUTE_CUSTOM1",
         "HAS_ATTRIBUTE_CUSTOM2",
@@ -358,7 +359,7 @@ namespace SoulFila {
         "HAS_ATTRIBUTE_CUSTOM7"
     });
 
-    static constexpr EnumArray<VertexAttribute, const char*> ATTRIBUTE_LOCATION_DEFINES({
+    static auto ATTRIBUTE_LOCATION_DEFINES = EnumArray<VertexAttribute, const char*>::build_from_list({
         "LOCATION_POSITION",
         "LOCATION_TANGENTS",
         "LOCATION_COLOR",
@@ -366,7 +367,7 @@ namespace SoulFila {
         "LOCATION_UV1",
         "LOCATION_BONE_INDICES",
         "LOCATION_BONE_WEIGHTS",
-        nullptr,
+        NULL_STRING,
         "LOCATION_CUSTOM0",
         "LOCATION_CUSTOM1",
         "LOCATION_CUSTOM2",
@@ -377,7 +378,7 @@ namespace SoulFila {
         "LOCATION_CUSTOM7"
         });
 
-    static constexpr EnumArray<Shading, const char*> SHADING_DEFINES({
+    static auto SHADING_DEFINES = EnumArray<Shading, const char*>::build_from_list({
         "SHADING_MODEL_UNLIT",
         "SHADING_MODEL_LIT",
         "SHADING_MODEL_SUBSURFACE",
@@ -475,7 +476,7 @@ namespace SoulFila {
         Util::ForEachBit(info.requiredAttributes,
             [&defines](uint32 index) {
                 VertexAttribute attr = VertexAttribute(index);
-                if (ATTRIBUTE_DEFINES[attr] != nullptr) defines.add(Demo::ShaderDefine(ATTRIBUTE_DEFINES[attr]));
+                if (ATTRIBUTE_DEFINES[attr] != NULL_STRING) defines.add(Demo::ShaderDefine(ATTRIBUTE_DEFINES[attr]));
             });
     }
 
@@ -515,7 +516,7 @@ namespace SoulFila {
         desc.defineCount = soul::cast<uint8>(defines.size());
 
         // generate inputs
-        static constexpr soul::EnumArray<VertexAttribute, Demo::ShaderInput> inputMap({
+        static auto inputMap = EnumArray<VertexAttribute, Demo::ShaderInput>::build_from_list({
             Demo::ShaderInput("mesh_position", Demo::ShaderVarType::FLOAT4),
             Demo::ShaderInput("mesh_tangents", Demo::ShaderVarType::FLOAT4),
             Demo::ShaderInput("mesh_color", Demo::ShaderVarType::FLOAT4),
@@ -537,7 +538,7 @@ namespace SoulFila {
         
         // generate outputs
         desc.outputs[4] = Demo::ShaderOutput("vertex_worldPosition", Demo::ShaderVarType::FLOAT3);
-        if (TestAttribute_(attributes, VertexAttribute::TANGENTS)) {
+        if (TestAttribute_(attributes, VertexAttribute::QTANGENTS)) {
             desc.outputs[5] = Demo::ShaderOutput("vertex_worldNormal", Demo::ShaderVarType::FLOAT3, Demo::ShaderPrecision::MEDIUM);
             if (IsPropertyNeedTBN_(info.properties))
                 desc.outputs[6] = Demo::ShaderOutput("vertex_worldTangent", Demo::ShaderVarType::FLOAT4, Demo::ShaderPrecision::MEDIUM);
@@ -705,7 +706,7 @@ namespace SoulFila {
 
         // defines shader inputs
         desc.inputs[4] = Demo::ShaderInput("vertex_worldPosition", Demo::ShaderVarType::FLOAT3);
-        if (TestAttribute_(info.requiredAttributes, VertexAttribute::TANGENTS)) {
+        if (TestAttribute_(info.requiredAttributes, VertexAttribute::QTANGENTS)) {
             desc.inputs[5] = Demo::ShaderInput("vertex_worldNormal", Demo::ShaderVarType::FLOAT3, Demo::ShaderPrecision::MEDIUM);
             if (IsPropertyNeedTBN_(info.properties)) {
                 desc.inputs[6] = Demo::ShaderInput("vertex_worldTangent", Demo::ShaderVarType::FLOAT4, Demo::ShaderPrecision::MEDIUM);
@@ -830,20 +831,20 @@ namespace SoulFila {
         return generator.createShader(desc);
     }
 
-    static bool GenerateProgramSet_(GPUProgramSet& programSet, const Demo::ShaderGenerator& generator, const soul::Array<VariantStagePair>& variants, const ProgramSetInfo& info) {
-        programSet.info = info;
+    static bool GenerateProgramSet_(GPUProgramSet& program_set, const Demo::ShaderGenerator& generator, const soul::Array<VariantStagePair>& variants, const ProgramSetInfo& info) {
+        program_set.info = info;
     	runtime::TaskID parent = runtime::create_task(runtime::TaskID::ROOT(), [](runtime::TaskID) {});
-    	for (const auto& variantPair : variants) {
-            if (variantPair.stage == Demo::ShaderType::VERTEX) {
+    	for (const auto& variant_pair : variants) {
+            if (variant_pair.stage == Demo::ShaderType::VERTEX) {
                 runtime::create_and_run_task(parent, [&](runtime::TaskID) {
-                    soul::gpu::ShaderID shaderID = GenerateVertexShader_(generator, GPUProgramVariant(variantPair.variant), info);
-                    programSet.vertShaderIDs[variantPair.variant] = shaderID;
+                    soul::gpu::ShaderID shader_id = GenerateVertexShader_(generator, GPUProgramVariant(variant_pair.variant), info);
+                    program_set.vertShaderIDs[variant_pair.variant] = shader_id;
                 });
             }
             else {
                 runtime::create_and_run_task(parent, [&](runtime::TaskID) {
-                    soul::gpu::ShaderID shaderID = GenerateFragmentShader_(generator, GPUProgramVariant(variantPair.variant), info);
-                    programSet.fragShaderIDs[variantPair.variant] = shaderID;
+                    soul::gpu::ShaderID shader_id = GenerateFragmentShader_(generator, GPUProgramVariant(variant_pair.variant), info);
+                    program_set.fragShaderIDs[variant_pair.variant] = shader_id;
                 });
             }
         }
@@ -1163,7 +1164,7 @@ namespace SoulFila {
 	}
 
 	GPUProgramSetID GPUProgramRegistry::createProgramSet(const GPUProgramKey& config) {
-
+        SOUL_ASSERT_MAIN_THREAD();
         if (_programSetMap.isExist(config)) {
             return _programSetMap[config];
         }
@@ -1196,7 +1197,7 @@ namespace SoulFila {
         if (numUv > 0) requiredAttributes |= (1 << VertexAttribute::UV0);
         if (numUv > 1) requiredAttributes |= (1 << VertexAttribute::UV1);
         if (config.hasVertexColors) requiredAttributes |= (1 << VertexAttribute::COLOR);
-        if (info.shading != Shading::UNLIT) requiredAttributes |= (1 << VertexAttribute::TANGENTS);
+        if (info.shading != Shading::UNLIT) requiredAttributes |= (1 << VertexAttribute::QTANGENTS);
 
         auto _addMatBufferMember = [&matBufferMembers](const char* name, Demo::ShaderVarType varType) {
             matBufferMembers.add(Demo::ShaderUniformMember(name, varType));
@@ -1369,18 +1370,18 @@ namespace SoulFila {
             _addMatBufferMember("_specularAntiAliasingThreshold", Demo::ShaderVarType::FLOAT);
         }
         
-        GPUProgramSetID programSetID = GPUProgramSetID(soul::cast<GPUProgramSetID::store_type>(_programSets.add(GPUProgramSet())));
-        _programSetMap.add(config, programSetID);
+        GPUProgramSetID program_set_id = GPUProgramSetID(soul::cast<GPUProgramSetID::store_type>(_programSets.add(GPUProgramSet())));
+        _programSetMap.add(config, program_set_id);
 
-        GenerateProgramSet_(_programSets[programSetID.id], _shaderGenerator, GetSurfaceVariants_(0, info.shading != Shading::UNLIT, info.hasShadowMultiplier), info);
+        GenerateProgramSet_(_programSets[program_set_id.id], _shaderGenerator, GetSurfaceVariants_(0, info.shading != Shading::UNLIT, info.hasShadowMultiplier), info);
 
-        return programSetID;
+        return program_set_id;
 	}
 
     soul::gpu::ProgramID GPUProgramRegistry::getProgram(GPUProgramSetID programSetID, GPUProgramVariant variant) {
 
-        GPUProgramSet& programSet = _programSets[programSetID.id];
-        gpu::ProgramID programID = programSet.programIDs[variant.key];
+        GPUProgramSet& program_set = _programSets[programSetID.id];
+        gpu::ProgramID programID = program_set.programIDs[variant.key];
         if (programID != soul::gpu::PROGRAM_ID_NULL) {
             return programID;
         }
@@ -1389,10 +1390,10 @@ namespace SoulFila {
         uint8 fragmentVariant = GPUProgramVariant::filterVariantFragment(variant.key);
 
         soul::gpu::ProgramDesc programDesc;
-        programDesc.shaderIDs[soul::gpu::ShaderStage::VERTEX] = programSet.vertShaderIDs[vertexVariant];
-        programDesc.shaderIDs[soul::gpu::ShaderStage::FRAGMENT] = programSet.fragShaderIDs[fragmentVariant];
+        programDesc.shaderIDs[soul::gpu::ShaderStage::VERTEX] = program_set.vertShaderIDs[vertexVariant];
+        programDesc.shaderIDs[soul::gpu::ShaderStage::FRAGMENT] = program_set.fragShaderIDs[fragmentVariant];
         programID = _gpuSystem->request_program(programDesc);
-        programSet.programIDs[variant.key] = programID;
+        program_set.programIDs[variant.key] = programID;
         return programID;
     }
 

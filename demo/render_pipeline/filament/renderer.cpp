@@ -10,7 +10,7 @@
 #include "render_module/lighting_pass.h"
 
 
-namespace SoulFila {
+namespace soul_fila {
 
 	void Cull(Renderables& renderables, const Frustum& frustum, soul_size bit)
 	{
@@ -39,7 +39,7 @@ namespace SoulFila {
 		{
 			if (visibleMasks[i])
 			{
-				const LightComponent& lightComp = scene.getLightComponent(entities[i]);
+				const LightComponent& lightComp = scene.get_light_component(entities[i]);
 				if (!lightComp.lightType.lightCaster)
 				{
 					visibleMasks[i] = 0;
@@ -82,7 +82,7 @@ namespace SoulFila {
 			distances[i] = length(center);
 		}
 
-		SoulFila::Zip2Iterator<Lights::iterator, float*> b = { lights.begin(), distances };
+		soul_fila::Zip2Iterator<Lights::iterator, float*> b = { lights.begin(), distances };
 		std::sort(b + Scene::DIRECTIONAL_LIGHTS_COUNT, b + lights.size(),
 			[](auto const& lhs, auto const& rhs) { return lhs.second < rhs.second; });
 	}
@@ -117,22 +117,22 @@ namespace SoulFila {
 	}
 	
 
-	void Renderer::prepareRenderData()
+	void Renderer::prepare_render_data()
 	{
-		const IBL& ibl = scene.getIBL();
-		Mat3f inverseIBLRot = mat3Transpose(ibl.rotation);
-		Mat4f worldOriginTransform = mat4FromMat3(inverseIBLRot);
+		const IBL& ibl = scene_.get_ibl();
+		Mat3f inverse_ibl_rot = mat3Transpose(ibl.rotation);
+		Mat4f world_origin_transform = mat4FromMat3(inverse_ibl_rot);
 
-		renderData.clear();
-		Renderables& renderables = renderData.renderables;
-		renderables.setCapacity(scene.getRenderableCount() + 1);
-		scene.forEachRenderable([&renderables, worldOriginTransform, this](EntityID entityID, const TransformComponent& transformComp, const RenderComponent& renderComp)
+		render_data_.clear();
+		Renderables& renderables = render_data_.renderables;
+		renderables.setCapacity(scene_.get_renderable_count() + 1);
+		scene_.for_each_renderable([&renderables, world_origin_transform, this](EntityID entityID, const TransformComponent& transformComp, const RenderComponent& renderComp)
 		{
-			soul::Mat4f worldTransform = worldOriginTransform * transformComp.world;
+			soul::Mat4f worldTransform = world_origin_transform * transformComp.world;
 			float scale = (length(transformComp.world.columns(0).xyz) + length(transformComp.world.columns(1).xyz) + length(transformComp.world.columns(2).xyz)) / 3.0f;
 			const bool reversedWindingOrder = determinant(mat3UpperLeft(worldTransform)) < 0.0f;
 
-			const Mesh& mesh = this->scene.meshes()[renderComp.meshID.id];
+			const Mesh& mesh = this->scene_.meshes()[renderComp.meshID.id];
 			AABB worldAABB = aabbTransform(mesh.aabb, worldTransform);
 			Vec3f worldAABBCenter = (worldAABB.min + worldAABB.max) / 2.0f;
 			Vec3f worldAABBHalfExtent = (worldAABB.max - worldAABB.min) / 2.0f;
@@ -154,15 +154,15 @@ namespace SoulFila {
 			);
 		});
 
-		Lights& lights = renderData.lights;
-		lights.setCapacity(scene.getLightCount());
+		Lights& lights = render_data_.lights;
+		lights.setCapacity(scene_.get_light_count());
 		// we only store 1 directional light with the maximum intensity
 		lights.resize(Scene::DIRECTIONAL_LIGHTS_COUNT);
 		float maxIntensity = 0.0f;
-		scene.forEachLight([&lights, worldOriginTransform, &maxIntensity, this](EntityID entityID, const TransformComponent& transformComp, const LightComponent& lightComp)
+		scene_.for_each_light([&lights, world_origin_transform, &maxIntensity, this](EntityID entityID, const TransformComponent& transformComp, const LightComponent& lightComp)
 		{
-			soul::Mat4f worldTransform = worldOriginTransform * transformComp.world;
-			if (scene.isDirectionalLight(entityID))
+			soul::Mat4f worldTransform = world_origin_transform * transformComp.world;
+			if (scene_.is_directional_light(entityID))
 			{
 				if (lightComp.intensity >= maxIntensity)
 				{
@@ -196,14 +196,14 @@ namespace SoulFila {
 			}
 		});
 
-		const CameraInfo& cameraInfo = scene.getActiveCamera(worldOriginTransform);
-		renderData.cameraInfo = cameraInfo;
+		const CameraInfo& cameraInfo = scene_.get_active_camera(world_origin_transform);
+		render_data_.cameraInfo = cameraInfo;
 
-		Frustum cameraFrustum = cameraInfo.getCullingFrustum();
-		Cull(renderData.renderables, cameraFrustum, VISIBLE_RENDERABLE_BIT);
-		Cull(scene, lights, cameraFrustum);
-		ComputeCameraDistanceAndSort(scene, cameraInfo, lights);
-		auto shadowFlags = shadowMapPass.prepare(scene, cameraInfo, renderables, lights, renderData.frameUBO);
+		Frustum cameraFrustum = cameraInfo.get_culling_frustum();
+		Cull(render_data_.renderables, cameraFrustum, VISIBLE_RENDERABLE_BIT);
+		Cull(scene_, lights, cameraFrustum);
+		ComputeCameraDistanceAndSort(scene_, cameraInfo, lights);
+		auto shadowFlags = shadow_map_pass_.prepare(scene_, cameraInfo, renderables, lights, render_data_.frameUBO);
 
 		/*
 		 * Partition the SoA so that renderables are partitioned w.r.t their visibility into the
@@ -229,7 +229,7 @@ namespace SoulFila {
 		auto const* visibilities = renderables.data<RenderablesIdx::VISIBILITY_STATE>();
 		uint8* visibleMask = renderables.data<RenderablesIdx::VISIBLE_MASK>();
 
-		ComputeVisibilityMasks(scene.getVisibleLayers(), layers, visibilities, visibleMask,
+		ComputeVisibilityMasks(scene_.get_visible_layers(), layers, visibilities, visibleMask,
 			renderables.size());
 
 		auto const beginRenderables = renderables.begin();
@@ -257,21 +257,21 @@ namespace SoulFila {
 		// convert to indices
 		uint32_t iEnd = uint32_t(beginSpotLightCastersOnly - beginRenderables);
 		uint32_t iSpotLightCastersEnd = uint32_t(endSpotLightCastersOnly - beginRenderables);
-		renderData.visibleRenderables = Range(0u, uint32(beginCastersOnly - beginRenderables));
-		renderData.directionalShadowCasters = Range(uint32(beginCasters - beginRenderables), iEnd);
-		renderData.spotLightShadowCasters = Range(0u, iSpotLightCastersEnd);
-		renderData.merged = Range(0u, iSpotLightCastersEnd);
+		render_data_.visibleRenderables = Range(0u, uint32(beginCastersOnly - beginRenderables));
+		render_data_.directionalShadowCasters = Range(uint32(beginCasters - beginRenderables), iEnd);
+		render_data_.spotLightShadowCasters = Range(0u, iSpotLightCastersEnd);
+		render_data_.merged = Range(0u, iSpotLightCastersEnd);
 
-		SOUL_ASSERT(0, renderData.merged.size() != 0, "");
+		SOUL_ASSERT(0, render_data_.merged.size() != 0, "");
 
-		FrameUBO& frameUBO = renderData.frameUBO;
+		FrameUBO& frameUBO = render_data_.frameUBO;
 		frameUBO.viewFromWorldMatrix = cameraInfo.view;
 		frameUBO.worldFromViewMatrix = cameraInfo.model;
 		frameUBO.clipFromViewMatrix = cameraInfo.projection;
 		frameUBO.viewFromClipMatrix = mat4Inverse(cameraInfo.projection);
 		frameUBO.clipFromWorldMatrix = cameraInfo.projection * cameraInfo.view;
 		frameUBO.worldFromClipMatrix = cameraInfo.model * mat4Inverse(cameraInfo.projection);
-		frameUBO.cameraPosition = cameraInfo.getPosition();
+		frameUBO.cameraPosition = cameraInfo.get_position();
 		frameUBO.worldOffset = cameraInfo.worldOffset;
 		frameUBO.cameraFar = cameraInfo.zf;
 		frameUBO.clipControl = soul::Vec2f(-0.5f, 0.5f);
@@ -281,7 +281,7 @@ namespace SoulFila {
 
 		// lighting
 		frameUBO.iblLuminance = ibl.intensity * exposure;
-		frameUBO.iblRoughnessOneLevel = float(gpuSystem->get_texture_mip_levels(ibl.reflectionTex) - 1);
+		frameUBO.iblRoughnessOneLevel = float(gpu_system_->get_texture_mip_levels(ibl.reflectionTex) - 1);
 		std::transform(ibl.irradianceCoefs, ibl.irradianceCoefs + 9, frameUBO.iblSH, [](Vec3f v)
 		{
 			return Vec4f(v, 0.0f);
@@ -290,7 +290,7 @@ namespace SoulFila {
 		if (dirLightEntity != ENTITY_ID_NULL)
 		{
 			const Vec3f l = -lights.elementAt<LightsIdx::DIRECTION>(0); // guaranteed normalized
-			const LightComponent& lightComp = scene.getLightComponent(dirLightEntity);
+			const LightComponent& lightComp = scene_.get_light_component(dirLightEntity);
 			const Vec4f colorIntensity = {
 					lightComp.color, lightComp.intensity * exposure };
 
@@ -319,12 +319,12 @@ namespace SoulFila {
 		}
 
 		// viewport
-		Vec2ui32 viewport = scene.getViewport();
+		Vec2ui32 viewport = scene_.get_viewport();
 		frameUBO.resolution = Vec4f(viewport.x, viewport.y, 1.0f / viewport.x, 1.0f / viewport.y);
 		frameUBO.origin = Vec2f();
 
 		// Fog
-		auto const& fogOptions = scene.getFogOptions();	
+		auto const& fogOptions = scene_.get_fog_options();	
 
 		// this can't be too high because we need density / heightFalloff to produce something
 		// close to fogOptions.density in the fragment shader which use 16-bits floats.
@@ -333,7 +333,7 @@ namespace SoulFila {
 
 		// precalculate the constant part of density  integral and correct for exp2() in the shader
 		const float density = ((fogOptions.density / heightFalloff) *
-			std::exp(-heightFalloff * (cameraInfo.getPosition().y - fogOptions.height)))
+			std::exp(-heightFalloff * (cameraInfo.get_position().y - fogOptions.height)))
 			* float(1.0f / soul::Fconst::LN2);
 
 		frameUBO.fogStart = fogOptions.distance;
@@ -356,18 +356,18 @@ namespace SoulFila {
 		float l = float(time.count() - h);
 		frameUBO.userTime = { h, l, 0, 0}; //TODO(kevinyu) : figure out if this is actually used in the shader, we use current timestamp instead of appVSync that is implemented in filament
 
-		renderData.lightsUBO = {};
+		render_data_.lightsUBO = {};
 
-		Array<MaterialUBO>& materialUBOs = renderData.materialUBOs;
-		materialUBOs.reserve(scene.materials().size());
-		for (const Material& material : scene.materials())
+		Array<MaterialUBO>& materialUBOs = render_data_.materialUBOs;
+		materialUBOs.reserve(scene_.materials().size());
+		for (const Material& material : scene_.materials())
 		{
 			materialUBOs.add(material.buffer);
 		}
 
-		Array<PerRenderableUBO>& renderableUBOs = renderData.renderableUBOs;
-		renderableUBOs.reserve(renderData.merged.size());
-		for (soul_size i : renderData.merged)
+		Array<PerRenderableUBO>& renderableUBOs = render_data_.renderableUBOs;
+		renderableUBOs.reserve(render_data_.merged.size());
+		for (soul_size i : render_data_.merged)
 		{
 			const Mat4f& model = renderables.elementAt<RenderablesIdx::WORLD_TRANSOFRM>(i);
 
@@ -395,8 +395,8 @@ namespace SoulFila {
 			renderableUBOs.add(renderableUBO);
 		}
 
-		soul::Array<BonesUBO>& bonesUBOs = renderData.bonesUBOs;
-		const Array<Skin>& skins = scene.skins();
+		soul::Array<BonesUBO>& bonesUBOs = render_data_.bonesUBOs;
+		const Array<Skin>& skins = scene_.skins();
 		bonesUBOs.resize(skins.size());
 		for (uint64 skinIdx = 0; skinIdx < skins.size(); skinIdx++) {
 			const Skin& skin = skins[skinIdx];
@@ -409,36 +409,99 @@ namespace SoulFila {
 		uint32 count = 0;
 		uint32* summedPrimitiveCounts = renderables.data<RenderablesIdx::SUMMED_PRIMITIVE_COUNT>();
 		const Array<Primitive>** primitives = renderables.data<RenderablesIdx::PRIMITIVES>();
-		for (soul_size i : renderData.merged)
+		for (soul_size i : render_data_.merged)
 		{
 			summedPrimitiveCounts[i] = count;
 			count += primitives[i]->size();
 		}
-		summedPrimitiveCounts[renderData.merged.last] = count;
+		summedPrimitiveCounts[render_data_.merged.last] = count;
 			
-		if (shadowFlags) { renderData.flags |= HAS_SHADOWING; }
-		if (dirLightEntity != ENTITY_ID_NULL) { renderData.flags |= HAS_DIRECTIONAL_LIGHT; }
-		if (lights.size() > Scene::DIRECTIONAL_LIGHTS_COUNT) { renderData.flags |= HAS_DYNAMIC_LIGHTING; }
-		if (shadowMapPass.getShadowType() == ShadowType::VSM) { renderData.flags |= HAS_VSM; }
-		if (fogOptions.enabled && fogOptions.density > 0.0f) { renderData.flags |= HAS_FOG; }
+		if (shadowFlags) { render_data_.flags |= HAS_SHADOWING; }
+		if (dirLightEntity != ENTITY_ID_NULL) { render_data_.flags |= HAS_DIRECTIONAL_LIGHT; }
+		if (lights.size() > Scene::DIRECTIONAL_LIGHTS_COUNT) { render_data_.flags |= HAS_DYNAMIC_LIGHTING; }
+		if (shadow_map_pass_.getShadowType() == ShadowType::VSM) { render_data_.flags |= HAS_VSM; }
+		if (fogOptions.enabled && fogOptions.density > 0.0f) { render_data_.flags |= HAS_FOG; }
 
 	}
 
 	void Renderer::init() {
-		lightingPass.init(gpuSystem, &programRegistry);
-		structurePass.init(gpuSystem, &programRegistry);
-		shadowMapPass.init(gpuSystem, &programRegistry);
-		depthMipmapPass.init(gpuSystem);
+
+		const gpu::ClearValue clear_value(Vec4f(1.0f, 1.0f, 1.0f, 1.0f), 0.0f, 0);
+		const gpu::TextureDesc stub_texture_2d_desc = gpu::TextureDesc::D2(
+			"Stub texture",
+			gpu::TextureFormat::RGBA8,
+			1,
+			{ gpu::TextureUsage::SAMPLED },
+			{ gpu::QueueType::GRAPHIC },
+			{ 1, 1 });
+		render_data_.stubTexture = gpu_system_->create_texture(stub_texture_2d_desc, clear_value);
+		gpu_system_->finalize_texture(render_data_.stubTexture, { gpu::TextureUsage::SAMPLED });
+
+		const gpu::ClearValue clear_value_uint(Vec4ui32(0, 0, 0, 0), 0, 0);
+		const gpu::TextureDesc stub_texture_2d_uint_desc = gpu::TextureDesc::D2(
+			"Stub texture Uint",
+			gpu::TextureFormat::RG16UI,
+			1,
+			{ gpu::TextureUsage::SAMPLED },
+			{ gpu::QueueType::GRAPHIC },
+			{ 1, 1 });
+		render_data_.stubTextureUint = gpu_system_->create_texture(stub_texture_2d_uint_desc, clear_value_uint);
+		gpu_system_->finalize_texture(render_data_.stubTextureUint, { gpu::TextureUsage::SAMPLED });
+
+		gpu::TextureDesc stub_texture_array_desc = gpu::TextureDesc::D2Array(
+			"Stub texture array",
+			gpu::TextureFormat::RGBA8,
+			1,
+			{ gpu::TextureUsage::SAMPLED },
+			{ gpu::QueueType::GRAPHIC },
+			{ 1, 1 }, 1);
+		render_data_.stubTextureArray = gpu_system_->create_texture(stub_texture_array_desc, clear_value);
+		gpu_system_->finalize_texture(render_data_.stubTextureArray, { gpu::TextureUsage::SAMPLED });
+
+		static constexpr Vec2f FULL_SCREEN_TRIANGLE_VERTICES[] = {
+			{ -1.0f, -1.0f },
+			{  -1.0f, 1.0f },
+			{ 1.0f,  -1.0f },
+			{ 1.0f, 1.0f }
+		};
+
+		static constexpr uint32 FULLSCREEN_INDICES[] = {
+			2, 1, 0,
+			3, 1, 2
+		};
+
+		render_data_.fullscreenVb = gpu_system_->create_buffer({
+			.count = std::size(FULL_SCREEN_TRIANGLE_VERTICES),
+			.typeSize = sizeof(Vec2f),
+			.typeAlignment = alignof(Vec2f),
+			.usageFlags = {gpu::BufferUsage::VERTEX},
+			.queueFlags = {gpu::QueueType::GRAPHIC}
+			}, FULL_SCREEN_TRIANGLE_VERTICES);
+		gpu_system_->finalize_buffer(render_data_.fullscreenVb);
+
+		render_data_.fullscreenIb = gpu_system_->create_buffer({
+			.count = std::size(FULLSCREEN_INDICES),
+			.typeSize = sizeof(uint32),
+			.typeAlignment = alignof(uint32),
+			.usageFlags = {gpu::BufferUsage::INDEX},
+			.queueFlags = {gpu::QueueType::GRAPHIC}
+			}, FULLSCREEN_INDICES);
+		gpu_system_->finalize_buffer(render_data_.fullscreenIb);
+
+		lighting_pass_.init(gpu_system_, &program_registry_);
+		structure_pass_.init(gpu_system_, &program_registry_);
+		shadow_map_pass_.init(gpu_system_, &program_registry_);
+		depth_mipmap_pass_.init(gpu_system_);
 	}
 
 	gpu::TextureNodeID Renderer::computeRenderGraph(gpu::RenderGraph* renderGraph) {
 
 		// TODO: Should remove this in the future. make this function run even when there is no object or use better check
-		if (scene.meshes().size() == 0) {
+		if (scene_.meshes().size() == 0) {
 			return gpu::TextureNodeID();
 		}
 
-		prepareRenderData();
+		prepare_render_data();
 		runtime::ScopeAllocator<> scopeAllocator("computeRenderGraph");
 		
 		soul::gpu::BufferDesc frame_ubo_desc;
@@ -447,8 +510,8 @@ namespace SoulFila {
 		frame_ubo_desc.count = 1;
 		frame_ubo_desc.usageFlags = {gpu:: BufferUsage::UNIFORM };
 		frame_ubo_desc.queueFlags = { gpu::QueueType::GRAPHIC };
-		soul::gpu::BufferID frame_gpu_buffer = gpuSystem->create_buffer(frame_ubo_desc, &renderData.frameUBO);
-		gpuSystem->destroy_buffer(frame_gpu_buffer);
+		soul::gpu::BufferID frame_gpu_buffer = gpu_system_->create_buffer(frame_ubo_desc, &render_data_.frameUBO);
+		gpu_system_->destroy_buffer(frame_gpu_buffer);
 		soul::gpu::BufferNodeID frame_uniform_buffer = renderGraph->import_buffer("Frame Uniform Buffer", frame_gpu_buffer);
 
 		soul::gpu::BufferDesc light_ubo_desc;
@@ -457,8 +520,8 @@ namespace SoulFila {
 		light_ubo_desc.count = 1;
 		light_ubo_desc.usageFlags = {gpu:: BufferUsage::UNIFORM };
 		light_ubo_desc.queueFlags = { gpu::QueueType::GRAPHIC };
-		soul::gpu::BufferID light_gpu_buffer = gpuSystem->create_buffer(light_ubo_desc, &renderData.lightsUBO);
-		gpuSystem->destroy_buffer(light_gpu_buffer);
+		soul::gpu::BufferID light_gpu_buffer = gpu_system_->create_buffer(light_ubo_desc, &render_data_.lightsUBO);
+		gpu_system_->destroy_buffer(light_gpu_buffer);
 		soul::gpu::BufferNodeID light_uniform_buffer = renderGraph->import_buffer("Light Uniform Buffer", light_gpu_buffer);
 
 		soul::gpu::BufferDesc shadow_ubo_desc;
@@ -467,8 +530,8 @@ namespace SoulFila {
 		shadow_ubo_desc.count = 1;
 		shadow_ubo_desc.usageFlags = {gpu:: BufferUsage::UNIFORM };
 		shadow_ubo_desc.queueFlags = { gpu::QueueType::GRAPHIC };
-		soul::gpu::BufferID shadow_gpu_buffer = gpuSystem->create_buffer(shadow_ubo_desc, &renderData.shadowUBO);
-		gpuSystem->destroy_buffer(shadow_gpu_buffer);
+		soul::gpu::BufferID shadow_gpu_buffer = gpu_system_->create_buffer(shadow_ubo_desc, &render_data_.shadowUBO);
+		gpu_system_->destroy_buffer(shadow_gpu_buffer);
 		soul::gpu::BufferNodeID shadowUniformBuffer = renderGraph->import_buffer("Shadow Uniform Buffer", shadow_gpu_buffer);
 
 		soul::gpu::BufferDesc froxel_records_buffer_desc;
@@ -478,40 +541,40 @@ namespace SoulFila {
 		froxel_records_buffer_desc.usageFlags = {gpu:: BufferUsage::UNIFORM };
 		froxel_records_buffer_desc.queueFlags = { gpu::QueueType::GRAPHIC };
 		FroxelRecordsUBO froxel_records_ubo = {};
-		soul::gpu::BufferID froxel_records_gpu_buffer = gpuSystem->create_buffer(froxel_records_buffer_desc, &froxel_records_ubo);
-		gpuSystem->destroy_buffer(froxel_records_gpu_buffer);
+		soul::gpu::BufferID froxel_records_gpu_buffer = gpu_system_->create_buffer(froxel_records_buffer_desc, &froxel_records_ubo);
+		gpu_system_->destroy_buffer(froxel_records_gpu_buffer);
 		soul::gpu::BufferNodeID froxel_records_uniform_buffer = renderGraph->import_buffer("Froxel Records Uniform Buffer", froxel_records_gpu_buffer);
 
 		soul::gpu::BufferDesc material_ubo_desc;
 		material_ubo_desc.typeSize = sizeof(MaterialUBO);
 		material_ubo_desc.typeAlignment = alignof(MaterialUBO);
-		material_ubo_desc.count = scene.materials().size();
+		material_ubo_desc.count = scene_.materials().size();
 		material_ubo_desc.usageFlags = {gpu:: BufferUsage::UNIFORM };
 		material_ubo_desc.queueFlags = { gpu::QueueType::GRAPHIC };
-		soul::gpu::BufferID material_gpu_buffer = gpuSystem->create_buffer(material_ubo_desc,renderData.materialUBOs.data());
-		gpuSystem->destroy_buffer(material_gpu_buffer);
+		soul::gpu::BufferID material_gpu_buffer = gpu_system_->create_buffer(material_ubo_desc,render_data_.materialUBOs.data());
+		gpu_system_->destroy_buffer(material_gpu_buffer);
 		soul::gpu::BufferNodeID material_uniform_buffer = renderGraph->import_buffer("Material Uniform Buffer", material_gpu_buffer);
 
 
 		soul::gpu::BufferDesc renderable_ubo_desc;
 		renderable_ubo_desc.typeSize = sizeof(PerRenderableUBO);
 		renderable_ubo_desc.typeAlignment = alignof(PerRenderableUBO);
-		renderable_ubo_desc.count = renderData.renderableUBOs.size();
+		renderable_ubo_desc.count = render_data_.renderableUBOs.size();
 		renderable_ubo_desc.usageFlags = {gpu:: BufferUsage::UNIFORM };
 		renderable_ubo_desc.queueFlags = { gpu::QueueType::GRAPHIC };
-			soul::gpu::BufferID renderable_gpu_buffer = gpuSystem->create_buffer(renderable_ubo_desc, renderData.renderableUBOs.data());
-		gpuSystem->destroy_buffer(renderable_gpu_buffer);
+			soul::gpu::BufferID renderable_gpu_buffer = gpu_system_->create_buffer(renderable_ubo_desc, render_data_.renderableUBOs.data());
+		gpu_system_->destroy_buffer(renderable_gpu_buffer);
 		soul::gpu::BufferNodeID object_uniform_buffer = renderGraph->import_buffer("Renderable Uniform Buffer", renderable_gpu_buffer);
 
 
 		soul::gpu::BufferDesc bones_ubo_desc;
 		bones_ubo_desc.typeSize = sizeof(BonesUBO);
 		bones_ubo_desc.typeAlignment = alignof(BonesUBO);
-		bones_ubo_desc.count = renderData.bonesUBOs.size();
+		bones_ubo_desc.count = render_data_.bonesUBOs.size();
 		bones_ubo_desc.usageFlags = {gpu:: BufferUsage::UNIFORM };
 		bones_ubo_desc.queueFlags = { gpu::QueueType::GRAPHIC };
-		soul::gpu::BufferID bones_ubogpu_buffer = gpuSystem->create_buffer(bones_ubo_desc, renderData.bonesUBOs.data());
-		gpuSystem->destroy_buffer(bones_ubogpu_buffer);
+		soul::gpu::BufferID bones_ubogpu_buffer = gpu_system_->create_buffer(bones_ubo_desc, render_data_.bonesUBOs.data());
+		gpu_system_->destroy_buffer(bones_ubogpu_buffer);
 		soul::gpu::BufferNodeID bone_uniform_buffer = renderGraph->import_buffer("Bones Uniform Buffer", bones_ubogpu_buffer);
 
 
@@ -519,7 +582,7 @@ namespace SoulFila {
 		shadow_map_input.objectsUb = object_uniform_buffer;
 		shadow_map_input.bonesUb = bone_uniform_buffer;
 		shadow_map_input.materialsUb = material_uniform_buffer;
-		ShadowMapGenPass::Output shadow_map_output = shadowMapPass.computeRenderGraph(*renderGraph, shadow_map_input, renderData, scene);
+		ShadowMapGenPass::Output shadow_map_output = shadow_map_pass_.computeRenderGraph(*renderGraph, shadow_map_input, render_data_, scene_);
 
 
 		StructurePass::Input structure_input;
@@ -527,9 +590,9 @@ namespace SoulFila {
 		structure_input.objectsUb = object_uniform_buffer;
 		structure_input.bonesUb = bone_uniform_buffer;
 		structure_input.materialsUb = material_uniform_buffer;
-		StructurePass::Output structure_output = structurePass.computeRenderGraph(*renderGraph, structure_input, renderData, scene);
+		StructurePass::Output structure_output = structure_pass_.computeRenderGraph(*renderGraph, structure_input, render_data_, scene_);
 
-		DepthMipmapPass::Output depth_mipmap_output = depthMipmapPass.computeRenderGraph(*renderGraph, { structure_output.depthTarget }, scene);
+		DepthMipmapPass::Output depth_mipmap_output = depth_mipmap_pass_.computeRenderGraph(*renderGraph, { structure_output.depthTarget }, render_data_, scene_);
 
 		LightingPass::Input lighting_input;
 		lighting_input.frameUb = frame_uniform_buffer;
@@ -541,7 +604,7 @@ namespace SoulFila {
 		lighting_input.materialsUb = material_uniform_buffer;
 		lighting_input.structureTex = depth_mipmap_output.depthMap;
 		lighting_input.shadowMap = shadow_map_output.depthTarget;
-		LightingPass::Output lighting_output = lightingPass.computeRenderGraph(*renderGraph, lighting_input, renderData, scene);
+		LightingPass::Output lighting_output = lighting_pass_.computeRenderGraph(*renderGraph, lighting_input, render_data_, scene_);
 		
 		return lighting_output.renderTarget;
 	}
