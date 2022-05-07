@@ -4,7 +4,7 @@
 #include "core/array.h"
 #include "core/config.h"
 
-#include <mutex>
+#include "core/mutex.h"
 
 namespace soul::gpu
 {
@@ -64,7 +64,7 @@ namespace soul::gpu
 		}
 
 	private:
-		mutable std::mutex mutex_;
+		mutable Mutex mutex_;
 		Array<T*> vacants_;
 		Array<T*> memories_;
 		memory::Allocator* allocator_;

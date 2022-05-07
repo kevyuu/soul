@@ -14,7 +14,7 @@
 #include "gpu/intern/render_compiler.h"
 
 #include "core/type.h"
-#include "core/thread.h"
+#include "core/mutex.h"
 #include "core/array.h"
 #include "core/enum_array.h"
 #include "core/pool.h"
@@ -25,7 +25,7 @@
 #include "runtime/runtime.h"
 #include "memory/allocators/proxy_allocator.h"
 
-#include <mutex>
+#include <shared_mutex>
 
 namespace soul::gpu
 {
@@ -786,24 +786,24 @@ namespace soul::gpu
 
 		void reserve(soul_size capacity)
 		{
-			lock_.lockWrite();
+			lock_.lock();
 			pool_.reserve(capacity);
-			lock_.unlockWrite();
+			lock_.unlock();
 		}
 
 		ID add(const T& datum)
 		{
-			lock_.lockWrite();
+			lock_.lock();
 			const ID id = pool_.add(datum);
-			lock_.unlockWrite();
+			lock_.unlock();
 			return id;
 		}
 
 		ID add(T&& datum)
 		{
-			lock_.lockWrite();
+			lock_.lock();
 			const ID id = pool_.add(std::move(datum));
-			lock_.unlockWrite();
+			lock_.unlock();
 			return id;
 		}
 
@@ -831,7 +831,7 @@ namespace soul::gpu
 		void cleanup() { pool_.cleanup(); }
 
 	private:
-		mutable RWSpinLock lock_;
+		mutable RWSpinMutex lock_;
 		Pool<T> pool_;
 	};
 
@@ -1227,9 +1227,8 @@ namespace soul::gpu
 			UInt64HashMap<VkDescriptorSet> descriptorSets;
 			Array<ShaderArgSet> shaderArgSetIDs;
 
-
-			std::mutex shaderArgSetRequestMutex;
-			std::mutex pipelineStateRequestMutex;
+			std::shared_mutex shaderArgSetRequestMutex;
+			SOUL_SHARED_LOCKABLE(std::shared_mutex, pipelineStateRequestMutex);
 
 			explicit Database(memory::Allocator* backingAllocator) :
 				cpuAllocator("GPU System", backingAllocator, CPUAllocatorProxy::Config{ memory::ProfileProxy::Config(), memory::CounterProxy::Config() }),

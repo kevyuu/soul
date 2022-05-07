@@ -1,6 +1,7 @@
 #pragma once
 
 #include "core/type.h"
+#include "core/mutex.h"
 #include "core/uint64_hash_map.h"
 #include "gpu/type.h"
 
@@ -179,7 +180,7 @@ namespace Demo {
         soul::memory::Allocator* _allocator;
         soul::runtime::AllocatorInitializer _allocatorInitializer;
 
-        mutable std::mutex shader_map_mutex;
+        mutable soul::Mutex shader_map_mutex;
         mutable soul::UInt64HashMap<soul::gpu::ShaderID> shader_map;
 
         soul::UInt64HashMap<char*> _templateMap;

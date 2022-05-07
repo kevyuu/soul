@@ -1559,7 +1559,7 @@ namespace soul::gpu
 
 	PipelineStateID System::request_pipeline_state(const ComputePipelineStateDesc& desc)
 	{
-		std::lock_guard<std::mutex> lock(_db.pipelineStateRequestMutex);
+		std::lock_guard lock(_db.pipelineStateRequestMutex);
 		if (_db.computePipelineStateMaps.isExist(desc)) {
 			return _db.computePipelineStateMaps[desc];
 		}
@@ -1602,13 +1602,14 @@ namespace soul::gpu
 
 	PipelineState System::get_pipeline_state(const PipelineStateID pipeline_state_id)
 	{
-		std::lock_guard<std::mutex> guard(_db.pipelineStateRequestMutex);
+		SOUL_PROFILE_ZONE();
+		std::shared_lock guard(_db.pipelineStateRequestMutex);
 		return _db.pipelineStates[pipeline_state_id.id];
 	}
 
 	ShaderArgSet System::get_shader_arg_set(const ShaderArgSetID arg_set_id)
 	{
-		std::lock_guard<std::mutex> guard(_db.shaderArgSetRequestMutex);
+		std::shared_lock guard(_db.shaderArgSetRequestMutex);
 		return _db.shaderArgSetIDs[arg_set_id.id];
 	}
 
@@ -1723,6 +1724,7 @@ namespace soul::gpu
 	}
 
 	ShaderArgSetID System::request_shader_arg_set(const ShaderArgSetDesc& desc) {
+		SOUL_PROFILE_ZONE();
 		uint64 hash = 0;
 		uint32 offset_count = 0;
 		uint32 offset[MAX_DYNAMIC_BUFFER_PER_SET];
@@ -1772,7 +1774,7 @@ namespace soul::gpu
 		VkDescriptorSet descriptor_set;
 		ShaderArgSetID arg_set_id;
 		{
-			std::lock_guard<std::mutex> lock(_db.shaderArgSetRequestMutex);
+			std::unique_lock lock(_db.shaderArgSetRequestMutex);
 			if (_db.descriptorSets.isExist(hash)) {
 				descriptor_set = _db.descriptorSets[hash];
 			}

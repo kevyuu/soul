@@ -51,7 +51,6 @@ void soul_intern_assert(int paranoia, int line, const char* file, const char* fo
 #endif
 
 // Profiling
-
 #if defined(SOUL_PROFILE_CPU_BACKEND_TRACY)
 
     #include <tracy/Tracy.hpp>
@@ -74,6 +73,8 @@ void soul_intern_assert(int paranoia, int line, const char* file, const char* fo
     #define SOUL_PROFILE_ZONE() ZoneScoped (void)0
     #define SOUL_PROFILE_ZONE_WITH_NAME(x) ZoneScopedN(x) (void)0
     #define SOUL_PROFILE_THREAD_SET_NAME(x) do{tracy::SetThreadName(x);} while(0)
+    #define SOUL_LOCKABLE(type, varname) TracyLockable(type, varname)
+    #define SOUL_SHARED_LOCKABLE(type, varname) TracySharedLockable(type, varname)
 
 #elif defined(SOUL_PROFILE_CPU_BACKEND_NVTX)
     #include "core/type.h"
@@ -94,6 +95,8 @@ void soul_intern_assert(int paranoia, int line, const char* file, const char* fo
     #define SOUL_PROFILE_ZONE() NVTXScope(__FUNCTION__)
     #define SOUL_PROFILE_ZONE_WITH_NAME(x) NVTXScope(x)
     #define SOUL_PROFILE_THREAD_SET_NAME(x) do{nvtxNameOsThread(GetOsThreadId(), x);} while(0)
+    #define SOUL_LOCKABLE(type, varname) type varname
+    #define SOUL_SHARED_LOCKABLE(type, varname) type varname
     
 #else
 
@@ -101,6 +104,8 @@ void soul_intern_assert(int paranoia, int line, const char* file, const char* fo
     #define SOUL_PROFILE_ZONE ((void) 0)
     #define SOUL_PROFILE_ZONE_WITH_NAME(x) ((void) 0)
     #define SOUL_PROFILE_THREAD_SET_NAME(x) ((void) 0)
+    #define SOUL_LOCKABLE(type, varname) type varname
+    #define SOUL_SHARED_LOCKABLE(type ,varname) type varname
 
 #endif // SOUL_PROFILE_CPU_BACKEND
 
