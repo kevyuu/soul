@@ -8,7 +8,8 @@
 
 namespace soul::gpu
 {
-	template <typename T, size_t BLOCK_SIZE = 512>
+
+	template <typename T, is_lockable_v Lockable = Mutex, size_t BLOCK_SIZE = 512>
 	class ConcurrentObjectPool
 	{
 	public:
@@ -62,15 +63,18 @@ namespace soul::gpu
 			vacants_.push_back(id);
 		}
 
-		T* get(const ID id) const
+		T* get(ID id) const
 		{
 			return id;
 		}
 
 	private:
-		mutable Mutex mutex_;
+		mutable Lockable mutex_;
 		Array<T*> vacants_;
 		Array<T*> memories_;
 		memory::Allocator* allocator_;
 	};
+
+	template<typename T, size_t BLOCK_SIZE = 512>
+	using ObjectPool = ConcurrentObjectPool<T, NullMutex, BLOCK_SIZE>;
 }
