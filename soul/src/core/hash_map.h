@@ -3,63 +3,246 @@
 #include "core/config.h"
 #include "core/type.h"
 #include "core/dev_util.h"
+#include "core/math.h"
 #include "runtime/runtime.h"
 
+#include <functional>
+
 namespace soul {
-	
-	template <typename KEYTYPE, typename VALTYPE>
+
+	template <typename T>
+	concept is_std_hash_implemented_v = std::is_default_constructible_v<std::hash<T>>;
+
+	template<typename T>
+	struct DefaultHashOperator
+	{
+		std::size_t operator()(const T& t) const noexcept
+		{
+			return hash_fnv1<T>(&t);
+		}
+	};
+
+	template<is_std_hash_implemented_v T>
+	struct DefaultHashOperator<T>
+	{
+		std::hash<T> hash;
+		std::size_t operator()(const T& t) const noexcept
+		{
+			return hash(t);
+		}
+	};
+
+	template <
+		typename KeyType,
+		typename ValType,
+		typename Hash=DefaultHashOperator<KeyType>,
+		typename KeyEqual=std::equal_to<KeyType>>
 	class HashMap {
 
 	public:
-		explicit HashMap(memory::Allocator* allocator = GetDefaultAllocator()) : _allocator(allocator) {}
-		HashMap(const HashMap& other);
-		HashMap& operator=(const HashMap& other);
-		HashMap(HashMap&& other) noexcept;
-		HashMap& operator=(HashMap&& other) noexcept;
-		~HashMap();
+		explicit HashMap(memory::Allocator* allocator = GetDefaultAllocator()) : allocator_(allocator) {}
 
-		void swap(HashMap<KEYTYPE, VALTYPE>& other) noexcept;
-		friend void swap(HashMap<KEYTYPE, VALTYPE>& a, HashMap<KEYTYPE, VALTYPE>& b) noexcept { a.swap(b); }
+		HashMap(const HashMap& other)
+		{
+			capacity_ = other.capacity();
+			size_ = other.size();
+			max_dib_ = other.max_dib_;
 
-		void clear();
-		void cleanup();
+			indexes_ = allocator_->create_raw_array<Index>(capacity_);
+			memcpy(indexes_, other.indexes_, sizeof(Index) * capacity_);
 
-		void reserve(soul_size capacity);
-		void add(const KEYTYPE& key, const VALTYPE& value);
-		void add(const KEYTYPE& key, VALTYPE&& value);
-
-		void remove(const KEYTYPE& key);
-
-		SOUL_NODISCARD bool isExist(const KEYTYPE& key) const {
-			if (_capacity == 0) return false;
-			soul_size index = findIndex(key);
-			return (_indexes[index].key == key && _indexes[index].dib != 0);
+			values_ = allocator_->create_raw_array<ValType>(capacity_);
+			copy_values(other);
 		}
 
-		SOUL_NODISCARD VALTYPE& operator[](const KEYTYPE& key);
-		SOUL_NODISCARD const VALTYPE& operator[](const KEYTYPE& key) const;
+		HashMap& operator=(const HashMap& other)  // NOLINT(bugprone-unhandled-self-assignment) Copy and swap idiom
+		{
+			HashMap tmp(other);
+			tmp.swap(*this);
+			return *this;
+		}
 
-		SOUL_NODISCARD soul_size size() const { return _size; }
-		SOUL_NODISCARD soul_size capacity() const { return _capacity; }
-		SOUL_NODISCARD bool empty() const { return _size == 0; }
+		HashMap(HashMap&& other) noexcept
+		{
+			indexes_ = std::move(other.indexes_);
+			values_ = std::move(other.values_);
+			size_ = std::move(other.size_);
+			capacity_ = std::move(other.capacity_);
+			max_dib_ = std::move(other.max_dib_);
+			allocator_ = std::move(other.allocator_);
+
+			other.indexes_ = nullptr;
+			other.values_ = nullptr;
+			other.size_ = 0;
+			other.capacity_ = 0;
+			other.max_dib_ = 0;
+		}
+
+		HashMap& operator=(HashMap&& other) noexcept
+		{
+			HashMap tmp(std::move(other));
+			tmp.swap(*this);
+			return *this;
+		}
+
+		~HashMap()
+		{
+			destruct_values<ValType>();
+			allocator_->deallocate_array(indexes_, capacity_);
+			allocator_->deallocate_array(values_, capacity_);
+		}
+
+		void swap(HashMap<KeyType, ValType>& other) noexcept
+		{
+			using std::swap;
+			swap(allocator_, other._allocator);
+			swap(indexes_, other._indexes);
+			swap(values_, other._values);
+			swap(indexes_, other._indexes);
+			swap(values_, other._values);
+		}
+
+		friend void swap(HashMap& a, HashMap& b) noexcept { a.swap(b); }
+
+		void clear()
+		{
+			destruct_values<ValType>();
+			memset(indexes_, 0, sizeof(Index) * capacity_);
+			max_dib_ = 0;
+			size_ = 0;
+		}
+
+		void cleanup()
+		{
+			destruct_values<ValType>();
+			allocator_->deallocate_array(indexes_, capacity_);
+			allocator_->deallocate_array(values_, capacity_);
+			max_dib_ = 0;
+			size_ = 0;
+			capacity_ = 0;
+		}
+
+		void reserve(soul_size capacity)
+		{
+			SOUL_ASSERT(0, _size == _capacity, "");
+			Index* old_indexes = indexes_;
+			indexes_ = allocator_->create_raw_array<Index>(capacity);
+			memset(indexes_, 0, sizeof(Index) * capacity);
+			ValType* old_values = values_;
+			values_ = allocator_->create_raw_array<ValType>(capacity);
+			const soul_size old_capacity = capacity_;
+			capacity_ = capacity;
+			max_dib_ = 0;
+			size_ = 0;
+
+			if (old_capacity != 0) {
+				SOUL_ASSERT(0, oldIndexes != nullptr, "");
+				SOUL_ASSERT(0, oldValues != nullptr, "");
+				for (soul_size i = 0; i < old_capacity; ++i) {
+					if (old_indexes[i].dib != 0) {
+						insert(old_indexes[i].key, std::move(old_values[i]));
+					}
+				}
+				allocator_->deallocate_array(old_indexes, old_capacity);
+				allocator_->deallocate_array(old_values,  old_capacity);
+			}
+		}
+
+		void insert(const KeyType& key, const ValType& value)
+		{
+			ValType value_to_insert = value;
+			insert(key, std::move(value_to_insert));
+		}
+
+		void insert(const KeyType& key, ValType&& value)
+		{
+			if (size_ == capacity_) {
+				reserve((capacity_ * 2) + 8);
+			}
+			const soul_size base_index = hash_(key) % capacity_;
+			soul_size iter_index = base_index;
+			ValType value_to_insert = std::move(value);
+			KeyType key_to_insert = key;
+			soul_size dib = 1;
+			while (indexes_[iter_index].dib != 0) {
+				if (indexes_[iter_index].dib < dib) {
+					KeyType tmp_key = indexes_[iter_index].key;
+					ValType tmp_value = std::move(values_[iter_index]);
+					const soul_size tmp_dib = indexes_[iter_index].dib;
+					indexes_[iter_index].key = key_to_insert;
+					indexes_[iter_index].dib = dib;
+					if (max_dib_ < dib) {
+						max_dib_ = dib;
+					}
+					new (values_ + iter_index) ValType(std::move(value_to_insert));
+					key_to_insert = tmp_key;
+					value_to_insert = std::move(tmp_value);
+					dib = tmp_dib;
+				}
+				++dib;
+				++iter_index;
+				iter_index %= capacity_;
+			}
+
+			indexes_[iter_index].key = key_to_insert;
+			indexes_[iter_index].dib = dib;
+			if (max_dib_ < dib) {
+				max_dib_ = dib;
+			}
+			new (values_ + iter_index) ValType(std::move(value_to_insert));
+			size_++;
+		}
+
+		void remove(const KeyType& key)
+		{
+			soul_size index = find_index(key);
+			SOUL_ASSERT(0, key_equal_(_indexes[index].key, key) && _indexes[index].dib != 0, "Does not found any key : %d in the hash map", key);
+			remove_by_index(index);
+		}
+
+		[[nodiscard]] bool contains(const KeyType& key) const {
+			if (capacity_ == 0) return false;
+			soul_size index = find_index(key);
+			return (key_equal_(indexes_[index].key, key) && indexes_[index].dib != 0);
+		}
+
+		[[nodiscard]] ValType& operator[](const KeyType& key)
+		{
+			soul_size index = find_index(key);
+			SOUL_ASSERT(0, key_equal_(_indexes[index].key, key) && _indexes[index].dib != 0, "Hashmap key not found");
+			return values_[index];
+		}
+
+		[[nodiscard]] const ValType& operator[](const KeyType& key) const
+		{
+			soul_size index = find_index(key);
+			SOUL_ASSERT(0, key_equal(_indexes[index].key, key) && _indexes[index].dib != 0, "Hashmap key not found");
+			return values_[index];
+		}
+
+		[[nodiscard]] soul_size size() const { return size_; }
+		[[nodiscard]] soul_size capacity() const { return capacity_; }
+		[[nodiscard]] bool empty() const { return size_ == 0; }
 
 	private:
 		struct Index {
-			KEYTYPE key;
+			KeyType key;
 			soul_size dib;
 		};
 
-		static constexpr soul_size VALTYPE_SIZE = sizeof(VALTYPE);  // NOLINT(bugprone-sizeof-expression)
+		static constexpr soul_size VALTYPE_SIZE = sizeof(ValType);  // NOLINT(bugprone-sizeof-expression)
 
-		memory::Allocator* _allocator = nullptr;
-		Index * _indexes = nullptr;
-		VALTYPE* _values = nullptr;
+		Hash hash_;
+		KeyEqual key_equal_;
+		memory::Allocator* allocator_ = nullptr;
+		Index * indexes_ = nullptr;
+		ValType* values_ = nullptr;
 
-		soul_size _size = 0;
-		soul_size _capacity = 0;
-		soul_size _maxDib = 0;
+		soul_size size_ = 0;
+		soul_size capacity_ = 0;
+		soul_size max_dib_ = 0;
 
-		inline void _initAssert() {
+		void init_assert() {
 			SOUL_ASSERT(0, _indexes == nullptr, "");
 			SOUL_ASSERT(0, _values == nullptr, "");
 			SOUL_ASSERT(0, _size == 0, "");
@@ -67,230 +250,58 @@ namespace soul {
 			SOUL_ASSERT(0, _maxDib == 0, "");
 		}
 
-		[[nodiscard]] soul_size findIndex(const KEYTYPE& key) const {
-			const soul_size baseIndex = key.hash() % _capacity;
-			soul_size iterIndex = baseIndex;
+		[[nodiscard]] soul_size find_index(const KeyType& key) const {
+			const soul_size base_index = hash_(key) % capacity_;
+			soul_size iter_index = base_index;
 			soul_size dib = 0;
-			while ((_indexes[iterIndex].key != key) && (_indexes[iterIndex].dib != 0) && (dib < _maxDib)) {
+			while ((!key_equal_(indexes_[iter_index].key, key)) && (indexes_[iter_index].dib != 0) && (dib < max_dib_)) {
 				++dib;
-				++iterIndex;
-				iterIndex %= _capacity;
+				++iter_index;
+				iter_index %= capacity_;
 			}
-			return iterIndex;
+			return iter_index;
 		}
 
-		void removeByIndex(soul_size index) {
-			soul_size nextIndex = index + 1;
-			nextIndex %= _capacity;
-			while(_indexes[nextIndex].dib > 1) {
-				_indexes[index].key = _indexes[nextIndex].key;
-				_indexes[index].dib = _indexes[nextIndex].dib - 1;
-				_values[index] = std::move(_values[nextIndex]);
-				index = (index + 1) % _capacity;
-				nextIndex = (nextIndex + 1) % _capacity;
+		void remove_by_index(soul_size index) {
+			soul_size next_index = index + 1;
+			next_index %= capacity_;
+			while(indexes_[next_index].dib > 1) {
+				indexes_[index].key = indexes_[next_index].key;
+				indexes_[index].dib = indexes_[next_index].dib - 1;
+				values_[index] = std::move(values_[next_index]);
+				index = (index + 1) % capacity_;
+				next_index = (next_index + 1) % capacity_;
 			}
-			_indexes[index].dib = 0;
-			_size--;
+			indexes_[index].dib = 0;
+			size_--;
 		}
 
-		template <
-			typename U = VALTYPE,
-			SOUL_REQUIRE(is_trivially_copyable_v<U>)>
-		void copyValues(const HashMap<KEYTYPE, VALTYPE>& other) {
-			memcpy(_values, other._values, sizeof(VALTYPE) * other._capacity);
-		}
-
-		template <
-			typename U = VALTYPE,
-			SOUL_REQUIRE(!is_trivially_copyable_v<U>)>
-		void copyValues(const HashMap<KEYTYPE, VALTYPE>& other) {
-			for (soul_size i = 0; i < other._capacity; ++i) {
-				if (other._indexes[i].dib == 0) continue;
-				new (_values + i) VALTYPE(other._values[i]);
+		template <typename U = ValType>
+		void copy_values(const HashMap<KeyType, ValType>& other) {
+			if (std::is_trivially_copyable_v<U>)
+			{
+				memcpy(values_, other._values, sizeof(ValType) * other._capacity);
+			} else
+			{
+				for (soul_size i = 0; i < other._capacity; ++i) {
+					if (other._indexes[i].dib == 0) continue;
+					new (values_ + i) ValType(other._values[i]);
+				}
 			}
 		}
 
-		template <typename U = VALTYPE>
-		void destructValues() {
+		template <typename U = ValType>
+		void destruct_values() {
 			if constexpr (!is_trivially_destructible_v<U>)
 			{
-				for (soul_size i = 0; i < _capacity; ++i) {
-					if (_indexes[i].dib != 0) {
-						_values[i].~U();
+				for (soul_size i = 0; i < capacity_; ++i) {
+					if (indexes_[i].dib != 0) {
+						values_[i].~U();
 					}
 				}
 			}
 		}
 	};
 
-	template <typename KEYTYPE, typename VALTYPE>
-	HashMap<KEYTYPE, VALTYPE>::HashMap(const HashMap& other) :  _allocator(other._allocator) {
-		_capacity = other.capacity();
-		_size = other.size();
-		_maxDib = other._maxDib;
-
-		_indexes = (Index*) _allocator->allocate(_capacity * sizeof(Index), alignof(Index));
-		memcpy(_indexes, other._indexes, sizeof(Index) * _capacity);
-
-		_values = (VALTYPE*) _allocator->allocate(_capacity * sizeof(VALTYPE), alignof(VALTYPE));
-		copyValues(other);
-	}
-
-	template <typename KEYTYPE, typename VALTYPE>
-	HashMap<KEYTYPE, VALTYPE>& HashMap<KEYTYPE, VALTYPE>::operator=(const HashMap& other) {  // NOLINT(bugprone-unhandled-self-assignment)
-		HashMap<KEYTYPE, VALTYPE>(other).swap(*this);
-		return *this;
-	}
-
-	template<typename KEYTYPE, typename VALTYPE>
-	HashMap<KEYTYPE, VALTYPE>::HashMap(HashMap&& other) noexcept {
-		_indexes = std::move(other._indexes);
-		_values = std::move(other._values);
-		_size = std::move(other._size);
-		_capacity = std::move(other._capacity);
-		_maxDib = std::move(other._maxDib);
-		_allocator = std::move(other._allocator);
-
-		other._indexes = nullptr;
-		other._values = nullptr;
-		other._size = 0;
-		other._capacity = 0;
-		other._maxDib = 0;
-	}
-
-	template<typename KEYTYPE, typename VALTYPE>
-	HashMap<KEYTYPE, VALTYPE>& HashMap<KEYTYPE, VALTYPE>::operator=(HashMap&& other) noexcept {
-		HashMap<KEYTYPE, VALTYPE>(std::move(other)).swap(*this);
-		return *this;
-	}
-
-	template<typename KEYTYPE, typename VALTYPE>
-	HashMap<KEYTYPE, VALTYPE>::~HashMap()
-	{
-		destructValues<VALTYPE>();
-		_allocator->deallocate(_indexes, sizeof(Index) * _capacity);
-		_allocator->deallocate(_values, VALTYPE_SIZE * _capacity);
-	}
-
-	template<typename KEYTYPE, typename VALTYPE>
-	void HashMap<KEYTYPE, VALTYPE>::swap(HashMap<KEYTYPE, VALTYPE>& other) noexcept
-	{
-		using std::swap;
-		swap(_allocator, other._allocator);
-		swap(_indexes, other._indexes);
-		swap(_values, other._values);
-		swap(_indexes, other._indexes);
-		swap(_values, other._values);
-	}
-
-	template <typename KEYTYPE, typename VALTYPE>
-	void HashMap<KEYTYPE, VALTYPE>::clear() {
-		destructValues<VALTYPE>();
-		memset(_indexes, 0, sizeof(Index) * _capacity);
-		_maxDib = 0;
-		_size = 0;
-	}
-
-	template <typename KEYTYPE, typename VALTYPE>
-	void HashMap<KEYTYPE, VALTYPE>::cleanup() {
-		destructValues<VALTYPE>();
-		_allocator->deallocate(_indexes, sizeof(Index) * _capacity);
-		_allocator->deallocate(_values, VALTYPE_SIZE * _capacity);
-		_maxDib = 0;
-		_size = 0;
-		_capacity = 0;
-	}
-
-	template <typename KEYTYPE, typename VALTYPE>
-	void HashMap<KEYTYPE, VALTYPE>::reserve(soul_size capacity) {
-		SOUL_ASSERT(0, _size == _capacity, "");
-		Index* oldIndexes = _indexes;
-		_indexes = (Index*) _allocator->allocate(capacity * sizeof(Index), alignof(Index));
-		memset(_indexes, 0, sizeof(Index) * capacity);
-		VALTYPE* oldValues = _values;
-		_values = (VALTYPE*) _allocator->allocate(capacity * VALTYPE_SIZE, alignof(VALTYPE));
-		const soul_size oldCapacity = _capacity;
-		_capacity = capacity;
-		_maxDib = 0;
-		_size = 0;
-
-		if (oldCapacity != 0) {
-			SOUL_ASSERT(0, oldIndexes != nullptr, "");
-			SOUL_ASSERT(0, oldValues != nullptr, "");
-			for (soul_size i = 0; i < oldCapacity; ++i) {
-				if (oldIndexes[i].dib != 0) {
-					add(oldIndexes[i].key, std::move(oldValues[i]));
-				}
-			}
-			_allocator->deallocate(oldIndexes, sizeof(Index) * oldCapacity);
-			_allocator->deallocate(oldValues, VALTYPE_SIZE * oldCapacity);
-		}
-	}
-
-	template <typename KEYTYPE, typename VALTYPE>
-	void HashMap<KEYTYPE, VALTYPE>::add(const KEYTYPE& key, const VALTYPE& value) {
-		VALTYPE valueToInsert = value;
-		add(key, std::move(valueToInsert));
-	}
-
-	template <typename KEYTYPE, typename VALTYPE>
-	void HashMap<KEYTYPE, VALTYPE>::add(const KEYTYPE& key, VALTYPE&& value) {
-		if (_size == _capacity) {
-			reserve((_capacity * 2) + 8);
-		}
-		const soul_size baseIndex = key.hash() % _capacity;
-		soul_size iterIndex = baseIndex;
-		VALTYPE valueToInsert = std::move(value);
-		KEYTYPE keyToInsert = key;
-		soul_size dib = 1;
-		while (_indexes[iterIndex].dib != 0) {
-			if (_indexes[iterIndex].dib < dib) {
-				KEYTYPE tmpKey = _indexes[iterIndex].key;
-				VALTYPE tmpValue = std::move(_values[iterIndex]);
-				const soul_size tmpDib = _indexes[iterIndex].dib;
-				_indexes[iterIndex].key = keyToInsert;
-				_indexes[iterIndex].dib = dib;
-				if (_maxDib < dib) {
-					_maxDib = dib;
-				}
-				new (_values + iterIndex) VALTYPE(std::move(valueToInsert));
-				keyToInsert = tmpKey;
-				valueToInsert = std::move(tmpValue);
-				dib = tmpDib;
-			}
-			++dib;
-			++iterIndex;
-			iterIndex %= _capacity;
-		}
-
-		_indexes[iterIndex].key = keyToInsert;
-		_indexes[iterIndex].dib = dib;
-		if (_maxDib < dib) {
-			_maxDib = dib;
-		}
-		new (_values + iterIndex) VALTYPE(std::move(valueToInsert));
-		_size++;
-	}
-
-	template <typename KEYTYPE, typename VALTYPE>
-	void HashMap<KEYTYPE, VALTYPE>::remove(const KEYTYPE& key) {
-		soul_size index = findIndex(key);
-		SOUL_ASSERT(0, _indexes[index].key == key && _indexes[index].dib != 0, "Does not found any key : %d in the hash map", key);
-		removeByIndex(index);
-	}
-
-	template <typename KEYTYPE, typename VALTYPE>
-	VALTYPE& HashMap<KEYTYPE, VALTYPE>::operator[](const KEYTYPE& key) {
-		soul_size index = findIndex(key);
-		SOUL_ASSERT(0, _indexes[index].key == key && _indexes[index].dib != 0, "Hashmap key not found");
-		return _values[index];
-	}
-
-	template <typename KEYTYPE, typename VALTYPE>
-	const VALTYPE& HashMap<KEYTYPE, VALTYPE>::operator[](const KEYTYPE& key) const {
-		soul_size index = findIndex(key);
-		SOUL_ASSERT(0, _indexes[index].key == key && _indexes[index].dib != 0, "Hashmap key not found");
-		return _values[index];
-	}
 
 }

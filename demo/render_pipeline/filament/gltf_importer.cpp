@@ -996,7 +996,7 @@ namespace soul_fila
         SOUL_PROFILE_ZONE_WITH_NAME("Create Material");
         MatCacheKey key = { ((intptr_t)src_material) ^ (vertex_color ? 1 : 0) };
 
-        if (mat_cache_.isExist(key)) {
+        if (mat_cache_.contains(key)) {
             const MatCacheEntry& entry = mat_cache_[key];
             uvmap = entry.uvmap;
             return entry.materialID;
@@ -1242,7 +1242,7 @@ namespace soul_fila
         mat_buf._specularAntiAliasingVariance = 0.15f;
         mat_buf._maskThreshold = src_material->alpha_cutoff;
 
-        mat_cache_.add(key, { material_id, uvmap });
+        mat_cache_.insert(key, { material_id, uvmap });
 
         return material_id;
 	}
@@ -1251,12 +1251,12 @@ namespace soul_fila
     {
         SOUL_PROFILE_ZONE_WITH_NAME("Create Texture");
         TexCacheKey key = { &src_texture, srgb };
-        if (tex_cache_.isExist(key)) {
+        if (tex_cache_.contains(key)) {
             return tex_cache_[key];
         }
 
         TextureID tex_id = scene_.create_texture();
-        tex_cache_.add(key, tex_id);
+        tex_cache_.insert(key, tex_id);
         tex_key_list_.push_back(key);
         return tex_id;
     }
@@ -1352,11 +1352,11 @@ namespace soul_fila
     EntityID GLTFImporter::create_entity(const cgltf_node* node)
     {
         const CGLTFNodeKey node_key(node);
-        if (node_map_.isExist(node_key)) {
+        if (node_map_.contains(node_key)) {
             return node_map_[node_key];
         }
         const EntityID entity = scene_.create_entity(get_node_name(node, "Unnamed"));
-        node_map_.add(node_key, entity);
+        node_map_.insert(node_key, entity);
 
         const soul::Mat4f local_transform = [](const cgltf_node* node)
         {

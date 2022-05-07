@@ -51,10 +51,6 @@ namespace soul_fila
             inline bool operator!=(const CGLTFNodeKey& other) const {
                 return (memcmp(this, &other, sizeof(CGLTFNodeKey)) != 0);
             }
-
-            [[nodiscard]] uint64 hash() const {
-                return reinterpret_cast<uint64>(node);
-            }
         };
 
         soul::HashMap<CGLTFNodeKey, EntityID> node_map_;
@@ -71,9 +67,6 @@ namespace soul_fila
                 return (memcmp(this, &other, sizeof(TexCacheKey)) != 0);
             }
 
-            [[nodiscard]] uint64 hash() const {
-                return hash_fnv1(soul::cast<const uint8*>(this), sizeof(TexCacheKey));
-            }
         };
         using TexCache = soul::HashMap<TexCacheKey, TextureID>;
         TexCache tex_cache_;
@@ -91,9 +84,6 @@ namespace soul_fila
                 return this->key != other.key;
             }
 
-            [[nodiscard]] uint64 hash() const {
-                return soul::cast<uint64>(key);
-            }
         };
         struct MatCacheEntry {
             MaterialID materialID;

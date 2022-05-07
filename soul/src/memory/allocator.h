@@ -41,9 +41,19 @@ namespace soul::memory {
 			return allocation.addr;
 		}
 
-
-
 		virtual void deallocate(void* addr, soul_size size) = 0;
+
+		template<typename T>
+		void deallocate(T* addr)
+		{
+			deallocate(addr, sizeof(T));
+		}
+
+		template<typename T>
+		void deallocate_array(T* addr, soul_size count)
+		{
+			deallocate(addr, count * sizeof(T));
+		}
 
 		template <typename TYPE, typename... ARGS>
 		TYPE* create(ARGS&&... args)

@@ -639,17 +639,14 @@ namespace soul::gpu
 			shaderIDs = {};
 		}
 
-		inline bool operator==(const ProgramDesc& other) const {
+		bool operator==(const ProgramDesc& other) const {
 			return (memcmp(this, &other, sizeof(ProgramDesc)) == 0);
 		}
 
-		inline bool operator!=(const ProgramDesc& other) const {
+		bool operator!=(const ProgramDesc& other) const {
 			return (memcmp(this, &other, sizeof(ProgramDesc)) != 0);
 		}
 
-		uint64 hash() const {
-			return hash_fnv1((uint8*)(this), sizeof(ProgramDesc));
-		}
 	};
 
 	using AttachmentFlagBits = enum {
@@ -740,33 +737,26 @@ namespace soul::gpu
 		};
 		DepthBiasDesc depthBias;
 
-		inline bool operator==(const GraphicPipelineStateDesc& other) const {
+		bool operator==(const GraphicPipelineStateDesc& other) const {
 			return (memcmp(this, &other, sizeof(GraphicPipelineStateDesc)) == 0);
 		}
 
-		inline bool operator!=(const GraphicPipelineStateDesc& other) const {
+		bool operator!=(const GraphicPipelineStateDesc& other) const {
 			return (memcmp(this, &other, sizeof(GraphicPipelineStateDesc)) != 0);
 		}
-
-		uint64 hash() const {
-			return hash_fnv1((uint8*)(this), sizeof(GraphicPipelineStateDesc));
-		}
 	};
+
 
 	struct ComputePipelineStateDesc
 	{
 		ProgramID programID = PROGRAM_ID_NULL;
 
-		inline bool operator==(const ComputePipelineStateDesc& other) const {
+		bool operator==(const ComputePipelineStateDesc& other) const {
 			return (memcmp(this, &other, sizeof(ComputePipelineStateDesc)) == 0);
 		}
 
-		inline bool operator!=(const ComputePipelineStateDesc& other) const {
+		bool operator!=(const ComputePipelineStateDesc& other) const {
 			return (memcmp(this, &other, sizeof(ComputePipelineStateDesc)) != 0);
-		}
-
-		uint64 hash() const {
-			return hash_fnv1((uint8*)(this), sizeof(ComputePipelineStateDesc));
 		}
 	};
 
@@ -859,16 +849,12 @@ namespace soul::gpu
 			Attachment inputAttachments[MAX_INPUT_ATTACHMENT_PER_SHADER];
 			Attachment depthAttachment;
 
-			inline bool operator==(const RenderPassKey& other) const {
+			bool operator==(const RenderPassKey& other) const {
 				return (memcmp(this, &other, sizeof(RenderPassKey)) == 0);
 			}
 
-			inline bool operator!=(const RenderPassKey& other) const {
+			bool operator!=(const RenderPassKey& other) const {
 				return (memcmp(this, &other, sizeof(RenderPassKey)) != 0);
-			}
-
-			uint64 hash() const {
-				return hash_fnv1((uint8*)(this), sizeof(RenderPassKey));
 			}
 		};
 
@@ -902,16 +888,12 @@ namespace soul::gpu
 		struct DescriptorSetLayoutKey {
 			DescriptorSetLayoutBinding bindings[MAX_BINDING_PER_SET];
 
-			inline bool operator==(const DescriptorSetLayoutKey& other) const {
+			bool operator==(const DescriptorSetLayoutKey& other) const {
 				return (memcmp(this, &other, sizeof(DescriptorSetLayoutKey)) == 0);
 			}
 
-			inline bool operator!=(const DescriptorSetLayoutKey& other) const {
+			bool operator!=(const DescriptorSetLayoutKey& other) const {
 				return (memcmp(this, &other, sizeof(DescriptorSetLayoutKey)) != 0);
-			}
-
-			uint64 hash() const {
-				return hash_fnv1((uint8*)(this), sizeof(DescriptorSetLayoutKey));
 			}
 		};
 
@@ -1445,5 +1427,3 @@ namespace soul::gpu
 	};
 
 }
-
-

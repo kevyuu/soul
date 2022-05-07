@@ -1314,7 +1314,7 @@ namespace soul::gpu
 		SOUL_PROFILE_ZONE_WITH_NAME("GPU::System::request_descriptor_layout");
 		runtime::ScopeAllocator<> scope_allocator("GPU::System::request_descriptor_layout");
 
-		if (_db.descriptorSetLayoutMaps.isExist(key)) {
+		if (_db.descriptorSetLayoutMaps.contains(key)) {
 			return _db.descriptorSetLayoutMaps[key];
 		}
 
@@ -1342,7 +1342,7 @@ namespace soul::gpu
 			"");
 		bindings.cleanup();
 
-		_db.descriptorSetLayoutMaps.add(key, set_layout);
+		_db.descriptorSetLayoutMaps.insert(key, set_layout);
 
 		return set_layout;
 	}
@@ -1350,7 +1350,7 @@ namespace soul::gpu
 	PipelineStateID System::request_pipeline_state(const GraphicPipelineStateDesc& desc, VkRenderPass renderPass, const TextureSampleCount sample_count) {
 		std::lock_guard lock(_db.pipelineStateRequestMutex);
 
-		if (_db.graphicPipelineStateMaps.isExist(desc)) {
+		if (_db.graphicPipelineStateMaps.contains(desc)) {
 			return _db.graphicPipelineStateMaps[desc];
 		}
 
@@ -1552,7 +1552,7 @@ namespace soul::gpu
 		shader_stage_infos.cleanup();
 
 		const PipelineStateID pipeline_state_id = PipelineStateID(_db.pipelineStates.add({ pipeline, VK_PIPELINE_BIND_POINT_GRAPHICS, desc.programID }));
-		_db.graphicPipelineStateMaps.add(desc, pipeline_state_id);
+		_db.graphicPipelineStateMaps.insert(desc, pipeline_state_id);
 		return pipeline_state_id;
 
 	}
@@ -1560,7 +1560,7 @@ namespace soul::gpu
 	PipelineStateID System::request_pipeline_state(const ComputePipelineStateDesc& desc)
 	{
 		std::lock_guard lock(_db.pipelineStateRequestMutex);
-		if (_db.computePipelineStateMaps.isExist(desc)) {
+		if (_db.computePipelineStateMaps.contains(desc)) {
 			return _db.computePipelineStateMaps[desc];
 		}
 
@@ -1587,7 +1587,7 @@ namespace soul::gpu
 		}
 
 		const PipelineStateID pipeline_state_id = PipelineStateID(_db.pipelineStates.add({ pipeline, VK_PIPELINE_BIND_POINT_COMPUTE, desc.programID }));
-		_db.computePipelineStateMaps.add(desc, pipeline_state_id);
+		_db.computePipelineStateMaps.insert(desc, pipeline_state_id);
 		return pipeline_state_id;
 	}
 
@@ -1618,7 +1618,7 @@ namespace soul::gpu
 		SOUL_PROFILE_ZONE_WITH_NAME("GPU::System::request_program");
 		runtime::ScopeAllocator<> scope_allocator("GPU::System::programCreate");
 
-		if (_db.programMaps.isExist(programDesc)) {
+		if (_db.programMaps.contains(programDesc)) {
 			return _db.programMaps[programDesc];
 		}
 
@@ -1678,7 +1678,7 @@ namespace soul::gpu
 
 		SOUL_VK_CHECK(vkCreatePipelineLayout(_db.device, &pipelineLayoutInfo, nullptr, &program.pipelineLayout));
 
-		_db.programMaps.add(programDesc, program_id);
+		_db.programMaps.insert(programDesc, program_id);
 		return program_id;
 	}
 
@@ -1879,7 +1879,7 @@ namespace soul::gpu
 	{
 		SOUL_PROFILE_ZONE();
 		SOUL_ASSERT_MAIN_THREAD();
-		if (_db.renderPassMaps.isExist(key))
+		if (_db.renderPassMaps.contains(key))
 		{
 			return _db.renderPassMaps[key];
 		}
@@ -2038,7 +2038,7 @@ namespace soul::gpu
 		VkRenderPass render_pass;
 		SOUL_VK_CHECK(vkCreateRenderPass(_db.device, &render_pass_info, nullptr, &render_pass), "");
 
-		_db.renderPassMaps.add(key, render_pass);
+		_db.renderPassMaps.insert(key, render_pass);
 		
 		return render_pass;
 	}

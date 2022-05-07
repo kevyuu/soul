@@ -74,10 +74,6 @@ namespace soul_fila {
         bool hasSheen : 1;
         bool hasIOR : 1;
         bool hasVolume : 1;
-        
-        SOUL_NODISCARD uint64 hash() const {
-            return soul::hash_fnv1((const uint8*) this, sizeof(GPUProgramKey));
-        }
 
         GPUProgramKey() :
             doubleSided(false), unlit(false), hasVertexColors(false),

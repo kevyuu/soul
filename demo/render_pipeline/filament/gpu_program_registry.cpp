@@ -1165,7 +1165,7 @@ namespace soul_fila {
 
 	GPUProgramSetID GPUProgramRegistry::createProgramSet(const GPUProgramKey& config) {
         SOUL_ASSERT_MAIN_THREAD();
-        if (_programSetMap.isExist(config)) {
+        if (_programSetMap.contains(config)) {
             return _programSetMap[config];
         }
 
@@ -1371,7 +1371,7 @@ namespace soul_fila {
         }
         
         GPUProgramSetID program_set_id = GPUProgramSetID(soul::cast<GPUProgramSetID::store_type>(_programSets.add(GPUProgramSet())));
-        _programSetMap.add(config, program_set_id);
+        _programSetMap.insert(config, program_set_id);
 
         GenerateProgramSet_(_programSets[program_set_id.id], _shaderGenerator, GetSurfaceVariants_(0, info.shading != Shading::UNLIT, info.hasShadowMultiplier), info);
 
