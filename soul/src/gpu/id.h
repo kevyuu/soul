@@ -29,8 +29,8 @@ namespace soul::gpu::impl
 namespace soul::gpu
 {
 	// ID
-	using TextureID = ID<impl::Texture, ObjectPool<impl::Texture>::ID, ObjectPool<impl::Texture>::NULLVAL>;
-	using BufferID = ID<impl::Buffer, ObjectPool<impl::Buffer>::ID, ObjectPool<impl::Buffer>::NULLVAL>;
+	using TextureID = ID<impl::Texture, ConcurrentObjectPool<impl::Texture>::ID, ConcurrentObjectPool<impl::Texture>::NULLVAL>;
+	using BufferID = ID<impl::Buffer, ConcurrentObjectPool<impl::Buffer>::ID, ConcurrentObjectPool<impl::Buffer>::NULLVAL>;
 
 	using SamplerID = ID<impl::Sampler, VkSampler, VK_NULL_HANDLE>;
 	constexpr SamplerID SAMPLER_ID_NULL = SamplerID();
@@ -40,7 +40,7 @@ namespace soul::gpu
 
 	using ShaderArgSetID = ID<impl::ShaderArgSet, uint32, 0>;
 
-	using ShaderID = ID<impl::Shader, ObjectPool<impl::Shader>::ID, ObjectPool<impl::Shader>::NULLVAL>;
+	using ShaderID = ID<impl::Shader, ConcurrentObjectPool<impl::Shader>::ID, ConcurrentObjectPool<impl::Shader>::NULLVAL>;
 	constexpr ShaderID SHADER_ID_NULL = ShaderID();
 
 	using ProgramID = ID<impl::Program, uint16, 0>;

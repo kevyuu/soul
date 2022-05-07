@@ -1205,9 +1205,9 @@ namespace soul::gpu
 
 			VmaAllocator gpuAllocator;
 
-			ObjectPool<Buffer> bufferPool;
-			ObjectPool<Texture> texturePool;
-			ObjectPool<Shader> shaders;
+			ConcurrentObjectPool<Buffer> bufferPool;
+			ConcurrentObjectPool<Texture> texturePool;
+			ConcurrentObjectPool<Shader> shaders;
 
 			HashMap<GraphicPipelineStateDesc, PipelineStateID> graphicPipelineStateMaps;
 			HashMap<ComputePipelineStateDesc, PipelineStateID> computePipelineStateMaps;

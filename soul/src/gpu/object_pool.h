@@ -9,13 +9,13 @@
 namespace soul::gpu
 {
 	template <typename T, size_t BLOCK_SIZE = 512>
-	class ObjectPool
+	class ConcurrentObjectPool
 	{
 	public:
 		using ID = T*;
 		static constexpr ID NULLVAL = nullptr;
 
-		explicit ObjectPool(soul::memory::Allocator* allocator = GetDefaultAllocator()) noexcept : allocator_(allocator)
+		explicit ConcurrentObjectPool(soul::memory::Allocator* allocator = GetDefaultAllocator()) noexcept : allocator_(allocator)
 		{}
 
 		template <typename... ARGS>
@@ -54,7 +54,7 @@ namespace soul::gpu
 			return id;
 		}
 
-		~ObjectPool()
+		~ConcurrentObjectPool()
 		{
 			soul_size num_objects = BLOCK_SIZE / sizeof(T);
 			for (T* memory : memories_)
