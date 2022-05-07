@@ -13,10 +13,23 @@ namespace soul::gpu
 	{
 	public:
 		using ID = T*;
-		static constexpr ID NULLVAL = nullptr;
+		static constexpr T* const NULLVAL = nullptr;
 
 		explicit ConcurrentObjectPool(soul::memory::Allocator* allocator = GetDefaultAllocator()) noexcept : allocator_(allocator)
 		{}
+		ConcurrentObjectPool(const ConcurrentObjectPool&) = delete;
+		ConcurrentObjectPool& operator=(const ConcurrentObjectPool& rhs) = delete;
+		ConcurrentObjectPool(ConcurrentObjectPool&&) = delete;
+		ConcurrentObjectPool& operator=(ConcurrentObjectPool&& rhs) = delete;
+		~ConcurrentObjectPool()
+		{
+			soul_size num_objects = BLOCK_SIZE / sizeof(T);
+			for (T* memory : memories_)
+			{
+				allocator_->deallocate(memory, num_objects * sizeof(T));
+			}
+		}
+
 
 		template <typename... ARGS>
 		ID create(ARGS&&... args)
@@ -49,18 +62,9 @@ namespace soul::gpu
 			vacants_.push_back(id);
 		}
 
-		T* get(ID id) const
+		T* get(const ID id) const
 		{
 			return id;
-		}
-
-		~ConcurrentObjectPool()
-		{
-			soul_size num_objects = BLOCK_SIZE / sizeof(T);
-			for (T* memory : memories_)
-			{
-				allocator_->deallocate(memory, num_objects * sizeof(T));
-			}
 		}
 
 	private:
