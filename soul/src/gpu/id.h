@@ -10,6 +10,9 @@
 #pragma warning(pop)
 
 #include "object_pool.h"
+#include "object_cache.h"
+#include <variant>
+
 
 namespace soul::gpu::impl
 {
@@ -28,14 +31,23 @@ namespace soul::gpu::impl
 
 namespace soul::gpu
 {
+
+	using TexturePool = ConcurrentObjectPool<impl::Texture>;
+	using BufferPool = ConcurrentObjectPool<impl::Buffer>;
+
+	struct GraphicPipelineStateDesc;
+	struct ComputePipelineStateDesc;
+	using PipelineStateDesc = std::variant<GraphicPipelineStateDesc, ComputePipelineStateDesc>;
+	using PipelineStateCache = ConcurrentObjectCache<PipelineStateDesc, impl::PipelineState>;
+
 	// ID
-	using TextureID = ID<impl::Texture, ConcurrentObjectPool<impl::Texture>::ID, ConcurrentObjectPool<impl::Texture>::NULLVAL>;
-	using BufferID = ID<impl::Buffer, ConcurrentObjectPool<impl::Buffer>::ID, ConcurrentObjectPool<impl::Buffer>::NULLVAL>;
+	using TextureID = ID<impl::Texture, TexturePool::ID, TexturePool::NULLVAL>;
+	using BufferID = ID<impl::Buffer, BufferPool::ID, BufferPool::NULLVAL>;
 
 	using SamplerID = ID<impl::Sampler, VkSampler, VK_NULL_HANDLE>;
 	constexpr SamplerID SAMPLER_ID_NULL = SamplerID();
 
-	using PipelineStateID = ID<impl::PipelineState, uint32, 0>;
+	using PipelineStateID = ID<impl::PipelineState, PipelineStateCache::ID, PipelineStateCache::NULLVAL>;
 	constexpr PipelineStateID PIPELINE_STATE_ID_NULL = PipelineStateID();
 
 	using ShaderArgSetID = ID<impl::ShaderArgSet, uint32, 0>;

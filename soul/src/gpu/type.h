@@ -9,6 +9,7 @@
 #pragma warning(pop)
 
 #include "gpu/object_pool.h"
+#include "gpu/object_cache.h"
 #include "gpu/id.h"
 #include "gpu/constant.h"
 #include "gpu/intern/render_compiler.h"
@@ -1191,10 +1192,8 @@ namespace soul::gpu
 			ConcurrentObjectPool<Texture> texturePool;
 			ConcurrentObjectPool<Shader> shaders;
 
-			HashMap<GraphicPipelineStateDesc, PipelineStateID> graphicPipelineStateMaps;
-			HashMap<ComputePipelineStateDesc, PipelineStateID> computePipelineStateMaps;
-			Pool<PipelineState> pipelineStates;
-
+			PipelineStateCache pipeline_state_cache_;
+			
 			HashMap<DescriptorSetLayoutKey, VkDescriptorSetLayout> descriptorSetLayoutMaps;
 
 			HashMap<ProgramDesc, ProgramID> programMaps;
@@ -1210,7 +1209,6 @@ namespace soul::gpu
 			Array<ShaderArgSet> shaderArgSetIDs;
 
 			std::shared_mutex shaderArgSetRequestMutex;
-			SOUL_SHARED_LOCKABLE(std::shared_mutex, pipelineStateRequestMutex);
 
 			explicit Database(memory::Allocator* backingAllocator) :
 				cpuAllocator("GPU System", backingAllocator, CPUAllocatorProxy::Config{ memory::ProfileProxy::Config(), memory::CounterProxy::Config() }),

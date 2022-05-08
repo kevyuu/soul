@@ -97,7 +97,6 @@ namespace soul::gpu
 		
 		_db.shaderArgSetIDs.add({});
 		_db.programs.add({});
-		_db.pipelineStates.add({});
 		_db.semaphores.reserve(1000);
 		_db.semaphores.add({});
 		_db.descriptorSets.reserve(1024);
@@ -1348,263 +1347,261 @@ namespace soul::gpu
 	}
 
 	PipelineStateID System::request_pipeline_state(const GraphicPipelineStateDesc& desc, VkRenderPass renderPass, const TextureSampleCount sample_count) {
-		std::lock_guard lock(_db.pipelineStateRequestMutex);
-
-		if (_db.graphicPipelineStateMaps.contains(desc)) {
-			return _db.graphicPipelineStateMaps[desc];
-		}
-
-		runtime::ScopeAllocator<> scope_allocator("GPU::System::pipelineStateRequest");
-
-		Program* program = get_program_ptr(desc.programID);
-
-		Array<VkPipelineShaderStageCreateInfo> shader_stage_infos(&scope_allocator);
-
-		const Shader& vert_shader = *get_shader_ptr(program->shaderIDs[ShaderStage::VERTEX]);
-		const VkPipelineShaderStageCreateInfo vert_shader_stage_info = {
-			.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
-			.stage = VK_SHADER_STAGE_VERTEX_BIT,
-			.module = vert_shader.module,
-			.pName = "main"
-		};
-		shader_stage_infos.add(vert_shader_stage_info);
-
-		const Shader& frag_shader = *get_shader_ptr(program->shaderIDs[ShaderStage::FRAGMENT]);
-		const VkPipelineShaderStageCreateInfo frag_shader_stage_info = {
-			.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
-			.stage = VK_SHADER_STAGE_FRAGMENT_BIT,
-			.module = frag_shader.module,
-			.pName = "main"
-		};
-		shader_stage_infos.add(frag_shader_stage_info);
-
-		if (ShaderID geom_shader_id = program->shaderIDs[ShaderStage::GEOMETRY]; geom_shader_id != SHADER_ID_NULL) {
-			const Shader& geom_shader = *get_shader_ptr(geom_shader_id);
-			shader_stage_infos.add({
-				.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
-				.stage = VK_SHADER_STAGE_GEOMETRY_BIT,
-				.module = geom_shader.module,
-				.pName = "main"}
-			);
-		}
-
-		static auto PRIMITIVE_TOPOLOGY_MAP = EnumArray<Topology, VkPrimitiveTopology>::build_from_list({
-			VK_PRIMITIVE_TOPOLOGY_POINT_LIST,
-			VK_PRIMITIVE_TOPOLOGY_LINE_LIST,
-			VK_PRIMITIVE_TOPOLOGY_LINE_STRIP,
-			VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
-			VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP,
-			VK_PRIMITIVE_TOPOLOGY_TRIANGLE_FAN
-		});
-
-		const VkPipelineInputAssemblyStateCreateInfo input_assembly_state = {
-			.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO,
-			.topology = PRIMITIVE_TOPOLOGY_MAP[desc.inputLayout.topology],
-			.primitiveRestartEnable = VK_FALSE
-		};
-
-		const VkViewport viewport = {
-			.x = static_cast<float>(desc.viewport.offsetX),
-			.y = static_cast<float>(desc.viewport.offsetY),
-			.width = static_cast<float>(desc.viewport.width),
-			.height = static_cast<float>(desc.viewport.height),
-			.minDepth = 0.0f,
-			.maxDepth = 1.0f
-		};
-
-		const VkRect2D scissor = {
-			.offset = { desc.scissor.offsetX, desc.scissor.offsetY },
-			.extent = { desc.scissor.width, desc.scissor.height }
-		};
-
-		const VkPipelineViewportStateCreateInfo viewport_state = {
-			.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO,
-			.viewportCount = 1,
-			.pViewports = &viewport,
-			.scissorCount = 1,
-			.pScissors = &scissor
-		};
-
-		static auto POLYGON_MODE_MAP = EnumArray<PolygonMode, VkPolygonMode>::build_from_list({
-			VK_POLYGON_MODE_FILL,
-			VK_POLYGON_MODE_LINE,
-			VK_POLYGON_MODE_POINT
-		});
-
-		const VkPipelineRasterizationStateCreateInfo rasterizer_state = {
-			.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO,
-			.depthClampEnable = VK_FALSE,
-			.rasterizerDiscardEnable = VK_FALSE,
-			.polygonMode = POLYGON_MODE_MAP[desc.raster.polygonMode],
-			.depthBiasEnable = (desc.depthBias.slope != 0.0f || desc.depthBias.constant != 0.0f) ? VK_TRUE : VK_FALSE,
-			.depthBiasConstantFactor = desc.depthBias.constant,
-			.depthBiasSlopeFactor = desc.depthBias.slope,
-			.lineWidth = desc.raster.lineWidth
-		};
-
-		const VkPipelineMultisampleStateCreateInfo multisample_state = {
-			.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO,
-			.rasterizationSamples = vkCast(sample_count),
-			.sampleShadingEnable = VK_FALSE
-		};
-
-		VkVertexInputAttributeDescription attr_descs[MAX_INPUT_PER_SHADER];
-		uint32 attr_desc_count = 0;
-		for (uint32 i = 0; i < MAX_INPUT_PER_SHADER; i++) {
-			if (vert_shader.inputs[i].format == VK_FORMAT_UNDEFINED) continue;
-			auto& input_attribute = desc.inputAttributes[i];
-			attr_descs[attr_desc_count].format = input_attribute.type == VertexElementType::DEFAULT ? vert_shader.inputs[i].format : vkCast(input_attribute.type, input_attribute.flags);
-			attr_descs[attr_desc_count].binding = desc.inputAttributes[i].binding;
-			attr_descs[attr_desc_count].location = i;
-			attr_descs[attr_desc_count].offset = desc.inputAttributes[i].offset;
-			attr_desc_count++;
-		}
-
-		VkVertexInputBindingDescription input_binding_descs[MAX_INPUT_BINDING_PER_SHADER];
-		uint32 input_binding_desc_count = 0;
-		for (uint32 i = 0; i < MAX_INPUT_BINDING_PER_SHADER; i++) {
-			if (desc.inputBindings[i].stride == 0) continue;
-			input_binding_descs[input_binding_desc_count] = {
-				i,
-				desc.inputBindings[i].stride,
-				VK_VERTEX_INPUT_RATE_VERTEX
-			};
-			input_binding_desc_count++;
-		}
-
-		const VkPipelineVertexInputStateCreateInfo inputStateInfo = {
-			.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
-			.vertexBindingDescriptionCount = attr_desc_count > 0 ? input_binding_desc_count : 0,
-			.pVertexBindingDescriptions = attr_desc_count > 0 ? input_binding_descs : nullptr,
-			.vertexAttributeDescriptionCount = attr_desc_count,
-			.pVertexAttributeDescriptions = attr_descs,
-		};
-
-		VkPipelineColorBlendAttachmentState color_blend_attachments[MAX_COLOR_ATTACHMENT_PER_SHADER];
-		std::transform(desc.colorAttachments, desc.colorAttachments + MAX_COLOR_ATTACHMENT_PER_SHADER, color_blend_attachments, 
-		[](const auto& attachment) -> VkPipelineColorBlendAttachmentState
-			{
-				return {
-					.blendEnable = attachment.blendEnable ? VK_TRUE : VK_FALSE,
-					.srcColorBlendFactor = vkCast(attachment.srcColorBlendFactor),
-					.dstColorBlendFactor = vkCast(attachment.dstColorBlendFactor),
-					.colorBlendOp = vkCast(attachment.colorBlendOp),
-					.srcAlphaBlendFactor = vkCast(attachment.srcAlphaBlendFactor),
-					.dstAlphaBlendFactor = vkCast(attachment.dstAlphaBlendFactor),
-					.alphaBlendOp = vkCast(attachment.alphaBlendOp),
-					.colorWriteMask = soul::cast<uint32>(attachment.colorWrite ? 0xf : 0x0)
-				};
-			});
-
-		const VkPipelineColorBlendStateCreateInfo color_blending = {
-			.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO,
-			.logicOpEnable = VK_FALSE,
-			.logicOp = VK_LOGIC_OP_COPY,
-			.attachmentCount = desc.colorAttachmentCount,
-			.pAttachments = color_blend_attachments,
-			.blendConstants = {}
-		};
-		
-		const VkPipelineDepthStencilStateCreateInfo depth_stencil_info = {
-			.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO,
-			.depthTestEnable = desc.depthStencilAttachment.depthTestEnable,
-			.depthWriteEnable = desc.depthStencilAttachment.depthWriteEnable,
-			.depthCompareOp = vkCast(desc.depthStencilAttachment.depthCompareOp),
-			.depthBoundsTestEnable = VK_FALSE,
-			.stencilTestEnable = VK_FALSE,
-			.front = {},
-			.back = {},
-			.minDepthBounds = 0.0f,
-			.maxDepthBounds = 1.0f
-		};
-
-		static constexpr VkDynamicState DYNAMIC_STATES[] = { VK_DYNAMIC_STATE_SCISSOR };
-		const VkPipelineDynamicStateCreateInfo dynamic_state_info = {
-			.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO,
-			.dynamicStateCount = 1,
-			.pDynamicStates = DYNAMIC_STATES
-		};
-
-		const VkGraphicsPipelineCreateInfo pipeline_info = {
-			.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
-			.stageCount = soul::cast<uint32>(shader_stage_infos.size()),
-			.pStages = shader_stage_infos.data(),
-			.pVertexInputState = &inputStateInfo,
-			.pInputAssemblyState = &input_assembly_state,
-			.pViewportState = &viewport_state,
-			.pRasterizationState = &rasterizer_state,
-			.pMultisampleState = &multisample_state,
-			.pDepthStencilState = &depth_stencil_info,
-			.pColorBlendState = &color_blending,
-			.pDynamicState = desc.scissor.dynamic ? &dynamic_state_info : nullptr,
-			.layout = program->pipelineLayout,
-			.renderPass = renderPass,
-			.subpass = 0,
-			.basePipelineHandle = VK_NULL_HANDLE
-		};
-
-		VkPipeline pipeline;
+		//TODO(kevinyu): Do we need to hash renderPass and sample_count as well?
+		PipelineStateDesc key(desc);
+		if (auto id = _db.pipeline_state_cache_.find(key); id != PipelineStateCache::NULLVAL)
 		{
-			SOUL_PROFILE_ZONE_WITH_NAME("vkCreateGraphicsPipelines");
-			SOUL_VK_CHECK(vkCreateGraphicsPipelines(_db.device, VK_NULL_HANDLE, 1, &pipeline_info, nullptr, &pipeline), "");
+			return PipelineStateID(id);
 		}
 
-		shader_stage_infos.cleanup();
+		auto create_graphic_pipeline_state = [this](const GraphicPipelineStateDesc& desc, VkRenderPass render_pass, const TextureSampleCount sample_count) -> PipelineState
+		{
+			runtime::ScopeAllocator<> scope_allocator("create_graphic_pipeline_state");
 
-		const PipelineStateID pipeline_state_id = PipelineStateID(_db.pipelineStates.add({ pipeline, VK_PIPELINE_BIND_POINT_GRAPHICS, desc.programID }));
-		_db.graphicPipelineStateMaps.insert(desc, pipeline_state_id);
-		return pipeline_state_id;
+			Program* program = get_program_ptr(desc.programID);
+
+			Array<VkPipelineShaderStageCreateInfo> shader_stage_infos(&scope_allocator);
+
+			const Shader& vert_shader = *get_shader_ptr(program->shaderIDs[ShaderStage::VERTEX]);
+			const VkPipelineShaderStageCreateInfo vert_shader_stage_info = {
+				.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+				.stage = VK_SHADER_STAGE_VERTEX_BIT,
+				.module = vert_shader.module,
+				.pName = "main"
+			};
+			shader_stage_infos.add(vert_shader_stage_info);
+
+			const Shader& frag_shader = *get_shader_ptr(program->shaderIDs[ShaderStage::FRAGMENT]);
+			const VkPipelineShaderStageCreateInfo frag_shader_stage_info = {
+				.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+				.stage = VK_SHADER_STAGE_FRAGMENT_BIT,
+				.module = frag_shader.module,
+				.pName = "main"
+			};
+			shader_stage_infos.add(frag_shader_stage_info);
+
+			if (ShaderID geom_shader_id = program->shaderIDs[ShaderStage::GEOMETRY]; geom_shader_id != SHADER_ID_NULL) {
+				const Shader& geom_shader = *get_shader_ptr(geom_shader_id);
+				shader_stage_infos.add({
+					.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+					.stage = VK_SHADER_STAGE_GEOMETRY_BIT,
+					.module = geom_shader.module,
+					.pName = "main" }
+				);
+			}
+
+			static auto PRIMITIVE_TOPOLOGY_MAP = EnumArray<Topology, VkPrimitiveTopology>::build_from_list({
+				VK_PRIMITIVE_TOPOLOGY_POINT_LIST,
+				VK_PRIMITIVE_TOPOLOGY_LINE_LIST,
+				VK_PRIMITIVE_TOPOLOGY_LINE_STRIP,
+				VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
+				VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP,
+				VK_PRIMITIVE_TOPOLOGY_TRIANGLE_FAN
+				});
+
+			const VkPipelineInputAssemblyStateCreateInfo input_assembly_state = {
+				.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO,
+				.topology = PRIMITIVE_TOPOLOGY_MAP[desc.inputLayout.topology],
+				.primitiveRestartEnable = VK_FALSE
+			};
+
+			const VkViewport viewport = {
+				.x = static_cast<float>(desc.viewport.offsetX),
+				.y = static_cast<float>(desc.viewport.offsetY),
+				.width = static_cast<float>(desc.viewport.width),
+				.height = static_cast<float>(desc.viewport.height),
+				.minDepth = 0.0f,
+				.maxDepth = 1.0f
+			};
+
+			const VkRect2D scissor = {
+				.offset = { desc.scissor.offsetX, desc.scissor.offsetY },
+				.extent = { desc.scissor.width, desc.scissor.height }
+			};
+
+			const VkPipelineViewportStateCreateInfo viewport_state = {
+				.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO,
+				.viewportCount = 1,
+				.pViewports = &viewport,
+				.scissorCount = 1,
+				.pScissors = &scissor
+			};
+
+			static auto POLYGON_MODE_MAP = EnumArray<PolygonMode, VkPolygonMode>::build_from_list({
+				VK_POLYGON_MODE_FILL,
+				VK_POLYGON_MODE_LINE,
+				VK_POLYGON_MODE_POINT
+				});
+
+			const VkPipelineRasterizationStateCreateInfo rasterizer_state = {
+				.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO,
+				.depthClampEnable = VK_FALSE,
+				.rasterizerDiscardEnable = VK_FALSE,
+				.polygonMode = POLYGON_MODE_MAP[desc.raster.polygonMode],
+				.depthBiasEnable = (desc.depthBias.slope != 0.0f || desc.depthBias.constant != 0.0f) ? VK_TRUE : VK_FALSE,
+				.depthBiasConstantFactor = desc.depthBias.constant,
+				.depthBiasSlopeFactor = desc.depthBias.slope,
+				.lineWidth = desc.raster.lineWidth
+			};
+
+			const VkPipelineMultisampleStateCreateInfo multisample_state = {
+				.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO,
+				.rasterizationSamples = vkCast(sample_count),
+				.sampleShadingEnable = VK_FALSE
+			};
+
+			VkVertexInputAttributeDescription attr_descs[MAX_INPUT_PER_SHADER];
+			uint32 attr_desc_count = 0;
+			for (uint32 i = 0; i < MAX_INPUT_PER_SHADER; i++) {
+				if (vert_shader.inputs[i].format == VK_FORMAT_UNDEFINED) continue;
+				auto& input_attribute = desc.inputAttributes[i];
+				attr_descs[attr_desc_count].format = input_attribute.type == VertexElementType::DEFAULT ? vert_shader.inputs[i].format : vkCast(input_attribute.type, input_attribute.flags);
+				attr_descs[attr_desc_count].binding = desc.inputAttributes[i].binding;
+				attr_descs[attr_desc_count].location = i;
+				attr_descs[attr_desc_count].offset = desc.inputAttributes[i].offset;
+				attr_desc_count++;
+			}
+
+			VkVertexInputBindingDescription input_binding_descs[MAX_INPUT_BINDING_PER_SHADER];
+			uint32 input_binding_desc_count = 0;
+			for (uint32 i = 0; i < MAX_INPUT_BINDING_PER_SHADER; i++) {
+				if (desc.inputBindings[i].stride == 0) continue;
+				input_binding_descs[input_binding_desc_count] = {
+					i,
+					desc.inputBindings[i].stride,
+					VK_VERTEX_INPUT_RATE_VERTEX
+				};
+				input_binding_desc_count++;
+			}
+
+			const VkPipelineVertexInputStateCreateInfo inputStateInfo = {
+				.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
+				.vertexBindingDescriptionCount = attr_desc_count > 0 ? input_binding_desc_count : 0,
+				.pVertexBindingDescriptions = attr_desc_count > 0 ? input_binding_descs : nullptr,
+				.vertexAttributeDescriptionCount = attr_desc_count,
+				.pVertexAttributeDescriptions = attr_descs,
+			};
+
+			VkPipelineColorBlendAttachmentState color_blend_attachments[MAX_COLOR_ATTACHMENT_PER_SHADER];
+			std::transform(desc.colorAttachments, desc.colorAttachments + MAX_COLOR_ATTACHMENT_PER_SHADER, color_blend_attachments,
+				[](const auto& attachment) -> VkPipelineColorBlendAttachmentState
+				{
+					return {
+						.blendEnable = attachment.blendEnable ? VK_TRUE : VK_FALSE,
+						.srcColorBlendFactor = vkCast(attachment.srcColorBlendFactor),
+						.dstColorBlendFactor = vkCast(attachment.dstColorBlendFactor),
+						.colorBlendOp = vkCast(attachment.colorBlendOp),
+						.srcAlphaBlendFactor = vkCast(attachment.srcAlphaBlendFactor),
+						.dstAlphaBlendFactor = vkCast(attachment.dstAlphaBlendFactor),
+						.alphaBlendOp = vkCast(attachment.alphaBlendOp),
+						.colorWriteMask = soul::cast<uint32>(attachment.colorWrite ? 0xf : 0x0)
+					};
+				});
+
+			const VkPipelineColorBlendStateCreateInfo color_blending = {
+				.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO,
+				.logicOpEnable = VK_FALSE,
+				.logicOp = VK_LOGIC_OP_COPY,
+				.attachmentCount = desc.colorAttachmentCount,
+				.pAttachments = color_blend_attachments,
+				.blendConstants = {}
+			};
+
+			const VkPipelineDepthStencilStateCreateInfo depth_stencil_info = {
+				.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO,
+				.depthTestEnable = desc.depthStencilAttachment.depthTestEnable,
+				.depthWriteEnable = desc.depthStencilAttachment.depthWriteEnable,
+				.depthCompareOp = vkCast(desc.depthStencilAttachment.depthCompareOp),
+				.depthBoundsTestEnable = VK_FALSE,
+				.stencilTestEnable = VK_FALSE,
+				.front = {},
+				.back = {},
+				.minDepthBounds = 0.0f,
+				.maxDepthBounds = 1.0f
+			};
+
+			static constexpr VkDynamicState DYNAMIC_STATES[] = { VK_DYNAMIC_STATE_SCISSOR };
+			const VkPipelineDynamicStateCreateInfo dynamic_state_info = {
+				.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO,
+				.dynamicStateCount = 1,
+				.pDynamicStates = DYNAMIC_STATES
+			};
+
+			const VkGraphicsPipelineCreateInfo pipeline_info = {
+				.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
+				.stageCount = soul::cast<uint32>(shader_stage_infos.size()),
+				.pStages = shader_stage_infos.data(),
+				.pVertexInputState = &inputStateInfo,
+				.pInputAssemblyState = &input_assembly_state,
+				.pViewportState = &viewport_state,
+				.pRasterizationState = &rasterizer_state,
+				.pMultisampleState = &multisample_state,
+				.pDepthStencilState = &depth_stencil_info,
+				.pColorBlendState = &color_blending,
+				.pDynamicState = desc.scissor.dynamic ? &dynamic_state_info : nullptr,
+				.layout = program->pipelineLayout,
+				.renderPass = render_pass,
+				.subpass = 0,
+				.basePipelineHandle = VK_NULL_HANDLE
+			};
+
+			VkPipeline pipeline;
+			{
+				SOUL_PROFILE_ZONE_WITH_NAME("vkCreateGraphicsPipelines");
+				SOUL_VK_CHECK(vkCreateGraphicsPipelines(_db.device, VK_NULL_HANDLE, 1, &pipeline_info, nullptr, &pipeline), "");
+			}
+
+			shader_stage_infos.cleanup();
+			return { pipeline, VK_PIPELINE_BIND_POINT_GRAPHICS, desc.programID };
+		};
+		return PipelineStateID(_db.pipeline_state_cache_.create(key, create_graphic_pipeline_state, desc, renderPass, sample_count));
 
 	}
 
 	PipelineStateID System::request_pipeline_state(const ComputePipelineStateDesc& desc)
 	{
-		std::lock_guard lock(_db.pipelineStateRequestMutex);
-		if (_db.computePipelineStateMaps.contains(desc)) {
-			return _db.computePipelineStateMaps[desc];
-		}
-
-		const Program* program = get_program_ptr(desc.programID);
-
-		const Shader& compute_shader = *get_shader_ptr(program->shaderIDs[ShaderStage::COMPUTE]);
-		const VkPipelineShaderStageCreateInfo compute_shader_stage_create_info = {
-			.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
-			.stage = VK_SHADER_STAGE_COMPUTE_BIT,
-			.module = compute_shader.module,
-			.pName = "main"
-		};
-
-		const VkComputePipelineCreateInfo create_info = {
-			.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO,
-			.stage = compute_shader_stage_create_info,
-			.layout = program->pipelineLayout
-		};
-
-		VkPipeline pipeline;
+		PipelineStateDesc key(desc);
+		if (auto id = _db.pipeline_state_cache_.find(key); id != PipelineStateCache::NULLVAL)
 		{
-			SOUL_PROFILE_ZONE_WITH_NAME("vkCreateGraphicsPipelines");
-			SOUL_VK_CHECK(vkCreateComputePipelines(_db.device, VK_NULL_HANDLE, 1, &create_info, nullptr, &pipeline), "");
+			return PipelineStateID(id);
 		}
 
-		const PipelineStateID pipeline_state_id = PipelineStateID(_db.pipelineStates.add({ pipeline, VK_PIPELINE_BIND_POINT_COMPUTE, desc.programID }));
-		_db.computePipelineStateMaps.insert(desc, pipeline_state_id);
-		return pipeline_state_id;
+		auto create_compute_pipeline_state = [this](const ComputePipelineStateDesc& desc) -> PipelineState
+		{
+			const Program* program = get_program_ptr(desc.programID);
+
+			const Shader& compute_shader = *get_shader_ptr(program->shaderIDs[ShaderStage::COMPUTE]);
+			const VkPipelineShaderStageCreateInfo compute_shader_stage_create_info = {
+				.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+				.stage = VK_SHADER_STAGE_COMPUTE_BIT,
+				.module = compute_shader.module,
+				.pName = "main"
+			};
+
+			const VkComputePipelineCreateInfo create_info = {
+				.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO,
+				.stage = compute_shader_stage_create_info,
+				.layout = program->pipelineLayout
+			};
+
+			VkPipeline pipeline;
+			{
+				SOUL_PROFILE_ZONE_WITH_NAME("vkCreateGraphicsPipelines");
+				SOUL_VK_CHECK(vkCreateComputePipelines(_db.device, VK_NULL_HANDLE, 1, &create_info, nullptr, &pipeline), "");
+			}
+			return { pipeline, VK_PIPELINE_BIND_POINT_COMPUTE, desc.programID };
+		};
+
+		return PipelineStateID(_db.pipeline_state_cache_.create(key, create_compute_pipeline_state, desc));
 	}
 
 
 	PipelineState* System::get_pipeline_state_ptr(const PipelineStateID pipeline_state_id) {
-		return &_db.pipelineStates[pipeline_state_id.id];
+		return _db.pipeline_state_cache_.get(pipeline_state_id.id);
 	}
 
-	const PipelineState& System::get_pipeline_state_ref(PipelineStateID pipeline_state_id) {
-		return _db.pipelineStates[pipeline_state_id.id];
-	}
-
-	PipelineState System::get_pipeline_state(const PipelineStateID pipeline_state_id)
-	{
-		SOUL_PROFILE_ZONE();
-		std::shared_lock guard(_db.pipelineStateRequestMutex);
-		return _db.pipelineStates[pipeline_state_id.id];
+	const PipelineState& System::get_pipeline_state(PipelineStateID pipeline_state_id) {
+		return *_db.pipeline_state_cache_.get(pipeline_state_id.id);
 	}
 
 	ShaderArgSet System::get_shader_arg_set(const ShaderArgSetID arg_set_id)
@@ -1879,7 +1876,7 @@ namespace soul::gpu
 	{
 		SOUL_PROFILE_ZONE();
 		SOUL_ASSERT_MAIN_THREAD();
-		if (_db.renderPassMaps.contains(key))
+		if (_db.renderPassMaps.contains(key)) 
 		{
 			return _db.renderPassMaps[key];
 		}
@@ -2309,6 +2306,8 @@ namespace soul::gpu
 		frameContext.garbages.semaphores.resize(0);
 		
 		_db.shaderArgSetIDs.resize(1);
+
+		_db.pipeline_state_cache_.flush_to_read_cache();
 	}
 
 	void System::_frameEnd() {

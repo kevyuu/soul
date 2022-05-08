@@ -101,13 +101,13 @@ namespace soul::gpu::impl
 
 	void RenderCompiler::apply_pipeline_state(PipelineStateID pipeline_state_id) {
 		SOUL_ASSERT(pipeline_state_id != PIPELINE_STATE_ID_NULL, "");
-		const PipelineState pipelineState = gpu_system_.get_pipeline_state(pipeline_state_id);
-		if (pipelineState.vkHandle != currentPipeline) {
-			vkCmdBindPipeline(commandBuffer, pipelineState.bindPoint, pipelineState.vkHandle);
-			currentPipeline = pipelineState.vkHandle;
-			const Program& program = gpu_system_.get_program(pipelineState.programID);
+		const PipelineState& pipeline_state = gpu_system_.get_pipeline_state(pipeline_state_id);
+		if (pipeline_state.vkHandle != currentPipeline) {
+			vkCmdBindPipeline(commandBuffer, pipeline_state.bindPoint, pipeline_state.vkHandle);
+			currentPipeline = pipeline_state.vkHandle;
+			const Program& program = gpu_system_.get_program(pipeline_state.programID);
 			currentPipelineLayout = program.pipelineLayout;
-			currentBindPoint = pipelineState.bindPoint;
+			currentBindPoint = pipeline_state.bindPoint;
 		}
 	}
 

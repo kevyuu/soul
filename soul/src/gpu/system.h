@@ -67,8 +67,7 @@ namespace soul::gpu
 		PipelineStateID request_pipeline_state(const GraphicPipelineStateDesc& key, VkRenderPass renderPass, const TextureSampleCount sample_count);
 		PipelineStateID request_pipeline_state(const ComputePipelineStateDesc& key);
 		impl::PipelineState* get_pipeline_state_ptr(PipelineStateID pipeline_state_id);
-		const impl::PipelineState& get_pipeline_state_ref(PipelineStateID pipeline_state_id);
-		[[nodiscard]] impl::PipelineState get_pipeline_state(PipelineStateID pipeline_state_id);
+		const impl::PipelineState& get_pipeline_state(PipelineStateID pipeline_state_id);
 
 		SamplerID request_sampler(const SamplerDesc& desc);
 
