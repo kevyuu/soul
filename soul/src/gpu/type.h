@@ -1208,7 +1208,7 @@ namespace soul::gpu
 			UInt64HashMap<VkDescriptorSet> descriptorSets;
 			Array<ShaderArgSet> shaderArgSetIDs;
 
-			std::shared_mutex shaderArgSetRequestMutex;
+			SOUL_SHARED_LOCKABLE(std::shared_mutex, shaderArgSetRequestMutex);
 
 			explicit Database(memory::Allocator* backingAllocator) :
 				cpuAllocator("GPU System", backingAllocator, CPUAllocatorProxy::Config{ memory::ProfileProxy::Config(), memory::CounterProxy::Config() }),

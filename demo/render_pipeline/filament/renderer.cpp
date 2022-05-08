@@ -14,40 +14,58 @@ namespace soul_fila {
 
 	void Cull(Renderables& renderables, const Frustum& frustum, soul_size bit)
 	{
-		const Vec3f* aabbCenter = renderables.data<RenderablesIdx::WORLD_AABB_CENTER>();
-		const Vec3f* halfExtent = renderables.data<RenderablesIdx::WORLD_AABB_EXTENT>();
-		VisibleMask* visibleMasks = renderables.data<RenderablesIdx::VISIBLE_MASK>();
-		for (soul_size i = 0; i < renderables.size(); i++)
+		const Vec3f* aabb_center = renderables.data<RenderablesIdx::WORLD_AABB_CENTER>();
+		const Vec3f* half_extent = renderables.data<RenderablesIdx::WORLD_AABB_EXTENT>();
+		VisibleMask* visible_masks = renderables.data<RenderablesIdx::VISIBLE_MASK>();
+
+		struct CullData
 		{
-			visibleMasks[i] |= FrustumCull(frustum, aabbCenter[i], halfExtent[i]) << bit;
-		}
+			const Vec3f* aabbCenter;
+			const Vec3f* halfExtent;
+			VisibleMask* visibleMasks;
+			Renderables& renderables;
+			const Frustum& frustum;
+			soul_size bit;
+		};
+		CullData cull_data = { aabb_center, half_extent, visible_masks, renderables, frustum, bit };
+
+		const soul::runtime::TaskID cull_task_id = soul::runtime::parallel_for_task_create(runtime::TaskID::ROOT(), renderables.size(), 8,
+		[&cull_data](int index)
+		{
+			cull_data.visibleMasks[index] |= FrustumCull(
+				cull_data.frustum, cull_data.aabbCenter[index], 
+				cull_data.halfExtent[index]) << cull_data.bit;
+		});
+		soul::runtime::run_and_wait_task(cull_task_id);
 	}
 
 	static void Cull(const Scene& scene, Lights& lights, const Frustum& frustum)
 	{
 		const Vec4f* spheres = lights.data<LightsIdx::POSITION_RADIUS>();
-		VisibleMask* visibleMasks = lights.data<LightsIdx::VISIBLE_MASK>();
-		for (soul_size i = 0; i < lights.size(); i++)
-		{
-			visibleMasks[i] |= uint8(FrustumCull(frustum, spheres[i]));
-		}
+		VisibleMask* visible_masks = lights.data<LightsIdx::VISIBLE_MASK>();
+		const soul::runtime::TaskID cull_task_id = soul::runtime::parallel_for_task_create(runtime::TaskID::ROOT(), lights.size(), 8,
+			[visible_masks, &frustum, spheres](int index)
+			{
+				visible_masks[index] |= uint8(FrustumCull(frustum, spheres[index]));
+			});
+		soul::runtime::run_and_wait_task(cull_task_id);
 
 		soul_size visibleLightCount = Scene::DIRECTIONAL_LIGHTS_COUNT;
 		const EntityID* entities = lights.data<LightsIdx::ENTITY_ID>();
 		const Vec3f* directions = lights.data<LightsIdx::DIRECTION>();
 		for (soul_size i = Scene::DIRECTIONAL_LIGHTS_COUNT; i < lights.size(); i++)
 		{
-			if (visibleMasks[i])
+			if (visible_masks[i])
 			{
 				const LightComponent& lightComp = scene.get_light_component(entities[i]);
 				if (!lightComp.lightType.lightCaster)
 				{
-					visibleMasks[i] = 0;
+					visible_masks[i] = 0;
 					continue;
 				}
 				if (lightComp.intensity <= 0.0f)
 				{
-					visibleMasks[i] = 0;
+					visible_masks[i] = 0;
 					continue;
 				}
 				if (lightComp.lightType.type == LightRadiationType::FOCUSED_SPOT || lightComp.lightType.type == LightRadiationType::SPOT)
