@@ -68,6 +68,7 @@ set (SOUL_SOURCES
 	src/gpu/intern/render_graph_execution.cpp
 	src/gpu/intern/render_graph_registry.cpp
 	src/gpu/intern/render_compiler.cpp
+	src/gpu/intern/shader_arg_set_allocator.cpp
 
 	src/memory/intern/malloc_allocator.cpp
 	src/memory/intern/proxy.cpp
@@ -81,7 +82,7 @@ set (SOUL_SOURCES
 	"$<$<STREQUAL:${CMAKE_SYSTEM_NAME},Darwin>:${SOUL_SOURCES_OSX}>"
 	"$<$<STREQUAL:${CMAKE_SYSTEM_NAME},Windows>:${SOUL_SOURCES_WINDOWS}>")
 
-add_library(soul STATIC ${SOUL_SOURCES} "src/core/compiler.h" "src/core/type_traits.h" "src/gpu/id.h" "src/gpu/constant.h" "src/gpu/object_pool.h")
+add_library(soul STATIC ${SOUL_SOURCES})
 target_link_libraries(soul
 	PUBLIC glfw ${GLFW_LIBRARIES} vk_mem_alloc ${NVTX}
 	PRIVATE volk shaderc spirv-cross-core tracy)

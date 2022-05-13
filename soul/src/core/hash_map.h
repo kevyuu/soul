@@ -95,11 +95,14 @@ namespace soul {
 		void swap(HashMap<KeyType, ValType>& other) noexcept
 		{
 			using std::swap;
-			swap(allocator_, other._allocator);
-			swap(indexes_, other._indexes);
-			swap(values_, other._values);
-			swap(indexes_, other._indexes);
-			swap(values_, other._values);
+			swap(hash_, other.hash_);
+			swap(key_equal_, other.key_equal_);
+			swap(allocator_, other.allocator_);
+			swap(indexes_, other.indexes_);
+			swap(values_, other.values_);
+			swap(size_, other.size_);
+			swap(capacity_, other.capacity_);
+			swap(max_dib_, other.max_dib_);
 		}
 
 		friend void swap(HashMap& a, HashMap& b) noexcept { a.swap(b); }
@@ -124,7 +127,7 @@ namespace soul {
 
 		void reserve(soul_size capacity)
 		{
-			SOUL_ASSERT(0, _size == _capacity, "");
+			SOUL_ASSERT(0, size_ == capacity_, "");
 			Index* old_indexes = indexes_;
 			indexes_ = allocator_->create_raw_array<Index>(capacity);
 			memset(indexes_, 0, sizeof(Index) * capacity);
@@ -136,8 +139,8 @@ namespace soul {
 			size_ = 0;
 
 			if (old_capacity != 0) {
-				SOUL_ASSERT(0, oldIndexes != nullptr, "");
-				SOUL_ASSERT(0, oldValues != nullptr, "");
+				SOUL_ASSERT(0, old_indexes != nullptr, "");
+				SOUL_ASSERT(0, old_values != nullptr, "");
 				for (soul_size i = 0; i < old_capacity; ++i) {
 					if (old_indexes[i].dib != 0) {
 						insert(old_indexes[i].key, std::move(old_values[i]));
@@ -196,7 +199,7 @@ namespace soul {
 		void remove(const KeyType& key)
 		{
 			soul_size index = find_index(key);
-			SOUL_ASSERT(0, key_equal_(_indexes[index].key, key) && _indexes[index].dib != 0, "Does not found any key : %d in the hash map", key);
+			SOUL_ASSERT(0, key_equal_(indexes_[index].key, key) && indexes_[index].dib != 0, "Does not found any key : %d in the hash map", key);
 			remove_by_index(index);
 		}
 
@@ -209,14 +212,14 @@ namespace soul {
 		[[nodiscard]] ValType& operator[](const KeyType& key)
 		{
 			soul_size index = find_index(key);
-			SOUL_ASSERT(0, key_equal_(_indexes[index].key, key) && _indexes[index].dib != 0, "Hashmap key not found");
+			SOUL_ASSERT(0, key_equal_(indexes_[index].key, key) && indexes_[index].dib != 0, "Hashmap key not found");
 			return values_[index];
 		}
 
 		[[nodiscard]] const ValType& operator[](const KeyType& key) const
 		{
 			soul_size index = find_index(key);
-			SOUL_ASSERT(0, key_equal(_indexes[index].key, key) && _indexes[index].dib != 0, "Hashmap key not found");
+			SOUL_ASSERT(0, key_equal(indexes_[index].key, key) && indexes_[index].dib != 0, "Hashmap key not found");
 			return values_[index];
 		}
 
@@ -243,11 +246,11 @@ namespace soul {
 		soul_size max_dib_ = 0;
 
 		void init_assert() {
-			SOUL_ASSERT(0, _indexes == nullptr, "");
-			SOUL_ASSERT(0, _values == nullptr, "");
-			SOUL_ASSERT(0, _size == 0, "");
-			SOUL_ASSERT(0, _capacity == 0, "");
-			SOUL_ASSERT(0, _maxDib == 0, "");
+			SOUL_ASSERT(0, indexes_ == nullptr, "");
+			SOUL_ASSERT(0, values_ == nullptr, "");
+			SOUL_ASSERT(0, size_ == 0, "");
+			SOUL_ASSERT(0, capacity_ == 0, "");
+			SOUL_ASSERT(0, max_dib_ == 0, "");
 		}
 
 		[[nodiscard]] soul_size find_index(const KeyType& key) const {
@@ -284,7 +287,7 @@ namespace soul {
 			} else
 			{
 				for (soul_size i = 0; i < other._capacity; ++i) {
-					if (other._indexes[i].dib == 0) continue;
+					if (other.indexes_[i].dib == 0) continue;
 					new (values_ + i) ValType(other._values[i]);
 				}
 			}

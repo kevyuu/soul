@@ -95,11 +95,9 @@ namespace soul::gpu
 		_db.currentFrame = 0;
 		_db.frameCounter = 0;
 		
-		_db.shaderArgSetIDs.add({});
 		_db.programs.add({});
 		_db.semaphores.reserve(1000);
 		_db.semaphores.add({});
-		_db.descriptorSets.reserve(1024);
 		_db.samplerMap.reserve(128);
 
 		SOUL_ASSERT(0, config.windowHandle != nullptr, "Invalid configuration value | windowHandle = nullptr");
@@ -692,6 +690,7 @@ namespace soul::gpu
 			SOUL_LOG_INFO("Vulkan init allocator sucessful");
 		};
 		init_allocator(&_db);
+		_db.arg_set_allocator.init(this, _db.device);
 		init_frame_context(config);
 		_frameBegin();
 	}
@@ -715,24 +714,6 @@ namespace soul::gpu
 
 			frame_context.imageAvailableSemaphore = create_semaphore();
 			frame_context.renderFinishedSemaphore = create_semaphore();
-
-			const VkDescriptorPoolSize pool_sizes[2] = {
-				{
-					.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC,
-					.descriptorCount = 1000
-				},
-				{
-					.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-					.descriptorCount = 2000
-				}
-			};
-			const VkDescriptorPoolCreateInfo pool_info = {
-				.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
-				.maxSets = 1100,
-				.poolSizeCount = std::size(pool_sizes),
-				.pPoolSizes = pool_sizes
-			};
-			SOUL_VK_CHECK(vkCreateDescriptorPool(_db.device, &pool_info, nullptr, &frame_context.descriptorPool), "");
 		});
 	}
 
@@ -1311,39 +1292,42 @@ namespace soul::gpu
 
 	VkDescriptorSetLayout System::request_descriptor_layout(const DescriptorSetLayoutKey& key) {
 		SOUL_PROFILE_ZONE_WITH_NAME("GPU::System::request_descriptor_layout");
-		runtime::ScopeAllocator<> scope_allocator("GPU::System::request_descriptor_layout");
-
-		if (_db.descriptorSetLayoutMaps.contains(key)) {
-			return _db.descriptorSetLayoutMaps[key];
+		
+		if (auto id = _db.descriptor_set_layout_cache.find(key); id != DescriptorSetLayoutCache::NULLVAL)
+		{
+			return *_db.descriptor_set_layout_cache.get(id);
 		}
 
-		VkDescriptorSetLayout set_layout = VK_NULL_HANDLE;
+		auto id = _db.descriptor_set_layout_cache.create(key, [this](const DescriptorSetLayoutKey& key) -> VkDescriptorSetLayout
+		{
+			runtime::ScopeAllocator<> scope_allocator("GPU::System::request_descriptor_layout");
+			VkDescriptorSetLayout set_layout = VK_NULL_HANDLE;
 
-		Array<VkDescriptorSetLayoutBinding> bindings(&scope_allocator);
-		for (uint32 i = 0; i < MAX_BINDING_PER_SET; i++) {
-			const DescriptorSetLayoutBinding& binding = key.bindings[i];
-			if (binding.stageFlags == 0) continue;
-			bindings.add({});
+			Array<VkDescriptorSetLayoutBinding> bindings(&scope_allocator);
+			for (uint32 i = 0; i < MAX_BINDING_PER_SET; i++) {
+				const DescriptorSetLayoutBinding& binding = key.bindings[i];
+				if (binding.stageFlags == 0) continue;
+				bindings.add({});
 
-			bindings.back().stageFlags = binding.stageFlags;
-			bindings.back().descriptorType = binding.descriptorType;
-			bindings.back().descriptorCount = binding.descriptorCount;
-			bindings.back().binding = i;
-		}
+				bindings.back().stageFlags = binding.stageFlags;
+				bindings.back().descriptorType = binding.descriptorType;
+				bindings.back().descriptorCount = binding.descriptorCount;
+				bindings.back().binding = i;
+			}
 
-		const VkDescriptorSetLayoutCreateInfo layout_info = {
-			.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
-			.bindingCount = soul::cast<uint32>(bindings.size()),
-			.pBindings = bindings.data()
-		};
-		SOUL_VK_CHECK(
-			vkCreateDescriptorSetLayout(_db.device, &layout_info, nullptr, &set_layout),
-			"");
-		bindings.cleanup();
+			const VkDescriptorSetLayoutCreateInfo layout_info = {
+				.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
+				.bindingCount = soul::cast<uint32>(bindings.size()),
+				.pBindings = bindings.data()
+			};
+			SOUL_VK_CHECK(
+				vkCreateDescriptorSetLayout(_db.device, &layout_info, nullptr, &set_layout),
+				"");
+			bindings.cleanup();
+			return set_layout;
+		}, key);
 
-		_db.descriptorSetLayoutMaps.insert(key, set_layout);
-
-		return set_layout;
+		return *_db.descriptor_set_layout_cache.get(id);
 	}
 
 	PipelineStateID System::request_pipeline_state(const GraphicPipelineStateDesc& desc, VkRenderPass renderPass, const TextureSampleCount sample_count) {
@@ -1604,10 +1588,9 @@ namespace soul::gpu
 		return *_db.pipeline_state_cache_.get(pipeline_state_id.id);
 	}
 
-	ShaderArgSet System::get_shader_arg_set(const ShaderArgSetID arg_set_id)
+	ShaderArgSet System::get_shader_arg_set(ShaderArgSetID arg_set_id)
 	{
-		std::shared_lock guard(_db.shaderArgSetRequestMutex);
-		return _db.shaderArgSetIDs[arg_set_id.id];
+		return _db.arg_set_allocator.get(arg_set_id);
 	}
 
 	ProgramID System::request_program(const ProgramDesc& programDesc) {
@@ -1722,154 +1705,7 @@ namespace soul::gpu
 
 	ShaderArgSetID System::request_shader_arg_set(const ShaderArgSetDesc& desc) {
 		SOUL_PROFILE_ZONE();
-		uint64 hash = 0;
-		uint32 offset_count = 0;
-		uint32 offset[MAX_DYNAMIC_BUFFER_PER_SET];
-		std::for_each(desc.bindingDescriptions, desc.bindingDescriptions + desc.bindingCount, 
-			[this, &offset_count, &hash, &offset](const Descriptor& descriptor_desc)
-			{
-				switch (descriptor_desc.type) {
-				case DescriptorType::NONE:
-				{
-					hash = hash_fnv1(&descriptor_desc.type, hash);
-					break;
-				}
-				case DescriptorType::UNIFORM_BUFFER: {
-					const UniformDescriptor& uniformDescriptor = descriptor_desc.uniformInfo;
-					hash = hash_fnv1(&descriptor_desc.type, hash);
-					hash = hash_fnv1(&descriptor_desc.uniformInfo.bufferID, hash);
-					offset[offset_count++] =
-						uniformDescriptor.unitIndex * soul::cast<uint32>(get_buffer_ptr(uniformDescriptor.bufferID)->unitSize);
-					break;
-				}
-				case DescriptorType::SAMPLED_IMAGE: {
-					hash = hash_fnv1(&descriptor_desc.type, hash);
-					const SampledImageDescriptor& descriptor = descriptor_desc.sampledImageInfo;
-					hash = hash_fnv1(&(get_texture_ptr(descriptor.textureID)->view), hash);
-					hash = hash_fnv1(&descriptor_desc.sampledImageInfo.samplerID, hash);
-					hash = hash_fnv1(&descriptor_desc.sampledImageInfo.view, hash);
-					break;
-				}
-				case DescriptorType::INPUT_ATTACHMENT: {
-					hash = hash_fnv1(&descriptor_desc.type, hash);
-					hash = hash_fnv1(&(get_texture_ptr(descriptor_desc.inputAttachmentInfo.textureID)->view), hash);
-					break;
-				}
-				case DescriptorType::STORAGE_IMAGE: {
-					hash = hash_fnv1(&descriptor_desc.type, hash);
-					hash = hash_fnv1(&(get_texture_ptr(descriptor_desc.storageImageInfo.textureID)->view), hash);
-					hash = hash_fnv1(&descriptor_desc.storageImageInfo.mipLevel, hash);
-					break;
-				}
-				default: {
-					SOUL_NOT_IMPLEMENTED();
-					break;
-				}
-				}
-			});
-
-		VkDescriptorSet descriptor_set;
-		ShaderArgSetID arg_set_id;
-		{
-			std::unique_lock lock(_db.shaderArgSetRequestMutex);
-			if (_db.descriptorSets.isExist(hash)) {
-				descriptor_set = _db.descriptorSets[hash];
-			}
-			else {
-				DescriptorSetLayoutKey set_layout_key = {};
-				for (uint32 binding_idx = 0; binding_idx < desc.bindingCount; binding_idx++) {
-					const Descriptor& descriptor_desc = desc.bindingDescriptions[binding_idx];
-					if (descriptor_desc.type == DescriptorType::NONE) continue;
-					set_layout_key.bindings[binding_idx].descriptorCount = 1;
-					set_layout_key.bindings[binding_idx].descriptorType = vkCast(descriptor_desc.type);
-					set_layout_key.bindings[binding_idx].stageFlags = vkCast(descriptor_desc.stageFlags);
-				}
-
-				VkDescriptorSetLayout set_layout = request_descriptor_layout(set_layout_key);
-				const VkDescriptorSetAllocateInfo alloc_info = {
-					.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
-					.descriptorPool = get_frame_context().descriptorPool,
-					.descriptorSetCount = 1,
-					.pSetLayouts = &set_layout
-				};
-
-				SOUL_VK_CHECK(vkAllocateDescriptorSets(_db.device, &alloc_info, &descriptor_set), "");
-				if (descriptor_set == VK_NULL_HANDLE)
-					SOUL_LOG_WARN("Descriptor set creation fail");
-
-				for (uint32 binding_idx = 0; binding_idx < desc.bindingCount; binding_idx++) {
-					const Descriptor& descriptor_desc = desc.bindingDescriptions[binding_idx];
-					VkWriteDescriptorSet descriptorWrite = {
-						.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-						.dstSet = descriptor_set,
-						.dstBinding = binding_idx,
-						.dstArrayElement = 0,
-						.descriptorCount = 1,
-						.descriptorType = vkCast(descriptor_desc.type)
-					};
-
-					VkDescriptorBufferInfo buffer_info;
-					VkDescriptorImageInfo image_info;
-					switch (descriptor_desc.type) {
-					case DescriptorType::NONE:
-						{
-							continue;
-						}
-					case DescriptorType::UNIFORM_BUFFER: {
-						buffer_info.buffer = get_buffer_ptr(descriptor_desc.uniformInfo.bufferID)->vkHandle;
-						Buffer* buffer = get_buffer_ptr(descriptor_desc.uniformInfo.bufferID);
-						buffer_info.offset = 0;
-						buffer_info.range = buffer->unitSize;
-						descriptorWrite.pBufferInfo = &buffer_info;
-						break;
-					}
-					case DescriptorType::SAMPLED_IMAGE: {
-						image_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-						TextureID texID = descriptor_desc.sampledImageInfo.textureID;
-						image_info.imageView = get_texture_view(texID, descriptor_desc.sampledImageInfo.view);
-						image_info.sampler = descriptor_desc.sampledImageInfo.samplerID.id;
-						descriptorWrite.pImageInfo = &image_info;
-						break;
-					}
-					case DescriptorType::INPUT_ATTACHMENT: {
-						image_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-						image_info.imageView = get_texture_ptr(descriptor_desc.inputAttachmentInfo.textureID)->view;
-						image_info.sampler = VK_NULL_HANDLE;
-						descriptorWrite.pImageInfo = &image_info;
-						break;
-					}
-					case DescriptorType::STORAGE_IMAGE: {
-						image_info.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
-						image_info.imageView = get_texture_view(descriptor_desc.storageImageInfo.textureID, descriptor_desc.storageImageInfo.mipLevel);
-						image_info.sampler = VK_NULL_HANDLE;
-						descriptorWrite.pImageInfo = &image_info;
-						break;
-					}
-					default: {
-						SOUL_NOT_IMPLEMENTED();
-						break;
-					}
-					}
-
-					vkUpdateDescriptorSets(_db.device, 1, &descriptorWrite, 0, nullptr);
-				}
-				_db.descriptorSets.add(hash, descriptor_set);
-			}
-			arg_set_id = ShaderArgSetID(_db.shaderArgSetIDs.add(ShaderArgSet()));
-			ShaderArgSet& arg_set = _db.shaderArgSetIDs[arg_set_id.id];
-
-			arg_set.vkHandle = descriptor_set;
-			arg_set.offsetCount = offset_count;
-			std::copy_n(offset, offset_count, arg_set.offset);
-
-		}
-
-		return arg_set_id;
-	}
-
-	const ShaderArgSet& System::get_shader_arg_set_ref(ShaderArgSetID argSetID) {
-		SOUL_ASSERT(!argSetID.is_null(), "");
-		return _db.shaderArgSetIDs[argSetID.id];
+		return _db.arg_set_allocator.request_shader_arg_set(desc);
 	}
 
 	VkRenderPass System::request_render_pass(const RenderPassKey& key)
@@ -2234,11 +2070,6 @@ namespace soul::gpu
 		swapchainTexture->layout = VK_IMAGE_LAYOUT_UNDEFINED;
 
 		{
-			SOUL_PROFILE_ZONE_WITH_NAME("Reset descriptor pool");
-			vkResetDescriptorPool(_db.device, frameContext.descriptorPool, 0);
-		}
-		
-		{
 			SOUL_PROFILE_ZONE_WITH_NAME("Destroy images");
 			for (TextureID texture_id : frameContext.garbages.textures) {
 				Texture& texture = *get_texture_ptr(texture_id);
@@ -2304,10 +2135,9 @@ namespace soul::gpu
 			_db.semaphores.remove(semaphoreID.id);
 		}
 		frameContext.garbages.semaphores.resize(0);
-		
-		_db.shaderArgSetIDs.resize(1);
 
-		_db.pipeline_state_cache_.flush_to_read_cache();
+		_db.pipeline_state_cache_.on_new_frame();
+		_db.arg_set_allocator.on_new_frame();
 	}
 
 	void System::_frameEnd() {
@@ -2410,8 +2240,6 @@ namespace soul::gpu
 		_db.frameCounter++;
 		_db.currentFrame += 1;
 		_db.currentFrame %= _db.frameContexts.size();
-
-		_db.descriptorSets.clear();
 	}
 
 	Vec2ui32 System::getSwapchainExtent() {

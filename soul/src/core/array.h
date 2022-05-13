@@ -37,6 +37,16 @@ namespace soul {
 		void push_back(const T& item);
 		void push_back(T&& item);
 
+		template<typename... Args>
+		void emplace_back(Args&&... args)
+		{
+			if (size_ == capacity_) {
+				reserve((capacity_ * GROWTH_FACTOR) + 8);
+			}
+			new (buffer_ + size_) T(std::forward<Args>(args)...);
+			++size_;
+		}
+
 		void append(const Array<T>& other);
 
 		SOUL_NODISCARD T& back() noexcept { return buffer_[size_ - 1]; }

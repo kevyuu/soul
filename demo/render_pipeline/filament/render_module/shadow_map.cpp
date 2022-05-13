@@ -910,30 +910,36 @@ namespace soul_fila
 							gpu::Descriptor::SampledImage(get_material_gpu_texture(material.textures.volumeThicknessTexture), sampler_id, {gpu::ShaderStage::VERTEX , gpu::ShaderStage::FRAGMENT})
 						};
 						const gpu::ShaderArgSetID set2 = registry.get_shader_arg_set(2, { std::size(set2_descriptors), set2_descriptors});
+						runtime::ScopeAllocator<> scope_allocator("Shadow Map Command Building");
+						soul::Array<gpu::Descriptor> set3_descriptors(&scope_allocator);
+						{
+							SOUL_PROFILE_ZONE_WITH_NAME("Set 3 Descriptor Building");
+							set3_descriptors.reserve(gpu::MAX_BINDING_PER_SET);
+							set3_descriptors.push_back(gpu::Descriptor::Uniform(registry.get_buffer(params.objectsUBO), draw_item.index, { gpu::ShaderStage::VERTEX , gpu::ShaderStage::FRAGMENT }));
 
-						soul::Array<gpu::Descriptor> set3_descriptors;
-						set3_descriptors.reserve(gpu::MAX_BINDING_PER_SET);
-						set3_descriptors.add(gpu::Descriptor::Uniform(registry.get_buffer(params.objectsUBO), draw_item.index, { gpu::ShaderStage::VERTEX , gpu::ShaderStage::FRAGMENT }));
-
-						const SkinID skin_id = renderables.elementAt<RenderablesIdx::SKIN_ID>(draw_item.index);
-						if (Visibility visibility = renderables.elementAt<RenderablesIdx::VISIBILITY_STATE>(draw_item.index); visibility.skinning || visibility.morphing) {
-							const uint32 skin_index = skin_id.is_null() ? 0 : soul::cast<uint32>(skin_id.id);
-							set3_descriptors.add(gpu::Descriptor::Uniform(registry.get_buffer(params.bonesUBO), skin_index, { gpu::ShaderStage::VERTEX }));
+							const SkinID skin_id = renderables.elementAt<RenderablesIdx::SKIN_ID>(draw_item.index);
+							if (Visibility visibility = renderables.elementAt<RenderablesIdx::VISIBILITY_STATE>(draw_item.index); visibility.skinning || visibility.morphing) {
+								const uint32 skin_index = skin_id.is_null() ? 0 : soul::cast<uint32>(skin_id.id);
+								set3_descriptors.push_back(gpu::Descriptor::Uniform(registry.get_buffer(params.bonesUBO), skin_index, { gpu::ShaderStage::VERTEX }));
+							}
 						}
 
 						gpu::ShaderArgSetID set3 = registry.get_shader_arg_set(3, { soul::cast<uint32>(set3_descriptors.size()), set3_descriptors.data() });
-
-						DrawCommand command = {
+						DrawCommand command;
+						{
+							SOUL_PROFILE_ZONE_WITH_NAME("Build Draw Command");
+							command = {
 							.pipelineStateID = registry.get_pipeline_state(pipeline_desc),
 							.shaderArgSetIDs = { set0, set1, set2, set3 },
 							.indexBufferID = primitive.indexBuffer
-						};
-						for (uint32 attrib_idx = 0; attrib_idx < to_underlying(VertexAttribute::COUNT); attrib_idx++) {
-							Attribute attribute = primitive.attributes[attrib_idx];
-							if (attribute.buffer == Attribute::BUFFER_UNUSED) {
-								attribute = primitive.attributes[0];
+							};
+							for (uint32 attrib_idx = 0; attrib_idx < to_underlying(VertexAttribute::COUNT); attrib_idx++) {
+								Attribute attribute = primitive.attributes[attrib_idx];
+								if (attribute.buffer == Attribute::BUFFER_UNUSED) {
+									attribute = primitive.attributes[0];
+								}
+								command.vertexBufferIDs[attrib_idx] = primitive.vertexBuffers[attribute.buffer];
 							}
-							command.vertexBufferIDs[attrib_idx] = primitive.vertexBuffers[attribute.buffer];
 						}
 						return command;
 					});

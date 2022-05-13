@@ -31,7 +31,6 @@ namespace soul::gpu
 			}
 		}
 
-
 		template <typename... ARGS>
 		ID create(ARGS&&... args)
 		{

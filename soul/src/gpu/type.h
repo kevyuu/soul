@@ -13,6 +13,7 @@
 #include "gpu/id.h"
 #include "gpu/constant.h"
 #include "gpu/intern/render_compiler.h"
+#include "gpu/intern/shader_arg_set_allocator.h"
 
 #include "core/type.h"
 #include "core/mutex.h"
@@ -467,10 +468,7 @@ namespace soul::gpu
 
 	};
 
-	struct ShaderArgSetDesc {
-		uint32 bindingCount;
-		const Descriptor* bindingDescriptions;
-	};
+
 
 	struct BufferDesc {
 		soul_size count = 0;
@@ -935,15 +933,7 @@ namespace soul::gpu
 			uint32 inputStride = 0;
 		};
 
-		struct ShaderArgSet {
-			VkDescriptorSet vkHandle = VK_NULL_HANDLE;
-			uint32 offset[8] = {};
-			uint32 offsetCount = 0;
 
-			bool operator==(const ShaderArgSet& rhs) const noexcept {
-				return vkHandle == rhs.vkHandle && offset == rhs.offset;
-			}
-		};
 
 		struct Program {
 			VkPipelineLayout pipelineLayout;
@@ -1139,8 +1129,6 @@ namespace soul::gpu
 				Array<SemaphoreID> semaphores;
 			} garbages;
 
-			VkDescriptorPool descriptorPool = VK_NULL_HANDLE;
-
 			GPUResourceInitializer gpuResourceInitializer;
 			GPUResourceFinalizer gpuResourceFinalizer;
 
@@ -1193,9 +1181,8 @@ namespace soul::gpu
 			ConcurrentObjectPool<Shader> shaders;
 
 			PipelineStateCache pipeline_state_cache_;
+			DescriptorSetLayoutCache descriptor_set_layout_cache;
 			
-			HashMap<DescriptorSetLayoutKey, VkDescriptorSetLayout> descriptorSetLayoutMaps;
-
 			HashMap<ProgramDesc, ProgramID> programMaps;
 			Pool<Program> programs;
 
@@ -1204,11 +1191,7 @@ namespace soul::gpu
 			Pool<Semaphore> semaphores;
 
 			UInt64HashMap<VkSampler> samplerMap;
-
-			UInt64HashMap<VkDescriptorSet> descriptorSets;
-			Array<ShaderArgSet> shaderArgSetIDs;
-
-			SOUL_SHARED_LOCKABLE(std::shared_mutex, shaderArgSetRequestMutex);
+			ShaderArgSetAllocator arg_set_allocator;
 
 			explicit Database(memory::Allocator* backingAllocator) :
 				cpuAllocator("GPU System", backingAllocator, CPUAllocatorProxy::Config{ memory::ProfileProxy::Config(), memory::CounterProxy::Config() }),

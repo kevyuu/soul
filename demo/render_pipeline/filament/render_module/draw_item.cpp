@@ -4,6 +4,7 @@ namespace soul_fila
 {
 	void DrawItem::ToPipelineStateDesc(const DrawItem& drawItem, soul::gpu::GraphicPipelineStateDesc& desc)
 	{
+        SOUL_PROFILE_ZONE();
         desc.programID = drawItem.programID;
 		const RasterState& rasterState = drawItem.rasterState;
 		desc.raster.cullMode = rasterState.culling;

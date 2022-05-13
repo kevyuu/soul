@@ -29,7 +29,7 @@ namespace soul::gpu::impl
 	}
 
 	void RenderCompiler::compile_command(const RenderCommandDrawIndex& command) {
-		
+		SOUL_PROFILE_ZONE();
 		apply_pipeline_state(command.pipelineStateID);
 		apply_shader_arguments(command.shaderArgSetIDs);
 
@@ -47,6 +47,7 @@ namespace soul::gpu::impl
 	}
 
 	void RenderCompiler::compile_command(const RenderCommandDrawPrimitive& command) {
+		SOUL_PROFILE_ZONE();
 		apply_pipeline_state(command.pipelineStateID);
 		apply_shader_arguments(command.shaderArgSetIDs);
 
@@ -69,6 +70,7 @@ namespace soul::gpu::impl
 
 	void RenderCompiler::compile_command(const RenderCommandCopyTexture& command)
 	{
+		SOUL_PROFILE_ZONE();
 		const Texture* src_texture = gpu_system_.get_texture_ptr(command.srcTexture);
 		const Texture* dst_texture = gpu_system_.get_texture_ptr(command.dstTexture);
 
@@ -100,6 +102,7 @@ namespace soul::gpu::impl
 
 
 	void RenderCompiler::apply_pipeline_state(PipelineStateID pipeline_state_id) {
+		SOUL_PROFILE_ZONE();
 		SOUL_ASSERT(pipeline_state_id != PIPELINE_STATE_ID_NULL, "");
 		const PipelineState& pipeline_state = gpu_system_.get_pipeline_state(pipeline_state_id);
 		if (pipeline_state.vkHandle != currentPipeline) {
@@ -112,8 +115,9 @@ namespace soul::gpu::impl
 	}
 
 	void RenderCompiler::apply_shader_arguments(const ShaderArgSetID* shader_arg_set_ids) {
+		SOUL_PROFILE_ZONE();
 		for (int i = 0; i < MAX_SET_PER_SHADER_PROGRAM; i++) {
-			if (shader_arg_set_ids[i].is_null()) continue;
+			if (shader_arg_set_ids[i].vkHandle == VK_NULL_HANDLE) continue;
 			if (shader_arg_set_ids[i] != currentShaderArgumentSets[i]) {
 				const ShaderArgSet arg_set = gpu_system_.get_shader_arg_set(shader_arg_set_ids[i]);
 				vkCmdBindDescriptorSets(commandBuffer, currentBindPoint, currentPipelineLayout, i, 1, &arg_set.vkHandle, arg_set.offsetCount, arg_set.offset);

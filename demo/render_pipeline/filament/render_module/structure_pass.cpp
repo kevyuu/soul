@@ -1,4 +1,5 @@
 #include "structure_pass.h"
+#include "runtime/scope_allocator.h"
 
 #include <variant>
 
@@ -143,6 +144,7 @@ namespace soul_fila
 				using DrawCommand = gpu::RenderCommandDrawPrimitive;
 				command_list.push<DrawCommand>(draw_items.size(), [&, sampler_id, set0](soul_size command_idx)
 				{
+					runtime::ScopeAllocator scope_allocator("Structure Pass Draw Command");
 					const DrawItem& drawItem = draw_items[command_idx];
 					const Primitive& primitive = *drawItem.primitive;
 					const Material& material = *drawItem.material;
@@ -170,15 +172,15 @@ namespace soul_fila
 					};
 					const gpu::ShaderArgSetID set2 = registry.get_shader_arg_set(2, { std::size(set2_descriptors), set2_descriptors });
 
-					soul::Array<gpu::Descriptor> set3Descriptors;
+					soul::Array<gpu::Descriptor> set3Descriptors(&scope_allocator);
 					set3Descriptors.reserve(gpu::MAX_BINDING_PER_SET);
-					set3Descriptors.add(gpu::Descriptor::Uniform(registry.get_buffer(params.objectsUBO), drawItem.index, { gpu::ShaderStage::VERTEX , gpu::ShaderStage::FRAGMENT }));
+					set3Descriptors.push_back(gpu::Descriptor::Uniform(registry.get_buffer(params.objectsUBO), drawItem.index, { gpu::ShaderStage::VERTEX , gpu::ShaderStage::FRAGMENT }));
 
 					const SkinID skin_id = renderables.elementAt<RenderablesIdx::SKIN_ID>(drawItem.index);
 					const Visibility visibility = renderables.elementAt<RenderablesIdx::VISIBILITY_STATE>(drawItem.index);
 					if (visibility.skinning || visibility.morphing) {
 						uint32 skin_index = skin_id.is_null() ? 0 : soul::cast<uint32>(skin_id.id);
-						set3Descriptors.add(gpu::Descriptor::Uniform(registry.get_buffer(params.bonesUBO), skin_index, { gpu::ShaderStage::VERTEX }));
+						set3Descriptors.push_back(gpu::Descriptor::Uniform(registry.get_buffer(params.bonesUBO), skin_index, { gpu::ShaderStage::VERTEX }));
 					}
 
 					const gpu::ShaderArgSetID set3 = registry.get_shader_arg_set(3, { uint32(set3Descriptors.size()), set3Descriptors.data() });

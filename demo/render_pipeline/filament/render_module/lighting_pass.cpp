@@ -5,6 +5,8 @@
 #include <set>
 #include <iostream>
 
+#include "runtime/scope_allocator.h"
+
 namespace soul_fila
 {
     void setup_key(const ProgramSetInfo& program_set_info, 
@@ -390,6 +392,7 @@ namespace soul_fila
 
 	            command_list.push<DrawCommand>(items.size(), [&, items, sampler_id, set0](soul_size command_index)
 	            {
+                    runtime::ScopeAllocator<> scope_allocator("Lighting Pass Command Building");
 	                gpu::GraphicPipelineStateDesc pipeline_desc = pipeline_base_desc;
 
 	                const DrawItem& draw_item = items[command_index];
@@ -418,7 +421,7 @@ namespace soul_fila
 	                };
 	                const gpu::ShaderArgSetID set2 = registry.get_shader_arg_set(2, { std::size(set2_descriptors), set2_descriptors});
 
-	                soul::Array<gpu::Descriptor> set3_descriptors;
+                    soul::Array<gpu::Descriptor> set3_descriptors(&scope_allocator);
 	                set3_descriptors.reserve(gpu::MAX_BINDING_PER_SET);
 	                set3_descriptors.add(gpu::Descriptor::Uniform(registry.get_buffer(params.objectUniformBuffer), draw_item.index, gpu::SHADER_STAGES_VERTEX_FRAGMENT));
 	                const SkinID skin_id = renderData.renderables.elementAt<RenderablesIdx::SKIN_ID>(draw_item.index);

@@ -25,6 +25,17 @@ namespace soul {
 
 		template<typename... ARGS>
 		void init(soul_size size, ARGS&&... args);
+
+		template<typename Construct>
+		void init_construct(soul_size size, Construct func)
+		{
+			_size = size;
+			_buffer = (T*)_allocator->allocate(_size * sizeof(T), alignof(T));
+			for (soul_size i = 0; i < _size; i++) {
+				func(i, _buffer + i);
+			}
+		}
+
 		void cleanup();
 
 		SOUL_NODISCARD T* ptr(soul_size idx) { SOUL_ASSERT(0, idx < _size, ""); return &_buffer[idx]; }

@@ -9,6 +9,7 @@
 #include <vk_mem_alloc.h>
 #pragma warning(pop)
 
+#include "intern/shader_arg_set_allocator.h"
 #include "object_pool.h"
 #include "object_cache.h"
 #include <variant>
@@ -27,6 +28,7 @@ namespace soul::gpu::impl
 	struct Shader;
 	struct Program;
 	struct Semaphore;
+	struct DescriptorSetLayoutKey;
 }
 
 namespace soul::gpu
@@ -40,6 +42,8 @@ namespace soul::gpu
 	using PipelineStateDesc = std::variant<GraphicPipelineStateDesc, ComputePipelineStateDesc>;
 	using PipelineStateCache = ConcurrentObjectCache<PipelineStateDesc, impl::PipelineState>;
 
+	using DescriptorSetLayoutCache = ConcurrentObjectCache<impl::DescriptorSetLayoutKey, VkDescriptorSetLayout>;
+	
 	// ID
 	using TextureID = ID<impl::Texture, TexturePool::ID, TexturePool::NULLVAL>;
 	using BufferID = ID<impl::Buffer, BufferPool::ID, BufferPool::NULLVAL>;
@@ -47,10 +51,10 @@ namespace soul::gpu
 	using SamplerID = ID<impl::Sampler, VkSampler, VK_NULL_HANDLE>;
 	constexpr SamplerID SAMPLER_ID_NULL = SamplerID();
 
+	using ShaderArgSetID = impl::ShaderArgSetAllocator::ID;
+
 	using PipelineStateID = ID<impl::PipelineState, PipelineStateCache::ID, PipelineStateCache::NULLVAL>;
 	constexpr PipelineStateID PIPELINE_STATE_ID_NULL = PipelineStateID();
-
-	using ShaderArgSetID = ID<impl::ShaderArgSet, uint32, 0>;
 
 	using ShaderID = ID<impl::Shader, ConcurrentObjectPool<impl::Shader>::ID, ConcurrentObjectPool<impl::Shader>::NULLVAL>;
 	constexpr ShaderID SHADER_ID_NULL = ShaderID();

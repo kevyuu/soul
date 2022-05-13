@@ -21,6 +21,9 @@
 
 #include "data.h"
 
+#include <chrono>
+#include <thread>
+
 using namespace soul;
 using namespace Demo;
 
@@ -105,6 +108,8 @@ int main(int argc, char* argv[])
 	if (args.path)
 		renderer.getScene()->import_from_gltf(args.path.value().c_str());
 
+	double last_time = glfwGetTime();
+	static constexpr double FRAME_TARGET_DELTA = 1.0 / 240;
 	while (!glfwWindowShouldClose(window))
 	{
 		SOUL_PROFILE_FRAME();
@@ -131,6 +136,12 @@ int main(int argc, char* argv[])
 		gpuSystem.frameFlush();
 
 		renderGraph.cleanup();
+		if (glfwGetTime() < last_time + FRAME_TARGET_DELTA)
+		{
+			soul_size delta = (glfwGetTime() - last_time) * 1000;
+			std::this_thread::sleep_for(std::chrono::milliseconds(delta));
+		}
+		last_time = glfwGetTime();
 	}
 
 	glfwDestroyWindow(window);

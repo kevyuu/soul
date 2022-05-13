@@ -72,7 +72,6 @@ namespace soul::gpu
 		SamplerID request_sampler(const SamplerDesc& desc);
 
 		ShaderArgSetID request_shader_arg_set(const ShaderArgSetDesc& desc);
-		const impl::ShaderArgSet& get_shader_arg_set_ref(ShaderArgSetID argSetID);
 		impl::ShaderArgSet get_shader_arg_set(ShaderArgSetID arg_set_id);
 
 		SemaphoreID create_semaphore();
