@@ -20,11 +20,11 @@
 #define SHADOW_RECEIVER_PLANE_DEPTH_BIAS  SHADOW_RECEIVER_PLANE_DEPTH_BIAS_DISABLED
 
 #if SHADOW_SAMPLING_ERROR == SHADOW_SAMPLING_ERROR_ENABLED
-#undef SHADOW_RECEIVER_PLANE_DEPTH_BIAS
-#define SHADOW_RECEIVER_PLANE_DEPTH_BIAS  SHADOW_RECEIVER_PLANE_DEPTH_BIAS_ENABLED
+  #undef SHADOW_RECEIVER_PLANE_DEPTH_BIAS
+  #define SHADOW_RECEIVER_PLANE_DEPTH_BIAS  SHADOW_RECEIVER_PLANE_DEPTH_BIAS_ENABLED
 #elif SHADOW_SAMPLING_METHOD < SHADOW_RECEIVER_PLANE_DEPTH_BIAS_MIN_SAMPLING_METHOD
-#undef SHADOW_RECEIVER_PLANE_DEPTH_BIAS
-#define SHADOW_RECEIVER_PLANE_DEPTH_BIAS  SHADOW_RECEIVER_PLANE_DEPTH_BIAS_DISABLED
+  #undef SHADOW_RECEIVER_PLANE_DEPTH_BIAS
+  #define SHADOW_RECEIVER_PLANE_DEPTH_BIAS  SHADOW_RECEIVER_PLANE_DEPTH_BIAS_DISABLED
 #endif
 
 //------------------------------------------------------------------------------
@@ -59,11 +59,11 @@ float samplingBias(float depth, const vec2 rpdb, const highp vec2 texelSize) {
 }
 
 float sampleDepth(const mediump sampler2DArrayShadow map, const uint layer,
-    const highp vec2 base, const highp vec2 dudv, float depth, vec2 rpdb) {
+        const highp vec2 base, const highp vec2 dudv, float depth, vec2 rpdb) {
 #if SHADOW_RECEIVER_PLANE_DEPTH_BIAS == SHADOW_RECEIVER_PLANE_DEPTH_BIAS_ENABLED
-#if SHADOW_SAMPLING_METHOD >= SHADOW_RECEIVER_PLANE_DEPTH_BIAS_MIN_SAMPLING_METHOD
+ #if SHADOW_SAMPLING_METHOD >= SHADOW_RECEIVER_PLANE_DEPTH_BIAS_MIN_SAMPLING_METHOD
     depth += dot(dudv, rpdb);
-#endif
+ #endif
 #endif
     // depth must be clamped to support floating-point depth formats. This is to avoid comparing a
     // value from the depth texture (which is never greater than 1.0) with a greater-than-one
@@ -73,7 +73,7 @@ float sampleDepth(const mediump sampler2DArrayShadow map, const uint layer,
 
 #if SHADOW_SAMPLING_METHOD == SHADOW_SAMPLING_PCF_HARD
 float ShadowSample_Hard(const mediump sampler2DArrayShadow map, const uint layer,
-    const highp vec2 size, const highp vec3 position) {
+        const highp vec2 size, const highp vec3 position) {
     highp vec2 texelSize = vec2(1.0) / size;
     vec2 rpdb = computeReceiverPlaneDepthBias(position);
     float depth = samplingBias(position.z, rpdb, texelSize);
@@ -83,7 +83,7 @@ float ShadowSample_Hard(const mediump sampler2DArrayShadow map, const uint layer
 
 #if SHADOW_SAMPLING_METHOD == SHADOW_SAMPLING_PCF_LOW
 float ShadowSample_PCF_Low(const mediump sampler2DArrayShadow map, const uint layer,
-    const highp vec2 size, highp vec3 position) {
+        const highp vec2 size, highp vec3 position) {
     //  Castaño, 2013, "Shadow Mapping Summary Part 1"
     highp vec2 texelSize = vec2(1.0) / size;
 
@@ -121,7 +121,7 @@ float ShadowSample_PCF_Low(const mediump sampler2DArrayShadow map, const uint la
 
 #if SHADOW_SAMPLING_METHOD == SHADOW_SAMPLING_PCF_MEDIUM
 float ShadowSample_PCF_Medium(const mediump sampler2DArrayShadow map, const uint layer,
-    const highp vec2 size, highp vec3 position) {
+        const highp vec2 size, highp vec3 position) {
     //  Castaño, 2013, "Shadow Mapping Summary Part 1"
     highp vec2 texelSize = vec2(1.0) / size;
 
@@ -165,7 +165,7 @@ float ShadowSample_PCF_Medium(const mediump sampler2DArrayShadow map, const uint
 
 #if SHADOW_SAMPLING_METHOD == SHADOW_SAMPLING_PCF_HIGH
 float ShadowSample_PCF_High(const mediump sampler2DArrayShadow map, const uint layer,
-    const highp vec2 size, highp vec3 position) {
+        const highp vec2 size, highp vec3 position) {
     //  Castaño, 2013, "Shadow Mapping Summary Part 1"
     highp vec2 texelSize = vec2(1.0) / size;
 
@@ -178,24 +178,24 @@ float ShadowSample_PCF_High(const mediump sampler2DArrayShadow map, const uint l
     highp vec2 st = fract(uv);
 
     vec4 uw = vec4(
-        5.0 * st.x - 6.0,
-        11.0 * st.x - 28.0,
+         5.0 * st.x - 6.0,
+         11.0 * st.x - 28.0,
         -(11.0 * st.x + 17.0),
         -(5.0 * st.x + 1.0));
     vec4 vw = vec4(
-        5.0 * st.y - 6.0,
-        11.0 * st.y - 28.0,
+         5.0 * st.y - 6.0,
+         11.0 * st.y - 28.0,
         -(11.0 * st.y + 17.0),
         -(5.0 * st.y + 1.0));
 
     vec4 u = vec4(
-        (4.0 * st.x - 5.0) / uw.x - 3.0,
-        (4.0 * st.x - 16.0) / uw.y - 1.0,
+         (4.0 * st.x - 5.0) / uw.x - 3.0,
+         (4.0 * st.x - 16.0) / uw.y - 1.0,
         -(7.0 * st.x + 5.0) / uw.z + 1.0,
         -st.x / uw.w + 3.0);
     vec4 v = vec4(
-        (4.0 * st.y - 5.0) / vw.x - 3.0,
-        (4.0 * st.y - 16.0) / vw.y - 1.0,
+         (4.0 * st.y - 5.0) / vw.x - 3.0,
+         (4.0 * st.y - 16.0) / vw.y - 1.0,
         -(7.0 * st.y + 5.0) / vw.z + 1.0,
         -st.y / vw.w + 3.0);
 
@@ -289,7 +289,7 @@ float screenSpaceContactShadow(vec3 lightDirection) {
     float t = dt * dither + dt;
 
     highp vec3 ray;
-    for (uint i = 0u; i < kStepCount; i++, t += dt) {
+    for (uint i = 0u ; i < kStepCount ; i++, t += dt) {
         ray = rayData.uvRayStart + rayData.uvRay * t;
         float z = 1.0 - textureLod(light_structure, uvToRenderTargetUV(ray.xy), 0.0).r;
         float dz = ray.z - z;
@@ -321,7 +321,7 @@ float reduceLightBleed(const float pMax, const float amount) {
 }
 
 float chebyshevUpperBound(const highp vec2 moments, const highp float mean,
-    const highp float minVariance, const float lightBleedReduction) {
+        const highp float minVariance, const float lightBleedReduction) {
     // Donnelly and Lauritzen 2006, "Variance Shadow Maps"
 
     highp float variance = moments.y - (moments.x * moments.x);
@@ -345,9 +345,9 @@ float chebyshevUpperBound(const highp vec2 moments, const highp float mean,
  * the light intensity.
  */
 
- // PCF sampling
+// PCF sampling
 float shadow(const mediump sampler2DArrayShadow shadowMap,
-    const uint layer, const highp vec3 shadowPosition) {
+        const uint layer, const highp vec3 shadowPosition) {
     highp vec2 size = vec2(textureSize(shadowMap, 0));
     // note: shadowPosition.z is in the [1, 0] range (reversed Z)
 #if SHADOW_SAMPLING_METHOD == SHADOW_SAMPLING_PCF_HARD
@@ -363,7 +363,7 @@ float shadow(const mediump sampler2DArrayShadow shadowMap,
 
 // VSM sampling
 float shadow(const mediump sampler2DArray shadowMap,
-    const uint layer, const highp vec3 shadowPosition) {
+        const uint layer, const highp vec3 shadowPosition) {
     // note: shadowPosition.z is in linear light space normalized to [0, 1]
     //  see: ShadowMap::computeVsmLightSpaceMatrix() in ShadowMap.cpp
     //  see: computeLightSpacePosition() in common_shadowing.fs

@@ -14,7 +14,7 @@ vec3 sampleSunAreaLight(const vec3 lightDirection) {
         float d = frameUniforms.sun.x;
         highp vec3 s = shading_reflected - LoR * lightDirection;
         return LoR < d ?
-            normalize(lightDirection * d + normalize(s) * frameUniforms.sun.y) : shading_reflected;
+                normalize(lightDirection * d + normalize(s) * frameUniforms.sun.y) : shading_reflected;
     }
 #endif
     return lightDirection;
@@ -31,7 +31,7 @@ Light getDirectionalLight() {
 }
 
 void evaluateDirectionalLight(const MaterialInputs material,
-    const PixelParams pixel, inout vec3 color) {
+        const PixelParams pixel, inout vec3 color) {
 
     Light light = getDirectionalLight();
 
@@ -61,9 +61,9 @@ void evaluateDirectionalLight(const MaterialInputs material,
 
         visibility *= 1.0 - ssContactShadowOcclusion;
 
-#if defined(MATERIAL_HAS_AMBIENT_OCCLUSION)
+        #if defined(MATERIAL_HAS_AMBIENT_OCCLUSION)
         visibility *= computeMicroShadowing(light.NoL, material.ambientOcclusion);
-#endif
+        #endif
 #if defined(MATERIAL_CAN_SKIP_LIGHTING)
         if (visibility <= 0.0) {
             return;
