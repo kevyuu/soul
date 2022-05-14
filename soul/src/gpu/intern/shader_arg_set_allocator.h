@@ -76,7 +76,7 @@ namespace soul::gpu::impl
 			FreeDescriptorSetCache freeDescriptorSetCache;
 			RingCache<DescriptorSetKey, DescriptorSet, RING_SIZE, DescriptorSetDeleter> descriptorSetCache;
 			ThreadContext(VkDevice device, VkDescriptorPool descriptor_pool, memory::Allocator* allocator):
-				proxyAllocator(memory::ProxyAllocator<memory::Allocator, memory::ProfileProxy>("Thread Context Allocator", allocator, memory::ProfileProxy({}))),
+				proxyAllocator(memory::ProxyAllocator<memory::Allocator, memory::ProfileProxy>("ShaderArgSet allocator", allocator, memory::ProfileProxy({}))),
 				descriptorPool(descriptor_pool),
 				descriptorSetCache(&proxyAllocator, DescriptorSetDeleter(device, descriptor_pool, &freeDescriptorSetCache))
 			{

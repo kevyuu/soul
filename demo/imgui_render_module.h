@@ -28,15 +28,15 @@ public:
 	};
 
 	void init(gpu::System* system) {
-
-		const char* vertSrc = LoadFile("shaders/imgui_render.vert.glsl");
+		runtime::ScopeAllocator<> scope_allocator("Imgui render module init");
+		const char* vertSrc = LoadFile("shaders/imgui_render.vert.glsl", &scope_allocator);
 		gpu::ShaderDesc vertShaderDesc;
 		vertShaderDesc.name = "Imgui vertex shader";
 		vertShaderDesc.source = vertSrc;
 		vertShaderDesc.sourceSize = strlen(vertSrc);
 		_vertShaderID = system->create_shader(vertShaderDesc, gpu::ShaderStage::VERTEX);
 
-		const char* fragSrc = LoadFile("shaders/imgui_render.frag.glsl");
+		const char* fragSrc = LoadFile("shaders/imgui_render.frag.glsl", &scope_allocator);
 		gpu::ShaderDesc fragShaderDesc;
 		fragShaderDesc.name = "Imgui fragment shader";
 		fragShaderDesc.source = fragSrc;

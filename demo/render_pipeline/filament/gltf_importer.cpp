@@ -2,11 +2,50 @@
 
 #include "gltf_importer.h"
 
+constexpr const char* CGLTF_ALLOCATION_NAME = "cgltf";
+static void* cgltf_malloc(size_t size)
+{
+    void* ptr = malloc(size);
+    SOUL_MEMPROFILE_REGISTER_ALLOCATION(CGLTF_ALLOCATION_NAME, "", ptr, size);
+    return ptr;
+}
+static void cgltf_free(void* ptr)
+{
+    SOUL_MEMPROFILE_REGISTER_DEALLOCATION(CGLTF_ALLOCATION_NAME, ptr, 0);
+    free(ptr);
+}
+#define CGLTF_MALLOC(sz) cgltf_malloc(sz)
+#define CGLTF_FREE(ptr) cgltf_free(ptr)
 #define CGLTF_IMPLEMENTATION
 #include "cgltf.h"
 
+constexpr const char* STBI_ALLOCATION_NAME = "stbi";
+static void* stbi_malloc(size_t size)
+{
+    void* ptr = malloc(size);
+    SOUL_MEMPROFILE_REGISTER_ALLOCATION(STBI_ALLOCATION_NAME, "", ptr, size);
+    return ptr;
+}
+
+static void stbi_free(void* ptr)
+{
+    SOUL_MEMPROFILE_REGISTER_DEALLOCATION(STBI_ALLOCATION_NAME, ptr, 0);
+    free(ptr);
+}
+
+static void* stbi_realloc(void* ptr, size_t size)
+{
+    SOUL_MEMPROFILE_REGISTER_DEALLOCATION(STBI_ALLOCATION_NAME, ptr, size);
+    void* new_ptr = realloc(ptr, size);
+    SOUL_MEMPROFILE_REGISTER_ALLOCATION(STBI_ALLOCATION_NAME, "", new_ptr, size);
+    return new_ptr;
+}
+#define STBI_MALLOC(sz)           stbi_malloc(sz)
+#define STBI_REALLOC(p,newsz)     stbi_realloc(p,newsz)
+#define STBI_FREE(p)              stbi_free(p)
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
+
 
 constexpr uint32 GLTF_URI_MAX_LENGTH = 1000;
 
@@ -981,7 +1020,7 @@ namespace soul_fila
         import_skins();
         scene_.update_bounding_box();
         scene_.fit_into_unit_cube();
-
+        
         cgltf_free(asset_);
 
         scene_.create_dfg("./assets/default_env/default_env_ibl.ktx", "Default env IBL");
@@ -1337,6 +1376,7 @@ namespace soul_fila
                 texture->gpuHandle = gpu_system_.create_texture(tex_desc, load_desc);
                 SOUL_ASSERT(0, !texture->gpuHandle.is_null(), "");
                 texture->samplerDesc = sampler_desc;
+                stbi_image_free(soul::cast<void*>(texels));
                 gpu_system_.finalize_texture(texture->gpuHandle, { gpu::TextureUsage::SAMPLED });
             });
         }

@@ -59,7 +59,7 @@ int main(int argc, char* argv[])
 	glfwMaximizeWindow(window);
 	SOUL_LOG_INFO("GLFW window creation sucessful");
 
-	memory::MallocAllocator mallocAllocator("Default");
+	memory::MallocAllocator mallocAllocator("Default allocator");
 	runtime::DefaultAllocator defaultAllocator(&mallocAllocator,
 		runtime::DefaultAllocatorProxy::Config(
 			memory::MutexProxy::Config(),
@@ -68,15 +68,16 @@ int main(int argc, char* argv[])
 			memory::ClearValuesProxy::Config{ char(0xFA), char(0xFF) },
 			memory::BoundGuardProxy::Config()));
 
-	memory::PageAllocator pageAllocator("Page Allocator");
-	memory::LinearAllocator linearAllocator("Main Thread Temporary Allocator", 10 * soul::memory::ONE_MEGABYTE, &pageAllocator);
-	runtime::TempAllocator tempAllocator(&linearAllocator,
+	memory::PageAllocator page_allocator("Page allocator");
+	memory::ProxyAllocator<memory::PageAllocator, memory::ProfileProxy> proxy_page_allocator(&page_allocator, memory::ProfileProxy::Config());
+	memory::LinearAllocator linear_allocator("Main Thread Temporary Allocator", 10 * soul::memory::ONE_MEGABYTE, &proxy_page_allocator);
+	runtime::TempAllocator temp_allocator(&linear_allocator,
 		runtime::TempProxy::Config());
 
 	runtime::init({
 		0,
 		4096,
-		&tempAllocator,
+		&temp_allocator,
 		20 * soul::memory::ONE_MEGABYTE,
 		&defaultAllocator
 		});

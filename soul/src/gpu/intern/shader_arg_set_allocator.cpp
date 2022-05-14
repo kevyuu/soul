@@ -26,17 +26,17 @@ namespace soul::gpu::impl
 				const VkDescriptorPoolSize pool_sizes[2] = {
 				{
 					.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC,
-					.descriptorCount = 1500
+					.descriptorCount = 2000
 				},
 				{
 					.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-					.descriptorCount = 3000
+					.descriptorCount = 4000
 				}
 				};
 				const VkDescriptorPoolCreateInfo pool_info = {
 					.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
 					.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT | VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT,
-					.maxSets = 1500,
+					.maxSets = 2000,
 					.poolSizeCount = std::size(pool_sizes),
 					.pPoolSizes = pool_sizes
 				};

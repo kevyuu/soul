@@ -1194,8 +1194,8 @@ namespace soul::gpu
 			ShaderArgSetAllocator arg_set_allocator;
 
 			explicit Database(memory::Allocator* backingAllocator) :
-				cpuAllocator("GPU System", backingAllocator, CPUAllocatorProxy::Config{ memory::ProfileProxy::Config(), memory::CounterProxy::Config() }),
-				vulkanCPUAllocator("Vulkan", &vulkanCPUBackingAllocator, VulkanCPUAllocatorProxy::Config{ memory::MutexProxy::Config(), memory::ProfileProxy::Config() }),
+				cpuAllocator("GPU System allocator", backingAllocator, CPUAllocatorProxy::Config{ memory::ProfileProxy::Config(), memory::CounterProxy::Config() }),
+				vulkanCPUAllocator("Vulkan allocator", &vulkanCPUBackingAllocator, VulkanCPUAllocatorProxy::Config{ memory::MutexProxy::Config(), memory::ProfileProxy::Config() }),
 				allocatorInitializer(&cpuAllocator) {
 				allocatorInitializer.end();
 			}
