@@ -119,7 +119,7 @@ namespace soul::gpu
 				.applicationVersion = VK_MAKE_VERSION(0, 0, 1),
 				.pEngineName = "Soul",
 				.engineVersion = VK_MAKE_VERSION(0, 0, 1),
-				.apiVersion = VK_API_VERSION_1_2
+				.apiVersion = VK_API_VERSION_1_3
 			};
 
 			static constexpr const char* REQUIRED_EXTENSIONS[] = {
