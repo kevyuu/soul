@@ -3,11 +3,11 @@
 #include "core/type_traits.h"
 #include "gpu/type.h"
 #include "gpu/render_graph.h"
-
 #if defined(SOUL_ASSERT_ENABLE)
 #define SOUL_VK_CHECK(result, message, ...) SOUL_ASSERT(0, result == VK_SUCCESS, "result = %d | " message, result, ##__VA_ARGS__)
 #else
-#define SOUL_VK_CHECK(result, message, ...) result
+#include <stdlib.h>
+#define SOUL_VK_CHECK(result, message, ...) do { if (result != VK_SUCCESS) { SOUL_LOG_ERROR("Vulkan Error = " #result ", result = %d | " message, result, ##__VA_ARGS__); exit(0); } } while(0)
 #endif
 
 namespace soul::gpu

@@ -710,7 +710,7 @@ namespace soul::gpu
 				.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
 				.flags = VK_FENCE_CREATE_SIGNALED_BIT
 			};
-			SOUL_VK_CHECK(vkCreateFence(_db.device, &fence_info, nullptr, &frame_context.fence), "");
+			SOUL_VK_CHECK(vkCreateFence(_db.device, &fence_info, nullptr, &frame_context.fence), "Fail to create Fence");
 
 			frame_context.imageAvailableSemaphore = create_semaphore();
 			frame_context.renderFinishedSemaphore = create_semaphore();
@@ -759,7 +759,7 @@ namespace soul::gpu
 
 		SOUL_VK_CHECK(vmaCreateImage(_db.gpuAllocator,
 			              &image_info, &alloc_info, &texture.vkHandle,
-			              &texture.allocation, nullptr), "");
+			              &texture.allocation, nullptr), "Fail to create image");
 
 		VkImageAspectFlags image_aspect = vkCastFormatToAspectFlags(desc.format);
 		if (image_aspect & VK_IMAGE_ASPECT_STENCIL_BIT)
@@ -783,7 +783,7 @@ namespace soul::gpu
 			}
 		};
 		SOUL_VK_CHECK(vkCreateImageView(_db.device,
-			              &image_view_info, nullptr, &texture.view), "Create Image View fail");
+			              &image_view_info, nullptr, &texture.view), "Fail to create image view");
 		
 		texture.layout = VK_IMAGE_LAYOUT_UNDEFINED;
 		texture.sharingMode = image_info.sharingMode;
@@ -902,7 +902,7 @@ namespace soul::gpu
 				}
 			};
 			SOUL_VK_CHECK(vkCreateImageView(_db.device,
-				              &image_view_info, nullptr, &texture->views[level]), "Create Image View fail");
+				              &image_view_info, nullptr, &texture->views[level]), "Fail to create image view");
 		}
 		return texture->views[level];
 	}
@@ -965,7 +965,7 @@ namespace soul::gpu
 			.usage = VMA_MEMORY_USAGE_GPU_ONLY
 		};
 
-		SOUL_VK_CHECK(vmaCreateBuffer(_db.gpuAllocator, &buffer_info, &alloc_info, &buffer.vkHandle, &buffer.allocation, nullptr), "");
+		SOUL_VK_CHECK(vmaCreateBuffer(_db.gpuAllocator, &buffer_info, &alloc_info, &buffer.vkHandle, &buffer.allocation, nullptr), "Fail to create buffer");
 		
 		buffer.unitSize = alignment;
 		buffer.desc = desc;
@@ -1116,7 +1116,7 @@ namespace soul::gpu
 			.pCode = spirv_code
 		};
 
-		SOUL_VK_CHECK(vkCreateShaderModule(_db.device, &module_info, nullptr, &shader.module), "");
+		SOUL_VK_CHECK(vkCreateShaderModule(_db.device, &module_info, nullptr, &shader.module), "Fail to create shader module");
 		
 		spirv_cross::Compiler spirv_compiler(spirv_code, spirv_code_size);
 		spirv_cross::ShaderResources resources = spirv_compiler.get_shader_resources();
@@ -1322,7 +1322,7 @@ namespace soul::gpu
 			};
 			SOUL_VK_CHECK(
 				vkCreateDescriptorSetLayout(_db.device, &layout_info, nullptr, &set_layout),
-				"");
+				"Fail to create descriptor set layout");
 			bindings.cleanup();
 			return set_layout;
 		}, key);
@@ -1532,7 +1532,7 @@ namespace soul::gpu
 			VkPipeline pipeline;
 			{
 				SOUL_PROFILE_ZONE_WITH_NAME("vkCreateGraphicsPipelines");
-				SOUL_VK_CHECK(vkCreateGraphicsPipelines(_db.device, VK_NULL_HANDLE, 1, &pipeline_info, nullptr, &pipeline), "");
+				SOUL_VK_CHECK(vkCreateGraphicsPipelines(_db.device, VK_NULL_HANDLE, 1, &pipeline_info, nullptr, &pipeline), "Fail to create graphics pipelines");
 			}
 
 			shader_stage_infos.cleanup();
@@ -1571,7 +1571,7 @@ namespace soul::gpu
 			VkPipeline pipeline;
 			{
 				SOUL_PROFILE_ZONE_WITH_NAME("vkCreateGraphicsPipelines");
-				SOUL_VK_CHECK(vkCreateComputePipelines(_db.device, VK_NULL_HANDLE, 1, &create_info, nullptr, &pipeline), "");
+				SOUL_VK_CHECK(vkCreateComputePipelines(_db.device, VK_NULL_HANDLE, 1, &create_info, nullptr, &pipeline), "Fail to create compute pipelines");
 			}
 			return { pipeline, VK_PIPELINE_BIND_POINT_COMPUTE, desc.programID };
 		};
@@ -1656,7 +1656,7 @@ namespace soul::gpu
 			.pSetLayouts = program.descriptorLayouts
 		};
 
-		SOUL_VK_CHECK(vkCreatePipelineLayout(_db.device, &pipelineLayoutInfo, nullptr, &program.pipelineLayout));
+		SOUL_VK_CHECK(vkCreatePipelineLayout(_db.device, &pipelineLayoutInfo, nullptr, &program.pipelineLayout), "Fail to create pipeline layout");
 
 		_db.programMaps.insert(programDesc, program_id);
 		return program_id;
@@ -1697,7 +1697,7 @@ namespace soul::gpu
 		};
 
 		VkSampler sampler;
-		SOUL_VK_CHECK(vkCreateSampler(_db.device, &sampler_create_info, nullptr, &sampler), "");
+		SOUL_VK_CHECK(vkCreateSampler(_db.device, &sampler_create_info, nullptr, &sampler), "Fail to create sampler");
 		_db.samplerMap.add(hash_key, sampler);
 
 		return SamplerID(sampler);
@@ -1869,7 +1869,7 @@ namespace soul::gpu
 		};
 
 		VkRenderPass render_pass;
-		SOUL_VK_CHECK(vkCreateRenderPass(_db.device, &render_pass_info, nullptr, &render_pass), "");
+		SOUL_VK_CHECK(vkCreateRenderPass(_db.device, &render_pass_info, nullptr, &render_pass), "Fail to create render pass");
 
 		_db.renderPassMaps.insert(key, render_pass);
 		
@@ -1879,7 +1879,7 @@ namespace soul::gpu
 	VkFramebuffer System::create_framebuffer(const VkFramebufferCreateInfo &info) {
 		SOUL_PROFILE_ZONE();
 		VkFramebuffer framebuffer;
-		SOUL_VK_CHECK(vkCreateFramebuffer(_db.device, &info, nullptr, &framebuffer), "");
+		SOUL_VK_CHECK(vkCreateFramebuffer(_db.device, &info, nullptr, &framebuffer), "Fail to create framebuffer");
 		return framebuffer;
 	}
 
@@ -1891,7 +1891,7 @@ namespace soul::gpu
 		SOUL_ASSERT_MAIN_THREAD();
 		VkEvent event;
 		const VkEventCreateInfo event_info = {.sType = VK_STRUCTURE_TYPE_EVENT_CREATE_INFO};
-		SOUL_VK_CHECK(vkCreateEvent(_db.device, &event_info, nullptr, &event), "");
+		SOUL_VK_CHECK(vkCreateEvent(_db.device, &event_info, nullptr, &event), "Fail to create event");
 		return event;
 	}
 
@@ -1906,7 +1906,7 @@ namespace soul::gpu
 		Semaphore &semaphore = _db.semaphores[semaphoreID.id];
 		semaphore = {};
 		const VkSemaphoreCreateInfo semaphore_info = {.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO};
-		SOUL_VK_CHECK(vkCreateSemaphore(_db.device, &semaphore_info, nullptr, &semaphore.vkHandle), "");
+		SOUL_VK_CHECK(vkCreateSemaphore(_db.device, &semaphore_info, nullptr, &semaphore.vkHandle), "Fail to create semaphore");
 		return semaphoreID;
 	}
 
@@ -1964,7 +1964,7 @@ namespace soul::gpu
 		SOUL_ASSERT(0, semaphoreCount <= MAX_SIGNAL_SEMAPHORE, "");
 		SOUL_PROFILE_ZONE();
 
-		SOUL_VK_CHECK(vkEndCommandBuffer(commandBuffer), "");
+		SOUL_VK_CHECK(vkEndCommandBuffer(commandBuffer), "Fail to end command buffer");
 
 		commands.add(commandBuffer);
 
@@ -2003,8 +2003,7 @@ namespace soul::gpu
 		submitInfo.signalSemaphoreCount = semaphoreCount;
 		submitInfo.pSignalSemaphores = signalSemaphores;
 
-		SOUL_VK_CHECK(vkQueueSubmit(vkHandle, 1, &submitInfo, fence), "");
-
+		SOUL_VK_CHECK(vkQueueSubmit(vkHandle, 1, &submitInfo, fence), "Fail to submit queue");
 		commands.resize(0);
 		waitSemaphores.resize(0);
 		waitStages.resize(0);
@@ -2012,7 +2011,7 @@ namespace soul::gpu
 
 	void CommandQueue::present(const VkPresentInfoKHR& presentInfo)
 	{
-		SOUL_VK_CHECK(vkQueuePresentKHR(vkHandle, &presentInfo), "");
+		SOUL_VK_CHECK(vkQueuePresentKHR(vkHandle, &presentInfo), "Fail to present queue");
 	}
 	
 	void System::execute(const RenderGraph &renderGraph) {
@@ -2041,7 +2040,7 @@ namespace soul::gpu
 		_FrameContext &frameContext = get_frame_context();
 		{
 			SOUL_PROFILE_ZONE_WITH_NAME("Wait fence");
-			SOUL_VK_CHECK(vkWaitForFences(_db.device, 1, &frameContext.fence, VK_TRUE, UINT64_MAX), "");
+			SOUL_VK_CHECK(vkWaitForFences(_db.device, 1, &frameContext.fence, VK_TRUE, UINT64_MAX), "Fail to wait fences");
 		}
 		
 		{
@@ -2146,12 +2145,12 @@ namespace soul::gpu
 		_FrameContext &frameContext = get_frame_context();
 		uint32 swapchainIndex = frameContext.swapchainIndex;
 		if (_db.swapchain.fences[swapchainIndex] != VK_NULL_HANDLE) {
-			SOUL_VK_CHECK(vkWaitForFences(_db.device, 1, &_db.swapchain.fences[swapchainIndex], VK_TRUE, UINT64_MAX), "");
+			SOUL_VK_CHECK(vkWaitForFences(_db.device, 1, &_db.swapchain.fences[swapchainIndex], VK_TRUE, UINT64_MAX), "Fail to wait fences");
 		}
 		_db.swapchain.fences[swapchainIndex] = frameContext.fence;
 
 		Texture &swapchainTexture = *get_texture_ptr(_db.swapchain.textures[swapchainIndex]);
-		SOUL_VK_CHECK(vkResetFences(_db.device, 1, &frameContext.fence), "");
+		SOUL_VK_CHECK(vkResetFences(_db.device, 1, &frameContext.fence), "Fail to reset fences");
 		{
 			SOUL_PROFILE_ZONE_WITH_NAME("GPU::System::LastSubmission");
 			frameContext.gpuResourceInitializer.flush(_db.queues, *this);
@@ -2296,7 +2295,7 @@ namespace soul::gpu
 			allocInfo.level = level;
 			allocInfo.commandBufferCount = 1;
 
-			SOUL_VK_CHECK(vkAllocateCommandBuffers(device, &allocInfo, &cmdBuffer), "");
+			SOUL_VK_CHECK(vkAllocateCommandBuffers(device, &allocInfo, &cmdBuffer), "Fail to allocate command buffers");
 			allocatedBuffers.add(cmdBuffer);
 		}
 
