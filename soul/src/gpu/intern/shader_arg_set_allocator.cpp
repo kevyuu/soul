@@ -26,22 +26,23 @@ namespace soul::gpu::impl
 				const VkDescriptorPoolSize pool_sizes[2] = {
 				{
 					.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC,
-					.descriptorCount = 500
+					.descriptorCount = 1500
 				},
 				{
 					.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-					.descriptorCount = 1050
+					.descriptorCount = 3000
 				}
 				};
 				const VkDescriptorPoolCreateInfo pool_info = {
 					.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
 					.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT | VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT,
-					.maxSets = 500,
+					.maxSets = 1500,
 					.poolSizeCount = std::size(pool_sizes),
 					.pPoolSizes = pool_sizes
 				};
-				VkDescriptorPool descriptor_pool;
+				VkDescriptorPool descriptor_pool = VK_NULL_HANDLE;
 				SOUL_VK_CHECK(vkCreateDescriptorPool(device, &pool_info, nullptr, &descriptor_pool), "");
+				if (descriptor_pool == VK_NULL_HANDLE) SOUL_LOG_WARN("Fail to create descriptor pool");
 				new (buffer) ThreadContext(device, descriptor_pool, allocator_);
 			});
 
@@ -58,14 +59,6 @@ namespace soul::gpu::impl
 		std::for_each(arg_set_desc.bindingDescriptions, arg_set_desc.bindingDescriptions + arg_set_desc.bindingCount,
 			[this, &offset_count, &hash, offsets](const Descriptor& desc)
 		{
-			auto get_buffer_vk_handle_ptr = [this](BufferID buffer_id) {
-				return &gpu_system_->get_buffer(buffer_id).vkHandle;
-			};
-
-			auto get_texture_vk_handle_ptr = [this](TextureID texture_id)
-			{
-				return &gpu_system_->get_texture(texture_id).vkHandle;
-			};
 
 			switch (desc.type) {
 			case DescriptorType::NONE:
@@ -74,17 +67,17 @@ namespace soul::gpu::impl
 				break;
 			}
 			case DescriptorType::UNIFORM_BUFFER: {
-				const UniformDescriptor& uniformDescriptor = desc.uniformInfo;
+				const UniformDescriptor& descriptor = desc.uniformInfo;
 				hash = hash_fnv1(&desc.type, hash);
-				hash = hash_fnv1(get_buffer_vk_handle_ptr(uniformDescriptor.bufferID), hash);
+				hash = hash_fnv1(&descriptor.bufferID.id.cookie, hash);
 				offsets[offset_count++] =
-					uniformDescriptor.unitIndex * soul::cast<uint32>(gpu_system_->get_buffer_ptr(uniformDescriptor.bufferID)->unitSize);
+					descriptor.unitIndex * soul::cast<uint32>(gpu_system_->get_buffer_ptr(descriptor.bufferID)->unitSize);
 				break;
 			}
 			case DescriptorType::SAMPLED_IMAGE: {
 				hash = hash_fnv1(&desc.type, hash);
 				const SampledImageDescriptor& descriptor = desc.sampledImageInfo;
-				hash = hash_fnv1(get_texture_vk_handle_ptr(descriptor.textureID), hash);
+				hash = hash_fnv1(&descriptor.textureID.id.cookie, hash);
 				hash = hash_fnv1(&desc.sampledImageInfo.samplerID, hash);
 				hash = hash_fnv1(&desc.sampledImageInfo.view, hash);
 				break;
@@ -123,7 +116,6 @@ namespace soul::gpu::impl
 		auto& thread_context = get_thread_context();
 		ID result;
 		DescriptorSetKey descriptor_set_key = get_descriptor_set_key(desc, result.offsetCount, result.offset);
-		thread_context.requestCount++;
 		DescriptorSet* set = thread_context.descriptorSetCache.get_or_create(descriptor_set_key,
 		[this](const ShaderArgSetDesc& desc, VkDevice device, VkDescriptorPool descriptor_pool, FreeDescriptorSetCache& free_set_cache)->DescriptorSet
 			{
@@ -228,12 +220,18 @@ namespace soul::gpu::impl
 
 	void ShaderArgSetAllocator::on_new_frame()
 	{
-		SOUL_LOG_INFO("On New Frame");
 		for (ThreadContext& thread_context : thread_contexts_)
 		{
-			SOUL_LOG_INFO("thread_context.requestCount=%d", thread_context.requestCount);
-			thread_context.requestCount = 0;
 			thread_context.descriptorSetCache.on_new_frame();
+		}
+	}
+
+	ShaderArgSetAllocator::~ShaderArgSetAllocator()
+	{
+		for (ThreadContext& thread_context : thread_contexts_)
+		{
+			vkResetDescriptorPool(device_, thread_context.descriptorPool, 0);
+			vkDestroyDescriptorPool(device_, thread_context.descriptorPool, nullptr);
 		}
 	}
 

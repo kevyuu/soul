@@ -34,6 +34,11 @@ namespace soul::gpu::impl
 	public:
 		using ID = ShaderArgSet;
 		explicit ShaderArgSetAllocator(memory::Allocator* allocator = GetDefaultAllocator()) : allocator_(allocator) {}
+		ShaderArgSetAllocator(const ShaderArgSetAllocator&) = delete;
+		ShaderArgSetAllocator& operator=(const ShaderArgSetAllocator&) = delete;
+		ShaderArgSetAllocator(ShaderArgSetAllocator&&) = delete;
+		ShaderArgSetAllocator& operator=(ShaderArgSetAllocator&&) = delete;
+		~ShaderArgSetAllocator();
 		void init(System* gpu_system, VkDevice device);
 		ID request_shader_arg_set(const ShaderArgSetDesc&);
 		ShaderArgSet get(ID id) { return id; }
@@ -70,14 +75,13 @@ namespace soul::gpu::impl
 			VkDescriptorPool descriptorPool = VK_NULL_HANDLE;
 			FreeDescriptorSetCache freeDescriptorSetCache;
 			RingCache<DescriptorSetKey, DescriptorSet, RING_SIZE, DescriptorSetDeleter> descriptorSetCache;
-			soul_size requestCount = 0;
 			ThreadContext(VkDevice device, VkDescriptorPool descriptor_pool, memory::Allocator* allocator):
 				proxyAllocator(memory::ProxyAllocator<memory::Allocator, memory::ProfileProxy>("Thread Context Allocator", allocator, memory::ProfileProxy({}))),
 				descriptorPool(descriptor_pool),
 				descriptorSetCache(&proxyAllocator, DescriptorSetDeleter(device, descriptor_pool, &freeDescriptorSetCache))
 			{
 
-				freeDescriptorSetCache.reserve(100);
+				freeDescriptorSetCache.reserve(2000);
 			}
 		};
 

@@ -18,7 +18,7 @@ namespace soul::gpu
 	{
 	public:
 		using ID = typename ObjectPool<ValType>::ID;
-		static constexpr ID NULLVAL = nullptr;
+		static constexpr ID NULLVAL = ObjectPool<ValType>::NULLVAL;
 
 		explicit ConcurrentObjectCache(memory::Allocator* allocator = GetDefaultAllocator()) :
 			read_only_map_(allocator), fallback_map_(allocator), fallback_keys_(allocator), object_pool_(allocator) {}
@@ -46,7 +46,7 @@ namespace soul::gpu
 			if (fallback_map_.contains(key))
 				return fallback_map_[key];
 			fallback_keys_.push_back(key);
-			ID id = object_pool_.create(func(std::forward<Args>(args)...));
+			auto id = object_pool_.create(func(std::forward<Args>(args)...));
 			fallback_map_.insert(key, id);
 			return id;
 		}
@@ -63,7 +63,7 @@ namespace soul::gpu
 
 		ValType* get(ID id) const
 		{
-			return id;
+			return object_pool_.get(id);
 		}
 
 	private:
@@ -141,7 +141,6 @@ namespace soul::gpu
 				object_pool_.destroy(item_id);
 				free_count++;
 			}
-			SOUL_LOG_INFO("Free Count : %d", free_count);
 			rings_[frame_index_].clear();
 		}
 

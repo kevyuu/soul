@@ -5,6 +5,7 @@
 #include "core/config.h"
 
 #include "core/mutex.h"
+#include <compare>
 
 namespace soul::gpu
 {
@@ -13,8 +14,12 @@ namespace soul::gpu
 	class ConcurrentObjectPool
 	{
 	public:
-		using ID = T*;
-		static constexpr T* const NULLVAL = nullptr;
+		struct ID {
+			T* obj = nullptr;
+			uint64 cookie = 0;
+			auto operator<=>(const ID&) const = default;
+		};
+		static constexpr ID const NULLVAL = { nullptr, 0 };
 
 		explicit ConcurrentObjectPool(soul::memory::Allocator* allocator = GetDefaultAllocator()) noexcept : allocator_(allocator)
 		{}
@@ -41,7 +46,7 @@ namespace soul::gpu
 				T* memory = static_cast<T*>(allocator_->allocate(num_objects * sizeof(T), alignof(T), ""));
 				if (!memory)
 				{
-					return nullptr;
+					return NULLVAL;
 				}
 				for (soul_size object_idx = 0; object_idx < num_objects; object_idx++)
 				{
@@ -52,19 +57,19 @@ namespace soul::gpu
 			T* ptr = vacants_.back();
 			vacants_.pop();
 			new(ptr) T(std::forward<ARGS>(args)...);
-			return ptr;
+			return { ptr, cookie++ };
 		}
 
 		void destroy(ID id)
 		{
-			id->~T();
+			id.obj->~T();
 			std::lock_guard guard(mutex_);
-			vacants_.push_back(id);
+			vacants_.push_back(id.obj);
 		}
 
 		T* get(ID id) const
 		{
-			return id;
+			return id.obj;
 		}
 
 	private:
@@ -72,6 +77,7 @@ namespace soul::gpu
 		Array<T*> vacants_;
 		Array<T*> memories_;
 		memory::Allocator* allocator_;
+		uint64 cookie = 0;
 	};
 
 	template<typename T, size_t BLOCK_SIZE = 512>
