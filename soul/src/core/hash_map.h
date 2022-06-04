@@ -283,12 +283,12 @@ namespace soul {
 		void copy_values(const HashMap<KeyType, ValType>& other) {
 			if (std::is_trivially_copyable_v<U>)
 			{
-				memcpy(values_, other._values, sizeof(ValType) * other._capacity);
+				memcpy(values_, other.values_, sizeof(ValType) * other.capacity_);
 			} else
 			{
-				for (soul_size i = 0; i < other._capacity; ++i) {
+				for (soul_size i = 0; i < other.capacity_; ++i) {
 					if (other.indexes_[i].dib == 0) continue;
-					new (values_ + i) ValType(other._values[i]);
+					new (values_ + i) ValType(other.values_[i]);
 				}
 			}
 		}

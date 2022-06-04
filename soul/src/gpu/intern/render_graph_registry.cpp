@@ -18,10 +18,6 @@ namespace soul::gpu
 		return execution_->get_texture_id(textureNodeId);
 	}
 
-	ShaderArgSetID RenderGraphRegistry::get_shader_arg_set(uint32 set, const ShaderArgSetDesc &desc) {
-		return system_->request_shader_arg_set(desc);
-	}
-
 	PipelineStateID RenderGraphRegistry::get_pipeline_state(const GraphicPipelineStateDesc& desc) {
 		return system_->request_pipeline_state(desc, render_pass_, sample_count_);
 	}

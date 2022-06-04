@@ -1,6 +1,9 @@
 cmake_minimum_required(VERSION 3.21)
 cmake_policy(SET CMP0091 NEW)
-project(soul)
+project(soul
+	VERSION "0.0.1"
+	LANGUAGES CXX
+)
 
 # ==================================================================================================
 # General compiler flags
@@ -53,5 +56,5 @@ endif()
 
 add_subdirectory(dependencies)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/soul)
-add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/demo)
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/sample)
 

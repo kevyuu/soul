@@ -53,6 +53,23 @@ namespace soul::Util
 		return dstFlags;
 	}
 
+	template <typename F>
+	struct ScopeExit {
+		ScopeExit(F f) : f(f) {}
+		~ScopeExit() { f(); }
+		F f;
+	};
+
+	template <typename F>
+	ScopeExit<F> make_scope_exit(F f) {
+		return ScopeExit<F>(f);
+	};
+
+#define STRING_JOIN2(arg1, arg2) DO_STRING_JOIN2(arg1, arg2)
+#define DO_STRING_JOIN2(arg1, arg2) arg1 ## arg2
+#define SCOPE_EXIT(code) \
+    auto STRING_JOIN2(scope_exit_, __LINE__) = soul::Util::make_scope_exit([=](){code;})
+
 #if __has_builtin(__builtin_expect)
 #   ifdef __cplusplus
 #      define SOUL_LIKELY( exp )    (__builtin_expect( !!(exp), true ))

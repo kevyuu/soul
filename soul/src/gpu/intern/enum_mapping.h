@@ -5,7 +5,6 @@
 
 namespace soul::gpu
 {
-
 	static auto RESOURCE_OWNER_TO_QUEUE_TYPE = EnumArray<ResourceOwner, QueueType>::build_from_list({
 		QueueType::COUNT,
 		QueueType::GRAPHIC,
@@ -44,17 +43,7 @@ namespace soul::gpu
 		});
 		return IMAGE_LAYOUT_MAP[layout];
 	}
-
-	static auto DESCRIPTOR_TYPE_MAP = EnumArray<DescriptorType, VkDescriptorType>::build_from_list({
-		VK_DESCRIPTOR_TYPE_MAX_ENUM,
-		VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC,
-		VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-		VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT,
-		VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
-	});
-	SOUL_ALWAYS_INLINE VkDescriptorType vkCast(DescriptorType type) {
-		return DESCRIPTOR_TYPE_MAP[type];
-	}
+	
 
 	static auto FORMAT_MAP = EnumArray<TextureFormat, VkFormat>::build_from_list({
 		VK_FORMAT_D16_UNORM,
@@ -236,8 +225,8 @@ namespace soul::gpu
 		});
 	}
 
-	SOUL_ALWAYS_INLINE VkShaderStageFlags vkCast(ShaderStage stageFlag) noexcept {
-		static auto MAPPING = EnumArray<ShaderStage, VkShaderStageFlags>::build_from_list({
+	SOUL_ALWAYS_INLINE VkShaderStageFlagBits vkCast(ShaderStage stageFlag) noexcept {
+		static auto MAPPING = EnumArray<ShaderStage, VkShaderStageFlagBits>::build_from_list({
 			VK_SHADER_STAGE_VERTEX_BIT,
 			VK_SHADER_STAGE_GEOMETRY_BIT,
 			VK_SHADER_STAGE_FRAGMENT_BIT,

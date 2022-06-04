@@ -1,5 +1,6 @@
 cmake_minimum_required(VERSION 3.10)
-project(soul_lib)
+project(soul_lib
+	VERSION "0.0.1")
 
 set (PUBLIC_HEADER_DIR src)
 
@@ -68,7 +69,8 @@ set (SOUL_SOURCES
 	src/gpu/intern/render_graph_execution.cpp
 	src/gpu/intern/render_graph_registry.cpp
 	src/gpu/intern/render_compiler.cpp
-	src/gpu/intern/shader_arg_set_allocator.cpp
+	
+	src/gpu/intern/bindless_descriptor_allocator.cpp
 
 	src/memory/intern/malloc_allocator.cpp
 	src/memory/intern/proxy.cpp
@@ -84,8 +86,8 @@ set (SOUL_SOURCES
 
 add_library(soul STATIC ${SOUL_SOURCES})
 target_link_libraries(soul
-	PUBLIC glfw ${GLFW_LIBRARIES} vk_mem_alloc ${NVTX}
-	PRIVATE volk shaderc spirv-cross-core tracy)
+	PUBLIC glfw ${GLFW_LIBRARIES} ${NVTX} vk_mem_alloc tracy
+	PRIVATE volk slang)
 target_include_directories(soul 
 	PUBLIC src/ ${NVTX_INCLUDE_DIR})
 

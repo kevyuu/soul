@@ -1,3 +1,4 @@
+
 #pragma once
 
 // TODO: Figure out how to do it without single header library
@@ -13,13 +14,14 @@
 #include "gpu/id.h"
 #include "gpu/constant.h"
 #include "gpu/intern/render_compiler.h"
-#include "gpu/intern/shader_arg_set_allocator.h"
+#include "gpu/intern/bindless_descriptor_allocator.h"
 
 #include "core/type.h"
 #include "core/mutex.h"
 #include "core/array.h"
 #include "core/enum_array.h"
 #include "core/pool.h"
+#include "core/string.h"
 #include "core/uint64_hash_map.h"
 #include "core/hash_map.h"
 #include "core/flag_set.h"
@@ -27,13 +29,17 @@
 #include "runtime/runtime.h"
 #include "memory/allocators/proxy_allocator.h"
 
-#include <shared_mutex>
+#include <filesystem>
+
+namespace slang
+{
+	class IGlobalSession;
+}
 
 namespace soul::gpu
 {
 	class System;
 	class RenderGraph;
-
 	
 	enum class VertexElementType : uint8_t {
 		BYTE,
@@ -252,32 +258,6 @@ namespace soul::gpu
 		COUNT
 	};
 
-	enum class DescriptorType : uint8 {
-		NONE,
-		UNIFORM_BUFFER,
-		SAMPLED_IMAGE,
-		INPUT_ATTACHMENT,
-		STORAGE_IMAGE,
-		COUNT
-	};
-	struct DescriptorTypeUtil {
-		static bool IsBuffer(DescriptorType type) {
-			return type == DescriptorType::UNIFORM_BUFFER;
-		}
-
-		static bool IsWriteableBuffer(DescriptorType type) {
-			return false;
-		}
-
-		static bool IsTexture(DescriptorType type) {
-			return type == DescriptorType::SAMPLED_IMAGE || type == DescriptorType::STORAGE_IMAGE;
-		}
-
-		static bool IsWriteableTexture(DescriptorType type) {
-			return type == DescriptorType::STORAGE_IMAGE;
-		}
-	};
-
 	enum class TextureLayout : uint8 {
 		DONT_CARE,
 		UNDEFINED,
@@ -398,77 +378,6 @@ namespace soul::gpu
 		const_iterator begin() const noexcept { return const_iterator(base.get_level(), base.get_layer(), base.get_level() + levelCount); }
 		const_iterator end() const noexcept { return const_iterator(base.get_level(), base.get_layer() + layerCount, base.get_level() + levelCount); }
 	};
-
-
-	struct UniformDescriptor {
-		BufferID bufferID;
-		uint32 unitIndex;
-	};
-
-	struct SampledImageDescriptor {
-		TextureID textureID;
-		SamplerID samplerID;
-		std::optional<SubresourceIndex> view = std::nullopt;
-	};
-
-	struct StorageImageDescriptor {
-		TextureID textureID;
-		uint8 mipLevel;
-	};
-
-	struct InputAttachmentDescriptor {
-		TextureID textureID;
-	};
-
-	struct Descriptor {
-		DescriptorType type = DescriptorType::NONE;
-		union {
-			UniformDescriptor uniformInfo;
-			SampledImageDescriptor sampledImageInfo;
-			StorageImageDescriptor storageImageInfo;
-			InputAttachmentDescriptor inputAttachmentInfo;
-		};
-		ShaderStageFlags stageFlags;
-
-		inline static Descriptor Uniform(BufferID bufferID, uint32 unitIndex, ShaderStageFlags stageFlags) {
-			Descriptor descriptor = {};
-			descriptor.type = DescriptorType::UNIFORM_BUFFER;
-			descriptor.uniformInfo.bufferID = bufferID;
-			descriptor.uniformInfo.unitIndex = unitIndex;
-			descriptor.stageFlags = stageFlags;
-			return descriptor;
-		}
-
-		inline static Descriptor SampledImage(TextureID textureID, SamplerID samplerID, ShaderStageFlags stageFlags, std::optional<SubresourceIndex> view = std::nullopt) {
-			Descriptor descriptor = {};
-			descriptor.type = DescriptorType::SAMPLED_IMAGE;
-			descriptor.sampledImageInfo.textureID = textureID;
-			descriptor.sampledImageInfo.samplerID = samplerID;
-			descriptor.sampledImageInfo.view = view;
-			descriptor.stageFlags = stageFlags;
-			return descriptor;
-		}
-
-		inline static Descriptor StorageImage(TextureID textureID, uint8 mipLevel, ShaderStageFlags stageFlags) {
-			Descriptor descriptor = {};
-			descriptor.type = DescriptorType::STORAGE_IMAGE;
-			descriptor.storageImageInfo.textureID = textureID;
-			descriptor.storageImageInfo.mipLevel = mipLevel;
-			descriptor.stageFlags = stageFlags;
-			return descriptor;
-		}
-
-		inline static Descriptor InputAttachment(TextureID textureID, ShaderStageFlags stageFlags) {
-			Descriptor descriptor = {};
-			descriptor.type = DescriptorType::INPUT_ATTACHMENT;
-			descriptor.inputAttachmentInfo.textureID = textureID;
-			descriptor.stageFlags = stageFlags;
-			return descriptor;
-		}
-
-	};
-
-
 
 	struct BufferDesc {
 		soul_size count = 0;
@@ -593,8 +502,6 @@ namespace soul::gpu
 
 	};
 
-
-
 	struct SamplerDesc {
 		TextureFilter minFilter = TextureFilter::COUNT;
 		TextureFilter magFilter = TextureFilter::COUNT;
@@ -625,27 +532,36 @@ namespace soul::gpu
 		}
 	};
 
-	struct ShaderDesc {
-		const char* name = nullptr;
-		const char* source = nullptr;
-		uint32 sourceSize = 0;
+	struct ShaderFile
+	{
+		std::filesystem::path path;
+		ShaderFile() = default;
+		explicit ShaderFile(const std::filesystem::path& path) : path(path) {}
+	};
+	struct ShaderString
+	{
+		soul::String source;
+		ShaderString() = default;
+		explicit ShaderString(const String& str) : source(str) {}
+		[[nodiscard]] const char* c_str() const { return source.data(); }
+	};
+	using ShaderSource = std::variant<ShaderFile, ShaderString>;
+	using EntryPoints = EnumArray<ShaderStage, const char*>;
+
+	struct ShaderDefine
+	{
+		const char* key;
+		const char* value;
 	};
 
 	struct ProgramDesc {
-		EnumArray<ShaderStage, ShaderID> shaderIDs;
-
-		ProgramDesc() {
-			shaderIDs = {};
-		}
-
-		bool operator==(const ProgramDesc& other) const {
-			return (memcmp(this, &other, sizeof(ProgramDesc)) == 0);
-		}
-
-		bool operator!=(const ProgramDesc& other) const {
-			return (memcmp(this, &other, sizeof(ProgramDesc)) != 0);
-		}
-
+		std::filesystem::path* searchPaths = nullptr;
+		soul_size searchPathCount = 0;
+		ShaderDefine* shaderDefines = nullptr;
+		soul_size shaderDefineCount = 0;
+		ShaderSource* sources = nullptr;
+		soul_size sourceCount = 0;
+		EntryPoints entryPointNames = EnumArray<ShaderStage, const char*>(nullptr);
 	};
 
 	using AttachmentFlagBits = enum {
@@ -688,18 +604,18 @@ namespace soul::gpu
 		} inputAttributes[MAX_INPUT_PER_SHADER];
 
 		struct ViewportDesc {
-			uint16 offsetX = 0;
-			uint16 offsetY = 0;
-			uint16 width = 0;
-			uint16 height = 0;
+			int32 offsetX = 0;
+			int32 offsetY = 0;
+			uint32 width = 0;
+			uint32 height = 0;
 		} viewport;
 
 		struct ScissorDesc {
 			bool dynamic = false;
-			uint16 offsetX = 0;
-			uint16 offsetY = 0;
-			uint16 width = 0;
-			uint16 height = 0;
+			int32 offsetX = 0;
+			int32 offsetY = 0;
+			uint32 width = 0;
+			uint32 height = 0;
 		} scissor;
 
 		struct RasterDesc {
@@ -834,7 +750,6 @@ namespace soul::gpu
 		};
 
 		struct ProgramDescriptorBinding {
-			DescriptorType type = DescriptorType::NONE;
 			uint8 count = 0;
 			uint8 attachmentIndex = 0;
 			VkShaderStageFlags shaderStageFlags = 0;
@@ -897,7 +812,6 @@ namespace soul::gpu
 		};
 
 		struct ShaderDescriptorBinding {
-			DescriptorType type = {};
 			uint8 count = 0;
 			uint8 attachmentIndex = 0;
 		};
@@ -910,36 +824,39 @@ namespace soul::gpu
 		struct Buffer {
 			BufferDesc desc;
 			VkBuffer vkHandle = VK_NULL_HANDLE;
-			soul_size unitSize;
+			soul_size unitSize = 0;
 			VmaAllocation allocation{};
 			ResourceOwner owner = ResourceOwner::NONE;
+			DescriptorID storageBufferGPUHandle;
+		};
+
+		struct TextureView
+		{
+			VkImageView vkHandle = VK_NULL_HANDLE;
+			DescriptorID storageImageGPUHandle;
+			DescriptorID sampledImageGPUHandle;
 		};
 
 		struct Texture {
 			TextureDesc desc;
 			VkImage vkHandle = VK_NULL_HANDLE;
-			VkImageView view = VK_NULL_HANDLE;
+			TextureView view;
 			VmaAllocation allocation = VK_NULL_HANDLE;
 			VkImageLayout layout = VK_IMAGE_LAYOUT_UNDEFINED;
 			VkSharingMode sharingMode = {};
 			ResourceOwner owner = ResourceOwner::NONE;
-			VkImageView* views = nullptr;
+			TextureView* views = nullptr;
 		};
 
-		struct Shader {
-			VkShaderModule module = VK_NULL_HANDLE;
-			ShaderDescriptorBinding bindings[MAX_SET_PER_SHADER_PROGRAM][MAX_BINDING_PER_SET];
-			ShaderInput inputs[MAX_INPUT_PER_SHADER];
-			uint32 inputStride = 0;
+		struct Shader
+		{
+			VkShaderModule vkHandle = VK_NULL_HANDLE;
+			String entryPoint;
 		};
-
-
 
 		struct Program {
 			VkPipelineLayout pipelineLayout;
-			VkDescriptorSetLayout descriptorLayouts[MAX_SET_PER_SHADER_PROGRAM];
-			ProgramDescriptorBinding bindings[MAX_SET_PER_SHADER_PROGRAM][MAX_BINDING_PER_SET];
-			EnumArray<ShaderStage, ShaderID> shaderIDs;
+			EnumArray<ShaderStage, Shader> shaders;
 		};
 
 		struct Semaphore {
@@ -1121,7 +1038,6 @@ namespace soul::gpu
 			struct Garbages {
 				Array<TextureID> textures;
 				Array<BufferID> buffers;
-				Array<ShaderID> shaders;
 				Array<VkRenderPass> renderPasses;
 				Array<VkFramebuffer> frameBuffers;
 				Array<VkPipeline> pipelines;
@@ -1163,6 +1079,8 @@ namespace soul::gpu
 			VkPhysicalDeviceProperties physicalDeviceProperties;
 			VkPhysicalDeviceFeatures physicalDeviceFeatures;
 
+			slang::IGlobalSession* slang_global_session = nullptr;
+
 			CommandQueues queues;
 
 			VkSurfaceKHR surface;
@@ -1181,17 +1099,15 @@ namespace soul::gpu
 			ConcurrentObjectPool<Shader> shaders;
 
 			PipelineStateCache pipeline_state_cache_;
-			DescriptorSetLayoutCache descriptor_set_layout_cache;
 			
-			HashMap<ProgramDesc, ProgramID> programMaps;
 			Pool<Program> programs;
 
 			HashMap<RenderPassKey, VkRenderPass> renderPassMaps;
 
 			Pool<Semaphore> semaphores;
 
-			UInt64HashMap<VkSampler> samplerMap;
-			ShaderArgSetAllocator arg_set_allocator;
+			UInt64HashMap<SamplerID> samplerMap;
+			BindlessDescriptorAllocator descriptorAllocator;
 
 			explicit Database(memory::Allocator* backingAllocator) :
 				cpuAllocator("GPU System allocator", backingAllocator, CPUAllocatorProxy::Config{ memory::ProfileProxy::Config(), memory::CounterProxy::Config() }),
@@ -1206,9 +1122,8 @@ namespace soul::gpu
 
 	// Render Command API
 	enum class RenderCommandType : uint8 {
-		DRAW_INDEX,
-		DRAW_PRIMITIVE,
-		DISPATCH,
+		DRAW,
+		DRAW_PRIMITIVE_BINDLESS,
 		COPY_TEXTURE,
 		COUNT
 	};
@@ -1224,32 +1139,30 @@ namespace soul::gpu
 		RenderCommandTyped() { type = TYPE; }
 	};
 
-	struct RenderCommandDrawIndex : RenderCommandTyped<RenderCommandType::DRAW_INDEX> {
+	struct RenderCommandDraw : RenderCommandTyped<RenderCommandType::DRAW>
+	{
 		static constexpr QueueType QUEUE_TYPE = QueueType::GRAPHIC;
-
 		PipelineStateID pipelineStateID = PIPELINE_STATE_ID_NULL;
-		ShaderArgSetID shaderArgSetIDs[MAX_SET_PER_SHADER_PROGRAM];
-		BufferID vertexBufferID;
+		void* pushConstantData = nullptr;
+		uint32 pushConstantSize = 0;
+		BufferID vertexBufferIDs[soul::gpu::MAX_VERTEX_BINDING];
+		uint16 vertexOffsets[MAX_VERTEX_BINDING];
+		uint32 vertexCount = 0;
+		uint32 instanceCount = 0;
+		uint32 firstVertex = 0;
+		uint32 firstInstance = 0;
+	};
+
+	struct RenderCommandDrawPrimitiveBindless : RenderCommandTyped<RenderCommandType::DRAW_PRIMITIVE_BINDLESS> {
+		static constexpr QueueType QUEUE_TYPE = QueueType::GRAPHIC;
+		PipelineStateID pipelineStateID = PIPELINE_STATE_ID_NULL;
+		void* pushConstantData = nullptr;
+		uint32 pushConstantSize = 0;
+		BufferID vertexBufferIDs[soul::gpu::MAX_VERTEX_BINDING];
+		uint16 vertexOffsets[MAX_VERTEX_BINDING];
 		BufferID indexBufferID;
 		uint16 indexOffset = 0;
-		uint16 vertexOffset = 0;
 		uint16 indexCount = 0;
-	};
-
-	struct RenderCommandDrawPrimitive : RenderCommandTyped<RenderCommandType::DRAW_PRIMITIVE> {
-		static constexpr QueueType QUEUE_TYPE = QueueType::GRAPHIC;
-		PipelineStateID pipelineStateID = PIPELINE_STATE_ID_NULL;
-		ShaderArgSetID shaderArgSetIDs[MAX_SET_PER_SHADER_PROGRAM];
-		BufferID vertexBufferIDs[soul::gpu::MAX_VERTEX_BINDING];
-		BufferID indexBufferID;
-	};
-
-	struct RenderCommandDispatch : RenderCommandTyped<RenderCommandType::DISPATCH>
-	{
-		static constexpr QueueType QUEUE_TYPE = QueueType::COMPUTE;
-		PipelineStateID pipelineStateID = PIPELINE_STATE_ID_NULL;
-		ShaderArgSetID shaderArgSetIDs[MAX_SET_PER_SHADER_PROGRAM];
-		Vec3ui32 groupCount;
 	};
 
 	struct RenderCommandCopyTexture : RenderCommandTyped<RenderCommandType::COPY_TEXTURE>
@@ -1270,141 +1183,6 @@ namespace soul::gpu
 	template <typename T>
 	concept graphic_render_command = render_command<T> && T::QUEUE_TYPE == QueueType::GRAPHIC;
 
-	class GraphicCommandList
-	{
-	private:
-		impl::PrimaryCommandBuffer primary_command_buffer_;
-		const VkRenderPassBeginInfo& render_pass_begin_info_;
-		impl::CommandPools& command_pools_;
-		System& gpu_system_;
-
-		static constexpr uint32 SECONDARY_COMMAND_BUFFER_THRESHOLD = 10;
-
-	public:
-		constexpr GraphicCommandList(impl::PrimaryCommandBuffer primary_command_buffer,
-			const VkRenderPassBeginInfo& render_pass_begin_info, impl::CommandPools& command_pools, System& gpu_system) :
-			primary_command_buffer_(primary_command_buffer), render_pass_begin_info_(render_pass_begin_info), command_pools_(command_pools),
-			gpu_system_(gpu_system) {}
-
-		template<
-			graphic_render_command RenderCommandType,
-			command_generator<RenderCommandType> CommandGenerator>
-		void push(const soul_size count, CommandGenerator&& generator)
-		{
-			if (count > SECONDARY_COMMAND_BUFFER_THRESHOLD)
-			{
-				primary_command_buffer_.begin_render_pass(render_pass_begin_info_, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
-				const uint32 thread_count = runtime::get_thread_count();
-
-				Array<impl::SecondaryCommandBuffer> secondary_command_buffers;
-				secondary_command_buffers.resize(thread_count);
-
-				struct TaskData
-				{
-					Array<impl::SecondaryCommandBuffer>& cmdBuffers;
-					soul_size commandCount;
-					VkRenderPass renderPass;
-					VkFramebuffer framebuffer;
-					impl::CommandPools& commandPools;
-					gpu::System& gpuSystem;
-				};
-				const TaskData task_data = {
-					secondary_command_buffers,
-					count,
-					render_pass_begin_info_.renderPass,
-					render_pass_begin_info_.framebuffer,
-					command_pools_,
-					gpu_system_
-				};
-
-				runtime::TaskID task_id = runtime::parallel_for_task_create(
-					runtime::TaskID::ROOT(), thread_count, 1,
-					[&task_data, &generator](int index)
-					{
-						auto&& command_buffers = task_data.cmdBuffers;
-						const auto command_count = task_data.commandCount;
-						impl::SecondaryCommandBuffer command_buffer = task_data.commandPools.request_secondary_command_buffer(task_data.renderPass, 0, task_data.framebuffer);
-						const uint32 div = command_count / command_buffers.size();
-						const uint32 mod = command_count % command_buffers.size();
-
-						impl::RenderCompiler render_compiler(task_data.gpuSystem, command_buffer.get_vk_handle());
-						if (soul::cast<uint32>(index) < mod)
-						{
-							soul_size start = index * (div + 1);
-
-							for (soul_size i = 0; i < div + 1; i++)
-							{
-								render_compiler.compile_command(generator(start + i));
-							}
-						}
-						else
-						{
-							soul_size start = mod * (div + 1) + (index - mod) * div;
-							for (soul_size i = 0; i < div; i++)
-							{
-								render_compiler.compile_command(generator(start + i));
-							}
-						}
-						command_buffer.end();
-						command_buffers[index] = command_buffer;
-
-					});
-				runtime::run_task(task_id);
-				runtime::wait_task(task_id);
-				primary_command_buffer_.execute_secondary_command_buffers(soul::cast<uint32>(secondary_command_buffers.size()), secondary_command_buffers.data());
-				primary_command_buffer_.end_render_pass();
-			}
-			else
-			{
-				primary_command_buffer_.begin_render_pass(render_pass_begin_info_, VK_SUBPASS_CONTENTS_INLINE);
-				impl::RenderCompiler render_compiler(gpu_system_, primary_command_buffer_.get_vk_handle());
-				for (soul_size command_idx = 0; command_idx < count; command_idx++)
-				{
-					render_compiler.compile_command(generator(command_idx));
-				}
-				primary_command_buffer_.end_render_pass();
-			}
-			
-		}
-
-		template <graphic_render_command RenderCommandType>
-		void push(soul_size count, const RenderCommandType* render_commands)
-		{
-			push<RenderCommandType>(count, [render_commands](soul_size index)
-			{
-				return *(render_commands + index);
-			});
-		}
-
-		template<graphic_render_command RenderCommandType>
-		void push(const RenderCommandType& render_command)
-		{
-			push(1, &render_command);
-		}
-	};
-
-	class ComputeCommandList
-	{
-	private:
-		impl::RenderCompiler& render_compiler_;
-	public:
-		explicit ComputeCommandList(impl::RenderCompiler& render_compiler) : render_compiler_(render_compiler) {}
-
-		void push(const RenderCommandDispatch& command)
-		{
-			render_compiler_.compile_command(command);
-		}
-	};
-
-	class CopyCommandList
-	{
-		impl::RenderCompiler& render_compiler_;
-	public:
-		explicit CopyCommandList(impl::RenderCompiler& render_compiler) : render_compiler_(render_compiler) {}
-		void push(const RenderCommandCopyTexture& command)
-		{
-			render_compiler_.compile_command(command);
-		}
-	};
+	
 
 }

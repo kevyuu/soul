@@ -121,7 +121,7 @@ namespace soul {
 		inline void _destructUnits() {
 			for (int i = 0; i < _capacity; i++) {
 				if (!_bitSet.test(i)) continue;
-				_buffer[i]->datum.~T();
+				_buffer[i].datum.~T();
 			}
 		}
 

@@ -35,7 +35,7 @@ namespace soul {
 
 		SOUL_NODISCARD soul_size size() const { return _size; }
 
-		SOUL_NODISCARD char* data() const { return _data; }
+		SOUL_NODISCARD const char* data() const { return _data; }
 
 	private:
 		memory::Allocator* _allocator;

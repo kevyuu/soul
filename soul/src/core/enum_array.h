@@ -34,6 +34,14 @@ namespace soul {
 			return ret;
 		}
 
+		explicit EnumArray<EnumType, ValType>(std::initializer_list<std::pair<EnumType, ValType>> init_list) noexcept : buffer_()
+		{
+			for (auto item : init_list)
+			{
+				buffer_[to_underlying(item.first)] = item.second;
+			}
+		}
+
 		constexpr ValType& operator[](EnumType index) noexcept {
 			SOUL_ASSERT(0, to_underlying(index) < to_underlying(EnumType::COUNT), "");
 			return buffer_[to_underlying(index)];

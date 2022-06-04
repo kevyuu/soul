@@ -7,15 +7,7 @@ add_subdirectory(glfw)
 add_subdirectory(volk)
 target_include_directories(volk
 	PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
-
-add_subdirectory(glslang)
-add_subdirectory(SPIRV-Headers)
-add_subdirectory(SPIRV-Tools)
-add_subdirectory(SPIRV-Cross)
-
-set(SHADERC_SKIP_TESTS ON)
-set(SHADERC_SKIP_INSTALL ON)
-add_subdirectory(shaderc)
+add_subdirectory(slang)
 
 # Tracy
 set (TRACY_SOURCES

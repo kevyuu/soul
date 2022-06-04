@@ -7,10 +7,10 @@
 #include "runtime/runtime.h"
 
 #include "gpu/type.h"
+#include "gpu/command_list.h"
 
 namespace soul::gpu
 {
-	class gpu::System;
 	namespace impl
 	{
 		struct TextureNode;

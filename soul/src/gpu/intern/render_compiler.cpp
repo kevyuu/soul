@@ -19,8 +19,8 @@ namespace soul::gpu::impl
 				break
 
 		switch (command.type) {
-		COMPILE_PACKET(RenderCommandDrawIndex);
-		COMPILE_PACKET(RenderCommandDrawPrimitive);
+		COMPILE_PACKET(RenderCommandDraw);
+		COMPILE_PACKET(RenderCommandDrawPrimitiveBindless);
 		COMPILE_PACKET(RenderCommandCopyTexture);
 			break;
 		default:
@@ -28,44 +28,45 @@ namespace soul::gpu::impl
 		}
 	}
 
-	void RenderCompiler::compile_command(const RenderCommandDrawIndex& command) {
+	void RenderCompiler::compile_command(const RenderCommandDraw& command)
+	{
 		SOUL_PROFILE_ZONE();
 		apply_pipeline_state(command.pipelineStateID);
-		apply_shader_arguments(command.shaderArgSetIDs);
+		apply_push_constant(command.pushConstantData, command.pushConstantSize);
 
-		const Buffer& vertexBuffer = gpu_system_.get_buffer(command.vertexBufferID);
-		SOUL_ASSERT(0, vertexBuffer.desc.usageFlags.test(BufferUsage::VERTEX), "");
-
-		const Buffer& indexBuffer = gpu_system_.get_buffer(command.indexBufferID);
-		SOUL_ASSERT(0, indexBuffer.desc.usageFlags.test(BufferUsage::INDEX), "");
-
-		VkDeviceSize offsets[] = { 0 };
-		vkCmdBindVertexBuffers(commandBuffer, 0, 1, &vertexBuffer.vkHandle, offsets);
-		vkCmdBindIndexBuffer(commandBuffer, indexBuffer.vkHandle, 0, indexBuffer.unitSize == 2 ? VK_INDEX_TYPE_UINT16 : VK_INDEX_TYPE_UINT32);
-		vkCmdDrawIndexed(commandBuffer, command.indexCount, 1, command.indexOffset, command.vertexOffset, 0);
-
-	}
-
-	void RenderCompiler::compile_command(const RenderCommandDrawPrimitive& command) {
-		SOUL_PROFILE_ZONE();
-		apply_pipeline_state(command.pipelineStateID);
-		apply_shader_arguments(command.shaderArgSetIDs);
-
-		for (uint32 vertBufIdx = 0; vertBufIdx < MAX_VERTEX_BINDING; vertBufIdx++) {
-			BufferID vertBufID = command.vertexBufferIDs[vertBufIdx];
-			if (vertBufID.is_null()) {
+		for (uint32 vert_buf_idx = 0; vert_buf_idx < MAX_VERTEX_BINDING; vert_buf_idx++) {
+			BufferID vert_buf_id = command.vertexBufferIDs[vert_buf_idx];
+			if (vert_buf_id.is_null()) {
 				continue;
 			}
-			const Buffer& vertexBuffer = gpu_system_.get_buffer(vertBufID);
-			SOUL_ASSERT(0, vertexBuffer.desc.usageFlags.test(BufferUsage::VERTEX), "");
+			const Buffer& vertex_buffer = gpu_system_.get_buffer(vert_buf_id);
+			SOUL_ASSERT(0, vertex_buffer.desc.usageFlags.test(BufferUsage::VERTEX), "");
 			VkDeviceSize offsets[] = { 0 };
-			vkCmdBindVertexBuffers(commandBuffer, vertBufIdx, 1, &vertexBuffer.vkHandle, offsets);			
+			vkCmdBindVertexBuffers(commandBuffer, vert_buf_idx, 1, &vertex_buffer.vkHandle, offsets);
+		}
+		vkCmdDraw(commandBuffer, command.vertexCount, command.instanceCount, command.firstVertex, command.firstInstance);
+	}
+
+	void RenderCompiler::compile_command(const RenderCommandDrawPrimitiveBindless& command) {
+		SOUL_PROFILE_ZONE();
+		apply_pipeline_state(command.pipelineStateID);
+		apply_push_constant(command.pushConstantData, command.pushConstantSize);
+		
+		for (uint32 vert_buf_idx = 0; vert_buf_idx < MAX_VERTEX_BINDING; vert_buf_idx++) {
+			BufferID vert_buf_id = command.vertexBufferIDs[vert_buf_idx];
+			if (vert_buf_id.is_null()) {
+				continue;
+			}
+			const Buffer& vertex_buffer = gpu_system_.get_buffer(vert_buf_id);
+			SOUL_ASSERT(0, vertex_buffer.desc.usageFlags.test(BufferUsage::VERTEX), "");
+			VkDeviceSize offsets[] = { 0 };
+			vkCmdBindVertexBuffers(commandBuffer, vert_buf_idx, 1, &vertex_buffer.vkHandle, offsets);
 		}
 
-		const Buffer& indexBuffer = gpu_system_.get_buffer(command.indexBufferID);
-		SOUL_ASSERT(0, indexBuffer.desc.usageFlags.test(gpu::BufferUsage::INDEX), "");
-		vkCmdBindIndexBuffer(commandBuffer, indexBuffer.vkHandle, 0, indexBuffer.unitSize == 2 ? VK_INDEX_TYPE_UINT16 : VK_INDEX_TYPE_UINT32);
-		vkCmdDrawIndexed(commandBuffer, indexBuffer.desc.count, 1, 0, 0, 1);
+		const Buffer& index_buffer = gpu_system_.get_buffer(command.indexBufferID);
+		SOUL_ASSERT(0, index_buffer.desc.usageFlags.test(gpu::BufferUsage::INDEX), "");
+		vkCmdBindIndexBuffer(commandBuffer, index_buffer.vkHandle, 0, index_buffer.unitSize == 2 ? VK_INDEX_TYPE_UINT16 : VK_INDEX_TYPE_UINT32);
+		vkCmdDrawIndexed(commandBuffer, command.indexCount, 1, command.indexOffset, command.vertexOffsets[0], 1);
 	}
 
 	void RenderCompiler::compile_command(const RenderCommandCopyTexture& command)
@@ -109,20 +110,14 @@ namespace soul::gpu::impl
 			vkCmdBindPipeline(commandBuffer, pipeline_state.bindPoint, pipeline_state.vkHandle);
 			currentPipeline = pipeline_state.vkHandle;
 			const Program& program = gpu_system_.get_program(pipeline_state.programID);
-			currentPipelineLayout = program.pipelineLayout;
-			currentBindPoint = pipeline_state.bindPoint;
 		}
 	}
 
-	void RenderCompiler::apply_shader_arguments(const ShaderArgSetID* shader_arg_set_ids) {
+	void RenderCompiler::apply_push_constant(void* push_constant_data, uint32 push_constant_size)
+	{
+		if (push_constant_data == nullptr) return;
 		SOUL_PROFILE_ZONE();
-		for (int i = 0; i < MAX_SET_PER_SHADER_PROGRAM; i++) {
-			if (shader_arg_set_ids[i].vkHandle == VK_NULL_HANDLE) continue;
-			if (shader_arg_set_ids[i] != currentShaderArgumentSets[i]) {
-				const ShaderArgSet arg_set = gpu_system_.get_shader_arg_set(shader_arg_set_ids[i]);
-				vkCmdBindDescriptorSets(commandBuffer, currentBindPoint, currentPipelineLayout, i, 1, &arg_set.vkHandle, arg_set.offsetCount, arg_set.offset);
-				currentShaderArgumentSets[i] = shader_arg_set_ids[i];
-			}
-		}
+		vkCmdPushConstants(commandBuffer, gpu_system_.get_bindless_pipeline_layout(), VK_SHADER_STAGE_ALL, 0, push_constant_size, push_constant_data);
 	}
+
 }

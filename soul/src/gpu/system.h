@@ -1,18 +1,18 @@
 #pragma once
 
-#include "core/type_traits.h"
 #include "gpu/type.h"
-#include "gpu/render_graph.h"
+#include "gpu/intern/bindless_descriptor_allocator.h"
+
 #if defined(SOUL_ASSERT_ENABLE)
 #define SOUL_VK_CHECK(result, message, ...) SOUL_ASSERT(0, result == VK_SUCCESS, "result = %d | " message, result, ##__VA_ARGS__)
 #else
-#include <stdlib.h>
-#define SOUL_VK_CHECK(result, message, ...) do { if (result != VK_SUCCESS) { SOUL_LOG_ERROR("Vulkan Error = " #result ", result = %d | " message, result, ##__VA_ARGS__); exit(0); } } while(0)
+#include <cstdlib>
+#define SOUL_VK_CHECK(expr, message, ...) do { VkResult _result = expr; if (_result != VK_SUCCESS) { SOUL_LOG_ERROR("Vulkan error| expr = %s, result = %s ", #expr, _result); SOUL_LOG_ERROR("Message = %s", ##__VA_ARGS__); } } while(0)
 #endif
 
 namespace soul::gpu
 {
-
+	class RenderGraph;
 	class GraphicBaseNode;
 
 	class System {
@@ -35,6 +35,7 @@ namespace soul::gpu
 		BufferID create_buffer(const BufferDesc& desc);
 		BufferID create_buffer(const BufferDesc& desc, const void* data);
 		void finalize_buffer(BufferID buffer_id);
+		void destroy_buffer_descriptor(BufferID buffer_id);
 		void destroy_buffer(BufferID bufferID);
 		impl::Buffer* get_buffer_ptr(BufferID buffer_id);
 		const impl::Buffer& get_buffer(BufferID buffer_id) const;
@@ -45,34 +46,31 @@ namespace soul::gpu
 		void finalize_texture(TextureID texture_id, TextureUsageFlags usage_flags);
 		uint32 get_texture_mip_levels(TextureID texture_id) const;
 		const TextureDesc& get_texture_desc(const TextureID texture_id) const;
-		
+		void destroy_texture_descriptor(TextureID texture_id);
 		void destroy_texture(TextureID textureID);
 		impl::Texture* get_texture_ptr(TextureID texture_id);
 		const impl::Texture& get_texture(TextureID texture_id) const;
-		VkImageView get_texture_view(TextureID texture_id, uint32 level, uint32 layer = 0);
-		VkImageView get_texture_view(TextureID texture_id, SubresourceIndex subresource_index);
-		VkImageView get_texture_view(TextureID texture_id, const std::optional<SubresourceIndex> subresource);
-
-		ShaderID create_shader(const ShaderDesc& desc, ShaderStage stage);
-		void destroy_shader(ShaderID shader_id);
-		impl::Shader* get_shader_ptr(ShaderID shader_id);
-
-		VkDescriptorSetLayout request_descriptor_layout(const impl::DescriptorSetLayoutKey& key);
-
-		ProgramID request_program(const ProgramDesc& key);
+		impl::TextureView get_texture_view(TextureID texture_id, uint32 level, uint32 layer = 0);
+		impl::TextureView get_texture_view(TextureID texture_id, SubresourceIndex subresource_index);
+		impl::TextureView get_texture_view(TextureID texture_id, const std::optional<SubresourceIndex> subresource);
+		
+		ProgramID create_program(const ProgramDesc& key);
 		impl::Program* get_program_ptr(ProgramID program_id);
 		const impl::Program& get_program(ProgramID program_id);
-
 
 		PipelineStateID request_pipeline_state(const GraphicPipelineStateDesc& key, VkRenderPass renderPass, const TextureSampleCount sample_count);
 		PipelineStateID request_pipeline_state(const ComputePipelineStateDesc& key);
 		impl::PipelineState* get_pipeline_state_ptr(PipelineStateID pipeline_state_id);
 		const impl::PipelineState& get_pipeline_state(PipelineStateID pipeline_state_id);
+		VkPipelineLayout get_bindless_pipeline_layout() const;
+		impl::BindlessDescriptorSets get_bindless_descriptor_sets() const;
 
 		SamplerID request_sampler(const SamplerDesc& desc);
 
-		ShaderArgSetID request_shader_arg_set(const ShaderArgSetDesc& desc);
-		impl::ShaderArgSet get_shader_arg_set(ShaderArgSetID arg_set_id);
+		DescriptorID get_ssbo_descriptor_id(BufferID buffer_id) const;
+		DescriptorID get_srv_descriptor_id(TextureID texture_id, std::optional<SubresourceIndex> subresource_index = std::nullopt);
+		DescriptorID get_uav_descriptor_id(TextureID texture_id, std::optional<SubresourceIndex> subresource_index = std::nullopt);
+		DescriptorID get_sampler_descriptor_id(SamplerID sampler_id) const;
 
 		SemaphoreID create_semaphore();
 		void reset_semaphore(SemaphoreID ID);
@@ -84,14 +82,14 @@ namespace soul::gpu
 
 		void execute(const RenderGraph& renderGraph);
 
-		void frameFlush();
+		void flush_frame();
 		void _frameBegin();
 		void _frameEnd();
 
-		Vec2ui32 getSwapchainExtent();
-		TextureID getSwapchainTexture();
+		Vec2ui32 get_swapchain_extent();
+		TextureID get_swapchain_texture();
 
-		void create_surface(void* windowHandle, VkSurfaceKHR* surface);
+		void create_surface(void* window_handle, VkSurfaceKHR* surface);
 
 		impl::_FrameContext& get_frame_context();
 
@@ -103,6 +101,8 @@ namespace soul::gpu
 		impl::QueueData get_queue_data_from_queue_flags(QueueFlags flags) const;
 
 		impl::Database _db;
+
+		soul_size class_size() const { return sizeof(*this); }
 	};
 
 }

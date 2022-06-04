@@ -4,24 +4,9 @@
 [submodule "dependencies/glfw"]
 	path = dependencies/glfw
 	url = https://github.com/glfw/glfw.git
-[submodule "dependencies/SPIRV-Cross"]
-	path = dependencies/SPIRV-Cross
-	url = https://github.com/KhronosGroup/SPIRV-Cross.git
-[submodule "dependencies/shaderc"]
-	path = dependencies/shaderc
-	url = https://github.com/google/shaderc.git
 [submodule "dependencies/VulkanMemoryAllocator"]
 	path = dependencies/VulkanMemoryAllocator
 	url = https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator.git
-[submodule "dependencies/SPIRV-Tools"]
-	path = dependencies/SPIRV-Tools
-	url = https://github.com/KhronosGroup/SPIRV-Tools
-[submodule "dependencies/SPIRV-Headers"]
-	path = dependencies/SPIRV-Headers
-	url = https://github.com/KhronosGroup/SPIRV-Headers
-[submodule "dependencies/glslang"]
-	path = dependencies/glslang
-	url = https://github.com/KhronosGroup/glslang
 [submodule "dependencies/tracy"]
 	path = dependencies/tracy
 	url = https://github.com/wolfpld/tracy

@@ -32,30 +32,6 @@ namespace soul::gpu::impl
 		PassType::NONE
 	});
 
-	auto DESCRIPTOR_TYPE_TO_BUFFER_USAGE_FLAGS = EnumArray<DescriptorType, BufferUsageFlags>::build_from_list({
-		BufferUsageFlags(),
-		{ BufferUsage::UNIFORM },
-		{},
-		{ BufferUsage::UNIFORM },
-		{}
-	});
-	constexpr BufferUsageFlags get_buffer_usage_flags(DescriptorType descriptor)
-	{
-		return DESCRIPTOR_TYPE_TO_BUFFER_USAGE_FLAGS[descriptor];
-	}
-
-	auto DESCRIPTOR_TYPE_TO_TEXTURE_USAGE_FLAGS = EnumArray<DescriptorType, TextureUsageFlags>::build_from_list({
-		TextureUsageFlags(),
-		{},
-		{ TextureUsage::SAMPLED },
-		{},
-		{ TextureUsage::STORAGE }
-	});
-	constexpr TextureUsageFlags get_texture_usage_flags(DescriptorType descriptor)
-	{
-		return DESCRIPTOR_TYPE_TO_TEXTURE_USAGE_FLAGS[descriptor];
-	}
-
 	auto SHADER_BUFFER_READ_USAGE_MAP = EnumArray<ShaderBufferReadUsage, BufferUsageFlags>::build_from_list({
 		BufferUsageFlags({ BufferUsage::UNIFORM }),
 		{ BufferUsage::STORAGE}
@@ -669,13 +645,13 @@ namespace soul::gpu::impl
 
 		for (const ColorAttachment& attachment : render_target.colorAttachments) {
 			const auto texture_id = get_texture_id(attachment.outNodeID);
-			image_views[image_view_count++] = gpu_system_->get_texture_view(texture_id, attachment.desc.view);
+			image_views[image_view_count++] = gpu_system_->get_texture_view(texture_id, attachment.desc.view).vkHandle;
 		}
 
 		for (const ResolveAttachment& attachment : render_target.resolveAttachments)
 		{
 			const auto texture_id = get_texture_id(attachment.outNodeID);
-			image_views[image_view_count++] = gpu_system_->get_texture_view(texture_id, attachment.desc.view);
+			image_views[image_view_count++] = gpu_system_->get_texture_view(texture_id, attachment.desc.view).vkHandle;
 		}
 
 		/* for (const InputAttachment& attachment : graphic_node->inputAttachments) {
@@ -688,7 +664,7 @@ namespace soul::gpu::impl
 			const TextureExecInfo& texture_info = texture_infos_[info_idx];
 			auto depth_attachment_desc = render_target.depthStencilAttachment.desc;
 
-			image_views[image_view_count++] = gpu_system_->get_texture_view(texture_info.textureID, depth_attachment_desc.view);
+			image_views[image_view_count++] = gpu_system_->get_texture_view(texture_info.textureID, depth_attachment_desc.view).vkHandle;
 		}
 
 		VkFramebufferCreateInfo framebuffer_info = {

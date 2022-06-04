@@ -2,6 +2,7 @@
 #include "gpu/render_graph.h"
 #include "gpu/intern/enum_mapping.h"
 #include "gpu/intern/render_graph_execution.h"
+#include "gpu/intern/bindless_descriptor_allocator.h"
 
 #include "runtime/system.h"
 
@@ -16,20 +17,55 @@
 #define VMA_IMPLEMENTATION
 
 #include <vk_mem_alloc.h>
-#include <shaderc/shaderc.hpp>
-#include <spirv_cross.hpp>
 
 #include <cstddef>
 #include <limits>
 #include <string>
 #include <sstream>
 #include <random>
+#include <variant>
+#include <span>
+#include <slang/slang.h>
+#include <slang/slang-com-ptr.h>
 
 #include "memory/allocator.h"
+
+static const char* RESOURCE_SLANG = R"SLANG(
+[[vk::binding(0, 0)]] ByteAddressBuffer global_buffers[];
+[[vk::binding(0, 1)]] SamplerState global_samplers[];
+[[vk::binding(0, 2)]] Texture2D global_2d_textures[];
+[[vk::binding(0, 2)]] TextureCube global_cube_textures[];
+
+__glsl_extension(GL_EXT_nonuniform_qualifier)
+T get_buffer<T>(uint descriptor_id) {
+	return global_buffers[descriptor_id].Load<T>(0);
+}
+
+SamplerState get_sampler(uint descriptor_id) {
+	return global_samplers[descriptor_id];
+}
+
+Texture2D get_texture_2d(uint descriptor_id) {
+	return global_2d_textures[descriptor_id];
+}
+)SLANG";
 
 namespace soul::gpu
 {
 	using namespace impl;
+
+	slang::IGlobalSession* create_slang_global_session()
+	{
+		slang::IGlobalSession* result = nullptr;
+		slang::createGlobalSession(&result);
+		return result;
+	}
+
+	slang::IGlobalSession* get_slang_global_session()
+	{
+		static slang::IGlobalSession* slang_global_session = create_slang_global_session();
+		return slang_global_session;
+	}
 
 	static void* vma_alloc_callback(void* user_data, const size_t size, const size_t alignment, VkSystemAllocationScope allocation_scope)
 	{
@@ -477,7 +513,12 @@ namespace soul::gpu
 			};
 			VkPhysicalDeviceDescriptorIndexingFeatures indexing_features = {
 				.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES,
+				.descriptorBindingSampledImageUpdateAfterBind = VK_TRUE,
+				.descriptorBindingStorageImageUpdateAfterBind = VK_TRUE,
+				.descriptorBindingStorageBufferUpdateAfterBind = VK_TRUE,
+				.descriptorBindingUpdateUnusedWhilePending = VK_TRUE,
 				.descriptorBindingPartiallyBound = VK_TRUE,
+				.descriptorBindingVariableDescriptorCount = VK_TRUE,
 				.runtimeDescriptorArray = VK_TRUE
 			};
 			VkPhysicalDeviceVulkanMemoryModelFeatures memory_model_features = {
@@ -626,7 +667,7 @@ namespace soul::gpu
 				Texture& texture = *get_texture_ptr(texture_id);
 				texture.desc = TextureDesc::D2("Swapchain Texture", TextureFormat::BGRA8, 1, {}, {}, Vec2ui32(db->swapchain.extent.width, db->swapchain.extent.height));
 				texture.vkHandle = image;
-				texture.view = image_view;
+				texture.view.vkHandle = image_view;
 				texture.layout = VK_IMAGE_LAYOUT_UNDEFINED;
 				texture.sharingMode = image_sharing_mode;
 				texture.owner = ResourceOwner::NONE;
@@ -690,8 +731,9 @@ namespace soul::gpu
 			SOUL_LOG_INFO("Vulkan init allocator sucessful");
 		};
 		init_allocator(&_db);
-		_db.arg_set_allocator.init(this, _db.device);
+		_db.descriptorAllocator.init(_db.device);
 		init_frame_context(config);
+		_db.slang_global_session = get_slang_global_session();
 		_frameBegin();
 	}
 
@@ -782,9 +824,18 @@ namespace soul::gpu
 				VK_REMAINING_ARRAY_LAYERS
 			}
 		};
+
 		SOUL_VK_CHECK(vkCreateImageView(_db.device,
-			              &image_view_info, nullptr, &texture.view), "Fail to create image view");
-		
+			              &image_view_info, nullptr, &texture.view.vkHandle), "Fail to create image view");
+		if (desc.usageFlags.test(TextureUsage::SAMPLED))
+		{
+			texture.view.sampledImageGPUHandle = _db.descriptorAllocator.create_sampled_image_descriptor(texture.view.vkHandle);
+		}
+		if (desc.usageFlags.test(TextureUsage::STORAGE))
+		{
+			texture.view.storageImageGPUHandle = _db.descriptorAllocator.create_storage_image_descriptor(texture.view.vkHandle);
+		}
+
 		texture.layout = VK_IMAGE_LAYOUT_UNDEFINED;
 		texture.sharingMode = image_info.sharingMode;
 		texture.owner = ResourceOwner::NONE;
@@ -860,6 +911,19 @@ namespace soul::gpu
 		return get_texture(texture_id).desc;
 	}
 
+	void System::destroy_texture_descriptor(TextureID texture_id)
+	{
+		auto destroy_texture_view_descriptor = [this](TextureView& texture_view)
+		{
+			_db.descriptorAllocator.destroy_sampled_image_descriptor(texture_view.sampledImageGPUHandle);
+			_db.descriptorAllocator.destroy_storage_image_descriptor(texture_view.storageImageGPUHandle);
+		};
+		Texture& texture = *get_texture_ptr(texture_id);
+		destroy_texture_view_descriptor(texture.view);
+		uint32 view_count = texture.desc.mipLevels * texture.desc.layerCount;
+		if (texture.views != nullptr) std::for_each_n(texture.views, view_count, destroy_texture_view_descriptor);
+	}
+
 	void System::destroy_texture(TextureID id) {
 		SOUL_ASSERT_MAIN_THREAD();
 		get_frame_context().garbages.textures.add(id);
@@ -874,27 +938,29 @@ namespace soul::gpu
 		return *texture;
 	}
 
-	VkImageView System::get_texture_view(const TextureID texture_id, const uint32 level, const uint32 layer) {
-		Texture* texture = get_texture_ptr(texture_id);
-		SOUL_ASSERT(0, level < texture->desc.mipLevels, "");
+	TextureView System::get_texture_view(const TextureID texture_id, const uint32 level,
+	                                                        const uint32 layer) {
+		Texture& texture = *get_texture_ptr(texture_id);
+		SOUL_ASSERT(0, level < texture.desc.mipLevels, "");
 
-		const uint32 layer_count = texture->desc.type == TextureType::D2_ARRAY ? texture->desc.extent.z : 1;
+		const uint32 layer_count = texture.desc.type == TextureType::D2_ARRAY ? texture.desc.extent.z : 1;
 
-		if (texture->desc.mipLevels == 1) return texture->view;
-		if (texture->views == nullptr) {
-			texture->views = static_cast<VkImageView*>(_db.cpuAllocator.allocate(sizeof(VkImageView) * layer_count * texture->desc.mipLevels, alignof(VkImageView)));
-			std::fill_n(texture->views, texture->desc.mipLevels, VK_NULL_HANDLE);
+		if (texture.desc.mipLevels == 1) return texture.view;
+		if (texture.views == nullptr) {
+			texture.views = _db.cpuAllocator.create_raw_array<TextureView>(soul::cast<uint64>(layer_count) * texture.desc.mipLevels);
+			std::fill_n(texture.views, texture.desc.mipLevels, TextureView());
 		}
-		const soul_size view_idx = layer * texture->desc.mipLevels + level;
-		if (texture->views[view_idx] == VK_NULL_HANDLE) {
+		const soul_size view_idx = layer * texture.desc.mipLevels + level;
+		if (texture.views[view_idx].vkHandle == VK_NULL_HANDLE) {
+			TextureView& texture_view = texture.views[level];
 			const VkImageViewCreateInfo image_view_info = {
 				.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
-				.image = texture->vkHandle,
-				.viewType = vkCastToImageViewType(texture->desc.type),
-				.format = vkCast(texture->desc.format),
+				.image = texture.vkHandle,
+				.viewType = vkCastToImageViewType(texture.desc.type),
+				.format = vkCast(texture.desc.format),
 				.components = {},
 				.subresourceRange = {
-					vkCastFormatToAspectFlags(texture->desc.format),
+					vkCastFormatToAspectFlags(texture.desc.format),
 					level,
 					1,
 					layer,
@@ -902,17 +968,25 @@ namespace soul::gpu
 				}
 			};
 			SOUL_VK_CHECK(vkCreateImageView(_db.device,
-				              &image_view_info, nullptr, &texture->views[level]), "Fail to create image view");
+				              &image_view_info, nullptr, &texture_view.vkHandle), "Fail to create image view");
+			if (texture.desc.usageFlags.test(TextureUsage::SAMPLED))
+			{
+				texture_view.sampledImageGPUHandle = _db.descriptorAllocator.create_sampled_image_descriptor(texture_view.vkHandle);
+			}
+			if (texture.desc.usageFlags.test(TextureUsage::STORAGE))
+			{
+				texture_view.storageImageGPUHandle = _db.descriptorAllocator.create_storage_image_descriptor(texture_view.vkHandle);
+			}
 		}
-		return texture->views[level];
+		return texture.views[level];
 	}
 
-	VkImageView System::get_texture_view(const TextureID texture_id, const SubresourceIndex subresource_index)
+	TextureView System::get_texture_view(const TextureID texture_id, const SubresourceIndex subresource_index)
 	{
 		return get_texture_view(texture_id, subresource_index.get_level(), subresource_index.get_layer());
 	}
 
-	VkImageView System::get_texture_view(const TextureID texture_id, const std::optional<SubresourceIndex> subresource_index)
+	TextureView System::get_texture_view(const TextureID texture_id, const std::optional<SubresourceIndex> subresource_index)
 	{
 		if (subresource_index)
 		{
@@ -920,11 +994,7 @@ namespace soul::gpu
 		}
 		return get_texture(texture_id).view;
 	}
-	/// <summary>
-	/// 
-	/// </summary>
-	/// <param name="desc"></param>
-	/// <returns></returns>
+
 	BufferID System::create_buffer(const BufferDesc &desc) {
 		SOUL_ASSERT_MAIN_THREAD();
 		SOUL_ASSERT(0, desc.count > 0, "");
@@ -950,6 +1020,7 @@ namespace soul::gpu
 			SOUL_ASSERT(0, isPowerOfTwo(min_ssbo_alignment), "");
 			const size_t dynamic_alignment = (desc.typeSize + min_ssbo_alignment - 1) & ~(min_ssbo_alignment - 1);
 			alignment = std::max(alignment, dynamic_alignment);
+
 		}
 
 		const VkBufferCreateInfo buffer_info = {
@@ -970,6 +1041,8 @@ namespace soul::gpu
 		buffer.unitSize = alignment;
 		buffer.desc = desc;
 		buffer.owner = ResourceOwner::NONE;
+		if (buffer.desc.usageFlags.test(BufferUsage::STORAGE))
+			buffer.storageBufferGPUHandle = _db.descriptorAllocator.create_storage_buffer_descriptor(buffer.vkHandle);
 
 		return buffer_id;
 	}
@@ -991,6 +1064,11 @@ namespace soul::gpu
 	void System::finalize_buffer(const BufferID buffer_id)
 	{
 		get_frame_context().gpuResourceFinalizer.finalize(*get_buffer_ptr(buffer_id));
+	}
+
+	void System::destroy_buffer_descriptor(BufferID buffer_id)
+	{
+		_db.descriptorAllocator.destroy_storage_buffer_descriptor(get_buffer_ptr(buffer_id)->storageBufferGPUHandle);
 	}
 
 	void System::destroy_buffer(BufferID id) {
@@ -1066,269 +1144,6 @@ namespace soul::gpu
 		return formatted_error_message;
 	}
 
-	ShaderID System::create_shader(const ShaderDesc &desc, const ShaderStage stage) {
-		SOUL_PROFILE_ZONE();
-		SOUL_ASSERT(0, desc.sourceSize > 0, "");
-		SOUL_ASSERT(0, desc.source != nullptr, "");
-		SOUL_ASSERT(0, desc.name != nullptr, "");
-		SOUL_ASSERT(0, strlen(desc.name) != 0, "Shader name cannot be empty");
-		
-		Shader shader;
-
-		shaderc::Compiler glsl_compiler;
-
-		static auto SHADERC_SHADER_STAGE_MAP = EnumArray<ShaderStage, shaderc_shader_kind>::build_from_list({
-			shaderc_shader_kind::shaderc_glsl_vertex_shader,
-			shaderc_shader_kind::shaderc_glsl_geometry_shader,
-			shaderc_shader_kind::shaderc_glsl_fragment_shader,
-			shaderc_shader_kind::shaderc_glsl_compute_shader
-		});
-
-		static auto STAGE_NAMES = EnumArray<ShaderStage, const char*>::build_from_list({
-			"VERTEX",
-			"GEOMETRY",
-			"FRAGMENT",
-			"COMPUTE"
-		});
-
-		shaderc::CompileOptions options;
-		options.SetTargetSpirv(shaderc_spirv_version_1_3);
-		shaderc::SpvCompilationResult glsl_compile_result;
-		{
-			SOUL_PROFILE_ZONE_WITH_NAME("Shader compilation");
-			glsl_compile_result = glsl_compiler.CompileGlslToSpv(
-				desc.source,
-				desc.sourceSize,
-				SHADERC_SHADER_STAGE_MAP[stage],
-				desc.name,
-				options);
-			const std::string error_message = glsl_compile_result.GetErrorMessage();
-
-			SOUL_ASSERT(0, glsl_compile_result.GetCompilationStatus() == shaderc_compilation_status_success,
-				"Fail when compiling pass : %d, shader_type = %s.\n"
-				"Error : \n%s\n", desc.name, STAGE_NAMES[stage], format_glsl_error_message(desc.source, error_message).c_str());
-		}
-		const uint32 *spirv_code = glsl_compile_result.begin();
-		const size_t spirv_code_size = glsl_compile_result.end() - spirv_code;
-		const VkShaderModuleCreateInfo module_info = {
-			.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
-			.codeSize = spirv_code_size * sizeof(uint32),
-			.pCode = spirv_code
-		};
-
-		SOUL_VK_CHECK(vkCreateShaderModule(_db.device, &module_info, nullptr, &shader.module), "Fail to create shader module");
-		
-		spirv_cross::Compiler spirv_compiler(spirv_code, spirv_code_size);
-		spirv_cross::ShaderResources resources = spirv_compiler.get_shader_resources();
-
-		for (spirv_cross::Resource &resource : resources.sampled_images) {
-			const uint32 set = spirv_compiler.get_decoration(resource.id, spv::DecorationDescriptorSet);
-			const uint32 binding = spirv_compiler.get_decoration(resource.id, spv::DecorationBinding);
-			const spirv_cross::SPIRType &type = spirv_compiler.get_type(resource.type_id);
-			shader.bindings[set][binding].type = DescriptorType::SAMPLED_IMAGE;
-			if (type.array.empty()) {
-				shader.bindings[set][binding].count = 1;
-			}
-			else {
-				SOUL_ASSERT(0, type.array.size() == 1, "Array must be one dimensional");
-				SOUL_ASSERT(0, type.array_size_literal.front(), "Array size must be literal");
-				shader.bindings[set][binding].count = soul::cast<uint8>(type.array[0]);
-			}
-		}
-
-		for (spirv_cross::Resource &resource : resources.subpass_inputs) {
-			const uint32 set = spirv_compiler.get_decoration(resource.id, spv::DecorationDescriptorSet);
-			const uint32 binding = spirv_compiler.get_decoration(resource.id, spv::DecorationBinding);
-			const auto attachment_index = soul::cast<uint8>(spirv_compiler.get_decoration(resource.id, spv::DecorationInputAttachmentIndex));
-
-			const spirv_cross::SPIRType &type = spirv_compiler.get_type(resource.type_id);
-			shader.bindings[set][binding].type = DescriptorType::INPUT_ATTACHMENT;
-			shader.bindings[set][binding].attachmentIndex = attachment_index;
-			if (type.array.empty()) {
-				shader.bindings[set][binding].count = 1;
-			}
-			else {
-				SOUL_ASSERT(0, type.array.size() == 1, "Array must be one dimensional");
-				SOUL_ASSERT(0, type.array_size_literal.front(), "Array size must be literal");
-				shader.bindings[set][binding].count = soul::cast<uint8>(type.array[0]);
-			}
-		}
-
-		for (spirv_cross::Resource &resource : resources.storage_images) {
-			const uint32 set = spirv_compiler.get_decoration(resource.id, spv::DecorationDescriptorSet);
-			const uint32 binding = spirv_compiler.get_decoration(resource.id, spv::DecorationBinding);
-
-			const spirv_cross::SPIRType &type = spirv_compiler.get_type(resource.type_id);
-			shader.bindings[set][binding].type = DescriptorType::STORAGE_IMAGE;
-			if (type.array.empty()) {
-				shader.bindings[set][binding].count = 1;
-			}
-			else {
-				SOUL_ASSERT(0, type.array.size() == 1, "Array must be one dimensional");
-				SOUL_ASSERT(0, type.array_size_literal.front(), "Array size must be literal");
-				shader.bindings[set][binding].count = soul::cast<uint8>(type.array[0]);
-			}
-		}
-
-		SOUL_ASSERT(0, resources.separate_images.empty(), "texture<Dimension> is not supported yet!");
-		SOUL_ASSERT(0, resources.push_constant_buffers.empty(), "push_constant is not supported yet!");
-		SOUL_ASSERT(0, resources.storage_buffers.empty(), "SSBO is not supported yet!");
-
-		for (spirv_cross::Resource &resource : resources.uniform_buffers) {
-			const uint32 set = spirv_compiler.get_decoration(resource.id, spv::DecorationDescriptorSet);
-			const uint32 binding = spirv_compiler.get_decoration(resource.id, spv::DecorationBinding);
-			const spirv_cross::SPIRType &type = spirv_compiler.get_type(resource.type_id);
-			shader.bindings[set][binding].type = DescriptorType::UNIFORM_BUFFER;
-			if (type.array.empty()) {
-				shader.bindings[set][binding].count = 1;
-			}
-			else {
-				SOUL_ASSERT(0, type.array.size() == 1, "Array must be one dimensional");
-				SOUL_ASSERT(0, type.array_size_literal.front(), "Array size must be literal");
-				shader.bindings[set][binding].count = soul::cast<uint8>(type.array[0]);
-			}
-		}
-
-		SOUL_ASSERT(0, resources.stage_inputs.size() <= MAX_INPUT_PER_SHADER, "");
-
-		if (stage != ShaderStage::VERTEX) {
-			return ShaderID(_db.shaders.create(std::move(shader)));
-		}
-
-		struct AttrExtraInfo {
-			uint8 location;
-			uint8 alignment;
-			uint64 size;
-		};
-
-		Array<AttrExtraInfo> attr_extra_infos;
-		attr_extra_infos.resize(MAX_INPUT_PER_SHADER);
-
-		for (spirv_cross::Resource& resource : resources.stage_inputs) {
-			const uint32 location = spirv_compiler.get_decoration(resource.id, spv::DecorationLocation);
-			const spirv_cross::SPIRType &type = spirv_compiler.get_type(resource.base_type_id);
-
-			AttrExtraInfo &extra_info = attr_extra_infos[location];
-			extra_info.location = soul::cast<uint8>(location);
-
-			SOUL_ASSERT(0, type.columns <= 1, "");
-
-			static constexpr VkFormat FLOAT_VEC_SIZE_TO_VK_FORMAT[4] = {
-				VK_FORMAT_R32_SFLOAT,
-				VK_FORMAT_R32G32_SFLOAT,
-				VK_FORMAT_R32G32B32_SFLOAT,
-				VK_FORMAT_R32G32B32A32_SFLOAT
-			};
-			static constexpr VkFormat DOUBLE_VEC_SIZE_TO_VK_FORMAT[4] = {
-				VK_FORMAT_R64_SFLOAT,
-				VK_FORMAT_R64G64_SFLOAT,
-				VK_FORMAT_R64G64B64_SFLOAT,
-				VK_FORMAT_R64G64B64A64_SFLOAT
-			};
-			static constexpr VkFormat INT_VEC_SIZE_TO_VK_FORMAT[4] = {
-				VK_FORMAT_R32_SINT,
-				VK_FORMAT_R32G32_SINT,
-				VK_FORMAT_R32G32B32_SINT,
-				VK_FORMAT_R32G32B32A32_SINT
-			};
-			static constexpr VkFormat UINT_VEC_SIZE_TO_VK_FORMAT[4] = {
-				VK_FORMAT_R32_UINT,
-				VK_FORMAT_R32G32_UINT,
-				VK_FORMAT_R32G32B32_UINT,
-				VK_FORMAT_R32G32B32A32_UINT
-			};
-
-			const VkFormat* vec_size_to_vk_format = nullptr;
-			switch (type.basetype) {
-			case spirv_cross::SPIRType::Float:
-				vec_size_to_vk_format = FLOAT_VEC_SIZE_TO_VK_FORMAT;
-				extra_info.alignment = alignof(float);
-				extra_info.size = sizeof(float) * type.vecsize;
-				break;
-			case spirv_cross::SPIRType::UInt:
-				vec_size_to_vk_format = UINT_VEC_SIZE_TO_VK_FORMAT;
-				extra_info.alignment = alignof(uint32);
-				extra_info.size = sizeof(uint32) * type.vecsize;
-				break;
-			case spirv_cross::SPIRType::Int:
-				vec_size_to_vk_format = INT_VEC_SIZE_TO_VK_FORMAT;
-				extra_info.alignment = alignof(int32);
-				extra_info.size = sizeof(int32) * type.vecsize;
-				break;
-			case spirv_cross::SPIRType::Double:
-				vec_size_to_vk_format = DOUBLE_VEC_SIZE_TO_VK_FORMAT;
-				extra_info.alignment = alignof(double);
-				extra_info.size = sizeof(double) * type.vecsize;
-				break;
-			default:
-				SOUL_PANIC(0, "Basetype %d is not supported", type.basetype);
-			}
-			shader.inputs[location].format = vec_size_to_vk_format[type.vecsize - 1];
-		}
-
-		uint32 current_offset = 0;
-		uint32 vertex_alignment = 0;
-		for (AttrExtraInfo& extra_info : attr_extra_infos) {
-			const int location = extra_info.location;
-			const uint32 alignment_minus_one = extra_info.alignment - 1;
-			shader.inputs[location].offset = (current_offset + alignment_minus_one) & ~alignment_minus_one;
-			current_offset += extra_info.size;
-			vertex_alignment = std::max<uint32>(vertex_alignment, extra_info.alignment);
-		}
-
-		const uint32 vertex_size = (current_offset + vertex_alignment - 1) & ~(vertex_alignment - 1);
-		shader.inputStride = vertex_size;
-
-		return ShaderID(_db.shaders.create(shader));
-	}
-
-	void System::destroy_shader(const ShaderID shader_id) {
-		get_frame_context().garbages.shaders.add(shader_id);
-	}
-
-	Shader *System::get_shader_ptr(const ShaderID shader_id) {
-		return _db.shaders.get(shader_id.id);
-	}
-
-	VkDescriptorSetLayout System::request_descriptor_layout(const DescriptorSetLayoutKey& key) {
-		SOUL_PROFILE_ZONE_WITH_NAME("GPU::System::request_descriptor_layout");
-		
-		if (auto id = _db.descriptor_set_layout_cache.find(key); id != DescriptorSetLayoutCache::NULLVAL)
-		{
-			return *_db.descriptor_set_layout_cache.get(id);
-		}
-
-		auto id = _db.descriptor_set_layout_cache.create(key, [this](const DescriptorSetLayoutKey& key) -> VkDescriptorSetLayout
-		{
-			runtime::ScopeAllocator<> scope_allocator("GPU::System::request_descriptor_layout");
-			VkDescriptorSetLayout set_layout = VK_NULL_HANDLE;
-
-			Array<VkDescriptorSetLayoutBinding> bindings(&scope_allocator);
-			for (uint32 i = 0; i < MAX_BINDING_PER_SET; i++) {
-				const DescriptorSetLayoutBinding& binding = key.bindings[i];
-				if (binding.stageFlags == 0) continue;
-				bindings.add({});
-
-				bindings.back().stageFlags = binding.stageFlags;
-				bindings.back().descriptorType = binding.descriptorType;
-				bindings.back().descriptorCount = binding.descriptorCount;
-				bindings.back().binding = i;
-			}
-
-			const VkDescriptorSetLayoutCreateInfo layout_info = {
-				.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
-				.bindingCount = soul::cast<uint32>(bindings.size()),
-				.pBindings = bindings.data()
-			};
-			SOUL_VK_CHECK(
-				vkCreateDescriptorSetLayout(_db.device, &layout_info, nullptr, &set_layout),
-				"Fail to create descriptor set layout");
-			bindings.cleanup();
-			return set_layout;
-		}, key);
-
-		return *_db.descriptor_set_layout_cache.get(id);
-	}
 
 	PipelineStateID System::request_pipeline_state(const GraphicPipelineStateDesc& desc, VkRenderPass renderPass, const TextureSampleCount sample_count) {
 		//TODO(kevinyu): Do we need to hash renderPass and sample_count as well?
@@ -1346,32 +1161,17 @@ namespace soul::gpu
 
 			Array<VkPipelineShaderStageCreateInfo> shader_stage_infos(&scope_allocator);
 
-			const Shader& vert_shader = *get_shader_ptr(program->shaderIDs[ShaderStage::VERTEX]);
-			const VkPipelineShaderStageCreateInfo vert_shader_stage_info = {
-				.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
-				.stage = VK_SHADER_STAGE_VERTEX_BIT,
-				.module = vert_shader.module,
-				.pName = "main"
-			};
-			shader_stage_infos.add(vert_shader_stage_info);
-
-			const Shader& frag_shader = *get_shader_ptr(program->shaderIDs[ShaderStage::FRAGMENT]);
-			const VkPipelineShaderStageCreateInfo frag_shader_stage_info = {
-				.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
-				.stage = VK_SHADER_STAGE_FRAGMENT_BIT,
-				.module = frag_shader.module,
-				.pName = "main"
-			};
-			shader_stage_infos.add(frag_shader_stage_info);
-
-			if (ShaderID geom_shader_id = program->shaderIDs[ShaderStage::GEOMETRY]; geom_shader_id != SHADER_ID_NULL) {
-				const Shader& geom_shader = *get_shader_ptr(geom_shader_id);
-				shader_stage_infos.add({
+			for (ShaderStage stage : EnumIter<ShaderStage>())
+			{
+				const Shader& shader = program->shaders[stage];
+				if (shader.vkHandle == VK_NULL_HANDLE) continue;
+				const VkPipelineShaderStageCreateInfo shader_stage_info = {
 					.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
-					.stage = VK_SHADER_STAGE_GEOMETRY_BIT,
-					.module = geom_shader.module,
-					.pName = "main" }
-				);
+					.stage = vkCast(stage),
+					.module = shader.vkHandle,
+					.pName = "main"
+				};
+				shader_stage_infos.add(shader_stage_info);
 			}
 
 			static auto PRIMITIVE_TOPOLOGY_MAP = EnumArray<Topology, VkPrimitiveTopology>::build_from_list({
@@ -1381,7 +1181,7 @@ namespace soul::gpu
 				VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
 				VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP,
 				VK_PRIMITIVE_TOPOLOGY_TRIANGLE_FAN
-				});
+			});
 
 			const VkPipelineInputAssemblyStateCreateInfo input_assembly_state = {
 				.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO,
@@ -1437,9 +1237,9 @@ namespace soul::gpu
 			VkVertexInputAttributeDescription attr_descs[MAX_INPUT_PER_SHADER];
 			uint32 attr_desc_count = 0;
 			for (uint32 i = 0; i < MAX_INPUT_PER_SHADER; i++) {
-				if (vert_shader.inputs[i].format == VK_FORMAT_UNDEFINED) continue;
 				auto& input_attribute = desc.inputAttributes[i];
-				attr_descs[attr_desc_count].format = input_attribute.type == VertexElementType::DEFAULT ? vert_shader.inputs[i].format : vkCast(input_attribute.type, input_attribute.flags);
+				if (input_attribute.type == VertexElementType::DEFAULT) continue;
+				attr_descs[attr_desc_count].format = vkCast(input_attribute.type, input_attribute.flags);
 				attr_descs[attr_desc_count].binding = desc.inputAttributes[i].binding;
 				attr_descs[attr_desc_count].location = i;
 				attr_descs[attr_desc_count].offset = desc.inputAttributes[i].offset;
@@ -1523,7 +1323,7 @@ namespace soul::gpu
 				.pDepthStencilState = &depth_stencil_info,
 				.pColorBlendState = &color_blending,
 				.pDynamicState = desc.scissor.dynamic ? &dynamic_state_info : nullptr,
-				.layout = program->pipelineLayout,
+				.layout = get_bindless_pipeline_layout(),
 				.renderPass = render_pass,
 				.subpass = 0,
 				.basePipelineHandle = VK_NULL_HANDLE
@@ -1554,18 +1354,18 @@ namespace soul::gpu
 		{
 			const Program* program = get_program_ptr(desc.programID);
 
-			const Shader& compute_shader = *get_shader_ptr(program->shaderIDs[ShaderStage::COMPUTE]);
+			const Shader& compute_shader = program->shaders[ShaderStage::COMPUTE];
 			const VkPipelineShaderStageCreateInfo compute_shader_stage_create_info = {
 				.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
 				.stage = VK_SHADER_STAGE_COMPUTE_BIT,
-				.module = compute_shader.module,
+				.module = compute_shader.vkHandle,
 				.pName = "main"
 			};
 
 			const VkComputePipelineCreateInfo create_info = {
 				.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO,
 				.stage = compute_shader_stage_create_info,
-				.layout = program->pipelineLayout
+				.layout = get_bindless_pipeline_layout()
 			};
 
 			VkPipeline pipeline;
@@ -1588,77 +1388,125 @@ namespace soul::gpu
 		return *_db.pipeline_state_cache_.get(pipeline_state_id.id);
 	}
 
-	ShaderArgSet System::get_shader_arg_set(ShaderArgSetID arg_set_id)
+	VkPipelineLayout System::get_bindless_pipeline_layout() const
 	{
-		return _db.arg_set_allocator.get(arg_set_id);
+		return _db.descriptorAllocator.get_pipeline_layout();
 	}
 
-	ProgramID System::request_program(const ProgramDesc& programDesc) {
+	BindlessDescriptorSets System::get_bindless_descriptor_sets() const
+	{
+		return _db.descriptorAllocator.get_bindless_descriptor_sets();
+	}
+
+	ProgramID System::create_program(const ProgramDesc& program_desc) {
 		SOUL_ASSERT_MAIN_THREAD();
 		SOUL_PROFILE_ZONE_WITH_NAME("GPU::System::request_program");
 		runtime::ScopeAllocator<> scope_allocator("GPU::System::programCreate");
 
-		if (_db.programMaps.contains(programDesc)) {
-			return _db.programMaps[programDesc];
-		}
-
 		const auto program_id = ProgramID(_db.programs.add({}));
-		Program &program = _db.programs[program_id.id];
-		std::ranges::copy(programDesc.shaderIDs, program.shaderIDs.begin());
+		Program& program = _db.programs[program_id.id];
 
-		const EnumArray<ShaderStage, ShaderID>& shader_ids = programDesc.shaderIDs;
-		for (uint32 set_idx = 0; set_idx < MAX_SET_PER_SHADER_PROGRAM; set_idx++) {
-			for (const ShaderStage shader_stage : EnumIter<ShaderStage>()) {
-				const ShaderID shader_id = shader_ids[shader_stage];
-				if (shader_id == SHADER_ID_NULL) continue;
-				const Shader &shader = *get_shader_ptr(shader_id);
+		const slang::TargetDesc target_desc = {
+			.format = SLANG_SPIRV,
+			.profile = _db.slang_global_session->findProfile("glsl_450")
+		};
+		soul::Array<std::string> search_paths;
+		soul::Array<const char*> slang_search_paths(&scope_allocator);
+		for (const auto& path : std::span(program_desc.searchPaths, program_desc.searchPathCount))
+		{
+			search_paths.push_back(path.string());
+			slang_search_paths.push_back(search_paths.back().c_str());
+		}
+		
+		const slang::SessionDesc session_desc = {
+			.targets = &target_desc,
+			.targetCount = 1,
+			.searchPaths = slang_search_paths.data(),
+			.searchPathCount = soul::cast<SlangInt>(slang_search_paths.size())
+		};
+		Slang::ComPtr<slang::ISession> session;
+		SOUL_ASSERT(0,
+			SLANG_SUCCEEDED(_db.slang_global_session->createSession(session_desc, session.writeRef())),
+			"Fail to create session");
 
-				for (uint32 binding_idx = 0; binding_idx < MAX_BINDING_PER_SET; binding_idx++) {
-					ProgramDescriptorBinding &program_binding = program.bindings[set_idx][binding_idx];
-					const ShaderDescriptorBinding &shader_binding = shader.bindings[set_idx][binding_idx];
+		SlangCompileRequest* request = nullptr;
+		session->createCompileRequest(&request);
+		SCOPE_EXIT(spDestroyCompileRequest(request));
 
-					if (shader.bindings[set_idx][binding_idx].count == 0) continue;
+		int translation_unit_index = spAddTranslationUnit(request, SLANG_SOURCE_LANGUAGE_SLANG, "");
+		spAddTranslationUnitSourceString(request, translation_unit_index, "resource_.slang", RESOURCE_SLANG);
 
-					if (program_binding.shaderStageFlags == 0) {
-						program_binding.type = shader_binding.type;
-						program_binding.count = shader_binding.count;
-						program_binding.attachmentIndex = shader_binding.attachmentIndex;
+		for (auto& source : std::span(program_desc.sources, program_desc.sourceCount)) {
+			if (std::holds_alternative<ShaderFile>(source))
+			{
+				const ShaderFile& shader_file = std::get<ShaderFile>(source);
+				const std::filesystem::path& path = shader_file.path;
+				const std::filesystem::path full_path = [&path, &program_desc]()->std::filesystem::path
+				{
+					if (path.is_absolute())
+					{
+						SOUL_ASSERT(0, std::filesystem::exists(path), "%s does not exist", path.string().c_str());
+						return std::filesystem::canonical(path);
 					}
 					else {
-						SOUL_ASSERT(0, program.bindings[set_idx][binding_idx].type == shader.bindings[set_idx][binding_idx].type, "");
-						SOUL_ASSERT(0, program.bindings[set_idx][binding_idx].count == shader.bindings[set_idx][binding_idx].count, "");
-						SOUL_ASSERT(0, program.bindings[set_idx][binding_idx].attachmentIndex == shader.bindings[set_idx][binding_idx].attachmentIndex, "");
+						for (const auto& search_path : std::span(program_desc.searchPaths, program_desc.searchPathCount))
+						{
+							auto full_path_candidate = search_path / path;
+							if (std::filesystem::exists(full_path_candidate)) return std::filesystem::canonical(full_path_candidate);
+						}
+						SOUL_ASSERT(0, false, "Cannot find file %s in any search path", path.string().c_str());
+						return "";
 					}
-					program_binding.shaderStageFlags |= vkCast(shader_stage);
-					program_binding.pipelineStageFlags |= vkCastShaderStageToPipelineStageFlags({ shader_stage });
-				}
+				}();
+				spAddTranslationUnitSourceFile(request, translation_unit_index, full_path.string().c_str());
+			}
+			else
+			{
+				const ShaderString& shader_string = std::get<ShaderString>(source);
+				spAddTranslationUnitSourceString(request, translation_unit_index, "", shader_string.c_str());
 			}
 		}
 
-		for (uint32 set_idx = 0; set_idx < MAX_SET_PER_SHADER_PROGRAM; set_idx++) {
-			DescriptorSetLayoutKey descriptor_set_layout_key = {};
-			std::transform(program.bindings[set_idx], program.bindings[set_idx] + MAX_BINDING_PER_SET, descriptor_set_layout_key.bindings,
-			[](const ProgramDescriptorBinding& program_binding) -> DescriptorSetLayoutBinding
-			{
-				if (program_binding.shaderStageFlags == 0) return {};
-				return {
-					.descriptorType = vkCast(program_binding.type),
-					.descriptorCount = program_binding.count,
-					.stageFlags = program_binding.shaderStageFlags
-				};
-			});
-			program.descriptorLayouts[set_idx] = request_descriptor_layout(descriptor_set_layout_key);
+		EnumArray<ShaderStage, int> entry_indexes;
+
+		static constexpr auto SLANG_STAGE_MAP = EnumArray<ShaderStage, SlangStage>::build_from_list({
+			SLANG_STAGE_VERTEX,
+			SLANG_STAGE_GEOMETRY,
+			SLANG_STAGE_FRAGMENT,
+			SLANG_STAGE_COMPUTE
+		});
+
+		for (ShaderStage stage : EnumIter<ShaderStage>())
+		{
+			const char* entry_point_name = program_desc.entryPointNames[stage];
+			if (entry_point_name == nullptr) continue;
+			entry_indexes[stage] = spAddEntryPoint(request, translation_unit_index, entry_point_name, SLANG_STAGE_MAP[stage]);
+		}
+		SlangResult result = spCompile(request);
+		if (SLANG_FAILED(result))
+		{
+			char const* diagnostics = spGetDiagnosticOutput(request);
+			SOUL_ASSERT(0, false, "Slang Diagnostics = %s", diagnostics);
 		}
 
-		const VkPipelineLayoutCreateInfo pipelineLayoutInfo = {
-			.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
-			.setLayoutCount = MAX_SET_PER_SHADER_PROGRAM,
-			.pSetLayouts = program.descriptorLayouts
-		};
+		for (ShaderStage stage : EnumIter<ShaderStage>())
+		{
+			const char* entry_point_name = program_desc.entryPointNames[stage];
+			if (entry_point_name == nullptr) continue;
 
-		SOUL_VK_CHECK(vkCreatePipelineLayout(_db.device, &pipelineLayoutInfo, nullptr, &program.pipelineLayout), "Fail to create pipeline layout");
+			Shader& shader = program.shaders[stage];
+			size_t spirv_code_size = 0;
+			void const* spirv_code = spGetEntryPointCode(request, entry_indexes[stage], &spirv_code_size);
+			const VkShaderModuleCreateInfo shader_module_create_info = {
+				.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
+				.codeSize = spirv_code_size,
+				.pCode = static_cast<const uint32_t*>(spirv_code)
+			};
+			SOUL_LOG_INFO("Code size = %d", spirv_code_size);
+			SOUL_VK_CHECK(vkCreateShaderModule(_db.device, &shader_module_create_info, nullptr, &shader.vkHandle));
+			shader.entryPoint = entry_point_name;
+		}
 
-		_db.programMaps.insert(programDesc, program_id);
 		return program_id;
 	}
 
@@ -1674,9 +1522,7 @@ namespace soul::gpu
 
 	SamplerID System::request_sampler(const SamplerDesc &desc) {
 		const uint64 hash_key = hash_fnv1(&desc);
-		if (_db.samplerMap.isExist(hash_key)) {
-			return SamplerID(_db.samplerMap[hash_key]);
-		}
+		if (_db.samplerMap.isExist(hash_key)) return _db.samplerMap[hash_key];
 
 		const VkSamplerCreateInfo sampler_create_info = {
 			.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
@@ -1698,14 +1544,11 @@ namespace soul::gpu
 
 		VkSampler sampler;
 		SOUL_VK_CHECK(vkCreateSampler(_db.device, &sampler_create_info, nullptr, &sampler), "Fail to create sampler");
-		_db.samplerMap.add(hash_key, sampler);
+		DescriptorID descriptor_id = _db.descriptorAllocator.create_sampler_descriptor(sampler);
+		const SamplerID sampler_id = { sampler, descriptor_id };
+		_db.samplerMap.add(hash_key, sampler_id);
 
-		return SamplerID(sampler);
-	}
-
-	ShaderArgSetID System::request_shader_arg_set(const ShaderArgSetDesc& desc) {
-		SOUL_PROFILE_ZONE();
-		return _db.arg_set_allocator.request_shader_arg_set(desc);
+		return sampler_id;
 	}
 
 	VkRenderPass System::request_render_pass(const RenderPassKey& key)
@@ -2026,7 +1869,7 @@ namespace soul::gpu
 		execution.cleanup();
 	}
 
-	void System::frameFlush() {
+	void System::flush_frame() {
 		SOUL_ASSERT_MAIN_THREAD();
 		SOUL_PROFILE_ZONE();
 		_frameEnd();
@@ -2070,16 +1913,19 @@ namespace soul::gpu
 
 		{
 			SOUL_PROFILE_ZONE_WITH_NAME("Destroy images");
+			auto destroy_texture_view = [this](TextureView& texture_view)
+			{
+				vkDestroyImageView(_db.device, texture_view.vkHandle, nullptr);
+			};
 			for (TextureID texture_id : frameContext.garbages.textures) {
+				destroy_texture_descriptor(texture_id);
 				Texture& texture = *get_texture_ptr(texture_id);
 				vmaDestroyImage(_db.gpuAllocator, texture.vkHandle, texture.allocation);
-				vkDestroyImageView(_db.device, texture.view, nullptr);
+				destroy_texture_view(texture.view);
+				soul_size view_count = soul::cast<uint64>(texture.desc.mipLevels) * texture.desc.layerCount;
 				if (texture.views != nullptr) {
-					std::for_each_n(texture.views, texture.desc.mipLevels, [device = _db.device](VkImageView image_view)
-					{
-						vkDestroyImageView(device, image_view, nullptr);
-					});
-					_db.cpuAllocator.deallocate(texture.views, sizeof(VkImageView) * texture.desc.mipLevels);
+					std::for_each_n(texture.views, view_count, destroy_texture_view);
+					_db.cpuAllocator.destroy_array(texture.views, view_count);
 					texture.views = nullptr;
 				}
 				_db.texturePool.destroy(texture_id.id);
@@ -2091,19 +1937,14 @@ namespace soul::gpu
 		{
 			SOUL_PROFILE_ZONE_WITH_NAME("Destroy buffers");
 			for (BufferID bufferID : frameContext.garbages.buffers) {
+				destroy_buffer_descriptor(bufferID);
 				Buffer& buffer = *get_buffer_ptr(bufferID);
 				vmaDestroyBuffer(_db.gpuAllocator, buffer.vkHandle, buffer.allocation);
+				_db.descriptorAllocator.destroy_storage_buffer_descriptor(buffer.storageBufferGPUHandle);
 				_db.bufferPool.destroy(bufferID.id);
 			}
 			frameContext.garbages.buffers.resize(0);
 		}
-
-		for (ShaderID shaderID : frameContext.garbages.shaders) {
-			Shader& shader = *_db.shaders.get(shaderID.id);
-			vkDestroyShaderModule(_db.device, shader.module, nullptr);
-			_db.shaders.destroy(shaderID.id);
-		}
-		frameContext.garbages.shaders.resize(0);
 
 		{
 			SOUL_PROFILE_ZONE_WITH_NAME("Destroy render passes");
@@ -2136,7 +1977,6 @@ namespace soul::gpu
 		frameContext.garbages.semaphores.resize(0);
 
 		_db.pipeline_state_cache_.on_new_frame();
-		_db.arg_set_allocator.on_new_frame();
 	}
 
 	void System::_frameEnd() {
@@ -2241,12 +2081,32 @@ namespace soul::gpu
 		_db.currentFrame %= _db.frameContexts.size();
 	}
 
-	Vec2ui32 System::getSwapchainExtent() {
+	Vec2ui32 System::get_swapchain_extent() {
 		return {_db.swapchain.extent.width, _db.swapchain.extent.height};
 	}
 
-	TextureID System::getSwapchainTexture() {
+	TextureID System::get_swapchain_texture() {
 		return _db.swapchain.textures[get_frame_context().swapchainIndex];
+	}
+
+	DescriptorID System::get_ssbo_descriptor_id(BufferID buffer_id) const
+	{
+		return get_buffer(buffer_id).storageBufferGPUHandle;
+	}
+
+	DescriptorID System::get_srv_descriptor_id(TextureID texture_id, std::optional<SubresourceIndex> subresource_index)
+	{
+		return get_texture_view(texture_id, subresource_index).sampledImageGPUHandle;
+	}
+
+	DescriptorID System::get_uav_descriptor_id(TextureID texture_id, std::optional<SubresourceIndex> subresource_index)
+	{
+		return get_texture_view(texture_id, subresource_index).storageImageGPUHandle;
+	}
+
+	DescriptorID System::get_sampler_descriptor_id(SamplerID sampler_id) const
+	{
+		return sampler_id.descriptorID;
 	}
 
 	void PrimaryCommandBuffer::begin_render_pass(const VkRenderPassBeginInfo& render_pass_begin_info, VkSubpassContents subpass_contents)
@@ -2362,7 +2222,7 @@ namespace soul::gpu
 
 	PrimaryCommandBuffer CommandPools::request_command_buffer(const QueueType queue_type)
 	{
-		const VkCommandBuffer cmd_buffer = primary_pools_[runtime::get_thread_id()][queue_type].request();
+		VkCommandBuffer cmd_buffer = primary_pools_[runtime::get_thread_id()][queue_type].request();
 		const VkCommandBufferBeginInfo beginInfo = {
 			.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
 			.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT
