@@ -3,7 +3,7 @@
 //
 #pragma once
 
-#include "core/array.h"
+#include "core/vector.h"
 #include "core/type.h"
 
 namespace soul {
@@ -14,14 +14,14 @@ namespace soul {
 	public:
 
 		Slice() = default;
-		Slice(Array<T>* array, soul_size begin, soul_size end): _array(array), _beginIdx(begin), _endIdx(end), _size(_endIdx - _beginIdx) {}
+		Slice(Vector<T>* array, soul_size begin, soul_size end): _array(array), _beginIdx(begin), _endIdx(end), _size(_endIdx - _beginIdx) {}
 		Slice(const Slice& other) = default;
 		Slice& operator=(const Slice& other) = default;
 		Slice(Slice&& other) = default;
 		Slice& operator=(Slice&& other) = default;
 		~Slice() = default;
 
-		void set(Array<T>* array, soul_size begin, soul_size end) {
+		void set(Vector<T>* array, soul_size begin, soul_size end) {
 			_array = array;
 			_beginIdx = begin;
 			_endIdx = end;
@@ -46,7 +46,7 @@ namespace soul {
 		[[nodiscard]] T* begin() { return _array->data() + _beginIdx; }
 		[[nodiscard]] T* end() { return _array->data() + _endIdx; }
 	private:
-		Array<T>* _array = nullptr;
+		Vector<T>* _array = nullptr;
 		soul_size _beginIdx = 0;
 		soul_size _endIdx = 0;
 		soul_size _size = 0;

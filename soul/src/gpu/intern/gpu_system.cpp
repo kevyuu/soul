@@ -8,7 +8,7 @@
 
 #include "runtime/scope_allocator.h"
 
-#include "core/array.h"
+#include "core/vector.h"
 #include "core/dev_util.h"
 #include "core/util.h"
 
@@ -179,7 +179,7 @@ namespace soul::gpu
 
 				vkEnumerateInstanceLayerProperties(&layer_count, nullptr);
 
-				Array<VkLayerProperties> available_layers;
+				Vector<VkLayerProperties> available_layers;
 				available_layers.resize(layer_count);
 				vkEnumerateInstanceLayerProperties(&layer_count, available_layers.data());
 				for (const char* required_layer : REQUIRED_LAYERS) {
@@ -257,12 +257,12 @@ namespace soul::gpu
 				vkEnumeratePhysicalDevices(db->instance, &device_count, nullptr);
 				SOUL_ASSERT(0, device_count > 0, "There is no device with vulkan support!");
 
-				soul::Array<VkPhysicalDevice> devices;
+				soul::Vector<VkPhysicalDevice> devices;
 				devices.resize(device_count);
 				vkEnumeratePhysicalDevices(db->instance, &device_count, devices.data());
 
-				Array<VkSurfaceFormatKHR> formats;
-				Array<VkPresentModeKHR> present_modes;
+				Vector<VkSurfaceFormatKHR> formats;
+				Vector<VkPresentModeKHR> present_modes;
 
 				db->physicalDevice = VK_NULL_HANDLE;
 				int best_score = -1;
@@ -308,7 +308,7 @@ namespace soul::gpu
 					uint32_t extension_count;
 					vkEnumerateDeviceExtensionProperties(device, nullptr, &extension_count, nullptr);
 
-					soul::Array<VkExtensionProperties> available_extensions;
+					soul::Vector<VkExtensionProperties> available_extensions;
 					available_extensions.resize(extension_count);
 					vkEnumerateDeviceExtensionProperties(device, nullptr, &extension_count, available_extensions.data());
 					
@@ -348,7 +348,7 @@ namespace soul::gpu
 					uint32 queue_family_count;
 					vkGetPhysicalDeviceQueueFamilyProperties(device, &queue_family_count, nullptr);
 
-					soul::Array<VkQueueFamilyProperties> queue_families;
+					soul::Vector<VkQueueFamilyProperties> queue_families;
 					queue_families.resize(queue_family_count);
 					vkGetPhysicalDeviceQueueFamilyProperties(device, &queue_family_count, queue_families.data());
 
@@ -562,7 +562,7 @@ namespace soul::gpu
 				                       VkSurfaceKHR surface) -> VkSurfaceFormatKHR {
 					runtime::ScopeAllocator<> scope_allocator("GPU::System::init::pickSurfaceFormat");
 					SOUL_LOG_INFO("Picking surface format.");
-					Array<VkSurfaceFormatKHR> formats(&scope_allocator);
+					Vector<VkSurfaceFormatKHR> formats(&scope_allocator);
 					uint32 format_count;
 					vkGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice, surface, &format_count, nullptr);
 					SOUL_ASSERT(0, format_count != 0, "Surface format count is zero!");
@@ -925,7 +925,7 @@ namespace soul::gpu
 
 	void System::destroy_texture(TextureID id) {
 		SOUL_ASSERT_MAIN_THREAD();
-		get_frame_context().garbages.textures.add(id);
+		get_frame_context().garbages.textures.push_back(id);
 	}
 
 	Texture *System:: get_texture_ptr(const TextureID texture_id) {
@@ -1072,7 +1072,7 @@ namespace soul::gpu
 
 	void System::destroy_buffer(BufferID id) {
 		SOUL_ASSERT_MAIN_THREAD();
-		get_frame_context().garbages.buffers.add(id);
+		get_frame_context().garbages.buffers.push_back(id);
 	}
 
 	Buffer *System::get_buffer_ptr(BufferID buffer_id) {
@@ -1091,8 +1091,8 @@ namespace soul::gpu
 	static std::string format_glsl_error_message(const char* source, const std::string& error_message) {
 		std::string formatted_error_message;
 
-		soul::Array<std::string> source_lines;
-		source_lines.add(std::string(""));
+		soul::Vector<std::string> source_lines;
+		source_lines.push_back(std::string(""));
 		std::stringstream source_stream(source);
 		for (std::string line; std::getline(source_stream, line, '\n');)
 			source_lines.add(line);
@@ -1158,7 +1158,7 @@ namespace soul::gpu
 
 			Program* program = get_program_ptr(desc.programID);
 
-			Array<VkPipelineShaderStageCreateInfo> shader_stage_infos(&scope_allocator);
+			Vector<VkPipelineShaderStageCreateInfo> shader_stage_infos(&scope_allocator);
 
 			for (ShaderStage stage : EnumIter<ShaderStage>())
 			{
@@ -1170,7 +1170,7 @@ namespace soul::gpu
 					.module = shader.vkHandle,
 					.pName = "main"
 				};
-				shader_stage_infos.add(shader_stage_info);
+				shader_stage_infos.push_back(shader_stage_info);
 			}
 
 			static auto PRIMITIVE_TOPOLOGY_MAP = EnumArray<Topology, VkPrimitiveTopology>::build_from_list({
@@ -1409,8 +1409,8 @@ namespace soul::gpu
 			.format = SLANG_SPIRV,
 			.profile = _db.slang_global_session->findProfile("glsl_450")
 		};
-		soul::Array<std::string> search_paths;
-		soul::Array<const char*> slang_search_paths(&scope_allocator);
+		soul::Vector<std::string> search_paths;
+		soul::Vector<const char*> slang_search_paths(&scope_allocator);
 		for (const auto& path : std::span(program_desc.searchPaths, program_desc.searchPathCount))
 		{
 			search_paths.push_back(path.string());
@@ -1726,7 +1726,7 @@ namespace soul::gpu
 	}
 
 	void System::destroy_framebuffer(VkFramebuffer framebuffer) {
-		get_frame_context().garbages.frameBuffers.add(framebuffer);
+		get_frame_context().garbages.frameBuffers.push_back(framebuffer);
 	}
 
 	VkEvent System::create_event() {
@@ -1739,7 +1739,7 @@ namespace soul::gpu
 
 	void System::destroy_event(VkEvent event) {
 		SOUL_ASSERT_MAIN_THREAD();
-		get_frame_context().garbages.events.add(event);
+		get_frame_context().garbages.events.push_back(event);
 	}
 
 	SemaphoreID System::create_semaphore() {
@@ -1765,7 +1765,7 @@ namespace soul::gpu
 
 	void System::destroy_semaphore(SemaphoreID ID) {
 		SOUL_ASSERT_MAIN_THREAD();
-		get_frame_context().garbages.semaphores.add(ID);
+		get_frame_context().garbages.semaphores.push_back(ID);
 	}
 
 	void CommandQueue::init(VkDevice inDevice, uint32 inFamilyIndex, uint32 queueIndex)
@@ -1786,11 +1786,11 @@ namespace soul::gpu
 		if (!commands.empty()) {
 			flush(0, nullptr, VK_NULL_HANDLE);
 		}
-		waitSemaphores.add(semaphore->vkHandle);
-		waitStages.add(waitStage);
+		waitSemaphores.push_back(semaphore->vkHandle);
+		waitStages.push_back(waitStage);
 	}
 
-	void CommandQueue::submit(VkCommandBuffer commandBuffer, const Array<Semaphore*>& semaphores, VkFence fence)
+	void CommandQueue::submit(VkCommandBuffer commandBuffer, const Vector<Semaphore*>& semaphores, VkFence fence)
 	{
 		submit(commandBuffer, soul::cast<uint32>(semaphores.size()), semaphores.data(), fence);
 	}
@@ -1808,7 +1808,7 @@ namespace soul::gpu
 
 		SOUL_VK_CHECK(vkEndCommandBuffer(commandBuffer), "Fail to end command buffer");
 
-		commands.add(commandBuffer);
+		commands.push_back(commandBuffer);
 
 		for (soul_size semaphoreIdx = 0; semaphoreIdx < semaphoreCount; semaphoreIdx++) {
 			Semaphore* semaphore = semaphores[semaphoreIdx];
@@ -2155,7 +2155,7 @@ namespace soul::gpu
 			allocInfo.commandBufferCount = 1;
 
 			SOUL_VK_CHECK(vkAllocateCommandBuffers(device, &allocInfo, &cmdBuffer), "Fail to allocate command buffers");
-			allocatedBuffers.add(cmdBuffer);
+			allocatedBuffers.push_back(cmdBuffer);
 		}
 
 		VkCommandBuffer cmdBuffer = allocatedBuffers[count];
@@ -2271,7 +2271,7 @@ namespace soul::gpu
 		StagingBuffer staging_buffer = {};
 		SOUL_VK_CHECK(vmaCreateBuffer(gpu_allocator_, &staging_buffer_info, &staging_alloc_info, &staging_buffer.vkHandle,
 			&staging_buffer.allocation, nullptr), "");
-		get_thread_context().staging_buffers_.add(staging_buffer);
+		get_thread_context().staging_buffers_.push_back(staging_buffer);
 		return staging_buffer;
 	}
 
@@ -2331,7 +2331,7 @@ namespace soul::gpu
 		for (auto& context : thread_contexts_)
 		{
 			memory::Allocator* default_allocator = GetDefaultAllocator();
-			context.staging_buffers_ = Array<StagingBuffer>(default_allocator);
+			context.staging_buffers_ = Vector<StagingBuffer>(default_allocator);
 		}
 	}
 
@@ -2694,7 +2694,7 @@ namespace soul::gpu
 
 				}
 			};
-			thread_contexts_[runtime::get_thread_id()].image_barriers_[RESOURCE_OWNER_TO_QUEUE_TYPE[texture.owner]].add(barrier);
+			thread_contexts_[runtime::get_thread_id()].image_barriers_[RESOURCE_OWNER_TO_QUEUE_TYPE[texture.owner]].push_back(barrier);
 
 			texture.layout = finalize_layout;
 		}
@@ -2709,8 +2709,8 @@ namespace soul::gpu
 		runtime::ScopeAllocator scope_allocator("Resource Finalizer Flush");
 
 		EnumArray<QueueType, VkCommandBuffer> command_buffers(VK_NULL_HANDLE);
-		EnumArray<QueueType, Array<Semaphore*>> signal_semaphores((Array<Semaphore*>(&scope_allocator)));
-		EnumArray<QueueType, Array<SemaphoreID>> wait_semaphores((Array<SemaphoreID>(&scope_allocator)));
+		EnumArray<QueueType, Vector<Semaphore*>> signal_semaphores((Vector<Semaphore*>(&scope_allocator)));
+		EnumArray<QueueType, Vector<SemaphoreID>> wait_semaphores((Vector<SemaphoreID>(&scope_allocator)));
 
 		// create command buffer and create semaphore
 		for (auto queue_type : EnumIter<QueueType>())
@@ -2726,7 +2726,7 @@ namespace soul::gpu
 				{
 					return capacity + thread_context.image_barriers_[queue_type].size();
 				});
-			Array<VkImageMemoryBarrier> image_barriers(&scope_allocator);
+			Vector<VkImageMemoryBarrier> image_barriers(&scope_allocator);
 			image_barriers.reserve(image_barrier_capacity);
 			for (const auto& thread_context : thread_contexts_)
 			{
@@ -2752,8 +2752,8 @@ namespace soul::gpu
 				{
 					const SemaphoreID semaphore_id = gpu_system.create_semaphore();
 					Semaphore* semaphore = gpu_system.get_semaphore_ptr(semaphore_id);
-					signal_semaphores[queue_type].add(semaphore);
-					wait_semaphores[dst_queue_type].add(semaphore_id);
+					signal_semaphores[queue_type].push_back(semaphore);
+					wait_semaphores[dst_queue_type].push_back(semaphore_id);
 				}
 			});
 		}

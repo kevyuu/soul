@@ -6,7 +6,7 @@
 #include <mutex>
 
 #include "core/architecture.h"
-#include "core/array.h"
+#include "core/vector.h"
 #include "core/static_array.h"
 #include "core/type.h"
 
@@ -122,7 +122,7 @@ namespace soul::runtime
 
 		uint16 threadIndex = 0;
 
-		Array<memory::Allocator*> allocatorStack{nullptr};
+		Vector<memory::Allocator*> allocatorStack{nullptr};
 		TempAllocator* tempAllocator = nullptr;
 	};
 

@@ -61,8 +61,8 @@ namespace soul { namespace memory {
 	}
 
 	void Profiler::snapshot(const char* name) {
-		Array<Snapshot>& snapshots = _frames.back().snapshots;
-		snapshots.add(Snapshot(name, _allocatorsData, _allocatorNames));
+		Vector<Snapshot>& snapshots = _frames.back().snapshots;
+		snapshots.push_back(Snapshot(name, _allocatorsData, _allocatorNames));
 	}
 
 	const Profiler::Region& Profiler::AllocatorData::getRegion(const void* addr) const {

@@ -69,7 +69,7 @@ namespace soul::gpu
 	private:
 		HashMap<KeyType, ID> read_only_map_;
 		HashMap<KeyType, ID> fallback_map_;
-		Array<KeyType> fallback_keys_;
+		Vector<KeyType> fallback_keys_;
 		ObjectPool<ValType> object_pool_;
 		SharedLockable mutex_;
 	};

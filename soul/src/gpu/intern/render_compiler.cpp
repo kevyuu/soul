@@ -79,7 +79,7 @@ namespace soul::gpu::impl
 		const VkImageAspectFlags dst_aspect_mask = vkCastFormatToAspectFlags(dst_texture->desc.format);
 
 		runtime::ScopeAllocator scope_allocator("compile_command copy texture");
-		Array<VkImageCopy> image_copies(&scope_allocator);
+		Vector<VkImageCopy> image_copies(&scope_allocator);
 		image_copies.resize(command.regionCount);
 
 		std::transform(command.regions, command.regions + command.regionCount, image_copies.begin(),

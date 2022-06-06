@@ -38,7 +38,7 @@ namespace soul::gpu::impl
 
 		VkAccessFlags visibleAccessMatrix[32] = {};
 
-		Array<PassNodeID> passes;
+		Vector<PassNodeID> passes;
 		uint32 passCounter = 0;
 	};
 
@@ -48,7 +48,7 @@ namespace soul::gpu::impl
 		VkPipelineStageFlags unsyncWriteStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
 		VkAccessFlags unsyncWriteAccess = 0;
 		VkAccessFlags visibleAccessMatrix[32] = {};
-		Array<PassNodeID> passes;
+		Vector<PassNodeID> passes;
 		uint32 passCounter = 0;
 		VkImageLayout layout = VK_IMAGE_LAYOUT_UNDEFINED;
 	};
@@ -83,17 +83,17 @@ namespace soul::gpu::impl
 	{
 
 	private:
-		Array<Array<PassNodeID>> dependencies_;
-		Array<Array<PassNodeID>> dependents_;
-		Array<soul_size> dependency_levels_;
+		Vector<Vector<PassNodeID>> dependencies_;
+		Vector<Vector<PassNodeID>> dependents_;
+		Vector<soul_size> dependency_levels_;
 	};
 
 	struct PassExecInfo {
 		PassNode* passNode = nullptr;
-		Array<BufferBarrier> bufferFlushes;
-		Array<BufferBarrier> bufferInvalidates;
-		Array<TextureBarrier> textureFlushes;
-		Array<TextureBarrier> textureInvalidates;
+		Vector<BufferBarrier> bufferFlushes;
+		Vector<BufferBarrier> bufferInvalidates;
+		Vector<TextureBarrier> textureFlushes;
+		Vector<TextureBarrier> textureInvalidates;
 	};
 
 	class RenderGraphExecution {
@@ -135,16 +135,16 @@ namespace soul::gpu::impl
 		CommandQueues& command_queues_;
 		CommandPools& command_pools_;
 
-		Array<BufferExecInfo> buffer_infos_;
+		Vector<BufferExecInfo> buffer_infos_;
 		Slice<BufferExecInfo> internal_buffer_infos_;
 		Slice<BufferExecInfo> external_buffer_infos_;
 
-		Array<TextureExecInfo> texture_infos_;
+		Vector<TextureExecInfo> texture_infos_;
 		Slice<TextureExecInfo> internal_texture_infos_;
 		Slice<TextureExecInfo> external_texture_infos_;
-		Array<TextureViewExecInfo> texture_view_infos_;
+		Vector<TextureViewExecInfo> texture_view_infos_;
 
-		Array<PassExecInfo> pass_infos_;
+		Vector<PassExecInfo> pass_infos_;
 		
 		
 
@@ -153,10 +153,10 @@ namespace soul::gpu::impl
 		void submit_external_sync_primitive();
 		void execute_pass(const uint32 pass_index, VkCommandBuffer command_buffer);
 
-		void init_shader_buffers(const Array<ShaderBufferReadAccess>& access_list, soul_size index, QueueType queue_type);
-		void init_shader_buffers(const Array<ShaderBufferWriteAccess>& access_list, soul_size index, QueueType queue_type);
-		void init_shader_textures(const Array<ShaderTextureReadAccess>& access_list, soul_size index, QueueType queue_type);
-		void init_shader_textures(const Array<ShaderTextureWriteAccess>& access_list, soul_size index, QueueType queue_type);
+		void init_shader_buffers(const Vector<ShaderBufferReadAccess>& access_list, soul_size index, QueueType queue_type);
+		void init_shader_buffers(const Vector<ShaderBufferWriteAccess>& access_list, soul_size index, QueueType queue_type);
+		void init_shader_textures(const Vector<ShaderTextureReadAccess>& access_list, soul_size index, QueueType queue_type);
+		void init_shader_textures(const Vector<ShaderTextureWriteAccess>& access_list, soul_size index, QueueType queue_type);
 
 	};
 }

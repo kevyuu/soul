@@ -3,7 +3,7 @@ set (PUBLIC_HEADER_DIR src)
 set (SOUL_HEADERS
 	
 	src/core/architecture.h
-	src/core/array.h
+	src/core/vector.h
 	src/core/config.h
 	src/core/dev_util.h
 	src/core/uint64_hash_map.h

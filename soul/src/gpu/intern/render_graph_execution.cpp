@@ -79,7 +79,7 @@ namespace soul::gpu::impl
 			buffer_info->firstPass = pass_id;
 		}
 		buffer_info->lastPass = pass_id;
-		buffer_info->passes.add(pass_id);
+		buffer_info->passes.push_back(pass_id);
 	};
 	
 
@@ -96,7 +96,7 @@ namespace soul::gpu::impl
 
 		std::ranges::for_each(view_index_range, [pass_id, texture_info](SubresourceIndex view_index)
 		{
-			texture_info->get_view(view_index)->passes.add(pass_id);
+			texture_info->get_view(view_index)->passes.push_back(pass_id);
 		});
 		SOUL_ASSERT(0, !texture_info->view->passes.empty(), "");
 	};
@@ -685,7 +685,7 @@ namespace soul::gpu::impl
 		// Sync semaphores
 		for(const auto src_pass_type : EnumIter<PassType>()) {
 			runtime::ScopeAllocator scopeAllocator("Sync semaphore allocator", runtime::get_temp_allocator());
-			Array<Semaphore*> semaphores(&scopeAllocator);
+			Vector<Semaphore*> semaphores(&scopeAllocator);
 			semaphores.reserve(to_underlying(PassType::COUNT));
 
 			for (auto semaphore_id : external_semaphores_[src_pass_type])
@@ -814,15 +814,15 @@ namespace soul::gpu::impl
 
 		submit_external_sync_primitive();
 
-		Array<VkEvent> garbage_events;
-		Array<SemaphoreID> garbage_semaphores;
+		Vector<VkEvent> garbage_events;
+		Vector<SemaphoreID> garbage_semaphores;
 
-		Array<VkBufferMemoryBarrier> event_buffer_barriers;
-		Array<VkImageMemoryBarrier> event_image_barriers;
+		Vector<VkBufferMemoryBarrier> event_buffer_barriers;
+		Vector<VkImageMemoryBarrier> event_image_barriers;
 
-		Array<VkImageMemoryBarrier> init_layout_barriers;
-		Array<VkImageMemoryBarrier> semaphore_layout_barriers;
-		Array<VkEvent> events;
+		Vector<VkImageMemoryBarrier> init_layout_barriers;
+		Vector<VkImageMemoryBarrier> semaphore_layout_barriers;
+		Vector<VkEvent> events;
 
 		auto need_invalidate = [](VkAccessFlags visible_access_matrix[], VkAccessFlags access_flags, 
 			VkPipelineStageFlags stage_flags) -> bool {
@@ -902,8 +902,8 @@ namespace soul::gpu::impl
 
 					VkAccessFlags dst_access_flags = barrier.accessFlags;
 
-					event_buffer_barriers.add(mem_barrier);
-					events.add(buffer_info.pendingEvent);
+					event_buffer_barriers.push_back(mem_barrier);
+					events.push_back(buffer_info.pendingEvent);
 					event_src_stage_flags |= buffer_info.unsyncWriteStage;
 					event_dst_stage_flags |= barrier.stageFlags;
 
@@ -958,7 +958,7 @@ namespace soul::gpu::impl
 
 						mem_barrier.srcAccessMask = 0;
 						mem_barrier.dstAccessMask = barrier.accessFlags;
-						semaphore_layout_barriers.add(mem_barrier);
+						semaphore_layout_barriers.push_back(mem_barrier);
 
 					}
 					Semaphore& semaphore = *gpu_system_->get_semaphore_ptr(view_info.pendingSemaphore);
@@ -972,8 +972,8 @@ namespace soul::gpu::impl
 					mem_barrier.srcAccessMask = view_info.unsyncWriteAccess;
 					mem_barrier.dstAccessMask = dstAccessFlags;
 
-					event_image_barriers.add(mem_barrier);
-					events.add(view_info.pendingEvent);
+					event_image_barriers.push_back(mem_barrier);
+					events.push_back(view_info.pendingEvent);
 					event_src_stage_flags |= view_info.unsyncWriteStage;
 					event_dst_stage_flags |= barrier.stageFlags;
 
@@ -989,7 +989,7 @@ namespace soul::gpu::impl
 
 					mem_barrier.srcAccessMask = 0;
 					mem_barrier.dstAccessMask = barrier.accessFlags;
-					init_layout_barriers.add(mem_barrier);
+					init_layout_barriers.push_back(mem_barrier);
 					init_layout_dst_stage_flags |= barrier.stageFlags;
 				}
 
@@ -1055,10 +1055,10 @@ namespace soul::gpu::impl
 			for (PassType passType : EnumIter<PassType>()) {
 				if (is_pass_type_dependent[passType] && passType == pass_node->get_type()) {
 					event = gpu_system_->create_event();
-					garbage_events.add(event);
+					garbage_events.push_back(event);
 				} else if (is_pass_type_dependent[passType] && passType != pass_node->get_type()) {
 					semaphoresMap[passType] = gpu_system_->create_semaphore();
-					garbage_semaphores.add(semaphoresMap[passType]);
+					garbage_semaphores.push_back(semaphoresMap[passType]);
 				}
 			}
 
@@ -1104,7 +1104,7 @@ namespace soul::gpu::impl
 				vkCmdSetEvent(cmd_buffer, event, eventStageFlags);
 			}
 
-			Array<Semaphore*> semaphores(&passNodeScopeAllocator);
+			Vector<Semaphore*> semaphores(&passNodeScopeAllocator);
 			semaphores.reserve(to_underlying(PassType::COUNT));
 			for (SemaphoreID semaphore_id : semaphoresMap) {
 				if (semaphore_id.is_valid()) {
@@ -1260,7 +1260,7 @@ namespace soul::gpu::impl
 
 	}
 
-	void RenderGraphExecution::init_shader_buffers(const Array<ShaderBufferReadAccess>& shaderAccessList, soul_size index, QueueType queue_type) {
+	void RenderGraphExecution::init_shader_buffers(const Vector<ShaderBufferReadAccess>& shaderAccessList, soul_size index, QueueType queue_type) {
 		PassExecInfo& passInfo = pass_infos_[index];
 		for (const ShaderBufferReadAccess& shader_access : shaderAccessList) {
 			SOUL_ASSERT(0, shader_access.nodeID != BUFFER_NODE_ID_NULL, "");
@@ -1273,20 +1273,20 @@ namespace soul::gpu::impl
 			invalidate_barrier.stageFlags = stage_flags;
 			invalidate_barrier.accessFlags = VK_ACCESS_SHADER_READ_BIT;
 			invalidate_barrier.bufferInfoIdx = buffer_info_id;
-			passInfo.bufferInvalidates.add(invalidate_barrier);
+			passInfo.bufferInvalidates.push_back(invalidate_barrier);
 
 			BufferBarrier flush_barrier;
 			flush_barrier.stageFlags = stage_flags;
 			flush_barrier.accessFlags = 0;
 			flush_barrier.bufferInfoIdx = buffer_info_id;
-			passInfo.bufferFlushes.add(flush_barrier);
+			passInfo.bufferFlushes.push_back(flush_barrier);
 
 			update_buffer_info(queue_type, impl::get_buffer_usage_flags(shader_access.usage), PassNodeID(index), &buffer_infos_[buffer_info_id]);
 		}
 
 	}
 
-	void RenderGraphExecution::init_shader_buffers(const Array<ShaderBufferWriteAccess>& shaderAccessList, soul_size index, QueueType queue_type) {
+	void RenderGraphExecution::init_shader_buffers(const Vector<ShaderBufferWriteAccess>& shaderAccessList, soul_size index, QueueType queue_type) {
 		PassExecInfo& passInfo = pass_infos_[index];
 		for (const auto& shader_access : shaderAccessList) {
 			SOUL_ASSERT(0, shader_access.outputNodeID != BUFFER_NODE_ID_NULL, "");
@@ -1299,20 +1299,20 @@ namespace soul::gpu::impl
 			invalidate_barrier.stageFlags = stage_flags;
 			invalidate_barrier.accessFlags = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
 			invalidate_barrier.bufferInfoIdx = buffer_info_id;
-			passInfo.bufferInvalidates.add(invalidate_barrier);
+			passInfo.bufferInvalidates.push_back(invalidate_barrier);
 
 			BufferBarrier flush_barrier;
 			flush_barrier.stageFlags = stage_flags;
 			flush_barrier.accessFlags = VK_ACCESS_SHADER_WRITE_BIT;
 			flush_barrier.bufferInfoIdx = buffer_info_id;
-			passInfo.bufferFlushes.add(flush_barrier);
+			passInfo.bufferFlushes.push_back(flush_barrier);
 
 			update_buffer_info(queue_type, get_buffer_usage_flags(shader_access.usage), PassNodeID(index), &buffer_infos_[buffer_info_id]);
 		}
 
 	}
 
-	void RenderGraphExecution::init_shader_textures(const Array<ShaderTextureReadAccess>& access_list, soul_size index, QueueType queue_type) {
+	void RenderGraphExecution::init_shader_textures(const Vector<ShaderTextureReadAccess>& access_list, soul_size index, QueueType queue_type) {
 		PassExecInfo& pass_info = pass_infos_[index];
 		for (const auto& shader_access : access_list) {
 			SOUL_ASSERT(0, shader_access.nodeID != TEXTURE_NODE_ID_NULL, "");
@@ -1357,7 +1357,7 @@ namespace soul::gpu::impl
 		}
 	}
 
-	void RenderGraphExecution::init_shader_textures(const Array<ShaderTextureWriteAccess>& access_list, soul_size index, QueueType queue_type) {
+	void RenderGraphExecution::init_shader_textures(const Vector<ShaderTextureWriteAccess>& access_list, soul_size index, QueueType queue_type) {
 		PassExecInfo& pass_info = pass_infos_[index];
 		for (const auto& shader_access : access_list) {
 			SOUL_ASSERT(0, shader_access.outputNodeID != TEXTURE_NODE_ID_NULL, "");

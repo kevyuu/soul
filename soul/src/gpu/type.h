@@ -18,7 +18,7 @@
 
 #include "core/type.h"
 #include "core/mutex.h"
-#include "core/array.h"
+#include "core/vector.h"
 #include "core/enum_array.h"
 #include "core/pool.h"
 #include "core/string.h"
@@ -699,7 +699,7 @@ namespace soul::gpu
 		ID add(const T& datum)
 		{
 			lock_.lock();
-			const ID id = pool_.add(datum);
+			const ID id = pool_.push_back(datum);
 			lock_.unlock();
 			return id;
 		}
@@ -787,10 +787,10 @@ namespace soul::gpu
 			VkSwapchainKHR vkHandle = VK_NULL_HANDLE;
 			VkSurfaceFormatKHR format = {};
 			VkExtent2D extent = {};
-			Array<TextureID> textures;
-			Array<VkImage> images;
-			Array<VkImageView> imageViews;
-			Array<VkFence> fences;
+			Vector<TextureID> textures;
+			Vector<VkImage> images;
+			Vector<VkImageView> imageViews;
+			Vector<VkFence> fences;
 		};
 
 		struct DescriptorSetLayoutBinding {
@@ -872,7 +872,7 @@ namespace soul::gpu
 		public:
 			void init(VkDevice device, uint32 familyIndex, uint32 queueIndex);
 			void wait(Semaphore* semaphore, VkPipelineStageFlags waitStages);
-			void submit(VkCommandBuffer commandBuffer, const Array<Semaphore*>& semaphores, VkFence fence = VK_NULL_HANDLE);
+			void submit(VkCommandBuffer commandBuffer, const Vector<Semaphore*>& semaphores, VkFence fence = VK_NULL_HANDLE);
 			void submit(VkCommandBuffer commandBuffer, Semaphore* semaphore, VkFence fence = VK_NULL_HANDLE);
 			void submit(VkCommandBuffer commandBuffer, uint32 semaphoreCount = 0, Semaphore* const* semaphores = nullptr, VkFence fence = VK_NULL_HANDLE);
 			void flush(uint32 semaphoreCount, Semaphore* const* semaphores, VkFence fence);
@@ -882,9 +882,9 @@ namespace soul::gpu
 			VkDevice device = VK_NULL_HANDLE;
 			VkQueue vkHandle = VK_NULL_HANDLE;
 			uint32 familyIndex = 0;
-			Array<VkSemaphore> waitSemaphores;
-			Array<VkPipelineStageFlags> waitStages;
-			Array<VkCommandBuffer> commands;
+			Vector<VkSemaphore> waitSemaphores;
+			Vector<VkPipelineStageFlags> waitStages;
+			Vector<VkCommandBuffer> commands;
 		};
 
 		class SecondaryCommandBuffer
@@ -930,7 +930,7 @@ namespace soul::gpu
 			runtime::AllocatorInitializer allocatorInitializer;
 			VkDevice device = VK_NULL_HANDLE;
 			VkCommandPool vkHandle = VK_NULL_HANDLE;
-			Array<VkCommandBuffer> allocatedBuffers;
+			Vector<VkCommandBuffer> allocatedBuffers;
 			VkCommandBufferLevel level = VK_COMMAND_BUFFER_LEVEL_MAX_ENUM;
 			uint16 count = 0;
 		};
@@ -952,8 +952,8 @@ namespace soul::gpu
 		private:
 			memory::Allocator* allocator_;
 			runtime::AllocatorInitializer allocator_initializer_;
-			Array<EnumArray<QueueType, CommandPool>> primary_pools_;
-			Array<CommandPool> secondary_pools_;
+			Vector<EnumArray<QueueType, CommandPool>> primary_pools_;
+			Vector<CommandPool> secondary_pools_;
 		};
 
 		class GPUResourceInitializer
@@ -979,7 +979,7 @@ namespace soul::gpu
 				PrimaryCommandBuffer transfer_command_buffer_;
 				PrimaryCommandBuffer clear_command_buffer_;
 				PrimaryCommandBuffer mipmap_gen_command_buffer_;
-				Array<StagingBuffer> staging_buffers_;
+				Vector<StagingBuffer> staging_buffers_;
 			};
 
 			VmaAllocator gpu_allocator_ = nullptr;
@@ -993,7 +993,7 @@ namespace soul::gpu
 			void load_staging_buffer(const StagingBuffer&, const void* data, soul_size size);
 			void load_staging_buffer(const StagingBuffer&, const void* data, soul_size count, soul_size type_size, soul_size stride);
 
-			Array<ThreadContext> thread_contexts_;
+			Vector<ThreadContext> thread_contexts_;
 		};
 
 		class GPUResourceFinalizer
@@ -1006,7 +1006,7 @@ namespace soul::gpu
 		private:
 			struct alignas(SOUL_CACHELINE_SIZE) ThreadContext
 			{
-				EnumArray<QueueType, Array<VkImageMemoryBarrier>> image_barriers_;
+				EnumArray<QueueType, Vector<VkImageMemoryBarrier>> image_barriers_;
 				EnumArray<QueueType, QueueFlags> sync_dst_queues_;
 
 				// TODO(kevinyu): Investigate why we cannot use explicitly or implicitly default constructor here.
@@ -1020,7 +1020,7 @@ namespace soul::gpu
 				~ThreadContext() {}
 			};
 
-			Array<ThreadContext> thread_contexts_;
+			Vector<ThreadContext> thread_contexts_;
 		};
 
 
@@ -1036,13 +1036,13 @@ namespace soul::gpu
 			uint32 swapchainIndex = 0;
 
 			struct Garbages {
-				Array<TextureID> textures;
-				Array<BufferID> buffers;
-				Array<VkRenderPass> renderPasses;
-				Array<VkFramebuffer> frameBuffers;
-				Array<VkPipeline> pipelines;
-				Array<VkEvent> events;
-				Array<SemaphoreID> semaphores;
+				Vector<TextureID> textures;
+				Vector<BufferID> buffers;
+				Vector<VkRenderPass> renderPasses;
+				Vector<VkFramebuffer> frameBuffers;
+				Vector<VkPipeline> pipelines;
+				Vector<VkEvent> events;
+				Vector<SemaphoreID> semaphores;
 			} garbages;
 
 			GPUResourceInitializer gpuResourceInitializer;
@@ -1088,7 +1088,7 @@ namespace soul::gpu
 
 			Swapchain swapchain;
 
-			Array<_FrameContext> frameContexts;
+			Vector<_FrameContext> frameContexts;
 			uint32 frameCounter;
 			uint32 currentFrame;
 

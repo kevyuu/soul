@@ -260,12 +260,12 @@ namespace soul::runtime {
 
 	void System::pushAllocator(memory::Allocator *allocator) {
 		SOUL_ASSERT(0, _db.defaultAllocator != nullptr, "");
-		_threadContext().allocatorStack.add(allocator);
+		_threadContext().allocatorStack.push_back(allocator);
 	}
 
 	void System::popAllocator() {
 		SOUL_ASSERT(0, !_threadContext().allocatorStack.empty(), "");
-		_threadContext().allocatorStack.pop();
+		_threadContext().allocatorStack.pop_back();
 	}
 
 	memory::Allocator* System::getContextAllocator() {

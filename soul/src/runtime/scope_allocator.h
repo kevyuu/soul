@@ -2,7 +2,7 @@
 
 // TODO(kevinyu) : Move this to runtime namespace, Use double ended stack allocator
 
-#include "core/array.h"
+#include "core/vector.h"
 
 #include "memory/allocator.h"
 #include "runtime/runtime.h"
@@ -29,7 +29,7 @@ namespace soul::runtime{
 		BackingAllocator* _backingAllocator = nullptr;
 		void* _scopeBaseAddr = nullptr;
 		Allocator* _fallbackAllocator = nullptr;
-		Array<memory::Allocation> _fallbackAllocations;
+		Vector<memory::Allocation> _fallbackAllocations;
 
 		SOUL_NODISCARD void* getMarker() const noexcept;
 		void rewind(void* addr) noexcept;
@@ -63,7 +63,7 @@ namespace soul::runtime{
 		memory::Allocation allocation = _backingAllocator->try_allocate(size, alignment, tag);
 		if (allocation.addr == nullptr) {
 			allocation = _fallbackAllocator->try_allocate(size, alignment, tag);
-			_fallbackAllocations.add(allocation);
+			_fallbackAllocations.push_back(allocation);
 		}
 		return allocation;
 	}

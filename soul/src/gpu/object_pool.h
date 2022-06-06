@@ -1,7 +1,7 @@
 #pragma once
 
 #include "memory/allocator.h"
-#include "core/array.h"
+#include "core/vector.h"
 #include "core/config.h"
 
 #include "core/mutex.h"
@@ -55,7 +55,7 @@ namespace soul::gpu
 				memories_.push_back(memory);
 			}
 			T* ptr = vacants_.back();
-			vacants_.pop();
+			vacants_.pop_back();
 			new(ptr) T(std::forward<ARGS>(args)...);
 			return { ptr, cookie++ };
 		}
@@ -74,8 +74,8 @@ namespace soul::gpu
 
 	private:
 		mutable Lockable mutex_;
-		Array<T*> vacants_;
-		Array<T*> memories_;
+		Vector<T*> vacants_;
+		Vector<T*> memories_;
 		memory::Allocator* allocator_;
 		uint64 cookie = 0;
 	};

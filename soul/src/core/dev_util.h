@@ -53,8 +53,8 @@ void soul_intern_assert(int paranoia, int line, const char* file, const char* fo
 // Profiling
 #if defined(SOUL_PROFILE_CPU_BACKEND_TRACY)
 
-    #include <tracy/Tracy.hpp>
-    #include <tracy/TracyC.h>
+    #include <Tracy.hpp>
+    #include <TracyC.h>
 
     struct FrameProfileScope {
 

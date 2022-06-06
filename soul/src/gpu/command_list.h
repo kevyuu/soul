@@ -30,12 +30,12 @@ namespace soul::gpu
 				primary_command_buffer_.begin_render_pass(render_pass_begin_info_, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
 				const uint32 thread_count = runtime::get_thread_count();
 
-				Array<impl::SecondaryCommandBuffer> secondary_command_buffers;
+				Vector<impl::SecondaryCommandBuffer> secondary_command_buffers;
 				secondary_command_buffers.resize(thread_count);
 
 				struct TaskData
 				{
-					Array<impl::SecondaryCommandBuffer>& cmdBuffers;
+					Vector<impl::SecondaryCommandBuffer>& cmdBuffers;
 					soul_size commandCount;
 					VkRenderPass renderPass;
 					VkFramebuffer framebuffer;

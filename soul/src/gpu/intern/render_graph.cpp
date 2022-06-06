@@ -147,7 +147,7 @@ namespace soul::gpu
 	}
 
 	void RenderGraph::read_buffer_node(BufferNodeID buffer_node_id, PassNodeID pass_node_id) {
-		get_buffer_node(buffer_node_id).readers.add(pass_node_id);
+		get_buffer_node(buffer_node_id).readers.push_back(pass_node_id);
 	}
 
 	BufferNodeID RenderGraph::write_buffer_node(BufferNodeID buffer_node_id, PassNodeID pass_node_id) {
@@ -168,7 +168,7 @@ namespace soul::gpu
 	}
 
 	void RenderGraph::read_texture_node(TextureNodeID node_id, PassNodeID pass_node_id) {
-		get_texture_node(node_id).readers.add(pass_node_id);
+		get_texture_node(node_id).readers.push_back(pass_node_id);
 	}
 
 	TextureNodeID RenderGraph::write_texture_node(TextureNodeID texture_node_id, PassNodeID pass_node_id) {
@@ -207,32 +207,32 @@ namespace soul::gpu
 
 	BufferNodeID RGShaderPassDependencyBuilder::add_vertex_buffer(const BufferNodeID node_id) {
 		render_graph_.read_buffer_node(node_id, pass_id_);
-		shader_node_.vertex_buffers_.add(node_id);
+		shader_node_.vertex_buffers_.push_back(node_id);
 		return node_id;
 	}
 
 	BufferNodeID RGShaderPassDependencyBuilder::add_index_buffer(const BufferNodeID node_id) {
 		render_graph_.read_buffer_node(node_id, pass_id_);
-		shader_node_.index_buffers_.add(node_id);
+		shader_node_.index_buffers_.push_back(node_id);
 		return node_id;
 	}
 
 	BufferNodeID RGShaderPassDependencyBuilder::add_shader_buffer(const BufferNodeID node_id, const ShaderStageFlags stage_flags, const ShaderBufferReadUsage usage) {
 		render_graph_.read_buffer_node(node_id, pass_id_);
-		shader_node_.shader_buffer_read_accesses_.add({ node_id, stage_flags, usage });
+		shader_node_.shader_buffer_read_accesses_.push_back({ node_id, stage_flags, usage });
 		return node_id;
 	}
 
 	BufferNodeID RGShaderPassDependencyBuilder::add_shader_buffer(const BufferNodeID node_id, const ShaderStageFlags stage_flags, const ShaderBufferWriteUsage usage) {
 		BufferNodeID out_node_id = render_graph_.write_buffer_node(node_id, pass_id_);
-		shader_node_.shader_buffer_write_accesses_.add({ node_id, out_node_id, stage_flags, usage });
+		shader_node_.shader_buffer_write_accesses_.push_back({ node_id, out_node_id, stage_flags, usage });
 		return out_node_id;
 	}
 
 	TextureNodeID RGShaderPassDependencyBuilder::add_shader_texture(const TextureNodeID node_id, const ShaderStageFlags stage_flags, const ShaderTextureReadUsage usage, const SubresourceIndexRange view_range) {
 		SOUL_ASSERT(0, node_id.is_valid(), "");
 		render_graph_.read_texture_node(node_id, pass_id_);
-		shader_node_.shader_texture_read_accesses_.add({ node_id, stage_flags, usage , view_range});
+		shader_node_.shader_texture_read_accesses_.push_back({ node_id, stage_flags, usage , view_range});
 		return node_id;
 	}
 

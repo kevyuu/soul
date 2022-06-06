@@ -50,6 +50,13 @@ namespace soul::memory {
 		}
 
 		template<typename T>
+		T* allocate_array(soul_size count, const char* tag = "untagged")
+		{
+			const Allocation allocation = try_allocate(count * sizeof(T), alignof(T), tag);
+			return static_cast<T*>(allocation.addr);
+		}
+
+		template<typename T>
 		void deallocate_array(T* addr, soul_size count)
 		{
 			deallocate(addr, count * sizeof(T));
@@ -77,7 +84,6 @@ namespace soul::memory {
 			const Allocation allocation = try_allocate(count * sizeof(T), alignof(T), tag);
 			return static_cast<T*>(allocation.addr);
 		}
-
 
 		template <typename T>
 		requires (!std::is_polymorphic_v<T> && !std::is_void_v<T>)

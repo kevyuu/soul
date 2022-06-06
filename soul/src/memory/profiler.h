@@ -1,6 +1,6 @@
 #pragma once
 
-#include "core/array.h"
+#include "core/vector.h"
 #include "core/packed_pool.h"
 #include "core/uint64_hash_map.h"
 
@@ -79,7 +79,7 @@ namespace soul::memory {
 		};
 
 		struct Frame {
-			Array<Snapshot> snapshots;
+			Vector<Snapshot> snapshots;
 			explicit Frame(Allocator* allocator) : snapshots(allocator) {}
 		};
 
@@ -96,17 +96,17 @@ namespace soul::memory {
 		void unregisterAllocator(const char* allocatorName);
 		void registerAllocation(const char* allocatorName, const char* tag, const void* addr, uint32 size);
 		void registerDeallocation(const char* allocatorName, const void* addr, uint32 size);
-		void beginFrame() { _frames.add(Frame(_allocator)); }
+		void beginFrame() { _frames.push_back(Frame(_allocator)); }
 		void endFrame() {}
 		void snapshot(const char* name);
 
-		SOUL_NODISCARD const Array<Frame>& getFrames() const { return _frames; }
+		SOUL_NODISCARD const Vector<Frame>& getFrames() const { return _frames; }
 
 	private:
 		Allocator* _allocator;
 		UInt64HashMap<AllocatorData> _allocatorsData;
 		PackedPool<const char*> _allocatorNames;
-		Array<Frame> _frames;
+		Vector<Frame> _frames;
 	};
 
 }

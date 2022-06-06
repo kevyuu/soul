@@ -292,8 +292,8 @@ namespace soul::gpu
 
 		Vec2ui32 dimension;
 		TextureSampleCount sampleCount = TextureSampleCount::COUNT_1;
-		Array<ColorAttachmentDesc> colorAttachments;
-		Array<ResolveAttachmentDesc> resolveAttachments;
+		Vector<ColorAttachmentDesc> colorAttachments;
+		Vector<ResolveAttachmentDesc> resolveAttachments;
 		DepthStencilAttachmentDesc depthStencilAttachment;
 	};
 
@@ -301,8 +301,8 @@ namespace soul::gpu
 	{
 		Vec2ui32 dimension;
 		TextureSampleCount sampleCount = TextureSampleCount::COUNT_1;
-		Array<ColorAttachment> colorAttachments;
-		Array<ResolveAttachment> resolveAttachments;
+		Vector<ColorAttachment> colorAttachments;
+		Vector<ResolveAttachment> resolveAttachments;
 		DepthStencilAttachment depthStencilAttachment;
 	};
 
@@ -329,12 +329,12 @@ namespace soul::gpu
 	class ShaderNode : public PassNode
 	{
 	private:
-		Array<ShaderBufferReadAccess> shader_buffer_read_accesses_;
-		Array<ShaderBufferWriteAccess> shader_buffer_write_accesses_;
-		Array<ShaderTextureReadAccess> shader_texture_read_accesses_;
-		Array<ShaderTextureWriteAccess> shader_texture_write_accesses_;
-		Array<BufferNodeID> vertex_buffers_;
-		Array<BufferNodeID> index_buffers_;
+		Vector<ShaderBufferReadAccess> shader_buffer_read_accesses_;
+		Vector<ShaderBufferWriteAccess> shader_buffer_write_accesses_;
+		Vector<ShaderTextureReadAccess> shader_texture_read_accesses_;
+		Vector<ShaderTextureWriteAccess> shader_texture_write_accesses_;
+		Vector<BufferNodeID> vertex_buffers_;
+		Vector<BufferNodeID> index_buffers_;
 
 		friend class RGShaderPassDependencyBuilder;
 
@@ -346,12 +346,12 @@ namespace soul::gpu
 		ShaderNode& operator=(ShaderNode&&) = delete;
 		~ShaderNode() override = default;
 
-		[[nodiscard]] const Array<BufferNodeID>& get_vertex_buffers() const { return vertex_buffers_;  }
-		[[nodiscard]] const Array<BufferNodeID>& get_index_buffers() const { return index_buffers_; }
-		[[nodiscard]] const Array<ShaderBufferReadAccess>& get_buffer_read_accesses() const { return shader_buffer_read_accesses_; }
-		[[nodiscard]] const Array<ShaderBufferWriteAccess>& get_buffer_write_accesses() const { return shader_buffer_write_accesses_; }
-		[[nodiscard]] const Array<ShaderTextureReadAccess>& get_texture_read_accesses() const { return shader_texture_read_accesses_; }
-		[[nodiscard]] const Array<ShaderTextureWriteAccess>& get_texture_write_accesses() const { return shader_texture_write_accesses_;  }
+		[[nodiscard]] const Vector<BufferNodeID>& get_vertex_buffers() const { return vertex_buffers_;  }
+		[[nodiscard]] const Vector<BufferNodeID>& get_index_buffers() const { return index_buffers_; }
+		[[nodiscard]] const Vector<ShaderBufferReadAccess>& get_buffer_read_accesses() const { return shader_buffer_read_accesses_; }
+		[[nodiscard]] const Vector<ShaderBufferWriteAccess>& get_buffer_write_accesses() const { return shader_buffer_write_accesses_; }
+		[[nodiscard]] const Vector<ShaderTextureReadAccess>& get_texture_read_accesses() const { return shader_texture_read_accesses_; }
+		[[nodiscard]] const Vector<ShaderTextureWriteAccess>& get_texture_write_accesses() const { return shader_texture_write_accesses_;  }
 	};
 
 	class GraphicBaseNode : public ShaderNode
@@ -452,19 +452,19 @@ namespace soul::gpu
 		CopyBaseNode& operator=(CopyBaseNode&&) = delete;
 		~CopyBaseNode() override = default;
 
-		const Array<TransferSrcBufferAccess>& get_source_buffers() const { return source_buffers_; }
-		const Array<TransferDstBufferAccess>& get_destination_buffers() const { return destination_buffers_; }
-		const Array<TransferSrcTextureAccess>& get_source_textures() const { return source_textures_; }
-		const Array<TransferDstTextureAccess>& get_destination_textures() const { return destination_textures_; }
+		const Vector<TransferSrcBufferAccess>& get_source_buffers() const { return source_buffers_; }
+		const Vector<TransferDstBufferAccess>& get_destination_buffers() const { return destination_buffers_; }
+		const Vector<TransferSrcTextureAccess>& get_source_textures() const { return source_textures_; }
+		const Vector<TransferDstTextureAccess>& get_destination_textures() const { return destination_textures_; }
 
 		virtual void execute_pass(RenderGraphRegistry& registry, CopyCommandList& command_list) = 0;
 
 		friend class RGCopyPassDependencyBuilder;
 	private:
-		Array<TransferSrcBufferAccess> source_buffers_;
-		Array<TransferDstBufferAccess> destination_buffers_;
-		Array<TransferSrcTextureAccess> source_textures_;
-		Array<TransferDstTextureAccess> destination_textures_;
+		Vector<TransferSrcBufferAccess> source_buffers_;
+		Vector<TransferDstBufferAccess> destination_buffers_;
+		Vector<TransferSrcTextureAccess> source_textures_;
+		Vector<TransferDstTextureAccess> destination_textures_;
 	};
 
 	template <typename Parameter,
@@ -564,7 +564,7 @@ namespace soul::gpu
 		{
 			auto* node = allocator_->create<Node>(name, std::forward<Executable>(execute));
 			
-			pass_nodes_.add(node);
+			pass_nodes_.push_back(node);
 			const auto pass_node_id = PassNodeID(pass_nodes_.size() - 1);
 			RGShaderPassDependencyBuilder builder(pass_node_id, *node, *this);
 			setup(builder, node->get_parameter_());
@@ -606,7 +606,7 @@ namespace soul::gpu
 		const Node& add_compute_pass(const char* name, Setup&& setup, Executable&& execute)
 		{
 			auto node = allocator_->create<Node>(name, std::forward<Executable>(execute));
-			pass_nodes_.add(node);
+			pass_nodes_.push_back(node);
 			RGShaderPassDependencyBuilder builder(PassNodeID(pass_nodes_.size() - 1), *node, *this);
 			setup(builder, node->get_parameter_());
 			return *node;
@@ -621,7 +621,7 @@ namespace soul::gpu
 		const Node& add_copy_pass(const char* name, Setup&& setup, Executable&& execute)
 		{
 			auto node = allocator_->create<Node>(name, std::forward<Executable>(execute));
-			pass_nodes_.add(node);
+			pass_nodes_.push_back(node);
 			RGCopyPassDependencyBuilder builder(PassNodeID(pass_nodes_.size() - 1), *node, *this);
 			setup(builder, node->get_parameter_());
 			return *node;
@@ -648,28 +648,28 @@ namespace soul::gpu
 		[[nodiscard]] const impl::TextureNode& get_texture_node(TextureNodeID node_id) const;
 		impl::TextureNode& get_texture_node(TextureNodeID node_id);
 
-		[[nodiscard]] const Array<PassNode*>& get_pass_nodes() const { return pass_nodes_; }
-		[[nodiscard]] const Array<impl::BufferNode>& get_buffer_nodes() const { return buffer_nodes_; }
-		[[nodiscard]] const Array<impl::TextureNode>& get_texture_nodes() const { return texture_nodes_; }
-		[[nodiscard]] const Array<impl::RGInternalBuffer>& get_internal_buffers() const { return internal_buffers_; }
-		[[nodiscard]] const Array<impl::RGInternalTexture>& get_internal_textures() const { return internal_textures_; }
-		[[nodiscard]] const Array<impl::RGExternalBuffer>& get_external_buffers() const { return external_buffers_; }
-		[[nodiscard]] const Array<impl::RGExternalTexture>& get_external_textures() const { return external_textures_; }
+		[[nodiscard]] const Vector<PassNode*>& get_pass_nodes() const { return pass_nodes_; }
+		[[nodiscard]] const Vector<impl::BufferNode>& get_buffer_nodes() const { return buffer_nodes_; }
+		[[nodiscard]] const Vector<impl::TextureNode>& get_texture_nodes() const { return texture_nodes_; }
+		[[nodiscard]] const Vector<impl::RGInternalBuffer>& get_internal_buffers() const { return internal_buffers_; }
+		[[nodiscard]] const Vector<impl::RGInternalTexture>& get_internal_textures() const { return internal_textures_; }
+		[[nodiscard]] const Vector<impl::RGExternalBuffer>& get_external_buffers() const { return external_buffers_; }
+		[[nodiscard]] const Vector<impl::RGExternalTexture>& get_external_textures() const { return external_textures_; }
 
 		[[nodiscard]] RGTextureDesc get_texture_desc(TextureNodeID node_id, const gpu::System& gpu_system) const;
 		[[nodiscard]] RGBufferDesc get_buffer_desc(BufferNodeID node_id, const gpu::System& gpu_system) const;
 
 	private:
-		Array<PassNode*> pass_nodes_;
+		Vector<PassNode*> pass_nodes_;
 
-		Array<impl::BufferNode> buffer_nodes_;
-		Array<impl::TextureNode> texture_nodes_;
+		Vector<impl::BufferNode> buffer_nodes_;
+		Vector<impl::TextureNode> texture_nodes_;
 
-		Array<impl::RGInternalBuffer> internal_buffers_;
-		Array<impl::RGInternalTexture> internal_textures_;
+		Vector<impl::RGInternalBuffer> internal_buffers_;
+		Vector<impl::RGInternalTexture> internal_textures_;
 
-		Array<impl::RGExternalBuffer> external_buffers_;
-		Array<impl::RGExternalTexture> external_textures_;
+		Vector<impl::RGExternalBuffer> external_buffers_;
+		Vector<impl::RGExternalTexture> external_textures_;
 		
 		memory::Allocator* allocator_;
 	};
@@ -724,7 +724,7 @@ namespace soul::gpu
 			PassNodeID creator = PASS_NODE_ID_NULL;
 			PassNodeID writer = PASS_NODE_ID_NULL;
 			TextureNodeID writeTargetNode;
-			Array<PassNodeID> readers;
+			Vector<PassNodeID> readers;
 		};
 
 		struct BufferNode
@@ -733,7 +733,7 @@ namespace soul::gpu
 			PassNodeID creator = PASS_NODE_ID_NULL;
 			PassNodeID writer = PASS_NODE_ID_NULL;
 			BufferNodeID writeTargetNode;
-			Array<PassNodeID> readers;
+			Vector<PassNodeID> readers;
 		};
 	}
 }

@@ -195,7 +195,7 @@ namespace soul {
 
 	static bool ComputeTangentFrameWithFlatNormals(const TangentFrameComputeInput& input, Quaternionf* qtangents) {
 		runtime::ScopeAllocator<> scopeAllocator("ComputeTangentWithFlatNormals");
-		Array<Vec3f> normals(&scopeAllocator);
+		Vector<Vec3f> normals(&scopeAllocator);
 		normals.resize(input.triangleCount);
 		const uint64 vertexCount = input.vertexCount;
 		const Vec3f* positions = input.positions;
@@ -219,9 +219,9 @@ namespace soul {
 
 	static bool ComputeTangentFrameWithUVs(const TangentFrameComputeInput& input, Quaternionf* qtangents) {
 		runtime::ScopeAllocator<> scopeAllocator("ComputeTangentWithUVs");
-		Array<Vec3f> tan1(&scopeAllocator);
+		Vector<Vec3f> tan1(&scopeAllocator);
 		tan1.resize(input.vertexCount);
-		Array<Vec3f> tan2(&scopeAllocator);
+		Vector<Vec3f> tan2(&scopeAllocator);
 		tan2.resize(input.vertexCount);
 		
 		static auto randomPerp = [](const Vec3f& n) -> Vec3f {
