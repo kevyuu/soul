@@ -1,6 +1,6 @@
 #pragma once
 
-#include <volk/volk.h>
+#include <volk.h>
 #include "core/type.h"
 #include "core/mutex.h"
 #include "gpu/constant.h"

@@ -12,7 +12,7 @@
 #include "core/dev_util.h"
 #include "core/util.h"
 
-#include <volk/volk.h>
+#include <volk.h>
 
 #define VMA_IMPLEMENTATION
 
@@ -25,8 +25,8 @@
 #include <random>
 #include <variant>
 #include <span>
-#include <slang/slang.h>
-#include <slang/slang-com-ptr.h>
+#include <slang.h>
+#include <slang-com-ptr.h>
 
 #include "memory/allocator.h"
 
@@ -721,7 +721,6 @@ namespace soul::gpu
 				.preferredLargeHeapBlockSize = 0,
 				.pAllocationCallbacks = &allocation_callbacks,
 				.pDeviceMemoryCallbacks = nullptr,
-				.frameInUseCount = 0,
 				.pVulkanFunctions = &vulkan_functions,
 				.instance = db->instance
 			};

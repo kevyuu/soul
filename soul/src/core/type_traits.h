@@ -2,6 +2,8 @@
 
 #include <functional>
 #include <type_traits>
+#include <limits>
+#include <cstdint>
 
 #define SOUL_REQUIRE(...) std::enable_if_t<(__VA_ARGS__)>* = nullptr
 
@@ -82,6 +84,7 @@ namespace soul {
 		std::conditional_t<(N > std::numeric_limits<uint32_t>::max()), uint64_t, uint32_t>,
 		std::conditional_t<(N > std::numeric_limits<uint32_t>::max()), uint16_t, uint8_t>
 	>;
+
 	template<uint64_t N>
 	using min_uint_t = typename min_uint<N>::type;
 

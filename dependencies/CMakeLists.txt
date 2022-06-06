@@ -1,24 +1,6 @@
-cmake_minimum_required(VERSION 3.10)
+cmake_minimum_required(VERSION 3.21)
 
-set(CMAKE_MACOSX_RPATH 1)
-
-add_subdirectory(glfw)
-
-add_subdirectory(volk)
-target_include_directories(volk
-	PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 add_subdirectory(slang)
-
-# Tracy
-set (TRACY_SOURCES
-	tracy/TracyClient.cpp)
-
-add_library(tracy STATIC ${TRACY_SOURCES})
-target_include_directories(tracy
-	PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
-target_compile_definitions(tracy
-	PUBLIC TRACY_ENABLE NOMINMAX)
-
 # Imgui
 set(IMGUI_SOURCES
 	imgui/imgui.cpp
@@ -66,11 +48,3 @@ target_include_directories(tiny_gltf
 	INTERFACE ${CMAKE_CURRENT_SOURCE_DIR})
 target_compile_definitions(tiny_gltf
 	INTERFACE TINYGLTF_IMPLEMENTATION)
-
-add_library(vk_mem_alloc INTERFACE)
-target_include_directories(vk_mem_alloc
-	INTERFACE ${CMAKE_CURRENT_SOURCE_DIR}/VulkanMemoryAllocator/src ${Vulkan_INCLUDE_DIR})
-
-add_library(argparse INTERFACE)
-target_include_directories(argparse
-	INTERFACE ${CMAKE_CURRENT_SOURCE_DIR})

@@ -1,13 +1,9 @@
-#include "argparse.h"
-
 #include "core/type.h"
 #include "gpu/gpu.h"
 
 #include <app.h>
 
 using namespace soul;
-
-struct Args : public argparse::Args{};
 
 class TriangleSampleApp : public App
 {
@@ -81,9 +77,7 @@ public:
 
 int main(int argc, char* argv[])
 {
-	auto args = argparse::parse<Args>(argc, argv);
-	args.print();
-
+	
 	TriangleSampleApp app;
 	app.run();
 

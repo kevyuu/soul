@@ -1,0 +1,15 @@
+{
+  "name": "soul",
+  "version": "0.0.1",
+  "dependencies": [
+    {
+      "name": "glfw3",
+      "version>=": "3.3.7"
+    },
+    "vulkan-memory-allocator",
+    "volk",
+    "tracy",
+    "argparse"
+  ],
+  "builtin-baseline": "faed44dfa013088fe1910908a8a65887622f412f"
+}

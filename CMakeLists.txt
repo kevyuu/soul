@@ -1,5 +1,7 @@
-cmake_minimum_required(VERSION 3.21)
-cmake_policy(SET CMP0091 NEW)
+cmake_minimum_required(VERSION 3.22)
+set(VCPKG_FEATURE_FLAGS "versions")
+message(STATUS ${CMAKE_TOOLCHAIN_FILE})
+message(STATUS ${VCPKG_TARGET_TRIPLET})
 project(soul
 	VERSION "0.0.1"
 	LANGUAGES CXX
@@ -17,8 +19,6 @@ set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 message(STATUS "Compiler ID : ${CMAKE_CXX_COMPILER_ID}")
 message(STATUS "Compiler Path : ${CMAKE_CXX_COMPILER}")
 message(STATUS "System Name : ${CMAKE_SYSTEM_NAME}")
-string(REPLACE "/MDd" "/MTd" CMAKE_CXX_FLAGS_DEBUG ${CMAKE_CXX_FLAGS_DEBUG})
-string(REPLACE "/MD" "/MT" CMAKE_CXX_FLAGS_RELEASE ${CMAKE_CXX_FLAGS_RELEASE})
 message(STATUS "CMAKE_CXX_FLAGS_DEBUG: ${CMAKE_CXX_FLAGS_DEBUG}")
 
 # ==================================================================================================
@@ -53,6 +53,13 @@ endif()
 if(MSVC)
     add_definitions(-D_CRT_SECURE_NO_WARNINGS)
 endif()
+
+find_package(glfw3 CONFIG REQUIRED)
+find_package(unofficial-vulkan-memory-allocator CONFIG REQUIRED)
+add_library(vk_mem_alloc ALIAS unofficial::vulkan-memory-allocator::vulkan-memory-allocator)
+find_package(volk REQUIRED)
+find_package(Threads REQUIRED)
+find_package(Tracy CONFIG REQUIRED)
 
 add_subdirectory(dependencies)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/soul)

@@ -1,15 +1,6 @@
-[submodule "dependencies/volk"]
-	path = dependencies/volk
-	url = https://github.com/zeux/volk.git
-[submodule "dependencies/glfw"]
-	path = dependencies/glfw
-	url = https://github.com/glfw/glfw.git
-[submodule "dependencies/VulkanMemoryAllocator"]
-	path = dependencies/VulkanMemoryAllocator
-	url = https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator.git
-[submodule "dependencies/tracy"]
-	path = dependencies/tracy
-	url = https://github.com/wolfpld/tracy
 [submodule "dependencies/imgui"]
 	path = dependencies/imgui
 	url = https://github.com/ocornut/imgui.git
+[submodule "dependencies/vcpkg"]
+	path = dependencies/vcpkg
+	url = https://github.com/microsoft/vcpkg.git

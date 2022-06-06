@@ -4,7 +4,7 @@
 #include "gpu/intern/render_compiler.h"
 #include "gpu/system.h"
 
-#include <volk/volk.h>
+#include <volk.h>
 
 namespace soul::gpu::impl
 {

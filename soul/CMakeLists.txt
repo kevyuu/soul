@@ -1,7 +1,3 @@
-cmake_minimum_required(VERSION 3.10)
-project(soul_lib
-	VERSION "0.0.1")
-
 set (PUBLIC_HEADER_DIR src)
 
 set (SOUL_HEADERS
@@ -84,12 +80,20 @@ set (SOUL_SOURCES
 	"$<$<STREQUAL:${CMAKE_SYSTEM_NAME},Darwin>:${SOUL_SOURCES_OSX}>"
 	"$<$<STREQUAL:${CMAKE_SYSTEM_NAME},Windows>:${SOUL_SOURCES_WINDOWS}>")
 
+get_target_property(slang_include_directories slang INTERFACE_INCLUDE_DIRECTORIES)
+message(STATUS "Slang include directories : ${slang_include_directories}")
+
 add_library(soul STATIC ${SOUL_SOURCES})
+target_include_directories(soul
+	PUBLIC src ${NVTX_INCLUDE_DIR} ${PROJECT_SOURCE_DIR}/dependencies)
 target_link_libraries(soul
-	PUBLIC glfw ${GLFW_LIBRARIES} ${NVTX} vk_mem_alloc tracy
-	PRIVATE volk slang)
-target_include_directories(soul 
-	PUBLIC src/ ${NVTX_INCLUDE_DIR})
+	PUBLIC glfw ${NVTX} Vulkan::Vulkan volk::volk vk_mem_alloc Tracy::TracyClient
+	PRIVATE slang)
+target_compile_definitions(soul PUBLIC TRACY_ENABLE NOMINMAX)
+
+
+get_target_property(soul_include_directories soul INCLUDE_DIRECTORIES)
+message(STATUS "Soul include directories : ${soul_include_directories}")
 
 option(SOUL_LOG_ENABLE "Option for enabling SOUL_LOGGING_*" OFF)
 option(SOUL_ASSERT_ENABLE "Option for enabling SOUL_ASSERT" OFF)
@@ -117,5 +121,3 @@ target_compile_definitions(soul
 	PRIVATE
 		"$<$<STREQUAL:${CMAKE_SYSTEM_NAME},Windows>:SOUL_OS_WINDOWS>"
 		"$<$<STREQUAL:${CMAKE_SYSTEM_NAME},Darwin>:SOUL_OS_APPLE>")
-
-

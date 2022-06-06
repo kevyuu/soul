@@ -11,7 +11,7 @@
 
 #include <chrono>
 
-#include <volk/volk.h>
+#include <volk.h>
 #include <ranges>
 
 namespace soul::gpu::impl
