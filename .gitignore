@@ -18,3 +18,5 @@ assets/*
 CMakeSettings.json
 soul/out
 nsight-report
+*.DotSettings
+*.DotSettings.user
