@@ -186,7 +186,7 @@ namespace soul {
 		if (_buffer != nullptr) {
 			_moveUnits(newBuffer);
 			_destructUnits<T>();
-			_allocator->deallocate(_buffer, sizeof(Unit) * _capacity);
+			_allocator->deallocate(_buffer);
 		}
 		_buffer = newBuffer;
 		for (uint64 i = _capacity; i < capacity; i++) {
@@ -250,7 +250,7 @@ namespace soul {
 		_destructUnits<T>();
 		_capacity = 0;
 		_size = 0;
-		_allocator->deallocate(_buffer, sizeof(T) * _capacity);
+		_allocator->deallocate(_buffer);
 		_buffer = nullptr;
 		_bitSet.cleanup();
 	}

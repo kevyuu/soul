@@ -138,7 +138,7 @@ namespace soul::gpu::impl
 		sampler_descriptor_set_.destroy_descriptor(device_, id);
 	}
 
-	BindlessDescriptorSet::BindlessDescriptorSet(uint32 capacity, VkDescriptorType descriptor_type, soul::memory::Allocator* allocator) : allocator_(allocator), free_head_(1), list_(allocator->create_raw_array<uint32>(capacity)), capacity_(capacity), descriptor_type_(descriptor_type)
+	BindlessDescriptorSet::BindlessDescriptorSet(uint32 capacity, VkDescriptorType descriptor_type, soul::memory::Allocator* allocator) : allocator_(allocator), free_head_(1), list_(allocator->allocate_array<uint32>(capacity)), capacity_(capacity), descriptor_type_(descriptor_type)
 	{
 		for (uint32 i = free_head_; i < capacity_; i++)
 		{
@@ -241,7 +241,7 @@ namespace soul::gpu::impl
 
 	BindlessDescriptorSet::~BindlessDescriptorSet()
 	{
-		allocator_->destroy_array(list_, capacity_);
+		allocator_->deallocate_array(list_, capacity_);
 	}
 
 

@@ -20,89 +20,64 @@ namespace soul::memory {
 	class Allocator {
 	public:
 		Allocator() = delete;
-		explicit Allocator(const char* name) noexcept : _name(name) {}
+		explicit Allocator(const char* name) noexcept : name_(name) {}
 		Allocator(const Allocator& other) = delete;
 		Allocator& operator=(const Allocator& other) = delete;
 		Allocator(Allocator&& other) = delete;
 		Allocator& operator=(Allocator&& other) = delete;
 		virtual ~Allocator() = default;
 
-		SOUL_NODISCARD const char* name() const { return _name; }
-
-		
 		virtual Allocation try_allocate(soul_size size, soul_size alignment, const char* tag) = 0;
-		virtual void* allocate(soul_size size, soul_size alignment) final {
+		virtual void deallocate(void* addr) = 0;
+		virtual soul_size get_allocation_size(void* addr) const = 0;
+		virtual void reset() = 0;
+
+		[[nodiscard]] const char* name() const { return name_; }
+
+		[[nodiscard]] void* allocate(const soul_size size, const soul_size alignment) {
 			const Allocation allocation = try_allocate(size, alignment, "untagged");
 			return allocation.addr;
 		}
 
-		virtual void* allocate(soul_size size, soul_size alignment, const char* tag) final {
+		[[nodiscard]] void* allocate(const soul_size size, const soul_size alignment, const char* tag) {
 			const Allocation allocation = try_allocate(size, alignment, tag);
 			return allocation.addr;
 		}
 
-		virtual void deallocate(void* addr, soul_size size) = 0;
-
 		template<typename T>
-		void deallocate(T* addr)
+		[[nodiscard]] T* allocate_array(const soul_size count, const char* tag = "untagged")
 		{
-			deallocate(addr, sizeof(T));
-		}
-
-		template<typename T>
-		T* allocate_array(soul_size count, const char* tag = "untagged")
-		{
-			const Allocation allocation = try_allocate(count * sizeof(T), alignof(T), tag);
+			const Allocation allocation = try_allocate(count * sizeof(T), alignof(T), tag);  // NOLINT(bugprone-sizeof-expression)
 			return static_cast<T*>(allocation.addr);
 		}
 
 		template<typename T>
-		void deallocate_array(T* addr, soul_size count)
+		void deallocate_array(T* addr, const soul_size count)
 		{
-			deallocate(addr, count * sizeof(T));
+			deallocate(addr);  // NOLINT(bugprone-sizeof-expression)
 		}
 
-		template <typename TYPE, typename... ARGS>
-		TYPE* create(ARGS&&... args)
+		template <typename Type, typename... Args>
+		[[nodiscard]] Type* create(Args&&... args)
 		{
-			Allocation allocation = try_allocate(sizeof(TYPE), alignof(TYPE), "untagged");
-			return allocation.addr ? new(allocation.addr) TYPE(std::forward<ARGS>(args)...) : nullptr;
+			Allocation allocation = try_allocate(sizeof(Type), alignof(Type), "untagged");
+			return allocation.addr ? new(allocation.addr) Type(std::forward<Args>(args)...) : nullptr;
 		}
 
-		template <typename TYPE>
-		void destroy(TYPE* ptr)
+		template <typename Type>
+		void destroy(Type* ptr)
 		{
 			SOUL_ASSERT(0, ptr != nullptr, "");
-			ptr->~TYPE();
-			deallocate(ptr, ptr->class_size());
-		}
-
-		template <typename T>
-		requires (!std::is_void_v<T>)
-		T* create_raw_array(soul_size count, const char* tag = "untagged")
-		{
-			const Allocation allocation = try_allocate(count * sizeof(T), alignof(T), tag);
-			return static_cast<T*>(allocation.addr);
-		}
-
-		template <typename T>
-		requires (!std::is_polymorphic_v<T> && !std::is_void_v<T>)
-		void destroy_array(T* array, soul_size count)
-		{
-			if constexpr(!std::is_trivially_destructible_v<T>)
+			if constexpr(!std::is_trivially_destructible_v<Type>)
 			{
-				for (soul_size i = 0; i < count; i++)
-				{
-					array[i].~T();
-				}
+				ptr->~Type();
 			}
-			deallocate(array, count * sizeof(T));
-		}
 
-		virtual void reset() = 0;
+			deallocate(ptr);
+		}
 
 	private:
-		const char* _name = nullptr;
+		const char* name_ = nullptr;
 	};
 
 }

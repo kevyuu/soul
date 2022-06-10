@@ -24,7 +24,7 @@ namespace soul {
 
 	BitSet& BitSet::operator=(const BitSet& other) {
 		if (this == &other) { return *this; }
-		allocator_->deallocate(bit_table_, byte_count(size_));
+		allocator_->deallocate(bit_table_);
 		size_ = other.size_;
 		bit_table_ = (uint8*) allocator_->allocate(byte_count(size_), alignof(BitUnit));
 		memcpy(bit_table_, other.bit_table_, byte_count(size_));
@@ -41,13 +41,13 @@ namespace soul {
 	}
 
 	BitSet& BitSet::operator=(BitSet&& other) noexcept {
-		allocator_->deallocate(bit_table_, byte_count(size_));
+		allocator_->deallocate(bit_table_);
 		new (this) BitSet(std::move(other));
 		return *this;
 	}
 
 	BitSet::~BitSet() {
-		allocator_->deallocate(bit_table_, byte_count(size_));
+		allocator_->deallocate(bit_table_);
 	}
 
 	void BitSet::clear() noexcept
@@ -76,14 +76,14 @@ namespace soul {
 
 		memcpy(bit_table_, oldBitTable, std::min(byte_count(size), byte_count(size_)));
 
-		allocator_->deallocate(oldBitTable, byte_count(size_));
+		allocator_->deallocate(oldBitTable);
 		size_ = size;
 	}
 
 	soul_size BitSet::size() const noexcept {return size_;}
 
 	void BitSet::cleanup() {
-		allocator_->deallocate(bit_table_, byte_count(size_));
+		allocator_->deallocate(bit_table_);
 		bit_table_ = nullptr;
 		size_ = 0;
 	}

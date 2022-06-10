@@ -10,10 +10,17 @@ namespace soul::memory {
 	}
 
 	Allocation MallocAllocator::try_allocate(soul_size size, soul_size alignment, const char* tag) {
-		return {malloc(size), size};
+		void* addr = malloc(size);
+		return {addr, size};
 	}
 
-	void MallocAllocator::deallocate(void *addr, soul_size size) {
+	soul_size MallocAllocator::get_allocation_size(void* addr) const
+	{
+		if (addr == nullptr) return 0;
+		return _msize(addr);
+	}
+
+	void MallocAllocator::deallocate(void *addr) {
 		free(addr);
 	}
 

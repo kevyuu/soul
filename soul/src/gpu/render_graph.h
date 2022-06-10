@@ -318,7 +318,6 @@ namespace soul::gpu
 
 		[[nodiscard]] PassType get_type() const { return type_; }
 		[[nodiscard]] const char* get_name() const { return name_; }
-		virtual soul_size class_size() = 0;
 
 	protected:
 		const char* name_ = nullptr;
@@ -394,8 +393,6 @@ namespace soul::gpu
 
 		[[nodiscard]] const Parameter& get_parameter() const { return parameter_; }
 		Parameter& get_parameter_() { return parameter_; }
-		
-		soul_size class_size() override { return sizeof(GraphicNode<Parameter, Execute>); }
 
 		friend class RenderGraph;
 
@@ -438,7 +435,6 @@ namespace soul::gpu
 		}
 		[[nodiscard]] const Parameter& get_parameter() const { return parameter_; }
 		Parameter& get_parameter_() { return parameter_; }
-		soul_size class_size() override { return sizeof(ComputeNode<Parameter, Execute>); }
 		
 	};
 
@@ -489,7 +485,6 @@ namespace soul::gpu
 		}
 		const Parameter& get_parameter() const { return parameter_; }
 		Parameter& get_parameter_() { return parameter_; }
-		soul_size class_size() override { return sizeof(CopyNode<Parameter, Execute>); }
 	};
 
 	class RGShaderPassDependencyBuilder

@@ -101,8 +101,7 @@ namespace soul::gpu
 		impl::QueueData get_queue_data_from_queue_flags(QueueFlags flags) const;
 
 		impl::Database _db;
-
-		soul_size class_size() const { return sizeof(*this); }
+		
 	};
 
 }

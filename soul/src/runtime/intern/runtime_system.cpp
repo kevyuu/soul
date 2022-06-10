@@ -278,7 +278,7 @@ namespace soul::runtime {
 	}
 
 	void System::deallocate(void* addr, uint32 size) {
-		getContextAllocator()->deallocate(addr, size);
+		getContextAllocator()->deallocate(addr);
 	}
 
 	TempAllocator* System::getTempAllocator() {

@@ -2,27 +2,32 @@
 
 #include "core/math.h"
 
-namespace soul::memory::Util
+namespace soul::memory::util
 {
-	inline static uint64 PageSizeRound(uint64 size, uint64 pageSize)
+	[[nodiscard]] static soul_size pointer_page_size_round(const soul_size size, const soul_size page_size)
 	{
-		SOUL_ASSERT(0, pageSize != 0, "");
-		SOUL_ASSERT(0, isPowerOfTwo(pageSize), "");
-		return ((size + pageSize) & ~(pageSize - 1));
+		SOUL_ASSERT(0, page_size != 0, "");
+		SOUL_ASSERT(0, isPowerOfTwo(page_size), "");
+		return ((size + page_size) & ~(page_size - 1));
 	}
 
-	inline static void* AlignForward(void* address, uint64 alignment)
+	[[nodiscard]] static void* pointer_add(const void* address, const soul_size size)
 	{
-		return (void*)((uintptr(address) + alignment) & ~(alignment - 1));
+		return soul::cast<byte*>(address) + size;
 	}
 
-	inline static void* Add(void* address, uint64 size)
+	[[nodiscard]] static void* pointer_align_forward(const void* address, const soul_size alignment)
 	{
-		return (void*)(uintptr(address) + size);
+		return (void*)((reinterpret_cast<uintptr>(address) + alignment) & ~(alignment - 1));  // NOLINT(performance-no-int-to-ptr)
 	}
 
-	inline static void* Sub(void* address, uint64 size)
+	[[nodiscard]] static void* pointer_align_backward(const void* address, const soul_size alignment)
 	{
-		return (void*)(uintptr(address) - size);
+		return (void*)(reinterpret_cast<uintptr>(address) & ~(alignment - 1));  // NOLINT(performance-no-int-to-ptr)
+	}
+	
+	[[nodiscard]] static void* pointer_sub(const void* address, const soul_size size)
+	{
+		return soul::cast<byte*>(address) - size;
 	}
 }

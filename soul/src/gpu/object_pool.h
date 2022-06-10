@@ -32,7 +32,7 @@ namespace soul::gpu
 			soul_size num_objects = BLOCK_SIZE / sizeof(T);
 			for (T* memory : memories_)
 			{
-				allocator_->deallocate(memory, num_objects * sizeof(T));
+				allocator_->deallocate(memory);
 			}
 		}
 

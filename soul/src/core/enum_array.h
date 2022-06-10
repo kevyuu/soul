@@ -16,9 +16,9 @@ namespace soul {
 
 		constexpr EnumArray<EnumType, ValType>() : buffer_(){}
 
-		constexpr explicit EnumArray<EnumType, ValType>(ValType val) noexcept : buffer_() {
-			for (ValType& bufferVal : buffer_) {
-				bufferVal = val;
+		constexpr explicit EnumArray<EnumType, ValType>(ValType val) noexcept {
+			for (ValType& dst_val : buffer_) {
+				new(&dst_val)ValType(val);
 			}
 		}
 

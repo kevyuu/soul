@@ -14,7 +14,7 @@ namespace soul::runtime{
 
 	public:
 		ScopeAllocator() = delete;
-		explicit ScopeAllocator(const char* name, BackingAllocator* backingAllocator = runtime::get_temp_allocator(), Allocator* fallbackAllocator = (Allocator*) runtime::get_context_allocator()) noexcept;
+		explicit ScopeAllocator(const char* name, BackingAllocator* backing_allocator = runtime::get_temp_allocator(), Allocator* fallbackAllocator = (Allocator*) runtime::get_context_allocator()) noexcept;
 		ScopeAllocator(const ScopeAllocator& other) = delete;
 		ScopeAllocator& operator=(const ScopeAllocator& other) = delete;
 		ScopeAllocator(ScopeAllocator&& other) = delete;
@@ -23,64 +23,68 @@ namespace soul::runtime{
 
 		void reset() override;
 		memory::Allocation try_allocate(soul_size size, soul_size alignment, const char* tag) override;
-		void deallocate(void* addr, soul_size size) override;
+		soul_size get_allocation_size(void* addr) const override;
+		void deallocate(void* addr) override;
 
 	private:
-		BackingAllocator* _backingAllocator = nullptr;
-		void* _scopeBaseAddr = nullptr;
-		Allocator* _fallbackAllocator = nullptr;
-		Vector<memory::Allocation> _fallbackAllocations;
+		BackingAllocator* backing_allocator_ = nullptr;
+		void* scope_base_addr_ = nullptr;
+		Allocator* fallback_allocator_ = nullptr;
+		Vector<memory::Allocation> fallback_allocations_;
 
-		SOUL_NODISCARD void* getMarker() const noexcept;
+		[[nodiscard]] void* get_marker() const noexcept;
 		void rewind(void* addr) noexcept;
 
 	};
 
 	template<typename BackingAllocator>
-	ScopeAllocator<BackingAllocator>::ScopeAllocator(const char* name, BackingAllocator* backingAllocator, Allocator* fallbackAllocator) noexcept :
-		Allocator(name), _backingAllocator(backingAllocator),
-		_fallbackAllocator(fallbackAllocator), _fallbackAllocations(fallbackAllocator)
-	{
-		_scopeBaseAddr = getMarker();
-	}
+	ScopeAllocator<BackingAllocator>::ScopeAllocator(const char* name, BackingAllocator* backing_allocator, Allocator* fallbackAllocator) noexcept :
+		Allocator(name), backing_allocator_(backing_allocator), scope_base_addr_(backing_allocator_->get_marker()),
+		fallback_allocator_(fallbackAllocator), fallback_allocations_(fallbackAllocator) {}
 
 	template<typename BackingAllocator>
 	ScopeAllocator<BackingAllocator>::~ScopeAllocator() {
-		rewind(_scopeBaseAddr);
-		for (const auto [addr, size] : _fallbackAllocations) {
-			_fallbackAllocator->deallocate(addr, size);
+		rewind(scope_base_addr_);
+		for (const auto [addr, size] : fallback_allocations_) {
+			fallback_allocator_->deallocate(addr);
 		}
 	}
 
 	template<typename BackingAllocator>
 	void ScopeAllocator<BackingAllocator>::reset()
 	{
-		rewind(_scopeBaseAddr);
+		rewind(scope_base_addr_);
 	}
 
-	template<typename BACKING_ALLOCATOR>
-	memory::Allocation ScopeAllocator<BACKING_ALLOCATOR>::try_allocate(soul_size size, soul_size alignment, const char* tag) {
-		memory::Allocation allocation = _backingAllocator->try_allocate(size, alignment, tag);
+	template<typename BackingAllocator>
+	memory::Allocation ScopeAllocator<BackingAllocator>::try_allocate(soul_size size, soul_size alignment, const char* tag) {
+		memory::Allocation allocation = backing_allocator_->try_allocate(size, alignment, tag);
 		if (allocation.addr == nullptr) {
-			allocation = _fallbackAllocator->try_allocate(size, alignment, tag);
-			_fallbackAllocations.push_back(allocation);
+			allocation = fallback_allocator_->try_allocate(size, alignment, tag);
+			fallback_allocations_.push_back(allocation);
 		}
 		return allocation;
 	}
 
-	template<typename BackingAllocator>
-	void ScopeAllocator<BackingAllocator>::deallocate(void* addr, soul_size size) {}
+	template <typename BackingAllocator>
+	soul_size ScopeAllocator<BackingAllocator>::get_allocation_size(void* addr) const
+	{
+		return backing_allocator_->get_allocation_size(addr);
+	}
 
 	template<typename BackingAllocator>
-	void* ScopeAllocator<BackingAllocator>::getMarker() const noexcept
+	void ScopeAllocator<BackingAllocator>::deallocate(void* addr) {}
+
+	template<typename BackingAllocator>
+	void* ScopeAllocator<BackingAllocator>::get_marker() const noexcept
 	{
-		return _backingAllocator->getMarker();
+		return backing_allocator_->getMarker();
 	}
 
 	template<typename BackingAllocator>
 	void ScopeAllocator<BackingAllocator>::rewind(void* addr) noexcept
 	{
-		_backingAllocator->rewind(addr);
+		backing_allocator_->rewind(addr);
 	}
 
 }

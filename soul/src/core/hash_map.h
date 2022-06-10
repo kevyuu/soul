@@ -48,10 +48,10 @@ namespace soul {
 			size_ = other.size();
 			max_dib_ = other.max_dib_;
 
-			indexes_ = allocator_->create_raw_array<Index>(capacity_);
+			indexes_ = allocator_->allocate_array<Index>(capacity_);
 			memcpy(indexes_, other.indexes_, sizeof(Index) * capacity_);
 
-			values_ = allocator_->create_raw_array<ValType>(capacity_);
+			values_ = allocator_->allocate_array<ValType>(capacity_);
 			copy_values(other);
 		}
 
@@ -129,10 +129,10 @@ namespace soul {
 		{
 			SOUL_ASSERT(0, size_ == capacity_, "");
 			Index* old_indexes = indexes_;
-			indexes_ = allocator_->create_raw_array<Index>(capacity);
+			indexes_ = allocator_->allocate_array<Index>(capacity);
 			memset(indexes_, 0, sizeof(Index) * capacity);
 			ValType* old_values = values_;
-			values_ = allocator_->create_raw_array<ValType>(capacity);
+			values_ = allocator_->allocate_array<ValType>(capacity);
 			const soul_size old_capacity = capacity_;
 			capacity_ = capacity;
 			max_dib_ = 0;

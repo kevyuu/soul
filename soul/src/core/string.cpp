@@ -65,7 +65,7 @@ namespace soul {
 	String::~String() {
 		if (_data != nullptr) {
 			SOUL_ASSERT(0, _capacity != 0, "");
-			_allocator->deallocate(_data, _capacity);
+			_allocator->deallocate(_data);
 		}
 	}
 
@@ -81,7 +81,7 @@ namespace soul {
 		const auto newData = (char*)_allocator->allocate(newCapacity, alignof(char));
 		if (_data != nullptr) {
 			memcpy(newData, _data, _capacity * sizeof(char));
-			_allocator->deallocate(_data, _capacity);
+			_allocator->deallocate(_data);
 		}
 		_data = newData;
 		_capacity = newCapacity;

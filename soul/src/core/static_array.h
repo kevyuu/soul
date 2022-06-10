@@ -124,7 +124,7 @@ namespace soul {
 
 	template <typename T>
 	void StaticArray<T>::cleanup() {
-		_allocator->deallocate(_buffer, sizeof(T) * _size);
+		_allocator->deallocate(_buffer);
 		Destruct(_buffer, _buffer + _size);
 		_buffer = nullptr;
 	}

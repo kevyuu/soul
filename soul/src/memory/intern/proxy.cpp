@@ -5,28 +5,28 @@
 
 namespace soul::memory
 {
-	void ProfileProxy::onPreInit(const char* name) {
+	void ProfileProxy::on_pre_init(const char* name) {
 		SOUL_MEMPROFILE_REGISTER_ALLOCATOR(name);
-		_name = name;
+		name_ = name;
 	}
 
-	AllocateParam ProfileProxy::onPreAllocate(const AllocateParam& allocParam) {
-		_currentAlloc = allocParam;
-		return allocParam;
+	AllocateParam ProfileProxy::on_pre_allocate(const AllocateParam& alloc_param) {
+		current_alloc_ = alloc_param;
+		return alloc_param;
 	}
 
-	Allocation ProfileProxy::onPostAllocate(Allocation allocation) {
+	Allocation ProfileProxy::on_post_allocate(const Allocation allocation) {
 		SOUL_MEMPROFILE_REGISTER_ALLOCATION(_name, _currentAlloc.tag, allocation.addr, _currentAlloc.size);
 		return allocation;
 	}
 
-	DeallocateParam ProfileProxy::onPreDeallocate(const DeallocateParam& deallocParam) {
-		if (deallocParam.addr == nullptr) return deallocParam;
+	DeallocateParam ProfileProxy::on_pre_deallocate(const DeallocateParam& dealloc_param) {
+		if (dealloc_param.addr == nullptr) return dealloc_param;
 		SOUL_MEMPROFILE_REGISTER_DEALLOCATION(_name, deallocParam.addr, deallocParam.size);
-		return deallocParam;
+		return dealloc_param;
 	}
 
-	void ProfileProxy::onPreCleanup() {
+	void ProfileProxy::on_pre_cleanup() {
 		SOUL_MEMPROFILE_DEREGISTER_ALLOCATOR(_name);
 	}
 

@@ -80,7 +80,7 @@ namespace soul::gpu
 
 		if (addr != nullptr)
 		{
-			allocator->deallocate(addr, 0);
+			allocator->deallocate(addr);
 		}
 		return allocator->allocate(size, alignment);
 	}
@@ -89,7 +89,7 @@ namespace soul::gpu
 	{
 		if (addr == nullptr) return;
 		const auto allocator = static_cast<memory::Allocator*>(user_data);
-		allocator->deallocate(addr, 0);
+		allocator->deallocate(addr);
 	}
 
 	static VKAPI_ATTR VkBool32 VKAPI_CALL debug_callback(
@@ -946,7 +946,7 @@ namespace soul::gpu
 
 		if (texture.desc.mipLevels == 1) return texture.view;
 		if (texture.views == nullptr) {
-			texture.views = _db.cpuAllocator.create_raw_array<TextureView>(soul::cast<uint64>(layer_count) * texture.desc.mipLevels);
+			texture.views = _db.cpuAllocator.allocate_array<TextureView>(soul::cast<uint64>(layer_count) * texture.desc.mipLevels);
 			std::fill_n(texture.views, texture.desc.mipLevels, TextureView());
 		}
 		const soul_size view_idx = layer * texture.desc.mipLevels + level;
@@ -1924,7 +1924,7 @@ namespace soul::gpu
 				soul_size view_count = soul::cast<uint64>(texture.desc.mipLevels) * texture.desc.layerCount;
 				if (texture.views != nullptr) {
 					std::for_each_n(texture.views, view_count, destroy_texture_view);
-					_db.cpuAllocator.destroy_array(texture.views, view_count);
+					_db.cpuAllocator.deallocate_array(texture.views, view_count);
 					texture.views = nullptr;
 				}
 				_db.texturePool.destroy(texture_id.id);

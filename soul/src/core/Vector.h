@@ -25,7 +25,8 @@ namespace soul {
 
 		explicit Vector(memory::Allocator* allocator = GetDefaultAllocator());
 		Vector(const Vector& other);
-		Vector& operator=(const Vector& rhs);
+		Vector(const Vector& other, memory::Allocator* allocator);
+		Vector& operator=(const Vector& rhs);  // NOLINT(bugprone-unhandled-self-assignment) use copy and swap
 		Vector(Vector&& other) noexcept;
 		Vector& operator=(Vector&& other) noexcept;
 		~Vector();
@@ -94,7 +95,7 @@ namespace soul {
 		}
 
 	private:
-		soul_size get_new_capacity(soul_size old_capacity);
+		static soul_size get_new_capacity(soul_size old_capacity);
 
 		static constexpr soul_size GROWTH_FACTOR = 2;
 		memory::Allocator* allocator_ = nullptr;
@@ -110,28 +111,30 @@ namespace soul {
 		buffer_(nullptr) {}
 
 	template <typename T>
-	Vector<T>::Vector(const Vector<T>& other) : allocator_(other.allocator_), buffer_(nullptr) {
+	Vector<T>::Vector(const Vector<T>& other) : allocator_(other.allocator_), buffer_(nullptr), size_(other.size_) {
 		reserve(other.capacity_);
 		Copy(other.buffer_, other.buffer_ + other.size_, buffer_);
-		size_ = other.size_;
+	}
+
+	template <typename T>
+	Vector<T>::Vector(const Vector<T>& other, memory::Allocator* allocator) : allocator_(allocator), buffer_(nullptr), size_(other.size_)
+	{
+		reserve(other.capacity_);
+		Copy(other.buffer_, other.buffer_ + other.size_, buffer_);
 	}
 
 	template <typename T>
 	Vector<T>& Vector<T>::operator=(const Vector<T>& rhs) {  // NOLINT(bugprone-unhandled-self-assignment)
-		Vector<T>(rhs).swap(*this);
+		Vector<T>(rhs, allocator_).swap(*this);
 		return *this;
 	}
 
 	template<typename T>
-	Vector<T>::Vector(Vector<T>&& other) noexcept {
-		allocator_ = std::move(other.allocator_);
-		buffer_ = std::move(other.buffer_);
-		size_ = std::move(other.size_);
-		capacity_ = std::move(other.capacity_);
-		other.buffer_ = nullptr;
-		other.size_ = 0;
-		other.capacity_ = 0;
-	}
+	Vector<T>::Vector(Vector<T>&& other) noexcept :
+		allocator_(std::exchange(other.allocator_, nullptr)),
+		buffer_(std::exchange(other.buffer_, nullptr)),
+		size_(std::exchange(other.size_, 0)),
+		capacity_(std::exchange(other.capacity_, 0)) {}
 
 	template<typename T>
 	Vector<T>& Vector<T>::operator=(Vector<T>&& other) noexcept {
@@ -147,7 +150,7 @@ namespace soul {
 	template<typename T>
 	void Vector<T>::swap(Vector<T>& other) noexcept {
 		using std::swap;
-		swap(allocator_, other.allocator_);
+		SOUL_ASSERT(0, allocator_ == other.allocator_, "Cannot swap container with different allocators.");
 		swap(buffer_, other.buffer_);
 		swap(size_, other.size_);
 		swap(capacity_, other.capacity_);
@@ -194,6 +197,7 @@ namespace soul {
 
 	template <typename T>
 	void Vector<T>::cleanup() {
+		if (allocator_ == nullptr && buffer_ == nullptr) return;
 		clear();
 		allocator_->deallocate_array(buffer_, capacity_);
 		buffer_ = nullptr;

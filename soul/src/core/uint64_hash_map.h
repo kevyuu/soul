@@ -204,8 +204,8 @@ namespace soul {
 	template <typename T>
 	void UInt64HashMap<T>::cleanup() {
 		_destructValues();
-		_allocator->deallocate(_indexes, sizeof(Index) * _capacity);
-		_allocator->deallocate(_values, _capacity * sizeof(T));  // NOLINT(bugprone-sizeof-expression)
+		_allocator->deallocate(_indexes);
+		_allocator->deallocate(_values);  // NOLINT(bugprone-sizeof-expression)
 		_maxDib = 0;
 		_size = 0;
 		_capacity = 0;
@@ -232,8 +232,8 @@ namespace soul {
 					add(oldIndexes[i].key, std::move(oldValues[i]));
 				}
 			}
-			_allocator->deallocate(oldIndexes, sizeof(Index) * oldCapacity);
-			_allocator->deallocate(oldValues, sizeof(T) * oldCapacity);
+			_allocator->deallocate(oldIndexes);
+			_allocator->deallocate(oldValues);
 		}
 	}
 

@@ -156,10 +156,10 @@ namespace soul
 		if (oldBuffer != nullptr)
 		{
 			Move(oldBuffer, oldBuffer + _capacity, _buffer);
-			_allocator->deallocate(oldBuffer, _capacity * sizeof(T));
+			_allocator->deallocate(oldBuffer);
 			SOUL_ASSERT(0, oldPoolIDs != nullptr, "");
 			Move(oldPoolIDs, oldPoolIDs + _capacity, _poolIDs);
-			_allocator->deallocate(oldPoolIDs, _capacity * sizeof(PoolID));
+			_allocator->deallocate(oldPoolIDs);
 		}
 		_capacity = capacity;
 	}
@@ -213,11 +213,11 @@ namespace soul
 		_capacity = 0;
 
 		Destruct(_buffer, _buffer + _size);
-		_allocator->deallocate(_buffer, sizeof(T) * _capacity);
+		_allocator->deallocate(_buffer);
 		_buffer = nullptr;
 
 		Destruct(_poolIDs, _poolIDs + _size);
-		_allocator->deallocate(_poolIDs, sizeof(PoolID) * _capacity);
+		_allocator->deallocate(_poolIDs);
 		_poolIDs = nullptr;
 
 		_internalIndexes.cleanup();

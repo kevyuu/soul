@@ -7,7 +7,7 @@ namespace soul::memory {
 	class LinearAllocator final : public Allocator {
 	public:
 		LinearAllocator() = delete;
-		LinearAllocator(const char* name, uint32 size, Allocator* backingAllocator);
+		LinearAllocator(const char* name, const soul_size size, Allocator* backing_allocator);
 		LinearAllocator(const LinearAllocator& other) = delete;
 		LinearAllocator& operator=(const LinearAllocator& other) = delete;
 		LinearAllocator(LinearAllocator&& other) = delete;
@@ -16,15 +16,16 @@ namespace soul::memory {
 
 		void reset() final;
 		Allocation try_allocate(soul_size size, soul_size alignment, const char* tag) override;
-		void deallocate(void* addr, soul_size size) override;
-		SOUL_NODISCARD void* getMarker() const noexcept;
+		soul_size get_allocation_size(void* addr) const override;
+		void deallocate(void* addr) override;
+		[[nodiscard]] void* get_marker() const noexcept;
 		void rewind(void* addr) noexcept;
 
 	private:
-		Allocator* _backingAllocator;
-		void* _baseAddr = nullptr;
-		void* _currentAddr = nullptr;
-		uint64 _size = 0;
+		Allocator* backing_allocator_;
+		void* base_addr_ = nullptr;
+		void* current_addr_ = nullptr;
+		uint64 size_ = 0;
 	};
 
 }
