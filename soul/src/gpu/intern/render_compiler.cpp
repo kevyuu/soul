@@ -104,7 +104,7 @@ namespace soul::gpu::impl
 
 	void RenderCompiler::apply_pipeline_state(PipelineStateID pipeline_state_id) {
 		SOUL_PROFILE_ZONE();
-		SOUL_ASSERT(pipeline_state_id != PIPELINE_STATE_ID_NULL, "");
+		SOUL_ASSERT(0, pipeline_state_id != PIPELINE_STATE_ID_NULL, "");
 		const PipelineState& pipeline_state = gpu_system_.get_pipeline_state(pipeline_state_id);
 		if (pipeline_state.vkHandle != currentPipeline) {
 			vkCmdBindPipeline(commandBuffer, pipeline_state.bindPoint, pipeline_state.vkHandle);
