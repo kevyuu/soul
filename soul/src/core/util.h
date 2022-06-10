@@ -1,7 +1,5 @@
 #pragma once
 
-#include <numeric>
-
 #include "core/type.h"
 #include "core/type_traits.h"
 
@@ -69,50 +67,6 @@ namespace soul::Util
 #define DO_STRING_JOIN2(arg1, arg2) arg1 ## arg2
 #define SCOPE_EXIT(code) \
     auto STRING_JOIN2(scope_exit_, __LINE__) = soul::Util::make_scope_exit([=](){code;})
-
-#if __has_builtin(__builtin_expect)
-#   ifdef __cplusplus
-#      define SOUL_LIKELY( exp )    (__builtin_expect( !!(exp), true ))
-#      define SOUL_UNLIKELY( exp )  (__builtin_expect( !!(exp), false ))
-#   else
-#      define SOUL_LIKELY( exp )    (__builtin_expect( !!(exp), 1 ))
-#      define SOUL_UNLIKELY( exp )  (__builtin_expect( !!(exp), 0 ))
-#   endif
-#else
-#   define SOUL_LIKELY( exp )    (!!(exp))
-#   define SOUL_UNLIKELY( exp )  (!!(exp))
-#endif
-
-#if __has_attribute(noinline)
-#define SOUL_NOINLINE __attribute__((noinline))
-#else
-#define SOUL_NOINLINE
-#endif
-
-#if defined(_MSC_VER) && _MSC_VER >= 1900
-#    define SOUL_RESTRICT __restrict
-#elif (defined(__clang__) || defined(__GNUC__))
-#    define SOUL_RESTRICT __restrict__
-#else
-#    define SOUL_RESTRICT
-#endif
-
-#if __has_attribute(maybe_unused)
-#define SOUL_UNUSED [[maybe_unused]]
-#define SOUL_UNUSED_IN_RELEASE [[maybe_unused]]
-#elif __has_attribute(unused)
-#define SOUL_UNUSED __attribute__((unused))
-#define SOUL_UNUSED_IN_RELEASE __attribute__((unused))
-#else
-#define SOUL_UNUSED
-#define SOUL_UNUSED_IN_RELEASE
-#endif
-
-#if __has_attribute(always_inline)
-#define SOUL_ALWAYS_INLINE __attribute__((always_inline))
-#else
-#define SOUL_ALWAYS_INLINE inline
-#endif
 
 };
 

@@ -1,13 +1,7 @@
 // ReSharper disable CppClangTidyCppcoreguidelinesMacroUsage
 #pragma once
 
-#if defined(_MSC_VER)
-    #define SOUL_DEBUG_BREAK() __debugbreak()
-#else
-    #include <cstdlib>
-    #include <csignal>
-    #define SOUL_DEBUG_BREAK() do { raise(SIGSEGV); } while(0)
-#endif //_MSC_VER
+#include "compiler.h"
 
 void soul_intern_log(int verbosity, int line, const char* file, const char* format, ...);
 
@@ -100,12 +94,12 @@ void soul_intern_assert(int paranoia, int line, const char* file, const char* fo
     
 #else
 
-    #define SOUL_PROFILE_FRAME ((void) 0)
-    #define SOUL_PROFILE_ZONE ((void) 0)
-    #define SOUL_PROFILE_ZONE_WITH_NAME(x) ((void) 0)
-    #define SOUL_PROFILE_THREAD_SET_NAME(x) ((void) 0)
-    #define SOUL_LOCKABLE(type, varname) type varname
-    #define SOUL_SHARED_LOCKABLE(type ,varname) type varname
+    #define SOUL_PROFILE_FRAME SOUL_NOOP
+    #define SOUL_PROFILE_ZONE SOUL_NOOP
+    #define SOUL_PROFILE_ZONE_WITH_NAME(x) SOUL_NOOP
+    #define SOUL_PROFILE_THREAD_SET_NAME(x) SOUL_NOOP
+    #define SOUL_LOCKABLE(type, var_name) type var_name
+    #define SOUL_SHARED_LOCKABLE(type ,var_name) type var_name
 
 #endif // SOUL_PROFILE_CPU_BACKEND
 
@@ -139,20 +133,20 @@ void soul_intern_assert(int paranoia, int line, const char* file, const char* fo
 
 	#include <tracy/Tracy.hpp>
 	#include "core/type.h"
-	#define SOUL_MEMPROFILE_REGISTER_ALLOCATOR(x) do {} while(0)
-	#define SOUL_MEMPROFILE_DEREGISTER_ALLOCATOR(x) do {} while(0)
+	#define SOUL_MEMPROFILE_REGISTER_ALLOCATOR(x) SOUL_NOOP
+	#define SOUL_MEMPROFILE_DEREGISTER_ALLOCATOR(x) SOUL_NOOP
 	#define SOUL_MEMPROFILE_REGISTER_ALLOCATION(allocatorName, tag, addr, size) do { TracyAllocNS(addr, size, SOUL_TRACY_STACKTRACE_DEPTH, allocatorName); } while(0)
 	#define SOUL_MEMPROFILE_REGISTER_DEALLOCATION(allocatorName, addr, size) do{ TracyFreeNS(addr, SOUL_TRACY_STACKTRACE_DEPTH, allocatorName); } while(0)
-	#define SOUL_MEMPROFILE_SNAPSHOT(x) do{} while(0)
-	#define SOUL_MEMPROFILE_FRAME() do{} while(0)
+	#define SOUL_MEMPROFILE_SNAPSHOT(x) SOUL_NOOP
+	#define SOUL_MEMPROFILE_FRAME() SOUL_NOOP
 
 #else
 
-	#define SOUL_MEMPROFILE_REGISTER_ALLOCATOR(x) ((void) 0)
-	#define SOUL_MEMPROFILE_DEREGISTER_ALLOCATOR(x) ((void) 0)
-	#define SOUL_MEMPROFILE_REGISTER_ALLOCATION(allocatorName, tag, addr, size) ((void) 0)
-	#define SOUL_MEMPROFILE_REGISTER_DEALLOCATION(allocatorName, addr, size) ((void) 0)
-	#define SOUL_MEMPROFILE_SNAPSHOT(x) ((void) 0)
-	#define SOUL_MEMPROFILE_FRAME() ((void) 0)
+	#define SOUL_MEMPROFILE_REGISTER_ALLOCATOR(x) SOUL_NOOP
+	#define SOUL_MEMPROFILE_DEREGISTER_ALLOCATOR(x) SOUL_NOOP
+	#define SOUL_MEMPROFILE_REGISTER_ALLOCATION(allocatorName, tag, addr, size) SOUL_NOOP
+	#define SOUL_MEMPROFILE_REGISTER_DEALLOCATION(allocatorName, addr, size) SOUL_NOOP
+	#define SOUL_MEMPROFILE_SNAPSHOT(x) SOUL_NOOP
+	#define SOUL_MEMPROFILE_FRAME() SOUL_NOOP
 
 #endif // SOUL_MEMPROFILE_CPU_BACKEND
