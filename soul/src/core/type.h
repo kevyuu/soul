@@ -34,7 +34,6 @@ typedef uint64_t soul_size;
 
 #define SOUL_ARRAY_LEN(arr) (sizeof(arr) / sizeof(*(arr)))
 #define SOUL_BIT_COUNT(type) (sizeof(type) * 8)
-#define SOUL_UTYPE_MAX(type) ((1u << SOUL_BIT_COUNT(type)) - 1)
 
 namespace soul {
 

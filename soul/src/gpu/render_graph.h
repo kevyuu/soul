@@ -37,7 +37,7 @@ namespace soul::gpu
 			}
 		};
 
-		constexpr RGResourceID RG_RESOURCE_ID_NULL = {SOUL_UTYPE_MAX(uint32)};
+		constexpr RGResourceID RG_RESOURCE_ID_NULL = {std::numeric_limits<uint32>::max()};
 
 		using RGBufferID = RGResourceID;
 		constexpr RGBufferID RG_BUFFER_ID_NULL = RG_RESOURCE_ID_NULL;
@@ -84,13 +84,10 @@ namespace soul::gpu
 
 	//ID
 	using PassNodeID = ID<PassNode, uint16>;
-	static constexpr PassNodeID PASS_NODE_ID_NULL = PassNodeID(SOUL_UTYPE_MAX(PassNodeID::id));
 
 	using TextureNodeID = ID<impl::TextureNode, uint16>;
-	static constexpr TextureNodeID TEXTURE_NODE_ID_NULL = TextureNodeID(SOUL_UTYPE_MAX(TextureNodeID::id));
 
 	using BufferNodeID = ID<impl::BufferNode, uint16>;
-	static constexpr BufferNodeID BUFFER_NODE_ID_NULL = BufferNodeID(SOUL_UTYPE_MAX(BufferNodeID));
 
 	enum class PassType : uint8
 	{
@@ -181,7 +178,7 @@ namespace soul::gpu
 
 	struct ShaderBufferReadAccess
 	{
-		BufferNodeID nodeID = BUFFER_NODE_ID_NULL;
+		BufferNodeID nodeID;
 		ShaderStageFlags stageFlags;
 		ShaderBufferReadUsage usage;
 	};
@@ -209,7 +206,7 @@ namespace soul::gpu
 
 	struct ShaderTextureReadAccess
 	{
-		TextureNodeID nodeID = TEXTURE_NODE_ID_NULL;
+		TextureNodeID nodeID;
 		ShaderStageFlags stageFlags;
 		ShaderTextureReadUsage usage;
 		SubresourceIndexRange viewRange;
@@ -715,18 +712,18 @@ namespace soul::gpu
 
 		struct TextureNode
 		{
-			impl::RGBufferID resourceID = impl::RG_BUFFER_ID_NULL;
-			PassNodeID creator = PASS_NODE_ID_NULL;
-			PassNodeID writer = PASS_NODE_ID_NULL;
+			impl::RGBufferID resourceID;
+			PassNodeID creator;
+			PassNodeID writer;
 			TextureNodeID writeTargetNode;
 			Vector<PassNodeID> readers;
 		};
 
 		struct BufferNode
 		{
-			impl::RGBufferID resourceID = impl::RG_BUFFER_ID_NULL;
-			PassNodeID creator = PASS_NODE_ID_NULL;
-			PassNodeID writer = PASS_NODE_ID_NULL;
+			impl::RGBufferID resourceID;
+			PassNodeID creator;
+			PassNodeID writer;
 			BufferNodeID writeTargetNode;
 			Vector<PassNodeID> readers;
 		};

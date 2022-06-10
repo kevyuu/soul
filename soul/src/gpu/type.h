@@ -79,7 +79,7 @@ namespace soul::gpu
 		VERTEX_ELEMENT_ENUM_END_BIT
 	};
 	using VertexElementFlags = uint8;
-	static_assert(VERTEX_ELEMENT_ENUM_END_BIT - 1 <= SOUL_UTYPE_MAX(VertexElementFlags));
+	static_assert(VERTEX_ELEMENT_ENUM_END_BIT - 1 <= std::numeric_limits<VertexElementFlags>::max());
 
 	enum class ShaderStage : uint8 {
 		VERTEX,
@@ -573,7 +573,7 @@ namespace soul::gpu
 		ATTACHMENT_ENUM_END_BIT
 	};
 	using AttachmentFlags = uint8;
-	static_assert(ATTACHMENT_ENUM_END_BIT - 1 < SOUL_UTYPE_MAX(AttachmentFlags), "");
+	static_assert(ATTACHMENT_ENUM_END_BIT - 1 < std::numeric_limits<AttachmentFlags>::max(), "");
 
 	struct Attachment
 	{

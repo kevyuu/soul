@@ -25,8 +25,8 @@ namespace soul::gpu::impl
 	};
 
 	struct BufferExecInfo {
-		PassNodeID firstPass = PASS_NODE_ID_NULL;
-		PassNodeID lastPass = PASS_NODE_ID_NULL;
+		PassNodeID firstPass;
+		PassNodeID lastPass;
 		BufferUsageFlags usageFlags;
 		QueueFlags queueFlags;
 		BufferID bufferID;
