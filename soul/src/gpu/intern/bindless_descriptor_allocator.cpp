@@ -174,7 +174,7 @@ namespace soul::gpu::impl
 			.pBindings = &binding
 		};
 
-		SOUL_VK_CHECK(vkCreateDescriptorSetLayout(device, &set_layout_info, nullptr, &descriptor_set_layout_));
+		SOUL_VK_CHECK(vkCreateDescriptorSetLayout(device, &set_layout_info, nullptr, &descriptor_set_layout_), "Fail to create descriptor set layout");
 		
 		const VkDescriptorSetAllocateInfo set_info = {
 			.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
@@ -182,7 +182,7 @@ namespace soul::gpu::impl
 			.descriptorSetCount = 1,
 			.pSetLayouts = &descriptor_set_layout_
 		};
-		SOUL_VK_CHECK(vkAllocateDescriptorSets(device, &set_info, &descriptor_set_));
+		SOUL_VK_CHECK(vkAllocateDescriptorSets(device, &set_info, &descriptor_set_), "Fail to allocate descriptor sets");
 	}
 
 	DescriptorID BindlessDescriptorSet::create_descriptor(VkDevice device, const VkDescriptorBufferInfo& buffer_info)
