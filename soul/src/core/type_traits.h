@@ -80,7 +80,7 @@ namespace soul {
 	template<uint64_t N>
 	using min_uint = std::conditional<(N > std::numeric_limits<uint16_t>::max()),
 		std::conditional_t<(N > std::numeric_limits<uint32_t>::max()), uint64_t, uint32_t>,
-		std::conditional_t<(N > std::numeric_limits<uint32_t>::max()), uint16_t, uint8_t>
+		std::conditional_t<(N > std::numeric_limits<uint8_t>::max()), uint16_t, uint8_t>
 	>;
 
 	template<uint64_t N>

@@ -1,15 +1,16 @@
 #pragma once
 #include "core/type.h"
-
+#include <numeric>
 namespace soul
 {
-	template <flag_scope_enum ENUMT>
+	template <flag_scope_enum Enum>
 	class FlagSet
 	{
 	public:
 
-		using enum_type = ENUMT;
-		using store_type = min_uint_t<(1 << to_underlying(ENUMT::COUNT))>;
+		using enum_type = Enum;
+		static constexpr uint64 ENUM_COUNT = to_underlying(Enum::COUNT);
+		using store_type = min_uint_t<1u << ENUM_COUNT>;
 
 		// Default constructor (all 0s)
 		constexpr FlagSet() = default;
