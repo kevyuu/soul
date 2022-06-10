@@ -225,10 +225,9 @@ namespace soul {
 
 	template<
 		typename PointerDst,
-		typename PointerSrc,
-		SOUL_REQUIRE(is_pointer_v<PointerDst>),
-		SOUL_REQUIRE(is_pointer_v<PointerSrc>)
+		typename PointerSrc
 	>
+	requires std::is_pointer_v<PointerDst> && std::is_pointer_v<PointerSrc>
 	constexpr PointerDst cast(PointerSrc srcPtr)
 	{
 		using Dst = std::remove_pointer_t<PointerDst>;
@@ -239,10 +238,8 @@ namespace soul {
 	}
 
 	template<
-		typename IntegralDst,
-		typename IntegralSrc,
-		SOUL_REQUIRE(is_integral_v<IntegralDst>),
-		SOUL_REQUIRE(is_integral_v<IntegralSrc>)
+		std::integral IntegralDst,
+		std::integral IntegralSrc
 	>
 	constexpr IntegralDst cast(IntegralSrc src) {
 		SOUL_ASSERT(0, static_cast<uint64>(src) <= std::numeric_limits<IntegralDst>::max(), "Source value is larger than the destintation type maximum!");
@@ -324,17 +321,17 @@ namespace soul {
 	}
 
 	template <
-		typename ElemType,
-		SOUL_REQUIRE(is_trivially_move_constructible_v<ElemType>)
+		typename ElemType
 	>
+	requires std::is_trivially_move_constructible_v<ElemType>
 	void Move(ElemType* begin, ElemType* end, ElemType* dst) {
 		memcpy((void*)dst, (void*)begin, uint64(end - begin) * sizeof(ElemType));  // NOLINT(bugprone-sizeof-expression)
 	}
 
 	template<
-		typename ElemType,
-		SOUL_REQUIRE(!is_trivially_move_constructible_v<ElemType>)
+		typename ElemType
 	>
+	requires (!std::is_trivially_move_constructible_v<ElemType>)
 	void Move(ElemType* begin, ElemType* end, ElemType* dst) {
 		for (ElemType* iter = begin; iter != end; ++iter, ++dst) {
 			new (dst) ElemType(std::move(*iter));
@@ -342,15 +339,15 @@ namespace soul {
 	}
 
 	template<
-		typename ElemType,
-		SOUL_REQUIRE(is_trivially_destructible_v<ElemType>)
+		typename ElemType
 	>
+	requires(is_trivially_destructible_v<ElemType>)
 	void Destruct(ElemType* begin, ElemType* end) {}
 
 	template<
-		typename ElemType,
-		SOUL_REQUIRE(!is_trivially_destructible_v<ElemType>)
+		typename ElemType
 	>
+	requires(!is_trivially_destructible_v<ElemType>)
 	void Destruct(ElemType* begin, ElemType* end) {
 		for (ElemType* iter = begin; iter != end; ++iter) {
 			iter->~ElemType();

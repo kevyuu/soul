@@ -5,8 +5,6 @@
 #include <limits>
 #include <cstdint>
 
-#define SOUL_REQUIRE(...) std::enable_if_t<(__VA_ARGS__)>* = nullptr
-
 namespace soul {
 
 	template<typename T>

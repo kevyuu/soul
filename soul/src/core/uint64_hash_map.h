@@ -93,16 +93,18 @@ namespace soul {
 		}
 
 		template <
-			typename U = T,
-			SOUL_REQUIRE(is_trivially_move_constructible_v<U>)>
-			void _moveValues(const UInt64HashMap<U>& other) {
+			typename U = T
+		>
+		requires is_trivially_move_constructible_v<U>
+		void _moveValues(const UInt64HashMap<U>& other) {
 			memcpy(_values, other._values, sizeof(U) * other._capacity);
 		}
 
 		template <
-			typename U = T,
-			SOUL_REQUIRE(!is_trivially_move_constructible_v<U>)>
-			void _moveValues(const UInt64HashMap<U>& other) {
+			typename U = T
+		>
+		requires !is_trivially_move_constructible_v<U>
+		void _moveValues(const UInt64HashMap<U>& other) {
 			for (soul_size i = 0; i < other._capacity; ++i) {
 				if (other._indexes[i].dib == 0) continue;
 				new (_values + i) U(std::move(other._values[i]));
@@ -110,15 +112,17 @@ namespace soul {
 		}
 
 		template <
-			typename U = T,
-			SOUL_REQUIRE(is_trivially_copyable_v<U>)>
+			typename U = T
+		>
+		requires is_trivially_copyable_v<U>
 		void _copyValues(const UInt64HashMap<T>& other) {
 			memcpy(_values, other._values, sizeof(T) * other._capacity);
 		}
 
 		template <
-			typename U = T,
-			SOUL_REQUIRE(!is_trivially_copyable_v<U>)>
+			typename U = T
+		>
+		requires !is_trivially_copyable_v<U>
 		void _copyValues(const UInt64HashMap<T>& other) {
 			for (int i = 0; i < other._capacity; i++) {
 				if (other._indexes[i].dib == 0) continue;

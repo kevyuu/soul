@@ -29,9 +29,9 @@ namespace soul::Util
 	}
 	
 	template<
-		typename T,
-		SOUL_REQUIRE(is_lambda_v<T, void(uint32)>)
+		typename T
 	>
+	requires is_lambda_v<T, void(uint32)>
 	void ForEachBit (uint32 value, const T& func) {
 		while (value)
 		{
