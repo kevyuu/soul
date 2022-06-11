@@ -21,6 +21,16 @@ message(STATUS "Compiler Path : ${CMAKE_CXX_COMPILER}")
 message(STATUS "System Name : ${CMAKE_SYSTEM_NAME}")
 message(STATUS "CMAKE_CXX_FLAGS_DEBUG: ${CMAKE_CXX_FLAGS_DEBUG}")
 
+option(SOUL_ASAN_ENABLE "Build this target with AddressSanitizer" OFF)
+if (SOUL_ASAN_ENABLE)
+	if(MSVC)
+		target_compile_options(<target> PUBLIC /fsanitize=address)
+	else()
+		target_compile_options(<target> PUBLIC -fsanitize=address <additional-options>)
+		target_link_options(<target> PUBLIC -fsanitize=address)
+	endif()
+endif()
+
 # ==================================================================================================
 # Try to find vulkan
 # ==================================================================================================
