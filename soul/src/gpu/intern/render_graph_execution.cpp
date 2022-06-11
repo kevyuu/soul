@@ -126,8 +126,8 @@ namespace soul::gpu::impl
 			return count + desc.get_view_count();
 		};
 
-		const soul_size internal_view_count = std::accumulate(internal_textures.begin(), internal_textures.end(), 0, fold_internal_texture_view_count);
-		const soul_size external_view_count = std::accumulate(external_textures.begin(), external_textures.end(), 0, fold_external_texture_view_count);
+		const soul_size internal_view_count = std::accumulate(internal_textures.begin(), internal_textures.end(), 0u, fold_internal_texture_view_count);
+		const soul_size external_view_count = std::accumulate(external_textures.begin(), external_textures.end(), 0u, fold_external_texture_view_count);
 		texture_view_infos_.resize(internal_view_count + external_view_count);
 
 		for (soul_size texture_info_idx = 0, view_offset = 0; texture_info_idx < internal_texture_infos_.size(); texture_info_idx++)

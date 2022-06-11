@@ -103,7 +103,7 @@ namespace soul {
 		template <
 			typename U = T
 		>
-		requires !is_trivially_move_constructible_v<U>
+		requires (!is_trivially_move_constructible_v<U>)
 		void _moveValues(const UInt64HashMap<U>& other) {
 			for (soul_size i = 0; i < other._capacity; ++i) {
 				if (other._indexes[i].dib == 0) continue;
@@ -122,7 +122,7 @@ namespace soul {
 		template <
 			typename U = T
 		>
-		requires !is_trivially_copyable_v<U>
+		requires (!is_trivially_copyable_v<U>)
 		void _copyValues(const UInt64HashMap<T>& other) {
 			for (int i = 0; i < other._capacity; i++) {
 				if (other._indexes[i].dib == 0) continue;

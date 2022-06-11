@@ -1080,7 +1080,7 @@ namespace soul::gpu
 	}
 
 	const Buffer& System::get_buffer(BufferID buffer_id) const {
-		SOUL_ASSERT(!buffer_id.is_null(), "");
+		SOUL_ASSERT(0, !buffer_id.is_null(), "");
 		return *_db.bufferPool.get(buffer_id.id);
 	}
 
@@ -1502,7 +1502,7 @@ namespace soul::gpu
 				.pCode = static_cast<const uint32_t*>(spirv_code)
 			};
 			SOUL_LOG_INFO("Code size = %d", spirv_code_size);
-			SOUL_VK_CHECK(vkCreateShaderModule(_db.device, &shader_module_create_info, nullptr, &shader.vkHandle));
+			SOUL_VK_CHECK(vkCreateShaderModule(_db.device, &shader_module_create_info, nullptr, &shader.vkHandle), "Fail to create shader module");
 			shader.entryPoint = entry_point_name;
 		}
 
@@ -2721,7 +2721,7 @@ namespace soul::gpu
 					return flag | thread_context.sync_dst_queues_[queue_type];
 				});
 
-			soul_size image_barrier_capacity = std::accumulate(thread_contexts_.begin(), thread_contexts_.end(), 0,
+			soul_size image_barrier_capacity = std::accumulate(thread_contexts_.begin(), thread_contexts_.end(), 0u,
 				[queue_type](const soul_size capacity, const ThreadContext& thread_context) -> soul_size
 				{
 					return capacity + thread_context.image_barriers_[queue_type].size();

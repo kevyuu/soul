@@ -29,8 +29,14 @@ namespace soul
 	public:
 		void lock() { mutex_.lock(); }
 		bool try_lock() { return mutex_.try_lock(); }
-		void unlock() { return mutex_.unlock(); }
 
+#pragma warning( push )
+#pragma warning( disable : 26110 )
+		void unlock()
+		{
+			mutex_.unlock();
+		}
+#pragma warning( pop )
 	private:
 		SOUL_LOCKABLE(std::mutex, mutex_);
 	};
