@@ -10,7 +10,7 @@ namespace soul {
 	class StaticArray {
 	public:
 
-		explicit StaticArray(memory::Allocator* allocator = GetDefaultAllocator()) : _allocator(allocator) {}
+		explicit StaticArray(memory::Allocator* allocator = get_default_allocator()) : _allocator(allocator) {}
 		StaticArray(const StaticArray& other);
 		StaticArray& operator=(const StaticArray& other);
 		StaticArray(StaticArray&& other) noexcept;

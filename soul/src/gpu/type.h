@@ -682,7 +682,7 @@ namespace soul::gpu
 
 		using ID = PoolID;
 
-		explicit VulkanPool(memory::Allocator* allocator = GetDefaultAllocator()) noexcept : pool_(allocator) {}
+		explicit VulkanPool(memory::Allocator* allocator = get_default_allocator()) noexcept : pool_(allocator) {}
 		VulkanPool(const VulkanPool& other) = delete;
 		VulkanPool& operator=(const VulkanPool& other) = delete;
 		VulkanPool(VulkanPool&& other) = delete;
@@ -917,7 +917,7 @@ namespace soul::gpu
 		class CommandPool {
 		public:
 
-			explicit CommandPool(memory::Allocator* allocator = GetDefaultAllocator()) : allocatorInitializer(allocator)
+			explicit CommandPool(memory::Allocator* allocator = get_default_allocator()) : allocatorInitializer(allocator)
 			{
 				allocatorInitializer.end();
 			}
@@ -938,7 +938,7 @@ namespace soul::gpu
 		class CommandPools
 		{
 		public:
-			explicit CommandPools(memory::Allocator* allocator = GetDefaultAllocator()) : allocator_(allocator), allocator_initializer_(allocator)
+			explicit CommandPools(memory::Allocator* allocator = get_default_allocator()) : allocator_(allocator), allocator_initializer_(allocator)
 			{
 				allocator_initializer_.end();
 			}
@@ -1072,27 +1072,27 @@ namespace soul::gpu
 			runtime::AllocatorInitializer allocatorInitializer;
 
 			VkInstance instance = VK_NULL_HANDLE;
-			VkDebugUtilsMessengerEXT debugMessenger;
+			VkDebugUtilsMessengerEXT debugMessenger = VK_NULL_HANDLE;
 
 			VkDevice device = VK_NULL_HANDLE;
 			VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
-			VkPhysicalDeviceProperties physicalDeviceProperties;
-			VkPhysicalDeviceFeatures physicalDeviceFeatures;
+			VkPhysicalDeviceProperties physicalDeviceProperties = {};
+			VkPhysicalDeviceFeatures physicalDeviceFeatures = {};
 
 			slang::IGlobalSession* slang_global_session = nullptr;
 
 			CommandQueues queues;
 
-			VkSurfaceKHR surface;
-			VkSurfaceCapabilitiesKHR surfaceCaps;
+			VkSurfaceKHR surface = VK_NULL_HANDLE;
+			VkSurfaceCapabilitiesKHR surfaceCaps = {};
 
 			Swapchain swapchain;
 
 			Vector<_FrameContext> frameContexts;
-			uint32 frameCounter;
-			uint32 currentFrame;
+			uint32 frameCounter = 0;
+			uint32 currentFrame = 0;
 
-			VmaAllocator gpuAllocator;
+			VmaAllocator gpuAllocator = VK_NULL_HANDLE;
 
 			ConcurrentObjectPool<Buffer> bufferPool;
 			ConcurrentObjectPool<Texture> texturePool;

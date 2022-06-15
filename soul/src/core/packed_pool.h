@@ -16,7 +16,7 @@ namespace soul
 	{
 
 	public:
-		explicit PackedPool(memory::Allocator* allocator = GetDefaultAllocator());
+		explicit PackedPool(memory::Allocator* allocator = get_default_allocator());
 		PackedPool(const PackedPool& other);
 		PackedPool& operator=(const PackedPool& other);
 		PackedPool(PackedPool&& other) noexcept;

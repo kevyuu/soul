@@ -86,7 +86,7 @@ message(STATUS "Slang include directories : ${slang_include_directories}")
 add_library(soul STATIC ${SOUL_SOURCES})
 target_include_directories(soul
 	PUBLIC src ${NVTX_INCLUDE_DIR} ${PROJECT_SOURCE_DIR}/dependencies)
-target_link_libraries(soul
+target_link_system_libraries(soul
 	PUBLIC glfw ${NVTX} Vulkan::Vulkan volk::volk volk::volk_headers vk_mem_alloc Tracy::TracyClient
 	PRIVATE slang)
 target_compile_definitions(soul PUBLIC TRACY_ENABLE NOMINMAX)

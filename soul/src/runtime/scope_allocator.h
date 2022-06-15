@@ -14,7 +14,7 @@ namespace soul::runtime{
 
 	public:
 		ScopeAllocator() = delete;
-		explicit ScopeAllocator(const char* name, BackingAllocator* backing_allocator = runtime::get_temp_allocator(), Allocator* fallbackAllocator = (Allocator*) runtime::get_context_allocator()) noexcept;
+		explicit ScopeAllocator(const char* name, BackingAllocator* backing_allocator = runtime::get_temp_allocator(), Allocator* fallbackAllocator = get_default_allocator()) noexcept;
 		ScopeAllocator(const ScopeAllocator& other) = delete;
 		ScopeAllocator& operator=(const ScopeAllocator& other) = delete;
 		ScopeAllocator(ScopeAllocator&& other) = delete;

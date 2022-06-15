@@ -77,7 +77,7 @@ namespace soul
 			return *this;
 		}
 
-		size_t count() const
+        [[nodiscard]] size_t count() const
 		{
 			// http://www-graphics.stanford.edu/~seander/bithacks.html#CountBitsSetKernighan
 
@@ -122,7 +122,7 @@ namespace soul
 			store_type flags = flags_;
 			while (flags)
 			{
-				uint32 bit = Util::TrailingZeroes(flags);
+				uint32 bit = Util::trailing_zeroes(flags);
 				dstFlags |= mapping[bit];
 				flags &= ~(1u << bit);
 			}
@@ -135,7 +135,7 @@ namespace soul
 			store_type flags = flags_;
 			while (flags)
 			{
-				std::underlying_type_t<enum_type> bit = Util::TrailingZeroes(flags);
+				std::underlying_type_t<enum_type> bit = Util::trailing_zeroes(flags);
 				func(enum_type(bit));
 				flags &= ~(1u << bit);
 			}

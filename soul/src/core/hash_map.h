@@ -40,7 +40,7 @@ namespace soul {
 	class HashMap {
 
 	public:
-		explicit HashMap(memory::Allocator* allocator = GetDefaultAllocator()) : allocator_(allocator) {}
+		explicit HashMap(memory::Allocator* allocator = get_default_allocator()) : allocator_(allocator) {}
 
 		HashMap(const HashMap& other)
 		{

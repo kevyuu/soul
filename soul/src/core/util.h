@@ -3,14 +3,12 @@
 #include "core/type.h"
 #include "core/type_traits.h"
 
-#define SOUL_TRAILING_ZEROES(x) TrailingZeroes(x)
-
 namespace soul::Util
 {
 
 	// From google's filament
 	template<typename T>
-	constexpr T TrailingZeroes(T x) noexcept {
+	constexpr T trailing_zeroes(T x) noexcept {
 		static_assert(sizeof(T) <= sizeof(uint64_t), "TrailingZeroes() only support up to 64 bits");
 		T c = sizeof(T) * 8;
 		x &= -signed(x);
@@ -26,34 +24,25 @@ namespace soul::Util
 		return c;
 	}
 	
-	template<
-		typename T
-	>
+	template<typename T>
 	requires is_lambda_v<T, void(uint32)>
-	void ForEachBit (uint32 value, const T& func) {
+	void for_each_bit (uint32 value, const T& func) {
 		while (value)
 		{
-			uint32 bit = SOUL_TRAILING_ZEROES(value);
+			uint32 bit = trailing_zeroes(value);
 			func(bit);
 			value &= ~(1u << bit);
 		}
 	}
 
-	template <std::integral FlagSrcType, typename FlagDstType>
-	FlagDstType CastFlags(FlagSrcType flags, FlagDstType mapping[]) {
-		std::remove_cv_t<FlagDstType> dstFlags = 0;
-		while (flags)
-		{
-			uint32 bit = SOUL_TRAILING_ZEROES(flags);
-			dstFlags |= mapping[bit];
-			flags &= ~(1u << bit);
-		}
-		return dstFlags;
-	}
-
 	template <typename F>
+	requires is_lambda_v<F, void()>
 	struct ScopeExit {
-		ScopeExit(F f) : f(f) {}
+		explicit ScopeExit(F f) : f(f) {}
+		ScopeExit(const ScopeExit&) = delete;
+		ScopeExit& operator=(const ScopeExit&) = delete;
+		ScopeExit(ScopeExit&&) = delete;
+		ScopeExit& operator=(ScopeExit&&) = delete;
 		~ScopeExit() { f(); }
 		F f;
 	};

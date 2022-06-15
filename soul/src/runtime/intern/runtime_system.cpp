@@ -166,33 +166,25 @@ namespace soul::runtime {
 		_db.defaultAllocator = config.defaultAllocator;
 		_db.tempAllocatorSize = config.workerTempAllocatorSize;
 
-		ThreadCount threadCount = config.threadCount;
-		if (threadCount == 0) {
-#ifdef SOUL_USE_STD_HARDWARE_THREAD_COUNT
-			threadCount = cast<ThreadCount>(std::thread::hardware_concurrency());
-#endif
-			if (threadCount == 0) {
-				threadCount = SOUL_HARDWARE_THREAD_COUNT;
-			}
-		}
+		const ThreadCount thread_count = config.threadCount != 0 ? config.threadCount : soul::cast<ThreadCount>(get_hardware_thread_count());
 
-		SOUL_ASSERT(0, threadCount <= Constant::MAX_THREAD_COUNT, "Thread count : %d is more than MAX_THREAD_COUNT : %d", threadCount, Constant::MAX_THREAD_COUNT);
-		_db.threadCount = threadCount;
+		SOUL_ASSERT(0, thread_count <= Constant::MAX_THREAD_COUNT, "Thread count : %d is more than MAX_THREAD_COUNT : %d", thread_count, Constant::MAX_THREAD_COUNT);
+		_db.threadCount = thread_count;
 
-		_db.threadContexts.init(config.defaultAllocator, threadCount);
+		_db.threadContexts.init(config.defaultAllocator, thread_count);
 
 		// NOTE(kevinyu): i == 0 is for main thread
 		Database::gThreadContext = &_db.threadContexts[0];
 
-		for (uint16 i = 0; i < threadCount; ++i) {
+		for (uint16 i = 0; i < thread_count; ++i) {
 			_db.threadContexts[i].taskCount = 0;
 			_db.threadContexts[i].threadIndex = i;
 			_db.threadContexts[i].taskDeque.init();
-			_db.threadContexts[i].allocatorStack.init(config.defaultAllocator);
+			_db.threadContexts[i].allocatorStack.set_allocator(*config.defaultAllocator);
 		}
 
 		_db.isTerminated.store(false, std::memory_order_relaxed);
-		for (uint16 i = 1; i < threadCount; ++i) {
+		for (uint16 i = 1; i < thread_count; ++i) {
 			_db.threads[i] = std::thread(&System::_loop, this, _db.threadContexts.ptr(i));
 		}
 		_db.activeTaskCount = 0;

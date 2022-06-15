@@ -46,12 +46,12 @@ namespace soul::gpu
 		BufferNodeID node_id = BufferNodeID(buffer_nodes_.add(BufferNode()));
 		BufferNode& node = buffer_nodes_.back();
 
-		uint32 resourceIndex = external_buffers_.add(RGExternalBuffer());
-		RGExternalBuffer& externalBuffer = external_buffers_.back();
-		externalBuffer.name = name;
-		externalBuffer.bufferID = buffer_id;
+		const soul_size resource_index = external_buffers_.add(RGExternalBuffer());
+		RGExternalBuffer& external_buffer = external_buffers_.back();
+		external_buffer.name = name;
+		external_buffer.bufferID = buffer_id;
 
-		node.resourceID = RGResourceID::external_id(resourceIndex);
+		node.resourceID = RGResourceID::external_id(resource_index);
 
 		return node_id;
 	}

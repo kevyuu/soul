@@ -60,18 +60,19 @@ else()
 endif()
 
 
-if(MSVC)
-    add_definitions(-D_CRT_SECURE_NO_WARNINGS)
-endif()
-
 find_package(glfw3 CONFIG REQUIRED)
 find_package(unofficial-vulkan-memory-allocator CONFIG REQUIRED)
 add_library(vk_mem_alloc ALIAS unofficial::vulkan-memory-allocator::vulkan-memory-allocator)
 find_package(volk REQUIRED)
 find_package(Threads REQUIRED)
 find_package(Tracy CONFIG REQUIRED)
+find_package(gtest CONFIG REQUIRED)
+
+include(${CMAKE_CURRENT_LIST_DIR}/cmake_lib/SystemLink.cmake)
+
+enable_testing()
 
 add_subdirectory(dependencies)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/soul)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/sample)
-
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/test)

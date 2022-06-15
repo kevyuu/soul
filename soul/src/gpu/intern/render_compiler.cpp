@@ -22,7 +22,6 @@ namespace soul::gpu::impl
 		COMPILE_PACKET(RenderCommandDraw);
 		COMPILE_PACKET(RenderCommandDrawPrimitiveBindless);
 		COMPILE_PACKET(RenderCommandCopyTexture);
-			break;
 		default:
 			SOUL_NOT_IMPLEMENTED();
 		}

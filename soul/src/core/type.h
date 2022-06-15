@@ -37,6 +37,11 @@ typedef uint64_t soul_size;
 
 namespace soul {
 
+	template <typename T>
+	struct raw_buffer {
+		alignas(T) std::byte data[sizeof(T)];
+	};
+
 	template <arithmetic T>
 	struct Vec2 {
 		T x = 0;
@@ -156,7 +161,7 @@ namespace soul {
 			float mem[FLOAT_COUNT] = {};
 			Vec4f col[3];
 		};
-		constexpr GLSLMat3f() noexcept : mem() {}
+		constexpr GLSLMat3f() noexcept {}
 
 		constexpr explicit GLSLMat3f(const Mat3f& mat) noexcept : mem{ 
 			mat.elem[0][0], mat.elem[1][0], mat.elem[2][0], 0.0f, 
@@ -233,7 +238,7 @@ namespace soul {
 		if constexpr (!is_same_v<PointerDst, void*>) {
 			SOUL_ASSERT(0, reinterpret_cast<uintptr>(srcPtr) % alignof(Dst) == 0, "Source pointer is not aligned in PointerDst alignment!");
 		}
-		return (PointerDst)srcPtr;
+		return (PointerDst)(srcPtr);
 	}
 
 	template<

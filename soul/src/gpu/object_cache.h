@@ -20,7 +20,7 @@ namespace soul::gpu
 		using ID = typename ObjectPool<ValType>::ID;
 		static constexpr ID NULLVAL = ObjectPool<ValType>::NULLVAL;
 
-		explicit ConcurrentObjectCache(memory::Allocator* allocator = GetDefaultAllocator()) :
+		explicit ConcurrentObjectCache(memory::Allocator* allocator = get_default_allocator()) :
 			read_only_map_(allocator), fallback_map_(allocator), fallback_keys_(allocator), object_pool_(allocator) {}
 		ConcurrentObjectCache(const ConcurrentObjectCache&) = delete;
 		ConcurrentObjectCache& operator=(const ConcurrentObjectCache&) = delete;
@@ -88,7 +88,7 @@ namespace soul::gpu
 		using ID = ValType*;
 		static constexpr ValType* NULLVAL = nullptr;
 
-		explicit RingCache(memory::Allocator* allocator = GetDefaultAllocator(), ValDeleter deleter = ValDeleter()) : map_(allocator), object_pool_(allocator), deleter_(deleter) {}
+		explicit RingCache(memory::Allocator* allocator = get_default_allocator(), ValDeleter deleter = ValDeleter()) : map_(allocator), object_pool_(allocator), deleter_(deleter) {}
 		RingCache(const RingCache&) = delete;
 		RingCache& operator=(const RingCache&) = delete;
 		RingCache(RingCache&&) = delete;

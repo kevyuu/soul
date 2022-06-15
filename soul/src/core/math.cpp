@@ -99,7 +99,7 @@ namespace soul {
 		if (q.w < bias) {
 			q.w = bias;
 
-			const float factor = float(std::sqrt(1.0 - double(bias) * double(bias)));
+			const auto factor = float(std::sqrt(1.0 - double(bias) * double(bias)));
 			q.xyz *= factor;
 		}
 

@@ -11,7 +11,7 @@ namespace soul {
 
 	public:
 
-		explicit UInt64HashMap(memory::Allocator* allocator = GetDefaultAllocator()) : _allocator(allocator) {}
+		explicit UInt64HashMap(memory::Allocator* allocator = get_default_allocator()) : _allocator(allocator) {}
 		UInt64HashMap(const UInt64HashMap& other);
 		UInt64HashMap& operator=(const UInt64HashMap& other);
 		UInt64HashMap(UInt64HashMap&& other) noexcept;

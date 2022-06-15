@@ -85,8 +85,8 @@ void soul_intern_assert(int paranoia, int line, const char* file, const char* fo
 
     uint32_t GetOsThreadId();
 
-    #define SOUL_PROFILE_FRAME() NVTXScope("Frame")
-    #define SOUL_PROFILE_ZONE() NVTXScope(__FUNCTION__)
+    #define SOUL_PROFILE_FRAME() NVTXScope nvtx_scope("Frame")
+    #define SOUL_PROFILE_ZONE() NVTXScope nvtx_scope(__FUNCTION__)
     #define SOUL_PROFILE_ZONE_WITH_NAME(x) NVTXScope(x)
     #define SOUL_PROFILE_THREAD_SET_NAME(x) do{nvtxNameOsThread(GetOsThreadId(), x);} while(0)
     #define SOUL_LOCKABLE(type, varname) type varname

@@ -80,4 +80,7 @@ namespace soul::memory {
 		const char* name_ = nullptr;
 	};
 
+	template <typename T>
+	concept allocator_type = std::derived_from<T, Allocator>;
+
 }

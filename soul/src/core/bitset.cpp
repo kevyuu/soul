@@ -2,15 +2,15 @@
 #include "runtime/runtime.h"
 
 namespace soul {
-	soul_size BitSet::byte_count(soul_size size) {
+	soul_size BitSet::byte_count(const soul_size size) {
 		return ((size + sizeof(BitUnit) - 1) >> BIT_TABLE_SHIFT) * sizeof(BitUnit);
 	}
 
-	soul_size BitSet::table_index(soul_size index) {
+	soul_size BitSet::table_index(const soul_size index) {
 		return index >> BIT_TABLE_SHIFT;
 	}
 
-	soul_size BitSet::table_offset(soul_size index) {
+	soul_size BitSet::table_offset(const soul_size index) {
 		return index % 8;
 	}
 
@@ -18,7 +18,7 @@ namespace soul {
 
 	BitSet::BitSet(const BitSet& other) : allocator_(other.allocator_) {
 		size_ = other.size_;
-		bit_table_ = (uint8*) allocator_->allocate(byte_count(size_), alignof(BitUnit));
+		bit_table_ = soul::cast<uint8*>(allocator_->allocate(byte_count(size_), alignof(BitUnit)));
 		memcpy(bit_table_, other.bit_table_, byte_count(size_));
 	}
 
@@ -26,7 +26,7 @@ namespace soul {
 		if (this == &other) { return *this; }
 		allocator_->deallocate(bit_table_);
 		size_ = other.size_;
-		bit_table_ = (uint8*) allocator_->allocate(byte_count(size_), alignof(BitUnit));
+		bit_table_ = soul::cast<uint8*>(allocator_->allocate(byte_count(size_), alignof(BitUnit)));
 		memcpy(bit_table_, other.bit_table_, byte_count(size_));
 		return *this;
 	}
@@ -55,12 +55,12 @@ namespace soul {
 		memset(bit_table_, 0, byte_count(size_));
 	}
 
-	bool BitSet::test(soul_size index) const {
+	bool BitSet::test(const soul_size index) const {
 		SOUL_ASSERT(0, index < size_, "");
 		return bit_table_[table_index(index)] & (1 << table_offset(index));
 	}
 
-	void BitSet::set(soul_size index) {
+	void BitSet::set(const soul_size index) {
 		SOUL_ASSERT(0, index < size_, "");
 		bit_table_[table_index(index)] |= (1 << table_offset(index));
 	}
@@ -70,9 +70,9 @@ namespace soul {
 		bit_table_[table_index(index)] &= (~(1 << table_offset(index)));
 	}
 
-	void BitSet::resize(soul_size size) {
+	void BitSet::resize(const soul_size size) {
 		uint8* oldBitTable = bit_table_;
-		bit_table_ = (uint8*) allocator_->allocate(byte_count(size), alignof(BitUnit));
+		bit_table_ = soul::cast<uint8*>(allocator_->allocate(byte_count(size), alignof(BitUnit)));
 
 		memcpy(bit_table_, oldBitTable, std::min(byte_count(size), byte_count(size_)));
 

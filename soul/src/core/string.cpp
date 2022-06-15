@@ -3,7 +3,7 @@
 #include <cstdio>
 
 #include "core/string.h"
-#include "runtime/runtime.h"
+#include "core/config.h"
 
 namespace soul {
 
@@ -24,9 +24,9 @@ namespace soul {
 		memcpy(_data, str, _capacity * sizeof(char));
 	}
 
-	String::String() : String(runtime::get_context_allocator(), uint64(0)) {}
-	String::String(char* str) : String(runtime::get_context_allocator(), str) {}
-	String::String(const char* str) : String(runtime::get_context_allocator(), str) {}
+	String::String() : String(get_default_allocator(), uint64(0)) {}
+	String::String(char* str) : String(get_default_allocator(), str) {}
+	String::String(const char* str) : String(get_default_allocator(), str) {}
 
 	String::String(const String& rhs) {
 		_allocator = rhs._allocator;

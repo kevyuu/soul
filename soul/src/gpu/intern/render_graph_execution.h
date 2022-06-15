@@ -151,7 +151,7 @@ namespace soul::gpu::impl
 		[[nodiscard]] VkRenderPass create_render_pass(uint32 pass_index);
 		[[nodiscard]] VkFramebuffer create_framebuffer(uint32 pass_index, VkRenderPass render_pass);
 		void submit_external_sync_primitive();
-		void execute_pass(const uint32 pass_index, VkCommandBuffer command_buffer);
+		void execute_pass(uint32 pass_index, VkCommandBuffer command_buffer);
 
 		void init_shader_buffers(const Vector<ShaderBufferReadAccess>& access_list, soul_size index, QueueType queue_type);
 		void init_shader_buffers(const Vector<ShaderBufferWriteAccess>& access_list, soul_size index, QueueType queue_type);

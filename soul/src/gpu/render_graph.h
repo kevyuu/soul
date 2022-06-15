@@ -539,7 +539,7 @@ namespace soul::gpu
 	class RenderGraph
 	{
 	public:
-		explicit RenderGraph(memory::Allocator* allocator = runtime::get_context_allocator()) : allocator_(allocator) {}
+		explicit RenderGraph(memory::Allocator* allocator = get_default_allocator()) : allocator_(allocator) {}
 		RenderGraph(const RenderGraph& other) = delete;
 		RenderGraph(RenderGraph&& other) = delete;
 		RenderGraph& operator=(const RenderGraph& other) = delete;

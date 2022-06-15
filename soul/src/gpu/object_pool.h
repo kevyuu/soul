@@ -21,7 +21,7 @@ namespace soul::gpu
 		};
 		static constexpr ID const NULLVAL = { nullptr, 0 };
 
-		explicit ConcurrentObjectPool(soul::memory::Allocator* allocator = GetDefaultAllocator()) noexcept : allocator_(allocator)
+		explicit ConcurrentObjectPool(soul::memory::Allocator* allocator = get_default_allocator()) noexcept : allocator_(allocator)
 		{}
 		ConcurrentObjectPool(const ConcurrentObjectPool&) = delete;
 		ConcurrentObjectPool& operator=(const ConcurrentObjectPool& rhs) = delete;

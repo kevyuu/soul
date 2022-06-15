@@ -15,7 +15,6 @@
 #include <volk.h>
 
 #define VMA_IMPLEMENTATION
-
 #include <vk_mem_alloc.h>
 
 #include <cstddef>
@@ -165,7 +164,7 @@ namespace soul::gpu
 	#endif // SOUL_PLATFORM_OS_WIN32
 	#ifdef SOUL_OS_APPLE
 					"VK_MVK_macos_surface",
-	#endif // SOUL_PLATFORM_OS_APPLE
+	#endif // SOUL_
 				VK_EXT_DEBUG_UTILS_EXTENSION_NAME
 			};
 
@@ -2330,7 +2329,7 @@ namespace soul::gpu
 		thread_contexts_.resize(runtime::get_thread_count());
 		for (auto& context : thread_contexts_)
 		{
-			memory::Allocator* default_allocator = GetDefaultAllocator();
+			memory::Allocator* default_allocator = get_default_allocator();
 			context.staging_buffers_ = Vector<StagingBuffer>(default_allocator);
 		}
 	}
@@ -2658,7 +2657,7 @@ namespace soul::gpu
 				VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
 			};
 			static_assert(std::size(USAGE_LAYOUT_MAP) == to_underlying(TextureUsage::COUNT));
-			Util::ForEachBit(usage.val(), [&result](uint32 bit)
+			Util::for_each_bit(usage.val(), [&result](uint32 bit)
 			{
 				if (result != VK_IMAGE_LAYOUT_UNDEFINED && result != USAGE_LAYOUT_MAP[bit])
 				{

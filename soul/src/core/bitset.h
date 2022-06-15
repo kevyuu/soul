@@ -9,7 +9,7 @@ namespace soul {
 
 	class BitSet {
 	public:
-		explicit BitSet(memory::Allocator* allocator = GetDefaultAllocator());
+		explicit BitSet(memory::Allocator* allocator = get_default_allocator());
 		BitSet(const BitSet& other);
 		BitSet& operator=(const BitSet& other);
 		BitSet(BitSet&& other) noexcept;

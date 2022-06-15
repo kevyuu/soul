@@ -86,9 +86,9 @@ namespace soul::runtime
 	struct alignas(SOUL_CACHELINE_SIZE) Task {
 
 		static constexpr uint32 STORAGE_SIZE_BYTE = SOUL_CACHELINE_SIZE
-			- sizeof(void*) // func size
-			- 2 // parentID size
-			- 2; // unfinishedCount size
+			- sizeof(TaskFunc) // func size
+			- sizeof(TaskID) // parentID size
+			- sizeof(std::atomic<uint16>); // unfinishedCount size
 				
 		void* storage[STORAGE_SIZE_BYTE / sizeof(void*)] = {};
 		TaskFunc func = nullptr;
@@ -121,7 +121,7 @@ namespace soul::runtime
 		uint16 taskCount = 0;
 
 		uint16 threadIndex = 0;
-
+		
 		Vector<memory::Allocator*> allocatorStack{nullptr};
 		TempAllocator* tempAllocator = nullptr;
 	};
