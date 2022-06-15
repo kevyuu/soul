@@ -1,7 +1,8 @@
 cmake_minimum_required(VERSION 3.22)
 set(VCPKG_FEATURE_FLAGS "versions")
-message(STATUS ${CMAKE_TOOLCHAIN_FILE})
-message(STATUS ${VCPKG_TARGET_TRIPLET})
+if (NOT EXISTS "${CMAKE_TOOLCHAIN_FILE}")
+	set(CMAKE_TOOLCHAIN_FILE "${CMAKE_CURRENT_LIST_DIR}/dependencies/vcpkg/scripts/buildsystems/vcpkg.cmake")
+endif()
 project(soul
 	VERSION "0.0.1"
 	LANGUAGES CXX
