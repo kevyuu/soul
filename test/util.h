@@ -2,8 +2,11 @@
 #include "memory/allocator.h"
 #include <cinttypes>
 #include <algorithm>
+#include <numeric>
 
 #include <gtest/gtest.h>
+#include <vector>
+#include <string>
 
 constexpr uint32_t K_MAGIC_VALUE = 0x01f1cbe8;
 
@@ -183,13 +186,22 @@ public:
 };
 
 static const char* const DEFAULT_SOUL_TEST_MESSAGE = "---";
-static const char* soul_test_message = "";
+static std::vector<std::string> soul_test_messages;
+
+inline static std::string get_soul_test_message()
+{
+    std::string str = std::accumulate(soul_test_messages.begin() + 1, soul_test_messages.end(), soul_test_messages[0],
+                           [](std::string x, std::string y) { return x + "::" + y; });
+    if (str.empty())
+        return DEFAULT_SOUL_TEST_MESSAGE;
+    return str;
+}
 
 struct SoulTestMessageScope
 {
 	explicit SoulTestMessageScope(const char* message)
-	{
-		soul_test_message = message;
+	{ 
+		soul_test_messages.push_back(message);
 	}
 
 	SoulTestMessageScope(const SoulTestMessageScope&) = delete;
@@ -197,14 +209,14 @@ struct SoulTestMessageScope
 	SoulTestMessageScope& operator=(const SoulTestMessageScope&) = delete;
 	SoulTestMessageScope& operator=(SoulTestMessageScope&&) = delete;
 
-	~SoulTestMessageScope()
-	{
-		soul_test_message = DEFAULT_SOUL_TEST_MESSAGE;
+	~SoulTestMessageScope() {
+	    soul_test_messages.pop_back();
 	}
 };
 
 #define SOUL_TEST_MESSAGE(message) SoulTestMessageScope test_message_scope (message)
 #define SOUL_TEST_RUN(expr) do{SOUL_TEST_MESSAGE(#expr); expr;} while(0)
-#define SOUL_TEST_ASSERT_EQ(expr1, expr2) ASSERT_EQ(expr1, expr2) << "Case : " << soul_test_message
-#define SOUL_TEST_ASSERT_NE(expr1, expr2) ASSERT_NE(expr1, expr2) << "Case : " << soul_test_message
-#define SOUL_TEST_ASSERT_TRUE(expr) ASSERT_TRUE(expr) << "Case : " << soul_test_message
+#define SOUL_TEST_ASSERT_EQ(expr1, expr2) ASSERT_EQ(expr1, expr2) << "Case : " << get_soul_test_message()
+#define SOUL_TEST_ASSERT_NE(expr1, expr2) ASSERT_NE(expr1, expr2) << "Case : " << get_soul_test_message()
+#define SOUL_TEST_ASSERT_TRUE(expr) ASSERT_TRUE(expr) << "Case : " << get_soul_test_message()
+#define SOUL_TEST_ASSERT_FALSE(expr) ASSERT_FALSE(expr) << "Case : " << get_soul_test_message()

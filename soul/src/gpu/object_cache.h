@@ -112,8 +112,7 @@ namespace soul::gpu
 				Item* item = object_pool_.get(item_id);
 				if (item->index != frame_index_)
 				{
-					rings_[item->index].remove(item);
-					rings_[frame_index_].insert(item);
+                    rings_[frame_index_].splice(rings_[frame_index_].begin, *item);
 					item->index = frame_index_;
 				}
 				return &(item->val);
@@ -123,7 +122,7 @@ namespace soul::gpu
 			ItemKey item_persistent_key = get_persistent_key(item_id);
 			map_.insert(item_persistent_key, item_id);
 			Item* item = object_pool_.get(item_id);
-			rings_[frame_index_].insert(item);
+			rings_[frame_index_].push_front(item);
 			item->index = frame_index_;
 			return &(item->val);
 		}
@@ -150,13 +149,11 @@ namespace soul::gpu
 		}
 
 	private:
-		struct Item
+		struct Item : public IntrusiveListNode
 		{
 			KeyType key;
 			ValType val;
 			soul_size index = 0;
-			Item* prev = nullptr;
-			Item* next = nullptr;
 		};
 
 		struct ItemKey
