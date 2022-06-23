@@ -67,7 +67,7 @@ namespace soul {
 		[[nodiscard]] bool empty() const noexcept { return size_ == 0; }
 
 		void set_allocator(AllocatorType& allocator) noexcept;
-		AllocatorType* get_allocator() const noexcept;
+		[[nodiscard]] AllocatorType* get_allocator() const noexcept;
 
 		void resize(soul_size size);
 		void reserve(soul_size capacity);
@@ -163,7 +163,7 @@ namespace soul {
 	Vector<T, AllocatorType>::Vector(InputIterator first, InputIterator last, AllocatorType* const allocator) : allocator_(allocator)
 	{
 		if constexpr (std::forward_iterator<InputIterator>) {
-			soul_size size = std::distance(first, last);
+			const soul_size size = std::distance(first, last);
 			init_reserve(size);
 			std::uninitialized_copy(first, last, buffer_);
 			size_ = size;
