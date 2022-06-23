@@ -148,29 +148,29 @@ namespace soul
         void swap(this_type& rhs) noexcept;
         friend void swap(this_type& a, this_type& b) noexcept { a.swap(b); }
 
-		iterator begin() noexcept;
-        const_iterator begin() const noexcept;
-        const_iterator cbegin() const noexcept;
+		[[nodiscard]] iterator begin() noexcept;
+        [[nodiscard]] const_iterator begin() const noexcept;
+        [[nodiscard]] const_iterator cbegin() const noexcept;
 
-		iterator end() noexcept;
-        const_iterator end() const noexcept;
-        const_iterator cend() const noexcept;
+		[[nodiscard]] iterator end() noexcept;
+        [[nodiscard]] const_iterator end() const noexcept;
+        [[nodiscard]] const_iterator cend() const noexcept;
 
 		reverse_iterator rbegin() noexcept;
-        const_reverse_iterator rbegin() const noexcept;
-        const_reverse_iterator crbegin() const noexcept;
+        [[nodiscard]] const_reverse_iterator rbegin() const noexcept;
+        [[nodiscard]] const_reverse_iterator crbegin() const noexcept;
 
 		reverse_iterator rend() noexcept;
-        const_reverse_iterator rend() const noexcept;
-        const_reverse_iterator crend() const noexcept;
+        [[nodiscard]] const_reverse_iterator rend() const noexcept;
+        [[nodiscard]] const_reverse_iterator crend() const noexcept;
 
         [[nodiscard]] soul_size size() const noexcept;
         [[nodiscard]] bool empty() const noexcept;
 
-		reference front();
-        const_reference front() const;
-        reference back();
-        const_reference back() const;
+		[[nodiscard]] reference front();
+        [[nodiscard]] const_reference front() const;
+        [[nodiscard]] reference back();
+        [[nodiscard]] const_reference back() const;
 
 		void push_front(value_type& x);
         void push_back(value_type& x);
@@ -179,8 +179,8 @@ namespace soul
 
 		bool contains(const value_type& x) const;
 
-		iterator locate(value_type& x);
-        const_iterator locate(const value_type& x) const;
+		[[nodiscard]] iterator locate(value_type& x);
+        [[nodiscard]] const_iterator locate(const value_type& x) const;
 
 		iterator insert(const_iterator pos, value_type& x);
         iterator erase(const_iterator pos);
@@ -477,6 +477,7 @@ namespace soul
     }
 
     template <intrusive_node_type T>
+    // ReSharper disable once CppMemberFunctionMayBeStatic
     void IntrusiveList<T>::splice(const_iterator pos, this_type& list)
     {
         if (!list.empty())
@@ -508,6 +509,7 @@ namespace soul
     }
 
     template <intrusive_node_type T>
+    // ReSharper disable once CppMemberFunctionMayBeStatic
     void IntrusiveList<T>::splice(const_iterator pos, this_type& list, const_iterator first, const_iterator last)
     {
         if (first != last)
