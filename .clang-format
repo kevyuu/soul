@@ -1,6 +1,8 @@
 ---
 Language: Cpp
 BasedOnStyle: LLVM
+ReferenceAlignment: Left
+PointerAlignment: Left
 AccessModifierOffset: -4
 AlignOperands: false
 AlignTrailingComments: false
