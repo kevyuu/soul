@@ -760,7 +760,7 @@ namespace soul::gpu
 	QueueData System::get_queue_data_from_queue_flags(QueueFlags flags) const {
 		QueueData queue_data;
 		const auto& queues = _db.queues;
-		flags.forEach([&queue_data, queues](QueueType type)
+		flags.for_each([&queue_data, queues](QueueType type)
 		{
 			queue_data.indices[queue_data.count++] = queues[type].getFamilyIndex();
 		});
@@ -2647,7 +2647,7 @@ namespace soul::gpu
 		static auto get_finalize_layout = [](TextureUsageFlags usage) -> VkImageLayout
 		{
 			VkImageLayout result = VK_IMAGE_LAYOUT_UNDEFINED;
-			static constexpr VkImageLayout USAGE_LAYOUT_MAP[] = {
+			static constexpr auto USAGE_LAYOUT_MAP = EnumArray<TextureUsage, VkImageLayout>::build_from_list({
 				VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
 				VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
 				VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
@@ -2655,18 +2655,20 @@ namespace soul::gpu
 				VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
 				VK_IMAGE_LAYOUT_UNDEFINED,
 				VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-			};
-			static_assert(std::size(USAGE_LAYOUT_MAP) == to_underlying(TextureUsage::COUNT));
-			Util::for_each_bit(usage.val(), [&result](uint32 bit)
-			{
-				if (result != VK_IMAGE_LAYOUT_UNDEFINED && result != USAGE_LAYOUT_MAP[bit])
-				{
-					result = VK_IMAGE_LAYOUT_GENERAL;
-				} else
-				{
-					result = USAGE_LAYOUT_MAP[bit];
-				}
 			});
+			static_assert(std::size(USAGE_LAYOUT_MAP) == to_underlying(TextureUsage::COUNT));
+
+			usage.for_each([&result](TextureUsage texture_usage)
+			{
+			    if (result != VK_IMAGE_LAYOUT_UNDEFINED && result != USAGE_LAYOUT_MAP[texture_usage])
+                {
+                    result = VK_IMAGE_LAYOUT_GENERAL;   
+                }
+                else
+                {
+                    result = USAGE_LAYOUT_MAP[texture_usage];    
+                }
+            });
 			SOUL_ASSERT(0, result != VK_IMAGE_LAYOUT_UNDEFINED, "");
 			return result;
 		};
@@ -2732,7 +2734,7 @@ namespace soul::gpu
 				image_barriers.append(thread_context.image_barriers_[queue_type]);
 			}
 
-			sync_dst_queue.forEach([&](const QueueType dst_queue_type)
+			sync_dst_queue.for_each([&](const QueueType dst_queue_type)
 			{
 				if (dst_queue_type == queue_type)
 				{

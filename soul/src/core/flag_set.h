@@ -1,16 +1,17 @@
 #pragma once
 #include "core/type.h"
 #include <numeric>
+
 namespace soul
 {
-	template <flag_scope_enum Enum>
+	template <flag Flag>
 	class FlagSet
 	{
 	public:
 
-		using enum_type = Enum;
-		static constexpr uint64 ENUM_COUNT = to_underlying(Enum::COUNT);
-		using store_type = min_uint_t<1u << ENUM_COUNT>;
+		using flag_type = Flag;
+		static constexpr soul_size FLAG_COUNT = to_underlying(Flag::COUNT);
+	    using store_type = min_uint_t<1u << FLAG_COUNT>;
 
 		// Default constructor (all 0s)
 		constexpr FlagSet() = default;
@@ -20,146 +21,218 @@ namespace soul
 		FlagSet& operator=(FlagSet&& other) = default;
 		~FlagSet() = default;
 
+		constexpr explicit FlagSet(store_type val) : flags_(val & MASK) {}
+
 		// Initializer list constructor
-		constexpr FlagSet(const std::initializer_list<enum_type>& initList) :
-			flags_(std::accumulate(initList.begin(), initList.end(), store_type(0), [](store_type x, enum_type y)
-			{
-				return x | store_type(1u << to_underlying(y));
-			}))
-		{}
+		constexpr FlagSet(const std::initializer_list<flag_type>& init_list);
 
-		constexpr explicit FlagSet(store_type val) : flags_(val) {}
+        FlagSet& set();
+        FlagSet& set(flag_type bit, bool value = true);
+        FlagSet& reset();
+        FlagSet& reset(flag_type bit);
+        FlagSet& flip();
+        FlagSet& flip(flag_type bit);
 
-		bool operator [] (enum_type bit) const
-		{
-			return test(bit);
-		}
+        [[nodiscard]] bool operator[](flag_type bit) const;
+        FlagSet& operator|=(FlagSet flag);
+        FlagSet& operator&=(FlagSet flag);
+        FlagSet& operator^=(FlagSet flag);
+        [[nodiscard]] FlagSet operator~() const;
+        bool operator==(const FlagSet&) const = default;
 
-		FlagSet& set()
-		{
-			flags_ = ~store_type(0);
-			return *this;
-		}
+        [[nodiscard]] size_t count() const;
+        [[nodiscard]] constexpr size_t size() const;
+        [[nodiscard]] constexpr bool test(flag_type bit) const;
+        [[nodiscard]] constexpr bool any() const;
+        [[nodiscard]] constexpr bool none() const;
 
-		FlagSet& reset()
-		{
-			flags_ = store_type(0);
-			return *this;
-		}
+        [[nodiscard]] constexpr store_type val() const;
 
-		FlagSet& reset(enum_type bit)
-		{
-			flags_ &= ~(1u << bit);
-			return *this;
-		}
+        template <std::integral DstFlags>
+		[[nodiscard]] constexpr DstFlags map(DstFlags const(&mapping)[to_underlying(flag_type::COUNT)]) const;
 
-		FlagSet& flip()
-		{
-			flags_ = ~flags_;
-			return *this;
-		}
+        template <typename T>
+		constexpr void for_each(T func) const;
 
-		FlagSet& flip(enum_type bit)
-		{
-			flags_ ^= (1u << bit);
-			return *this;
-		}
-
-		FlagSet& operator|=(FlagSet flag)
-		{
-			flags_ |= flag.flags_;
-			return *this;
-		}
-
-		FlagSet& operator&=(FlagSet flag)
-		{
-			flags_ &= flag.flags_;
-			return *this;
-		}
-
-        [[nodiscard]] size_t count() const
-		{
-			// http://www-graphics.stanford.edu/~seander/bithacks.html#CountBitsSetKernighan
-
-			store_type bits = flags_;
-			size_t total = 0;
-			for (; bits != 0; ++total)
-			{
-				bits &= bits - 1; // clear the least significant bit set
-			}
-			return total;
-		}
-
-		[[nodiscard]] constexpr size_t size() const
-		{
-			return sizeof(enum_type) * 8;
-		}
-
-		[[nodiscard]] constexpr bool test(enum_type bit) const
-		{
-			return (flags_ & (1u << bit)) > 0;
-		}
-
-		[[nodiscard]] constexpr bool any() const
-		{
-			return flags_ > 0;
-		}
-
-		[[nodiscard]] constexpr bool none() const
-		{
-			return flags_ == 0;
-		}
-
-		[[nodiscard]] constexpr store_type val() const
-		{
-			return flags_;
-		}
-
-		template <std::integral DstFlags>
-		[[nodiscard]] constexpr DstFlags map(DstFlags const(&mapping)[to_underlying(enum_type::COUNT)]) const
-		{
-			std::remove_cv_t<DstFlags> dstFlags = 0;
-			store_type flags = flags_;
-			while (flags)
-			{
-				uint32 bit = Util::trailing_zeroes(flags);
-				dstFlags |= mapping[bit];
-				flags &= ~(1u << bit);
-			}
-			return dstFlags;
-		}
-
-		template <typename T>
-		constexpr void forEach(T func)
-		{
-			store_type flags = flags_;
-			while (flags)
-			{
-				std::underlying_type_t<enum_type> bit = Util::trailing_zeroes(flags);
-				func(enum_type(bit));
-				flags &= ~(1u << bit);
-			}
-		}
-		
-	private:
+    private:
+        static constexpr soul_size MASK = (1u << FLAG_COUNT) - 1;
 		store_type flags_ = 0;
 	};
 
-	template<flag_scope_enum enumT>
-	FlagSet<enumT> operator & (const FlagSet<enumT> lhs, const FlagSet<enumT> rhs)
+    template <flag Flag>
+    constexpr FlagSet<Flag>::FlagSet(const std::initializer_list<flag_type>& init_list):
+        flags_(std::accumulate(init_list.begin(), init_list.end(), store_type(0), [](store_type x, flag_type y)
+        {
+            return x | store_type(1u << to_underlying(y));
+        }))
+    {}
+
+    template <flag Flag>
+    constexpr size_t FlagSet<Flag>::size() const
+    {
+        return to_underlying(Flag::COUNT);
+    }
+
+    template <flag Flag>
+    constexpr bool FlagSet<Flag>::test(flag_type bit) const
+    {
+        return (flags_ & (1u << bit)) > 0;
+    }
+
+    template <flag Flag>
+    constexpr bool FlagSet<Flag>::any() const
+    {
+        return flags_ > 0;
+    }
+
+    template <flag Flag>
+    constexpr bool FlagSet<Flag>::none() const
+    {
+        return flags_ == 0;
+    }
+
+    template <flag Flag>
+    constexpr typename FlagSet<Flag>::store_type FlagSet<Flag>::val() const
+    {
+        return flags_;
+    }
+
+    template <flag Flag>
+    template <std::integral DstFlags>
+    constexpr DstFlags FlagSet<Flag>::map(DstFlags const(& mapping)[to_underlying(flag_type::COUNT)]) const
+    {
+        std::remove_cv_t<DstFlags> dst_flags = 0;
+        store_type flags = flags_;
+        while (flags)
+        {
+            uint32 bit = Util::trailing_zeroes(flags);
+            dst_flags |= mapping[bit];
+            flags &= ~(1u << bit);
+        }
+        return dst_flags;
+    }
+
+    template <flag Flag>
+    template <typename T>
+    constexpr void FlagSet<Flag>::for_each(T func) const
+    {
+        store_type flags = flags_;
+        while (flags)
+        {
+            std::underlying_type_t<flag_type> bit = Util::trailing_zeroes(flags);
+            func(flag_type(bit));
+            flags &= ~(1u << bit);
+        }
+    }
+
+    template <flag Flag>
+    bool FlagSet<Flag>::operator[](flag_type bit) const
+    {
+        return test(bit);
+    }
+
+    template <flag Flag>
+    FlagSet<Flag>& FlagSet<Flag>::set()
+    {
+        flags_ = MASK;
+        return *this;
+    }
+
+    template <flag Flag>
+    FlagSet<Flag>& FlagSet<Flag>::set(flag_type bit, bool value)
+    {
+        if (value)
+            flags_ |= (1u << bit);
+        else
+            flags_ &= ~(1u << bit);
+        return *this;
+    }
+
+    template <flag Flag>
+    FlagSet<Flag>& FlagSet<Flag>::reset()
+    {
+        flags_ = store_type(0);
+        return *this;
+    }
+
+    template <flag Flag>
+    FlagSet<Flag>& FlagSet<Flag>::reset(flag_type bit)
+    {
+        flags_ &= ~(1u << bit);
+        return *this;
+    }
+
+    template <flag Flag>
+    FlagSet<Flag>& FlagSet<Flag>::flip()
+    {
+        flags_ = ~flags_;
+        flags_ &= MASK;
+        return *this;
+    }
+
+    template <flag Flag>
+    FlagSet<Flag>& FlagSet<Flag>::flip(flag_type bit)
+    {
+        flags_ ^= (1u << bit);
+        return *this;
+    }
+
+    template <flag Flag>
+    FlagSet<Flag>& FlagSet<Flag>::operator|=(FlagSet flag)
+    {
+        flags_ |= flag.flags_;
+        return *this;
+    }
+
+    template <flag Flag>
+    FlagSet<Flag>& FlagSet<Flag>::operator&=(FlagSet flag)
+    {
+        flags_ &= flag.flags_;
+        return *this;
+    }
+
+    template <flag Flag>
+    FlagSet<Flag>& FlagSet<Flag>::operator^=(FlagSet flag)
+    {
+        flags_ ^= flag.flags_;
+        return *this;
+    }
+
+    template <flag Flag>
+    FlagSet<Flag> FlagSet<Flag>::operator~() const
+    {
+        return FlagSet(~this->flags_);
+    }
+
+    template <flag Flag>
+    size_t FlagSet<Flag>::count() const
+    {
+        // http://www-graphics.stanford.edu/~seander/bithacks.html#CountBitsSetKernighan
+
+        store_type bits = flags_;
+        size_t total = 0;
+        for (; bits != 0; ++total)
+        {
+            bits &= bits - 1; // clear the least significant bit set
+        }
+        return total;
+    }
+
+    template<flag FlagT>
+	FlagSet<FlagT> operator & (const FlagSet<FlagT> lhs, const FlagSet<FlagT> rhs)
 	{
-		return FlagSet<enumT>(FlagSet<enumT>::store_type(lhs.val()) & FlagSet<enumT>::store_type(rhs.val()));
+		return FlagSet<FlagT>(FlagSet<FlagT>::store_type(lhs.val()) & FlagSet<FlagT>::store_type(rhs.val()));
 	}
 
-	template<flag_scope_enum enumT>
-	FlagSet<enumT> operator | (const FlagSet<enumT> lhs, const FlagSet<enumT> rhs)
+	template<flag FlagT>
+	FlagSet<FlagT> operator | (const FlagSet<FlagT> lhs, const FlagSet<FlagT> rhs)
 	{
-		return FlagSet<enumT>(FlagSet<enumT>::store_type(lhs.val()) | FlagSet<enumT>::store_type(rhs.val()));
+		return FlagSet<FlagT>(FlagSet<FlagT>::store_type(lhs.val()) | FlagSet<FlagT>::store_type(rhs.val()));
 	}
 
-	template<flag_scope_enum enumT>
-	FlagSet<enumT> operator ^ (const FlagSet<enumT> lhs, const FlagSet<enumT> rhs)
+	template<flag FlagT>
+	FlagSet<FlagT> operator ^ (const FlagSet<FlagT> lhs, const FlagSet<FlagT> rhs)
 	{
-		return FlagSet<enumT>(FlagSet<enumT>::store_type(lhs.val()) ^ FlagSet<enumT>::store_type(rhs.val()));
+		return FlagSet<FlagT>(FlagSet<FlagT>::store_type(lhs.val()) ^ FlagSet<FlagT>::store_type(rhs.val()));
 	}
 }
