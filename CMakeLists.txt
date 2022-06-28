@@ -16,11 +16,32 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 
+option(SOUL_EXCEPTION_ENABLE "Build this target with exception" OFF)
+if (NOT SOUL_EXCEPTION_ENABLE)
+	message(STATUS "SOUL_EXCEPTION_ENABLE OFF")
+	if(MSVC)
+		# Disable C++ exceptions.
+		string(REGEX REPLACE "/EH[a-z]+" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
+		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /EHs-c-")
+	endif()
+endif()
+
+option(SOUL_RTTI_ENABLE "Build this target with rtti" OFF)
+if (NOT SOUL_RTTI_ENABLE)
+	if (MSVC)
+		# Disable RTTI
+		string(REGEX REPLACE "/GR" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
+		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /GR-")
+	endif()
+endif()
 
 message(STATUS "Compiler ID : ${CMAKE_CXX_COMPILER_ID}")
 message(STATUS "Compiler Path : ${CMAKE_CXX_COMPILER}")
 message(STATUS "System Name : ${CMAKE_SYSTEM_NAME}")
+message(STATUS "CMAKE_CXX_FLAGS : ${CMAKE_CXX_FLAGS}")
 message(STATUS "CMAKE_CXX_FLAGS_DEBUG: ${CMAKE_CXX_FLAGS_DEBUG}")
+message(STATUS "CMAKE_CXX_FLAGS_RELWITHDEBINFO : ${CMAKE_CXX_FLAGS_RELWITHDEBINFO}")
+message(STATUS "CMAKE_CXX_FLAGS_RELEASE: ${CMAKE_CXX_FLAGS_RELEASE}")
 
 option(SOUL_ASAN_ENABLE "Build this target with AddressSanitizer" OFF)
 if (SOUL_ASAN_ENABLE)
@@ -31,6 +52,8 @@ if (SOUL_ASAN_ENABLE)
 		target_link_options(<target> PUBLIC -fsanitize=address)
 	endif()
 endif()
+
+
 
 # ==================================================================================================
 # Try to find vulkan
@@ -74,6 +97,11 @@ include(${CMAKE_CURRENT_LIST_DIR}/cmake_lib/SystemLink.cmake)
 enable_testing()
 
 add_subdirectory(dependencies)
-add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/soul)
-add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/sample)
-add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/test)
+add_subdirectory(soul)
+add_subdirectory(sample)
+add_subdirectory(test)
+
+if (IS_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}/benchmark_sandbox")
+	add_subdirectory(benchmark_sandbox)
+endif()
+

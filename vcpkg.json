@@ -10,7 +10,8 @@
     "volk",
     "tracy",
     "argparse",
-    "gtest"
+    "gtest",
+    "benchmark"
   ],
   "builtin-baseline": "faed44dfa013088fe1910908a8a65887622f412f"
 }

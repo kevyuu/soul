@@ -56,16 +56,18 @@
         "SOUL_ASSERT_ENABLE": true,
         "SOUL_VULKAN_VALIDATION_ENABLE": true,
         "SOUL_PROFILE_CPU_BACKEND": "DISABLED",
-        "SOUL_ASSERT_PARANOIA_LEVEL": "1"
+        "SOUL_ASSERT_PARANOIA_LEVEL": "1",
+        "SOUL_ENABLE_EXCEPTION": true,
+        "SOUL_ENABLE_RTTI": true
       },
       "hidden": true
     },
     {
       "name": "Release",
       "cacheVariables": { 
-        "CMAKE_BUILD_TYPE": "RelWithDebInfo" ,
+        "CMAKE_BUILD_TYPE": "Release" ,
         "SOUL_LOG_ENABLE": true,
-        "SOUL_VULKAN_VALIDATION_ENABLE":false
+        "SOUL_VULKAN_VALIDATION_ENABLE": false
       },
       "hidden": true
     },
