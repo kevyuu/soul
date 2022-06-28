@@ -17,4 +17,8 @@ namespace soul
     memory::Allocator* get_default_allocator();
 #endif
 
+#ifndef SOUL_BIT_BLOCK_TYPE_DEFAULT
+#define SOUL_BIT_BLOCK_TYPE_DEFAULT soul_size
+#endif
+
 }

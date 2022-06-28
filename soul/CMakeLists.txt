@@ -16,7 +16,7 @@ set (SOUL_HEADERS
 	src/core/util.h
 	src/core/slice.h
 	src/core/enum_array.h
-	src/core/bitset.h
+	src/core/bit_vector.h
 	src/core/geometry.h
 	src/core/string.h
 	src/core/thread.h
@@ -53,7 +53,6 @@ set (SOUL_SOURCES
 	src/core/config.cpp
 	src/core/dev_util.cpp
 	src/core/math.cpp
-	src/core/bitset.cpp
 	src/core/geometry.cpp
 	src/core/string.cpp
 

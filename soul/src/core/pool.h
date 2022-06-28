@@ -1,7 +1,7 @@
 #pragma once
 
 #include "core/config.h"
-#include "core/bitset.h"
+#include "core/bit_vector.h"
 #include "core/dev_util.h"
 #include "core/compiler.h"
 #include "core/type.h"
@@ -70,7 +70,7 @@ namespace soul {
 		};
 
 		memory::Allocator* _allocator;
-		BitSet _bitSet;
+		BitVector<> _bitSet;
 		Unit* _buffer = nullptr;
 		soul_size _capacity = 0;
 		soul_size _size = 0;
@@ -86,7 +86,7 @@ namespace soul {
 				std::enable_if_t<!std::is_trivially_move_constructible_v<U>>* = nullptr>
 		inline void _moveUnits(Unit* dst) {
 			for (int i = 0; i < _size; i++) {
-				if (_bitSet.test(i)) {
+				if (_bitSet[i]) {
 					new (dst + i) T(std::move(_buffer[i].datum));
 				} else {
 					dst[i].next = _buffer[i].next;
@@ -104,7 +104,7 @@ namespace soul {
 				std::enable_if_t<!std::is_trivially_destructible_v<U>>* = nullptr>
 		inline void copy_units(const Pool<T>& other) {
 			for (int i = 0; i < _capacity; i++) {
-				if (_bitSet.test(i)) {
+				if (_bitSet[i]) {
 					new(_buffer + i) T(other._buffer[i].datum);
 				} else {
 					_buffer[i].next = other._buffer[i].next;
@@ -120,7 +120,7 @@ namespace soul {
 				std::enable_if_t<!std::is_trivially_destructible_v<U>>* = nullptr>
 		inline void destruct_units() {
 			for (soul_size i = 0; i < _capacity; i++) {
-				if (!_bitSet.test(i)) continue;
+				if (!_bitSet[i]) continue;
 				_buffer[i].datum.~T();
 			}
 		}
@@ -231,7 +231,7 @@ namespace soul {
 		_buffer[id].datum.~T();
 		_buffer[id].next = _freelist;
 		_freelist = id;
-		_bitSet.unset(id);
+		_bitSet[id] = false;
 	}
 
 	template <typename T>
