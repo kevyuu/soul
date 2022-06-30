@@ -38,6 +38,9 @@ typedef uint64_t soul_size;
 namespace soul {
 
 	template <typename T>
+	concept bit_block_type = std::unsigned_integral<T>;
+
+	template <typename T>
 	struct raw_buffer {
 		alignas(T) std::byte data[sizeof(T)];
 	};
