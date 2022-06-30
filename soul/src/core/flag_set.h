@@ -1,6 +1,5 @@
 #pragma once
 #include "core/type.h"
-#include "core/bit_set.h"
 #include <numeric>
 
 namespace soul
