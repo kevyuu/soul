@@ -190,6 +190,7 @@ static std::vector<std::string> soul_test_messages;
 
 inline static std::string get_soul_test_message()
 {
+	if (soul_test_messages.empty()) return "-----";
     std::string str = std::accumulate(soul_test_messages.begin() + 1, soul_test_messages.end(), soul_test_messages[0],
                            [](std::string x, std::string y) { return x + "::" + y; });
     if (str.empty())
