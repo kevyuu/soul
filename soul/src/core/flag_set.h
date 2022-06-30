@@ -1,5 +1,6 @@
 #pragma once
 #include "core/type.h"
+#include "core/bit_set.h"
 #include <numeric>
 
 namespace soul
@@ -105,7 +106,7 @@ namespace soul
         store_type flags = flags_;
         while (flags)
         {
-            uint32 bit = Util::trailing_zeroes(flags);
+            uint32 bit = *util::get_first_one_bit_pos(flags);
             dst_flags |= mapping[bit];
             flags &= ~(1u << bit);
         }
@@ -119,7 +120,7 @@ namespace soul
         store_type flags = flags_;
         while (flags)
         {
-            std::underlying_type_t<flag_type> bit = Util::trailing_zeroes(flags);
+            std::underlying_type_t<flag_type> bit = *util::get_first_one_bit_pos(flags);
             func(flag_type(bit));
             flags &= ~(1u << bit);
         }

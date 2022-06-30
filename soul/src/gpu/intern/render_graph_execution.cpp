@@ -825,7 +825,7 @@ namespace soul::gpu::impl
 		auto need_invalidate = [](VkAccessFlags visible_access_matrix[], VkAccessFlags access_flags, 
 			VkPipelineStageFlags stage_flags) -> bool {
 			bool result = false;
-			Util::for_each_bit(stage_flags, [&result, access_flags, visible_access_matrix](uint32 bit) {
+			util::for_each_one_bit_pos(stage_flags, [&result, access_flags, visible_access_matrix](uint32 bit) {
 				if (access_flags & ~visible_access_matrix[bit]) {
 					result = true;
 				}
@@ -905,7 +905,7 @@ namespace soul::gpu::impl
 					event_src_stage_flags |= buffer_info.unsyncWriteStage;
 					event_dst_stage_flags |= barrier.stageFlags;
 
-					Util::for_each_bit(barrier.stageFlags, [&buffer_info, dst_access_flags](const uint32 bit) {
+					util::for_each_one_bit_pos(barrier.stageFlags, [&buffer_info, dst_access_flags](const uint32 bit) {
 						buffer_info.visibleAccessMatrix[bit] |= dst_access_flags;
 					});
 
@@ -975,7 +975,7 @@ namespace soul::gpu::impl
 					event_src_stage_flags |= view_info.unsyncWriteStage;
 					event_dst_stage_flags |= barrier.stageFlags;
 
-					Util::for_each_bit(barrier.stageFlags, [&view_info, dstAccessFlags](uint32 bit) {
+					util::for_each_one_bit_pos(barrier.stageFlags, [&view_info, dstAccessFlags](uint32 bit) {
 						view_info.visibleAccessMatrix[bit] |= dstAccessFlags;
 					});
 

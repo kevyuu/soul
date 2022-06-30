@@ -1,4 +1,21 @@
 #pragma once
+#include <cstdint>
+
+namespace soul
+{
+    enum class Compiler : uint8_t
+    {
+        MSVC,
+        COUNT
+    };
+}
+
+#if defined(_MSC_VER)
+#include <intrin.h>
+namespace soul {
+    constexpr Compiler COMPILER = Compiler::MSVC;
+}
+#endif
 
 #define SOUL_NODISCARD [[nodiscard]]
 
@@ -68,3 +85,34 @@
 #else
 #define SOUL_ALWAYS_INLINE inline
 #endif
+
+namespace soul
+{
+    inline size_t pop_count_16(const uint16_t val)
+    {
+        static_assert(COMPILER == Compiler::MSVC);
+        if constexpr (COMPILER == Compiler::MSVC)
+        {
+            return __popcnt16(val);
+        }
+    }
+
+    inline size_t pop_count_32(const uint32_t val)
+    {
+        static_assert(COMPILER == Compiler::MSVC);
+        if constexpr (COMPILER == Compiler::MSVC)
+        {
+            return __popcnt(val);
+        }
+    }
+
+    inline size_t pop_count_64(const uint64_t val)
+    {
+        static_assert(COMPILER == Compiler::MSVC);
+        if constexpr (COMPILER == Compiler::MSVC)
+        {
+            return __popcnt64(val);
+        }
+    }
+
+}
