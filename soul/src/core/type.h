@@ -238,7 +238,7 @@ namespace soul {
 	constexpr PointerDst cast(PointerSrc srcPtr)
 	{
 		using Dst = std::remove_pointer_t<PointerDst>;
-		if constexpr (!is_same_v<PointerDst, void*>) {
+		if constexpr (!std::is_same_v<PointerDst, void*>) {
 			SOUL_ASSERT(0, reinterpret_cast<uintptr>(srcPtr) % alignof(Dst) == 0, "Source pointer is not aligned in PointerDst alignment!");
 		}
 		return (PointerDst)(srcPtr);
