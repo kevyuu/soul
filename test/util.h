@@ -215,6 +215,7 @@ struct SoulTestMessageScope
 	}
 };
 
+#define SOUL_SINGLE_ARG(...) __VA_ARGS__
 #define SOUL_TEST_MESSAGE(message) SoulTestMessageScope test_message_scope (message)
 #define SOUL_TEST_RUN(expr) do{SOUL_TEST_MESSAGE(#expr); expr;} while(0)
 #define SOUL_TEST_ASSERT_EQ(expr1, expr2) ASSERT_EQ(expr1, expr2) << "Case : " << get_soul_test_message()
