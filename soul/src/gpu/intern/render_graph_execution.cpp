@@ -420,8 +420,8 @@ namespace soul::gpu::impl
 			event = VK_NULL_HANDLE;
 		}
 
-		for (auto src_pass_type : EnumIter<PassType>()) {
-			for (auto dst_pass_type : EnumIter<PassType>()) {
+		for (auto src_pass_type : FlagIter<PassType>()) {
+			for (auto dst_pass_type : FlagIter<PassType>()) {
 				external_semaphores_[src_pass_type][dst_pass_type] = SemaphoreID::Null();
 			}
 		}
@@ -681,7 +681,7 @@ namespace soul::gpu::impl
 	void RenderGraphExecution::submit_external_sync_primitive() {
 
 		// Sync semaphores
-		for(const auto src_pass_type : EnumIter<PassType>()) {
+		for(const auto src_pass_type : FlagIter<PassType>()) {
 			runtime::ScopeAllocator scopeAllocator("Sync semaphore allocator", runtime::get_temp_allocator());
 			Vector<Semaphore*> semaphores(&scopeAllocator);
 			semaphores.reserve(to_underlying(PassType::COUNT));
@@ -700,7 +700,7 @@ namespace soul::gpu::impl
 		}
 
 		// Sync events
-		for(PassType pass_type : EnumIter<PassType>()) {
+		for(PassType pass_type : FlagIter<PassType>()) {
 			if (external_events_[pass_type] != VK_NULL_HANDLE && pass_type != PassType::NONE) {
 				QueueType queue_type = PASS_TYPE_TO_QUEUE_TYPE_MAP[pass_type];
 				VkCommandBuffer syncEventCmdBuffer = command_pools_.requestCommandBuffer(queue_type);
@@ -1050,7 +1050,7 @@ namespace soul::gpu::impl
 			VkEvent event = VK_NULL_HANDLE;
 			VkPipelineStageFlags eventStageFlags = 0;
 
-			for (PassType passType : EnumIter<PassType>()) {
+			for (PassType passType : FlagIter<PassType>()) {
 				if (is_pass_type_dependent[passType] && passType == pass_node->get_type()) {
 					event = gpu_system_->create_event();
 					garbage_events.push_back(event);
@@ -1242,7 +1242,7 @@ namespace soul::gpu::impl
 			if (event != VK_NULL_HANDLE) gpu_system_->destroy_event(event);
 		}
 
-		for (PassType src_pass_type : EnumIter<PassType>::Iterates()) {
+		for (PassType src_pass_type : FlagIter<PassType>::Iterates()) {
 			for (auto semaphore_id : external_semaphores_[src_pass_type]) {
 				if (semaphore_id.is_valid()) gpu_system_->destroy_semaphore(semaphore_id);
 			}

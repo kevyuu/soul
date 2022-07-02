@@ -291,10 +291,10 @@ namespace soul {
 		}
 	};
 
-	template<flag Enum>
-	class EnumIter {
+	template<flag Flag>
+	class FlagIter {
 
-		using store_type = std::underlying_type_t<Enum>;
+		using store_type = std::underlying_type_t<Flag>;
 
 	public:
 		class Iterator {
@@ -302,21 +302,21 @@ namespace soul {
 			constexpr explicit Iterator(store_type index): index_(index) {}
 			constexpr Iterator operator++() { ++index_; return *this; }
 			constexpr bool operator!=(const Iterator& other) const { return index_ != other.index_; }
-			constexpr Enum operator*() const { return Enum(index_); }
+			constexpr Flag operator*() const { return Flag(index_); }
 		private:
 			store_type index_;
 		};
 		SOUL_NODISCARD Iterator begin() const { return Iterator(0);}
-		SOUL_NODISCARD Iterator end() const { return Iterator(to_underlying(Enum::COUNT)); }
+		SOUL_NODISCARD Iterator end() const { return Iterator(to_underlying(Flag::COUNT)); }
 
-		constexpr EnumIter() = default;
+		constexpr FlagIter() = default;
 
-		static EnumIter Iterates() {
-			return EnumIter();
+		static FlagIter Iterates() {
+			return FlagIter();
 		}
 
 		static uint64 Count() {
-			return to_underlying(Enum::COUNT);
+			return to_underlying(Flag::COUNT);
 		}
 
 	};

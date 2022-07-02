@@ -63,7 +63,7 @@ void test_default_constructor()
     SOUL_TEST_ASSERT_EQ(flag_set.size(), soul::to_underlying(T::COUNT));
     SOUL_TEST_ASSERT_TRUE(flag_set.none());
     SOUL_TEST_ASSERT_FALSE(flag_set.any());
-    for (const T e : soul::EnumIter<T>())
+    for (const T e : soul::FlagIter<T>())
     {
         SOUL_TEST_ASSERT_FALSE(flag_set.test(e));
         SOUL_TEST_ASSERT_FALSE(flag_set[e]);
@@ -85,7 +85,7 @@ void test_init_list_constructor(std::initializer_list<T> init_list)
     SOUL_TEST_ASSERT_EQ(flag_set.size(), soul::to_underlying(T::COUNT));
     SOUL_TEST_ASSERT_FALSE(flag_set.none());
     SOUL_TEST_ASSERT_TRUE(flag_set.any());
-    for (const T e : soul::EnumIter<T>())
+    for (const T e : soul::FlagIter<T>())
     {
         if (std::find(init_list.begin(), init_list.end(), e) == init_list.end())
         {
@@ -176,7 +176,7 @@ TEST_F(TestFlagSetManipulation, TestFlagSetSet)
         SOUL_TEST_ASSERT_EQ(test_flag_set.count(), soul::to_underlying(T::COUNT));
         SOUL_TEST_ASSERT_FALSE(test_flag_set.none());
         SOUL_TEST_ASSERT_TRUE(test_flag_set.any());
-        for (auto e : soul::EnumIter<T>())
+        for (auto e : soul::FlagIter<T>())
         {
             SOUL_TEST_ASSERT_TRUE(test_flag_set.test(e));
             SOUL_TEST_ASSERT_TRUE(test_flag_set[e]);
@@ -192,7 +192,7 @@ TEST_F(TestFlagSetManipulation, TestFlagSetSet)
         test_flag_set.set(position, value);
         SOUL_TEST_ASSERT_EQ(test_flag_set.test(position), value); 
         SOUL_TEST_ASSERT_EQ(test_flag_set[position], value);
-        for (auto e : soul::EnumIter<T>())
+        for (auto e : soul::FlagIter<T>())
         {
             if (e != position)
             {
@@ -236,7 +236,7 @@ TEST_F(TestFlagSetManipulation, TestFlagSetReset)
         SOUL_TEST_ASSERT_EQ(test_flag_set.count(), 0);
         SOUL_TEST_ASSERT_FALSE(test_flag_set.any());
         SOUL_TEST_ASSERT_TRUE(test_flag_set.none());
-        for (auto e : soul::EnumIter<T>())
+        for (auto e : soul::FlagIter<T>())
         {
             SOUL_TEST_ASSERT_FALSE(test_flag_set.test(e));
             SOUL_TEST_ASSERT_FALSE(test_flag_set[e]);
@@ -251,7 +251,7 @@ TEST_F(TestFlagSetManipulation, TestFlagSetReset)
         test_flag_set.reset(position);
         SOUL_TEST_ASSERT_FALSE(test_flag_set.test(position));
         SOUL_TEST_ASSERT_FALSE(test_flag_set[position]);
-        for (auto e : soul::EnumIter<T>())
+        for (auto e : soul::FlagIter<T>())
         {
             if (e != position)
             {
@@ -278,7 +278,7 @@ TEST_F(TestFlagSetManipulation, TestFlagSetFlip)
         auto old_flag_set = test_flag_set;
         std::cout << old_flag_set.count() << std::endl;
         test_flag_set.flip();
-        for (auto e : soul::EnumIter<T>())
+        for (auto e : soul::FlagIter<T>())
         {
             SOUL_TEST_ASSERT_EQ(test_flag_set.test(e), !old_flag_set.test(e));
             SOUL_TEST_ASSERT_EQ(test_flag_set[e], !old_flag_set[e]);
@@ -292,7 +292,7 @@ TEST_F(TestFlagSetManipulation, TestFlagSetFlip)
     auto test_flip_position = []<soul::scoped_enum T>(soul::FlagSet<T> test_flag_set, T position) {
         auto old_flag_set = test_flag_set;
         test_flag_set.flip(position);
-        for (auto e : soul::EnumIter<T>())
+        for (auto e : soul::FlagIter<T>())
         {
             if (e != position)
                 SOUL_TEST_ASSERT_EQ(test_flag_set.test(e), old_flag_set.test(e));
@@ -316,7 +316,7 @@ TEST(TestFlagSetOperator, TestFlagSetOperatorOr)
     auto test_operator_or = []<typename T>(soul::FlagSet<T> flag_set1, soul::FlagSet<T> flag_set2) {
         auto flag_set_result = flag_set1 | flag_set2;
         soul_size expected_count = 0;
-        for (auto e : soul::EnumIter<T>())
+        for (auto e : soul::FlagIter<T>())
         {
             if (flag_set1.test(e) || flag_set2.test(e))
             {
@@ -343,7 +343,7 @@ TEST(TestFlagSetOperator, TestFlagSetOperatorAnd)
     auto test_operator_and = []<typename T>(soul::FlagSet<T> flag_set1, soul::FlagSet<T> flag_set2) {
         auto flag_set_result = flag_set1 & flag_set2;
         soul_size expected_count = 0;
-        for (auto e : soul::EnumIter<T>())
+        for (auto e : soul::FlagIter<T>())
         {
             if (flag_set1.test(e) && flag_set2.test(e))
             {
@@ -371,7 +371,7 @@ TEST(TestFlagSetOperator, TestFlagSetOperatorXor)
     auto test_operator_xor = []<typename T>(soul::FlagSet<T> flag_set1, soul::FlagSet<T> flag_set2) {
         auto flag_set_result = flag_set1 ^ flag_set2;
         soul_size expected_count = 0;
-        for (auto e : soul::EnumIter<T>())
+        for (auto e : soul::FlagIter<T>())
         {
             if (flag_set1.test(e) != flag_set2.test(e))
             {
@@ -398,7 +398,7 @@ TEST(TestFlagSetOperator, TestFlagSetOperatorNegate)
 {
     auto test_operator_negate = []<typename T>(soul::FlagSet<T> flag_set) {
         auto flag_set_result = ~flag_set;
-        for (auto e : soul::EnumIter<T>())
+        for (auto e : soul::FlagIter<T>())
         {
             if (flag_set.test(e))
                 SOUL_TEST_ASSERT_FALSE(flag_set_result.test(e));

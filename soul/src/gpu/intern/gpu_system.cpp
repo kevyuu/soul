@@ -550,7 +550,7 @@ namespace soul::gpu
 
 		auto [device, queueIndex] = create_device_and_queue(_db.physicalDevice, queue_family_indices);
 		_db.device = device;
-		for (const auto queue_type : EnumIter<QueueType>::Iterates())
+		for (const auto queue_type : FlagIter<QueueType>::Iterates())
 		{
 			_db.queues[queue_type].init(device, queue_family_indices[queue_type], queueIndex[queue_type]);
 		}
@@ -1159,7 +1159,7 @@ namespace soul::gpu
 
 			Vector<VkPipelineShaderStageCreateInfo> shader_stage_infos(&scope_allocator);
 
-			for (ShaderStage stage : EnumIter<ShaderStage>())
+			for (ShaderStage stage : FlagIter<ShaderStage>())
 			{
 				const Shader& shader = program->shaders[stage];
 				if (shader.vkHandle == VK_NULL_HANDLE) continue;
@@ -1474,7 +1474,7 @@ namespace soul::gpu
 			SLANG_STAGE_COMPUTE
 		});
 
-		for (ShaderStage stage : EnumIter<ShaderStage>())
+		for (ShaderStage stage : FlagIter<ShaderStage>())
 		{
 			const char* entry_point_name = program_desc.entryPointNames[stage];
 			if (entry_point_name == nullptr) continue;
@@ -1487,7 +1487,7 @@ namespace soul::gpu
 			SOUL_ASSERT(0, false, "Slang Diagnostics = %s", diagnostics);
 		}
 
-		for (ShaderStage stage : EnumIter<ShaderStage>())
+		for (ShaderStage stage : FlagIter<ShaderStage>())
 		{
 			const char* entry_point_name = program_desc.entryPointNames[stage];
 			if (entry_point_name == nullptr) continue;
@@ -2182,7 +2182,7 @@ namespace soul::gpu
 		primary_pools_.resize(thread_count);
 		for (auto& pools : primary_pools_)
 		{
-			for (const auto queue_type : EnumIter<QueueType>())
+			for (const auto queue_type : FlagIter<QueueType>())
 			{
 				pools[queue_type].init(device, VK_COMMAND_BUFFER_LEVEL_PRIMARY, queues[queue_type].getFamilyIndex());
 			}
@@ -2714,7 +2714,7 @@ namespace soul::gpu
 		EnumArray<QueueType, Vector<SemaphoreID>> wait_semaphores((Vector<SemaphoreID>(&scope_allocator)));
 
 		// create command buffer and create semaphore
-		for (auto queue_type : EnumIter<QueueType>())
+		for (auto queue_type : FlagIter<QueueType>())
 		{
 			QueueFlags sync_dst_queue = std::accumulate(thread_contexts_.begin(), thread_contexts_.end(), QueueFlags({}),
 				[queue_type](const QueueFlags flag, const ThreadContext& thread_context) -> QueueFlags
@@ -2760,7 +2760,7 @@ namespace soul::gpu
 		}
 
 		// submit command buffer
-		for (auto queue_type : EnumIter<QueueType>())
+		for (auto queue_type : FlagIter<QueueType>())
 		{
 			if (VkCommandBuffer command_buffer = command_buffers[queue_type]; command_buffer != VK_NULL_HANDLE)
 			{
@@ -2769,7 +2769,7 @@ namespace soul::gpu
 		}
 
 		// wait and destroy semaphore
-		for (auto queue_type : EnumIter<QueueType>())
+		for (auto queue_type : FlagIter<QueueType>())
 		{
 			for (SemaphoreID semaphore_id : wait_semaphores[queue_type])
 			{
