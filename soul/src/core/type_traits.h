@@ -69,14 +69,12 @@ namespace soul {
 	concept scoped_enum = is_scoped_enum<T>::value;
 
 	template<typename T>
-	concept counted_scoped_enum = scoped_enum<T> && requires
+	concept flag = scoped_enum<T> && requires
 	{
 		T::COUNT;
 	};
 
-	template<typename T>
-	concept flag = counted_scoped_enum<T> && (static_cast<std::underlying_type_t<T>>(T::COUNT) < 64);
-
+	
 	template<uint64_t N>
 	using min_uint = std::conditional<(N > std::numeric_limits<uint16_t>::max()),
 		std::conditional_t<(N > std::numeric_limits<uint32_t>::max()), uint64_t, uint32_t>,

@@ -291,7 +291,7 @@ namespace soul {
 		}
 	};
 
-	template<counted_scoped_enum Enum>
+	template<flag Enum>
 	class EnumIter {
 
 		using store_type = std::underlying_type_t<Enum>;
@@ -361,7 +361,7 @@ namespace soul {
 		}
 	}
 
-	template <std::integral Integral, counted_scoped_enum Enum>
+	template <std::integral Integral, flag Enum>
 	constexpr auto operator<<(Integral integral, Enum e)
 	{
 		using ReturnType = min_uint_t<1u << to_underlying(Enum::COUNT)>;

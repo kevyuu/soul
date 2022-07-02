@@ -8,7 +8,7 @@
 
 namespace soul {
 
-	template<counted_scoped_enum EnumType, typename ValType>
+	template<flag EnumType, typename ValType>
 	class EnumArray {
 	public:
 
