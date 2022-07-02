@@ -251,7 +251,7 @@ namespace soul {
 	constexpr IntegralDst cast(IntegralSrc src) {
 		SOUL_ASSERT(0, static_cast<uint64>(src) <= std::numeric_limits<IntegralDst>::max(), "Source value is larger than the destintation type maximum!");
 		SOUL_ASSERT(0, static_cast<int64>(src) >= std::numeric_limits<IntegralDst>::min(), "Source value is smaller than the destination type minimum!");
-		return IntegralDst(src);
+	    return static_cast<IntegralDst>(src);
 	}
 
 	template <scoped_enum E>
