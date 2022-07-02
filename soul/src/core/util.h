@@ -13,16 +13,18 @@ namespace soul::util
 		if (x == 0) return std::nullopt;
 		constexpr uint32 bit_count = sizeof(T) * 8;
 	    static_assert(bit_count <= 64);
-		uint32 n = bit_count;
-		x &= -signed(x);
-		if (x) --n;
-		if constexpr (bit_count > 32) if (x & 0x00000000FFFFFFFF) n -= 32;
-		if constexpr (bit_count > 16) if (x & 0x0000FFFF) n -= 16;
-		if constexpr (bit_count > 8) if (x & 0x00FF00FF) n -= 8;
-		if (x & 0x0F0F0F0F) n -= 4;
-		if (x & 0x33333333) n -= 2;
-		if (x & 0x55555555) n -= 1;
-		return n;
+		if (x)
+		{
+			uint32_t n = 1;
+			if constexpr (bit_count > 32) if ((x & 0xFFFFFFFF) == 0) { n += 32; x >>= 32; }
+			if constexpr (bit_count > 16) if ((x & 0x0000FFFF) == 0) { n += 16; x >>= 16; }
+			if constexpr (bit_count > 8) if ((x & 0x000000FF) == 0) { n += 8; x >>= 8; }
+			if ((x & 0x0000000F) == 0) { n += 4; x >>= 4; }
+			if ((x & 0x00000003) == 0) { n += 2; x >>= 2; }
+
+			return (n - (static_cast<uint32>(x) & 1));
+		}
+		return std::nullopt;
 	}
 
     template<std::unsigned_integral T>

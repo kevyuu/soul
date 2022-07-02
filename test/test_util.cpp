@@ -23,6 +23,7 @@ TEST(TestCoreUtil, TestGetFirstOneBitPos)
     SOUL_TEST_ASSERT_FALSE(soul::util::get_first_one_bit_pos(uint64{ 0 }));
     SOUL_TEST_ASSERT_EQ(soul::util::get_first_one_bit_pos(~uint64{ 0 }).value(), 0);
     SOUL_TEST_ASSERT_EQ(soul::util::get_first_one_bit_pos(uint64{ 0x40000000 }).value(), 30);
+    SOUL_TEST_ASSERT_EQ(soul::util::get_first_one_bit_pos(uint64{ 18446744069414584320llu }).value(), 32);
 
 }
 
@@ -77,7 +78,7 @@ TEST(TestCoreUtil, TestForEachOneBitPos)
     auto test_for_each_one_bit_pos = []<std::integral T>(T val, const std::vector<uint32>& expected_value)
     {
         std::vector<uint32> bit_pos;
-        soul::util::for_each_one_bit_pos(val, [&bit_pos](const uint32 position)
+        soul::util::for_each_one_bit_pos(val, [&bit_pos](const soul_size position)
         {
             bit_pos.push_back(position);
         });
