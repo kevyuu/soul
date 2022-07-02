@@ -52,13 +52,24 @@ namespace soul::util
 	template<std::unsigned_integral T>
 	constexpr soul_size get_one_bit_count(T x) noexcept
 	{
-		static_assert(sizeof(T) <= 8);
-		if constexpr (std::same_as<T, uint8> || std::same_as<T, uint16>)
-			return pop_count_16(x);
-	    if constexpr (std::same_as<T, uint32>)
-			return pop_count_32(x);
-		return pop_count_64(x);
-	
+		if (std::is_constant_evaluated()) {
+			soul_size count = 0;
+		    while (x) {
+				uint32 bit_pos = *get_first_one_bit_pos(x);
+				count++;
+				x &= ~(1u << bit_pos);
+			}
+			return count;
+		}
+		else
+		{
+			static_assert(sizeof(T) <= 8);
+			if constexpr (std::same_as<T, uint8> || std::same_as<T, uint16>)
+				return pop_count_16(x);
+			if constexpr (std::same_as<T, uint32>)
+				return pop_count_32(x);
+			return pop_count_64(x);
+		}
 	}
 	
 	template<std::unsigned_integral Integral, typename Func>

@@ -52,6 +52,9 @@ TEST(TestCoreUtil, TestGetLastOneBitPos)
 
 TEST(TestCoreUtil, TestGetOneBitCount)
 {
+
+
+
     SOUL_TEST_ASSERT_EQ(soul::util::get_one_bit_count(uint8{ 0b1000'0000 }), 1);
     SOUL_TEST_ASSERT_EQ(soul::util::get_one_bit_count(uint8{ 0b0100'0001 }), 2);
     SOUL_TEST_ASSERT_EQ(soul::util::get_one_bit_count(uint8{ 0 }), 0);
@@ -71,6 +74,11 @@ TEST(TestCoreUtil, TestGetOneBitCount)
     SOUL_TEST_ASSERT_EQ(soul::util::get_one_bit_count(uint64{ 0 }), 0);
     SOUL_TEST_ASSERT_EQ(soul::util::get_one_bit_count(~uint64{ 0 }), 64);
     SOUL_TEST_ASSERT_EQ(soul::util::get_one_bit_count(uint64{ 0x4F000200 }), 6);
+
+    {
+        constexpr soul_size test_count = soul::util::get_one_bit_count(uint16{ 0b0100'0100'0100'0001 });
+        SOUL_TEST_ASSERT_EQ(test_count, 4);
+    }
 }
 
 TEST(TestCoreUtil, TestForEachOneBitPos)

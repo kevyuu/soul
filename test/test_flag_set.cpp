@@ -63,7 +63,6 @@ void test_default_constructor()
     SOUL_TEST_ASSERT_EQ(flag_set.size(), soul::to_underlying(T::COUNT));
     SOUL_TEST_ASSERT_TRUE(flag_set.none());
     SOUL_TEST_ASSERT_FALSE(flag_set.any());
-    SOUL_TEST_ASSERT_EQ(flag_set.val(), 0u);
     for (const T e : soul::EnumIter<T>())
     {
         SOUL_TEST_ASSERT_FALSE(flag_set.test(e));
@@ -77,36 +76,6 @@ TEST(TestFlagSetConstructor, TestFlagSetDefaultConstructor)
     SOUL_TEST_RUN(test_default_constructor<Uint16TestEnum>());
     SOUL_TEST_RUN(test_default_constructor<Uint32TestEnum>());
     SOUL_TEST_RUN(test_default_constructor<Uint64TestEnum>());
-}
-
-template <soul::scoped_enum T>
-void test_init_val_constructor(typename soul::FlagSet<T>::store_type init_val)
-{
-    const soul::FlagSet<T> flag_set(init_val);
-    SOUL_TEST_ASSERT_EQ(flag_set.size(), soul::to_underlying(T::COUNT));
-    SOUL_TEST_ASSERT_FALSE(flag_set.none());
-    SOUL_TEST_ASSERT_TRUE(flag_set.any());
-    SOUL_TEST_ASSERT_EQ(flag_set.val(), init_val);
-    for (const T e : soul::EnumIter<T>())
-    {
-        if ((1u << soul::to_underlying(e)) & init_val)
-        {
-            SOUL_TEST_ASSERT_TRUE(flag_set.test(e));
-            SOUL_TEST_ASSERT_TRUE(flag_set[e]);
-        }
-        else
-        {
-            SOUL_TEST_ASSERT_FALSE(flag_set.test(e));
-            SOUL_TEST_ASSERT_FALSE(flag_set[e]);
-        }
-    }
-}
-
-TEST(TestFlagSetConstructor, TestFlagSetValConstructor)
-{
-    static constexpr soul_size INIT_VAL = (1 << 1u) | (1 << 3u);
-    SOUL_TEST_RUN(test_init_val_constructor<Uint8TestEnum>(INIT_VAL));
-    SOUL_TEST_RUN(test_init_val_constructor<Uint32TestEnum>(INIT_VAL));
 }
 
 template <soul::scoped_enum T>
@@ -212,7 +181,6 @@ TEST_F(TestFlagSetManipulation, TestFlagSetSet)
             SOUL_TEST_ASSERT_TRUE(test_flag_set.test(e));
             SOUL_TEST_ASSERT_TRUE(test_flag_set[e]);
         }
-        SOUL_TEST_ASSERT_EQ(test_flag_set.val(), (1u << soul::to_underlying(T::COUNT)) - 1);
     };
 
     SOUL_TEST_RUN(test_set(test_filled_flag_set));
