@@ -80,14 +80,13 @@ void test_bitset_constructor()
     }
 }
 
-
 TEST(TestBitsetConstructor, TestBitSetDefaultConstructor)
 {
     SOUL_TEST_RUN(test_bitset_constructor<1>());
     SOUL_TEST_RUN(test_bitset_constructor<8>());
     SOUL_TEST_RUN(test_bitset_constructor<17>());
     SOUL_TEST_RUN(test_bitset_constructor<32>());
-    SOUL_TEST_RUN2(SOUL_SINGLE_ARG(test_bitset_constructor<10000, uint8>()));
+    SOUL_TEST_RUN(SOUL_SINGLE_ARG(test_bitset_constructor<10000, uint8>()));
     SOUL_TEST_RUN(SOUL_SINGLE_ARG(test_bitset_constructor<16, uint64>()));
 }
 
