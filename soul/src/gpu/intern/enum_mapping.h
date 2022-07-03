@@ -5,7 +5,7 @@
 
 namespace soul::gpu
 {
-	static auto RESOURCE_OWNER_TO_QUEUE_TYPE = EnumArray<ResourceOwner, QueueType>::build_from_list({
+	static auto RESOURCE_OWNER_TO_QUEUE_TYPE = FlagMap<ResourceOwner, QueueType>::build_from_list({
 		QueueType::COUNT,
 		QueueType::GRAPHIC,
 		QueueType::COMPUTE,
@@ -14,7 +14,7 @@ namespace soul::gpu
 	});
 
 	SOUL_ALWAYS_INLINE VkCompareOp vkCast(CompareOp compareOp) {
-		auto COMPARE_OP_MAP = EnumArray<CompareOp, VkCompareOp>::build_from_list({
+		auto COMPARE_OP_MAP = FlagMap<CompareOp, VkCompareOp>::build_from_list({
 			VK_COMPARE_OP_NEVER,
 			VK_COMPARE_OP_LESS,
 			VK_COMPARE_OP_EQUAL,
@@ -29,7 +29,7 @@ namespace soul::gpu
 	}
 
 	SOUL_ALWAYS_INLINE VkImageLayout vkCast(TextureLayout layout) {
-		auto IMAGE_LAYOUT_MAP = EnumArray<TextureLayout, VkImageLayout>::build_from_list({
+		auto IMAGE_LAYOUT_MAP = FlagMap<TextureLayout, VkImageLayout>::build_from_list({
 			VK_IMAGE_LAYOUT_UNDEFINED,
 			VK_IMAGE_LAYOUT_UNDEFINED,
 			VK_IMAGE_LAYOUT_GENERAL,
@@ -45,7 +45,7 @@ namespace soul::gpu
 	}
 	
 
-	static auto FORMAT_MAP = EnumArray<TextureFormat, VkFormat>::build_from_list({
+	static auto FORMAT_MAP = FlagMap<TextureFormat, VkFormat>::build_from_list({
 		VK_FORMAT_D16_UNORM,
 
 		VK_FORMAT_R8G8B8_UNORM,
@@ -71,7 +71,7 @@ namespace soul::gpu
 		return FORMAT_MAP[format];
 	}
 
-	static auto IMAGE_TYPE_MAP = EnumArray<TextureType, VkImageType>::build_from_list({
+	static auto IMAGE_TYPE_MAP = FlagMap<TextureType, VkImageType>::build_from_list({
 		VK_IMAGE_TYPE_1D,
 		VK_IMAGE_TYPE_2D,
 		VK_IMAGE_TYPE_2D,
@@ -84,7 +84,7 @@ namespace soul::gpu
 	}
 
 	SOUL_ALWAYS_INLINE VkImageViewType vkCastToImageViewType(TextureType type) {
-		static auto IMAGE_VIEW_TYPE_MAP = EnumArray<TextureType, VkImageViewType>::build_from_list({
+		static auto IMAGE_VIEW_TYPE_MAP = FlagMap<TextureType, VkImageViewType>::build_from_list({
 			VK_IMAGE_VIEW_TYPE_1D,
 			VK_IMAGE_VIEW_TYPE_2D,
 			VK_IMAGE_VIEW_TYPE_2D_ARRAY,
@@ -95,7 +95,7 @@ namespace soul::gpu
 	}
 
 	SOUL_ALWAYS_INLINE VkImageAspectFlags vkCastFormatToAspectFlags(TextureFormat format) {
-		static auto IMAGE_ASPECT_FLAGS_MAP = EnumArray<TextureFormat, VkImageAspectFlags>::build_from_list({
+		static auto IMAGE_ASPECT_FLAGS_MAP = FlagMap<TextureFormat, VkImageAspectFlags>::build_from_list({
 			VK_IMAGE_ASPECT_DEPTH_BIT,
 
 			VK_IMAGE_ASPECT_COLOR_BIT,
@@ -120,7 +120,7 @@ namespace soul::gpu
 		return IMAGE_ASPECT_FLAGS_MAP[format];
 	}
 
-	static auto FILTER_MAP = EnumArray<TextureFilter, VkFilter>::build_from_list({
+	static auto FILTER_MAP = FlagMap<TextureFilter, VkFilter>::build_from_list({
 		VK_FILTER_NEAREST,
 		VK_FILTER_LINEAR
 	});
@@ -128,7 +128,7 @@ namespace soul::gpu
 		return FILTER_MAP[filter];
 	}
 
-	static auto MIPMAP_FILTER_MAP = EnumArray<TextureFilter, VkSamplerMipmapMode>::build_from_list({
+	static auto MIPMAP_FILTER_MAP = FlagMap<TextureFilter, VkSamplerMipmapMode>::build_from_list({
 		VK_SAMPLER_MIPMAP_MODE_NEAREST,
 		VK_SAMPLER_MIPMAP_MODE_LINEAR
 	});
@@ -138,7 +138,7 @@ namespace soul::gpu
 	}
 
 	SOUL_ALWAYS_INLINE VkSamplerAddressMode vkCast(TextureWrap wrap) {
-		static auto MAPPING = EnumArray<TextureWrap, VkSamplerAddressMode>::build_from_list({
+		static auto MAPPING = FlagMap<TextureWrap, VkSamplerAddressMode>::build_from_list({
 			VK_SAMPLER_ADDRESS_MODE_REPEAT,
 			VK_SAMPLER_ADDRESS_MODE_MIRRORED_REPEAT,
 			VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
@@ -149,7 +149,7 @@ namespace soul::gpu
 	}
 
 	SOUL_ALWAYS_INLINE VkBlendFactor vkCast(BlendFactor blendFactor) {
-		static auto MAPPING = EnumArray<BlendFactor, VkBlendFactor>::build_from_list({
+		static auto MAPPING = FlagMap<BlendFactor, VkBlendFactor>::build_from_list({
 			VK_BLEND_FACTOR_ZERO,
 			VK_BLEND_FACTOR_ONE,
 			VK_BLEND_FACTOR_SRC_COLOR,
@@ -174,7 +174,7 @@ namespace soul::gpu
 	}
 
 	SOUL_ALWAYS_INLINE VkBlendOp vkCast(BlendOp blendOp) {
-		static auto MAPPING = EnumArray<BlendOp, VkBlendOp>::build_from_list({
+		static auto MAPPING = FlagMap<BlendOp, VkBlendOp>::build_from_list({
 			VK_BLEND_OP_ADD,
 			VK_BLEND_OP_SUBTRACT,
 			VK_BLEND_OP_REVERSE_SUBTRACT,
@@ -226,7 +226,7 @@ namespace soul::gpu
 	}
 
 	SOUL_ALWAYS_INLINE VkShaderStageFlagBits vkCast(ShaderStage stageFlag) noexcept {
-		static auto MAPPING = EnumArray<ShaderStage, VkShaderStageFlagBits>::build_from_list({
+		static auto MAPPING = FlagMap<ShaderStage, VkShaderStageFlagBits>::build_from_list({
 			VK_SHADER_STAGE_VERTEX_BIT,
 			VK_SHADER_STAGE_GEOMETRY_BIT,
 			VK_SHADER_STAGE_FRAGMENT_BIT,

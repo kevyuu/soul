@@ -249,7 +249,7 @@ namespace soul::gpu
 
 		create_surface(config.windowHandle, &_db.surface);
 		auto pick_physical_device = [](Database *db, int required_extension_count,
-			                        const char *required_extensions[])-> EnumArray<QueueType, uint32> {
+			                        const char *required_extensions[])-> FlagMap<QueueType, uint32> {
 				SOUL_LOG_INFO("Picking vulkan physical device.");
 				db->physicalDevice = VK_NULL_HANDLE;
 				uint32 device_count = 0;
@@ -266,7 +266,7 @@ namespace soul::gpu
 				db->physicalDevice = VK_NULL_HANDLE;
 				int best_score = -1;
 
-				EnumArray<QueueType, uint32> queue_family_indices;
+				FlagMap<QueueType, uint32> queue_family_indices;
 
 				for (VkPhysicalDevice device : devices) {
 
@@ -455,15 +455,15 @@ namespace soul::gpu
 			VK_KHR_SWAPCHAIN_EXTENSION_NAME
 		};
 		static constexpr uint32_t DEVICE_REQUIRED_EXTENSION_COUNT = std::size(device_required_extensions);
-		EnumArray<QueueType, uint32> queue_family_indices = pick_physical_device(&_db, DEVICE_REQUIRED_EXTENSION_COUNT, device_required_extensions);
+		FlagMap<QueueType, uint32> queue_family_indices = pick_physical_device(&_db, DEVICE_REQUIRED_EXTENSION_COUNT, device_required_extensions);
 
 		auto create_device_and_queue = 
-			[](VkPhysicalDevice physicalDevice, EnumArray<QueueType, uint32>& queue_family_indices)
-				-> std::tuple<VkDevice, EnumArray<QueueType, uint32>> {
+			[](VkPhysicalDevice physicalDevice, FlagMap<QueueType, uint32>& queue_family_indices)
+				-> std::tuple<VkDevice, FlagMap<QueueType, uint32>> {
 			SOUL_LOG_INFO("Creating vulkan logical device");
 
 			int graphicsQueueCount = 1;
-			EnumArray<QueueType, uint32> queueIndex(0);
+			FlagMap<QueueType, uint32> queueIndex(0);
 
 			if (queue_family_indices[QueueType::COMPUTE] == queue_family_indices[QueueType::GRAPHIC]) {
 				graphicsQueueCount++;
@@ -1172,7 +1172,7 @@ namespace soul::gpu
 				shader_stage_infos.push_back(shader_stage_info);
 			}
 
-			static auto PRIMITIVE_TOPOLOGY_MAP = EnumArray<Topology, VkPrimitiveTopology>::build_from_list({
+			static auto PRIMITIVE_TOPOLOGY_MAP = FlagMap<Topology, VkPrimitiveTopology>::build_from_list({
 				VK_PRIMITIVE_TOPOLOGY_POINT_LIST,
 				VK_PRIMITIVE_TOPOLOGY_LINE_LIST,
 				VK_PRIMITIVE_TOPOLOGY_LINE_STRIP,
@@ -1209,7 +1209,7 @@ namespace soul::gpu
 				.pScissors = &scissor
 			};
 
-			static auto POLYGON_MODE_MAP = EnumArray<PolygonMode, VkPolygonMode>::build_from_list({
+			static auto POLYGON_MODE_MAP = FlagMap<PolygonMode, VkPolygonMode>::build_from_list({
 				VK_POLYGON_MODE_FILL,
 				VK_POLYGON_MODE_LINE,
 				VK_POLYGON_MODE_POINT
@@ -1465,9 +1465,9 @@ namespace soul::gpu
 			}
 		}
 
-		EnumArray<ShaderStage, int> entry_indexes;
+		FlagMap<ShaderStage, int> entry_indexes;
 
-		static constexpr auto SLANG_STAGE_MAP = EnumArray<ShaderStage, SlangStage>::build_from_list({
+		static constexpr auto SLANG_STAGE_MAP = FlagMap<ShaderStage, SlangStage>::build_from_list({
 			SLANG_STAGE_VERTEX,
 			SLANG_STAGE_GEOMETRY,
 			SLANG_STAGE_FRAGMENT,
@@ -2027,7 +2027,7 @@ namespace soul::gpu
 			                     1,
 			                     &imageBarrier);
 
-			static auto  RESOURCE_OWNER_TO_QUEUE_TYPE = EnumArray<ResourceOwner, QueueType>::build_from_list({
+			static auto  RESOURCE_OWNER_TO_QUEUE_TYPE = FlagMap<ResourceOwner, QueueType>::build_from_list({
 				QueueType::COUNT,
 				QueueType::GRAPHIC,
 				QueueType::COMPUTE,
@@ -2647,7 +2647,7 @@ namespace soul::gpu
 		static auto get_finalize_layout = [](TextureUsageFlags usage) -> VkImageLayout
 		{
 			VkImageLayout result = VK_IMAGE_LAYOUT_UNDEFINED;
-			static constexpr auto USAGE_LAYOUT_MAP = EnumArray<TextureUsage, VkImageLayout>::build_from_list({
+			static constexpr auto USAGE_LAYOUT_MAP = FlagMap<TextureUsage, VkImageLayout>::build_from_list({
 				VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
 				VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
 				VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
@@ -2709,9 +2709,9 @@ namespace soul::gpu
 		SOUL_ASSERT_MAIN_THREAD();
 		runtime::ScopeAllocator scope_allocator("Resource Finalizer Flush");
 
-		EnumArray<QueueType, VkCommandBuffer> command_buffers(VK_NULL_HANDLE);
-		EnumArray<QueueType, Vector<Semaphore*>> signal_semaphores((Vector<Semaphore*>(&scope_allocator)));
-		EnumArray<QueueType, Vector<SemaphoreID>> wait_semaphores((Vector<SemaphoreID>(&scope_allocator)));
+		FlagMap<QueueType, VkCommandBuffer> command_buffers(VK_NULL_HANDLE);
+		FlagMap<QueueType, Vector<Semaphore*>> signal_semaphores((Vector<Semaphore*>(&scope_allocator)));
+		FlagMap<QueueType, Vector<SemaphoreID>> wait_semaphores((Vector<SemaphoreID>(&scope_allocator)));
 
 		// create command buffer and create semaphore
 		for (auto queue_type : FlagIter<QueueType>())
@@ -2784,7 +2784,7 @@ namespace soul::gpu
 			{
 				image_barrier_list.resize(0);
 			}
-			context.sync_dst_queues_ = EnumArray<QueueType, QueueFlags>(QueueFlags());
+			context.sync_dst_queues_ = FlagMap<QueueType, QueueFlags>(QueueFlags());
 		}
 	}
 	

@@ -19,7 +19,7 @@
 #include "core/type.h"
 #include "core/mutex.h"
 #include "core/vector.h"
-#include "core/enum_array.h"
+#include "core/flag_map.h"
 #include "core/pool.h"
 #include "core/string.h"
 #include "core/uint64_hash_map.h"
@@ -546,7 +546,7 @@ namespace soul::gpu
 		[[nodiscard]] const char* c_str() const { return source.data(); }
 	};
 	using ShaderSource = std::variant<ShaderFile, ShaderString>;
-	using EntryPoints = EnumArray<ShaderStage, const char*>;
+	using EntryPoints = FlagMap<ShaderStage, const char*>;
 
 	struct ShaderDefine
 	{
@@ -561,7 +561,7 @@ namespace soul::gpu
 		soul_size shaderDefineCount = 0;
 		ShaderSource* sources = nullptr;
 		soul_size sourceCount = 0;
-		EntryPoints entryPointNames = EnumArray<ShaderStage, const char*>(nullptr);
+		EntryPoints entryPointNames = FlagMap<ShaderStage, const char*>(nullptr);
 	};
 
 	using AttachmentFlagBits = enum {
@@ -856,7 +856,7 @@ namespace soul::gpu
 
 		struct Program {
 			VkPipelineLayout pipelineLayout;
-			EnumArray<ShaderStage, Shader> shaders;
+			FlagMap<ShaderStage, Shader> shaders;
 		};
 
 		struct Semaphore {
@@ -912,7 +912,7 @@ namespace soul::gpu
 			void execute_secondary_command_buffers(uint32_t count, const SecondaryCommandBuffer* secondary_command_buffers);
 		};
 
-		using CommandQueues = EnumArray<QueueType, CommandQueue>;
+		using CommandQueues = FlagMap<QueueType, CommandQueue>;
 
 		class CommandPool {
 		public:
@@ -952,7 +952,7 @@ namespace soul::gpu
 		private:
 			memory::Allocator* allocator_;
 			runtime::AllocatorInitializer allocator_initializer_;
-			Vector<EnumArray<QueueType, CommandPool>> primary_pools_;
+			Vector<FlagMap<QueueType, CommandPool>> primary_pools_;
 			Vector<CommandPool> secondary_pools_;
 		};
 
@@ -1006,8 +1006,8 @@ namespace soul::gpu
 		private:
 			struct alignas(SOUL_CACHELINE_SIZE) ThreadContext
 			{
-				EnumArray<QueueType, Vector<VkImageMemoryBarrier>> image_barriers_;
-				EnumArray<QueueType, QueueFlags> sync_dst_queues_;
+				FlagMap<QueueType, Vector<VkImageMemoryBarrier>> image_barriers_;
+				FlagMap<QueueType, QueueFlags> sync_dst_queues_;
 
 				// TODO(kevinyu): Investigate why we cannot use explicitly or implicitly default constructor here.
 				// - alignas seems to be relevant

@@ -1,7 +1,7 @@
 #pragma once
 
 #include "core/type.h"
-#include "enum_array.h"
+#include "flag_map.h"
 
 namespace soul {
 
@@ -30,7 +30,7 @@ namespace soul {
             COUNT
         };
 
-        using Planes = EnumArray<Side, Plane>;
+        using Planes = FlagMap<Side, Plane>;
 
         // Note(kevinyu):
         // normal of the planes pointing outwards

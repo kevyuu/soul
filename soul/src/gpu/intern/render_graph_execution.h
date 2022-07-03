@@ -130,8 +130,8 @@ namespace soul::gpu::impl
 		const RenderGraph* render_graph_;
 		System* gpu_system_;
 
-		EnumArray<PassType, VkEvent> external_events_;
-		EnumArray<PassType, EnumArray<PassType, SemaphoreID>> external_semaphores_;
+		FlagMap<PassType, VkEvent> external_events_;
+		FlagMap<PassType, FlagMap<PassType, SemaphoreID>> external_semaphores_;
 		CommandQueues& command_queues_;
 		CommandPools& command_pools_;
 
