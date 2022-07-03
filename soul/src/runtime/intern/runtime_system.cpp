@@ -171,7 +171,7 @@ namespace soul::runtime {
 		SOUL_ASSERT(0, thread_count <= Constant::MAX_THREAD_COUNT, "Thread count : %d is more than MAX_THREAD_COUNT : %d", thread_count, Constant::MAX_THREAD_COUNT);
 		_db.threadCount = thread_count;
 
-		_db.threadContexts.init(config.defaultAllocator, thread_count);
+		_db.threadContexts.init(*config.defaultAllocator, thread_count);
 
 		// NOTE(kevinyu): i == 0 is for main thread
 		Database::gThreadContext = &_db.threadContexts[0];
@@ -185,7 +185,7 @@ namespace soul::runtime {
 
 		_db.isTerminated.store(false, std::memory_order_relaxed);
 		for (uint16 i = 1; i < thread_count; ++i) {
-			_db.threads[i] = std::thread(&System::_loop, this, _db.threadContexts.ptr(i));
+			_db.threads[i] = std::thread(&System::_loop, this, &_db.threadContexts[i]);
 		}
 		_db.activeTaskCount = 0;
 

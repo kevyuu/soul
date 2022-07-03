@@ -6,8 +6,8 @@
 #include <mutex>
 
 #include "core/architecture.h"
+#include "core/fixed_vector.h"
 #include "core/vector.h"
-#include "core/static_array.h"
 #include "core/type.h"
 
 #include "memory/allocator.h"
@@ -128,7 +128,7 @@ namespace soul::runtime
 
 	struct Database {
 		thread_local static ThreadContext* gThreadContext;
-		StaticArray<ThreadContext> threadContexts;
+		FixedVector<ThreadContext> threadContexts;
 		std::thread threads[Constant::MAX_THREAD_COUNT];
 			
 		std::condition_variable waitCondVar;
