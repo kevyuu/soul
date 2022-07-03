@@ -157,7 +157,7 @@ namespace soul::gpu::impl
 				break;
 			}
 			case PassType::COMPUTE: {
-					auto compute_node = dynamic_cast<const ComputeBaseNode*>(&pass_node);
+					auto compute_node = static_cast<const ComputeBaseNode*>(&pass_node);
                     init_shader_buffers(compute_node->get_buffer_read_accesses(), i, QueueType::COMPUTE);
                     init_shader_buffers(compute_node->get_buffer_write_accesses(), i, QueueType::COMPUTE);
                     init_shader_textures(compute_node->get_texture_read_accesses(), i, QueueType::COMPUTE);
@@ -165,7 +165,7 @@ namespace soul::gpu::impl
 				break;
 			}
 			case PassType::GRAPHIC: {
-				auto graphic_node = dynamic_cast<const GraphicBaseNode*>(&pass_node);
+				auto graphic_node = static_cast<const GraphicBaseNode*>(&pass_node);
 				init_shader_buffers(graphic_node->get_buffer_read_accesses(), i, QueueType::GRAPHIC);
 				init_shader_buffers(graphic_node->get_buffer_write_accesses(), i, QueueType::GRAPHIC);
 				init_shader_textures(graphic_node->get_texture_read_accesses(), i, QueueType::GRAPHIC);
@@ -312,7 +312,7 @@ namespace soul::gpu::impl
 			}
 			case PassType::TRANSFER:
 			{
-				const auto copy_node = dynamic_cast<const CopyBaseNode*>(&pass_node);
+				const auto copy_node = static_cast<const CopyBaseNode*>(&pass_node);
 				for (const auto& source_buffer : copy_node->get_source_buffers())
 				{
 					const uint32 resource_info_index = get_buffer_info_index(source_buffer.nodeID);
@@ -585,7 +585,7 @@ namespace soul::gpu::impl
 		SOUL_PROFILE_ZONE();
 		SOUL_ASSERT_MAIN_THREAD();
 
-		auto graphic_node = dynamic_cast<const GraphicBaseNode*>(render_graph_->get_pass_nodes()[pass_index]);
+		auto graphic_node = static_cast<const GraphicBaseNode*>(render_graph_->get_pass_nodes()[pass_index]);
 		RenderPassKey render_pass_key = {};
 		const RGRenderTarget& render_target = graphic_node->get_render_target();
 
@@ -635,7 +635,7 @@ namespace soul::gpu::impl
 
 		SOUL_ASSERT_MAIN_THREAD();
 
-		auto graphic_node = dynamic_cast<const GraphicBaseNode*>(render_graph_->get_pass_nodes()[pass_index]);
+		auto graphic_node = static_cast<const GraphicBaseNode*>(render_graph_->get_pass_nodes()[pass_index]);
 
 		VkImageView image_views[2 * MAX_COLOR_ATTACHMENT_PER_SHADER + 1];
 		uint32 image_view_count = 0;
@@ -721,7 +721,7 @@ namespace soul::gpu::impl
 			break;
 		case PassType::TRANSFER: {
 
-			auto copy_node = dynamic_cast<CopyBaseNode*>(passNode);
+			auto copy_node = static_cast<CopyBaseNode*>(passNode);
 			RenderCompiler render_compiler(*gpu_system_, command_buffer);
 			CopyCommandList command_list(render_compiler);
 			RenderGraphRegistry registry(gpu_system_, this);
@@ -730,7 +730,7 @@ namespace soul::gpu::impl
 			break;
 		}
 		case PassType::COMPUTE: {
-			auto compute_node = dynamic_cast<ComputeBaseNode*>(passNode);
+			auto compute_node = static_cast<ComputeBaseNode*>(passNode);
 			RenderCompiler render_compiler(*gpu_system_, command_buffer);
 			ComputeCommandList command_list(render_compiler);
 
@@ -741,7 +741,7 @@ namespace soul::gpu::impl
 		}
 		case PassType::GRAPHIC: {
 
-			auto graphic_node = dynamic_cast<GraphicBaseNode*>(passNode);
+			auto graphic_node = static_cast<GraphicBaseNode*>(passNode);
 			SOUL_ASSERT(0, graphic_node != nullptr, "");
 			VkRenderPass render_pass = create_render_pass(pass_index);
 			VkFramebuffer framebuffer = create_framebuffer(pass_index, render_pass);
