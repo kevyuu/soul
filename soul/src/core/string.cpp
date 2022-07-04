@@ -8,20 +8,20 @@
 namespace soul {
 
 	String::String(memory::Allocator* allocator, uint64 initialCapacity) :
-		_allocator(allocator), _capacity(0),
-		_size(0), _data(nullptr)
+		allocator_(allocator), capacity_(0),
+		size_(0), data_(nullptr)
 	{
 		reserve(initialCapacity);
 	}
 
 	String::String(memory::Allocator* allocator, char* str) : String(allocator, strlen(str) + 1) {
-		_size = _capacity - 1;
-		memcpy(_data, str, _capacity * sizeof(char));
+		size_ = capacity_ - 1;
+		memcpy(data_, str, capacity_ * sizeof(char));
 	}
 
 	String::String(memory::Allocator* allocator, const char* str) : String(allocator, strlen(str) + 1) {
-		_size = _capacity - 1;
-		memcpy(_data, str, _capacity * sizeof(char));
+		size_ = capacity_ - 1;
+		memcpy(data_, str, capacity_ * sizeof(char));
 	}
 
 	String::String() : String(get_default_allocator(), uint64(0)) {}
@@ -29,11 +29,11 @@ namespace soul {
 	String::String(const char* str) : String(get_default_allocator(), str) {}
 
 	String::String(const String& rhs) {
-		_allocator = rhs._allocator;
-		_data = (char*) _allocator->allocate(rhs._capacity, alignof(char));
-		_size = rhs._size;
-		_capacity = rhs._capacity;
-		std::copy(rhs._data, rhs._data + rhs._capacity, _data);
+		allocator_ = rhs.allocator_;
+		data_ = (char*) allocator_->allocate(rhs.capacity_, alignof(char));
+		size_ = rhs.size_;
+		capacity_ = rhs.capacity_;
+		std::copy(rhs.data_, rhs.data_ + rhs.capacity_, data_);
 	}
 
 	String& String::operator=(const String& other) {
@@ -42,10 +42,10 @@ namespace soul {
 	}
 
 	String::String(String&& rhs) noexcept {
-		_allocator = std::exchange(rhs._allocator, nullptr);
-		_data = std::exchange(rhs._data, nullptr);
-		_capacity = std::exchange(rhs._capacity, 0);
-		_size = std::exchange(rhs._size, 0);
+		allocator_ = std::exchange(rhs.allocator_, nullptr);
+		data_ = std::exchange(rhs.data_, nullptr);
+		capacity_ = std::exchange(rhs.capacity_, 0);
+		size_ = std::exchange(rhs.size_, 0);
 	}
 
 	String& String::operator=(String&& other) noexcept {
@@ -54,37 +54,37 @@ namespace soul {
 	}
 
 	String& String::operator=(char* buf) {
-		_size = strlen(buf);
-		if (_capacity < _size + 1) {
-			reserve(_size + 1);
+		size_ = strlen(buf);
+		if (capacity_ < size_ + 1) {
+			reserve(size_ + 1);
 		}
-		std::copy(buf, buf + _size + 1, _data);
+		std::copy(buf, buf + size_ + 1, data_);
 		return *this;
 	}
 
 	String::~String() {
-		if (_data != nullptr) {
-			SOUL_ASSERT(0, _capacity != 0, "");
-			_allocator->deallocate(_data);
+		if (data_ != nullptr) {
+			SOUL_ASSERT(0, capacity_ != 0, "");
+			allocator_->deallocate(data_);
 		}
 	}
 
 	void String::swap(String& rhs) noexcept {
 		using std::swap;
-		swap(_allocator, rhs._allocator);
-		swap(_capacity, rhs._capacity);
-		swap(_size, rhs._size);
-		swap(_data, rhs._data);
+		swap(allocator_, rhs.allocator_);
+		swap(capacity_, rhs.capacity_);
+		swap(size_, rhs.size_);
+		swap(data_, rhs.data_);
 	}
 
 	void String::reserve(soul_size newCapacity) {
-		const auto newData = (char*)_allocator->allocate(newCapacity, alignof(char));
-		if (_data != nullptr) {
-			memcpy(newData, _data, _capacity * sizeof(char));
-			_allocator->deallocate(_data);
+		const auto newData = (char*)allocator_->allocate(newCapacity, alignof(char));
+		if (data_ != nullptr) {
+			memcpy(newData, data_, capacity_ * sizeof(char));
+			allocator_->deallocate(data_);
 		}
-		_data = newData;
-		_capacity = newCapacity;
+		data_ = newData;
+		capacity_ = newCapacity;
 	}
 
 	String& String::appendf(const char* format, ...) {
@@ -94,17 +94,17 @@ namespace soul {
 		const soul_size needed = vsnprintf(nullptr, 0, format, args);
 		va_end(args);
 
-		if (needed + 1 > _capacity - _size) {
-			const soul_size newCapacity = _capacity >= (needed + 1) ? 2 * _capacity : _capacity + (needed + 1);
+		if (needed + 1 > capacity_ - size_) {
+			const soul_size newCapacity = capacity_ >= (needed + 1) ? 2 * capacity_ : capacity_ + (needed + 1);
 			reserve(newCapacity);
 		}
 
 		va_start(args, format);
-		vsnprintf(_data + _size, (needed + 1), format, args);
+		vsnprintf(data_ + size_, (needed + 1), format, args);
 		va_end(args);
 
-		_size += needed;
-		_data[_size] = '\0';
+		size_ += needed;
+		data_[size_] = '\0';
 
 		return *this;
 	}

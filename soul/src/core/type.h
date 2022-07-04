@@ -9,7 +9,6 @@
 #include <cstdint>
 #include <limits>
 
-#include "core/compiler.h"
 #include "core/dev_util.h"
 #include "core/type_traits.h"
 
@@ -254,6 +253,16 @@ namespace soul {
 	    return static_cast<IntegralDst>(src);
 	}
 
+	template<
+		typename PointerDst,
+		typename PointerSrc
+	>
+	requires std::is_pointer_v<PointerDst>&& std::is_pointer_v<PointerSrc>
+	constexpr PointerDst downcast(PointerSrc srcPtr)
+	{
+		return static_cast<PointerDst>(srcPtr);
+	}
+
 	template <scoped_enum E>
 	constexpr auto to_underlying(E e) noexcept
 	{
@@ -306,8 +315,8 @@ namespace soul {
 		private:
 			store_type index_;
 		};
-		SOUL_NODISCARD Iterator begin() const { return Iterator(0);}
-		SOUL_NODISCARD Iterator end() const { return Iterator(to_underlying(Flag::COUNT)); }
+		[[nodiscard]] Iterator begin() const { return Iterator(0);}
+		[[nodiscard]] Iterator end() const { return Iterator(to_underlying(Flag::COUNT)); }
 
 		constexpr FlagIter() = default;
 

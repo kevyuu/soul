@@ -130,9 +130,9 @@ namespace soul::gpu
 		_db.currentFrame = 0;
 		_db.frameCounter = 0;
 		
-		_db.programs.add({});
+		_db.programs.create();
 		_db.semaphores.reserve(1000);
-		_db.semaphores.add({});
+		_db.semaphores.create();
 		_db.samplerMap.reserve(128);
 
 		SOUL_ASSERT(0, config.windowHandle != nullptr, "Invalid configuration value | windowHandle = nullptr");
@@ -550,7 +550,7 @@ namespace soul::gpu
 
 		auto [device, queueIndex] = create_device_and_queue(_db.physicalDevice, queue_family_indices);
 		_db.device = device;
-		for (const auto queue_type : FlagIter<QueueType>::Iterates())
+		for (const auto queue_type : FlagIter<QueueType>())
 		{
 			_db.queues[queue_type].init(device, queue_family_indices[queue_type], queueIndex[queue_type]);
 		}
@@ -1401,7 +1401,7 @@ namespace soul::gpu
 		SOUL_PROFILE_ZONE_WITH_NAME("GPU::System::request_program");
 		runtime::ScopeAllocator<> scope_allocator("GPU::System::programCreate");
 
-		const auto program_id = ProgramID(_db.programs.add({}));
+		const auto program_id = ProgramID(_db.programs.create());
 		Program& program = _db.programs[program_id.id];
 
 		const slang::TargetDesc target_desc = {
@@ -1743,7 +1743,7 @@ namespace soul::gpu
 
 	SemaphoreID System::create_semaphore() {
 		SOUL_ASSERT_MAIN_THREAD();
-		SemaphoreID semaphoreID = SemaphoreID(_db.semaphores.add(Semaphore()));
+		SemaphoreID semaphoreID = SemaphoreID(_db.semaphores.create());
 		Semaphore &semaphore = _db.semaphores[semaphoreID.id];
 		semaphore = {};
 		const VkSemaphoreCreateInfo semaphore_info = {.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO};

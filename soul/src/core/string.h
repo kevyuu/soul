@@ -31,16 +31,16 @@ namespace soul {
 
 		String& appendf(const char* format, ...);
 
-		SOUL_NODISCARD soul_size capacity() const { return _capacity; }
+		[[nodiscard]] soul_size capacity() const { return capacity_; }
 
-		SOUL_NODISCARD soul_size size() const { return _size; }
+		[[nodiscard]] soul_size size() const { return size_; }
 
-		SOUL_NODISCARD const char* data() const { return _data; }
+		[[nodiscard]] const char* data() const { return data_; }
 
 	private:
-		memory::Allocator* _allocator;
-		soul_size _capacity;
-		soul_size _size; // string size, not counting NULL
-		char* _data;
+		memory::Allocator* allocator_;
+		soul_size capacity_;
+		soul_size size_; // string size, not counting NULL
+		char* data_;
 	};
 }

@@ -69,11 +69,11 @@ set (SOUL_SOURCES
 
 	src/memory/intern/malloc_allocator.cpp
 	src/memory/intern/proxy.cpp
-	src/memory/intern/profiler.cpp
+	
 	src/memory/intern/linear_allocator.cpp
 	
 	src/runtime/intern/runtime_system.cpp
-	src/runtime/intern/task_deque.cpp src/memory/intern/profiler.cpp
+	src/runtime/intern/task_deque.cpp
 	
 
 	"$<$<STREQUAL:${CMAKE_SYSTEM_NAME},Darwin>:${SOUL_SOURCES_OSX}>"

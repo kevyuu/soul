@@ -17,8 +17,6 @@ namespace soul {
 }
 #endif
 
-#define SOUL_NODISCARD [[nodiscard]]
-
 #if defined(_MSC_VER)
 #	define SOUL_DEBUG_BREAK() __debugbreak()
 #else

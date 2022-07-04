@@ -33,71 +33,71 @@ namespace soul
 
 		inline void remove(PackedID id);
 
-		SOUL_NODISCARD T& operator[](PackedID id) 
+		[[nodiscard]] T& operator[](PackedID id) 
 		{
-			soul_size internalIndex = _internalIndexes[id];
-			return _buffer[internalIndex];
+			soul_size internalIndex = internal_indexes_[id];
+			return buffer_[internalIndex];
 		}
 
-		SOUL_NODISCARD const T& get(PackedID id) const
+		[[nodiscard]] const T& get(PackedID id) const
 		{
-			soul_size internalIndex = _internalIndexes[id];
-			return _buffer[internalIndex];
+			soul_size internalIndex = internal_indexes_[id];
+			return buffer_[internalIndex];
 		}
 
-		SOUL_NODISCARD const T& getInternal(soul_size idx) const {
-			return _buffer[idx];
+		[[nodiscard]] const T& getInternal(soul_size idx) const {
+			return buffer_[idx];
 		}
 
-		SOUL_NODISCARD T* ptr(PackedID id)
+		[[nodiscard]] T* ptr(PackedID id)
 		{
-			soul_size internalIndex = _internalIndexes[id];
-			return &_buffer[internalIndex];
+			soul_size internalIndex = internal_indexes_[id];
+			return &buffer_[internalIndex];
 		}
 
-		SOUL_NODISCARD soul_size size() const noexcept { return _size; }
-		SOUL_NODISCARD soul_size capacity() const noexcept { return _capacity; }
+		[[nodiscard]] soul_size size() const noexcept { return size_; }
+		[[nodiscard]] soul_size capacity() const noexcept { return capacity_; }
 
 		inline void clear()
 		{
-			_internalIndexes.clear();
-			_size = 0;
+			internal_indexes_.clear();
+			size_ = 0;
 		}
 
 		void cleanup();
 
-		SOUL_NODISCARD T* begin() noexcept { return _buffer; }
-		SOUL_NODISCARD T* end() noexcept { return _buffer + _size; }
+		[[nodiscard]] T* begin() noexcept { return buffer_; }
+		[[nodiscard]] T* end() noexcept { return buffer_ + size_; }
 
-		SOUL_NODISCARD const T* begin() const { return _buffer; }
-		SOUL_NODISCARD const T* end() const { return _buffer + _size; }
+		[[nodiscard]] const T* begin() const { return buffer_; }
+		[[nodiscard]] const T* end() const { return buffer_ + size_; }
 
 	private:
 
 		using IndexPool = Pool<soul_size>;
 
-		memory::Allocator* _allocator = nullptr;
-		IndexPool _internalIndexes;
-		PoolID* _poolIDs = 0;
-		T* _buffer = nullptr;
-		soul_size _capacity = 0;
-		soul_size _size = 0;
+		memory::Allocator* allocator_ = nullptr;
+		IndexPool internal_indexes_;
+		PoolID* pool_ids_ = 0;
+		T* buffer_ = nullptr;
+		soul_size capacity_ = 0;
+		soul_size size_ = 0;
 
 	};
 
 	template <typename T>
 	PackedPool<T>::PackedPool(memory::Allocator* allocator) :
-		_allocator(allocator),
-		_internalIndexes(allocator)
+		allocator_(allocator),
+		internal_indexes_(allocator)
 		{}
 
 	template<typename T>
-	PackedPool<T>::PackedPool(const PackedPool& other) : _allocator(other._allocator), _internalIndexes(other._internalIndexes), _capacity(other._capacity), _size(other._size) {
-		_poolIDs = (PoolID*) _allocator->allocate(_capacity * sizeof(PoolID), alignof(PoolID));
-		memcpy(_poolIDs, other._poolIDs, other._size * sizeof(PoolID));
+	PackedPool<T>::PackedPool(const PackedPool& other) : allocator_(other.allocator_), internal_indexes_(other.internal_indexes_), capacity_(other.capacity_), size_(other.size_) {
+		pool_ids_ = (PoolID*) allocator_->allocate(capacity_ * sizeof(PoolID), alignof(PoolID));
+		memcpy(pool_ids_, other.pool_ids_, other.size_ * sizeof(PoolID));
 
-		_buffer = (T*) _allocator->allocate(_capacity * sizeof(T), alignof(T));
-		Copy(other._buffer, other._buffer + other._size, _buffer);
+		buffer_ = (T*) allocator_->allocate(capacity_ * sizeof(T), alignof(T));
+		Copy(other.buffer_, other.buffer_ + other.size_, buffer_);
 	}
 
 	template<typename T>
@@ -108,17 +108,17 @@ namespace soul
 
 	template <typename T>
 	PackedPool<T>::PackedPool(PackedPool&& other) noexcept {
-		_allocator = std::move(other._allocator);
-		new (&_internalIndexes) IndexPool(std::move(other._internalIndexes));
-		_poolIDs = std::move(other._poolIDs);
-		_buffer = std::move(other._buffer);
-		_size = std::move(other._size);
-		_capacity = std::move(other._capacity);
+		allocator_ = std::move(other.allocator_);
+		new (&internal_indexes_) IndexPool(std::move(other.internal_indexes_));
+		pool_ids_ = std::move(other.pool_ids_);
+		buffer_ = std::move(other.buffer_);
+		size_ = std::move(other.size_);
+		capacity_ = std::move(other.capacity_);
 
-		other._poolIDs = nullptr;
-		other._buffer = nullptr;
-		other._size = 0;
-		other._capacity = 0;
+		other.pool_ids_ = nullptr;
+		other.buffer_ = nullptr;
+		other.size_ = 0;
+		other.capacity_ = 0;
 	}
 
 	template <typename T>
@@ -135,58 +135,58 @@ namespace soul
 	template <typename T>
 	void PackedPool<T>::swap(PackedPool& other) noexcept {
 		using std::swap;
-		swap(_allocator, other._allocator);
-		swap(_internalIndexes, other._internalIndexes);
-		swap(_poolIDs, other._poolIDs);
-		swap(_buffer, other._buffer);
-		swap(_capacity, other._capacity);
-		swap(_size, other._size);
+		swap(allocator_, other.allocator_);
+		swap(internal_indexes_, other.internal_indexes_);
+		swap(pool_ids_, other.pool_ids_);
+		swap(buffer_, other.buffer_);
+		swap(capacity_, other.capacity_);
+		swap(size_, other.size_);
 	}
 
 	template <typename T>
 	void PackedPool<T>::reserve(soul_size capacity) {
-		SOUL_ASSERT(0, capacity > _capacity, "");
+		SOUL_ASSERT(0, capacity > capacity_, "");
 
-		T* oldBuffer = _buffer;
-		_buffer = (T*) _allocator->allocate(capacity * sizeof(T), alignof(T));
+		T* oldBuffer = buffer_;
+		buffer_ = (T*) allocator_->allocate(capacity * sizeof(T), alignof(T));
 
-		PoolID* oldPoolIDs = _poolIDs;
-		_poolIDs = (PoolID*) _allocator->allocate(capacity * sizeof(PoolID), alignof(PoolID));
+		PoolID* oldPoolIDs = pool_ids_;
+		pool_ids_ = (PoolID*) allocator_->allocate(capacity * sizeof(PoolID), alignof(PoolID));
 
 		if (oldBuffer != nullptr)
 		{
-			Move(oldBuffer, oldBuffer + _capacity, _buffer);
-			_allocator->deallocate(oldBuffer);
+			Move(oldBuffer, oldBuffer + capacity_, buffer_);
+			allocator_->deallocate(oldBuffer);
 			SOUL_ASSERT(0, oldPoolIDs != nullptr, "");
-			Move(oldPoolIDs, oldPoolIDs + _capacity, _poolIDs);
-			_allocator->deallocate(oldPoolIDs);
+			Move(oldPoolIDs, oldPoolIDs + capacity_, pool_ids_);
+			allocator_->deallocate(oldPoolIDs);
 		}
-		_capacity = capacity;
+		capacity_ = capacity;
 	}
 
 	template <typename T>
 	PackedID PackedPool<T>::add(const T& datum) {
-		if (_size == _capacity) {
-			reserve(_capacity * 2 + 1);
+		if (size_ == capacity_) {
+			reserve(capacity_ * 2 + 1);
 		}
 
-		new (_buffer + _size) T(datum);
-		const PackedID id = _internalIndexes.add(_size);
-		_poolIDs[_size] = id;
-		_size++;
+		new (buffer_ + size_) T(datum);
+		const PackedID id = internal_indexes_.create(size_);
+		pool_ids_[size_] = id;
+		size_++;
 
 		return id;
 	}
 
 	template <typename T>
 	PackedID PackedPool<T>::add(T&& datum) {
-		if (_size == _capacity) {
-			reserve(_capacity * 2 + 1);
+		if (size_ == capacity_) {
+			reserve(capacity_ * 2 + 1);
 		}
-		new (_buffer + _size) T(std::move(datum));
-		const PackedID id = _internalIndexes.add(_size);
-		_poolIDs[_size] = id;
-		_size++;
+		new (buffer_ + size_) T(std::move(datum));
+		const PackedID id = internal_indexes_.create(size_);
+		pool_ids_[size_] = id;
+		size_++;
 
 		return id;
 	}
@@ -200,27 +200,27 @@ namespace soul
 
 	template <typename T>
 	void PackedPool<T>::remove(PackedID id) {
-		soul_size internalIndex = _internalIndexes[id];
-		_buffer[internalIndex] = _buffer[_size - 1];
-		_poolIDs[internalIndex] = _poolIDs[_size - 1];
-		_internalIndexes[_poolIDs[internalIndex]] = internalIndex;
-		_size--;
+		soul_size internalIndex = internal_indexes_[id];
+		buffer_[internalIndex] = buffer_[size_ - 1];
+		pool_ids_[internalIndex] = pool_ids_[size_ - 1];
+		internal_indexes_[pool_ids_[internalIndex]] = internalIndex;
+		size_--;
 	}
 
 	template <typename T>
 	void PackedPool<T>::cleanup() {
 		clear();
-		_capacity = 0;
+		capacity_ = 0;
 
-		Destruct(_buffer, _buffer + _size);
-		_allocator->deallocate(_buffer);
-		_buffer = nullptr;
+		Destruct(buffer_, buffer_ + size_);
+		allocator_->deallocate(buffer_);
+		buffer_ = nullptr;
 
-		Destruct(_poolIDs, _poolIDs + _size);
-		_allocator->deallocate(_poolIDs);
-		_poolIDs = nullptr;
+		Destruct(pool_ids_, pool_ids_ + size_);
+		allocator_->deallocate(pool_ids_);
+		pool_ids_ = nullptr;
 
-		_internalIndexes.cleanup();
+		internal_indexes_.cleanup();
 	}
 
 }

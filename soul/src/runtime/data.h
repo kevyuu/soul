@@ -66,18 +66,18 @@ namespace soul::runtime
 			SOUL_ASSERT(0, taskIndex < Constant::MAX_TASK_PER_THREAD, "Task Index overflow");
 		}
 
-		SOUL_NODISCARD uint32 threadIndex() const {
+		[[nodiscard]] uint32 threadIndex() const {
 			return (id & Constant::TASK_ID_THREAD_INDEX_MASK) >> Constant::TASK_ID_THREAD_INDEX_SHIFT;
 		}
 
-		SOUL_NODISCARD uint32 taskIndex() const {
+		[[nodiscard]] uint32 taskIndex() const {
 			return (id & Constant::TASK_ID_TASK_INDEX_MASK) >> Constant::TASK_ID_TASK_INDEX_SHIFT;
 		}
 
-		SOUL_NODISCARD bool operator==(const TaskID& other) const { return other.id == id; }
-		SOUL_NODISCARD bool operator!=(const TaskID& other) const { return other.id != id; }
-		SOUL_NODISCARD bool isRoot() const { return id == ROOT().id; }
-		SOUL_NODISCARD bool isNull() const { return id == NULLVAL().id; }
+		[[nodiscard]] bool operator==(const TaskID& other) const { return other.id == id; }
+		[[nodiscard]] bool operator!=(const TaskID& other) const { return other.id != id; }
+		[[nodiscard]] bool isRoot() const { return id == ROOT().id; }
+		[[nodiscard]] bool isNull() const { return id == NULLVAL().id; }
 	};
 		
 		

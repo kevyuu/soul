@@ -364,7 +364,7 @@ namespace soul::gpu::impl
 							.view = view_index
 						};
 					};
-					std::transform(src_texture.viewRange.begin(), src_texture.viewRange.end(), std::back_inserter(pass_info.textureInvalidates), generate_invalidate_barrier);
+					std::ranges::transform(src_texture.viewRange, std::back_inserter(pass_info.textureInvalidates), generate_invalidate_barrier);
 
 					auto generate_flush_barrier = [resource_info_index](SubresourceIndex view_index) -> TextureBarrier
 					{
@@ -376,7 +376,7 @@ namespace soul::gpu::impl
 							.view = view_index
 						};
 					};
-					std::transform(src_texture.viewRange.begin(), src_texture.viewRange.end(), std::back_inserter(pass_info.textureFlushes), generate_flush_barrier);
+					std::ranges::transform(src_texture.viewRange, std::back_inserter(pass_info.textureFlushes), generate_flush_barrier);
 
 				}
 
@@ -394,7 +394,7 @@ namespace soul::gpu::impl
 							.textureInfoIdx = resource_info_index
 						};
 					};
-					std::transform(dst_texture.viewRange.begin(), dst_texture.viewRange.end(), std::back_inserter(pass_info.textureInvalidates), generate_invalidate_barrier);
+					std::ranges::transform(dst_texture.viewRange, std::back_inserter(pass_info.textureInvalidates), generate_invalidate_barrier);
 
 					auto generate_flush_barrier = [resource_info_index](SubresourceIndex view_index) -> TextureBarrier
 					{
@@ -405,7 +405,7 @@ namespace soul::gpu::impl
 							.textureInfoIdx = resource_info_index
 						};
 					};
-					std::transform(dst_texture.viewRange.begin(), dst_texture.viewRange.end(), std::back_inserter(pass_info.textureFlushes), generate_flush_barrier);
+					std::ranges::transform(dst_texture.viewRange, std::back_inserter(pass_info.textureFlushes), generate_flush_barrier);
 				}
 				break;
 			}
@@ -591,8 +591,8 @@ namespace soul::gpu::impl
 
 		auto get_render_pass_attachment = [this, pass_index](const auto& attachment) -> Attachment
 		{
-			uint32 textureInfoIdx = get_texture_info_index(attachment.outNodeID);
-			const TextureExecInfo& texture_info = texture_infos_[textureInfoIdx];
+            const uint32 texture_info_idx = get_texture_info_index(attachment.outNodeID);
+			const TextureExecInfo& texture_info = texture_infos_[texture_info_idx];
 			const Texture& texture = *gpu_system_->get_texture_ptr(texture_info.textureID);
 
 			Attachment render_pass_attachment = {};
@@ -1242,7 +1242,7 @@ namespace soul::gpu::impl
 			if (event != VK_NULL_HANDLE) gpu_system_->destroy_event(event);
 		}
 
-		for (PassType src_pass_type : FlagIter<PassType>::Iterates()) {
+		for (PassType src_pass_type : FlagIter<PassType>()) {
 			for (auto semaphore_id : external_semaphores_[src_pass_type]) {
 				if (semaphore_id.is_valid()) gpu_system_->destroy_semaphore(semaphore_id);
 			}
@@ -1289,7 +1289,7 @@ namespace soul::gpu::impl
 		for (const auto& shader_access : shaderAccessList) {
 			SOUL_ASSERT(0, shader_access.outputNodeID.is_valid(), "");
 
-			uint32 buffer_info_id = get_buffer_info_index(shader_access.outputNodeID);
+            const uint32 buffer_info_id = get_buffer_info_index(shader_access.outputNodeID);
 
 			VkPipelineStageFlags stage_flags = vkCastShaderStageToPipelineStageFlags(shader_access.stageFlags);
 
@@ -1331,7 +1331,7 @@ namespace soul::gpu::impl
 			VkImageLayout image_layout = is_writable(shader_access.usage) ? VK_IMAGE_LAYOUT_GENERAL : VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
 			std::transform(shader_access.viewRange.begin(), shader_access.viewRange.end(), std::back_inserter(pass_info.textureInvalidates),
-			[stage_flags, image_layout, texture_info_id](SubresourceIndex view_index) -> TextureBarrier
+		[stage_flags, image_layout, texture_info_id](SubresourceIndex view_index) -> TextureBarrier
 			{
 				return {
 					.stageFlags = stage_flags,
@@ -1343,7 +1343,8 @@ namespace soul::gpu::impl
 			});
 
 			std::transform(shader_access.viewRange.begin(), shader_access.viewRange.end(), std::back_inserter(pass_info.textureFlushes),
-			[stage_flags, image_layout, texture_info_id](SubresourceIndex view_index) -> TextureBarrier {
+		[stage_flags, image_layout, texture_info_id](SubresourceIndex view_index) -> TextureBarrier 
+			{
 				return {
 					.stageFlags = stage_flags,
 					.accessFlags = 0,
@@ -1366,29 +1367,29 @@ namespace soul::gpu::impl
 			update_texture_info(queue_type, get_texture_usage_flags(shader_access.usage), PassNodeID(index), shader_access.viewRange, &texture_infos_[texture_info_id]);
 
 			std::ranges::transform(shader_access.viewRange, std::back_inserter(pass_info.textureInvalidates),
-				[stage_flags, texture_info_id](const SubresourceIndex& view_index) -> TextureBarrier
-				{
-					return {
-						.stageFlags = stage_flags,
-						.accessFlags = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT,
-						.layout = VK_IMAGE_LAYOUT_GENERAL,
-						.textureInfoIdx = texture_info_id,
-						.view = view_index
-					};
-				});
+        [stage_flags, texture_info_id](const SubresourceIndex& view_index) -> TextureBarrier
+            {
+                return {
+                    .stageFlags = stage_flags,
+                    .accessFlags = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT,
+                    .layout = VK_IMAGE_LAYOUT_GENERAL,
+                    .textureInfoIdx = texture_info_id,
+                    .view = view_index
+                };
+            });
 
-			std::transform(shader_access.viewRange.begin(), shader_access.viewRange.end(), std::back_inserter(pass_info.textureFlushes),
-				[stage_flags, texture_info_id](SubresourceIndex view_index)->TextureBarrier
-				{
-					return {
-						.stageFlags = stage_flags,
-						.accessFlags =VK_ACCESS_SHADER_WRITE_BIT,
-						.layout = VK_IMAGE_LAYOUT_GENERAL,
-						.textureInfoIdx = texture_info_id,
-						.view = view_index
-					};
-				});
-			
+			std::ranges::transform(shader_access.viewRange, std::back_inserter(pass_info.textureFlushes),
+		[stage_flags, texture_info_id](SubresourceIndex view_index) -> TextureBarrier
+            {
+                return {
+                    .stageFlags = stage_flags,
+                    .accessFlags =VK_ACCESS_SHADER_WRITE_BIT,
+                    .layout = VK_IMAGE_LAYOUT_GENERAL,
+                    .textureInfoIdx = texture_info_id,
+                    .view = view_index
+                };
+            });
+
 		}
 	}
 	

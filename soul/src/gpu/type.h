@@ -812,7 +812,7 @@ namespace soul::gpu
 			void submit(VkCommandBuffer commandBuffer, uint32 semaphoreCount = 0, Semaphore* const* semaphores = nullptr, VkFence fence = VK_NULL_HANDLE);
 			void flush(uint32 semaphoreCount, Semaphore* const* semaphores, VkFence fence);
 			void present(const VkPresentInfoKHR& presentInfo);
-			SOUL_NODISCARD uint32 getFamilyIndex() const { return familyIndex; }
+			[[nodiscard]] uint32 getFamilyIndex() const { return familyIndex; }
 		private:
 			VkDevice device = VK_NULL_HANDLE;
 			VkQueue vkHandle = VK_NULL_HANDLE;

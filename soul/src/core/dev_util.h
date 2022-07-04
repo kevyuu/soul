@@ -2,17 +2,13 @@
 #pragma once
 
 #include "compiler.h"
+#include <cstdarg>
+#include <cstdio>
+#include <cstring>
 
-void soul_intern_log(int verbosity, int line, const char* file, const char* format, ...);
-
-// Log
-#define SOUL_LOG_VERBOSE_LEVEL SOUL_LOG_VERBOSE_INFO
-
-#if defined(SOUL_LOG_ENABLE)
-    #define SOUL_LOG(verbosity, format, ...) do {soul_intern_log(verbosity, __LINE__, __FILE__, format, ##__VA_ARGS__);} while(0)
-#else
-    #define SOUL_LOG(verbosity, format, ...) ((void) 0)
-#endif
+static const char* project_path(const char* filepath) {
+    return filepath + strlen(__FILE__) - strlen("core/debug.cpp");
+}
 
 // Logging
 #define SOUL_LOG_VERBOSE_COUNT 5
@@ -22,15 +18,60 @@ void soul_intern_log(int verbosity, int line, const char* file, const char* form
 #define SOUL_LOG_VERBOSE_ERROR 1
 #define SOUL_LOG_VERBOSE_FATAL 0
 
+static constexpr int SOUL_LOG_VERBOSE_LEVEL = SOUL_LOG_VERBOSE_INFO;
+
+inline constexpr const char* LOG_PREFIX[] = {
+    "FATAL",
+    "ERROR",
+    "WARN",
+    "INFO",
+    "DEBUG",
+};
+
+constexpr void soul_intern_log(const int verbosity, const int line, const char* file, _In_z_ _Printf_format_string_ const char* format, ...)
+{
+    if (verbosity <= SOUL_LOG_VERBOSE_LEVEL) {
+        printf("[%s] ", LOG_PREFIX[verbosity]);
+        printf(":");
+        printf("%s", project_path(file));
+        printf(":");
+        printf("%d", line);
+        printf("::");
+        va_list argsList;
+        va_start(argsList, format);
+        vprintf(format, argsList);  // NOLINT(clang-diagnostic-format-nonliteral)
+        printf("\n");
+    }
+}
+
+#if defined(SOUL_LOG_ENABLE)
+    #define SOUL_LOG(verbosity, format, ...) do {soul_intern_log(verbosity, __LINE__, __FILE__, format, ##__VA_ARGS__);} while(0)
+#else
+    #define SOUL_LOG(verbosity, format, ...) ((void) 0)
+#endif
+
 #define SOUL_LOG_DEBUG(format, ...) SOUL_LOG (SOUL_LOG_VERBOSE_DEBUG, format, ##__VA_ARGS__)
 #define SOUL_LOG_INFO(format, ...) SOUL_LOG (SOUL_LOG_VERBOSE_INFO, format, ##__VA_ARGS__)
 #define SOUL_LOG_WARN(format, ...) SOUL_LOG (SOUL_LOG_VERBOSE_WARN, format, ##__VA_ARGS__)
 #define SOUL_LOG_ERROR(format, ...) SOUL_LOG(SOUL_LOG_VERBOSE_ERROR, format, ##__VA_ARGS__)
 #define SOUL_LOG_FATAL(format, ...) SOUL_LOG(SOUL_LOG_VERBOSE_FATAL, format, ##__VA_ARGS__)
 
-void soul_intern_assert(int paranoia, int line, const char* file, const char* format, ...);
 
-// Assert
+// Assertion
+constexpr void soul_intern_assert(const int paranoia, const int line, const char* const file, _In_z_ _Printf_format_string_ const char* const format, ...) {
+    if (paranoia <= SOUL_ASSERT_PARANOIA_LEVEL) {
+        printf("%s", project_path(file));
+        printf(":");
+        printf("%d", line);
+        printf("::");
+        va_list args_list;
+        va_start(args_list, format);
+        vprintf(format, args_list);  // NOLINT(clang-diagnostic-format-nonliteral)
+        va_end(args_list);
+        printf("\n");
+    }
+}
+
 #if defined(SOUL_ASSERT_ENABLE)
     #define SOUL_ASSERT(paranoia, test, msg, ...) do {if (!(test)) {soul_intern_assert(paranoia, __LINE__, __FILE__, \
             "Assertion failed: %s\n\n" msg, #test,  ##__VA_ARGS__); SOUL_DEBUG_BREAK();}} while (0)

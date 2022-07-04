@@ -18,7 +18,7 @@ namespace soul {
 		using pointer = T*;
 		using const_pointer = const T*;
 		using reference = T&;
-		using const_reference = T&;
+		using const_reference = const T&;
 		using iterator = T*;
 		using const_iterator = const T*;
 		using reverse_iterator = std::reverse_iterator<iterator>;

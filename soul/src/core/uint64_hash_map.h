@@ -30,19 +30,19 @@ namespace soul {
 
 		void remove(uint64 key);
 
-		SOUL_NODISCARD bool isExist(uint64 key) const noexcept
+		[[nodiscard]] bool isExist(uint64 key) const noexcept
 		{
 			if (_size == 0) return false;
 			uint32 index = _findIndex(key);
 			return (_indexes[index].key == key && _indexes[index].dib != 0);
 		}
 
-		SOUL_NODISCARD T& operator[](uint64 key);
-		SOUL_NODISCARD const T& operator[](uint64 key) const;
+		[[nodiscard]] T& operator[](uint64 key);
+		[[nodiscard]] const T& operator[](uint64 key) const;
 
-		SOUL_NODISCARD soul_size size() const noexcept { return _size; }
-		SOUL_NODISCARD soul_size capacity() const { return _capacity; }
-		SOUL_NODISCARD bool empty() const noexcept { return _size == 0; }
+		[[nodiscard]] soul_size size() const noexcept { return _size; }
+		[[nodiscard]] soul_size capacity() const { return _capacity; }
+		[[nodiscard]] bool empty() const noexcept { return _size == 0; }
 
 	private:
 		memory::Allocator* _allocator = nullptr;

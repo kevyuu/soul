@@ -48,48 +48,48 @@ namespace soul {
 	uint64 floorLog2(uint64 val);
 
 	template<typename T>
-	SOUL_NODISCARD constexpr Vec2<T> operator+(const Vec2<T>& lhs, const Vec2<T>& rhs) {
+	[[nodiscard]] constexpr Vec2<T> operator+(const Vec2<T>& lhs, const Vec2<T>& rhs) {
 		return Vec2<T>(lhs.x + rhs.x, lhs.y + rhs.y);
 	}
 
 	template<typename T>
-	SOUL_NODISCARD constexpr Vec2<T> operator-(const Vec2<T>& lhs, const Vec2<T>& rhs) {
+	[[nodiscard]] constexpr Vec2<T> operator-(const Vec2<T>& lhs, const Vec2<T>& rhs) {
 		return Vec2<T>(lhs.x - rhs.x, lhs.y - rhs.y);
 	}
 
 	template<typename T>
-	SOUL_NODISCARD constexpr Vec2<T> operator-(const Vec2<T>& vec)
+	[[nodiscard]] constexpr Vec2<T> operator-(const Vec2<T>& vec)
 	{
 		return Vec2<T>(-vec.x, -vec.y);
 	}
 
 	template<typename T>
-	SOUL_NODISCARD constexpr Vec2<T> operator*(const Vec2<T>& lhs, const Vec2<T>& rhs) {
+	[[nodiscard]] constexpr Vec2<T> operator*(const Vec2<T>& lhs, const Vec2<T>& rhs) {
 		return Vec2<T>(lhs.x * rhs.x, lhs.y * rhs.y);
 	}
 
 	template<typename T>
-	SOUL_NODISCARD constexpr Vec2<T> operator*(const Vec2<T>& lhs, T rhs) {
+	[[nodiscard]] constexpr Vec2<T> operator*(const Vec2<T>& lhs, T rhs) {
 		return Vec2<T>(lhs.x * rhs, lhs.y * rhs);
 	}
 
 	template<typename T>
-	SOUL_NODISCARD constexpr Vec2<T> operator*(T lhs, const Vec2<T>& rhs) {
+	[[nodiscard]] constexpr Vec2<T> operator*(T lhs, const Vec2<T>& rhs) {
 		return Vec2<T>(lhs * rhs.x, lhs * rhs.y);
 	}
 
 	template<typename T>
-	SOUL_NODISCARD constexpr Vec2<T> operator/(const Vec2<T>& lhs, const Vec2<T>& rhs) {
+	[[nodiscard]] constexpr Vec2<T> operator/(const Vec2<T>& lhs, const Vec2<T>& rhs) {
 		return Vec2<T>(lhs.x / rhs.x, lhs.y / rhs.y);
 	}
 
 	template<typename T>
-	SOUL_NODISCARD constexpr Vec2<T> operator/(const Vec2<T>& lhs, const T rhs) {
+	[[nodiscard]] constexpr Vec2<T> operator/(const Vec2<T>& lhs, const T rhs) {
 		return Vec2<T>(lhs.x / rhs, lhs.y / rhs);
 	}
 
 	template<typename T>
-	SOUL_NODISCARD constexpr Vec2<T> operator/(const T lhs, const Vec2<T>& rhs)
+	[[nodiscard]] constexpr Vec2<T> operator/(const T lhs, const Vec2<T>& rhs)
 	{
 		return Vec2<T>(lhs / rhs.x, lhs / rhs.y);
 	}
@@ -135,48 +135,48 @@ namespace soul {
 	}
 
 	template<typename T>
-	SOUL_NODISCARD T squareLength(const Vec2<T>& vec) {
+	[[nodiscard]] T squareLength(const Vec2<T>& vec) {
 		return vec.x * vec.x + vec.y * vec.y;
 	}
 
 	template<typename T>
-	SOUL_NODISCARD T length(const Vec2<T>& vec) {
+	[[nodiscard]] T length(const Vec2<T>& vec) {
 		return std::sqrt(vec.x * vec.x + vec.y * vec.y);
 	}
 
 	template<typename T>
-	SOUL_NODISCARD constexpr Vec2<T> unit(const Vec2<T>& vec) {
+	[[nodiscard]] constexpr Vec2<T> unit(const Vec2<T>& vec) {
 		return vec / length;
 	}
 
 	// Vec3
 	template<typename T>
-	SOUL_NODISCARD constexpr Vec3<T> operator+(const Vec3<T>& lhs, const Vec3<T>& rhs) {
+	[[nodiscard]] constexpr Vec3<T> operator+(const Vec3<T>& lhs, const Vec3<T>& rhs) {
 		return Vec3<T>(lhs.x + rhs.x, lhs.y + rhs.y, lhs.z + rhs.z);
 	}
 
 	template<typename T>
-	SOUL_NODISCARD constexpr Vec3<T> operator-(const Vec3<T>& lhs, const Vec3<T>& rhs) {
+	[[nodiscard]] constexpr Vec3<T> operator-(const Vec3<T>& lhs, const Vec3<T>& rhs) {
 		return Vec3<T>(lhs.x - rhs.x, lhs.y - rhs.y, lhs.z - rhs.z);
 	}
 
 	template<typename T>
-	SOUL_NODISCARD constexpr Vec3<T> operator-(const Vec3<T>& rhs) {
+	[[nodiscard]] constexpr Vec3<T> operator-(const Vec3<T>& rhs) {
 		return Vec3<T>(-rhs.x, -rhs.y, -rhs.z);
 	}
 
 	template<typename T>
-	SOUL_NODISCARD Vec3<T> constexpr operator*(const Vec3<T>& lhs, T rhs) {
+	[[nodiscard]] Vec3<T> constexpr operator*(const Vec3<T>& lhs, T rhs) {
 		return Vec3<T>(lhs.x * rhs, lhs.y * rhs, lhs.z * rhs);
 	}
 
 	template<typename T>
-	SOUL_NODISCARD Vec3<T> constexpr operator*(T lhs, const Vec3<T>& rhs) {
+	[[nodiscard]] Vec3<T> constexpr operator*(T lhs, const Vec3<T>& rhs) {
 		return Vec3<T>(lhs * rhs.x, lhs * rhs.y, lhs * rhs.z);
 	}
 
 	template<typename T>
-	SOUL_NODISCARD constexpr Vec3<T> operator/(const Vec3<T>& lhs, T rhs) {
+	[[nodiscard]] constexpr Vec3<T> operator/(const Vec3<T>& lhs, T rhs) {
 		return Vec3<T>(lhs.x / rhs, lhs.y / rhs, lhs.z / rhs);
 	}
 
@@ -219,7 +219,7 @@ namespace soul {
 	}
 
 	template<typename T>
-	SOUL_NODISCARD Vec3<T> cross(const Vec3<T>& lhs, const Vec3<T>& rhs)
+	[[nodiscard]] Vec3<T> cross(const Vec3<T>& lhs, const Vec3<T>& rhs)
 	{
 		return Vec3<T>(
 			lhs.y * rhs.z - lhs.z * rhs.y,
@@ -228,70 +228,70 @@ namespace soul {
 	}
 
 	template<typename T>
-	SOUL_NODISCARD float dot(const Vec3<T>& lhs, const Vec3<T>& rhs)
+	[[nodiscard]] float dot(const Vec3<T>& lhs, const Vec3<T>& rhs)
 	{
 		return lhs.x * rhs.x + lhs.y * rhs.y + lhs.z * rhs.z;
 	}
 
 	template<typename T>
-	SOUL_NODISCARD Vec3<T> unit(const Vec3<T>& vec)
+	[[nodiscard]] Vec3<T> unit(const Vec3<T>& vec)
 	{
 		float magnitude = sqrt(vec.x * vec.x + vec.y * vec.y + vec.z * vec.z);
 		return Vec3f(vec.x / magnitude, vec.y / magnitude, vec.z / magnitude);
 	}
 
 	template<typename T>
-	SOUL_NODISCARD T squareLength(const Vec3<T>& vec)
+	[[nodiscard]] T squareLength(const Vec3<T>& vec)
 	{
 		return vec.x * vec.x + vec.y * vec.y + vec.z * vec.z;
 	}
 
 	template<typename T>
-	SOUL_NODISCARD T length(const Vec3<T>& vec)
+	[[nodiscard]] T length(const Vec3<T>& vec)
 	{
 		return std::sqrt(vec.x * vec.x + vec.y * vec.y + vec.z * vec.z);
 	}
 
 	template<typename T>
-	SOUL_NODISCARD Vec3<T> componentMin(const Vec3<T>& v1, const Vec3<T>& v2)
+	[[nodiscard]] Vec3<T> componentMin(const Vec3<T>& v1, const Vec3<T>& v2)
 	{
 		return { std::min(v1.x, v2.x), std::min(v1.y, v2.y), std::min(v1.z, v2.z) };
 	}
 
 	template<typename T>
-	SOUL_NODISCARD Vec3<T> componentMax(const Vec3<T>& v1, const Vec3<T>& v2)
+	[[nodiscard]] Vec3<T> componentMax(const Vec3<T>& v1, const Vec3<T>& v2)
 	{
 		return { std::max(v1.x, v2.x), std::max(v1.y, v2.y), std::max(v1.z, v2.z) };
 	}
 
 	// Vec4
 	template<typename T>
-	SOUL_NODISCARD constexpr Vec4<T> operator+(const Vec4<T>& lhs, const Vec4<T>& rhs) {
+	[[nodiscard]] constexpr Vec4<T> operator+(const Vec4<T>& lhs, const Vec4<T>& rhs) {
 		return Vec4<T>(lhs.x + rhs.x, lhs.y + rhs.y, lhs.z + rhs.z, lhs.w + rhs.w);
 	}
 
 	template<typename T>
-	SOUL_NODISCARD constexpr Vec4<T> operator-(const Vec4<T>& lhs, const Vec4<T>& rhs) {
+	[[nodiscard]] constexpr Vec4<T> operator-(const Vec4<T>& lhs, const Vec4<T>& rhs) {
 		return Vec4<T>(lhs.x - rhs.x, lhs.y - rhs.y, lhs.z - rhs.z, lhs.w - rhs.w);
 	}
 
 	template<typename T>
-	SOUL_NODISCARD constexpr Vec4<T> operator-(const Vec4<T>& rhs) {
+	[[nodiscard]] constexpr Vec4<T> operator-(const Vec4<T>& rhs) {
 		return Vec4<T>(-rhs.x, -rhs.y, -rhs.z, -rhs.w);
 	}
 
 	template<typename T>
-	SOUL_NODISCARD Vec4<T> constexpr operator*(const Vec4<T>& lhs, T rhs) {
+	[[nodiscard]] Vec4<T> constexpr operator*(const Vec4<T>& lhs, T rhs) {
 		return Vec4<T>(lhs.x * rhs, lhs.y * rhs, lhs.z * rhs, lhs.w * rhs);
 	}
 
 	template<typename T>
-	SOUL_NODISCARD Vec4<T> constexpr operator*(T lhs, const Vec4<T>& rhs) {
+	[[nodiscard]] Vec4<T> constexpr operator*(T lhs, const Vec4<T>& rhs) {
 		return Vec4<T>(lhs * rhs.x, lhs * rhs.y, lhs * rhs.z, lhs * rhs.w);
 	}
 
 	template<typename T>
-	SOUL_NODISCARD constexpr Vec4<T> operator/(const Vec4<T>& lhs, T rhs) {
+	[[nodiscard]] constexpr Vec4<T> operator/(const Vec4<T>& lhs, T rhs) {
 		return Vec4<T>(lhs.x / rhs, lhs.y / rhs, lhs.z / rhs, lhs.w / rhs);
 	}
 
@@ -338,23 +338,23 @@ namespace soul {
 	}
 
 	template<typename T>
-	SOUL_NODISCARD float dot(const Vec4<T>& lhs, const Vec4<T>& rhs) {
+	[[nodiscard]] float dot(const Vec4<T>& lhs, const Vec4<T>& rhs) {
 		return lhs.x * rhs.x + lhs.y * rhs.y + lhs.z * rhs.z + lhs.w * rhs.w;
 	}
 
 	template<typename T>
-	SOUL_NODISCARD Vec4<T> unit(const Vec4<T>& vec) {
+	[[nodiscard]] Vec4<T> unit(const Vec4<T>& vec) {
 		float magnitude = sqrt(vec.x * vec.x + vec.y * vec.y + vec.z * vec.z, + vec.w * vec.w);
 		return Vec3f(vec.x / magnitude, vec.y / magnitude, vec.z / magnitude, vec.w / magnitude);
 	}
 
 	template<typename T>
-	SOUL_NODISCARD T squareLength(const Vec4<T>& vec) {
+	[[nodiscard]] T squareLength(const Vec4<T>& vec) {
 		return vec.x * vec.x + vec.y * vec.y + vec.z * vec.z + vec.w * vec.w;
 	}
 
 	template<typename T>
-	SOUL_NODISCARD T length(const Vec4<T>& vec) {
+	[[nodiscard]] T length(const Vec4<T>& vec) {
 		return std::sqrt(vec.x * vec.x + vec.y * vec.y + vec.z * vec.z + vec.w * vec.w);
 	}
 
