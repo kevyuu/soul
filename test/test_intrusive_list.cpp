@@ -271,7 +271,7 @@ TEST(TestIntrusiveListInsert, TestIntrusiveListInsert)
         for (T& object : new_objects)
         {
             auto iterator = test_list.insert(insert_pos, object);
-            SOUL_TEST_ASSERT_TRUE(*iterator, object);
+            SOUL_TEST_ASSERT_EQ(*iterator, object);
         }
         verify_sequence(test_list, expected_values, expected_objects);
 

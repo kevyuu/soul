@@ -102,12 +102,12 @@ namespace soul {
 		[[nodiscard]] const_reference back() const noexcept { SOUL_ASSERT(0, size_ != 0, "Vector cannot be empty when calling Vector::back()"); return buffer_[size_ - 1]; }
 
 		[[nodiscard]] reference operator[](soul_size idx) {
-			SOUL_ASSERT(0, idx < size_, "Out of bound access to array detected. idx = %d, _size = %d", idx, size_);
+			SOUL_ASSERT(0, idx < size_, "Out of bound access to array detected. idx = %llu, _size = %llu", idx, size_);
 			return buffer_[idx];
 		}
 
 		[[nodiscard]] const_reference operator[](soul_size idx) const {
-			SOUL_ASSERT(0, idx < size_, "Out of bound access to array detected. idx = %d, _size=%d", idx, size_);
+			SOUL_ASSERT(0, idx < size_, "Out of bound access to array detected. idx = %llu, _size=%llu", idx, size_);
 			return buffer_[idx];
 		}
 

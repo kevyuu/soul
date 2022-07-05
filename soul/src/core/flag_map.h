@@ -56,6 +56,7 @@ namespace soul {
         }
     }
 
+#pragma warning( disable : 26495 )
     template <flag EnumType, typename ValType>
     constexpr FlagMap<EnumType, ValType>::FlagMap(ValType val) noexcept
     {
@@ -63,6 +64,7 @@ namespace soul {
             std::construct_at(&dst_val, val);
         }
     }
+#pragma warning( default : 26495 )
 
     template <flag EnumType, typename ValType>
     template <std::size_t N>

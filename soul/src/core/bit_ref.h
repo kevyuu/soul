@@ -9,8 +9,7 @@ namespace soul {
 	public:
 
 		BitRef(BlockType* ptr, soul_size bit_index);
-		BitRef(const BitRef&) = default;
-		BitRef(BitRef&&) = default;
+
 		~BitRef() = default;
 
 		BitRef& operator=(bool val);
@@ -29,6 +28,9 @@ namespace soul {
 
 	private:
 
+		BitRef(const BitRef&) = default;
+		BitRef(BitRef&&) = default;
+
 		BlockType* bit_block_ = nullptr;
 		soul_size bit_index_ = 0;
 		BitRef() = default;
@@ -36,7 +38,7 @@ namespace soul {
 		void set_true();
 		void set_false();
 
-		BlockType get_mask() const;
+        [[nodiscard]] BlockType get_mask() const;
 		void copy_from(const BitRef& rhs);
 
 	};

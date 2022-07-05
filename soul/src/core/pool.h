@@ -65,6 +65,12 @@ namespace soul {
 		union Unit {
 			T datum;
 			size_type next;
+			Unit() = delete;
+			Unit(const Unit&) = delete;
+			Unit(Unit&&) = delete;
+			Unit& operator=(const Unit&) = delete;
+			Unit& operator=(Unit&&) = delete;
+		    ~Unit() = delete;
 		};
 
 		AllocatorType* allocator_;
@@ -161,7 +167,7 @@ namespace soul {
 			allocator_->deallocate(buffer_);
 		}
 		buffer_ = new_buffer;
-		for (size_type i = capacity_; i < capacity; i++) {
+		for (auto i = capacity_; i < capacity; i++) {
 			buffer_[i].next = i + 1;
 		}
 		free_list_ = size_;
@@ -175,7 +181,7 @@ namespace soul {
 		if (size_ == capacity_) {
 			reserve(capacity_ * 2 + 8);
 		}
-		PoolID id = free_list_;
+		const PoolID id = free_list_;
 		free_list_ = buffer_[free_list_].next;
 		size_++;
 		return id;

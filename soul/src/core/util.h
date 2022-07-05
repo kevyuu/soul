@@ -13,14 +13,14 @@ namespace soul::util
 		if (x == 0) return std::nullopt;
 		constexpr uint32 bit_count = sizeof(T) * 8;
 	    static_assert(bit_count <= 64);
-		if (x)
+	    if (x)
 		{
 			uint32_t n = 1;
 			if constexpr (bit_count > 32) if ((x & 0xFFFFFFFF) == 0) { n += 32; x >>= 32; }
-			if constexpr (bit_count > 16) if ((x & 0x0000FFFF) == 0) { n += 16; x >>= 16; }
-			if constexpr (bit_count > 8) if ((x & 0x000000FF) == 0) { n += 8; x >>= 8; }
-			if ((x & 0x0000000F) == 0) { n += 4; x >>= 4; }
-			if ((x & 0x00000003) == 0) { n += 2; x >>= 2; }
+			if constexpr (bit_count > 16) if ((x & 0xFFFF) == 0) { n += 16; x >>= 16; }
+			if constexpr (bit_count > 8) if ((x & 0xFF) == 0) { n += 8; x >>= 8; }
+			if ((x & 0x0F) == 0) { n += 4; x >>= 4; }
+			if ((x & 0x03) == 0) { n += 2; x >>= 2; }
 
 			return (n - (static_cast<uint32>(x) & 1));
 		}
@@ -55,14 +55,15 @@ namespace soul::util
 		if (std::is_constant_evaluated()) {
 			soul_size count = 0;
 		    while (x) {
-				uint32 bit_pos = *get_first_one_bit_pos(x);
+				auto bit_pos = *get_first_one_bit_pos(x);
 				count++;
-				x &= ~(1u << bit_pos);
+				x &= ~(static_cast<T>(1) << bit_pos);
 			}
 			return count;
 		}
 		else
-		{
+        // ReSharper disable once CppUnreachableCode
+        {
 			static_assert(sizeof(T) <= 8);
 			if constexpr (std::same_as<T, uint8> || std::same_as<T, uint16>)
 				return pop_count_16(x);
@@ -76,9 +77,9 @@ namespace soul::util
 	requires is_lambda_v<Func, void(uint32)>
 	void for_each_one_bit_pos (Integral value, const Func& func) {
 		while (value) {
-			uint32 bit_pos = *get_first_one_bit_pos(value);
+			auto bit_pos = *get_first_one_bit_pos(value);
 			func(bit_pos);
-			value &= ~(1u << bit_pos);
+			value &= ~(static_cast<Integral>(1) << bit_pos);
 		}
 	}
 

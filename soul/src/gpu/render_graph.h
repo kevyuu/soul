@@ -4,7 +4,6 @@
 #include "core/slice.h"
 
 #include "memory/allocator.h"
-#include "runtime/runtime.h"
 
 #include "gpu/type.h"
 #include "gpu/command_list.h"
@@ -103,11 +102,11 @@ namespace soul::gpu
 		TextureType type = TextureType::D2;
 		TextureFormat format = TextureFormat::RGBA8;
 		Vec3ui32 extent;
-		uint32 mipLevels = 1;
-		uint16 layerCount = 1;
-		TextureSampleCount sampleCount = gpu::TextureSampleCount::COUNT_1;
+		uint32 mip_levels = 1;
+		uint16 layer_count = 1;
+		TextureSampleCount sample_count = gpu::TextureSampleCount::COUNT_1;
 		bool clear = false;
-		ClearValue clearValue;
+		ClearValue clear_value;
 
 		static RGTextureDesc create_d2(const TextureFormat format, const uint32 mip_levels, const Vec2ui32 dimension, bool clear = false, ClearValue clear_value = {}, const TextureSampleCount sample_count = TextureSampleCount::COUNT_1)
 		{
@@ -115,11 +114,11 @@ namespace soul::gpu
 				.type = TextureType::D2,
 				.format = format,
 				.extent = Vec3ui32(dimension.x, dimension.y, 1),
-				.mipLevels = mip_levels,
-				.layerCount = 1,
-				.sampleCount = sample_count,
+				.mip_levels = mip_levels,
+				.layer_count = 1,
+				.sample_count = sample_count,
 				.clear = clear,
-				.clearValue = clear_value
+				.clear_value = clear_value
 			};
 		}
 
@@ -129,10 +128,10 @@ namespace soul::gpu
 				.type = TextureType::D2_ARRAY,
 				.format = format,
 				.extent = Vec3ui32(dimension.x, dimension.y, 1),
-				.mipLevels = mip_levels,
-				.layerCount = layer_count,
+				.mip_levels = mip_levels,
+				.layer_count = layer_count,
 				.clear = clear,
-				.clearValue = clear_value
+				.clear_value = clear_value
 			};
 		}
 	};
@@ -146,27 +145,27 @@ namespace soul::gpu
 
 	struct ColorAttachmentDesc
 	{
-		TextureNodeID nodeID;
+		TextureNodeID node_id;
 		SubresourceIndex view = SubresourceIndex();
 		bool clear = false;
-		ClearValue clearValue;
+		ClearValue clear_value;
 	};
 
 	struct DepthStencilAttachmentDesc
 	{
-		TextureNodeID nodeID;
+		TextureNodeID node_id;
 		SubresourceIndex view;
-		bool depthWriteEnable = true;
+		bool depth_write_enable = true;
 		bool clear = false;
-		ClearValue clearValue;
+		ClearValue clear_value;
 	};
 
 	struct ResolveAttachmentDesc
 	{
-		TextureNodeID nodeID;
+		TextureNodeID node_id;
 		SubresourceIndex view;
 		bool clear = false;
-		ClearValue clearValue;
+		ClearValue clear_value;
 	};
 
 	enum class ShaderBufferReadUsage : uint8
@@ -178,8 +177,8 @@ namespace soul::gpu
 
 	struct ShaderBufferReadAccess
 	{
-		BufferNodeID nodeID;
-		ShaderStageFlags stageFlags;
+		BufferNodeID node_id;
+		ShaderStageFlags stage_flags;
 		ShaderBufferReadUsage usage;
 	};
 
@@ -191,9 +190,9 @@ namespace soul::gpu
 
 	struct ShaderBufferWriteAccess
 	{
-		BufferNodeID inputNodeID;
-		BufferNodeID outputNodeID;
-		ShaderStageFlags stageFlags;
+		BufferNodeID input_node_id;
+		BufferNodeID output_node_id;
+		ShaderStageFlags stage_flags;
 		ShaderBufferWriteUsage usage;
 	};
 
@@ -206,10 +205,10 @@ namespace soul::gpu
 
 	struct ShaderTextureReadAccess
 	{
-		TextureNodeID nodeID;
-		ShaderStageFlags stageFlags;
+		TextureNodeID node_id;
+		ShaderStageFlags stage_flags;
 		ShaderTextureReadUsage usage;
-		SubresourceIndexRange viewRange;
+		SubresourceIndexRange view_range;
 	};
 
 	enum class ShaderTextureWriteUsage : uint8
@@ -220,17 +219,17 @@ namespace soul::gpu
 
 	struct ShaderTextureWriteAccess
 	{
-		TextureNodeID inputNodeID;
-		TextureNodeID outputNodeID;
-		ShaderStageFlags stageFlags;
+		TextureNodeID input_node_id;
+		TextureNodeID output_node_id;
+		ShaderStageFlags stage_flags;
 		ShaderTextureWriteUsage usage;
-		SubresourceIndexRange viewRange;
+		SubresourceIndexRange view_range;
 	};
 
 	template <typename AttachmentDesc>
 	struct AttachmentAccess
 	{
-		TextureNodeID outNodeID;
+		TextureNodeID out_node_id;
 		AttachmentDesc desc;
 	};
 	using ColorAttachment = AttachmentAccess<ColorAttachmentDesc>;
@@ -239,26 +238,26 @@ namespace soul::gpu
 
 	struct TransferSrcBufferAccess
 	{
-		BufferNodeID nodeID;
+		BufferNodeID node_id;
 	};
 
 	struct TransferDstBufferAccess
 	{
-		BufferNodeID inputNodeID;
-		BufferNodeID outputNodeID;
+		BufferNodeID input_node_id;
+		BufferNodeID output_node_id;
 	};
 
 	struct TransferSrcTextureAccess
 	{
-		TextureNodeID nodeID;
-		SubresourceIndexRange viewRange;
+		TextureNodeID node_id;
+		SubresourceIndexRange view_range;
 	};
 
 	struct TransferDstTextureAccess
 	{
-		TextureNodeID inputNodeID;
-		TextureNodeID outputNodeID;
-		SubresourceIndexRange viewRange;
+		TextureNodeID input_node_id;
+		TextureNodeID output_node_id;
+		SubresourceIndexRange view_range;
 	};
 
 	struct RGRenderTargetDesc
@@ -267,40 +266,40 @@ namespace soul::gpu
 
 		RGRenderTargetDesc(Vec2ui32 dimension, const ColorAttachmentDesc& color) : dimension(dimension)
 		{
-			colorAttachments.push_back(color);
+			color_attachments.push_back(color);
 		}
 
 		RGRenderTargetDesc(Vec2ui32 dimension, const ColorAttachmentDesc& color, const DepthStencilAttachmentDesc& depth_stencil) :
-			dimension(dimension), depthStencilAttachment(depth_stencil)
+			dimension(dimension), depth_stencil_attachment(depth_stencil)
 		{
-			colorAttachments.push_back(color);
+			color_attachments.push_back(color);
 		}
 
 		RGRenderTargetDesc(Vec2ui32 dimension, const TextureSampleCount sample_count, const ColorAttachmentDesc& color, 
 			const ResolveAttachmentDesc& resolve, const DepthStencilAttachmentDesc depth_stencil):
-			dimension(dimension), sampleCount(sample_count), depthStencilAttachment(depth_stencil)
+			dimension(dimension), sample_count(sample_count), depth_stencil_attachment(depth_stencil)
 		{
-			colorAttachments.push_back(color);
-			resolveAttachments.push_back(resolve);
+			color_attachments.push_back(color);
+			resolve_attachments.push_back(resolve);
 		}
 
 		RGRenderTargetDesc(Vec2ui32 dimension, const DepthStencilAttachmentDesc& depth_stencil) :
-			dimension(dimension), depthStencilAttachment(depth_stencil)  {}
+			dimension(dimension), depth_stencil_attachment(depth_stencil)  {}
 
 		Vec2ui32 dimension;
-		TextureSampleCount sampleCount = TextureSampleCount::COUNT_1;
-		Vector<ColorAttachmentDesc> colorAttachments;
-		Vector<ResolveAttachmentDesc> resolveAttachments;
-		DepthStencilAttachmentDesc depthStencilAttachment;
+		TextureSampleCount sample_count = TextureSampleCount::COUNT_1;
+		Vector<ColorAttachmentDesc> color_attachments;
+		Vector<ResolveAttachmentDesc> resolve_attachments;
+		DepthStencilAttachmentDesc depth_stencil_attachment;
 	};
 
 	struct RGRenderTarget
 	{
 		Vec2ui32 dimension;
-		TextureSampleCount sampleCount = TextureSampleCount::COUNT_1;
-		Vector<ColorAttachment> colorAttachments;
-		Vector<ResolveAttachment> resolveAttachments;
-		DepthStencilAttachment depthStencilAttachment;
+		TextureSampleCount sample_count = TextureSampleCount::COUNT_1;
+		Vector<ColorAttachment> color_attachments;
+		Vector<ResolveAttachment> resolve_attachments;
+		DepthStencilAttachment depth_stencil_attachment;
 	};
 
 	class PassNode
@@ -445,10 +444,10 @@ namespace soul::gpu
 		CopyBaseNode& operator=(CopyBaseNode&&) = delete;
 		~CopyBaseNode() override = default;
 
-		const Vector<TransferSrcBufferAccess>& get_source_buffers() const { return source_buffers_; }
-		const Vector<TransferDstBufferAccess>& get_destination_buffers() const { return destination_buffers_; }
-		const Vector<TransferSrcTextureAccess>& get_source_textures() const { return source_textures_; }
-		const Vector<TransferDstTextureAccess>& get_destination_textures() const { return destination_textures_; }
+		[[nodiscard]] const Vector<TransferSrcBufferAccess>& get_source_buffers() const { return source_buffers_; }
+		[[nodiscard]] const Vector<TransferDstBufferAccess>& get_destination_buffers() const { return destination_buffers_; }
+		[[nodiscard]] const Vector<TransferSrcTextureAccess>& get_source_textures() const { return source_textures_; }
+		[[nodiscard]] const Vector<TransferDstTextureAccess>& get_destination_textures() const { return destination_textures_; }
 
 		virtual void execute_pass(RenderGraphRegistry& registry, CopyCommandList& command_list) = 0;
 
@@ -501,16 +500,16 @@ namespace soul::gpu
 		RGShaderPassDependencyBuilder& operator=(RGShaderPassDependencyBuilder&&) = delete;
 		~RGShaderPassDependencyBuilder() = default;
 
-		BufferNodeID add_shader_buffer(const BufferNodeID node_id, const ShaderStageFlags stage_flags, 
-			const ShaderBufferReadUsage usage_type);
-		BufferNodeID add_shader_buffer(const BufferNodeID node_id, const ShaderStageFlags stage_flags,
-			const ShaderBufferWriteUsage usage_type);
-		TextureNodeID add_shader_texture(const TextureNodeID node_id, const ShaderStageFlags stage_flags,
-			const ShaderTextureReadUsage usage_type, const SubresourceIndexRange view = SubresourceIndexRange());
-		TextureNodeID add_shader_texture(const TextureNodeID node_id, const ShaderStageFlags stage_flags,
-			const ShaderTextureWriteUsage usage_type, const SubresourceIndexRange view = SubresourceIndexRange());
-		BufferNodeID add_vertex_buffer(const BufferNodeID node_id);
-		BufferNodeID add_index_buffer(const BufferNodeID node_id);
+		BufferNodeID add_shader_buffer(BufferNodeID node_id, ShaderStageFlags stage_flags, 
+			ShaderBufferReadUsage usage_type);
+		BufferNodeID add_shader_buffer(BufferNodeID node_id, ShaderStageFlags stage_flags,
+			ShaderBufferWriteUsage usage_type);
+		TextureNodeID add_shader_texture(TextureNodeID node_id, ShaderStageFlags stage_flags,
+			ShaderTextureReadUsage usage_type, SubresourceIndexRange view = SubresourceIndexRange());
+		TextureNodeID add_shader_texture(TextureNodeID node_id, ShaderStageFlags stage_flags,
+			ShaderTextureWriteUsage usage_type, SubresourceIndexRange view = SubresourceIndexRange());
+		BufferNodeID add_vertex_buffer(BufferNodeID node_id);
+		BufferNodeID add_index_buffer(BufferNodeID node_id);
 	};
 	using RGGraphicPassDependencyBuilder = RGShaderPassDependencyBuilder;
 	using RGComputePassDependencyBuilder = RGShaderPassDependencyBuilder;
@@ -529,10 +528,10 @@ namespace soul::gpu
 		RGCopyPassDependencyBuilder& operator=(RGCopyPassDependencyBuilder&&) = delete;
 		~RGCopyPassDependencyBuilder() = default;
 
-		BufferNodeID add_src_buffer(const BufferNodeID node_id);
-		BufferNodeID add_dst_buffer(const BufferNodeID node_id);
-		TextureNodeID add_src_texture(const TextureNodeID node_id);
-		TextureNodeID add_dst_texture(const TextureNodeID node_id);
+		BufferNodeID add_src_buffer(BufferNodeID node_id);
+		BufferNodeID add_dst_buffer(BufferNodeID node_id);
+		TextureNodeID add_src_texture(TextureNodeID node_id);
+		TextureNodeID add_dst_texture(TextureNodeID node_id);
 	};
 
 
@@ -564,27 +563,27 @@ namespace soul::gpu
 			auto to_output_attachment = [this, pass_node_id]<typename AttachmentDesc>(const AttachmentDesc attachment_desc) -> auto
 			{
 				AttachmentAccess<AttachmentDesc> access = {
-					.outNodeID = write_texture_node(attachment_desc.nodeID, pass_node_id),
+					.out_node_id = write_texture_node(attachment_desc.node_id, pass_node_id),
 					.desc = attachment_desc
 				};
 				return access;
 			};
 			
-			std::ranges::transform(render_target.colorAttachments,
-				std::back_inserter(node->render_target_.colorAttachments), to_output_attachment);
-			std::ranges::transform(render_target.resolveAttachments,
-				std::back_inserter(node->render_target_.resolveAttachments), to_output_attachment);
-			if (render_target.depthStencilAttachment.nodeID.is_valid())
+			std::ranges::transform(render_target.color_attachments,
+				std::back_inserter(node->render_target_.color_attachments), to_output_attachment);
+			std::ranges::transform(render_target.resolve_attachments,
+				std::back_inserter(node->render_target_.resolve_attachments), to_output_attachment);
+			if (render_target.depth_stencil_attachment.node_id.is_valid())
 			{
-				const auto& depth_desc = render_target.depthStencilAttachment;
-				const TextureNodeID out_node_id = depth_desc.depthWriteEnable ? depth_desc.nodeID : write_texture_node(depth_desc.nodeID, pass_node_id);
-				node->render_target_.depthStencilAttachment = {
-					.outNodeID = out_node_id,
+				const auto& depth_desc = render_target.depth_stencil_attachment;
+				const TextureNodeID out_node_id = depth_desc.depth_write_enable ? depth_desc.node_id : write_texture_node(depth_desc.node_id, pass_node_id);
+				node->render_target_.depth_stencil_attachment = {
+					.out_node_id = out_node_id,
 					.desc = depth_desc
 				};
 			}
 			node->render_target_.dimension = render_target.dimension;
-			node->render_target_.sampleCount = render_target.sampleCount;
+			node->render_target_.sample_count = render_target.sample_count;
 
 			return *node;
 		}
@@ -674,57 +673,57 @@ namespace soul::gpu
 			TextureType type = TextureType::D2;
 			TextureFormat format = TextureFormat::COUNT;
 			Vec3ui32 extent;
-			uint32 mipLevels = 1;
-			uint16 layerCount = 1;
-			TextureSampleCount sampleCount = TextureSampleCount::COUNT_1;
+			uint32 mip_levels = 1;
+			uint16 layer_count = 1;
+			TextureSampleCount sample_count = TextureSampleCount::COUNT_1;
 			bool clear = false;
-			ClearValue clearValue = {};
+			ClearValue clear_value = {};
 
 			[[nodiscard]] soul_size get_view_count() const
 			{
-				return mipLevels * layerCount;
+				return soul::cast<uint64>(mip_levels) * layer_count;
 			}
 		};
 
 		struct RGExternalTexture
 		{
 			const char* name = nullptr;
-			TextureID textureID;
+			TextureID texture_id;
 			bool clear = false;
-			ClearValue clearValue = {};
+			ClearValue clear_value = {};
 		};
 
 		struct RGInternalBuffer
 		{
 			const char* name = nullptr;
 			uint16 count = 0;
-			uint16 typeSize = 0;
-			uint16 typeAlignment = 0;
+			uint16 type_size = 0;
+			uint16 type_alignment = 0;
 			bool clear = false;
 		};
 
 		struct RGExternalBuffer
 		{
 			const char* name = nullptr;
-			BufferID bufferID;
+			BufferID buffer_id;
 			bool clear = false;
 		};
 
 		struct TextureNode
 		{
-			impl::RGBufferID resourceID;
+			impl::RGBufferID resource_id;
 			PassNodeID creator;
 			PassNodeID writer;
-			TextureNodeID writeTargetNode;
+			TextureNodeID write_target_node;
 			Vector<PassNodeID> readers;
 		};
 
 		struct BufferNode
 		{
-			impl::RGBufferID resourceID;
+			impl::RGBufferID resource_id;
 			PassNodeID creator;
 			PassNodeID writer;
-			BufferNodeID writeTargetNode;
+			BufferNodeID write_target_node;
 			Vector<PassNodeID> readers;
 		};
 	}

@@ -5,9 +5,8 @@
 
 using namespace soul;
 
-class TriangleSampleApp : public App
+class TriangleSampleApp final : public App
 {
-private:
 	gpu::ProgramID program_id_;
 
 	void render(gpu::RenderGraph& render_graph) override
@@ -15,7 +14,7 @@ private:
 		const gpu::TextureID swapchain_texture_id = gpu_system_->get_swapchain_texture();
 		const gpu::TextureNodeID render_target = render_graph.import_texture("Color Output", swapchain_texture_id);
 		const gpu::ColorAttachmentDesc color_attachment_desc = {
-			.nodeID = render_target,
+			.node_id = render_target,
 			.clear = true
 		};
 
@@ -34,7 +33,7 @@ private:
 			}, [viewport, this](const PassParameter& parameter, gpu::RenderGraphRegistry& registry, gpu::GraphicCommandList& command_list)
 			{
 				const gpu::GraphicPipelineStateDesc pipeline_desc = {
-					.programID = program_id_,
+					.program_id = program_id_,
 					.viewport = {
 						.width = viewport.x,
 						.height = viewport.y
@@ -43,14 +42,14 @@ private:
 						.width = viewport.x,
 						.height = viewport.y
 					},
-					.colorAttachmentCount = 1
+					.color_attachment_count = 1
 				};
 
 				using Command = gpu::RenderCommandDraw;
 				const Command command = {
-					.pipelineStateID = registry.get_pipeline_state(pipeline_desc),
-					.vertexCount = 3,
-					.instanceCount = 1
+					.pipeline_state_id = registry.get_pipeline_state(pipeline_desc),
+					.vertex_count = 3,
+					.instance_count = 1
 				};
 				command_list.push(command);
 			});
@@ -62,11 +61,11 @@ public:
 		gpu::ShaderSource shader_source = gpu::ShaderFile("triangle.slang");
 		std::filesystem::path search_path = "shaders/";
 		const gpu::ProgramDesc program_desc = {
-			.searchPaths = &search_path,
-			.searchPathCount = 1,
+			.search_paths = &search_path,
+			.search_path_count = 1,
 			.sources = &shader_source,
-			.sourceCount = 1,
-			.entryPointNames = gpu::EntryPoints({
+			.source_count = 1,
+			.entry_point_names = gpu::EntryPoints({
 				{gpu::ShaderStage::VERTEX, "vsMain"},
 				{gpu::ShaderStage::FRAGMENT, "fsMain"}
 			})

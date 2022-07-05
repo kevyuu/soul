@@ -91,7 +91,7 @@ namespace soul::gpu
 
 		void create_surface(void* window_handle, VkSurfaceKHR* surface);
 
-		impl::_FrameContext& get_frame_context();
+		impl::FrameContext& get_frame_context();
 
 		VkRenderPass request_render_pass(const impl::RenderPassKey& key);
 

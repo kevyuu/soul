@@ -17,7 +17,6 @@
 #include "gpu/intern/bindless_descriptor_allocator.h"
 
 #include "core/type.h"
-#include "core/mutex.h"
 #include "core/vector.h"
 #include "core/flag_map.h"
 #include "core/pool.h"
@@ -291,41 +290,42 @@ namespace soul::gpu
 			float depth = 0.0f;
 			uint32 stencil = 0;
 			DepthStencil() = default;
-			DepthStencil(float depth, uint32 stencil) : depth(depth), stencil(stencil) {}
-		} depthStencil;
+			DepthStencil(const float depth, const uint32 stencil) : depth(depth), stencil(stencil) {}
+		} depth_stencil;
 
 		ClearValue() = default;
-		ClearValue(Vec4f color, float depth, uint32 stencil) : color(color), depthStencil(depth, stencil) {}
-		ClearValue(Vec4ui32 color, float depth, uint32 stencil) : color(color), depthStencil(depth, stencil) {}
-		ClearValue(Vec4i32 color, float depth, uint32 stencil) : color(color), depthStencil(depth, stencil) {}
+		ClearValue(Vec4f color, float depth, uint32 stencil) : color(color), depth_stencil(depth, stencil) {}
+		ClearValue(Vec4ui32 color, float depth, uint32 stencil) : color(color), depth_stencil(depth, stencil) {}
+		ClearValue(Vec4i32 color, float depth, uint32 stencil) : color(color), depth_stencil(depth, stencil) {}
 
 	};
 
 	class SubresourceIndex
 	{
 	private:
-		using value_type = uint16;
+		using value_type = uint32;
 
-		static constexpr value_type LEVEL_MASK = 0xFF;
+		static constexpr value_type LEVEL_MASK = 0xFFFF;
 		static constexpr value_type LEVEL_BIT_SHIFT = 0;
 
-		static constexpr value_type LAYER_MASK = 0xFF00;
-		static constexpr uint8 LAYER_BIT_SHIFT = 8;
+		static constexpr value_type LAYER_MASK = 0xFFFF0000;
+		static constexpr uint8 LAYER_BIT_SHIFT = 16;
 
 		value_type index_ = 0;
 
 	public:
 		constexpr SubresourceIndex() = default;
-		constexpr explicit SubresourceIndex(const uint8 level, const uint8 layer) : index_(level | layer << 8) {}
+		constexpr explicit SubresourceIndex(const uint16 level, const uint16 layer) :
+	    index_(soul::cast<uint32>(level | soul::cast<uint32>(layer) << LAYER_BIT_SHIFT)) {}
 
-		[[nodiscard]] constexpr uint8 get_level() const
+		[[nodiscard]] constexpr uint16 get_level() const
 		{
-			return soul::cast<uint8>((index_ & LEVEL_MASK) >> LEVEL_BIT_SHIFT);
+			return soul::cast<uint16>((index_ & LEVEL_MASK) >> LEVEL_BIT_SHIFT);
 		}
 
-		[[nodiscard]] constexpr uint8 get_layer() const
+		[[nodiscard]] constexpr uint16 get_layer() const
 		{
-			return soul::cast<uint8>((index_ & LAYER_MASK) >> LAYER_BIT_SHIFT);
+			return soul::cast<uint16>((index_ & LAYER_MASK) >> LAYER_BIT_SHIFT);
 		}
 
 	};
@@ -335,15 +335,15 @@ namespace soul::gpu
 		using value_type = SubresourceIndex;
 
 		SubresourceIndex base;
-		uint32 levelCount = 1;
-		uint32 layerCount = 1;
+		uint16 level_count = 1;
+		uint16 layer_count = 1;
 
-		class const_iterator
+		class ConstIterator
 		{
 		private:
-			uint8 mip_ = 0;
-			uint8 layer_ = 1;
-			uint32 mip_end_ = 1;
+			uint16 mip_ = 0;
+			uint16 layer_ = 1;
+			uint16 mip_end_ = 1;
 		public:
 
 			using pointer_type = SubresourceIndex*;
@@ -351,12 +351,12 @@ namespace soul::gpu
 			using iterator_category = std::input_iterator_tag;
 			using difference_type = std::ptrdiff_t;
 
-			const_iterator() noexcept = default;
-			const_iterator(uint8 mip, uint8 layer, uint32 mip_end_) noexcept : mip_(mip), layer_(layer), mip_end_(mip_end_) {}
+			ConstIterator() noexcept = default;
+			ConstIterator(const uint16 mip, const uint16 layer, const uint16 mip_end) noexcept : mip_(mip), layer_(layer), mip_end_(mip_end) {}
 
-			const value_type operator*() const { return SubresourceIndex(mip_, layer_); }
+			[[nodiscard]] value_type operator*() const { return SubresourceIndex(mip_, layer_); }
 
-			const_iterator& operator++()
+			ConstIterator& operator++()
 			{
 				mip_ += 1;
 				if (mip_ == mip_end_)
@@ -367,16 +367,22 @@ namespace soul::gpu
 				return *this;
 			}
 
-			const const_iterator operator++(int) { const_iterator t(mip_, layer_, mip_end_); this->operator++(); return t; }
+			[[nodiscard]] ConstIterator operator++(int) { const ConstIterator t{ mip_, layer_, mip_end_ }; this->operator++(); return t; }
 
-			bool operator==(const_iterator const& rhs) const { return (mip_ == rhs.mip_ && layer_ == rhs.layer_ && mip_end_ == rhs.mip_end_); }
-			bool operator!=(const_iterator const& rhs) const { return (mip_ != rhs.mip_ || layer_ != rhs.layer_ || mip_end_ != rhs.mip_end_); }
+			bool operator==(ConstIterator const& rhs) const { return (mip_ == rhs.mip_ && layer_ == rhs.layer_ && mip_end_ == rhs.mip_end_); }
+			bool operator!=(ConstIterator const& rhs) const { return (mip_ != rhs.mip_ || layer_ != rhs.layer_ || mip_end_ != rhs.mip_end_); }
 		};
 
-		const_iterator begin() noexcept { return const_iterator(base.get_level(), base.get_layer(), base.get_level() + levelCount); }
-		const_iterator end() noexcept { return const_iterator(base.get_level(), base.get_layer() + layerCount, base.get_level() + levelCount); }
-		const_iterator begin() const noexcept { return const_iterator(base.get_level(), base.get_layer(), base.get_level() + levelCount); }
-		const_iterator end() const noexcept { return const_iterator(base.get_level(), base.get_layer() + layerCount, base.get_level() + levelCount); }
+		using const_iterator = ConstIterator;
+
+		const_iterator begin() noexcept
+	    { return const_iterator{ base.get_level(), base.get_layer(), soul::cast<uint16>(base.get_level() + level_count) }; }
+	    const_iterator end() noexcept
+	    { return const_iterator{ base.get_level(), soul::cast<uint16>(base.get_layer() + layer_count), soul::cast<uint16>(base.get_level() + level_count) }; }
+		[[nodiscard]] const_iterator begin() const noexcept
+	    { return const_iterator{ base.get_level(), base.get_layer(), soul::cast<uint16>(base.get_level() + level_count) }; }
+		[[nodiscard]] const_iterator end() const noexcept
+	    { return const_iterator{ base.get_level(), soul::cast<uint16>(base.get_layer() + layer_count), soul::cast<uint16>(base.get_level() + level_count) }; }
 	};
 
 	struct BufferDesc {
@@ -446,88 +452,88 @@ namespace soul::gpu
 		TextureType type = TextureType::D2;
 		TextureFormat format = TextureFormat::COUNT;
 		Vec3ui32 extent;
-		uint32 mipLevels = 1;
-		uint16 layerCount = 1;
-		TextureSampleCount sampleCount = TextureSampleCount::COUNT_1;
-		TextureUsageFlags usageFlags;
-		QueueFlags queueFlags;
+		uint32 mip_levels = 1;
+		uint16 layer_count = 1;
+		TextureSampleCount sample_count = TextureSampleCount::COUNT_1;
+		TextureUsageFlags usage_flags;
+		QueueFlags queue_flags;
 		const char* name = nullptr;
 
-		static TextureDesc D2(const char* name, TextureFormat format, uint32 mipLevels, TextureUsageFlags usageFlags, QueueFlags queueFlags, Vec2ui32 dimension, TextureSampleCount sampleCount = TextureSampleCount::COUNT_1)
+		static TextureDesc d2(const char* name, TextureFormat format, uint32 mip_levels, TextureUsageFlags usage_flags, QueueFlags queue_flags, const Vec2ui32 dimension, TextureSampleCount sample_count = TextureSampleCount::COUNT_1)
 		{
 			return {
 				.type = TextureType::D2,
 				.format = format,
 				.extent = Vec3ui32(dimension.x, dimension.y, 1),
-				.mipLevels =mipLevels,
-				.sampleCount = sampleCount,
-				.usageFlags = usageFlags,
-				.queueFlags = queueFlags,
+				.mip_levels =mip_levels,
+				.sample_count = sample_count,
+				.usage_flags = usage_flags,
+				.queue_flags = queue_flags,
 				.name = name
 			};
 		}
 
-		static TextureDesc D2Array(const char* name, TextureFormat format, uint32 mipLevels, TextureUsageFlags usageFlags, QueueFlags queueFlags, Vec2ui32 dimension, uint16 layerCount)
+		static TextureDesc d2_array(const char* name, TextureFormat format, uint32 mip_levels, TextureUsageFlags usage_flags, QueueFlags queue_flags, const Vec2ui32 dimension, uint16 layer_count)
 		{
 			return {
 				.type = TextureType::D2_ARRAY,
 				.format = format,
 				.extent = Vec3ui32(dimension.x, dimension.y, 1),
-				.mipLevels = mipLevels,
-				.layerCount = layerCount,
-				.usageFlags = usageFlags,
-				.queueFlags = queueFlags,
+				.mip_levels = mip_levels,
+				.layer_count = layer_count,
+				.usage_flags = usage_flags,
+				.queue_flags = queue_flags,
 				.name = name
 			};
 		}
 
-		static TextureDesc Cube(const char* name, TextureFormat format, uint32 mipLevels, TextureUsageFlags usageFlags, QueueFlags queueFlags, Vec2ui32 dimension)
+		static TextureDesc cube(const char* name, TextureFormat format, uint32 mip_levels, TextureUsageFlags usage_flags, QueueFlags queue_flags, const Vec2ui32 dimension)
 		{
 			return {
 				.type = TextureType::CUBE,
 				.format = format,
 				.extent = Vec3ui32(dimension.x, dimension.y, 1),
-				.mipLevels = mipLevels,
-				.layerCount = 6,
-				.usageFlags = usageFlags,
-				.queueFlags = queueFlags,
+				.mip_levels = mip_levels,
+				.layer_count = 6,
+				.usage_flags = usage_flags,
+				.queue_flags = queue_flags,
 				.name = name
 			};
 		}
 
 		[[nodiscard]] soul_size get_view_count() const
 		{
-			return mipLevels * layerCount;
+			return mip_levels * layer_count;
 		}
 
 	};
 
 	struct SamplerDesc {
-		TextureFilter minFilter = TextureFilter::COUNT;
-		TextureFilter magFilter = TextureFilter::COUNT;
-		TextureFilter mipmapFilter = TextureFilter::COUNT;
-		TextureWrap wrapU = TextureWrap::CLAMP_TO_EDGE;
-		TextureWrap wrapV = TextureWrap::CLAMP_TO_EDGE;
-		TextureWrap wrapW = TextureWrap::CLAMP_TO_EDGE;
-		bool anisotropyEnable = false;
-		float maxAnisotropy = 0.0f;
-		bool compareEnable = false;
-		CompareOp comapreOp = CompareOp::COUNT;
+		TextureFilter min_filter = TextureFilter::COUNT;
+		TextureFilter mag_filter = TextureFilter::COUNT;
+		TextureFilter mipmap_filter = TextureFilter::COUNT;
+		TextureWrap wrap_u = TextureWrap::CLAMP_TO_EDGE;
+		TextureWrap wrap_v = TextureWrap::CLAMP_TO_EDGE;
+		TextureWrap wrap_w = TextureWrap::CLAMP_TO_EDGE;
+		bool anisotropy_enable = false;
+		float max_anisotropy = 0.0f;
+		bool compare_enable = false;
+		CompareOp compare_op = CompareOp::COUNT;
 
-		static constexpr SamplerDesc SameFilterWrap(TextureFilter filter, TextureWrap wrap, bool anisotropyEnable = false, 
-			float maxAnisotropy = 0.0f, bool compareEnable = false, CompareOp compareOp = CompareOp::ALWAYS)
+		static constexpr SamplerDesc same_filter_wrap(const TextureFilter filter, const TextureWrap wrap, const bool anisotropy_enable = false,
+                                                    const float max_anisotropy = 0.0f, const bool compare_enable = false, const CompareOp compare_op = CompareOp::ALWAYS)
 		{
 			SamplerDesc desc;
-			desc.minFilter = filter;
-			desc.magFilter = filter;
-			desc.mipmapFilter = filter;
-			desc.wrapU = wrap;
-			desc.wrapV = wrap;
-			desc.wrapW = wrap;
-			desc.anisotropyEnable = anisotropyEnable;
-			desc.maxAnisotropy = maxAnisotropy;
-			desc.compareEnable = compareEnable;
-			desc.comapreOp = compareOp;
+			desc.min_filter = filter;
+			desc.mag_filter = filter;
+			desc.mipmap_filter = filter;
+			desc.wrap_u = wrap;
+			desc.wrap_v = wrap;
+			desc.wrap_w = wrap;
+			desc.anisotropy_enable = anisotropy_enable;
+			desc.max_anisotropy = max_anisotropy;
+			desc.compare_enable = compare_enable;
+			desc.compare_op = compare_op;
 			return desc;
 		}
 	};
@@ -536,13 +542,13 @@ namespace soul::gpu
 	{
 		std::filesystem::path path;
 		ShaderFile() = default;
-		explicit ShaderFile(const std::filesystem::path& path) : path(path) {}
+		explicit ShaderFile(std::filesystem::path path) : path(std::move(path)) {}
 	};
 	struct ShaderString
 	{
 		soul::String source;
 		ShaderString() = default;
-		explicit ShaderString(const String& str) : source(str) {}
+		explicit ShaderString(String str) : source(std::move(str)) {}
 		[[nodiscard]] const char* c_str() const { return source.data(); }
 	};
 	using ShaderSource = std::variant<ShaderFile, ShaderString>;
@@ -555,13 +561,13 @@ namespace soul::gpu
 	};
 
 	struct ProgramDesc {
-		std::filesystem::path* searchPaths = nullptr;
-		soul_size searchPathCount = 0;
-		ShaderDefine* shaderDefines = nullptr;
-		soul_size shaderDefineCount = 0;
+		std::filesystem::path* search_paths = nullptr;
+		soul_size search_path_count = 0;
+		ShaderDefine* shader_defines = nullptr;
+		soul_size shader_define_count = 0;
 		ShaderSource* sources = nullptr;
-		soul_size sourceCount = 0;
-		EntryPoints entryPointNames = FlagMap<ShaderStage, const char*>(nullptr);
+		soul_size source_count = 0;
+		EntryPoints entry_point_names = FlagMap<ShaderStage, const char*>(nullptr);
 	};
 
 	using AttachmentFlagBits = enum {
@@ -573,7 +579,7 @@ namespace soul::gpu
 		ATTACHMENT_ENUM_END_BIT
 	};
 	using AttachmentFlags = uint8;
-	static_assert(ATTACHMENT_ENUM_END_BIT - 1 < std::numeric_limits<AttachmentFlags>::max(), "");
+	static_assert(ATTACHMENT_ENUM_END_BIT - 1 < std::numeric_limits<AttachmentFlags>::max());
 
 	struct Attachment
 	{
@@ -588,69 +594,69 @@ namespace soul::gpu
 
 	struct GraphicPipelineStateDesc {
 
-		ProgramID programID = PROGRAM_ID_NULL;
+		ProgramID program_id = PROGRAM_ID_NULL;
 
-		InputLayoutDesc inputLayout;
+		InputLayoutDesc input_layout;
 
 		struct InputBindingDesc {
 			uint32 stride = 0;
-		} inputBindings[MAX_INPUT_BINDING_PER_SHADER];
+		} input_bindings[MAX_INPUT_BINDING_PER_SHADER];
 
 		struct InputAttrDesc {
 			uint32 binding = 0;
 			uint32 offset = 0;
 			VertexElementType type = VertexElementType::DEFAULT;
 			VertexElementFlags flags = 0;
-		} inputAttributes[MAX_INPUT_PER_SHADER];
+		} input_attributes[MAX_INPUT_PER_SHADER];
 
 		struct ViewportDesc {
-			int32 offsetX = 0;
-			int32 offsetY = 0;
+			int32 offset_x = 0;
+			int32 offset_y = 0;
 			uint32 width = 0;
 			uint32 height = 0;
 		} viewport;
 
 		struct ScissorDesc {
 			bool dynamic = false;
-			int32 offsetX = 0;
-			int32 offsetY = 0;
+			int32 offset_x = 0;
+			int32 offset_y = 0;
 			uint32 width = 0;
 			uint32 height = 0;
 		} scissor;
 
 		struct RasterDesc {
-			float lineWidth = 1.0f;
-			PolygonMode polygonMode = PolygonMode::FILL;
-			CullMode cullMode = CullMode::NONE;
-			FrontFace frontFace = FrontFace::CLOCKWISE;
+			float line_width = 1.0f;
+			PolygonMode polygon_mode = PolygonMode::FILL;
+			CullMode cull_mode = CullMode::NONE;
+			FrontFace front_face = FrontFace::CLOCKWISE;
 		} raster;
 
 		struct ColorAttachmentDesc {
-			bool blendEnable = false;
-			bool colorWrite = true;
-			BlendFactor srcColorBlendFactor = BlendFactor::ZERO;
-			BlendFactor dstColorBlendFactor = BlendFactor::ZERO;
-			BlendOp colorBlendOp = BlendOp::ADD;
-			BlendFactor srcAlphaBlendFactor = BlendFactor::ZERO;
-			BlendFactor dstAlphaBlendFactor = BlendFactor::ZERO;
-			BlendOp alphaBlendOp = BlendOp::ADD;
+			bool blend_enable = false;
+			bool color_write = true;
+			BlendFactor src_color_blend_factor = BlendFactor::ZERO;
+			BlendFactor dst_color_blend_factor = BlendFactor::ZERO;
+			BlendOp color_blend_op = BlendOp::ADD;
+			BlendFactor src_alpha_blend_factor = BlendFactor::ZERO;
+			BlendFactor dst_alpha_blend_factor = BlendFactor::ZERO;
+			BlendOp alpha_blend_op = BlendOp::ADD;
 		};
-		ColorAttachmentDesc colorAttachments[MAX_COLOR_ATTACHMENT_PER_SHADER];
-		uint8 colorAttachmentCount = 0;
+		ColorAttachmentDesc color_attachments[MAX_COLOR_ATTACHMENT_PER_SHADER];
+		uint8 color_attachment_count = 0;
 
 		struct DepthStencilAttachmentDesc {
-			bool depthTestEnable = false;
-			bool depthWriteEnable = false;
-			CompareOp depthCompareOp = CompareOp::NEVER;
+			bool depth_test_enable = false;
+			bool depth_write_enable = false;
+			CompareOp depth_compare_op = CompareOp::NEVER;
 		};
-		DepthStencilAttachmentDesc depthStencilAttachment;
+		DepthStencilAttachmentDesc depth_stencil_attachment;
 
 		struct DepthBiasDesc
 		{
 			float constant = 0.0f;
 			float slope = 0.0f;
 		};
-		DepthBiasDesc depthBias;
+		DepthBiasDesc depth_bias;
 
 		bool operator==(const GraphicPipelineStateDesc& other) const {
 			return (memcmp(this, &other, sizeof(GraphicPipelineStateDesc)) == 0);
@@ -664,7 +670,7 @@ namespace soul::gpu
 
 	struct ComputePipelineStateDesc
 	{
-		ProgramID programID = PROGRAM_ID_NULL;
+		ProgramID program_id = PROGRAM_ID_NULL;
 
 		bool operator==(const ComputePipelineStateDesc& other) const {
 			return (memcmp(this, &other, sizeof(ComputePipelineStateDesc)) == 0);
@@ -679,24 +685,24 @@ namespace soul::gpu
 	{
 
 		struct PipelineState {
-			VkPipeline vkHandle;
-			VkPipelineBindPoint bindPoint;
-			ProgramID programID;
+			VkPipeline vk_handle = VK_NULL_HANDLE;
+			VkPipelineBindPoint bind_point = VK_PIPELINE_BIND_POINT_MAX_ENUM;
+			ProgramID program_id;
 		};
 
 		struct ProgramDescriptorBinding {
 			uint8 count = 0;
-			uint8 attachmentIndex = 0;
-			VkShaderStageFlags shaderStageFlags = 0;
-			VkPipelineStageFlags pipelineStageFlags = 0;
+			uint8 attachment_index = 0;
+			VkShaderStageFlags shader_stage_flags = 0;
+			VkPipelineStageFlags pipeline_stage_flags = 0;
 		};
 
 		struct RenderPassKey
 		{
-			Attachment colorAttachments[MAX_COLOR_ATTACHMENT_PER_SHADER];
-			Attachment resolveAttachments[MAX_COLOR_ATTACHMENT_PER_SHADER];
-			Attachment inputAttachments[MAX_INPUT_ATTACHMENT_PER_SHADER];
-			Attachment depthAttachment;
+			Attachment color_attachments[MAX_COLOR_ATTACHMENT_PER_SHADER];
+			Attachment resolve_attachments[MAX_COLOR_ATTACHMENT_PER_SHADER];
+			Attachment input_attachments[MAX_INPUT_ATTACHMENT_PER_SHADER];
+			Attachment depth_attachment;
 
 			bool operator==(const RenderPassKey& other) const {
 				return (memcmp(this, &other, sizeof(RenderPassKey)) == 0);
@@ -712,26 +718,26 @@ namespace soul::gpu
 			uint32 indices[3] = {};
 		};
 
-		enum class semaphore_state : uint8 {
+		enum class SemaphoreState : uint8 {
 			INITIAL,
 			SUBMITTED,
 			PENDING
 		};
 
 		struct Swapchain {
-			VkSwapchainKHR vkHandle = VK_NULL_HANDLE;
+			VkSwapchainKHR vk_handle = VK_NULL_HANDLE;
 			VkSurfaceFormatKHR format = {};
 			VkExtent2D extent = {};
 			Vector<TextureID> textures;
 			Vector<VkImage> images;
-			Vector<VkImageView> imageViews;
+			Vector<VkImageView> image_views;
 			Vector<VkFence> fences;
 		};
 
 		struct DescriptorSetLayoutBinding {
-			VkDescriptorType descriptorType;
-			uint32 descriptorCount;
-			VkShaderStageFlags stageFlags;
+			VkDescriptorType descriptor_type;
+			uint32 descriptor_count;
+			VkShaderStageFlags stage_flags;
 		};
 
 		struct DescriptorSetLayoutKey {
@@ -758,68 +764,68 @@ namespace soul::gpu
 
 		struct Buffer {
 			BufferDesc desc;
-			VkBuffer vkHandle = VK_NULL_HANDLE;
-			soul_size unitSize = 0;
+			VkBuffer vk_handle = VK_NULL_HANDLE;
+			soul_size unit_size = 0;
 			VmaAllocation allocation{};
 			ResourceOwner owner = ResourceOwner::NONE;
-			DescriptorID storageBufferGPUHandle;
+			DescriptorID storage_buffer_gpu_handle;
 		};
 
 		struct TextureView
 		{
-			VkImageView vkHandle = VK_NULL_HANDLE;
-			DescriptorID storageImageGPUHandle;
-			DescriptorID sampledImageGPUHandle;
+			VkImageView vk_handle = VK_NULL_HANDLE;
+			DescriptorID storage_image_gpu_handle;
+			DescriptorID sampled_image_gpu_handle;
 		};
 
 		struct Texture {
 			TextureDesc desc;
-			VkImage vkHandle = VK_NULL_HANDLE;
+			VkImage vk_handle = VK_NULL_HANDLE;
 			TextureView view;
 			VmaAllocation allocation = VK_NULL_HANDLE;
 			VkImageLayout layout = VK_IMAGE_LAYOUT_UNDEFINED;
-			VkSharingMode sharingMode = {};
+			VkSharingMode sharing_mode = {};
 			ResourceOwner owner = ResourceOwner::NONE;
 			TextureView* views = nullptr;
 		};
 
 		struct Shader
 		{
-			VkShaderModule vkHandle = VK_NULL_HANDLE;
-			String entryPoint;
+			VkShaderModule vk_handle = VK_NULL_HANDLE;
+			String entry_point;
 		};
 
 		struct Program {
-			VkPipelineLayout pipelineLayout;
+			VkPipelineLayout pipeline_layout = VK_NULL_HANDLE;
 			FlagMap<ShaderStage, Shader> shaders;
 		};
 
 		struct Semaphore {
-			VkSemaphore vkHandle = VK_NULL_HANDLE;
-			VkPipelineStageFlags stageFlags = 0;
-			semaphore_state state = semaphore_state::INITIAL;
+			VkSemaphore vk_handle = VK_NULL_HANDLE;
+			VkPipelineStageFlags stage_flags = 0;
+			SemaphoreState state = SemaphoreState::INITIAL;
 
-			bool isPending() { return state == semaphore_state::PENDING; }
+			[[nodiscard]] bool is_pending() const { return state == SemaphoreState::PENDING; }
 		};
 
 		class CommandQueue {
 
 		public:
-			void init(VkDevice device, uint32 familyIndex, uint32 queueIndex);
+			void init(VkDevice device, uint32 family_index, uint32 queue_index);
 			void wait(Semaphore* semaphore, VkPipelineStageFlags waitStages);
-			void submit(VkCommandBuffer commandBuffer, const Vector<Semaphore*>& semaphores, VkFence fence = VK_NULL_HANDLE);
-			void submit(VkCommandBuffer commandBuffer, Semaphore* semaphore, VkFence fence = VK_NULL_HANDLE);
-			void submit(VkCommandBuffer commandBuffer, uint32 semaphoreCount = 0, Semaphore* const* semaphores = nullptr, VkFence fence = VK_NULL_HANDLE);
-			void flush(uint32 semaphoreCount, Semaphore* const* semaphores, VkFence fence);
+			void submit(VkCommandBuffer command_buffer, const Vector<Semaphore*>& semaphores, VkFence fence = VK_NULL_HANDLE);
+			void submit(VkCommandBuffer command_buffer, Semaphore* semaphore, VkFence fence = VK_NULL_HANDLE);
+			void submit(VkCommandBuffer command_buffer, uint32 semaphore_count = 0, Semaphore* const* semaphores = nullptr, VkFence fence = VK_NULL_HANDLE);
+			void flush(uint32 semaphore_count, Semaphore* const* semaphores, VkFence fence);
 			void present(const VkPresentInfoKHR& presentInfo);
-			[[nodiscard]] uint32 getFamilyIndex() const { return familyIndex; }
+			[[nodiscard]] uint32 getFamilyIndex() const { return family_index_; }
 		private:
-			VkDevice device = VK_NULL_HANDLE;
-			VkQueue vkHandle = VK_NULL_HANDLE;
-			uint32 familyIndex = 0;
-			Vector<VkSemaphore> waitSemaphores;
-			Vector<VkPipelineStageFlags> waitStages;
-			Vector<VkCommandBuffer> commands;
+			VkDevice device_ = VK_NULL_HANDLE;
+			VkQueue vk_handle_ = VK_NULL_HANDLE;
+			uint32 family_index_ = 0;
+			Vector<VkSemaphore> wait_semaphores_;
+			Vector<VkPipelineStageFlags> wait_stages_;
+			Vector<VkCommandBuffer> commands_;
 		};
 
 		class SecondaryCommandBuffer
@@ -852,22 +858,22 @@ namespace soul::gpu
 		class CommandPool {
 		public:
 
-			explicit CommandPool(memory::Allocator* allocator = get_default_allocator()) : allocatorInitializer(allocator)
+			explicit CommandPool(memory::Allocator* allocator = get_default_allocator()) : allocator_initializer_(allocator)
 			{
-				allocatorInitializer.end();
+				allocator_initializer_.end();
 			}
 
-			void init(VkDevice device, VkCommandBufferLevel level, uint32 queueFamilyIndex);
+			void init(VkDevice device, VkCommandBufferLevel level, uint32 queue_family_index);
 			void reset();
 			VkCommandBuffer request();
 
 		private:
-			runtime::AllocatorInitializer allocatorInitializer;
-			VkDevice device = VK_NULL_HANDLE;
-			VkCommandPool vkHandle = VK_NULL_HANDLE;
-			Vector<VkCommandBuffer> allocatedBuffers;
-			VkCommandBufferLevel level = VK_COMMAND_BUFFER_LEVEL_MAX_ENUM;
-			uint16 count = 0;
+			runtime::AllocatorInitializer allocator_initializer_;
+			VkDevice device_ = VK_NULL_HANDLE;
+			VkCommandPool vk_handle_ = VK_NULL_HANDLE;
+			Vector<VkCommandBuffer> allocated_buffers_;
+			VkCommandBufferLevel level_ = VK_COMMAND_BUFFER_LEVEL_MAX_ENUM;
+			uint16 count_ = 0;
 		};
 
 		class CommandPools
@@ -894,10 +900,10 @@ namespace soul::gpu
 		class GPUResourceInitializer
 		{
 		public:
-			void init(VmaAllocator gpuAllocator, CommandPools* commandPools);
+			void init(VmaAllocator gpu_allocator, CommandPools* command_pools);
 			void load(Buffer& buffer, const void* data);
-			void load(Texture& texture, const TextureLoadDesc& loadDesc);
-			void clear(Texture& texture, ClearValue clearValue);
+			void load(Texture& texture, const TextureLoadDesc& load_desc);
+			void clear(Texture& texture, ClearValue clear_value);
 			void generate_mipmap(Texture& texture);
 			void flush(CommandQueues& command_queues, System& gpu_system);
 			void reset();
@@ -905,7 +911,7 @@ namespace soul::gpu
 
 			struct StagingBuffer
 			{
-				VkBuffer vkHandle;
+				VkBuffer vk_handle;
 				VmaAllocation allocation;
 			};
 
@@ -959,16 +965,16 @@ namespace soul::gpu
 		};
 
 
-		struct _FrameContext {
+		struct FrameContext {
 
 			runtime::AllocatorInitializer allocatorInitializer;
-			CommandPools commandPools;
+			CommandPools command_pools;
 			
 			VkFence fence = VK_NULL_HANDLE;
-			SemaphoreID imageAvailableSemaphore;
-			SemaphoreID renderFinishedSemaphore;
+			SemaphoreID image_available_semaphore;
+			SemaphoreID render_finished_semaphore;
 
-			uint32 swapchainIndex = 0;
+			uint32 swapchain_index = 0;
 
 			struct Garbages {
 				Vector<TextureID> textures;
@@ -980,10 +986,10 @@ namespace soul::gpu
 				Vector<SemaphoreID> semaphores;
 			} garbages;
 
-			GPUResourceInitializer gpuResourceInitializer;
-			GPUResourceFinalizer gpuResourceFinalizer;
+			GPUResourceInitializer gpu_resource_initializer;
+			GPUResourceFinalizer gpu_resource_finalizer;
 
-			_FrameContext(memory::Allocator* allocator) : allocatorInitializer(allocator)
+			explicit FrameContext(memory::Allocator* allocator) : allocatorInitializer(allocator)
 			{
 				allocatorInitializer.end();
 			}
@@ -995,24 +1001,24 @@ namespace soul::gpu
 			using CPUAllocator = memory::ProxyAllocator<
 				memory::Allocator,
 				CPUAllocatorProxy>;
-			CPUAllocator cpuAllocator;
+			CPUAllocator cpu_allocator;
 
-			memory::MallocAllocator vulkanCPUBackingAllocator{ "Vulkan CPU Backing Allocator" };
+			memory::MallocAllocator vulkan_cpu_backing_allocator{ "Vulkan CPU Backing Allocator" };
 			using VulkanCPUAllocatorProxy = memory::MultiProxy<memory::MutexProxy, memory::ProfileProxy>;
 			using VulkanCPUAllocator = memory::ProxyAllocator<
 				memory::MallocAllocator,
 				VulkanCPUAllocatorProxy>;
-			VulkanCPUAllocator vulkanCPUAllocator;
+			VulkanCPUAllocator vulkan_cpu_allocator;
 
-			runtime::AllocatorInitializer allocatorInitializer;
+			runtime::AllocatorInitializer allocator_initializer;
 
 			VkInstance instance = VK_NULL_HANDLE;
-			VkDebugUtilsMessengerEXT debugMessenger = VK_NULL_HANDLE;
+			VkDebugUtilsMessengerEXT debug_messenger = VK_NULL_HANDLE;
 
 			VkDevice device = VK_NULL_HANDLE;
-			VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
-			VkPhysicalDeviceProperties physicalDeviceProperties = {};
-			VkPhysicalDeviceFeatures physicalDeviceFeatures = {};
+			VkPhysicalDevice physical_device = VK_NULL_HANDLE;
+			VkPhysicalDeviceProperties physical_device_properties = {};
+			VkPhysicalDeviceFeatures physical_device_features = {};
 
 			slang::IGlobalSession* slang_global_session = nullptr;
 
@@ -1023,32 +1029,32 @@ namespace soul::gpu
 
 			Swapchain swapchain;
 
-			Vector<_FrameContext> frameContexts;
-			uint32 frameCounter = 0;
-			uint32 currentFrame = 0;
+			Vector<FrameContext> frame_contexts;
+			uint32 frame_counter = 0;
+			uint32 current_frame = 0;
 
-			VmaAllocator gpuAllocator = VK_NULL_HANDLE;
+			VmaAllocator gpu_allocator = VK_NULL_HANDLE;
 
-			ConcurrentObjectPool<Buffer> bufferPool;
-			ConcurrentObjectPool<Texture> texturePool;
+			ConcurrentObjectPool<Buffer> buffer_pool;
+			ConcurrentObjectPool<Texture> texture_pool;
 			ConcurrentObjectPool<Shader> shaders;
 
-			PipelineStateCache pipeline_state_cache_;
+			PipelineStateCache pipeline_state_cache;
 			
 			Pool<Program> programs;
 
-			HashMap<RenderPassKey, VkRenderPass> renderPassMaps;
+			HashMap<RenderPassKey, VkRenderPass> render_pass_maps;
 
 			Pool<Semaphore> semaphores;
 
-			UInt64HashMap<SamplerID> samplerMap;
-			BindlessDescriptorAllocator descriptorAllocator;
+			UInt64HashMap<SamplerID> sampler_map;
+			BindlessDescriptorAllocator descriptor_allocator;
 
 			explicit Database(memory::Allocator* backingAllocator) :
-				cpuAllocator("GPU System allocator", backingAllocator, CPUAllocatorProxy::Config{ memory::ProfileProxy::Config(), memory::CounterProxy::Config() }),
-				vulkanCPUAllocator("Vulkan allocator", &vulkanCPUBackingAllocator, VulkanCPUAllocatorProxy::Config{ memory::MutexProxy::Config(), memory::ProfileProxy::Config() }),
-				allocatorInitializer(&cpuAllocator) {
-				allocatorInitializer.end();
+				cpu_allocator("GPU System allocator", backingAllocator, CPUAllocatorProxy::Config{ memory::ProfileProxy::Config(), memory::CounterProxy::Config() }),
+				vulkan_cpu_allocator("Vulkan allocator", &vulkan_cpu_backing_allocator, VulkanCPUAllocatorProxy::Config{ memory::MutexProxy::Config(), memory::ProfileProxy::Config() }),
+				allocator_initializer(&cpu_allocator) {
+				allocator_initializer.end();
 			}
 		};
 
@@ -1077,35 +1083,35 @@ namespace soul::gpu
 	struct RenderCommandDraw : RenderCommandTyped<RenderCommandType::DRAW>
 	{
 		static constexpr QueueType QUEUE_TYPE = QueueType::GRAPHIC;
-		PipelineStateID pipelineStateID = PIPELINE_STATE_ID_NULL;
-		void* pushConstantData = nullptr;
-		uint32 pushConstantSize = 0;
-		BufferID vertexBufferIDs[soul::gpu::MAX_VERTEX_BINDING];
-		uint16 vertexOffsets[MAX_VERTEX_BINDING];
-		uint32 vertexCount = 0;
-		uint32 instanceCount = 0;
-		uint32 firstVertex = 0;
-		uint32 firstInstance = 0;
+		PipelineStateID pipeline_state_id = PIPELINE_STATE_ID_NULL;
+		void* push_constant_data = nullptr;
+		uint32 push_constant_size = 0;
+		BufferID vertex_buffer_i_ds[soul::gpu::MAX_VERTEX_BINDING];
+		uint16 vertex_offsets[MAX_VERTEX_BINDING];
+		uint32 vertex_count = 0;
+		uint32 instance_count = 0;
+		uint32 first_vertex = 0;
+		uint32 first_instance = 0;
 	};
 
 	struct RenderCommandDrawPrimitiveBindless : RenderCommandTyped<RenderCommandType::DRAW_PRIMITIVE_BINDLESS> {
 		static constexpr QueueType QUEUE_TYPE = QueueType::GRAPHIC;
-		PipelineStateID pipelineStateID = PIPELINE_STATE_ID_NULL;
-		void* pushConstantData = nullptr;
-		uint32 pushConstantSize = 0;
-		BufferID vertexBufferIDs[soul::gpu::MAX_VERTEX_BINDING];
-		uint16 vertexOffsets[MAX_VERTEX_BINDING];
-		BufferID indexBufferID;
-		uint16 indexOffset = 0;
-		uint16 indexCount = 0;
+		PipelineStateID pipeline_state_id = PIPELINE_STATE_ID_NULL;
+		void* push_constant_data = nullptr;
+		uint32 push_constant_size = 0;
+		BufferID vertex_buffer_ids[soul::gpu::MAX_VERTEX_BINDING];
+		uint16 vertex_offsets[MAX_VERTEX_BINDING];
+		BufferID index_buffer_id;
+		uint16 index_offset = 0;
+		uint16 index_count = 0;
 	};
 
 	struct RenderCommandCopyTexture : RenderCommandTyped<RenderCommandType::COPY_TEXTURE>
 	{
 		static constexpr QueueType QUEUE_TYPE = QueueType::TRANSFER;
-		TextureID srcTexture;
-		TextureID dstTexture;
-		uint32 regionCount = 0;
+		TextureID src_texture;
+		TextureID dst_texture;
+		uint32 region_count = 0;
 		const TextureCopyRegion* regions = nullptr;
 	};
 

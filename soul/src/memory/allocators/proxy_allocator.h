@@ -360,10 +360,10 @@ namespace soul::memory {
 		void on_post_init() override{}
 
 		AllocateParam on_pre_allocate(const AllocateParam& alloc_param) override { mutex_.lock(); return alloc_param; }
-		Allocation on_post_allocate(const Allocation allocation) override { mutex_.unlock(); return allocation; }
+	    Allocation on_post_allocate(const Allocation allocation) override { mutex_.unlock(); return allocation; }
 
 		DeallocateParam on_pre_deallocate(const DeallocateParam& dealloc_param) override { mutex_.lock(); return dealloc_param; }
-		void on_post_deallocate() override { mutex_.unlock(); }
+	    void on_post_deallocate() override { mutex_.unlock(); }
 
 		void on_pre_cleanup() override {}
 		void on_post_cleanup() override {}
