@@ -56,7 +56,7 @@ class TriangleSampleApp final : public App
 	}
 
 public:
-	TriangleSampleApp() : App()
+	explicit TriangleSampleApp(const AppConfig& app_config) : App(app_config)
 	{
 		gpu::ShaderSource shader_source = gpu::ShaderFile("triangle.slang");
 		std::filesystem::path search_path = "shaders/";
@@ -77,7 +77,7 @@ public:
 int main(int argc, char* argv[])
 {
 	
-	TriangleSampleApp app;
+	TriangleSampleApp app({});
 	app.run();
 
 	return 0;

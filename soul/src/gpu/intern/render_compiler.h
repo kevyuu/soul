@@ -8,7 +8,7 @@ namespace soul::gpu
 	class System;
 	struct RenderCommand;
 	struct RenderCommandDraw;
-	struct RenderCommandDrawPrimitiveBindless;
+	struct RenderCommandDrawIndex;
 	struct RenderCommandCopyTexture;
 }
 
@@ -26,7 +26,7 @@ namespace soul::gpu::impl
 
 		void compile_command(const RenderCommand& command);
 		void compile_command(const RenderCommandDraw& command);
-		void compile_command(const RenderCommandDrawPrimitiveBindless& command);
+		void compile_command(const RenderCommandDrawIndex& command);
 		void compile_command(const RenderCommandCopyTexture& command);
 
 	private:

@@ -1,4 +1,6 @@
 #pragma once
+#include <optional>
+
 struct GLFWwindow;
 
 #include "memory/allocators/page_allocator.h"
@@ -10,10 +12,21 @@ namespace soul::gpu
 	class RenderGraph;
 }
 
+struct ScreenDimension
+{
+	int32 width;
+	int32 height;
+};
+
+struct AppConfig
+{
+	std::optional<ScreenDimension> screen_dimension = std::nullopt;
+};
+
 class App
 {
 public:
-	App();
+	explicit App(const AppConfig& app_config);
 	App(const App&) = delete;
 	App& operator=(const App&) = delete;
 	App(App&& app) = delete;

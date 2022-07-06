@@ -112,8 +112,8 @@ namespace soul::gpu
 			const gpu::BufferDesc& desc = system.get_buffer(external_buffer.buffer_id).desc;
 			return {
 				.count = desc.count,
-				.typeSize = desc.typeSize,
-				.typeAlignment = desc.typeAlignment
+				.typeSize = desc.type_size,
+				.typeAlignment = desc.type_alignment
 			};
 		}
 		const RGInternalBuffer& internal_buffer = internal_buffers_[node.resource_id.get_index()];

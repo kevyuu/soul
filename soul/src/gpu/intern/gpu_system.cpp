@@ -996,27 +996,27 @@ namespace soul::gpu
 	BufferID System::create_buffer(const BufferDesc &desc) {
 		SOUL_ASSERT_MAIN_THREAD();
 		SOUL_ASSERT(0, desc.count > 0, "");
-		SOUL_ASSERT(0, desc.typeSize > 0, "");
-		SOUL_ASSERT(0, desc.typeAlignment > 0, "");
-		SOUL_ASSERT(0, desc.usageFlags.any(), "");
+		SOUL_ASSERT(0, desc.type_size > 0, "");
+		SOUL_ASSERT(0, desc.type_alignment > 0, "");
+		SOUL_ASSERT(0, desc.usage_flags.any(), "");
 
 		const auto buffer_id = BufferID(_db.buffer_pool.create());
 		Buffer &buffer = *get_buffer_ptr(buffer_id);
 
-		const QueueData queue_data = get_queue_data_from_queue_flags(desc.queueFlags);
+		const QueueData queue_data = get_queue_data_from_queue_flags(desc.queue_flags);
 		SOUL_ASSERT(0, queue_data.count > 0, "");
 
-		uint64 alignment = desc.typeSize;
-		if (desc.usageFlags.test(BufferUsage::UNIFORM)) {
+		uint64 alignment = desc.type_size;
+		if (desc.usage_flags.test(BufferUsage::UNIFORM)) {
 			const size_t min_ubo_alignment = _db.physical_device_properties.limits.minUniformBufferOffsetAlignment;
 			SOUL_ASSERT(0, isPowerOfTwo(min_ubo_alignment), "");
-			const size_t dynamic_alignment = (desc.typeSize + min_ubo_alignment - 1) & ~(min_ubo_alignment - 1);
+			const size_t dynamic_alignment = (desc.type_size + min_ubo_alignment - 1) & ~(min_ubo_alignment - 1);
 			alignment = std::max(alignment, dynamic_alignment);
 		}
-		if (desc.usageFlags.test(BufferUsage::STORAGE)) {
+		if (desc.usage_flags.test(BufferUsage::STORAGE)) {
 			const size_t min_ssbo_alignment = _db.physical_device_properties.limits.minStorageBufferOffsetAlignment;
 			SOUL_ASSERT(0, isPowerOfTwo(min_ssbo_alignment), "");
-			const size_t dynamic_alignment = (desc.typeSize + min_ssbo_alignment - 1) & ~(min_ssbo_alignment - 1);
+			const size_t dynamic_alignment = (desc.type_size + min_ssbo_alignment - 1) & ~(min_ssbo_alignment - 1);
 			alignment = std::max(alignment, dynamic_alignment);
 
 		}
@@ -1024,7 +1024,7 @@ namespace soul::gpu
 		const VkBufferCreateInfo buffer_info = {
 			.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
 			.size = alignment * desc.count,
-			.usage = vkCastBufferUsageFlags(desc.usageFlags),
+			.usage = vkCastBufferUsageFlags(desc.usage_flags),
 			.sharingMode = queue_data.count > 1 ? VK_SHARING_MODE_CONCURRENT : VK_SHARING_MODE_EXCLUSIVE,
 			.queueFamilyIndexCount = queue_data.count,
 			.pQueueFamilyIndices = queue_data.indices
@@ -1039,7 +1039,7 @@ namespace soul::gpu
 		buffer.unit_size = alignment;
 		buffer.desc = desc;
 		buffer.owner = ResourceOwner::NONE;
-		if (buffer.desc.usageFlags.test(BufferUsage::STORAGE))
+		if (buffer.desc.usage_flags.test(BufferUsage::STORAGE))
 			buffer.storage_buffer_gpu_handle = _db.descriptor_allocator.create_storage_buffer_descriptor(buffer.vk_handle);
 
 		return buffer_id;
@@ -1048,8 +1048,8 @@ namespace soul::gpu
 	BufferID System::create_buffer(const BufferDesc& desc, const void* data) {
 		SOUL_PROFILE_ZONE();
 		BufferDesc new_desc = desc;
-		new_desc.usageFlags |= { BufferUsage::TRANSFER_DST };
-		new_desc.queueFlags |= { QueueType::TRANSFER };
+		new_desc.usage_flags |= { BufferUsage::TRANSFER_DST };
+		new_desc.queue_flags |= { QueueType::TRANSFER };
 
 		const BufferID buffer_id = create_buffer(new_desc);
 		impl::Buffer& buffer = *get_buffer_ptr(buffer_id);
@@ -2338,7 +2338,7 @@ namespace soul::gpu
 		SOUL_ASSERT(0, buffer.owner == ResourceOwner::NONE, "Buffer must be uninitialized!");
 		soul_size buffer_size = buffer.unit_size * buffer.desc.count;
 		StagingBuffer staging_buffer = get_staging_buffer(buffer_size);
-		load_staging_buffer(staging_buffer, data, buffer.desc.count, buffer.desc.typeSize, buffer.unit_size);
+		load_staging_buffer(staging_buffer, data, buffer.desc.count, buffer.desc.type_size, buffer.unit_size);
 
 		const VkBufferCopy copy_region = {
 			.size = buffer_size
@@ -2633,7 +2633,7 @@ namespace soul::gpu
 
 	void GPUResourceFinalizer::finalize(Buffer& buffer)
 	{
-		thread_contexts_[runtime::get_thread_id()].sync_dst_queues_[RESOURCE_OWNER_TO_QUEUE_TYPE[buffer.owner]] |= buffer.desc.queueFlags;
+		thread_contexts_[runtime::get_thread_id()].sync_dst_queues_[RESOURCE_OWNER_TO_QUEUE_TYPE[buffer.owner]] |= buffer.desc.queue_flags;
 		buffer.owner = ResourceOwner::NONE;
 	}
 

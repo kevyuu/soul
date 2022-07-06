@@ -23,3 +23,4 @@ endfunction()
 
 add_subdirectory(common)
 add_subdirectory(triangle)
+add_subdirectory(index_buffer)

@@ -232,12 +232,12 @@ namespace soul::memory {
 
 		struct Config
 		{
-			char allocateClearValue;
-			char freeClearValue;
+			uint8 allocate_clear_value;
+			uint8 free_clear_value;
 		};
 
 		explicit ClearValuesProxy(const Config& config)
-			: on_alloc_clear_value_(config.allocateClearValue), on_dealloc_clear_value_(config.freeClearValue) {}
+			: on_alloc_clear_value_(config.allocate_clear_value), on_dealloc_clear_value_(config.free_clear_value) {}
 
 		void on_pre_init(const char* name) override {}
 		void on_post_init() override {}
@@ -266,8 +266,8 @@ namespace soul::memory {
 		void on_post_cleanup() override {}
 
 	private:
-		const char on_alloc_clear_value_;
-		const char on_dealloc_clear_value_;
+		uint8 on_alloc_clear_value_;
+		uint8 on_dealloc_clear_value_;
 		
 		soul_size current_alloc_size_ = 0;
 	};

@@ -387,10 +387,10 @@ namespace soul::gpu
 
 	struct BufferDesc {
 		soul_size count = 0;
-		uint16 typeSize = 0;
-		uint16 typeAlignment = 0;
-		BufferUsageFlags usageFlags;
-		QueueFlags  queueFlags = QUEUE_DEFAULT;
+		uint16 type_size = 0;
+		uint16 type_alignment = 0;
+		BufferUsageFlags usage_flags;
+		QueueFlags  queue_flags = QUEUE_DEFAULT;
 	};
 
 	struct TextureSubresourceLayers
@@ -1064,7 +1064,7 @@ namespace soul::gpu
 	// Render Command API
 	enum class RenderCommandType : uint8 {
 		DRAW,
-		DRAW_PRIMITIVE_BINDLESS,
+		DRAW_INDEX,
 		COPY_TEXTURE,
 		COUNT
 	};
@@ -1087,22 +1087,22 @@ namespace soul::gpu
 		void* push_constant_data = nullptr;
 		uint32 push_constant_size = 0;
 		BufferID vertex_buffer_i_ds[soul::gpu::MAX_VERTEX_BINDING];
-		uint16 vertex_offsets[MAX_VERTEX_BINDING];
+		uint16 vertex_offsets[MAX_VERTEX_BINDING] = {};
 		uint32 vertex_count = 0;
 		uint32 instance_count = 0;
 		uint32 first_vertex = 0;
 		uint32 first_instance = 0;
 	};
 
-	struct RenderCommandDrawPrimitiveBindless : RenderCommandTyped<RenderCommandType::DRAW_PRIMITIVE_BINDLESS> {
+	struct RenderCommandDrawIndex : RenderCommandTyped<RenderCommandType::DRAW_INDEX> {
 		static constexpr QueueType QUEUE_TYPE = QueueType::GRAPHIC;
 		PipelineStateID pipeline_state_id = PIPELINE_STATE_ID_NULL;
 		void* push_constant_data = nullptr;
 		uint32 push_constant_size = 0;
 		BufferID vertex_buffer_ids[soul::gpu::MAX_VERTEX_BINDING];
-		uint16 vertex_offsets[MAX_VERTEX_BINDING];
+		uint16 vertex_offsets[MAX_VERTEX_BINDING] = {};
 		BufferID index_buffer_id;
-		uint16 index_offset = 0;
+		uint16 first_index = 0;
 		uint16 index_count = 0;
 	};
 

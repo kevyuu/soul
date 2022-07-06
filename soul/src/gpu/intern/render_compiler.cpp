@@ -18,7 +18,7 @@ namespace soul::gpu::impl
 
 		switch (command.type) {
 		COMPILE_PACKET(RenderCommandDraw);
-		COMPILE_PACKET(RenderCommandDrawPrimitiveBindless);
+		COMPILE_PACKET(RenderCommandDrawIndex);
 		COMPILE_PACKET(RenderCommandCopyTexture);
 		case RenderCommandType::COUNT:
 			SOUL_NOT_IMPLEMENTED();
@@ -37,14 +37,14 @@ namespace soul::gpu::impl
 				continue;
 			}
 			const Buffer& vertex_buffer = gpu_system_.get_buffer(vert_buf_id);
-			SOUL_ASSERT(0, vertex_buffer.desc.usageFlags.test(BufferUsage::VERTEX), "");
+			SOUL_ASSERT(0, vertex_buffer.desc.usage_flags.test(BufferUsage::VERTEX), "");
 			VkDeviceSize offsets[] = { 0 };
 			vkCmdBindVertexBuffers(commandBuffer, vert_buf_idx, 1, &vertex_buffer.vk_handle, offsets);
 		}
 		vkCmdDraw(commandBuffer, command.vertex_count, command.instance_count, command.first_vertex, command.first_instance);
 	}
 
-	void RenderCompiler::compile_command(const RenderCommandDrawPrimitiveBindless& command) {
+	void RenderCompiler::compile_command(const RenderCommandDrawIndex& command) {
 		SOUL_PROFILE_ZONE();
 		apply_pipeline_state(command.pipeline_state_id);
 		apply_push_constant(command.push_constant_data, command.push_constant_size);
@@ -55,15 +55,15 @@ namespace soul::gpu::impl
 				continue;
 			}
 			const Buffer& vertex_buffer = gpu_system_.get_buffer(vert_buf_id);
-			SOUL_ASSERT(0, vertex_buffer.desc.usageFlags.test(BufferUsage::VERTEX), "");
+			SOUL_ASSERT(0, vertex_buffer.desc.usage_flags.test(BufferUsage::VERTEX), "");
 			VkDeviceSize offsets[] = { 0 };
 			vkCmdBindVertexBuffers(commandBuffer, vert_buf_idx, 1, &vertex_buffer.vk_handle, offsets);
 		}
 
 		const Buffer& index_buffer = gpu_system_.get_buffer(command.index_buffer_id);
-		SOUL_ASSERT(0, index_buffer.desc.usageFlags.test(gpu::BufferUsage::INDEX), "");
+		SOUL_ASSERT(0, index_buffer.desc.usage_flags.test(gpu::BufferUsage::INDEX), "");
 		vkCmdBindIndexBuffer(commandBuffer, index_buffer.vk_handle, 0, index_buffer.unit_size == 2 ? VK_INDEX_TYPE_UINT16 : VK_INDEX_TYPE_UINT32);
-		vkCmdDrawIndexed(commandBuffer, command.index_count, 1, command.index_offset, command.vertex_offsets[0], 1);
+		vkCmdDrawIndexed(commandBuffer, command.index_count, 1, command.first_index, command.vertex_offsets[0], 1);
 	}
 
 	void RenderCompiler::compile_command(const RenderCommandCopyTexture& command)

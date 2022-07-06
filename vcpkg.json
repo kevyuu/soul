@@ -6,6 +6,7 @@
       "name": "glfw3",
       "version>=": "3.3.7"
     },
+    "glm",
     "vulkan-memory-allocator",
     "volk",
     "tracy",

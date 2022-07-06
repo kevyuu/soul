@@ -431,10 +431,10 @@ namespace soul::gpu::impl
 
 			buffer_info.bufferID = gpu_system_->create_buffer({
 				.count = rg_buffer.count,
-				.typeSize = rg_buffer.type_size,
-				.typeAlignment = rg_buffer.type_alignment,
-				.usageFlags = buffer_info.usageFlags,
-				.queueFlags = buffer_info.queueFlags
+				.type_size = rg_buffer.type_size,
+				.type_alignment = rg_buffer.type_alignment,
+				.usage_flags = buffer_info.usageFlags,
+				.queue_flags = buffer_info.queueFlags
 			});
 		}
 

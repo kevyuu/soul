@@ -1,6 +1,5 @@
 #include "app.h"
 
-#include "core/type.h"
 #include "core/dev_util.h"
 
 #include "memory/allocators/page_allocator.h"
@@ -18,14 +17,14 @@ void glfw_print_error_callback(const int code, const char* message)
 	SOUL_LOG_INFO("GLFW Error. Error code : %d. Message = %s", code, message);
 }
 
-App::App() :
+App::App(const AppConfig& app_config) :
 	malloc_allocator_("Default Allocator"),
 	default_allocator_(&malloc_allocator_,
 		runtime::DefaultAllocatorProxy::Config(
 			memory::MutexProxy::Config(),
 			memory::ProfileProxy::Config(),
 			memory::CounterProxy::Config(),
-			memory::ClearValuesProxy::Config{ char(0xFA), char(0xFF) },
+			memory::ClearValuesProxy::Config{ uint8{0xFA}, uint8{0xFF} },
 			memory::BoundGuardProxy::Config())),
 	page_allocator_("Page allocator"),
 	proxy_page_allocator_(&page_allocator_, memory::ProfileProxy::Config()),
@@ -35,7 +34,7 @@ App::App() :
 	SOUL_PROFILE_THREAD_SET_NAME("Main Thread");
 
 	glfwSetErrorCallback(glfw_print_error_callback);
-	bool glfw_init_success = glfwInit();
+	const bool glfw_init_success = glfwInit();
 	SOUL_ASSERT(0, glfw_init_success, "GLFW initialization failed!");
 	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 	glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
@@ -43,10 +42,18 @@ App::App() :
 
 	SOUL_ASSERT(0, glfwVulkanSupported(), "Vulkan is not supported by glfw");
 
-	const GLFWvidmode* mode = glfwGetVideoMode(glfwGetPrimaryMonitor());
-	SOUL_ASSERT(0, mode != nullptr, "Mode cannot be nullpointer");
-	window_ = glfwCreateWindow(mode->width, mode->height, "Vulkan", nullptr, nullptr);
-	glfwMaximizeWindow(window_);
+	if (app_config.screen_dimension)
+	{
+		const ScreenDimension screen_dimension = *app_config.screen_dimension;
+		window_ = glfwCreateWindow(screen_dimension.width, screen_dimension.height, "Vulkan", nullptr, nullptr);
+	}
+	else
+	{
+		const GLFWvidmode* mode = glfwGetVideoMode(glfwGetPrimaryMonitor());
+		SOUL_ASSERT(0, mode != nullptr, "Mode cannot be nullpointer");
+		window_ = glfwCreateWindow(mode->width, mode->height, "Vulkan", nullptr, nullptr);
+		glfwMaximizeWindow(window_);
+	}
 	SOUL_LOG_INFO("GLFW window creation sucessful");
 
 	runtime::init({
