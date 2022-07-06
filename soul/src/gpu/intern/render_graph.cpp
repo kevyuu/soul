@@ -6,7 +6,6 @@
 
 namespace soul::gpu
 {
-
 	using namespace impl;
 
 	TextureNodeID RenderGraph::import_texture(const char* name, TextureID texture_id) {
@@ -23,10 +22,10 @@ namespace soul::gpu
 	}
 
 	TextureNodeID RenderGraph::create_texture(const char* name, const RGTextureDesc& desc) {
-		TextureNodeID node_id = TextureNodeID(texture_nodes_.add(TextureNode()));
+		const auto node_id = TextureNodeID(texture_nodes_.add(TextureNode()));
 		TextureNode& node = texture_nodes_.back();
 
-		uint32 resource_index = soul::cast<uint32>(internal_textures_.add(RGInternalTexture()));
+		const auto resource_index = soul::cast<uint32>(internal_textures_.add(RGInternalTexture()));
 		RGInternalTexture& internal_texture = internal_textures_.back();
 		internal_texture.name = name;
 		internal_texture.type = desc.type;
@@ -42,11 +41,11 @@ namespace soul::gpu
 		return node_id;
 	}
 
-	BufferNodeID RenderGraph::import_buffer(const char* name, BufferID buffer_id) {
-		BufferNodeID node_id = BufferNodeID(buffer_nodes_.add(BufferNode()));
+	BufferNodeID RenderGraph::import_buffer(const char* name, const BufferID buffer_id) {
+		const BufferNodeID node_id = BufferNodeID(buffer_nodes_.add(BufferNode()));
 		BufferNode& node = buffer_nodes_.back();
 
-		const soul_size resource_index = external_buffers_.add(RGExternalBuffer());
+		const auto resource_index = external_buffers_.add(RGExternalBuffer());
 		RGExternalBuffer& external_buffer = external_buffers_.back();
 		external_buffer.name = name;
 		external_buffer.buffer_id = buffer_id;
@@ -57,16 +56,15 @@ namespace soul::gpu
 	}
 
 	BufferNodeID RenderGraph::create_buffer(const char* name, const RGBufferDesc& desc) {
-		BufferNodeID node_id = BufferNodeID(buffer_nodes_.add(BufferNode()));
+		SOUL_ASSERT(0, desc.size > 0, "Render Graph buffer size must be greater than zero!, name = %s", name);
+		const auto node_id = BufferNodeID(buffer_nodes_.add(BufferNode()));
 		BufferNode& node = buffer_nodes_.back();
 
-		uint32 resource_index = soul::cast<uint32>(internal_buffers_.add(RGInternalBuffer()));
-		RGInternalBuffer& internalBuffer = internal_buffers_.back();
-		internalBuffer.name = name;
-		internalBuffer.count = desc.count;
-		internalBuffer.type_size = desc.typeSize;
-		internalBuffer.type_alignment = desc.typeAlignment;
-
+		const auto resource_index = soul::cast<uint32>(internal_buffers_.add(RGInternalBuffer()));
+		RGInternalBuffer& internal_buffer = internal_buffers_.back();
+		internal_buffer.name = name;
+		internal_buffer.size = desc.size;
+		
 		node.resource_id = RGResourceID::internal_id(resource_index);
 
 		return node_id;
@@ -111,16 +109,12 @@ namespace soul::gpu
 			const RGExternalBuffer& external_buffer = external_buffers_[node.resource_id.get_index()];
 			const gpu::BufferDesc& desc = system.get_buffer(external_buffer.buffer_id).desc;
 			return {
-				.count = desc.count,
-				.typeSize = desc.type_size,
-				.typeAlignment = desc.type_alignment
+				.size = desc.size
 			};
 		}
 		const RGInternalBuffer& internal_buffer = internal_buffers_[node.resource_id.get_index()];
 		return {
-			.count = internal_buffer.count,
-			.typeSize = internal_buffer.type_size,
-			.typeAlignment = internal_buffer.type_alignment
+			.size = internal_buffer.size
 		};
 	}
 
@@ -156,7 +150,7 @@ namespace soul::gpu
 		if (src_buffer_node.writer.is_null())
 		{
 			src_buffer_node.writer = pass_node_id;
-			const BufferNodeID dst_buffer_node_id = BufferNodeID(soul::cast<uint16>(buffer_nodes_.add(BufferNode())));
+			const auto dst_buffer_node_id = BufferNodeID(soul::cast<uint16>(buffer_nodes_.add(BufferNode())));
 			BufferNode& dst_buffer_node = get_buffer_node(dst_buffer_node_id);
 			dst_buffer_node.resource_id = get_buffer_node(buffer_node_id).resource_id;
 			dst_buffer_node.creator = pass_node_id;
@@ -242,31 +236,31 @@ namespace soul::gpu
 		return out_node_id;
 	}
 
-	BufferNodeID RGCopyPassDependencyBuilder::add_src_buffer(const BufferNodeID node_id)
+	BufferNodeID RGTransferPassDependencyBuilder::add_src_buffer(const BufferNodeID node_id)
     {
 		render_graph_.read_buffer_node(node_id, pass_id_);
 		copy_base_node_.source_buffers_.add({ node_id });
 		return node_id;
 	}
 
-	BufferNodeID RGCopyPassDependencyBuilder::add_dst_buffer(const BufferNodeID node_id)
+	BufferNodeID RGTransferPassDependencyBuilder::add_dst_buffer(const BufferNodeID node_id, const TransferDataSource data_source)
     {
 		BufferNodeID out_node_id = render_graph_.write_buffer_node(node_id, pass_id_);
-		copy_base_node_.destination_buffers_.add({.input_node_id = node_id, .output_node_id = out_node_id});
+		copy_base_node_.destination_buffers_.add({.data_source = data_source, .input_node_id = node_id, .output_node_id = out_node_id});
 		return out_node_id;
 	}
 
-	TextureNodeID RGCopyPassDependencyBuilder::add_src_texture(const TextureNodeID node_id)
+	TextureNodeID RGTransferPassDependencyBuilder::add_src_texture(const TextureNodeID node_id)
     {
 		render_graph_.read_texture_node(node_id, pass_id_);
 		copy_base_node_.source_textures_.add({node_id});
 		return node_id;
 	}
 
-	TextureNodeID RGCopyPassDependencyBuilder::add_dst_texture(const TextureNodeID node_id)
+	TextureNodeID RGTransferPassDependencyBuilder::add_dst_texture(const TextureNodeID node_id, const TransferDataSource data_source)
     {
 		TextureNodeID out_node_id = render_graph_.write_texture_node(node_id, pass_id_);
-		copy_base_node_.destination_textures_.add({.input_node_id = node_id, .output_node_id = out_node_id});
+		copy_base_node_.destination_textures_.add({.data_source = data_source, .input_node_id = node_id, .output_node_id = out_node_id});
 		return out_node_id;
 	}
 

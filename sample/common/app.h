@@ -2,6 +2,7 @@
 #include <optional>
 
 struct GLFWwindow;
+class ImGuiRenderGraphPass;
 
 #include "memory/allocators/page_allocator.h"
 #include "runtime/runtime.h"
@@ -21,6 +22,7 @@ struct ScreenDimension
 struct AppConfig
 {
 	std::optional<ScreenDimension> screen_dimension = std::nullopt;
+	bool enable_imgui = false;
 };
 
 class App
@@ -34,6 +36,7 @@ public:
 	virtual ~App();
 
 	void run();
+	float get_elapsed_seconds() const;
 	
 private:
 
@@ -45,9 +48,16 @@ private:
 	soul::runtime::TempAllocator temp_allocator_;
 
 	GLFWwindow* window_ = nullptr;
+	ImGuiRenderGraphPass* imgui_render_graph_pass_ = nullptr;
+
+	const AppConfig app_config_;
+
+	const std::chrono::steady_clock::time_point start_ = std::chrono::steady_clock::now();
 
 	virtual void render(soul::gpu::RenderGraph& render_graph) = 0;
 
+
 protected:
 	soul::gpu::System* gpu_system_ = nullptr;
+	
 };

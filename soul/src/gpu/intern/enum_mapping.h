@@ -46,7 +46,9 @@ namespace soul::gpu
 	
 
 	static auto FORMAT_MAP = FlagMap<TextureFormat, VkFormat>::build_from_list({
-		VK_FORMAT_D16_UNORM,
+		VK_FORMAT_R8_UNORM,
+
+	    VK_FORMAT_D16_UNORM,
 
 		VK_FORMAT_R8G8B8_UNORM,
 		VK_FORMAT_UNDEFINED,
@@ -96,7 +98,9 @@ namespace soul::gpu
 
 	SOUL_ALWAYS_INLINE VkImageAspectFlags vkCastFormatToAspectFlags(TextureFormat format) {
 		static auto IMAGE_ASPECT_FLAGS_MAP = FlagMap<TextureFormat, VkImageAspectFlags>::build_from_list({
-			VK_IMAGE_ASPECT_DEPTH_BIT,
+			VK_IMAGE_ASPECT_COLOR_BIT,
+
+		    VK_IMAGE_ASPECT_DEPTH_BIT,
 
 			VK_IMAGE_ASPECT_COLOR_BIT,
 			VK_IMAGE_ASPECT_DEPTH_BIT,
@@ -327,12 +331,12 @@ namespace soul::gpu
 		return static_cast<VkSampleCountFlagBits>(to_underlying(sampleCount));
 	}
 
-	constexpr VkOffset3D get_vk_offset_3d(const Vec3i32 val)
+	constexpr VkOffset3D get_vk_offset_3d(const vec3i32 val)
 	{
 		return { val.x, val.y, val.z };
 	}
 
-	constexpr VkExtent3D get_vk_extent_3d(const Vec3ui32 val)
+	constexpr VkExtent3D get_vk_extent_3d(const vec3ui32 val)
 	{
 		return { val.x, val.y, val.z };
 	}
@@ -341,9 +345,28 @@ namespace soul::gpu
 	{
 		return {
 			.aspectMask = aspect_flags,
-			.mipLevel = subresource_layers.mipLevel,
-			.baseArrayLayer = subresource_layers.baseArrayLayer,
-			.layerCount = subresource_layers.layerCount
+			.mipLevel = subresource_layers.mip_level,
+			.baseArrayLayer = subresource_layers.base_array_layer,
+			.layerCount = subresource_layers.layer_count
 		};
+	}
+
+	SOUL_ALWAYS_INLINE VkIndexType vk_cast(const IndexType index_type)
+	{
+		static constexpr auto MAP = FlagMap<IndexType, VkIndexType>::build_from_list({
+			VK_INDEX_TYPE_UINT16,
+			VK_INDEX_TYPE_UINT32
+		});
+		return MAP[index_type];
+	}
+
+	SOUL_ALWAYS_INLINE VkMemoryPropertyFlags vk_cast(const MemoryPropertyFlags flags)
+	{
+		return flags.map<VkMemoryPropertyFlags>({
+			VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
+			VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+			VK_MEMORY_PROPERTY_HOST_CACHED_BIT
+		});
 	}
 }

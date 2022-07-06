@@ -44,7 +44,7 @@ namespace soul::runtime {
 		SOUL_PROFILE_THREAD_SET_NAME(threadName);
 
 		char tempAllocatorName[512];
-		memory::LinearAllocator linearAllocator(tempAllocatorName, 20 * memory::ONE_MEGABYTE, getContextAllocator());
+		memory::LinearAllocator linearAllocator(tempAllocatorName, 20 * ONE_MEGABYTE, getContextAllocator());
 		TempAllocator tempAllocator(&linearAllocator, runtime::TempProxy::Config());
 		threadContext->tempAllocator = &tempAllocator;
 

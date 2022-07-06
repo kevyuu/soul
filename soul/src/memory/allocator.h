@@ -5,10 +5,6 @@
 
 namespace soul::memory {
 
-	constexpr soul_size ONE_KILOBYTE = 1024;
-	constexpr soul_size ONE_MEGABYTE = 1024 * ONE_KILOBYTE;
-	constexpr soul_size ONE_GIGABYTE = 1024 * ONE_MEGABYTE;
-
 	struct Allocation {
 		void* addr = nullptr;
 		soul_size size = 0;

@@ -1,11 +1,10 @@
 set(SHADER_SOURCES
-	shaders/triangle.slang
+	shaders/triangle_sample.hlsl
 )
 
-create_shaders_target(shaders ${SHADER_SOURCES})
+create_shaders_target(shaders "${SHADER_SOURCES}")
 
-add_executable(triangle main.cpp)
-target_link_libraries(triangle 
+add_executable(triangle_sample "triangle_sample.cpp")
+target_link_libraries(triangle_sample
 	PRIVATE sample_common)
-add_dependencies(triangle shaders)
-executable_add_slang_dependencies(triangle)
+add_dependencies(triangle_sample shaders)

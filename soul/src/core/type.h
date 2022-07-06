@@ -8,33 +8,46 @@
 #include <cstddef>
 #include <cstdint>
 #include <limits>
+#include <tl/expected.hpp>
 
+#include "glm/vec2.hpp"
+#include "glm/vec3.hpp"
+#include "glm/vec4.hpp"
 #include "core/dev_util.h"
 #include "core/type_traits.h"
 
-typedef int8_t int8;
-typedef int16_t int16;
-typedef int32_t int32;
-typedef int64_t int64;
-typedef int32 bool32;
+using int8 = int8_t;
+using int16 = int16_t;
+using int32 = int32_t;
+using int64 = int64_t;
+using bool32 = int32;
 
-typedef uint8_t uint8;
-typedef uint16_t uint16;
-typedef uint32_t uint32;
-typedef uint64_t uint64;
+using uint8 = uint8_t;
+using uint16 = uint16_t;
+using uint32 = uint32_t;
+using uint64 = uint64_t;
 
-typedef intptr_t intptr;
-typedef uintptr_t uintptr;
+using intptr = intptr_t;
+using uintptr = uintptr_t;
 
-typedef size_t memory_index;
+using memory_index = size_t;
 
-typedef uint8 byte;
-typedef uint64_t soul_size;
-
-#define SOUL_ARRAY_LEN(arr) (sizeof(arr) / sizeof(*(arr)))
-#define SOUL_BIT_COUNT(type) (sizeof(type) * 8)
+using byte = uint8;
+using soul_size = uint64_t;
 
 namespace soul {
+
+	constexpr soul_size ONE_KILOBYTE = 1024;
+	constexpr soul_size ONE_MEGABYTE = 1024 * ONE_KILOBYTE;
+	constexpr soul_size ONE_GIGABYTE = 1024 * ONE_MEGABYTE;
+
+	template <typename Val, typename Err>
+	using expected = tl::expected<Val, Err>;
+
+	template <class E>
+	tl::unexpected<typename std::decay<E>::type> make_unexpected(E&& e) {
+		return unexpected<typename std::decay<E>::type>(std::forward<E>(e));
+	}
 
 	template <typename T>
 	concept bit_block_type = std::unsigned_integral<T>;
@@ -44,74 +57,82 @@ namespace soul {
 		alignas(T) std::byte data[sizeof(T)];
 	};
 
-	template <arithmetic T>
-	struct Vec2 {
-		T x = 0;
-		T y = 0;
+	template <soul_size Dim, typename T>
+	using vec = glm::vec<Dim, T, glm::defaultp>;
 
-		Vec2() = default;
-		constexpr Vec2(T x, T y) noexcept : x(x), y(y) {}
+	template <typename T>
+	using vec2 = vec<2, T>;
+
+	template <typename T>
+	using vec3 = vec<3, T>;
+
+	template <typename T>
+	using vec4 = vec<4, T>;
+
+	using vec2f = vec2<float>;
+	using vec3f = vec3<float>;
+	using vec4f = vec4<float>;
+
+	using vec2d = vec2<double>;
+	using vec3d = vec3<double>;
+	using vec4d = vec4<double>;
+
+	using vec2i16 = vec2<int16>;
+	using vec3i16 = vec3<int16>;
+	using vec4i16 = vec4<int16>;
+
+	using vec2ui32 = vec2<uint32>;
+	using vec3ui32 = vec3<uint32>;
+	using vec4ui32 = vec4<uint32>;
+
+	using vec2i32 = vec2<int32>;
+	using vec3i32 = vec3<int32>;
+	using vec4i32 = vec4<int32>;
+
+	template <soul_size Row, soul_size Column, typename T>
+	struct matrix
+	{
+		using this_type = matrix < Column, Row, T>;
+		using store_type = glm::mat<Column, Row, T, glm::defaultp>;
+		store_type mat;
+
+		constexpr matrix() = default;
+		constexpr explicit matrix(T val) : mat(val) {}
+		constexpr explicit matrix(store_type mat) : mat(mat) {}
+
+		SOUL_ALWAYS_INLINE [[nodiscard]] float m(const uint8 row, const uint8 column) const
+		{
+			return mat[column][row];
+		}
+
+		SOUL_ALWAYS_INLINE float& m(const uint8 row, const uint8 column)
+		{
+			return mat[column][row];
+		}
+
+		static constexpr this_type identity()
+		{
+			return this_type(store_type(1));
+		}
+
+
 	};
 
-	template <arithmetic T>
-	struct Vec3 {
-		union {
-			struct { T x, y, z; };
-			Vec2<T> xy;
-			T mem[3];
-		};
+	template<typename T>
+	using matrix4x4 = matrix<4, 4, T>;
 
-		constexpr Vec3() noexcept : x(0), y(0), z(0) {}
-		constexpr Vec3(T val) noexcept : x(val), y(val), z(val) {}
-		constexpr Vec3(T x, T y, T z) noexcept : x(x), y(y), z(z) {}
-		constexpr explicit Vec3(const T* val) noexcept : x(val[0]), y(val[1]), z(val[2]) {}
-	};
-
-	template <arithmetic T>
-	struct Vec4 {
-		union {
-			struct { T x, y, z, w; };
-			Vec3<T> xyz;
-			Vec2<T> xy;
-			T mem[4];
-		};
-
-		constexpr Vec4() noexcept : x(0), y(0), z(0), w(0) {}
-		constexpr Vec4(T val) noexcept : x(val), y(val), z(val), w(val) {}
-		constexpr Vec4(T x, T y, T z, T w) noexcept : x(x), y(y), z(z), w(w) {}
-		constexpr Vec4(Vec3<T> xyz, T w) noexcept : x(xyz.x), y(xyz.y), z(xyz.z), w(w) {}
-		constexpr explicit Vec4(const T* val) noexcept : x(val[0]), y(val[1]), z(val[2]), w(val[3]) {}
-	};
-
-	using Vec2f = Vec2<float>;
-	using Vec3f = Vec3<float>;
-	using Vec4f = Vec4<float>;
-
-	using Vec2ui8 = Vec2<uint8>;
-	using Vec4ui8 = Vec4<uint8>;
-
-	using Vec2ui16 = Vec2<uint16>;
-	using Vec3ui16 = Vec3<uint16>;
-
-	using Vec4i16 = Vec4<int16>;
-
-	using Vec2ui32 = Vec2<uint32>;
-	using Vec3ui32 = Vec3<uint32>;
-	using Vec4ui32 = Vec4<uint32>;
-
-	using Vec2i32 = Vec2<int32>;
-	using Vec3i32 = Vec3<int32>;
-	using Vec4i32 = Vec4<int32>;
+	using mat3f = matrix<3, 3, float>;
+	using mat4f = matrix<4, 4, float>;
 
 	template <arithmetic T>
 	struct Quaternion {
 		union {
 			struct { T x, y, z, w; };
-			Vec4<T> xyzw;
-			Vec3<T> xyz;
-			Vec2<T> xy;
+			vec4<T> xyzw;
+			vec3<T> xyz;
+			vec2<T> xy;
 			struct {
-				Vec3<T> vector;
+				vec3<T> vector;
 				T real;
 			};
 			T mem[4];
@@ -119,90 +140,26 @@ namespace soul {
 
 		constexpr Quaternion() noexcept : x(0), y(0), z(0), w(1) {}
 		constexpr Quaternion(T x, T y, T z, T w) noexcept : x(x), y(y), z(z), w(w) {}
-		constexpr Quaternion(Vec3<T> xyz, T w) noexcept : x(xyz.x), y(xyz.y), z(xyz.z), w(w) {}
+		constexpr Quaternion(vec3<T> xyz, T w) noexcept : x(xyz.x), y(xyz.y), z(xyz.z), w(w) {}
 		constexpr explicit Quaternion(const T* val) noexcept : x(val[0]), y(val[1]), z(val[2]), w(val[3]) {}
 	};
 	using Quaternionf = Quaternion<float>;
 
 	struct Transformf {
-		Vec3f position;
-		Vec3f scale;
+		vec3f position;
+		vec3f scale;
 		Quaternionf rotation;
 	};
 
-	struct Mat4f {
-		union {
-			float elem[4][4] = {};
-			float mem[16];
-			Vec4f rows[4];
-		};
-		constexpr Mat4f() noexcept : mem() {}
-
-		Vec4f columns(soul_size idx) const { return Vec4f(elem[0][idx], elem[1][idx], elem[2][idx], elem[3][idx]); }
-	};
-
-	struct Mat3f {
-		union {
-			float elem[3][3] = {};
-			float mem[9];
-			Vec3f rows[3];
-		};
-		constexpr Mat3f() : mem() {}
-		constexpr explicit Mat3f(const Mat4f& srcMat) noexcept : mem {
-			srcMat.elem[0][0], srcMat.elem[0][1], srcMat.elem[0][2],
-			srcMat.elem[1][0], srcMat.elem[1][1], srcMat.elem[1][2],
-			srcMat.elem[2][0], srcMat.elem[2][1], srcMat.elem[2][2] } {}
-
-		Vec3f columns(soul_size idx) const { return Vec3f(elem[0][idx], elem[1][idx], elem[2][idx]); }
-	};
-
-	struct alignas(16) GLSLMat3f {
-		
-		static constexpr int FLOAT_COUNT = 12;
-		union {
-			float mem[FLOAT_COUNT] = {};
-			Vec4f col[3];
-		};
-		constexpr GLSLMat3f() noexcept {}
-
-		constexpr explicit GLSLMat3f(const Mat3f& mat) noexcept : mem{ 
-			mat.elem[0][0], mat.elem[1][0], mat.elem[2][0], 0.0f, 
-			mat.elem[0][1], mat.elem[1][1], mat.elem[2][1], 0.0f,
-			mat.elem[0][2], mat.elem[1][2], mat.elem[2][2], 0.0f}
-		{}
-	};
-
-	struct GLSLMat4f {
-		
-		static constexpr int FLOAT_COUNT = 16;
-		union {
-			float mem[FLOAT_COUNT] = {};
-			Vec4f col[4];
-		};
-        constexpr GLSLMat4f() : mem() {}
-
-		constexpr explicit GLSLMat4f(const Mat4f& mat) noexcept : mem{
-			mat.elem[0][0], mat.elem[1][0], mat.elem[2][0], mat.elem[3][0],
-			mat.elem[0][1], mat.elem[1][1], mat.elem[2][1], mat.elem[3][1],
-			mat.elem[0][2], mat.elem[1][2], mat.elem[2][2], mat.elem[3][2],
-			mat.elem[0][3], mat.elem[1][3], mat.elem[2][3], mat.elem[3][3] }
-		{}
-
-		GLSLMat4f& operator=(const Mat4f& mat) noexcept
-        {
-			*this = GLSLMat4f(mat);
-			return *this;
-        }
-	};
 
 	struct AABB {
-		Vec3f min = Vec3f(std::numeric_limits<float>::max());
-		Vec3f max = Vec3f(std::numeric_limits<float>::lowest());
+		vec3f min = vec3f(std::numeric_limits<float>::max());
+		vec3f max = vec3f(std::numeric_limits<float>::lowest());
 
 		AABB() = default;
-		AABB(const Vec3f& min, const Vec3f& max) noexcept : min{min}, max{max} {}
+		AABB(const vec3f& min, const vec3f& max) noexcept : min{min}, max{max} {}
 		bool isEmpty() const { return (min.x >= max.x || min.y >= max.y || min.z >= max.z); }
-		bool isInside(const Vec3f& point) const
+		bool isInside(const vec3f& point) const
 		{
 			return (point.x >= min.x && point.x <= max.x) && (point.y >= min.y && point.y <= max.y) && (point.z >= min.z && point.z <= max.z);
 		}
@@ -210,20 +167,20 @@ namespace soul {
 		struct Corners
 		{
 			static constexpr soul_size COUNT = 8;
-			Vec3f vertices[COUNT];
+			vec3f vertices[COUNT];
 		};
 
 		Corners getCorners() const
 		{
 			return {
-				Vec3f(min.x, min.y, min.z),
-				Vec3f(min.x, min.y, max.z),
-				Vec3f(min.x, max.y, min.z),
-				Vec3f(min.x, max.y, max.z),
-				Vec3f(max.x, min.y, min.z),
-				Vec3f(max.x, min.y, max.z),
-				Vec3f(max.x, max.y, min.z),
-				Vec3f(max.x, max.y, max.z)
+				vec3f(min.x, min.y, min.z),
+				vec3f(min.x, min.y, max.z),
+				vec3f(min.x, max.y, min.z),
+				vec3f(min.x, max.y, max.z),
+				vec3f(max.x, min.y, min.z),
+				vec3f(max.x, min.y, max.z),
+				vec3f(max.x, max.y, min.z),
+				vec3f(max.x, max.y, max.z)
 			};
 		}
 
@@ -295,7 +252,7 @@ namespace soul {
 		[[nodiscard]] bool is_null() const { return id == NullValue; }
 		[[nodiscard]] bool is_valid() const { return id != NullValue; }
 
-		static constexpr ID Null() {
+		static constexpr ID null() {
 			return ID(NullValue);
 		}
 	};

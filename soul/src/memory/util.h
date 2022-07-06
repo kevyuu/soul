@@ -1,13 +1,10 @@
 #pragma once
-
-#include "core/math.h"
-
+#include "core/type.h"
 namespace soul::memory::util
 {
 	[[nodiscard]] static soul_size pointer_page_size_round(const soul_size size, const soul_size page_size)
 	{
 		SOUL_ASSERT(0, page_size != 0, "");
-		SOUL_ASSERT(0, isPowerOfTwo(page_size), "");
 		return ((size + page_size) & ~(page_size - 1));
 	}
 

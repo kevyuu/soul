@@ -40,9 +40,9 @@ namespace soul::gpu::impl
 	}
 
 	using ShaderBufferWriteMap = FlagMap<ShaderBufferWriteUsage, BufferUsageFlags>;
-	auto SHADER_BUFFER_WRITE_USAGE_MAP = ShaderBufferWriteMap::build_from_list(
-{
-		{ BufferUsage::STORAGE }
+	auto SHADER_BUFFER_WRITE_USAGE_MAP = ShaderBufferWriteMap::build_from_list({
+        { BufferUsage::UNIFORM },
+        { BufferUsage::STORAGE }
 	});
 	constexpr BufferUsageFlags get_buffer_usage_flags(ShaderBufferWriteUsage usage)
 	{
@@ -71,12 +71,12 @@ namespace soul::gpu::impl
 	void update_buffer_info(const QueueType queue_type, const BufferUsageFlags usage_flags,
 	                        const PassNodeID pass_id, BufferExecInfo* buffer_info) {
 
-		buffer_info->usageFlags |= usage_flags;
-		buffer_info->queueFlags |= { queue_type };
-		if (buffer_info->firstPass.is_null()) {
-			buffer_info->firstPass = pass_id;
+		buffer_info->usage_flags |= usage_flags;
+		buffer_info->queue_flags |= { queue_type };
+		if (buffer_info->first_pass.is_null()) {
+			buffer_info->first_pass = pass_id;
 		}
-		buffer_info->lastPass = pass_id;
+		buffer_info->last_pass = pass_id;
 		buffer_info->passes.push_back(pass_id);
 	};
 	
@@ -85,12 +85,12 @@ namespace soul::gpu::impl
 	                         const PassNodeID pass_id, const SubresourceIndexRange view_index_range, TextureExecInfo* texture_info)
 	{
 
-		texture_info->usageFlags |= usage_flags;
-		texture_info->queueFlags |= { queue_type };
-		if (texture_info->firstPass.is_null()) { 
-			texture_info->firstPass = pass_id;
+		texture_info->usage_flags |= usage_flags;
+		texture_info->queue_flags |= { queue_type };
+		if (texture_info->first_pass.is_null()) { 
+			texture_info->first_pass = pass_id;
 		}
-		texture_info->lastPass = pass_id;
+		texture_info->last_pass = pass_id;
 
 		std::ranges::for_each(view_index_range, [pass_id, texture_info](SubresourceIndex view_index)
 		{
@@ -132,7 +132,7 @@ namespace soul::gpu::impl
 		{
 			TextureExecInfo& texture_info = internal_texture_infos_[texture_info_idx];
 			texture_info.view = texture_view_infos_.data() + view_offset;
-			texture_info.mipLevels = internal_textures[texture_info_idx].mip_levels;
+			texture_info.mip_levels = internal_textures[texture_info_idx].mip_levels;
 			texture_info.layers = internal_textures[texture_info_idx].layer_count;
 			view_offset += texture_info.get_view_count();
 		}
@@ -142,7 +142,7 @@ namespace soul::gpu::impl
 			TextureExecInfo& texture_info = external_texture_infos_[texture_info_idx];
 			texture_info.view = texture_view_infos_.data() + view_offset;
 			const TextureDesc& desc = gpu_system_->get_texture(external_textures[texture_info_idx].texture_id).desc;
-			texture_info.mipLevels = desc.mip_levels;
+			texture_info.mip_levels = desc.mip_levels;
 			texture_info.layers = desc.layer_count;
 			view_offset += texture_info.get_view_count();
 		}
@@ -176,16 +176,16 @@ namespace soul::gpu::impl
 
 					uint32 buffer_info_id = get_buffer_info_index(node_id);
 
-					pass_info.bufferInvalidates.push_back({
-						.stageFlags = VK_PIPELINE_STAGE_VERTEX_INPUT_BIT,
-						.accessFlags = VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT,
-						.bufferInfoIdx = buffer_info_id
+					pass_info.buffer_invalidates.push_back({
+						.stage_flags = VK_PIPELINE_STAGE_VERTEX_INPUT_BIT,
+						.access_flags = VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT,
+						.buffer_info_idx = buffer_info_id
 					});
 
-					pass_info.bufferInvalidates.push_back({
-						.stageFlags = VK_PIPELINE_STAGE_VERTEX_INPUT_BIT,
-						.accessFlags = 0,
-						.bufferInfoIdx = buffer_info_id
+					pass_info.buffer_invalidates.push_back({
+						.stage_flags = VK_PIPELINE_STAGE_VERTEX_INPUT_BIT,
+						.access_flags = 0,
+						.buffer_info_idx = buffer_info_id
 					});
 
 					update_buffer_info(QueueType::GRAPHIC, { BufferUsage::VERTEX }, pass_node_id, &buffer_infos_[buffer_info_id]);
@@ -194,19 +194,19 @@ namespace soul::gpu::impl
 				for (const BufferNodeID node_id : graphic_node->get_index_buffers()) {
 					SOUL_ASSERT(0, node_id.is_valid(), "");
 
-					uint32 buffer_info_id = get_buffer_info_index(node_id);
+					const auto buffer_info_id = get_buffer_info_index(node_id);
 
-					pass_info.bufferInvalidates.add(BufferBarrier());
-					BufferBarrier& invalidate_barrier = pass_info.bufferInvalidates.back();
-					invalidate_barrier.stageFlags = VK_PIPELINE_STAGE_VERTEX_INPUT_BIT;
-					invalidate_barrier.accessFlags = VK_ACCESS_INDEX_READ_BIT;
-					invalidate_barrier.bufferInfoIdx = buffer_info_id;
+					pass_info.buffer_invalidates.add(BufferBarrier());
+					BufferBarrier& invalidate_barrier = pass_info.buffer_invalidates.back();
+					invalidate_barrier.stage_flags = VK_PIPELINE_STAGE_VERTEX_INPUT_BIT;
+					invalidate_barrier.access_flags = VK_ACCESS_INDEX_READ_BIT;
+					invalidate_barrier.buffer_info_idx = buffer_info_id;
 
-					pass_info.bufferFlushes.add(BufferBarrier());
-					BufferBarrier& flush_barrier = pass_info.bufferFlushes.back();
-					flush_barrier.stageFlags = VK_PIPELINE_STAGE_VERTEX_INPUT_BIT;
-					flush_barrier.accessFlags = 0;
-					flush_barrier.bufferInfoIdx = buffer_info_id;
+					pass_info.buffer_flushes.add(BufferBarrier());
+					BufferBarrier& flush_barrier = pass_info.buffer_flushes.back();
+					flush_barrier.stage_flags = VK_PIPELINE_STAGE_VERTEX_INPUT_BIT;
+					flush_barrier.access_flags = 0;
+					flush_barrier.buffer_info_idx = buffer_info_id;
 
 					update_buffer_info(QueueType::GRAPHIC, { BufferUsage::INDEX }, pass_node_id, &buffer_infos_[buffer_info_id]);
 				}
@@ -217,23 +217,23 @@ namespace soul::gpu::impl
 				for (const ColorAttachment& color_attachment : colorAttachments) {
 					SOUL_ASSERT(0, color_attachment.out_node_id.is_valid(), "");
 
-					uint32 texture_info_id = get_texture_info_index(color_attachment.out_node_id);
+					const auto texture_info_id = get_texture_info_index(color_attachment.out_node_id);
 					update_texture_info(QueueType::GRAPHIC, { TextureUsage::COLOR_ATTACHMENT },
 						pass_node_id, { color_attachment.desc.view, 1, 1 }, & texture_infos_[texture_info_id]);
 
-					pass_info.textureInvalidates.push_back({
-						.stageFlags = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-						.accessFlags = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+					pass_info.texture_invalidates.push_back({
+						.stage_flags = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+						.access_flags = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
 						.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-						.textureInfoIdx = texture_info_id,
+						.texture_info_idx = texture_info_id,
 						.view =color_attachment.desc.view
 					});
 
-					pass_info.textureFlushes.push_back({
-						.stageFlags = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-						.accessFlags = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+					pass_info.texture_flushes.push_back({
+						.stage_flags = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+						.access_flags = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
 						.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-						.textureInfoIdx = texture_info_id,
+						.texture_info_idx = texture_info_id,
 						.view = color_attachment.desc.view
 					});
 
@@ -241,69 +241,48 @@ namespace soul::gpu::impl
 
 				for (const ResolveAttachment& resolve_attachment : resolveAttachments)
 				{
-					uint32 texture_info_id = get_texture_info_index(resolve_attachment.out_node_id);
+					const auto texture_info_id = get_texture_info_index(resolve_attachment.out_node_id);
 					update_texture_info(QueueType::GRAPHIC, { TextureUsage::COLOR_ATTACHMENT },
 						pass_node_id, { resolve_attachment.desc.view, 1, 1 }, & texture_infos_[texture_info_id]);
 
-					pass_info.textureInvalidates.push_back({
-						.stageFlags = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-						.accessFlags = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+					pass_info.texture_invalidates.push_back({
+						.stage_flags = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+						.access_flags = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
 						.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-						.textureInfoIdx = texture_info_id,
+						.texture_info_idx = texture_info_id,
 						.view = resolve_attachment.desc.view
 					});
 
-					pass_info.textureFlushes.push_back({
-						.stageFlags = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-						.accessFlags = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+					pass_info.texture_flushes.push_back({
+						.stage_flags = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+						.access_flags = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
 						.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-						.textureInfoIdx = texture_info_id,
+						.texture_info_idx = texture_info_id,
 						.view = resolve_attachment.desc.view
 					});
 
 				}
 
-				/* for (const InputAttachment& inputAttachment : graphic_node->inputAttachments) {
-
-					uint32 textureInfoID = get_texture_info_index(inputAttachment.nodeID);
-					updateTextureInfo(&textureInfos[textureInfoID], QueueType::GRAPHIC,
-						{ TextureUsage::INPUT_ATTACHMENT }, pass_node_id);
-
-					TextureBarrier invalidateBarrier;
-					invalidateBarrier.stageFlags = vkCastShaderStageToPipelineStageFlags(inputAttachment.stageFlags);
-					invalidateBarrier.accessFlags = VK_ACCESS_INPUT_ATTACHMENT_READ_BIT;
-					invalidateBarrier.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-					invalidateBarrier.textureInfoIdx = textureInfoID;
-					pass_info.textureInvalidates.add(invalidateBarrier);
-
-					TextureBarrier flushBarrier;
-					flushBarrier.stageFlags = vkCastShaderStageToPipelineStageFlags(inputAttachment.stageFlags);
-					flushBarrier.accessFlags = 0;
-					flushBarrier.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-					flushBarrier.textureInfoIdx = textureInfoID;
-					pass_info.textureFlushes.add(flushBarrier);
-				}*/
-
 				if (depthStencilAttachment.out_node_id.is_valid()) {
-					uint32 resource_info_index = get_texture_info_index(depthStencilAttachment.out_node_id);
+					const auto resource_info_index = get_texture_info_index(depthStencilAttachment.out_node_id);
 
-					uint32 texture_info_id = get_texture_info_index(depthStencilAttachment.out_node_id);
+					const auto texture_info_id = get_texture_info_index(depthStencilAttachment.out_node_id);
 					update_texture_info(QueueType::GRAPHIC, { TextureUsage::DEPTH_STENCIL_ATTACHMENT },
 						pass_node_id, { depthStencilAttachment.desc.view, 1, 1 }, & texture_infos_[texture_info_id]);
 
-					pass_info.textureInvalidates.push_back({
-						.stageFlags = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT,
-						.accessFlags = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
+					pass_info.texture_invalidates.push_back({
+						.stage_flags = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT,
+						.access_flags = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
 						.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
-						.textureInfoIdx = resource_info_index,
+						.texture_info_idx = resource_info_index,
 						.view = depthStencilAttachment.desc.view
 					});
 
-					pass_info.textureFlushes.push_back({
-						.stageFlags = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT,
-						.accessFlags = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
+					pass_info.texture_flushes.push_back({
+						.stage_flags = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT,
+						.access_flags = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
 						.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
-						.textureInfoIdx = resource_info_index,
+						.texture_info_idx = resource_info_index,
 						.view = depthStencilAttachment.desc.view
 					});
 				}
@@ -312,100 +291,100 @@ namespace soul::gpu::impl
 			}
 			case PassType::TRANSFER:
 			{
-				const auto copy_node = soul::downcast<const CopyBaseNode*>(&pass_node);
+				const auto copy_node = soul::downcast<const TransferBaseNode*>(&pass_node);
 				for (const auto& source_buffer : copy_node->get_source_buffers())
 				{
-					const uint32 resource_info_index = get_buffer_info_index(source_buffer.node_id);
+					const auto resource_info_index = get_buffer_info_index(source_buffer.node_id);
 					update_buffer_info(QueueType::TRANSFER, { BufferUsage::TRANSFER_SRC }, pass_node_id, &buffer_infos_[resource_info_index]);
 
-					pass_info.bufferInvalidates.push_back({
-						.stageFlags = VK_PIPELINE_STAGE_TRANSFER_BIT,
-						.accessFlags = VK_ACCESS_TRANSFER_READ_BIT,
-						.bufferInfoIdx = resource_info_index
+					pass_info.buffer_invalidates.push_back({
+						.stage_flags = VK_PIPELINE_STAGE_TRANSFER_BIT,
+						.access_flags = VK_ACCESS_TRANSFER_READ_BIT,
+						.buffer_info_idx = resource_info_index
 					});
 
-					pass_info.bufferFlushes.push_back({
-						.stageFlags = VK_PIPELINE_STAGE_TRANSFER_BIT,
-						.accessFlags = 0,
-						.bufferInfoIdx = resource_info_index
+					pass_info.buffer_flushes.push_back({
+						.stage_flags = VK_PIPELINE_STAGE_TRANSFER_BIT,
+						.access_flags = 0,
+						.buffer_info_idx = resource_info_index
 					});
 				}
 
 				for (const auto& dst_buffer : copy_node->get_destination_buffers())
 				{
-					const uint32 resource_info_index = get_buffer_info_index(dst_buffer.output_node_id);
+					const auto resource_info_index = get_buffer_info_index(dst_buffer.output_node_id);
 					update_buffer_info(QueueType::TRANSFER, { BufferUsage::TRANSFER_DST }, pass_node_id, &buffer_infos_[resource_info_index]);
 
-					pass_info.bufferInvalidates.push_back({
-						.stageFlags = VK_PIPELINE_STAGE_TRANSFER_BIT,
-						.accessFlags = VK_ACCESS_TRANSFER_WRITE_BIT,
-						.bufferInfoIdx = resource_info_index
+					pass_info.buffer_invalidates.push_back({
+						.stage_flags = VK_PIPELINE_STAGE_TRANSFER_BIT,
+						.access_flags = VK_ACCESS_TRANSFER_WRITE_BIT,
+						.buffer_info_idx = resource_info_index
 					});
 
-					pass_info.bufferFlushes.push_back({
-						.stageFlags = VK_PIPELINE_STAGE_TRANSFER_BIT,
-						.accessFlags = VK_ACCESS_TRANSFER_WRITE_BIT,
-						.bufferInfoIdx = resource_info_index
+					pass_info.buffer_flushes.push_back({
+						.stage_flags = VK_PIPELINE_STAGE_TRANSFER_BIT,
+						.access_flags = VK_ACCESS_TRANSFER_WRITE_BIT,
+						.buffer_info_idx = resource_info_index
 					});
 				}
 
 				for(const auto& src_texture : copy_node->get_source_textures())
 				{
-					const uint32 resource_info_index = get_texture_info_index(src_texture.node_id);
+					const auto resource_info_index = get_texture_info_index(src_texture.node_id);
 					update_texture_info(QueueType::TRANSFER, { TextureUsage::TRANSFER_SRC }, pass_node_id, src_texture.view_range, &texture_infos_[resource_info_index]);
 
 					auto generate_invalidate_barrier = [resource_info_index](SubresourceIndex view_index) -> TextureBarrier
 					{
 						return {
-							.stageFlags = VK_PIPELINE_STAGE_TRANSFER_BIT,
-							.accessFlags = VK_ACCESS_TRANSFER_READ_BIT,
+							.stage_flags = VK_PIPELINE_STAGE_TRANSFER_BIT,
+							.access_flags = VK_ACCESS_TRANSFER_READ_BIT,
 							.layout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-							.textureInfoIdx = resource_info_index,
+							.texture_info_idx = resource_info_index,
 							.view = view_index
 						};
 					};
-					std::ranges::transform(src_texture.view_range, std::back_inserter(pass_info.textureInvalidates), generate_invalidate_barrier);
+					std::ranges::transform(src_texture.view_range, std::back_inserter(pass_info.texture_invalidates), generate_invalidate_barrier);
 
 					auto generate_flush_barrier = [resource_info_index](SubresourceIndex view_index) -> TextureBarrier
 					{
 						return {
-							.stageFlags = VK_PIPELINE_STAGE_TRANSFER_BIT,
-							.accessFlags = 0,
+							.stage_flags = VK_PIPELINE_STAGE_TRANSFER_BIT,
+							.access_flags = 0,
 							.layout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-							.textureInfoIdx = resource_info_index,
+							.texture_info_idx = resource_info_index,
 							.view = view_index
 						};
 					};
-					std::ranges::transform(src_texture.view_range, std::back_inserter(pass_info.textureFlushes), generate_flush_barrier);
+					std::ranges::transform(src_texture.view_range, std::back_inserter(pass_info.texture_flushes), generate_flush_barrier);
 
 				}
 
 				for (const auto& dst_texture : copy_node->get_destination_textures())
 				{
-					const uint32 resource_info_index = get_texture_info_index(dst_texture.output_node_id);
+					const auto resource_info_index = get_texture_info_index(dst_texture.output_node_id);
 					update_texture_info(QueueType::TRANSFER, { TextureUsage::TRANSFER_DST }, pass_node_id, dst_texture.view_range, &texture_infos_[resource_info_index]);
 
 					auto generate_invalidate_barrier = [resource_info_index](SubresourceIndex view_index) -> TextureBarrier
 					{
 						return {
-							.stageFlags = VK_PIPELINE_STAGE_TRANSFER_BIT,
-							.accessFlags = VK_ACCESS_TRANSFER_WRITE_BIT,
+							.stage_flags = VK_PIPELINE_STAGE_TRANSFER_BIT,
+							.access_flags = VK_ACCESS_TRANSFER_WRITE_BIT,
 							.layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-							.textureInfoIdx = resource_info_index
+							.texture_info_idx = resource_info_index
 						};
 					};
-					std::ranges::transform(dst_texture.view_range, std::back_inserter(pass_info.textureInvalidates), generate_invalidate_barrier);
+					std::ranges::transform(dst_texture.view_range, std::back_inserter(pass_info.texture_invalidates), generate_invalidate_barrier);
 
 					auto generate_flush_barrier = [resource_info_index](SubresourceIndex view_index) -> TextureBarrier
 					{
 						return {
-							.stageFlags = VK_PIPELINE_STAGE_TRANSFER_BIT,
-							.accessFlags = VK_ACCESS_TRANSFER_WRITE_BIT,
+							.stage_flags = VK_PIPELINE_STAGE_TRANSFER_BIT,
+							.access_flags = VK_ACCESS_TRANSFER_WRITE_BIT,
 							.layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-							.textureInfoIdx = resource_info_index
+							.texture_info_idx = resource_info_index
 						};
 					};
-					std::ranges::transform(dst_texture.view_range, std::back_inserter(pass_info.textureFlushes), generate_flush_barrier);
+					std::ranges::transform(dst_texture.view_range, std::back_inserter(pass_info.texture_flushes), generate_flush_barrier);
 				}
 				break;
 			}
@@ -421,7 +400,7 @@ namespace soul::gpu::impl
 
 		for (auto src_pass_type : FlagIter<PassType>()) {
 			for (auto dst_pass_type : FlagIter<PassType>()) {
-				external_semaphores_[src_pass_type][dst_pass_type] = SemaphoreID::Null();
+				external_semaphores_[src_pass_type][dst_pass_type] = SemaphoreID::null();
 			}
 		}
 
@@ -429,12 +408,10 @@ namespace soul::gpu::impl
 			const RGInternalBuffer& rg_buffer = render_graph_->get_internal_buffers()[i];
 			BufferExecInfo& buffer_info = buffer_infos_[i];
 
-			buffer_info.bufferID = gpu_system_->create_buffer({
-				.count = rg_buffer.count,
-				.type_size = rg_buffer.type_size,
-				.type_alignment = rg_buffer.type_alignment,
-				.usage_flags = buffer_info.usageFlags,
-				.queue_flags = buffer_info.queueFlags
+			buffer_info.buffer_id = gpu_system_->create_transient_buffer({
+				.size = rg_buffer.size,
+				.usage_flags = buffer_info.usage_flags,
+				.queue_flags = buffer_info.queue_flags
 			});
 		}
 
@@ -442,31 +419,31 @@ namespace soul::gpu::impl
 			BufferExecInfo& buffer_info = external_buffer_infos_[i];
 			if (buffer_info.passes.empty()) continue;
 
-			buffer_info.bufferID = render_graph_->get_external_buffers()[i].buffer_id;
+			buffer_info.buffer_id = render_graph_->get_external_buffers()[i].buffer_id;
 
 			PassType first_pass_type = render_graph_->get_pass_nodes()[buffer_info.passes[0].id]->get_type();
-			ResourceOwner owner = gpu_system_->get_buffer_ptr(buffer_info.bufferID)->owner;
+			ResourceOwner owner = gpu_system_->get_buffer(buffer_info.buffer_id).owner;
 			PassType external_pass_type = RESOURCE_OWNER_TO_PASS_TYPE_MAP[owner];
 			SOUL_ASSERT(0, owner != ResourceOwner::PRESENTATION_ENGINE, "");
 			if (external_pass_type == first_pass_type) {
 				VkEvent& external_event = external_events_[first_pass_type];
-				if (external_event == VK_NULL_HANDLE) {
+				if (external_event == VK_NULL_HANDLE && external_pass_type != PassType::TRANSFER) {
 					external_event = gpu_system_->create_event();
 				}
-				buffer_info.pendingEvent = external_event;
-				buffer_info.pendingSemaphore = SemaphoreID::Null();
-				buffer_info.unsyncWriteStage = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
-				buffer_info.unsyncWriteAccess = VK_ACCESS_MEMORY_WRITE_BIT;
-			} else {
-				SemaphoreID& externalSemaphore = external_semaphores_[external_pass_type][first_pass_type];
-				if (externalSemaphore == SemaphoreID::Null()) {
-					externalSemaphore = gpu_system_->create_semaphore();
+			    buffer_info.pending_event = external_event;
+				buffer_info.pending_semaphore = SemaphoreID::null();
+				buffer_info.unsync_write_stage = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
+				buffer_info.unsync_write_access = VK_ACCESS_MEMORY_WRITE_BIT;
+			} else if (owner != ResourceOwner::NONE) {
+				SemaphoreID& external_semaphore = external_semaphores_[external_pass_type][first_pass_type];
+				if (external_semaphore == SemaphoreID::null()) {
+					external_semaphore = gpu_system_->create_semaphore();
 				}
 
-				buffer_info.pendingEvent = VK_NULL_HANDLE;
-				buffer_info.pendingSemaphore = externalSemaphore;
-				buffer_info.unsyncWriteStage = 0;
-				buffer_info.unsyncWriteAccess = 0;
+				buffer_info.pending_event = VK_NULL_HANDLE;
+				buffer_info.pending_semaphore = external_semaphore;
+				buffer_info.unsync_write_stage = 0;
+				buffer_info.unsync_write_access = 0;
 			}
 
 		}
@@ -475,7 +452,7 @@ namespace soul::gpu::impl
 			const RGInternalTexture& rg_texture = render_graph_->get_internal_textures()[i];
 			TextureExecInfo& texture_info = texture_infos_[i];
 
-			if (texture_info.queueFlags.none()) continue;
+			if (texture_info.queue_flags.none()) continue;
 
 			TextureDesc desc = {
 				.type = rg_texture.type,
@@ -483,16 +460,15 @@ namespace soul::gpu::impl
 				.extent = rg_texture.extent,
 				.mip_levels = rg_texture.mip_levels,
 				.sample_count = rg_texture.sample_count,
-				.usage_flags = texture_info.usageFlags,
-				.queue_flags = texture_info.queueFlags,
+				.usage_flags = texture_info.usage_flags,
+				.queue_flags = texture_info.queue_flags,
 				.name = rg_texture.name
 			};
 			if (!rg_texture.clear) {
-				texture_info.textureID = gpu_system_->create_texture(desc);
+				texture_info.texture_id = gpu_system_->create_texture(desc);
 			} else {
 				desc.usage_flags |= { TextureUsage::SAMPLED };
-				texture_info.textureID = gpu_system_->create_texture(desc, rg_texture.clear_value);
-				
+				texture_info.texture_id = gpu_system_->create_texture(desc, rg_texture.clear_value);
 				std::for_each(texture_info.view, texture_info.view + texture_info.get_view_count(), [this](TextureViewExecInfo& view_info)
 				{
 					if (view_info.passes.empty()) return;
@@ -500,24 +476,25 @@ namespace soul::gpu::impl
 					if (first_pass_type == PassType::GRAPHIC)
 					{
 						auto& external_event = external_events_[PassType::GRAPHIC];
+						
 						if (external_event == VK_NULL_HANDLE) {
 							external_event = gpu_system_->create_event();
 						}
-						view_info.pendingEvent = external_event;
-						view_info.pendingSemaphore = SemaphoreID::Null();
-						view_info.unsyncWriteStage = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
-						view_info.unsyncWriteAccess = VK_ACCESS_MEMORY_WRITE_BIT;
+						view_info.pending_event = external_event;
+						view_info.pending_semaphore = SemaphoreID::null();
+						view_info.unsync_write_stage = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
+						view_info.unsync_write_access = VK_ACCESS_MEMORY_WRITE_BIT;
 					}
 					else
 					{
-						SemaphoreID& externalSemaphoreID = external_semaphores_[PassType::GRAPHIC][first_pass_type];
-						if (externalSemaphoreID == SemaphoreID::Null()) {
-							externalSemaphoreID = gpu_system_->create_semaphore();
+						SemaphoreID& external_semaphore_id = external_semaphores_[PassType::GRAPHIC][first_pass_type];
+						if (external_semaphore_id == SemaphoreID::null()) {
+							external_semaphore_id = gpu_system_->create_semaphore();
 						}
-						view_info.pendingEvent = VK_NULL_HANDLE;
-						view_info.pendingSemaphore = externalSemaphoreID;
-						view_info.unsyncWriteStage = 0;
-						view_info.unsyncWriteAccess = 0;
+						view_info.pending_event = VK_NULL_HANDLE;
+						view_info.pending_semaphore = external_semaphore_id;
+						view_info.unsync_write_stage = 0;
+						view_info.unsync_write_access = 0;
 					}
 				});
 			}
@@ -525,9 +502,9 @@ namespace soul::gpu::impl
 
 		for (soul_size i = 0; i < external_texture_infos_.size(); i++) {
 			TextureExecInfo& texture_info = external_texture_infos_[i];
-			texture_info.textureID = render_graph_->get_external_textures()[i].texture_id;
+			texture_info.texture_id = render_graph_->get_external_textures()[i].texture_id;
 
-			const ResourceOwner owner = gpu_system_->get_texture_ptr(texture_info.textureID)->owner;
+			const ResourceOwner owner = gpu_system_->get_texture_ptr(texture_info.texture_id)->owner;
 			const PassType external_pass_type = RESOURCE_OWNER_TO_PASS_TYPE_MAP[owner];
 
 			std::for_each(texture_info.view, texture_info.view + texture_info.get_view_count(), [this, owner, external_pass_type](TextureViewExecInfo& view_info)
@@ -536,34 +513,34 @@ namespace soul::gpu::impl
 				{
 					const PassType first_pass_type = render_graph_->get_pass_nodes()[view_info.passes[0].id]->get_type();
 					if (first_pass_type == PassType::NONE) {
-						view_info.pendingEvent = VK_NULL_HANDLE;
-						view_info.pendingSemaphore = SemaphoreID::Null();
+						view_info.pending_event = VK_NULL_HANDLE;
+						view_info.pending_semaphore = SemaphoreID::null();
 					}
 					else if (owner == ResourceOwner::PRESENTATION_ENGINE) {
-						view_info.pendingEvent = VK_NULL_HANDLE;
-						view_info.pendingSemaphore = gpu_system_->get_frame_context().image_available_semaphore;
-						view_info.unsyncWriteStage = 0;
-						view_info.unsyncWriteAccess = 0;
+						view_info.pending_event = VK_NULL_HANDLE;
+						view_info.pending_semaphore = gpu_system_->get_frame_context().image_available_semaphore;
+						view_info.unsync_write_stage = 0;
+						view_info.unsync_write_access = 0;
 					}
 					else if (external_pass_type == first_pass_type) {
-						VkEvent& externalEvent = external_events_[first_pass_type];
-						if (externalEvent == VK_NULL_HANDLE) {
-							externalEvent = gpu_system_->create_event();
+						VkEvent& external_event = external_events_[first_pass_type];
+						if (external_event == VK_NULL_HANDLE && external_pass_type != PassType::TRANSFER) {
+							external_event = gpu_system_->create_event();
 						}
-						view_info.pendingEvent = externalEvent;
-						view_info.pendingSemaphore = SemaphoreID::Null();
-						view_info.unsyncWriteStage = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
-						view_info.unsyncWriteAccess = VK_ACCESS_MEMORY_WRITE_BIT;
+						view_info.pending_event = external_event;
+						view_info.pending_semaphore = SemaphoreID::null();
+						view_info.unsync_write_stage = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
+						view_info.unsync_write_access = VK_ACCESS_MEMORY_WRITE_BIT;
 					}
 					else if (owner != ResourceOwner::NONE) {
 						SemaphoreID& external_semaphore_id = external_semaphores_[external_pass_type][first_pass_type];
-						if (external_semaphore_id == SemaphoreID::Null()) {
+						if (external_semaphore_id == SemaphoreID::null()) {
 							external_semaphore_id = gpu_system_->create_semaphore();
 						}
-						view_info.pendingEvent = VK_NULL_HANDLE;
-						view_info.pendingSemaphore = external_semaphore_id;
-						view_info.unsyncWriteStage = 0;
-						view_info.unsyncWriteAccess = 0;
+						view_info.pending_event = VK_NULL_HANDLE;
+						view_info.pending_semaphore = external_semaphore_id;
+						view_info.unsync_write_stage = 0;
+						view_info.unsync_write_access = 0;
 					}
 				}
 			});
@@ -572,7 +549,7 @@ namespace soul::gpu::impl
 
 		std::ranges::for_each(texture_infos_, [this](const TextureExecInfo& texture_info)
 		{
-			const Texture& texture = gpu_system_->get_texture(texture_info.textureID);
+			const Texture& texture = gpu_system_->get_texture(texture_info.texture_id);
 			std::for_each(texture_info.view, texture_info.view + texture_info.get_view_count(), [layout = texture.layout](TextureViewExecInfo& view_info)
 			{
 				view_info.layout = layout;
@@ -592,13 +569,13 @@ namespace soul::gpu::impl
 		{
             const uint32 texture_info_idx = get_texture_info_index(attachment.out_node_id);
 			const TextureExecInfo& texture_info = texture_infos_[texture_info_idx];
-			const Texture& texture = *gpu_system_->get_texture_ptr(texture_info.textureID);
+			const Texture& texture = *gpu_system_->get_texture_ptr(texture_info.texture_id);
 
 			Attachment render_pass_attachment = {};
 			render_pass_attachment.format = texture.desc.format;
 			render_pass_attachment.sampleCount = texture.desc.sample_count;
-			if (texture_info.firstPass.id == pass_index) render_pass_attachment.flags |= ATTACHMENT_FIRST_PASS_BIT;
-			if (texture_info.lastPass.id == pass_index) render_pass_attachment.flags |= ATTACHMENT_LAST_PASS_BIT;
+			if (texture_info.first_pass.id == pass_index) render_pass_attachment.flags |= ATTACHMENT_FIRST_PASS_BIT;
+			if (texture_info.last_pass.id == pass_index) render_pass_attachment.flags |= ATTACHMENT_LAST_PASS_BIT;
 			if (attachment.desc.clear) render_pass_attachment.flags |= ATTACHMENT_CLEAR_BIT;
 			if (is_external(texture_info)) render_pass_attachment.flags |= ATTACHMENT_EXTERNAL_BIT;
 			render_pass_attachment.flags |= ATTACHMENT_ACTIVE_BIT;
@@ -657,14 +634,14 @@ namespace soul::gpu::impl
 		} */
 
 		if (render_target.depth_stencil_attachment.out_node_id.is_valid()) {
-			uint32 info_idx = get_texture_info_index(render_target.depth_stencil_attachment.out_node_id);
+			const auto info_idx = get_texture_info_index(render_target.depth_stencil_attachment.out_node_id);
 			const TextureExecInfo& texture_info = texture_infos_[info_idx];
-			auto depth_attachment_desc = render_target.depth_stencil_attachment.desc;
+			const auto depth_attachment_desc = render_target.depth_stencil_attachment.desc;
 
-			image_views[image_view_count++] = gpu_system_->get_texture_view(texture_info.textureID, depth_attachment_desc.view).vk_handle;
+			image_views[image_view_count++] = gpu_system_->get_texture_view(texture_info.texture_id, depth_attachment_desc.view).vk_handle;
 		}
 
-		VkFramebufferCreateInfo framebuffer_info = {
+		const VkFramebufferCreateInfo framebuffer_info = {
 			.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
 			.renderPass = render_pass,
 			.attachmentCount = image_view_count,
@@ -701,10 +678,12 @@ namespace soul::gpu::impl
 		// Sync events
 		for(const auto pass_type : FlagIter<PassType>()) {
 			if (external_events_[pass_type] != VK_NULL_HANDLE && pass_type != PassType::NONE) {
-                const auto queue_type = PASS_TYPE_TO_QUEUE_TYPE_MAP[pass_type];
-                const auto syncEventCmdBuffer = command_pools_.requestCommandBuffer(queue_type);
-				vkCmdSetEvent(syncEventCmdBuffer, external_events_[pass_type], VK_PIPELINE_STAGE_ALL_COMMANDS_BIT);
-				command_queues_[queue_type].submit(syncEventCmdBuffer);
+				const auto queue_type = PASS_TYPE_TO_QUEUE_TYPE_MAP[pass_type];
+			    
+				const auto sync_event_command_buffer = command_pools_.request_command_buffer(queue_type).get_vk_handle();
+				vkCmdSetEvent(sync_event_command_buffer, external_events_[pass_type], VK_PIPELINE_STAGE_ALL_COMMANDS_BIT);
+				command_queues_[queue_type].submit(sync_event_command_buffer);
+				
 			}
 		}
 
@@ -712,26 +691,28 @@ namespace soul::gpu::impl
 
 	void RenderGraphExecution::execute_pass(const uint32 pass_index, VkCommandBuffer command_buffer) {
 		SOUL_PROFILE_ZONE();
-		PassNode* passNode = render_graph_->get_pass_nodes()[pass_index];
+		PassNode* pass_node = render_graph_->get_pass_nodes()[pass_index];
 		// Run render pass here
-		switch(passNode->get_type()) {
+		switch(pass_node->get_type()) {
 		case PassType::NONE:
-			SOUL_PANIC(0, "Pass Type is unknown!");
+			SOUL_PANIC("Pass Type is unknown!");
 			break;
 		case PassType::TRANSFER: {
 
-			auto copy_node = soul::downcast<CopyBaseNode*>(passNode);
+			auto copy_node = soul::downcast<TransferBaseNode*>(pass_node);
 			RenderCompiler render_compiler(*gpu_system_, command_buffer);
-			CopyCommandList command_list(render_compiler);
+			TransferCommandList command_list(render_compiler);
 			RenderGraphRegistry registry(gpu_system_, this);
 			copy_node->execute_pass(registry, command_list);
 
 			break;
 		}
 		case PassType::COMPUTE: {
-			auto compute_node = soul::downcast<ComputeBaseNode*>(passNode);
+			auto compute_node = soul::downcast<ComputeBaseNode*>(pass_node);
 			RenderCompiler render_compiler(*gpu_system_, command_buffer);
-			ComputeCommandList command_list(render_compiler);
+			ComputeCommandList command_list(
+				impl::PrimaryCommandBuffer(command_buffer), 
+				render_compiler, *gpu_system_);
 
             RenderGraphRegistry registry(gpu_system_, this);
             compute_node->execute_pass(registry, command_list);
@@ -740,7 +721,7 @@ namespace soul::gpu::impl
 		}
 		case PassType::GRAPHIC: {
 
-			auto graphic_node = soul::downcast<GraphicBaseNode*>(passNode);
+			auto graphic_node = soul::downcast<GraphicBaseNode*>(pass_node);
 			SOUL_ASSERT(0, graphic_node != nullptr, "");
 			VkRenderPass render_pass = create_render_pass(pass_index);
 			VkFramebuffer framebuffer = create_framebuffer(pass_index, render_pass);
@@ -760,14 +741,10 @@ namespace soul::gpu::impl
 				memcpy(&clear_values[clear_count++], &clear_value, sizeof(VkClearValue));
 			}
 
-			/* for ([[maybe_unused]] InputAttachment attachment : graphic_node->inputAttachments) {
-				clear_values[clear_count++] = {};
-			} */
-
 			if (render_target.depth_stencil_attachment.out_node_id.is_valid()) {
 				const DepthStencilAttachmentDesc& desc = render_target.depth_stencil_attachment.desc;
-				ClearValue clearValue = desc.clear_value;
-				clear_values[clear_count++].depthStencil = { clearValue.depth_stencil.depth, clearValue.depth_stencil.stencil };
+				ClearValue clear_value = desc.clear_value;
+				clear_values[clear_count++].depthStencil = { clear_value.depth_stencil.depth, clear_value.depth_stencil.stencil };
 			}
 
 			const VkRenderPassBeginInfo render_pass_begin_info = {
@@ -812,16 +789,17 @@ namespace soul::gpu::impl
 		Vector<VkEvent> garbage_events;
 		Vector<SemaphoreID> garbage_semaphores;
 
+		Vector<VkBufferMemoryBarrier> pipeline_buffer_barriers;
+		Vector<VkImageMemoryBarrier> pipeline_image_barriers;
 		Vector<VkBufferMemoryBarrier> event_buffer_barriers;
 		Vector<VkImageMemoryBarrier> event_image_barriers;
-
-		Vector<VkImageMemoryBarrier> init_layout_barriers;
+		
 		Vector<VkImageMemoryBarrier> semaphore_layout_barriers;
 		Vector<VkEvent> events;
 
 		auto need_invalidate = [](VkAccessFlags visible_access_matrix[], VkAccessFlags access_flags, 
-			VkPipelineStageFlags stage_flags) -> bool {
-			bool result = false;
+			const VkPipelineStageFlags stage_flags) -> bool {
+			auto result = false;
 			util::for_each_one_bit_pos(stage_flags, [&result, access_flags, visible_access_matrix](uint32 bit) {
 				if (access_flags & ~visible_access_matrix[bit]) {
 					result = true;
@@ -839,7 +817,7 @@ namespace soul::gpu::impl
 
 			VkCommandBuffer cmd_buffer = command_pools_.requestCommandBuffer(queue_type);
 
-				Vec4f color = { (rand() % 125) / 255.0f, (rand() % 125) / 255.0f, (rand() % 125) / 255.0f, 1.0f };
+				vec4f color = { (rand() % 125) / 255.0f, (rand() % 125) / 255.0f, (rand() % 125) / 255.0f, 1.0f };
 			const VkDebugUtilsLabelEXT passLabel = {
 				VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT, // sType
 				nullptr,                                 // pNext
@@ -847,87 +825,99 @@ namespace soul::gpu::impl
 				{color.x, color.y, color.z, color.w}, // color
 			};
 			vkCmdBeginDebugUtilsLabelEXT(cmd_buffer, &passLabel);
-			
+
+			pipeline_buffer_barriers.clear();
+			pipeline_image_barriers.clear();
 			event_buffer_barriers.clear();
 			event_image_barriers.clear();
-			init_layout_barriers.clear();
 			semaphore_layout_barriers.clear();
 			events.clear();
 
+			VkPipelineStageFlags pipeline_src_stage_flags = 0;
+			VkPipelineStageFlags pipeline_dst_stage_flags = 0;
 			VkPipelineStageFlags event_src_stage_flags = 0;
 			VkPipelineStageFlags event_dst_stage_flags = 0;
 			VkPipelineStageFlags semaphore_dst_stage_flags = 0;
-			VkPipelineStageFlags init_layout_dst_stage_flags = 0;
 
-			for (const BufferBarrier& barrier: pass_info.bufferInvalidates) {
-				BufferExecInfo& buffer_info = buffer_infos_[barrier.bufferInfoIdx];
+			for (const BufferBarrier& barrier: pass_info.buffer_invalidates) {
+				BufferExecInfo& buffer_info = buffer_infos_[barrier.buffer_info_idx];
 
-				if (buffer_info.unsyncWriteAccess != 0) {
-					for (VkAccessFlags& access_flags : buffer_info.visibleAccessMatrix) {
+				if (buffer_info.unsync_write_access != 0) {
+					for (auto& access_flags : buffer_info.visible_access_matrix) {
 						access_flags = 0;
 					}
 				}
 
-				if (buffer_info.pendingSemaphore.is_null() &&
-					buffer_info.unsyncWriteAccess == 0 &&
-					!need_invalidate(buffer_info.visibleAccessMatrix, barrier.accessFlags, barrier.stageFlags)) {
+				if (buffer_info.pending_semaphore.is_null() &&
+					buffer_info.unsync_write_access == 0 &&
+					!need_invalidate(buffer_info.visible_access_matrix, barrier.access_flags, barrier.stage_flags)) {
 					continue;
 				}
 
-				if (buffer_info.pendingSemaphore.is_valid()) {
-					Semaphore& semaphore = *gpu_system_->get_semaphore_ptr(buffer_info.pendingSemaphore);
+				if (buffer_info.pending_semaphore.is_valid()) {
+					Semaphore& semaphore = *gpu_system_->get_semaphore_ptr(buffer_info.pending_semaphore);
 
 					if (!semaphore.is_pending()) {
-						command_queues_[queue_type].wait(gpu_system_->get_semaphore_ptr(buffer_info.pendingSemaphore), VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT);
+						command_queues_[queue_type].wait(gpu_system_->get_semaphore_ptr(buffer_info.pending_semaphore), VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT);
 					}
 
-					buffer_info.pendingSemaphore = SemaphoreID::Null();
+					buffer_info.pending_semaphore = SemaphoreID::null();
 				} else {
-
+					if (buffer_info.unsync_write_stage == 0 || buffer_info.unsync_write_stage == VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT) 
+						SOUL_ASSERT(0, buffer_info.unsync_write_access ==0, "");
 					VkBufferMemoryBarrier mem_barrier = {
 						.sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER,
-						.srcAccessMask = buffer_info.unsyncWriteAccess,
-						.dstAccessMask = barrier.accessFlags,
+						.srcAccessMask = buffer_info.unsync_write_access,
+						.dstAccessMask = barrier.access_flags,
 						.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
 						.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-						.buffer = gpu_system_->get_buffer_ptr(buffer_info.bufferID)->vk_handle,
+						.buffer = gpu_system_->get_buffer_ptr(buffer_info.buffer_id)->vk_handle,
 						.offset = 0,
 						.size = VK_WHOLE_SIZE
 					};
 
-					VkAccessFlags dst_access_flags = barrier.accessFlags;
+					const auto dst_access_flags = barrier.access_flags;
 
-					event_buffer_barriers.push_back(mem_barrier);
-					events.push_back(buffer_info.pendingEvent);
-					event_src_stage_flags |= buffer_info.unsyncWriteStage;
-					event_dst_stage_flags |= barrier.stageFlags;
-
-					util::for_each_one_bit_pos(barrier.stageFlags, [&buffer_info, dst_access_flags](const uint32 bit) {
-						buffer_info.visibleAccessMatrix[bit] |= dst_access_flags;
+					if (buffer_info.pending_event != VK_NULL_HANDLE)
+					{
+						event_buffer_barriers.push_back(mem_barrier);
+						events.push_back(buffer_info.pending_event);
+						event_src_stage_flags |= buffer_info.unsync_write_stage;
+						event_dst_stage_flags |= barrier.stage_flags;
+						buffer_info.pending_event = VK_NULL_HANDLE;
+					}
+					else
+					{
+						pipeline_buffer_barriers.push_back(mem_barrier);
+						pipeline_src_stage_flags |= buffer_info.unsync_write_stage;
+						pipeline_dst_stage_flags |= barrier.stage_flags;
+					}
+					
+					util::for_each_one_bit_pos(barrier.stage_flags, [&buffer_info, dst_access_flags](const uint32 bit) {
+						buffer_info.visible_access_matrix[bit] |= dst_access_flags;
 					});
 
-					buffer_info.pendingEvent = VK_NULL_HANDLE;
-
+					
 				}
 			}
 
-			for (const TextureBarrier& barrier: pass_info.textureInvalidates) {
-				TextureExecInfo& texture_info = texture_infos_[barrier.textureInfoIdx];
-				Texture* texture = gpu_system_->get_texture_ptr(texture_info.textureID);
+			for (const TextureBarrier& barrier: pass_info.texture_invalidates) {
+				TextureExecInfo& texture_info = texture_infos_[barrier.texture_info_idx];
+				Texture* texture = gpu_system_->get_texture_ptr(texture_info.texture_id);
 				TextureViewExecInfo& view_info = *texture_info.get_view(barrier.view);
 
-				bool layout_change = view_info.layout != barrier.layout;
+				const auto layout_change = view_info.layout != barrier.layout;
 
-				if (view_info.unsyncWriteAccess != 0 || layout_change) {
-					for (VkAccessFlags& accessFlags : view_info.visibleAccessMatrix) {
-						accessFlags = 0;
+				if (view_info.unsync_write_access != 0 || layout_change) {
+					for (auto& access_flags : view_info.visible_access_matrix) {
+						access_flags = 0;
 					}
 				}
 
-				if (view_info.pendingSemaphore.is_null() &&
+				if (view_info.pending_semaphore.is_null() &&
 					!layout_change &&
-					view_info.unsyncWriteAccess == 0 &&
-					!need_invalidate(view_info.visibleAccessMatrix, barrier.accessFlags, barrier.stageFlags)) {
+					view_info.unsync_write_access == 0 &&
+					!need_invalidate(view_info.visible_access_matrix, barrier.access_flags, barrier.stage_flags)) {
 					continue;
 				}
 
@@ -947,161 +937,165 @@ namespace soul::gpu::impl
 					}
 				};
 
-				if (view_info.pendingSemaphore != SemaphoreID::Null()) {
-					semaphore_dst_stage_flags |= barrier.stageFlags;
+				if (view_info.pending_semaphore.is_valid()) {
+					semaphore_dst_stage_flags |= barrier.stage_flags;
 					if (layout_change) {
 
 						mem_barrier.srcAccessMask = 0;
-						mem_barrier.dstAccessMask = barrier.accessFlags;
+						mem_barrier.dstAccessMask = barrier.access_flags;
 						semaphore_layout_barriers.push_back(mem_barrier);
 
 					}
-					Semaphore& semaphore = *gpu_system_->get_semaphore_ptr(view_info.pendingSemaphore);
+					Semaphore& semaphore = *gpu_system_->get_semaphore_ptr(view_info.pending_semaphore);
 					if (!semaphore.is_pending()) {
-						command_queues_[queue_type].wait(gpu_system_->get_semaphore_ptr(view_info.pendingSemaphore), VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT);
+						command_queues_[queue_type].wait(gpu_system_->get_semaphore_ptr(view_info.pending_semaphore), VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT);
 					}
-					view_info.pendingSemaphore = SemaphoreID::Null();
-				} else if (view_info.pendingEvent != VK_NULL_HANDLE){
-					VkAccessFlags dstAccessFlags = barrier.accessFlags;
-
-					mem_barrier.srcAccessMask = view_info.unsyncWriteAccess;
-					mem_barrier.dstAccessMask = dstAccessFlags;
-
-					event_image_barriers.push_back(mem_barrier);
-					events.push_back(view_info.pendingEvent);
-					event_src_stage_flags |= view_info.unsyncWriteStage;
-					event_dst_stage_flags |= barrier.stageFlags;
-
-					util::for_each_one_bit_pos(barrier.stageFlags, [&view_info, dstAccessFlags](uint32 bit) {
-						view_info.visibleAccessMatrix[bit] |= dstAccessFlags;
-					});
-
-					view_info.pendingEvent = VK_NULL_HANDLE;
-
+					view_info.pending_semaphore = SemaphoreID::null();
 				} else {
-					SOUL_ASSERT(0, layout_change, "");
-					SOUL_ASSERT(0, view_info.layout == VK_IMAGE_LAYOUT_UNDEFINED, "");
+					const auto dst_access_flags = barrier.access_flags;
 
-					mem_barrier.srcAccessMask = 0;
-					mem_barrier.dstAccessMask = barrier.accessFlags;
-					init_layout_barriers.push_back(mem_barrier);
-					init_layout_dst_stage_flags |= barrier.stageFlags;
+					mem_barrier.srcAccessMask = view_info.unsync_write_access;
+					mem_barrier.dstAccessMask = dst_access_flags;
+
+					if (view_info.pending_event != VK_NULL_HANDLE)
+					{
+						event_image_barriers.push_back(mem_barrier);
+						events.push_back(view_info.pending_event);
+						event_src_stage_flags |= view_info.unsync_write_stage;
+						event_dst_stage_flags |= barrier.stage_flags;
+						view_info.pending_event = VK_NULL_HANDLE;
+					}
+					else
+					{
+						pipeline_image_barriers.push_back(mem_barrier);
+						pipeline_src_stage_flags |= view_info.unsync_write_stage;
+						pipeline_dst_stage_flags |= barrier.stage_flags;
+					}
+					
+					util::for_each_one_bit_pos(barrier.stage_flags, [&view_info, dst_access_flags](uint32 bit) {
+						view_info.visible_access_matrix[bit] |= dst_access_flags;
+					});
+					
 				}
 
 				view_info.layout = barrier.layout;
 			}
 
-			if (!events.empty()) {
-				vkCmdWaitEvents(cmd_buffer,
-				                soul::cast<uint32>(events.size()), events.data(),
-				                event_src_stage_flags, event_dst_stage_flags,
-				                0, nullptr,
-				                soul::cast<uint32>(event_buffer_barriers.size()), event_buffer_barriers.data(),
-				                soul::cast<uint32>(event_image_barriers.size()), event_image_barriers.data()
+			if (!pipeline_buffer_barriers.empty() || !pipeline_image_barriers.empty())
+			{
+				if (pipeline_src_stage_flags == 0) {
+				    pipeline_src_stage_flags = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+				}
+				SOUL_ASSERT(0, pipeline_dst_stage_flags != 0, "");
+				vkCmdPipelineBarrier(
+				    cmd_buffer,
+				    pipeline_src_stage_flags, pipeline_dst_stage_flags,
+				    0,
+				    0, nullptr,
+				    soul::cast<uint32>(pipeline_buffer_barriers.size()), pipeline_buffer_barriers.data(),
+				    soul::cast<uint32>(pipeline_image_barriers.size()), pipeline_image_barriers.data()
 				);
 			}
 
-			if (!init_layout_barriers.empty()) {
-				vkCmdPipelineBarrier(cmd_buffer,
-				                     VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, init_layout_dst_stage_flags,
-				                     0,
-				                     0, nullptr,
-				                     0, nullptr,
-				                     soul::cast<uint32>(init_layout_barriers.size()), init_layout_barriers.data());
+			if (!events.empty()) {
+				vkCmdWaitEvents(cmd_buffer,
+                    soul::cast<uint32>(events.size()), events.data(),
+                    event_src_stage_flags, event_dst_stage_flags,
+                    0, nullptr,
+                    soul::cast<uint32>(event_buffer_barriers.size()), event_buffer_barriers.data(),
+                    soul::cast<uint32>(event_image_barriers.size()), event_image_barriers.data()
+				);
 			}
 
 			if (!semaphore_layout_barriers.empty()) {
-				vkCmdPipelineBarrier(cmd_buffer,
-				                     semaphore_dst_stage_flags, semaphore_dst_stage_flags,
-				                     0,
-				                     0, nullptr,
-				                     0, nullptr,
-				                     soul::cast<uint32>(semaphore_layout_barriers.size()), semaphore_layout_barriers.data());
+			    vkCmdPipelineBarrier(cmd_buffer,
+                    semaphore_dst_stage_flags, semaphore_dst_stage_flags,
+                    0,
+                    0, nullptr,
+                    0, nullptr,
+                    soul::cast<uint32>(semaphore_layout_barriers.size()), semaphore_layout_barriers.data());
 			}
 
 			execute_pass(i, cmd_buffer);
 
 			FlagMap<PassType, bool> is_pass_type_dependent(false);
-			for (const BufferBarrier& barrier : pass_info.bufferFlushes) {
-				const BufferExecInfo& buffer_info = buffer_infos_[barrier.bufferInfoIdx];
-				if (buffer_info.passCounter != buffer_info.passes.size() - 1) {
-					uint32 next_pass_idx = buffer_info.passes[buffer_info.passCounter + 1].id;
+			for (const BufferBarrier& barrier : pass_info.buffer_flushes) {
+				const BufferExecInfo& buffer_info = buffer_infos_[barrier.buffer_info_idx];
+				if (buffer_info.pass_counter != buffer_info.passes.size() - 1) {
+					uint32 next_pass_idx = buffer_info.passes[buffer_info.pass_counter + 1].id;
 					PassType pass_type = render_graph_->get_pass_nodes()[next_pass_idx]->get_type();
 					is_pass_type_dependent[pass_type] = true;
 				}
 			}
 
-			for (const TextureBarrier& barrier: pass_info.textureFlushes) {
-				const TextureExecInfo& texture_info = texture_infos_[barrier.textureInfoIdx];
-				if (texture_info.firstPass.is_null()) continue;
+			for (const TextureBarrier& barrier: pass_info.texture_flushes) {
+				const TextureExecInfo& texture_info = texture_infos_[barrier.texture_info_idx];
+				if (texture_info.first_pass.is_null()) continue;
 				const TextureViewExecInfo& texture_view_info = *texture_info.get_view(barrier.view);
-				if (texture_view_info.passCounter != texture_view_info.passes.size() - 1)
+				if (texture_view_info.pass_counter != texture_view_info.passes.size() - 1)
 				{
-					uint32 next_pass_idx = texture_view_info.passes[texture_view_info.passCounter + 1].id;
+					uint32 next_pass_idx = texture_view_info.passes[texture_view_info.pass_counter + 1].id;
 					PassType pass_type = render_graph_->get_pass_nodes()[next_pass_idx]->get_type();
 					is_pass_type_dependent[pass_type] = true;
 				}
 			}
 
-			FlagMap<PassType, SemaphoreID> semaphoresMap(SemaphoreID::Null());
+			FlagMap<PassType, SemaphoreID> semaphores_map(SemaphoreID::null());
 			VkEvent event = VK_NULL_HANDLE;
-			VkPipelineStageFlags eventStageFlags = 0;
+			VkPipelineStageFlags unsync_write_stage_flags = 0;
 
-			for (PassType passType : FlagIter<PassType>()) {
-				if (is_pass_type_dependent[passType] && passType == pass_node->get_type()) {
+			for (PassType pass_type : FlagIter<PassType>()) {
+				if (is_pass_type_dependent[pass_type] && pass_type == pass_node->get_type() && pass_type != PassType::TRANSFER) {
 					event = gpu_system_->create_event();
 					garbage_events.push_back(event);
-				} else if (is_pass_type_dependent[passType] && passType != pass_node->get_type()) {
-					semaphoresMap[passType] = gpu_system_->create_semaphore();
-					garbage_semaphores.push_back(semaphoresMap[passType]);
+				} else if (is_pass_type_dependent[pass_type] && pass_type != pass_node->get_type()) {
+					semaphores_map[pass_type] = gpu_system_->create_semaphore();
+					garbage_semaphores.push_back(semaphores_map[pass_type]);
 				}
 			}
 
-			for (const BufferBarrier& barrier : pass_info.bufferFlushes) {
-				BufferExecInfo& bufferInfo = buffer_infos_[barrier.bufferInfoIdx];
-				if (bufferInfo.passCounter != bufferInfo.passes.size() - 1) {
-					uint32 nextPassIdx = bufferInfo.passes[bufferInfo.passCounter + 1].id;
-					PassType nextPassType = render_graph_->get_pass_nodes()[nextPassIdx]->get_type();
+			for (const BufferBarrier& barrier : pass_info.buffer_flushes) {
+				BufferExecInfo& buffer_info = buffer_infos_[barrier.buffer_info_idx];
+				if (buffer_info.pass_counter != buffer_info.passes.size() - 1) {
+					const auto next_pass_idx = buffer_info.passes[buffer_info.pass_counter + 1].id;
+					PassType next_pass_type = render_graph_->get_pass_nodes()[next_pass_idx]->get_type();
 
-					if (pass_node->get_type() != nextPassType) {
-						SemaphoreID semaphoreID = semaphoresMap[nextPassType];
-						SOUL_ASSERT(0, semaphoreID != SemaphoreID::Null(), "");
-						bufferInfo.pendingSemaphore = semaphoreID;
+					if (pass_node->get_type() != next_pass_type) {
+						SemaphoreID semaphore_id = semaphores_map[next_pass_type];
+						SOUL_ASSERT(0, semaphore_id != SemaphoreID::null(), "");
+						buffer_info.pending_semaphore = semaphore_id;
 					} else {
-						SOUL_ASSERT(0, event != VK_NULL_HANDLE, "");
-						bufferInfo.pendingEvent = event;
-						eventStageFlags |= barrier.stageFlags;
-						
+						buffer_info.pending_event = event;
+						unsync_write_stage_flags |= barrier.stage_flags;
 					}
 				}
 			}
 
-			for (const TextureBarrier& barrier: pass_info.textureFlushes) {
-				TextureExecInfo& texture_info = texture_infos_[barrier.textureInfoIdx];
+			for (const TextureBarrier& barrier: pass_info.texture_flushes) {
+				TextureExecInfo& texture_info = texture_infos_[barrier.texture_info_idx];
 				TextureViewExecInfo& texture_view_info = *texture_info.get_view(barrier.view);
-				if (texture_view_info.passCounter != texture_view_info.passes.size() - 1) {
-					uint32 next_pass_idx = texture_view_info.passes[texture_view_info.passCounter + 1].id;
-					PassType nextPassType = render_graph_->get_pass_nodes()[next_pass_idx]->get_type();
-					if (pass_node->get_type() != nextPassType) {
-						SemaphoreID semaphoreID = semaphoresMap[nextPassType];
-						SOUL_ASSERT(0, semaphoreID != SemaphoreID::Null(), "");
-						texture_view_info.pendingSemaphore = semaphoreID;
+				if (texture_view_info.pass_counter != texture_view_info.passes.size() - 1) {
+					uint32 next_pass_idx = texture_view_info.passes[texture_view_info.pass_counter + 1].id;
+					PassType next_pass_type = render_graph_->get_pass_nodes()[next_pass_idx]->get_type();
+					if (pass_node->get_type() != next_pass_type) {
+						SemaphoreID semaphore_id = semaphores_map[next_pass_type];
+						SOUL_ASSERT(0, semaphore_id != SemaphoreID::null(), "");
+						texture_view_info.pending_semaphore = semaphore_id;
 					} else {
-						SOUL_ASSERT(0, event != VK_NULL_HANDLE, "");
-						texture_view_info.pendingEvent = event;
-						eventStageFlags |= barrier.stageFlags;
+						texture_view_info.pending_event = event;
+						unsync_write_stage_flags |= barrier.stage_flags;
 					}
 				}
 				texture_view_info.layout = barrier.layout;
 			}
 
 			if (event != VK_NULL_HANDLE) {
-				vkCmdSetEvent(cmd_buffer, event, eventStageFlags);
+				vkCmdSetEvent(cmd_buffer, event, unsync_write_stage_flags);
 			}
 
 			Vector<Semaphore*> semaphores(&passNodeScopeAllocator);
 			semaphores.reserve(to_underlying(PassType::COUNT));
-			for (SemaphoreID semaphore_id : semaphoresMap) {
+			for (SemaphoreID semaphore_id : semaphores_map) {
 				if (semaphore_id.is_valid()) {
 					semaphores.add(gpu_system_->get_semaphore_ptr(semaphore_id));
 				}
@@ -1111,33 +1105,33 @@ namespace soul::gpu::impl
 				VkAccessFlags barrier_access_flags,
 				VkPipelineStageFlags event_stage_flags, 
 				auto& resource_info) {
-				bool is_resource_in_last_pass = resource_info.passCounter != resource_info.passes.size() - 1;
+				const bool is_resource_in_last_pass = resource_info.pass_counter != resource_info.passes.size() - 1;
 				if (is_resource_in_last_pass) {
-					const uint32 next_pass_idx = resource_info.passes[resource_info.passCounter].id;
+					const uint32 next_pass_idx = resource_info.passes[resource_info.pass_counter + 1].id;
 					const PassType next_pass_type = render_graph_->get_pass_nodes()[next_pass_idx]->get_type();
 					if (pass_type != next_pass_type) {
-						resource_info.unsyncWriteAccess = 0;
-						resource_info.unsyncWriteStage = 0;
+						resource_info.unsync_write_access = 0;
+						resource_info.unsync_write_stage = 0;
 					}
 					else {
-						resource_info.unsyncWriteAccess = barrier_access_flags;
-						resource_info.unsyncWriteStage = event_stage_flags;
+						resource_info.unsync_write_access = barrier_access_flags;
+						resource_info.unsync_write_stage = event_stage_flags;
 					}
 				}
 			};
 
 			// Update unsync stage
-			for (const BufferBarrier& barrier : pass_info.bufferFlushes) {
-				BufferExecInfo& buffer_info = buffer_infos_[barrier.bufferInfoIdx];
-				update_resource_unsync_status(pass_node->get_type(), barrier.accessFlags, eventStageFlags, buffer_info);
-				buffer_info.passCounter += 1;
+			for (const BufferBarrier& barrier : pass_info.buffer_flushes) {
+				BufferExecInfo& buffer_info = buffer_infos_[barrier.buffer_info_idx];
+				update_resource_unsync_status(pass_node->get_type(), barrier.access_flags, unsync_write_stage_flags, buffer_info);
+				buffer_info.pass_counter += 1;
 			}
 
-			for (const TextureBarrier& barrier: pass_info.textureFlushes) {
-				TextureExecInfo& texture_info = texture_infos_[barrier.textureInfoIdx];
+			for (const TextureBarrier& barrier: pass_info.texture_flushes) {
+				TextureExecInfo& texture_info = texture_infos_[barrier.texture_info_idx];
 				TextureViewExecInfo& texture_view_info = *texture_info.get_view(barrier.view);
-				update_resource_unsync_status(pass_node->get_type(), barrier.accessFlags, eventStageFlags, texture_view_info);
-				texture_view_info.passCounter += 1;
+				update_resource_unsync_status(pass_node->get_type(), barrier.access_flags, unsync_write_stage_flags, texture_view_info);
+				texture_view_info.pass_counter += 1;
 			}
 
 			vkCmdEndDebugUtilsLabelEXT(cmd_buffer);
@@ -1145,7 +1139,7 @@ namespace soul::gpu::impl
 		}
 
 		// Update resource owner for external resource
-		static auto PASS_TYPE_TO_RESOURCE_OWNER = FlagMap<PassType, ResourceOwner>::build_from_list({
+		static constexpr auto PASS_TYPE_TO_RESOURCE_OWNER = FlagMap<PassType, ResourceOwner>::build_from_list({
 			ResourceOwner::NONE,
 			ResourceOwner::GRAPHIC_QUEUE,
 			ResourceOwner::COMPUTE_QUEUE,
@@ -1153,7 +1147,7 @@ namespace soul::gpu::impl
 		});
 
 		for (const TextureExecInfo& texture_info : external_texture_infos_) {
-			Texture* texture = gpu_system_->get_texture_ptr(texture_info.textureID);
+			Texture* texture = gpu_system_->get_texture_ptr(texture_info.texture_id);
 
 			VkImageLayout layout = texture_info.view->layout;
 			SOUL_ASSERT(0, std::all_of(texture_info.view, texture_info.view + texture_info.get_view_count(),
@@ -1176,7 +1170,7 @@ namespace soul::gpu::impl
 
 		for (const BufferExecInfo& buffer_info : buffer_infos_) {
 			if (buffer_info.passes.empty()) continue;
-			Buffer* buffer = gpu_system_->get_buffer_ptr(buffer_info.bufferID);
+			Buffer* buffer = gpu_system_->get_buffer_ptr(buffer_info.buffer_id);
 			uint64 last_pass_idx = buffer_info.passes.back().id;
 			PassType last_pass_type = render_graph_->get_pass_nodes()[last_pass_idx]->get_type();
 			buffer->owner = PASS_TYPE_TO_RESOURCE_OWNER[last_pass_type];
@@ -1201,12 +1195,12 @@ namespace soul::gpu::impl
 
 	BufferID RenderGraphExecution::get_buffer_id(const BufferNodeID node_id) const {
 		const auto info_idx = get_buffer_info_index(node_id);
-		return buffer_infos_[info_idx].bufferID;
+		return buffer_infos_[info_idx].buffer_id;
 	}
 
 	TextureID RenderGraphExecution::get_texture_id(const TextureNodeID node_id) const {
 		const auto info_idx = get_texture_info_index(node_id);
-		return texture_infos_[info_idx].textureID;
+		return texture_infos_[info_idx].texture_id;
 	}
 
 	Buffer* RenderGraphExecution::get_buffer(const BufferNodeID node_id) const {
@@ -1245,19 +1239,15 @@ namespace soul::gpu::impl
 			}
 		}
 
-		for (const auto& buffer_info : internal_buffer_infos_) {
-			gpu_system_->destroy_buffer(buffer_info.bufferID);
-		}
-
 		for (const auto& texture_info : internal_texture_infos_) {
-			gpu_system_->destroy_texture(texture_info.textureID);
+			gpu_system_->destroy_texture(texture_info.texture_id);
 		}
 
 	}
 
-	void RenderGraphExecution::init_shader_buffers(const Vector<ShaderBufferReadAccess>& shaderAccessList, soul_size index, QueueType queue_type) {
-		PassExecInfo& passInfo = pass_infos_[index];
-		for (const ShaderBufferReadAccess& shader_access : shaderAccessList) {
+	void RenderGraphExecution::init_shader_buffers(const Vector<ShaderBufferReadAccess>& access_list, const soul_size index, const QueueType queue_type) {
+		PassExecInfo& pass_info = pass_infos_[index];
+		for (const ShaderBufferReadAccess& shader_access : access_list) {
 			SOUL_ASSERT(0, shader_access.node_id.is_valid(), "");
 
 			const auto buffer_info_id = get_buffer_info_index(shader_access.node_id);
@@ -1265,54 +1255,54 @@ namespace soul::gpu::impl
 			const auto stage_flags = vkCastShaderStageToPipelineStageFlags(shader_access.stage_flags);
 
 			BufferBarrier invalidate_barrier;
-			invalidate_barrier.stageFlags = stage_flags;
-			invalidate_barrier.accessFlags = VK_ACCESS_SHADER_READ_BIT;
-			invalidate_barrier.bufferInfoIdx = buffer_info_id;
-			passInfo.bufferInvalidates.push_back(invalidate_barrier);
+			invalidate_barrier.stage_flags = stage_flags;
+			invalidate_barrier.access_flags = VK_ACCESS_SHADER_READ_BIT;
+			invalidate_barrier.buffer_info_idx = buffer_info_id;
+			pass_info.buffer_invalidates.push_back(invalidate_barrier);
 
 			BufferBarrier flush_barrier;
-			flush_barrier.stageFlags = stage_flags;
-			flush_barrier.accessFlags = 0;
-			flush_barrier.bufferInfoIdx = buffer_info_id;
-			passInfo.bufferFlushes.push_back(flush_barrier);
+			flush_barrier.stage_flags = stage_flags;
+			flush_barrier.access_flags = 0;
+			flush_barrier.buffer_info_idx = buffer_info_id;
+			pass_info.buffer_flushes.push_back(flush_barrier);
 
 			update_buffer_info(queue_type, impl::get_buffer_usage_flags(shader_access.usage), PassNodeID(index), &buffer_infos_[buffer_info_id]);
 		}
 
 	}
 
-	void RenderGraphExecution::init_shader_buffers(const Vector<ShaderBufferWriteAccess>& shaderAccessList, soul_size index, QueueType queue_type) {
+	void RenderGraphExecution::init_shader_buffers(const Vector<ShaderBufferWriteAccess>& access_list, const soul_size index, const QueueType queue_type) {
 		PassExecInfo& passInfo = pass_infos_[index];
-		for (const auto& shader_access : shaderAccessList) {
+		for (const auto& shader_access : access_list) {
 			SOUL_ASSERT(0, shader_access.output_node_id.is_valid(), "");
 
-            const uint32 buffer_info_id = get_buffer_info_index(shader_access.output_node_id);
+            const auto buffer_info_id = get_buffer_info_index(shader_access.output_node_id);
 
             const auto stage_flags = vkCastShaderStageToPipelineStageFlags(shader_access.stage_flags);
 
 			BufferBarrier invalidate_barrier;
-			invalidate_barrier.stageFlags = stage_flags;
-			invalidate_barrier.accessFlags = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
-			invalidate_barrier.bufferInfoIdx = buffer_info_id;
-			passInfo.bufferInvalidates.push_back(invalidate_barrier);
+			invalidate_barrier.stage_flags = stage_flags;
+			invalidate_barrier.access_flags = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
+			invalidate_barrier.buffer_info_idx = buffer_info_id;
+			passInfo.buffer_invalidates.push_back(invalidate_barrier);
 
 			BufferBarrier flush_barrier;
-			flush_barrier.stageFlags = stage_flags;
-			flush_barrier.accessFlags = VK_ACCESS_SHADER_WRITE_BIT;
-			flush_barrier.bufferInfoIdx = buffer_info_id;
-			passInfo.bufferFlushes.push_back(flush_barrier);
+			flush_barrier.stage_flags = stage_flags;
+			flush_barrier.access_flags = VK_ACCESS_SHADER_WRITE_BIT;
+			flush_barrier.buffer_info_idx = buffer_info_id;
+			passInfo.buffer_flushes.push_back(flush_barrier);
 
 			update_buffer_info(queue_type, get_buffer_usage_flags(shader_access.usage), PassNodeID(index), &buffer_infos_[buffer_info_id]);
 		}
 
 	}
 
-	void RenderGraphExecution::init_shader_textures(const Vector<ShaderTextureReadAccess>& access_list, soul_size index, QueueType queue_type) {
+	void RenderGraphExecution::init_shader_textures(const Vector<ShaderTextureReadAccess>& access_list, const soul_size index, const QueueType queue_type) {
 		PassExecInfo& pass_info = pass_infos_[index];
 		for (const auto& shader_access : access_list) {
 			SOUL_ASSERT(0, shader_access.node_id.is_valid(), "");
 
-			uint32 texture_info_id = get_texture_info_index(shader_access.node_id);
+			const auto texture_info_id = get_texture_info_index(shader_access.node_id);
 			VkPipelineStageFlags stage_flags = vkCastShaderStageToPipelineStageFlags(shader_access.stage_flags);
 
 			update_texture_info(queue_type, get_texture_usage_flags(shader_access.usage),PassNodeID(index), shader_access.view_range, &texture_infos_[texture_info_id]);
@@ -1327,62 +1317,62 @@ namespace soul::gpu::impl
 
 			auto image_layout = is_writable(shader_access.usage) ? VK_IMAGE_LAYOUT_GENERAL : VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
-			std::ranges::transform(shader_access.view_range, std::back_inserter(pass_info.textureInvalidates),
+			std::ranges::transform(shader_access.view_range, std::back_inserter(pass_info.texture_invalidates),
 		[stage_flags, image_layout, texture_info_id](SubresourceIndex view_index) -> TextureBarrier
 			{
 				return {
-					.stageFlags = stage_flags,
-					.accessFlags = VK_ACCESS_SHADER_READ_BIT,
+					.stage_flags = stage_flags,
+					.access_flags = VK_ACCESS_SHADER_READ_BIT,
 					.layout = image_layout,
-					.textureInfoIdx = texture_info_id,
+					.texture_info_idx = texture_info_id,
 					.view = view_index
 				};
 			});
 
-			std::ranges::transform(shader_access.view_range, std::back_inserter(pass_info.textureFlushes),
+			std::ranges::transform(shader_access.view_range, std::back_inserter(pass_info.texture_flushes),
         [stage_flags, image_layout, texture_info_id](SubresourceIndex view_index) -> TextureBarrier 
             {
                 return {
-                    .stageFlags = stage_flags,
-                    .accessFlags = 0,
+                    .stage_flags = stage_flags,
+                    .access_flags = 0,
                     .layout = image_layout,
-                    .textureInfoIdx = texture_info_id,
+                    .texture_info_idx = texture_info_id,
                     .view = view_index
                 };
             });
 		}
 	}
 
-	void RenderGraphExecution::init_shader_textures(const Vector<ShaderTextureWriteAccess>& access_list, soul_size index, QueueType queue_type) {
+	void RenderGraphExecution::init_shader_textures(const Vector<ShaderTextureWriteAccess>& access_list, const soul_size index, const QueueType queue_type) {
 		PassExecInfo& pass_info = pass_infos_[index];
 		for (const auto& shader_access : access_list) {
 			SOUL_ASSERT(0, shader_access.output_node_id.is_valid(), "");
 
-			const uint32 texture_info_id = get_texture_info_index(shader_access.output_node_id);
-			const VkPipelineStageFlags stage_flags = vkCastShaderStageToPipelineStageFlags(shader_access.stage_flags);
+			const auto texture_info_id = get_texture_info_index(shader_access.output_node_id);
+			const auto stage_flags = vkCastShaderStageToPipelineStageFlags(shader_access.stage_flags);
 
 			update_texture_info(queue_type, get_texture_usage_flags(shader_access.usage), PassNodeID(index), shader_access.view_range, &texture_infos_[texture_info_id]);
 
-			std::ranges::transform(shader_access.view_range, std::back_inserter(pass_info.textureInvalidates),
+			std::ranges::transform(shader_access.view_range, std::back_inserter(pass_info.texture_invalidates),
         [stage_flags, texture_info_id](const SubresourceIndex& view_index) -> TextureBarrier
             {
                 return {
-                    .stageFlags = stage_flags,
-                    .accessFlags = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT,
+                    .stage_flags = stage_flags,
+                    .access_flags = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT,
                     .layout = VK_IMAGE_LAYOUT_GENERAL,
-                    .textureInfoIdx = texture_info_id,
+                    .texture_info_idx = texture_info_id,
                     .view = view_index
                 };
             });
 
-			std::ranges::transform(shader_access.view_range, std::back_inserter(pass_info.textureFlushes),
+			std::ranges::transform(shader_access.view_range, std::back_inserter(pass_info.texture_flushes),
 		[stage_flags, texture_info_id](SubresourceIndex view_index) -> TextureBarrier
             {
                 return {
-                    .stageFlags = stage_flags,
-                    .accessFlags =VK_ACCESS_SHADER_WRITE_BIT,
+                    .stage_flags = stage_flags,
+                    .access_flags =VK_ACCESS_SHADER_WRITE_BIT,
                     .layout = VK_IMAGE_LAYOUT_GENERAL,
-                    .textureInfoIdx = texture_info_id,
+                    .texture_info_idx = texture_info_id,
                     .view = view_index
                 };
             });

@@ -1,5 +1,6 @@
 cmake_minimum_required(VERSION 3.21)
 
+add_subdirectory(dxc)
 add_subdirectory(slang)
 # Imgui
 set(IMGUI_SOURCES

@@ -2,8 +2,8 @@
 
 #include "core/config.h"
 #include "core/type.h"
+#include "core/util.h"
 #include "core/dev_util.h"
-#include "core/math.h"
 #include "runtime/runtime.h"
 
 #include <functional>
@@ -18,7 +18,7 @@ namespace soul {
 	{
 		std::size_t operator()(const T& t) const noexcept
 		{
-			return hash_fnv1<T>(&t);
+			return util::hash_fnv1<T>(&t);
 		}
 	};
 
