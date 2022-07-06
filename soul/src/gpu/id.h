@@ -9,7 +9,6 @@
 #include <vk_mem_alloc.h>
 #pragma warning(pop)
 
-#include "intern/bindless_descriptor_allocator.h"
 #include "object_pool.h"
 #include "object_cache.h"
 #include <variant>
@@ -48,6 +47,9 @@ namespace soul::gpu
 	using TextureID = ID<impl::Texture, TexturePool::ID, TexturePool::NULLVAL>;
 	using BufferID = ID<impl::Buffer, BufferPool::ID, BufferPool::NULLVAL>;
 
+	struct Descriptor;
+	using DescriptorID = ID<Descriptor, uint32>;
+
 	struct SamplerID
 	{
 		VkSampler vkHandle = VK_NULL_HANDLE;
@@ -65,11 +67,6 @@ namespace soul::gpu
 	};
 
 	using PipelineStateID = ID<impl::PipelineState, PipelineStateCache::ID, PipelineStateCache::NULLVAL>;
-	constexpr PipelineStateID PIPELINE_STATE_ID_NULL = PipelineStateID();
-
-	using ProgramID = ID<impl::Program, uint16, 0>;
-	constexpr ProgramID PROGRAM_ID_NULL = ProgramID();
-
-	using SemaphoreID = ID<impl::Semaphore, uint32, 0>;
-	constexpr SemaphoreID SEMAPHORE_ID_NULL = SemaphoreID();
+	using ProgramID = ID<impl::Program, uint16>;
+	using SemaphoreID = ID<impl::Semaphore, uint32>;
 }

@@ -63,7 +63,7 @@ namespace soul::gpu
 
 						VkPipelineLayout pipeline_layout = task_data.gpuSystem.get_bindless_pipeline_layout();
 						impl::BindlessDescriptorSets bindless_descriptor_sets = task_data.gpuSystem.get_bindless_descriptor_sets();
-						vkCmdBindDescriptorSets(command_buffer.get_vk_handle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, BINDLESS_SET_COUNT, bindless_descriptor_sets.vkHandles, 0, 0);
+						vkCmdBindDescriptorSets(command_buffer.get_vk_handle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, BINDLESS_SET_COUNT, bindless_descriptor_sets.vk_handles, 0, 0);
 
 						impl::RenderCompiler render_compiler(task_data.gpuSystem, command_buffer.get_vk_handle());
 						if (soul::cast<uint32>(index) < mod)
@@ -97,7 +97,7 @@ namespace soul::gpu
 				primary_command_buffer_.begin_render_pass(render_pass_begin_info_, VK_SUBPASS_CONTENTS_INLINE);
 				VkPipelineLayout pipeline_layout = gpu_system_.get_bindless_pipeline_layout();
 				impl::BindlessDescriptorSets bindless_descriptor_sets = gpu_system_.get_bindless_descriptor_sets();
-				vkCmdBindDescriptorSets(primary_command_buffer_.get_vk_handle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, BINDLESS_SET_COUNT, bindless_descriptor_sets.vkHandles, 0, 0);
+				vkCmdBindDescriptorSets(primary_command_buffer_.get_vk_handle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, BINDLESS_SET_COUNT, bindless_descriptor_sets.vk_handles, 0, 0);
 
 				impl::RenderCompiler render_compiler(gpu_system_, primary_command_buffer_.get_vk_handle());
 				for (soul_size command_idx = 0; command_idx < count; command_idx++)
@@ -113,9 +113,9 @@ namespace soul::gpu
 		void push(soul_size count, const RenderCommandType* render_commands)
 		{
 			push<RenderCommandType>(count, [render_commands](soul_size index)
-				{
-					return *(render_commands + index);
-				});
+			{
+				return *(render_commands + index);
+			});
 		}
 
 		template<graphic_render_command RenderCommandType>
@@ -128,17 +128,36 @@ namespace soul::gpu
 	class ComputeCommandList
 	{
 	private:
+		impl::PrimaryCommandBuffer command_buffer_;
 		impl::RenderCompiler& render_compiler_;
+		System& gpu_system_;
 	public:
-		explicit ComputeCommandList(impl::RenderCompiler& render_compiler) : render_compiler_(render_compiler) {}
+		explicit ComputeCommandList(
+			impl::PrimaryCommandBuffer command_buffer, 
+			impl::RenderCompiler& render_compiler,
+		    System& gpu_system)
+	    : command_buffer_(command_buffer), render_compiler_(render_compiler), gpu_system_(gpu_system) {}
+
+		template<compute_render_command RenderCommandType>
+		void push(const RenderCommandType& command)
+		{
+			auto pipeline_layout = gpu_system_.get_bindless_pipeline_layout();
+			impl::BindlessDescriptorSets bindless_descriptor_sets = gpu_system_.get_bindless_descriptor_sets();
+			vkCmdBindDescriptorSets(command_buffer_.get_vk_handle(), VK_PIPELINE_BIND_POINT_COMPUTE, 
+				pipeline_layout, 0, BINDLESS_SET_COUNT, bindless_descriptor_sets.vk_handles, 0, 0);
+
+			render_compiler_.compile_command(command);
+		}
 	};
 
-	class CopyCommandList
+	class TransferCommandList
 	{
 		impl::RenderCompiler& render_compiler_;
 	public:
-		explicit CopyCommandList(impl::RenderCompiler& render_compiler) : render_compiler_(render_compiler) {}
-		void push(const RenderCommandCopyTexture& command)
+		explicit TransferCommandList(impl::RenderCompiler& render_compiler) : render_compiler_(render_compiler) {}
+
+		template<transfer_render_command RenderCommandType>
+		void push(const RenderCommandType& command)
 		{
 			render_compiler_.compile_command(command);
 		}

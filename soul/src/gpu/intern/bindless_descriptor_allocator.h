@@ -4,6 +4,7 @@
 #include "core/type.h"
 #include "core/mutex.h"
 #include "gpu/constant.h"
+#include "gpu/id.h"
 #include "runtime/runtime.h"
 #include "memory/allocator.h"
 
@@ -11,21 +12,24 @@ namespace soul::gpu
 {
 	class System;
 	struct Descriptor;
-	using DescriptorID = ID<Descriptor, uint32>;
 }
 
 namespace soul::gpu::impl
 {
 	struct BindlessDescriptorSets
 	{
-		VkDescriptorSet vkHandles[BINDLESS_SET_COUNT];
+		VkDescriptorSet vk_handles[BINDLESS_SET_COUNT];
 	};
 
 	class BindlessDescriptorSet
 	{
 	public:
 		explicit BindlessDescriptorSet(uint32 capacity, VkDescriptorType descriptor_type, soul::memory::Allocator* allocator = runtime::get_context_allocator());
-		void init(VkDevice device, VkDescriptorPool descriptor_pool);
+		BindlessDescriptorSet(const BindlessDescriptorSet&) = delete;
+		BindlessDescriptorSet(BindlessDescriptorSet&&) = delete;
+		BindlessDescriptorSet& operator=(const BindlessDescriptorSet&) = delete;
+		BindlessDescriptorSet& operator=(BindlessDescriptorSet&&) = delete;
+	    void init(VkDevice device, VkDescriptorPool descriptor_pool);
 		DescriptorID create_descriptor(VkDevice device, const VkDescriptorBufferInfo& buffer_info);
 		DescriptorID create_descriptor(VkDevice device, const VkDescriptorImageInfo& image_info);
 		void destroy_descriptor(VkDevice device, DescriptorID id);

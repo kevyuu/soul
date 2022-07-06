@@ -80,8 +80,12 @@ namespace soul {
 
 #if __has_attribute(always_inline)
 #define SOUL_ALWAYS_INLINE __attribute__((always_inline))
-#else
-#define SOUL_ALWAYS_INLINE inline
+#elif defined(_MSC_VER)
+#define SOUL_ALWAYS_INLINE __forceinline
+#endif
+
+#if defined(_MSC_VER)
+#define SOUL_FORMAT_STRING _In_z_ _Printf_format_string_
 #endif
 
 namespace soul

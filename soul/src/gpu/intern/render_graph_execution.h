@@ -10,67 +10,67 @@ namespace soul::gpu::impl
 {
 
 	struct BufferBarrier {
-		VkPipelineStageFlags stageFlags = 0;
-		VkAccessFlags accessFlags = 0;
-		uint32 bufferInfoIdx = 0;
+		VkPipelineStageFlags stage_flags = 0;
+		VkAccessFlags access_flags = 0;
+		uint32 buffer_info_idx = 0;
 	};
 
 	struct TextureBarrier {
-		VkPipelineStageFlags stageFlags = 0;
-		VkAccessFlags accessFlags = 0;
+		VkPipelineStageFlags stage_flags = 0;
+		VkAccessFlags access_flags = 0;
 
 		VkImageLayout layout = VK_IMAGE_LAYOUT_UNDEFINED;
-		uint32 textureInfoIdx = 0;
+		uint32 texture_info_idx = 0;
 		SubresourceIndex view;
 	};
 
 	struct BufferExecInfo {
-		PassNodeID firstPass;
-		PassNodeID lastPass;
-		BufferUsageFlags usageFlags;
-		QueueFlags queueFlags;
-		BufferID bufferID;
+		PassNodeID first_pass;
+		PassNodeID last_pass;
+		BufferUsageFlags usage_flags;
+		QueueFlags queue_flags;
+		BufferID buffer_id;
 
-		VkEvent pendingEvent = VK_NULL_HANDLE;
-		SemaphoreID pendingSemaphore = SemaphoreID::Null();
-		VkPipelineStageFlags unsyncWriteStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-		VkAccessFlags unsyncWriteAccess = 0;
+		VkEvent pending_event = VK_NULL_HANDLE;
+		SemaphoreID pending_semaphore = SemaphoreID::null();
+		VkPipelineStageFlags unsync_write_stage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+		VkAccessFlags unsync_write_access = 0;
 
-		VkAccessFlags visibleAccessMatrix[32] = {};
+		VkAccessFlags visible_access_matrix[32] = {};
 
 		Vector<PassNodeID> passes;
-		uint32 passCounter = 0;
+		uint32 pass_counter = 0;
 	};
 
 	struct TextureViewExecInfo {
-		VkEvent pendingEvent = VK_NULL_HANDLE;
-		SemaphoreID pendingSemaphore = SemaphoreID::Null();
-		VkPipelineStageFlags unsyncWriteStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-		VkAccessFlags unsyncWriteAccess = 0;
-		VkAccessFlags visibleAccessMatrix[32] = {};
+		VkEvent pending_event = VK_NULL_HANDLE;
+		SemaphoreID pending_semaphore = SemaphoreID::null();
+		VkPipelineStageFlags unsync_write_stage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+		VkAccessFlags unsync_write_access = 0;
+		VkAccessFlags visible_access_matrix[32] = {};
 		Vector<PassNodeID> passes;
-		uint32 passCounter = 0;
+		uint32 pass_counter = 0;
 		VkImageLayout layout = VK_IMAGE_LAYOUT_UNDEFINED;
 	};
 
 	struct TextureExecInfo {
-		PassNodeID firstPass;
-		PassNodeID lastPass;
-		TextureUsageFlags usageFlags;
-		QueueFlags queueFlags;
-		TextureID textureID;
+		PassNodeID first_pass;
+		PassNodeID last_pass;
+		TextureUsageFlags usage_flags;
+		QueueFlags queue_flags;
+		TextureID texture_id;
 		TextureViewExecInfo* view = nullptr;
-		uint32 mipLevels = 0;
+		uint32 mip_levels = 0;
 		uint32 layers = 0;
 
 		[[nodiscard]] soul_size get_view_count() const
 		{
-			return mipLevels * layers;
+			return mip_levels * layers;
 		}
 
 		[[nodiscard]] soul_size get_view_index(const SubresourceIndex index) const
 		{
-			return index.get_layer() * mipLevels + index.get_level();
+			return index.get_layer() * mip_levels + index.get_level();
 		}
 
 		[[nodiscard]] TextureViewExecInfo* get_view(const SubresourceIndex index) const
@@ -89,11 +89,11 @@ namespace soul::gpu::impl
 	};
 
 	struct PassExecInfo {
-		PassNode* passNode = nullptr;
-		Vector<BufferBarrier> bufferFlushes;
-		Vector<BufferBarrier> bufferInvalidates;
-		Vector<TextureBarrier> textureFlushes;
-		Vector<TextureBarrier> textureInvalidates;
+		PassNode* pass_node = nullptr;
+		Vector<BufferBarrier> buffer_flushes;
+		Vector<BufferBarrier> buffer_invalidates;
+		Vector<TextureBarrier> texture_flushes;
+		Vector<TextureBarrier> texture_invalidates;
 	};
 
 	class RenderGraphExecution {

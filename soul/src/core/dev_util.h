@@ -75,7 +75,7 @@ constexpr void soul_intern_assert(const int paranoia, const int line, const char
 #if defined(SOUL_ASSERT_ENABLE)
     #define SOUL_ASSERT(paranoia, test, msg, ...) do {if (!(test)) {soul_intern_assert(paranoia, __LINE__, __FILE__, \
             "Assertion failed: %s\n\n" msg, #test,  ##__VA_ARGS__); SOUL_DEBUG_BREAK();}} while (0)
-    #define SOUL_PANIC(paranoia, msg, ...) do{soul_intern_assert(paranoia, __LINE__, __FILE__, \
+    #define SOUL_PANIC(msg, ...) do{soul_intern_log(SOUL_LOG_VERBOSE_FATAL, __LINE__, __FILE__, \
             "Panic! \n\n" msg, ##__VA_ARGS__); SOUL_DEBUG_BREAK();} while(0)
     #define SOUL_NOT_IMPLEMENTED() do{soul_intern_assert(0, __LINE__, __FILE__, \
             "Not implemented yet! \n\n"); SOUL_DEBUG_BREAK();} while(0)

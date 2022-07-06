@@ -138,9 +138,9 @@ namespace soul::gpu::impl
 		sampler_descriptor_set_.destroy_descriptor(device_, id);
 	}
 
-	BindlessDescriptorSet::BindlessDescriptorSet(uint32 capacity, VkDescriptorType descriptor_type, soul::memory::Allocator* allocator) : allocator_(allocator), free_head_(1), list_(allocator->allocate_array<uint32>(capacity)), capacity_(capacity), descriptor_type_(descriptor_type)
+	BindlessDescriptorSet::BindlessDescriptorSet(const uint32 capacity, VkDescriptorType descriptor_type, soul::memory::Allocator* allocator) : allocator_(allocator), free_head_(1), list_(allocator->allocate_array<uint32>(capacity)), capacity_(capacity), descriptor_type_(descriptor_type)
 	{
-		for (uint32 i = free_head_; i < capacity_; i++)
+		for (auto i = free_head_; i < capacity_; i++)
 		{
 			list_[i] = i + 1;
 		}
@@ -155,7 +155,7 @@ namespace soul::gpu::impl
 			.stageFlags = VK_SHADER_STAGE_ALL
 		};
 
-		const VkDescriptorBindingFlags flags =
+		constexpr VkDescriptorBindingFlags flags =
 			VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT |
 			VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT |
 			VK_DESCRIPTOR_BINDING_UPDATE_UNUSED_WHILE_PENDING_BIT;
@@ -188,7 +188,7 @@ namespace soul::gpu::impl
 	DescriptorID BindlessDescriptorSet::create_descriptor(VkDevice device, const VkDescriptorBufferInfo& buffer_info)
 	{
 		std::unique_lock lock(mutex_);
-		uint32 index = free_head_;
+		auto index = free_head_;
 		free_head_ = list_[free_head_];
 		const VkWriteDescriptorSet descriptor_write = {
 			.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
@@ -206,7 +206,7 @@ namespace soul::gpu::impl
 	DescriptorID BindlessDescriptorSet::create_descriptor(VkDevice device, const VkDescriptorImageInfo& image_info)
 	{
 		std::unique_lock lock(mutex_);
-		uint32 index = free_head_;
+		auto index = free_head_;
 		free_head_ = list_[free_head_];
 		const VkWriteDescriptorSet descriptor_write = {
 			.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
@@ -224,7 +224,7 @@ namespace soul::gpu::impl
 	void BindlessDescriptorSet::destroy_descriptor(VkDevice device, DescriptorID id)
 	{
 		if (id.is_null()) return;
-		VkCopyDescriptorSet copy_descriptor_set = {
+		const VkCopyDescriptorSet copy_descriptor_set = {
 			.sType = VK_STRUCTURE_TYPE_COPY_DESCRIPTOR_SET,
 			.srcSet = descriptor_set_,
 			.srcBinding = 0,

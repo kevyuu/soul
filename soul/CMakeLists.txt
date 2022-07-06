@@ -18,7 +18,7 @@ set (SOUL_HEADERS
 	src/core/enum_array.h
 	src/core/bit_vector.h
 	src/core/geometry.h
-	src/core/string.h
+	src/core/cstring.h
 	src/core/thread.h
 
 	src/gpu/type.h
@@ -52,9 +52,9 @@ set (SOUL_SOURCES
 
 	src/core/config.cpp
 	src/core/dev_util.cpp
-	src/core/math.cpp
-	src/core/geometry.cpp
-	src/core/string.cpp
+	
+	
+	src/core/cstring.cpp
 
 	src/gpu/intern/gpu_system_glfw.cpp
 	src/gpu/intern/gpu_system.cpp
@@ -84,7 +84,7 @@ target_include_directories(soul
 	PUBLIC src ${NVTX_INCLUDE_DIR} ${PROJECT_SOURCE_DIR}/dependencies)
 target_link_system_libraries(soul
 	PUBLIC glfw ${NVTX} Vulkan::Vulkan volk::volk volk::volk_headers vk_mem_alloc Tracy::TracyClient
-	PRIVATE slang::main)
+	PRIVATE dxc)
 target_compile_definitions(soul PUBLIC TRACY_ENABLE NOMINMAX)
 
 

@@ -21,7 +21,7 @@ namespace soul {
         template<std::size_t N>
 		static consteval FlagMap<EnumType, ValType> build_from_list(const ValType (&list)[N]);
 
-        explicit FlagMap<EnumType, ValType>(std::initializer_list<std::pair<EnumType, ValType>> init_list) noexcept;
+        constexpr FlagMap<EnumType, ValType>(std::initializer_list<std::pair<EnumType, ValType>> init_list) noexcept;
 
 		constexpr ValType& operator[](EnumType index) noexcept {
 			SOUL_ASSERT(0, to_underlying(index) < to_underlying(EnumType::COUNT), "");
@@ -48,7 +48,7 @@ namespace soul {
 	};
 
     template <flag EnumType, typename ValType>
-    FlagMap<EnumType, ValType>::FlagMap(std::initializer_list<std::pair<EnumType, ValType>> init_list) noexcept: buffer_()
+    constexpr FlagMap<EnumType, ValType>::FlagMap(std::initializer_list<std::pair<EnumType, ValType>> init_list) noexcept: buffer_()
     {
         for (auto item : init_list)
         {

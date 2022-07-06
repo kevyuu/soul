@@ -6,6 +6,8 @@
       "name": "glfw3",
       "version>=": "3.3.7"
     },
+    "directxtk",
+    "tl-expected",
     "glm",
     "vulkan-memory-allocator",
     "volk",

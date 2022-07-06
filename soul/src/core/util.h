@@ -3,6 +3,7 @@
 #include "core/compiler.h"
 #include "core/type.h"
 #include "core/type_traits.h"
+#include "core/cstring.h"
 #include <optional>
 
 namespace soul::util
@@ -104,6 +105,36 @@ namespace soul::util
 #define DO_STRING_JOIN2(arg1, arg2) arg1 ## arg2
 #define SCOPE_EXIT(code) \
     auto STRING_JOIN2(scope_exit_, __LINE__) = soul::util::make_scope_exit([=](){code;})
+
+	inline CString load_file(const char* filepath, soul::memory::Allocator& allocator) {
+		FILE* file = nullptr;
+	    const auto err = fopen_s(&file, filepath, "rb");
+		if (err != 0) SOUL_PANIC("Fail to open file %s", filepath);
+	    SCOPE_EXIT(fclose(file));
+
+	    fseek(file, 0, SEEK_END);
+		const auto fsize = ftell(file);
+		fseek(file, 0, SEEK_SET);  /* same as rewind(f); */
+
+		CString string(fsize, allocator);
+		fread(string.data(), 1, fsize, file);
+
+		return string;
+	}
+
+	constexpr uint64 hash_fnv1_bytes(const uint8* data, const soul_size size, const uint64 initial = 0xcbf29ce484222325ull) {
+        auto hash = initial;
+		for (uint32 i = 0; i < size; i++) {
+			hash = (hash * 0x100000001b3ull) ^ data[i];
+		}
+		return hash;
+	}
+
+	template <typename T>
+	constexpr uint64 hash_fnv1(const T* data, const uint64 initial = 0xcbf29ce484222325ull)
+	{
+		return hash_fnv1_bytes(reinterpret_cast<const uint8*>(data), sizeof(data), initial);
+	}
 
 };
 

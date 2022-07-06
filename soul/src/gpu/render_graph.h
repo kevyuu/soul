@@ -54,7 +54,7 @@ namespace soul::gpu
 	class RenderGraphRegistry;
 	class PassNode;
 	class RGShaderPassDependencyBuilder;
-	class RGCopyPassDependencyBuilder;
+	class RGTransferPassDependencyBuilder;
 
 	template <typename Func, typename Data>
 	concept graphic_pass_executable =
@@ -68,8 +68,8 @@ namespace soul::gpu
 
 	template <typename Func, typename Data>
 	concept copy_pass_executable =
-		std::invocable<Func, const Data&, gpu::RenderGraphRegistry&, gpu::CopyCommandList&> &&
-		std::same_as<void, std::invoke_result_t<Func, const Data&, gpu::RenderGraphRegistry&, gpu::CopyCommandList&>>;
+		std::invocable<Func, const Data&, gpu::RenderGraphRegistry&, gpu::TransferCommandList&> &&
+		std::same_as<void, std::invoke_result_t<Func, const Data&, gpu::RenderGraphRegistry&, gpu::TransferCommandList&>>;
 
 	template <typename Func, typename Data>
 	concept shader_pass_setup =
@@ -78,8 +78,8 @@ namespace soul::gpu
 
 	template <typename Func, typename Data>
 	concept copy_pass_setup =
-		std::invocable<Func, RGCopyPassDependencyBuilder&, Data&> &&
-		std::same_as<void, std::invoke_result_t<Func, gpu::RGCopyPassDependencyBuilder&, Data&>>;
+		std::invocable<Func, RGTransferPassDependencyBuilder&, Data&> &&
+		std::same_as<void, std::invoke_result_t<Func, gpu::RGTransferPassDependencyBuilder&, Data&>>;
 
 	//ID
 	using PassNodeID = ID<PassNode, uint16>;
@@ -101,19 +101,21 @@ namespace soul::gpu
 	{
 		TextureType type = TextureType::D2;
 		TextureFormat format = TextureFormat::RGBA8;
-		Vec3ui32 extent;
+		vec3ui32 extent;
 		uint32 mip_levels = 1;
 		uint16 layer_count = 1;
 		TextureSampleCount sample_count = gpu::TextureSampleCount::COUNT_1;
 		bool clear = false;
 		ClearValue clear_value;
 
-		static RGTextureDesc create_d2(const TextureFormat format, const uint32 mip_levels, const Vec2ui32 dimension, bool clear = false, ClearValue clear_value = {}, const TextureSampleCount sample_count = TextureSampleCount::COUNT_1)
+		static RGTextureDesc create_d2(const TextureFormat format, const uint32 mip_levels, 
+			const vec2ui32 dimension, bool clear = false, ClearValue clear_value = {}, 
+			const TextureSampleCount sample_count = TextureSampleCount::COUNT_1)
 		{
 			return {
 				.type = TextureType::D2,
 				.format = format,
-				.extent = Vec3ui32(dimension.x, dimension.y, 1),
+				.extent = vec3ui32(dimension.x, dimension.y, 1),
 				.mip_levels = mip_levels,
 				.layer_count = 1,
 				.sample_count = sample_count,
@@ -122,12 +124,30 @@ namespace soul::gpu
 			};
 		}
 
-		static RGTextureDesc create_d2_array(const TextureFormat format, const uint32 mip_levels, const Vec2ui32 dimension, const uint16 layer_count, bool clear = false, ClearValue clear_value = {})
+		static RGTextureDesc create_d3(const TextureFormat format, const uint32 mip_levels,
+			const vec3ui32 dimension, bool clear = false, ClearValue clear_value = {},
+			const TextureSampleCount sample_count = TextureSampleCount::COUNT_1)
+		{
+			return {
+				.type = TextureType::D3,
+				.format = format,
+				.extent = dimension,
+				.mip_levels = mip_levels,
+				.layer_count = 1,
+				.sample_count = sample_count,
+				.clear = clear,
+				.clear_value = clear_value
+			};
+		}
+
+		static RGTextureDesc create_d2_array(const TextureFormat format, const uint32 mip_levels, 
+			const vec2ui32 dimension, const uint16 layer_count, bool clear = false, 
+			ClearValue clear_value = {})
 		{
 			return {
 				.type = TextureType::D2_ARRAY,
 				.format = format,
-				.extent = Vec3ui32(dimension.x, dimension.y, 1),
+				.extent = vec3ui32(dimension.x, dimension.y, 1),
 				.mip_levels = mip_levels,
 				.layer_count = layer_count,
 				.clear = clear,
@@ -138,9 +158,7 @@ namespace soul::gpu
 
 	struct RGBufferDesc
 	{
-		soul_size count = 0;
-		uint16 typeSize = 0;
-		uint16 typeAlignment = 0;
+		soul_size size = 0;
 	};
 
 	struct ColorAttachmentDesc
@@ -185,6 +203,7 @@ namespace soul::gpu
 	enum class ShaderBufferWriteUsage : uint8
 	{
 		UNIFORM,
+		STORAGE,
 		COUNT
 	};
 
@@ -241,8 +260,16 @@ namespace soul::gpu
 		BufferNodeID node_id;
 	};
 
+	enum class TransferDataSource
+	{
+	    GPU,
+		CPU,
+		COUNT
+	};
+
 	struct TransferDstBufferAccess
 	{
+		TransferDataSource data_source;
 		BufferNodeID input_node_id;
 		BufferNodeID output_node_id;
 	};
@@ -255,6 +282,7 @@ namespace soul::gpu
 
 	struct TransferDstTextureAccess
 	{
+		TransferDataSource data_source;
 		TextureNodeID input_node_id;
 		TextureNodeID output_node_id;
 		SubresourceIndexRange view_range;
@@ -264,18 +292,18 @@ namespace soul::gpu
 	{
 		RGRenderTargetDesc() = default;
 
-		RGRenderTargetDesc(Vec2ui32 dimension, const ColorAttachmentDesc& color) : dimension(dimension)
+		RGRenderTargetDesc(vec2ui32 dimension, const ColorAttachmentDesc& color) : dimension(dimension)
 		{
 			color_attachments.push_back(color);
 		}
 
-		RGRenderTargetDesc(Vec2ui32 dimension, const ColorAttachmentDesc& color, const DepthStencilAttachmentDesc& depth_stencil) :
+		RGRenderTargetDesc(vec2ui32 dimension, const ColorAttachmentDesc& color, const DepthStencilAttachmentDesc& depth_stencil) :
 			dimension(dimension), depth_stencil_attachment(depth_stencil)
 		{
 			color_attachments.push_back(color);
 		}
 
-		RGRenderTargetDesc(Vec2ui32 dimension, const TextureSampleCount sample_count, const ColorAttachmentDesc& color, 
+		RGRenderTargetDesc(vec2ui32 dimension, const TextureSampleCount sample_count, const ColorAttachmentDesc& color, 
 			const ResolveAttachmentDesc& resolve, const DepthStencilAttachmentDesc depth_stencil):
 			dimension(dimension), sample_count(sample_count), depth_stencil_attachment(depth_stencil)
 		{
@@ -283,10 +311,10 @@ namespace soul::gpu
 			resolve_attachments.push_back(resolve);
 		}
 
-		RGRenderTargetDesc(Vec2ui32 dimension, const DepthStencilAttachmentDesc& depth_stencil) :
+		RGRenderTargetDesc(vec2ui32 dimension, const DepthStencilAttachmentDesc& depth_stencil) :
 			dimension(dimension), depth_stencil_attachment(depth_stencil)  {}
 
-		Vec2ui32 dimension;
+		vec2ui32 dimension;
 		TextureSampleCount sample_count = TextureSampleCount::COUNT_1;
 		Vector<ColorAttachmentDesc> color_attachments;
 		Vector<ResolveAttachmentDesc> resolve_attachments;
@@ -295,7 +323,7 @@ namespace soul::gpu
 
 	struct RGRenderTarget
 	{
-		Vec2ui32 dimension;
+		vec2ui32 dimension;
 		TextureSampleCount sample_count = TextureSampleCount::COUNT_1;
 		Vector<ColorAttachment> color_attachments;
 		Vector<ResolveAttachment> resolve_attachments;
@@ -434,24 +462,24 @@ namespace soul::gpu
 		
 	};
 
-	class CopyBaseNode : public ShaderNode
+	class TransferBaseNode : public ShaderNode
 	{
 	public:
-		explicit CopyBaseNode(const char* name) : ShaderNode(PassType::TRANSFER, name) {}
-		CopyBaseNode(const CopyBaseNode&) = delete;
-		CopyBaseNode& operator=(const CopyBaseNode&) = delete;
-		CopyBaseNode(CopyBaseNode&&) = delete;
-		CopyBaseNode& operator=(CopyBaseNode&&) = delete;
-		~CopyBaseNode() override = default;
+		explicit TransferBaseNode(const char* name) : ShaderNode(PassType::TRANSFER, name) {}
+		TransferBaseNode(const TransferBaseNode&) = delete;
+		TransferBaseNode& operator=(const TransferBaseNode&) = delete;
+		TransferBaseNode(TransferBaseNode&&) = delete;
+		TransferBaseNode& operator=(TransferBaseNode&&) = delete;
+		~TransferBaseNode() override = default;
 
 		[[nodiscard]] const Vector<TransferSrcBufferAccess>& get_source_buffers() const { return source_buffers_; }
 		[[nodiscard]] const Vector<TransferDstBufferAccess>& get_destination_buffers() const { return destination_buffers_; }
 		[[nodiscard]] const Vector<TransferSrcTextureAccess>& get_source_textures() const { return source_textures_; }
 		[[nodiscard]] const Vector<TransferDstTextureAccess>& get_destination_textures() const { return destination_textures_; }
 
-		virtual void execute_pass(RenderGraphRegistry& registry, CopyCommandList& command_list) = 0;
+		virtual void execute_pass(RenderGraphRegistry& registry, TransferCommandList& command_list) = 0;
 
-		friend class RGCopyPassDependencyBuilder;
+		friend class RGTransferPassDependencyBuilder;
 	private:
 		Vector<TransferSrcBufferAccess> source_buffers_;
 		Vector<TransferDstBufferAccess> destination_buffers_;
@@ -461,21 +489,21 @@ namespace soul::gpu
 
 	template <typename Parameter,
 		copy_pass_executable<Parameter> Execute>
-	class CopyNode final : public CopyBaseNode
+	class TransferNode final : public TransferBaseNode
 	{
 		Parameter parameter_;
 		Execute execute_;
 	public:
-		CopyNode() = delete;
-		CopyNode(const CopyNode&) = delete;
-		CopyNode& operator=(const CopyNode&) = delete;
-		CopyNode(CopyNode&&) = delete;
-		CopyNode& operator=(CopyNode&&) = delete;
-		~CopyNode() override = default;
+		TransferNode() = delete;
+		TransferNode(const TransferNode&) = delete;
+		TransferNode& operator=(const TransferNode&) = delete;
+		TransferNode(TransferNode&&) = delete;
+		TransferNode& operator=(TransferNode&&) = delete;
+		~TransferNode() override = default;
 
-		CopyNode(const char* name, Execute&& execute) : CopyBaseNode(name), execute_(std::forward<Execute>(execute)) {}
+		TransferNode(const char* name, Execute&& execute) : TransferBaseNode(name), execute_(std::forward<Execute>(execute)) {}
 
-		void execute_pass(RenderGraphRegistry& registry, CopyCommandList& command_list) override
+		void execute_pass(RenderGraphRegistry& registry, TransferCommandList& command_list) override
 		{
 			execute_(parameter_, registry, command_list);
 		}
@@ -514,24 +542,24 @@ namespace soul::gpu
 	using RGGraphicPassDependencyBuilder = RGShaderPassDependencyBuilder;
 	using RGComputePassDependencyBuilder = RGShaderPassDependencyBuilder;
 
-	class RGCopyPassDependencyBuilder
+	class RGTransferPassDependencyBuilder
 	{
 		const PassNodeID pass_id_;
-		CopyBaseNode& copy_base_node_;
+		TransferBaseNode& copy_base_node_;
 		RenderGraph& render_graph_;
 	public:
-		RGCopyPassDependencyBuilder(const PassNodeID pass_id, CopyBaseNode& copy_base_node, RenderGraph& render_graph)
+		RGTransferPassDependencyBuilder(const PassNodeID pass_id, TransferBaseNode& copy_base_node, RenderGraph& render_graph)
 			: pass_id_(pass_id), copy_base_node_(copy_base_node), render_graph_(render_graph) {}
-		RGCopyPassDependencyBuilder(const RGCopyPassDependencyBuilder&) = delete;
-		RGCopyPassDependencyBuilder& operator=(const RGCopyPassDependencyBuilder&) = delete;
-		RGCopyPassDependencyBuilder(RGCopyPassDependencyBuilder&&) = delete;
-		RGCopyPassDependencyBuilder& operator=(RGCopyPassDependencyBuilder&&) = delete;
-		~RGCopyPassDependencyBuilder() = default;
+		RGTransferPassDependencyBuilder(const RGTransferPassDependencyBuilder&) = delete;
+		RGTransferPassDependencyBuilder& operator=(const RGTransferPassDependencyBuilder&) = delete;
+		RGTransferPassDependencyBuilder(RGTransferPassDependencyBuilder&&) = delete;
+		RGTransferPassDependencyBuilder& operator=(RGTransferPassDependencyBuilder&&) = delete;
+		~RGTransferPassDependencyBuilder() = default;
 
 		BufferNodeID add_src_buffer(BufferNodeID node_id);
-		BufferNodeID add_dst_buffer(BufferNodeID node_id);
+		BufferNodeID add_dst_buffer(BufferNodeID node_id, TransferDataSource data_source = TransferDataSource::GPU);
 		TextureNodeID add_src_texture(TextureNodeID node_id);
-		TextureNodeID add_dst_texture(TextureNodeID node_id);
+		TextureNodeID add_dst_texture(TextureNodeID node_id, TransferDataSource data_source = TransferDataSource::GPU);
 	};
 
 
@@ -607,13 +635,13 @@ namespace soul::gpu
 			typename Parameter,
 			copy_pass_setup<Parameter&> Setup,
 			copy_pass_executable<Parameter&> Executable,
-			typename Node = CopyNode<Parameter, Executable>
+			typename Node = TransferNode<Parameter, Executable>
 		>
-		const Node& add_copy_pass(const char* name, Setup&& setup, Executable&& execute)
+		const Node& add_transfer_pass(const char* name, Setup&& setup, Executable&& execute)
 		{
 			auto node = allocator_->create<Node>(name, std::forward<Executable>(execute));
 			pass_nodes_.push_back(node);
-			RGCopyPassDependencyBuilder builder(PassNodeID(pass_nodes_.size() - 1), *node, *this);
+			RGTransferPassDependencyBuilder builder(PassNodeID(pass_nodes_.size() - 1), *node, *this);
 			setup(builder, node->get_parameter_());
 			return *node;
 		}
@@ -623,7 +651,6 @@ namespace soul::gpu
 		
 		BufferNodeID import_buffer(const char* name, BufferID buffer_id);
 		BufferNodeID create_buffer(const char* name, const RGBufferDesc& desc);
-		
 
 		void cleanup();
 
@@ -672,7 +699,7 @@ namespace soul::gpu
 			const char* name = nullptr;
 			TextureType type = TextureType::D2;
 			TextureFormat format = TextureFormat::COUNT;
-			Vec3ui32 extent;
+			vec3ui32 extent;
 			uint32 mip_levels = 1;
 			uint16 layer_count = 1;
 			TextureSampleCount sample_count = TextureSampleCount::COUNT_1;
@@ -696,9 +723,7 @@ namespace soul::gpu
 		struct RGInternalBuffer
 		{
 			const char* name = nullptr;
-			uint16 count = 0;
-			uint16 type_size = 0;
-			uint16 type_alignment = 0;
+			soul_size size = 0;
 			bool clear = false;
 		};
 
