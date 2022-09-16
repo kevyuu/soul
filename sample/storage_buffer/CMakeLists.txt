@@ -1,0 +1,12 @@
+set(SHADER_SOURCES
+	shaders/transform.hlsl
+	shaders/storage_buffer_sample.hlsl
+)
+
+create_shaders_target(storage_buffer_shaders "${SHADER_SOURCES}")
+
+add_executable(storage_buffer_sample "storage_buffer_sample.cpp")
+target_link_libraries(storage_buffer_sample 
+	PRIVATE sample_common)
+add_dependencies(storage_buffer_sample storage_buffer_shaders)
+executable_add_dxc_dependencies(storage_buffer_sample)

@@ -1,27 +1,6 @@
-[submodule "dependencies/volk"]
-	path = dependencies/volk
-	url = https://github.com/zeux/volk.git
-[submodule "dependencies/glfw"]
-	path = dependencies/glfw
-	url = https://github.com/glfw/glfw.git
-[submodule "dependencies/SPIRV-Cross"]
-	path = dependencies/SPIRV-Cross
-	url = https://github.com/KhronosGroup/SPIRV-Cross.git
-[submodule "dependencies/shaderc"]
-	path = dependencies/shaderc
-	url = https://github.com/google/shaderc.git
-[submodule "dependencies/VulkanMemoryAllocator"]
-	path = dependencies/VulkanMemoryAllocator
-	url = https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator.gitls
-[submodule "dependencies/SPIRV-Tools"]
-	path = dependencies/SPIRV-Tools
-	url = https://github.com/KhronosGroup/SPIRV-Tools
-[submodule "dependencies/SPIRV-Headers"]
-	path = dependencies/SPIRV-Headers
-	url = https://github.com/KhronosGroup/SPIRV-Headers
-[submodule "dependencies/glslang"]
-	path = dependencies/glslang
-	url = https://github.com/KhronosGroup/glslang
-[submodule "dependencies/tracy"]
-	path = dependencies/tracy
-	url = https://bitbucket.org/wolfpld/tracy.git
+[submodule "dependencies/imgui"]
+	path = dependencies/imgui
+	url = https://github.com/ocornut/imgui.git
+[submodule "dependencies/vcpkg"]
+	path = dependencies/vcpkg
+	url = https://github.com/microsoft/vcpkg.git

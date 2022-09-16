@@ -2,202 +2,336 @@
 // Created by Kevin Yudi Utama on 2/8/18.
 //
 
+// ReSharper disable CppInconsistentNaming
 #pragma once
 
-#include <cstdint>
 #include <cstddef>
-#include <climits>
-#include <cfloat>
-#include <type_traits>
+#include <cstdint>
+#include <limits>
+#include <tl/expected.hpp>
 
-typedef int8_t int8;
-typedef int16_t int16;
-typedef int32_t int32;
-typedef int64_t int64;
-typedef int32 bool32;
+#include "glm/vec2.hpp"
+#include "glm/vec3.hpp"
+#include "glm/vec4.hpp"
+#include "core/dev_util.h"
+#include "core/type_traits.h"
 
-typedef uint8_t uint8;
-typedef uint16_t uint16;
-typedef uint32_t uint32;
-typedef uint64_t uint64;
+using int8 = int8_t;
+using int16 = int16_t;
+using int32 = int32_t;
+using int64 = int64_t;
+using bool32 = int32;
 
-typedef intptr_t intptr;
-typedef uintptr_t uintptr;
+using uint8 = uint8_t;
+using uint16 = uint16_t;
+using uint32 = uint32_t;
+using uint64 = uint64_t;
 
-typedef size_t memory_index;
+using intptr = intptr_t;
+using uintptr = uintptr_t;
 
-typedef float real32;
-typedef double real64;
+using memory_index = size_t;
 
-typedef int8 s8;
-typedef int8 s08;
-typedef int16 s16;
-typedef int32 s32;
-typedef int64 s64;
-typedef bool32 b32;
+using byte = uint8;
+using soul_size = uint64_t;
 
-typedef uint8 u8;
-typedef uint8 byte;
-typedef uint8 u08;
-typedef uint16 u16;
-typedef uint32 u32;
-typedef uint64 u64;
+namespace soul {
 
-typedef real32 r32;
-typedef real64 r64;
-typedef real32 f32;
-typedef real64 f64;
+	constexpr soul_size ONE_KILOBYTE = 1024;
+	constexpr soul_size ONE_MEGABYTE = 1024 * ONE_KILOBYTE;
+	constexpr soul_size ONE_GIGABYTE = 1024 * ONE_MEGABYTE;
 
-typedef uintptr_t umm;
-typedef intptr_t smm;
+	template <typename Val, typename Err>
+	using expected = tl::expected<Val, Err>;
 
-typedef b32 b32x;
-typedef u32 u32x;
-
-namespace Soul {
-
-	struct Vec2f;
-	struct Vec3f;
-	struct Vec4f;
-
-	struct Vec2ui32 {
-		uint32 x;
-		uint32 y;
-
-		Vec2ui32() : x(0), y(0) {}
-		Vec2ui32(uint32 x, uint32 y) : x(x), y(y) {}
-	};
-
-	struct Vec2f {
-		float x;
-		float y;
-
-		Vec2f() : x(0), y(0) {}
-		Vec2f(float x, float y) : x(x), y(y) {}
-	};
-
-	struct Vec3f {
-		float x;
-		float y;
-		float z;
-
-		constexpr Vec3f() : x(0), y(0), z(0) {}
-		constexpr Vec3f(float x, float y, float z) : x(x), y(y), z(z) {}
-	};
-
-	struct Vec4f {
-		float x;
-		float y;
-		float z;
-		float w;
-
-		Vec4f() : x(0), y(0), z(0), w(0) {}
-		Vec4f(float x, float y, float z, float w) : x(x), y(y), z(z), w(w) {}
-		Vec4f(Vec3f xyz, float w) : x(xyz.x), y(xyz.y), z(xyz.z), w(w) {}
-		Vec3f xyz() const { return Vec3f(x, y, z); }
-	};
-
-	struct Quaternion {
-		float x;
-		float y;
-		float z;
-		float w;
-
-		Quaternion() : x(0), y(0), z(0), w(1) {}
-		Quaternion(float x, float y, float z, float w) : x(x), y(y), z(z), w(w) {}
-		Quaternion(Vec3f xyz, float w) : x(xyz.x), y(xyz.y), z(xyz.z), w(w) {}
-		Vec3f xyz() const { return Vec3f(x, y, z); }
-	};
-
-	struct Mat3 {
-
-		float elem[3][3];
-
-		Mat3() {
-			for (int i = 0; i < 3; i++) {
-				for (int j = 0; j < 3; j++) {
-					elem[i][j] = 0;
-				}
-			}
-		}
-	};
-
-	struct Mat4 {
-
-		union {
-			float elem[4][4];
-			float mem[16];
-		};
-
-
-		Mat4() {
-			for (int i = 0; i < 4; i++) {
-				for (int j = 0; j < 4; j++) {
-					elem[i][j] = 0;
-				}
-			}
-		}
-	};
-
-	struct Transform {
-		Vec3f position;
-		Vec3f scale;
-		Quaternion rotation;
-	};
-
-	struct AABB {
-		Vec3f min;
-		Vec3f max;
-	};
-
-	template <typename ResourceType, typename IDType>
-	struct ID {
-		IDType id;
-
-		constexpr ID() = default;
-		constexpr explicit ID(IDType id) : id(id) {}
-		bool operator==(const ID& other) const { return other.id == id; }
-		bool operator!=(const ID& other) const { return other.id != id; }
-	};
-
-	template <typename Enum, typename T>
-	void ForEachEnum(const T& func) {
-		for (uint64 i = 0; i < uint64(Enum::COUNT); i++) {
-			func(Enum(i));
-		}
+	template <class E>
+	tl::unexpected<typename std::decay<E>::type> make_unexpected(E&& e) {
+		return unexpected<typename std::decay<E>::type>(std::forward<E>(e));
 	}
 
+	template <typename T>
+	concept bit_block_type = std::unsigned_integral<T>;
+
+	template <typename T>
+	struct raw_buffer {
+		alignas(T) std::byte data[sizeof(T)];
+	};
+
+	template <soul_size Dim, typename T>
+	using vec = glm::vec<Dim, T, glm::defaultp>;
+
+	template <typename T>
+	using vec2 = vec<2, T>;
+
+	template <typename T>
+	using vec3 = vec<3, T>;
+
+	template <typename T>
+	using vec4 = vec<4, T>;
+
+	using vec2f = vec2<float>;
+	using vec3f = vec3<float>;
+	using vec4f = vec4<float>;
+
+	using vec2d = vec2<double>;
+	using vec3d = vec3<double>;
+	using vec4d = vec4<double>;
+
+	using vec2i16 = vec2<int16>;
+	using vec3i16 = vec3<int16>;
+	using vec4i16 = vec4<int16>;
+
+	using vec2ui32 = vec2<uint32>;
+	using vec3ui32 = vec3<uint32>;
+	using vec4ui32 = vec4<uint32>;
+
+	using vec2i32 = vec2<int32>;
+	using vec3i32 = vec3<int32>;
+	using vec4i32 = vec4<int32>;
+
+	template <soul_size Row, soul_size Column, typename T>
+	struct matrix
+	{
+		using this_type = matrix < Column, Row, T>;
+		using store_type = glm::mat<Column, Row, T, glm::defaultp>;
+		store_type mat;
+
+		constexpr matrix() = default;
+		constexpr explicit matrix(T val) : mat(val) {}
+		constexpr explicit matrix(store_type mat) : mat(mat) {}
+
+		SOUL_ALWAYS_INLINE [[nodiscard]] float m(const uint8 row, const uint8 column) const
+		{
+			return mat[column][row];
+		}
+
+		SOUL_ALWAYS_INLINE float& m(const uint8 row, const uint8 column)
+		{
+			return mat[column][row];
+		}
+
+		static constexpr this_type identity()
+		{
+			return this_type(store_type(1));
+		}
+
+
+	};
+
 	template<typename T>
-	class Enum {
+	using matrix4x4 = matrix<4, 4, T>;
+
+	using mat3f = matrix<3, 3, float>;
+	using mat4f = matrix<4, 4, float>;
+
+	template <arithmetic T>
+	struct Quaternion {
+		union {
+			struct { T x, y, z, w; };
+			vec4<T> xyzw;
+			vec3<T> xyz;
+			vec2<T> xy;
+			struct {
+				vec3<T> vector;
+				T real;
+			};
+			T mem[4];
+		};
+
+		constexpr Quaternion() noexcept : x(0), y(0), z(0), w(1) {}
+		constexpr Quaternion(T x, T y, T z, T w) noexcept : x(x), y(y), z(z), w(w) {}
+		constexpr Quaternion(vec3<T> xyz, T w) noexcept : x(xyz.x), y(xyz.y), z(xyz.z), w(w) {}
+		constexpr explicit Quaternion(const T* val) noexcept : x(val[0]), y(val[1]), z(val[2]), w(val[3]) {}
+	};
+	using Quaternionf = Quaternion<float>;
+
+	struct Transformf {
+		vec3f position;
+		vec3f scale;
+		Quaternionf rotation;
+	};
+
+
+	struct AABB {
+		vec3f min = vec3f(std::numeric_limits<float>::max());
+		vec3f max = vec3f(std::numeric_limits<float>::lowest());
+
+		AABB() = default;
+		AABB(const vec3f& min, const vec3f& max) noexcept : min{min}, max{max} {}
+		bool isEmpty() const { return (min.x >= max.x || min.y >= max.y || min.z >= max.z); }
+		bool isInside(const vec3f& point) const
+		{
+			return (point.x >= min.x && point.x <= max.x) && (point.y >= min.y && point.y <= max.y) && (point.z >= min.z && point.z <= max.z);
+		}
+
+		struct Corners
+		{
+			static constexpr soul_size COUNT = 8;
+			vec3f vertices[COUNT];
+		};
+
+		Corners getCorners() const
+		{
+			return {
+				vec3f(min.x, min.y, min.z),
+				vec3f(min.x, min.y, max.z),
+				vec3f(min.x, max.y, min.z),
+				vec3f(min.x, max.y, max.z),
+				vec3f(max.x, min.y, min.z),
+				vec3f(max.x, min.y, max.z),
+				vec3f(max.x, max.y, min.z),
+				vec3f(max.x, max.y, max.z)
+			};
+		}
+
+	};
+
+	template<
+		typename PointerDst,
+		typename PointerSrc
+	>
+	requires std::is_pointer_v<PointerDst> && std::is_pointer_v<PointerSrc>
+	constexpr PointerDst cast(PointerSrc srcPtr)
+	{
+		using Dst = std::remove_pointer_t<PointerDst>;
+		if constexpr (!std::is_same_v<PointerDst, void*>) {
+			SOUL_ASSERT(0, reinterpret_cast<uintptr>(srcPtr) % alignof(Dst) == 0, "Source pointer is not aligned in PointerDst alignment!");
+		}
+		return (PointerDst)(srcPtr);
+	}
+
+	template<
+		std::integral IntegralDst,
+		std::integral IntegralSrc
+	>
+	constexpr IntegralDst cast(IntegralSrc src) {
+		SOUL_ASSERT(0, static_cast<uint64>(src) <= std::numeric_limits<IntegralDst>::max(), "Source value is larger than the destintation type maximum!");
+		SOUL_ASSERT(0, static_cast<int64>(src) >= std::numeric_limits<IntegralDst>::min(), "Source value is smaller than the destination type minimum!");
+	    return static_cast<IntegralDst>(src);
+	}
+
+	template<
+		typename PointerDst,
+		typename PointerSrc
+	>
+	requires std::is_pointer_v<PointerDst>&& std::is_pointer_v<PointerSrc>
+	constexpr PointerDst downcast(PointerSrc srcPtr)
+	{
+		return static_cast<PointerDst>(srcPtr);
+	}
+
+	template <scoped_enum E>
+	constexpr auto to_underlying(E e) noexcept
+	{
+		return static_cast<std::underlying_type_t<E>>(e);
+	}
+
+	template <
+		typename ResourceType,
+		typename IDType,
+		IDType NullValue = std::numeric_limits<IDType>::max()
+	>
+	struct ID {
+
+		using store_type = IDType;
+		IDType id;
+
+		constexpr ID() : id(NullValue) {}
+		constexpr explicit ID(IDType id) : id(id) {}
+
+		template<std::integral Integral>
+		constexpr explicit ID(Integral id) : id(soul::cast<IDType>(id)) {}
+
+		template<typename Pointer> requires std::is_pointer_v<Pointer>
+		constexpr explicit ID(Pointer id): id(id) {}
+
+		bool operator==(const ID& other) const { return other.id == id; }
+		bool operator!=(const ID& other) const { return other.id != id; }
+		bool operator<(const ID& other) const { return id < other.id; }
+		bool operator<=(const ID& other) const { return id <= other.id; }
+		[[nodiscard]] bool is_null() const { return id == NullValue; }
+		[[nodiscard]] bool is_valid() const { return id != NullValue; }
+
+		static constexpr ID null() {
+			return ID(NullValue);
+		}
+	};
+
+	template<flag Flag>
+	class FlagIter {
+
+		using store_type = std::underlying_type_t<Flag>;
 
 	public:
 		class Iterator {
 		public:
-			Iterator(uint64 index): _index(index) {}
-			Iterator operator++() { ++_index; return *this; }
-			bool operator!=(const Iterator& other) const { return _index != other._index; }
-			const T& operator*() const { return T(_index); }
+			constexpr explicit Iterator(store_type index): index_(index) {}
+			constexpr Iterator operator++() { ++index_; return *this; }
+			constexpr bool operator!=(const Iterator& other) const { return index_ != other.index_; }
+			constexpr Flag operator*() const { return Flag(index_); }
 		private:
-			uint64 _index;
+			store_type index_;
 		};
-		Iterator begin() const { return Iterator(0);}
-		Iterator end() const { return Iterator(uint64(T::COUNT)); }
+		[[nodiscard]] Iterator begin() const { return Iterator(0);}
+		[[nodiscard]] Iterator end() const { return Iterator(to_underlying(Flag::COUNT)); }
 
-		static Enum Iterates() {
-			return Enum();
+		constexpr FlagIter() = default;
+
+		static FlagIter Iterates() {
+			return FlagIter();
 		}
 
 		static uint64 Count() {
-			return uint64(T::COUNT);
+			return to_underlying(Flag::COUNT);
 		}
-
-	private:
-		Enum() = default;
 
 	};
 
+	template<typename InputIt, typename OutputIt>
+	void Copy(InputIt first, InputIt last, OutputIt output)
+	{
+		std::copy(first, last, output);
+	}
+
+	template <
+		typename ElemType
+	>
+	requires std::is_trivially_move_constructible_v<ElemType>
+	void Move(ElemType* begin, ElemType* end, ElemType* dst) {
+		memcpy((void*)dst, (void*)begin, uint64(end - begin) * sizeof(ElemType));  // NOLINT(bugprone-sizeof-expression)
+	}
+
+	template<
+		typename ElemType
+	>
+	requires (!std::is_trivially_move_constructible_v<ElemType>)
+	void Move(ElemType* begin, ElemType* end, ElemType* dst) {
+		for (ElemType* iter = begin; iter != end; ++iter, ++dst) {
+			new (dst) ElemType(std::move(*iter));
+		}
+	}
+
+	template<
+		typename ElemType
+	>
+	requires(is_trivially_destructible_v<ElemType>)
+	void Destruct(ElemType* begin, ElemType* end) {}
+
+	template<
+		typename ElemType
+	>
+	requires(!is_trivially_destructible_v<ElemType>)
+	void Destruct(ElemType* begin, ElemType* end) {
+		for (ElemType* iter = begin; iter != end; ++iter) {
+			iter->~ElemType();
+		}
+	}
+
+	template <std::integral Integral, flag Enum>
+	constexpr auto operator<<(Integral integral, Enum e)
+	{
+		using ReturnType = min_uint_t<1u << to_underlying(Enum::COUNT)>;
+		return static_cast<ReturnType>(1u << to_underlying(e));
+	}
 }
 
-#define SOUL_ARRAY_LEN(arr) (sizeof(arr) / sizeof(*arr))
-#define SOUL_BIT_COUNT(type) (sizeof(type) * 8)
-#define SOUL_UTYPE_MAX(type) ((1u << (SOUL_BIT_COUNT(type) - 1)) - 1)

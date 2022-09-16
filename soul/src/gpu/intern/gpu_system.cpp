@@ -2,542 +2,685 @@
 #include "gpu/render_graph.h"
 #include "gpu/intern/enum_mapping.h"
 #include "gpu/intern/render_graph_execution.h"
+#include "gpu/intern/bindless_descriptor_allocator.h"
 
-#include "job/system.h"
+#include "runtime/system.h"
 
-#include "core/array.h"
-#include "core/math.h"
+#include "runtime/scope_allocator.h"
+
+#include "core/vector.h"
 #include "core/dev_util.h"
+#include "core/util.h"
 
-#include <volk/volk.h>
+#include <volk.h>
 #define VMA_IMPLEMENTATION
 #include <vk_mem_alloc.h>
-#include <shaderc/shaderc.hpp>
-#include <spirv_cross.hpp>
 
 #include <cstddef>
 #include <limits>
+#include <string>
+#include <random>
+#include <variant>
+#include <span>
 
-namespace Soul { namespace GPU {
+#include "memory/allocator.h"
 
-	static VKAPI_ATTR VkBool32 VKAPI_CALL _debugCallback(
-		VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
-		VkDebugUtilsMessageTypeFlagsEXT messageType,
-		const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
-		void* pUserData) {
-		SOUL_LOG_INFO("_debugCallback");
-		switch(messageSeverity) {
-			case VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT: {
-				SOUL_LOG_INFO("VkDebugUtils: %s", pCallbackData->pMessage);
-				break;
-			}
-			case VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT: {
-				SOUL_LOG_WARN("VkDebugUtils: %s", pCallbackData->pMessage);
-				break;
-			}
-			case VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT: {
-				SOUL_LOG_ERROR("VkDebugUtils: %s", pCallbackData->pMessage);
-				break;
-			}
-			default: {
-				SOUL_LOG_INFO("VkDebugUtils: %s", pCallbackData->pMessage);
-				break;
-			}
+static constexpr const char* RESOURCE_HLSL = R"HLSL(
+
+typedef uint uint32;
+
+namespace soul
+{
+    typedef vector <uint, 2> vec2ui32;
+
+	typedef vector <float, 2> vec2f;
+	typedef vector <float, 3> vec3f;
+	typedef vector <float, 4> vec4f;
+
+	typedef matrix <float, 3, 3> mat3f;
+	typedef matrix <float, 4, 4> mat4f;
+}
+
+namespace soulsl
+{
+    typedef uint DescriptorID;
+
+	typedef vector <float, 2> float2;
+	typedef vector <float, 3> float3;
+	typedef vector <float, 4> float4;
+
+    typedef vector <double, 2> double2;
+    typedef vector <double, 3> double3;
+    typedef vector <double, 4> double4;
+
+    typedef vector <uint, 2> uint2;
+    typedef vector <uint, 3> uint3;
+    typedef vector <uint, 4> uint4;
+
+	typedef matrix <float, 3, 3> float3x3;
+	typedef matrix <float, 4, 4> float4x4;
+}
+
+[[vk::binding(0, 0)]] ByteAddressBuffer global_buffer_arr[];
+[[vk::binding(0, 1)]] SamplerState global_sampler_arr[];
+[[vk::binding(0, 2)]] Texture2D global_texture_2d_arr[];
+[[vk::binding(0, 2)]] Texture3D global_texture_3d_arr[];
+[[vk::binding(0, 2)]] TextureCube global_texture_cube_arr[];
+[[vk::binding(0, 3)]] RWTexture2D<float4> global_rw_texture_2d_float4_arr[]; 
+
+template<typename T>
+T get_buffer(uint descriptor_id, uint offset) {
+	return global_buffer_arr[descriptor_id].Load<T>(offset);
+}
+
+SamplerState get_sampler(uint descriptor_id) {
+	return global_sampler_arr[descriptor_id];
+}
+
+Texture2D get_texture_2d(uint descriptor_id) {
+	return global_texture_2d_arr[descriptor_id];
+}
+
+Texture3D get_texture_3d(uint descriptor_id) {
+    return global_texture_3d_arr[descriptor_id];
+}
+
+TextureCube get_texture_cube(uint descriptor_id) {
+    return global_texture_cube_arr[descriptor_id];
+}
+
+RWTexture2D<float4> get_rw_texture_2d_float4(uint descriptor_id) {
+    return global_rw_texture_2d_float4_arr[descriptor_id];
+}
+)HLSL";
+static constexpr soul_size RESOURCE_HLSL_SIZE = std::char_traits<char>::length(RESOURCE_HLSL);
+
+#include <Windows.h>
+#include <dxc/dxcapi.h>
+#include <wrl/client.h>
+
+namespace soul::gpu
+{
+
+	using namespace impl;
+
+	namespace wrl = Microsoft::WRL;
+	struct DxcSession
+	{
+		wrl::ComPtr<IDxcLibrary> library;
+		wrl::ComPtr<IDxcCompiler3> compiler;
+		wrl::ComPtr<IDxcUtils> utils;
+        wrl::ComPtr<IDxcIncludeHandler> default_include_handler;
+	};
+
+	DxcSession create_dxc_session()
+	{
+		DxcSession dxc_session;
+		if (const auto result = DxcCreateInstance(CLSID_DxcLibrary, IID_PPV_ARGS(dxc_session.library.GetAddressOf())); FAILED(result))
+			SOUL_PANIC("Fail to create dxc library instance");
+
+		if (const auto result = DxcCreateInstance(CLSID_DxcCompiler, IID_PPV_ARGS(dxc_session.compiler.GetAddressOf())); FAILED(result))
+			SOUL_PANIC("Fail to create dxc compiler instance");
+
+		if (const auto result = DxcCreateInstance(CLSID_DxcUtils, IID_PPV_ARGS(dxc_session.utils.GetAddressOf())); FAILED(result))
+			SOUL_PANIC("Fail to create dxc utils instance");
+
+		if (const auto result = dxc_session.utils->CreateDefaultIncludeHandler(dxc_session.default_include_handler.GetAddressOf()); FAILED(result))
+			SOUL_PANIC("Fail to create dxc inlcude handler");
+
+		return dxc_session;
+	}
+
+	DxcSession* get_dxc_session()
+	{
+		static DxcSession dxc_global_session = create_dxc_session();
+		return &dxc_global_session;
+	}
+
+
+	static void* vma_alloc_callback(void* user_data, const size_t size, const size_t alignment, VkSystemAllocationScope allocation_scope)
+	{
+		const auto allocator = static_cast<memory::Allocator*>(user_data);
+		return allocator->allocate(size, alignment);
+	}
+
+	static auto vma_reallocation_callback(void* user_data, void* addr, const size_t size, const size_t alignment,
+	                                    VkSystemAllocationScope scope) -> void*
+	{
+		const auto allocator = static_cast<memory::Allocator*>(user_data);
+
+		if (addr != nullptr)
+		{
+			allocator->deallocate(addr);
 		}
-		SOUL_PANIC(0, "Vulkan Error!");
+		return allocator->allocate(size, alignment);
+	}
+
+	static void vma_free_callback(void* user_data, void* addr)
+	{
+		if (addr == nullptr) return;
+		const auto allocator = static_cast<memory::Allocator*>(user_data);
+		allocator->deallocate(addr);
+	}
+
+	static VKAPI_ATTR VkBool32 VKAPI_CALL debug_callback(
+		const VkDebugUtilsMessageSeverityFlagBitsEXT message_severity,
+		[[maybe_unused]] VkDebugUtilsMessageTypeFlagsEXT message_type,
+		const VkDebugUtilsMessengerCallbackDataEXT *callback_data,
+		void *user_data) {
+		switch (message_severity) {
+		case VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT: {
+			break;
+		}
+		case VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT:
+			{
+				SOUL_LOG_INFO("VkDebugUtils: %s", callback_data->pMessage);
+				break; 
+			}
+		case VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT: {
+			SOUL_LOG_WARN("VkDebugUtils: %s", callback_data->pMessage);
+			break;
+		}
+		case VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT: {
+			SOUL_LOG_ERROR("VkDebugUtils: %s", callback_data->pMessage);
+			SOUL_PANIC("Vulkan Error!");
+			break;
+		}
+		case VK_DEBUG_UTILS_MESSAGE_SEVERITY_FLAG_BITS_MAX_ENUM_EXT: {
+			SOUL_NOT_IMPLEMENTED();
+			break;
+		}
+		}
 		return VK_FALSE;
 	}
 
-	void System::init(const Config& config) {
+	void System::init(const Config &config) {
 		SOUL_ASSERT_MAIN_THREAD();
+		config_ = config;
+		runtime::ScopeAllocator<> scope_allocator("GPU::System::Init");
 
-		_db.currentFrame = 0;
-
-		_db.buffers.add({});
-		_db.textures.add({});
-		_db.shaderArgSets.add({});
-		_db.shaders.add({});
-		_db.programs.add({});
-		_db.semaphores.add({});
-
-		_db.descriptorSets.init(1024);
-		_db.samplerMap.init(128);
-
-		SOUL_ASSERT(0, config.windowHandle != nullptr, "Invalid configuration value | windowHandle = nullptr");
-		SOUL_ASSERT(0, config.threadCount > 0, "Invalid configuration value | threadCount = %d", config.threadCount);
-		SOUL_ASSERT(0, config.maxFrameInFlight > 0, "Invalid configuration value | maxFrameInFlight = %d", config.maxFrameInFlight);
+		_db.current_frame = 0;
+		_db.frame_counter = 0;
 		
+		_db.semaphores.reserve(1000);
+		_db.sampler_map.reserve(128);
+
+		SOUL_ASSERT(0, config.window_handle != nullptr, "Invalid configuration value | windowHandle = nullptr");
+		SOUL_ASSERT(0, config.thread_count > 0, "Invalid configuration value | threadCount = %d",
+		            config.thread_count);
+		SOUL_ASSERT(0,
+		            config.max_frame_in_flight > 0,
+		            "Invalid configuration value | maxFrameInFlight = %d",
+		            config.max_frame_in_flight);
+
 		SOUL_VK_CHECK(volkInitialize(), "Volk initialization fail!");
 		SOUL_LOG_INFO("Volk initialization sucessful");
 
-		VkApplicationInfo appInfo = {VK_STRUCTURE_TYPE_APPLICATION_INFO};
-		appInfo.pApplicationName = "Soul Engine";
-		appInfo.applicationVersion = VK_MAKE_VERSION(0, 0, 1);
-		appInfo.pEngineName = "Soul Engine";
-		appInfo.engineVersion = VK_MAKE_VERSION(0, 0, 1);
-		appInfo.apiVersion = VK_API_VERSION_1_1;
+		auto create_instance = []()->VkInstance
+		{
+			const VkApplicationInfo app_info = {
+				.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,
+				.pApplicationName = "Soul",
+				.applicationVersion = VK_MAKE_VERSION(0, 0, 1),
+				.pEngineName = "Soul",
+				.engineVersion = VK_MAKE_VERSION(0, 0, 1),
+				.apiVersion = VK_API_VERSION_1_2
+			};
 
-		SOUL_LOG_INFO("Creating vulkan instance");
-		VkInstanceCreateInfo instanceCreateInfo = {VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO};
-		instanceCreateInfo.pApplicationInfo = &appInfo;
+			static constexpr const char* REQUIRED_EXTENSIONS[] = {
+				VK_KHR_SURFACE_EXTENSION_NAME,
+	#if defined(SOUL_OS_WINDOWS)
+				"VK_KHR_win32_surface",
+	#endif // SOUL_PLATFORM_OS_WIN32
+	#ifdef SOUL_OS_APPLE
+					"VK_MVK_macos_surface",
+	#endif // SOUL_
+				VK_EXT_DEBUG_UTILS_EXTENSION_NAME
+			};
 
-		static const char* requiredExtensions[] = {
-			VK_KHR_SURFACE_EXTENSION_NAME,
-			
-			#ifdef SOUL_OS_WIN32
-			"VK_KHR_win32_surface",
-			#endif // SOUL_PLATFORM_OS_WIN32
-			
-			#ifdef SOUL_OS_APPLE
-			"VK_MVK_macos_surface",
-			#endif // SOUL_PLATFORM_OS_APPLE
-			VK_EXT_DEBUG_UTILS_EXTENSION_NAME
-		};
-		static const uint32_t requiredExtensionCount = sizeof(requiredExtensions)/sizeof(requiredExtensions[0]);
-		instanceCreateInfo.enabledExtensionCount = requiredExtensionCount;
-		instanceCreateInfo.ppEnabledExtensionNames = requiredExtensions;
+	#ifdef SOUL_VULKAN_VALIDATION_ENABLE
+			static constexpr const char* REQUIRED_LAYERS[] = {
+				"VK_LAYER_KHRONOS_validation",
+			};
+			auto is_required_layers_supported = []() -> bool {
+				SOUL_LOG_INFO("Check vulkan layer support.");
+				uint32 layer_count;
 
-		static const char* requiredLayers[] = {
-			
-			#ifdef SOUL_OPTION_VULKAN_ENABLE_VALIDATION
-			"VK_LAYER_KHRONOS_validation",
-			#endif // SOUL_OPTION_VULKAN_ENABLE_VALIDATION
-			
-			#ifdef SOUL_OPTION_VULKAN_ENABLE_RENDERDOC
-			"VK_LAYER_RENDERDOC_Capture",
-			#endif // SOUL_OPTION_VULKAN_ENABLE_RENDERDOC			
-		
-		};
-		static const uint32_t requiredLayerCount = sizeof(requiredLayers) / sizeof(requiredLayers[0]);
+				vkEnumerateInstanceLayerProperties(&layer_count, nullptr);
 
-		static const auto checkLayerSupport = [](int count, const char** layers) -> bool {
-			SOUL_LOG_INFO("Check vulkan layer support.");
-			uint32 layerCount;
-
-			vkEnumerateInstanceLayerProperties(&layerCount, nullptr);
-
-			Array<VkLayerProperties> availableLayers;
-			availableLayers.resize(layerCount);
-
-			vkEnumerateInstanceLayerProperties(&layerCount, availableLayers.data());
-
-			for (int i = 0; i < count; i++) {
-				bool layerFound = false;
-				for (int j = 0; j < layerCount; j++) {
-					if (strcmp(layers[i], availableLayers[j].layerName) == 0) {
-						layerFound = true;
-						break;
+				Vector<VkLayerProperties> available_layers;
+				available_layers.resize(layer_count);
+				vkEnumerateInstanceLayerProperties(&layer_count, available_layers.data());
+				for (const char* required_layer : REQUIRED_LAYERS) {
+					bool layer_found = false;
+					for (const auto& layer : available_layers)
+					{
+						if (strcmp(required_layer, layer.layerName) == 0) {
+							layer_found = true;
+							break;
+						}
+					}
+					if (!layer_found) {
+						SOUL_LOG_INFO("Validation layer %s not found!", required_layer);
+						return false;
 					}
 				}
-				if (!layerFound) {
-					SOUL_LOG_INFO("Validation layer %s not found!", layers[i]);
-					return false;
-				}
-			}
-			availableLayers.cleanup();
+				available_layers.cleanup();
 
-			return true;
+				return true;
+			};
+
+			SOUL_ASSERT(0, is_required_layers_supported(), "");
+
+			constexpr uint32 required_layers_count = std::size(REQUIRED_LAYERS);
+	#else
+			constexpr uint32 required_layers_count = 0;
+			static constexpr const char* const* REQUIRED_LAYERS = nullptr;
+	#endif
+
+			const VkInstanceCreateInfo instance_create_info = {
+				.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
+				.pApplicationInfo = &app_info,
+				.enabledLayerCount = required_layers_count,
+				.ppEnabledLayerNames = REQUIRED_LAYERS,
+				.enabledExtensionCount = std::size(REQUIRED_EXTENSIONS),
+				.ppEnabledExtensionNames = REQUIRED_EXTENSIONS
+			};
+			VkInstance instance;
+			SOUL_VK_CHECK(vkCreateInstance(&instance_create_info, nullptr, &instance),
+				"Vulkan instance creation fail!");
+			SOUL_LOG_INFO("Vulkan instance creation succesful");
+			volkLoadInstance(instance);
+			SOUL_LOG_INFO("Instance version = %d, %d", VK_VERSION_MAJOR(volkGetInstanceVersion()), VK_VERSION_MINOR(volkGetInstanceVersion()));
+			return instance;
 		};
-		
-		SOUL_ASSERT(0, checkLayerSupport(requiredLayerCount, requiredLayers), "");
-		instanceCreateInfo.enabledLayerCount = requiredLayerCount;
-		instanceCreateInfo.ppEnabledLayerNames = requiredLayers;
-		SOUL_VK_CHECK(vkCreateInstance(&instanceCreateInfo, nullptr, &_db.instance), "Vulkan instance creation fail!");
-		SOUL_LOG_INFO("Vulkan instance creation succesful");
+		_db.instance = create_instance();
 
-		volkLoadInstance(_db.instance);
-
-		static const auto createDebugUtilsMessenger = [](_Database* db) {
+		auto create_debug_utils_messenger = [](VkInstance instance) -> VkDebugUtilsMessengerEXT {
+			VkDebugUtilsMessengerEXT debug_messenger = VK_NULL_HANDLE;
 			SOUL_LOG_INFO("Creating vulkan debug utils messenger");
-			VkDebugUtilsMessengerCreateInfoEXT debugMessengerCreateInfo = {VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT};
-			debugMessengerCreateInfo.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
-			debugMessengerCreateInfo.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
-			debugMessengerCreateInfo.pfnUserCallback = _debugCallback;
-			debugMessengerCreateInfo.pUserData = nullptr;
-			SOUL_VK_CHECK(vkCreateDebugUtilsMessengerEXT(db->instance, &debugMessengerCreateInfo, nullptr, &db->debugMessenger), "Vulkan debug messenger creation fail!");
+			const VkDebugUtilsMessengerCreateInfoEXT debug_messenger_create_info = {
+				.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT,
+				.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT |
+					VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT |
+					VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT |
+					VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT,
+				.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT |
+					VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT |
+					VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT,
+				.pfnUserCallback = debug_callback,
+				.pUserData = nullptr
+			};
+			SOUL_VK_CHECK(vkCreateDebugUtilsMessengerEXT(instance, &debug_messenger_create_info, nullptr, &debug_messenger), "Vulkan debug messenger creation fail!");
 			SOUL_LOG_INFO("Vulkan debug messenger creation sucesfull");
+			return debug_messenger;
 		};
-		createDebugUtilsMessenger(&_db);
+		_db.debug_messenger = create_debug_utils_messenger(_db.instance);
 
-		_surfaceCreate(config.windowHandle, &_db.surface);
+		create_surface(config.window_handle, &_db.surface);
+		auto pick_physical_device = [](Database *db, int required_extension_count,
+			                        const char *required_extensions[])-> FlagMap<QueueType, uint32> {
+				SOUL_LOG_INFO("Picking vulkan physical device.");
+				db->physical_device = VK_NULL_HANDLE;
+				uint32 device_count = 0;
+				vkEnumeratePhysicalDevices(db->instance, &device_count, nullptr);
+				SOUL_ASSERT(0, device_count > 0, "There is no device with vulkan support!");
 
-		static const auto pickPhysicalDevice = [](_Database* db, int requiredExtensionCount, const char* requiredExtensions[]) {
-			SOUL_LOG_INFO("Picking vulkan physical device.");
-			db->physicalDevice = VK_NULL_HANDLE;
-			uint32 deviceCount = 0;
-			vkEnumeratePhysicalDevices(db->instance, &deviceCount, nullptr);
-			SOUL_ASSERT(0, deviceCount > 0, "There is no device with vulkan support!");
+				soul::Vector<VkPhysicalDevice> devices;
+				devices.resize(device_count);
+				vkEnumeratePhysicalDevices(db->instance, &device_count, devices.data());
 
-			Soul::Array<VkPhysicalDevice> devices;
-			devices.resize(deviceCount);
-			vkEnumeratePhysicalDevices(db->instance, &deviceCount, devices.data());
+				Vector<VkSurfaceFormatKHR> formats;
+				Vector<VkPresentModeKHR> present_modes;
 
-			Array<VkSurfaceFormatKHR> formats;
-			Array<VkPresentModeKHR> presentModes;
+				db->physical_device = VK_NULL_HANDLE;
+				int best_score = -1;
 
-			db->physicalDevice = VK_NULL_HANDLE;
-			int bestScore = -1;
+				FlagMap<QueueType, uint32> queue_family_indices;
 
-			for (int i = 0; i < devices.size(); i++) {
+				for (VkPhysicalDevice device : devices) {
 
-				VkPhysicalDeviceProperties physicalDeviceProperties;
-				VkPhysicalDeviceFeatures physicalDeviceFeatures;
+					VkPhysicalDeviceDescriptorIndexingFeatures indexing_features = {
+						.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES_EXT,
+						.pNext = nullptr
+					};
+					VkPhysicalDeviceFeatures2 device_features{
+						.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2,
+						.pNext = &indexing_features
+					};
+					vkGetPhysicalDeviceFeatures2(device, &device_features);
+					const bool bindless_supported = indexing_features.descriptorBindingPartiallyBound && indexing_features.runtimeDescriptorArray;
+					if (!bindless_supported)
+						continue;
 
-				vkGetPhysicalDeviceProperties(devices[i], &physicalDeviceProperties);
-				vkGetPhysicalDeviceFeatures(devices[i], &physicalDeviceFeatures);
+					VkPhysicalDeviceProperties physical_device_properties;
+					VkPhysicalDeviceFeatures physical_device_features;
+					vkGetPhysicalDeviceProperties(device, &physical_device_properties);
+					vkGetPhysicalDeviceFeatures(device, &physical_device_features);
+					
+					const auto api_version = physical_device_properties.apiVersion;
+					const auto driver_version = physical_device_properties.driverVersion;
+					const auto vendor_id = physical_device_properties.vendorID;
+					const auto device_id = physical_device_properties.deviceID;
 
-				const uint32_t apiVersion = physicalDeviceProperties.apiVersion;
-				const uint32_t driverVersion = physicalDeviceProperties.driverVersion;
-				const uint32_t vendorID = physicalDeviceProperties.vendorID;
-				const uint32_t deviceID = physicalDeviceProperties.deviceID;
+					SOUL_LOG_INFO("Devices\n"
+					              " -- Name = %s\n"
+					              " -- Vendor = 0x%.8X\n"
+					              " -- Device ID = 0x%.8X\n"
+					              " -- Api Version = %d.%d.%d\n"
+					              " -- Driver Version = %d.%d.%d\n",
+					              physical_device_properties.deviceName, vendor_id, 
+					              device_id, 
+					              VK_VERSION_MAJOR(api_version), VK_VERSION_MINOR(api_version), VK_VERSION_PATCH(api_version),
+					              VK_VERSION_MAJOR(driver_version), VK_VERSION_MINOR(driver_version), VK_VERSION_PATCH(driver_version));
 
-				SOUL_LOG_INFO("Devices %d\n"
-					" -- Name = %s\n"
-					" -- Vendor = 0x%.8X\n"
-					" -- Device ID = 0x%.8X\n"
-					" -- Api Version = 0x%.8X\n"
-					" -- Driver Version = 0x%.8X\n",
-					i, physicalDeviceProperties.deviceName, vendorID, deviceID, apiVersion, driverVersion);
+					uint32_t extension_count;
+					vkEnumerateDeviceExtensionProperties(device, nullptr, &extension_count, nullptr);
 
-				uint32_t extensionCount;
-				vkEnumerateDeviceExtensionProperties(devices[i], nullptr, &extensionCount, nullptr);
+					soul::Vector<VkExtensionProperties> available_extensions;
+					available_extensions.resize(extension_count);
+					vkEnumerateDeviceExtensionProperties(device, nullptr, &extension_count, available_extensions.data());
+					
+					auto is_extension_available = [&available_extensions](const char* required_extension) -> bool
+					{
+						return std::ranges::any_of(available_extensions, [required_extension](const auto& properties)
+						{
+							return strcmp(properties.extensionName, required_extension);
+						});
+					};
+					const auto all_extension_found = std::any_of(required_extensions, required_extensions + required_extension_count, is_extension_available);
+					if (!all_extension_found) {
+						continue;
+					}
 
-				Soul::Array<VkExtensionProperties> availableExtensions;
-				availableExtensions.resize(extensionCount);
-				bool allExtensionFound = true;
-				for (int j = 0; j < requiredExtensionCount; j++) {
-					bool extensionFound = false;
-					for (int k = 0; k < extensionCount; k++) {
-						if (strcmp(availableExtensions[k].extensionName, requiredExtensions[j])) {
-							extensionFound = true;
+					vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device, db->surface, &db->surfaceCaps);
+
+					uint32 format_count;
+					vkGetPhysicalDeviceSurfaceFormatsKHR(device, db->surface, &format_count, nullptr);
+					SOUL_LOG_INFO(" -- Format count = %d", format_count);
+					if (format_count == 0) {
+						continue;
+					}
+					formats.resize(format_count);
+					vkGetPhysicalDeviceSurfaceFormatsKHR(device, db->surface, &format_count, formats.data());
+
+					uint32 present_mode_count;
+					vkGetPhysicalDeviceSurfacePresentModesKHR(device, db->surface, &present_mode_count, nullptr);
+					SOUL_LOG_INFO(" -- Present mode count = %d", present_mode_count);
+					if (present_mode_count == 0) {
+						continue;
+					}
+					present_modes.resize(present_mode_count);
+					vkGetPhysicalDeviceSurfacePresentModesKHR(device, db->surface, &present_mode_count,
+					                                          present_modes.data());
+
+					uint32 queue_family_count;
+					vkGetPhysicalDeviceQueueFamilyProperties(device, &queue_family_count, nullptr);
+
+					soul::Vector<VkQueueFamilyProperties> queue_families;
+					queue_families.resize(queue_family_count);
+					vkGetPhysicalDeviceQueueFamilyProperties(device, &queue_family_count, queue_families.data());
+
+					const auto not_found_family_index = soul::cast<uint32>(queue_families.size());
+
+                    auto graphics_queue_family_index = not_found_family_index;
+					// Try to find queue that support present, graphics and compute
+					for (uint32 j = 0; j < queue_family_count; j++) {
+						VkBool32 present_support = false;
+						vkGetPhysicalDeviceSurfaceSupportKHR(device, j, db->surface, &present_support);
+
+						const VkQueueFamilyProperties &queueProps = queue_families[j];
+						if (VkQueueFlags required_flags = VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_COMPUTE_BIT; present_support && queueProps.queueCount > 0 &&
+							(queueProps.queueFlags & required_flags) == required_flags) {
+							graphics_queue_family_index = j;
+						}
+					}
+
+                    auto compute_queue_family_index = not_found_family_index;
+					for (uint32 j = 0; j < queue_family_count; j++) {
+						const VkQueueFamilyProperties &queue_props = queue_families[j];
+						VkQueueFlags required_flags = VK_QUEUE_COMPUTE_BIT;
+						if (j != graphics_queue_family_index && queue_props.queueCount > 0
+							&& (queue_props.queueFlags & required_flags) == required_flags) {
+							compute_queue_family_index = j;
 							break;
 						}
 					}
-					if (!extensionFound) {
-						SOUL_LOG_INFO(" -- Extension %s not found", requiredExtensions[j]);
-						allExtensionFound = false;
-						break;
-					}
-					SOUL_LOG_INFO(" -- Extension %s found", requiredExtensions[j]);
-				}
-				availableExtensions.cleanup();
-				if (!allExtensionFound) {
-					continue;
-				}
 
-				SOUL_LOG_INFO("vkGetPhysicalDeviceSurfaceCapabilities");
-				vkGetPhysicalDeviceSurfaceCapabilitiesKHR(devices[i], db->surface, &db->surfaceCaps);
-				
-				uint32 formatCount;
-				SOUL_LOG_INFO("vkGetPhysicalDeviceSurfaceFormatsKHR");
-				vkGetPhysicalDeviceSurfaceFormatsKHR(devices[i], db->surface, &formatCount, nullptr);
-				SOUL_LOG_INFO(" -- Format count = %d", formatCount);
-				if (formatCount == 0) {
-					continue;
-				}
-				formats.resize(formatCount);
-				vkGetPhysicalDeviceSurfaceFormatsKHR(devices[i], db->surface, &formatCount, formats.data());
-
-				uint32 presentModeCount;
-				vkGetPhysicalDeviceSurfacePresentModesKHR(devices[i], db->surface, &presentModeCount, nullptr);
-				SOUL_LOG_INFO(" -- Present mode count = %d", presentModeCount);
-				if (presentModeCount == 0) {
-					continue;
-				}
-				presentModes.resize(presentModeCount);
-				vkGetPhysicalDeviceSurfacePresentModesKHR(devices[i], db->surface, &presentModeCount, presentModes.data());
-
-				uint32 queueFamilyCount = 0;
-				vkGetPhysicalDeviceQueueFamilyProperties(devices[i], &queueFamilyCount, nullptr);
-
-				Soul::Array<VkQueueFamilyProperties> queueFamilies;
-				queueFamilies.resize(queueFamilyCount);
-				vkGetPhysicalDeviceQueueFamilyProperties(devices[i], &queueFamilyCount, queueFamilies.data());
-				
-				int graphicsQueueFamilyIndex = -1;
-				int presentQueueFamilyIndex = -1;
-				int computeQueueFamilyIndex = -1;
-				int transferQueueFamilyIndex = -1;
-
-				// Try to find queue that support present, graphics and compute
-				for (int j = 0; j < queueFamilyCount; j++) {
-					VkBool32 presentSupport = false;
-					vkGetPhysicalDeviceSurfaceSupportKHR(devices[i], j, db->surface, &presentSupport);
-
-					const VkQueueFamilyProperties& queueProps = queueFamilies[j];
-					VkQueueFlags requiredFlags = VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_COMPUTE_BIT;
-					if (presentSupport && queueProps.queueCount > 0 && (queueProps.queueFlags & requiredFlags) == requiredFlags) {
-						graphicsQueueFamilyIndex = j;
-						presentQueueFamilyIndex = j;
-					}
-				}
-
-				if (graphicsQueueFamilyIndex == -1) {
-					for (int j = 0; j < queueFamilyCount; j++) {
-						const VkQueueFamilyProperties& queueProps = queueFamilies[j];
-						VkQueueFlags requiredFlags = VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_COMPUTE_BIT;
-						if (queueProps.queueCount > 0 && (queueProps.queueFlags & requiredFlags) == requiredFlags) {
-							graphicsQueueFamilyIndex = j;
-							break;
-						}
-					}	
-				}
-
-				for (int j = 0; j < queueFamilyCount; j++) {
-					for (int j = 0; j < queueFamilyCount; j++) {
-						const VkQueueFamilyProperties& queueProps = queueFamilies[j];
-						VkQueueFlags requiredFlags = VK_QUEUE_COMPUTE_BIT;
-						if (j != graphicsQueueFamilyIndex && queueProps.queueCount > 0 && (queueProps.queueFlags & requiredFlags) == requiredFlags) {
-							computeQueueFamilyIndex = j;
+                    auto transfer_queue_family_index = not_found_family_index;
+					for (uint32 j = 0; j < queue_family_count; j++) {
+						const VkQueueFamilyProperties &queue_props = queue_families[j];
+						VkQueueFlags required_flags = VK_QUEUE_TRANSFER_BIT;
+						if (j != graphics_queue_family_index && j != compute_queue_family_index
+							&& (queue_props.queueFlags & required_flags) == required_flags) {
+							transfer_queue_family_index = j;
 							break;
 						}
 					}
-				}
-				if (computeQueueFamilyIndex == -1) computeQueueFamilyIndex = graphicsQueueFamilyIndex;
 
-				for (int j = 0; j < queueFamilyCount; j++) {
-					for (int j = 0; j < queueFamilyCount; j++) {
-						const VkQueueFamilyProperties& queueProps = queueFamilies[j];
-						VkQueueFlags requiredFlags = VK_QUEUE_TRANSFER_BIT;
-						if (j != graphicsQueueFamilyIndex && j != computeQueueFamilyIndex && (queueProps.queueFlags & requiredFlags) == requiredFlags) {
-							transferQueueFamilyIndex = j;
-							break;
-						}
+					queue_families.cleanup();
+
+					if (graphics_queue_family_index == not_found_family_index) {
+						SOUL_LOG_INFO(" -- Graphics queue family not found");
+						continue;
+					}
+					if (compute_queue_family_index == not_found_family_index) {
+						SOUL_LOG_INFO(" -- Compute queue family not found");
+						continue;
+					}
+					if (transfer_queue_family_index == not_found_family_index) {
+						SOUL_LOG_INFO("-- Transfer queue family not found");
+						continue;
+					}
+
+					int score = 0;
+					if (physical_device_properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU) {
+						score += 100;
+					}
+
+					SOUL_LOG_INFO("-- Score = %d", score);
+					if (score > best_score) {
+						db->physical_device = device;
+						queue_family_indices[QueueType::GRAPHIC] = graphics_queue_family_index;
+						queue_family_indices[QueueType::TRANSFER] = transfer_queue_family_index;
+						queue_family_indices[QueueType::COMPUTE] = compute_queue_family_index;
+						best_score = score;
 					}
 				}
-				if (transferQueueFamilyIndex == -1) transferQueueFamilyIndex = graphicsQueueFamilyIndex;
 
-				if (presentQueueFamilyIndex == -1) {
-					for (int j = 0; j < queueFamilyCount; j++) {
-						VkBool32 presentSupport = false;
-						vkGetPhysicalDeviceSurfaceSupportKHR(devices[i], j, db->surface, &presentSupport);
-						if (presentSupport) {
-							presentQueueFamilyIndex = j;
-							break;
-						}
-					}
-				}
+				SOUL_ASSERT(0, db->physical_device != VK_NULL_HANDLE,
+				            "Cannot find physical device that satisfy the requirements.");
 
-				queueFamilies.cleanup();
-
-				if (graphicsQueueFamilyIndex == -1) {
-					SOUL_LOG_INFO(" -- Graphics queue family not found");
-					continue;
-				}
-				if (presentQueueFamilyIndex == -1) {
-					SOUL_LOG_INFO(" -- Present queue family not found");
-					continue;
-				}
-				if (computeQueueFamilyIndex == -1) {
-					SOUL_LOG_INFO(" -- Compute queue family not found");
-					continue;
-				}
-				if (transferQueueFamilyIndex == -1) {
-					SOUL_LOG_INFO("-- Transfer queue family not found");
-					continue;
-				}
-				
-				int score = 0;
-				if (physicalDeviceProperties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU) {
-					score += 100;
-				}
-
-				SOUL_LOG_INFO("-- Score = %d", score);
-				if (score > bestScore) {
-					db->physicalDevice = devices[i];
-					db->graphicsQueueFamilyIndex = graphicsQueueFamilyIndex;
-					db->presentQueueFamilyIndex = presentQueueFamilyIndex;
-					db->transferQueueFamilyIndex = transferQueueFamilyIndex;
-					db->computeQueueFamilyIndex = computeQueueFamilyIndex;
-					bestScore = score;
-				}
-			}
-
-			SOUL_ASSERT(0, db->physicalDevice != VK_NULL_HANDLE, "Cannot find physical device that satisfy the requirements.");
-
-			vkGetPhysicalDeviceProperties(db->physicalDevice, &db->physicalDeviceProperties);
-			vkGetPhysicalDeviceFeatures(db->physicalDevice, &db->physicalDeviceFeatures);
-			const uint32_t apiVersion = db->physicalDeviceProperties.apiVersion;
-			const uint32_t driverVersion = db->physicalDeviceProperties.driverVersion;
-			const uint32_t vendorID = db->physicalDeviceProperties.vendorID;
-			const uint32_t deviceID = db->physicalDeviceProperties.deviceID;
+				vkGetPhysicalDeviceProperties(db->physical_device, &db->physical_device_properties);
+				vkGetPhysicalDeviceMemoryProperties(db->physical_device, &db->physical_device_memory_properties);
+				vkGetPhysicalDeviceFeatures(db->physical_device, &db->physical_device_features);
 			
-			SOUL_LOG_INFO("Selected device\n"
-				" -- Name = %s\n"
-				" -- Vendor = 0x%.8X\n"
-				" -- Device ID = 0x%.8X\n"
-				" -- Api Version = 0x%.8X\n"
-				" -- Driver Version = 0x%.8X\n"
-				" -- Graphics queue family index = %d\n"
-				" -- Presentation queue family index = %d\n"
-				" -- Transfer queue family index = %d\n"
-				" -- Compute queue family index = %d\n",
-				db->physicalDeviceProperties.deviceName, vendorID, deviceID, apiVersion, driverVersion,
-				db->graphicsQueueFamilyIndex, db->presentQueueFamilyIndex, db->transferQueueFamilyIndex, db->computeQueueFamilyIndex);
-			db->queueFamilyIndices[QueueType::NONE] = 0;
-			db->queueFamilyIndices[QueueType::GRAPHIC] = db->graphicsQueueFamilyIndex;
-			db->queueFamilyIndices[QueueType::TRANSFER] = db->transferQueueFamilyIndex;
-			db->queueFamilyIndices[QueueType::COMPUTE] = db->computeQueueFamilyIndex;
+				const uint32_t api_version = db->physical_device_properties.apiVersion;
+				const uint32_t driver_version = db->physical_device_properties.driverVersion;
+				const uint32_t vendor_id = db->physical_device_properties.vendorID;
+				const uint32_t device_id = db->physical_device_properties.deviceID;
 
-			formats.cleanup();
-			presentModes.cleanup();
-			devices.cleanup();
-			
-			SOUL_ASSERT(0, db->physicalDevice != VK_NULL_HANDLE, "Fail to find a suitable GPU!");
+				SOUL_LOG_INFO("Selected device\n"
+				              " -- Name = %s\n"
+				              " -- Vendor = 0x%.8X\n"
+				              " -- Device ID = 0x%.8X\n"
+				              " -- Api Version = 0x%.8X\n"
+				              " -- Driver Version = 0x%.8X\n"
+				              " -- Graphics queue family index = %d\n"
+				              " -- Transfer queue family index = %d\n"
+				              " -- Compute queue family index = %d\n",
+				              db->physical_device_properties.deviceName,
+				              vendor_id,
+				              device_id,
+				              api_version,
+				              driver_version,
+				              queue_family_indices[QueueType::GRAPHIC],
+				              queue_family_indices[QueueType::TRANSFER],
+				              queue_family_indices[QueueType::COMPUTE]);
+
+				SOUL_ASSERT(0, db->physical_device != VK_NULL_HANDLE, "Fail to find a suitable GPU!");
+				return queue_family_indices;
+			};
+		static const char* device_required_extensions[] = {
+			VK_KHR_VULKAN_MEMORY_MODEL_EXTENSION_NAME,
+			VK_KHR_SWAPCHAIN_EXTENSION_NAME
 		};
-		pickPhysicalDevice(&_db, requiredExtensionCount, requiredExtensions);
-		
+		static constexpr uint32_t DEVICE_REQUIRED_EXTENSION_COUNT = std::size(device_required_extensions);
+		FlagMap<QueueType, uint32> queue_family_indices = pick_physical_device(&_db, DEVICE_REQUIRED_EXTENSION_COUNT, device_required_extensions);
 
-		static const auto createDevice = [](_Database* db) {
+		auto create_device_and_queue = 
+			[](VkPhysicalDevice physicalDevice, FlagMap<QueueType, uint32>& queue_family_indices)
+				-> std::tuple<VkDevice, FlagMap<QueueType, uint32>> {
 			SOUL_LOG_INFO("Creating vulkan logical device");
 
 			int graphicsQueueCount = 1;
-			int graphicsQueueIndex = 0;
-			int computeQueueIndex = 0;
-			int transferQueueIndex = 0;
-			int presentQueueIndex = 0;
+			FlagMap<QueueType, uint32> queueIndex(0);
 
-			if (db->computeQueueFamilyIndex == db->graphicsQueueFamilyIndex) {
+			if (queue_family_indices[QueueType::COMPUTE] == queue_family_indices[QueueType::GRAPHIC]) {
 				graphicsQueueCount++;
-				computeQueueIndex = graphicsQueueIndex + 1;
+				queueIndex[QueueType::COMPUTE] = queueIndex[QueueType::GRAPHIC] + 1;
 			}
-			if (db->transferQueueFamilyIndex == db->graphicsQueueFamilyIndex) {
+			if (queue_family_indices[QueueType::TRANSFER] == queue_family_indices[QueueType::GRAPHIC]) {
 				graphicsQueueCount++;
-				transferQueueIndex = computeQueueIndex + 1;
+				queueIndex[QueueType::TRANSFER] = queueIndex[QueueType::COMPUTE] + 1;
 			}
 
-			VkDeviceQueueCreateInfo queueCreateInfo[4] = {};
+			VkDeviceQueueCreateInfo queue_create_info[4] = {};
 			float priorities[4] = {1.0f, 1.0f, 1.0f, 1.0f};
-			int queueCreateInfoCount = 1;
+			uint32 queue_create_info_count = 1;
 
-			queueCreateInfo[0].sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-			queueCreateInfo[0].queueFamilyIndex = db->graphicsQueueFamilyIndex;
-			queueCreateInfo[0].queueCount = graphicsQueueCount;
-			queueCreateInfo[0].pQueuePriorities = priorities;
+			queue_create_info[0].sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+			queue_create_info[0].queueFamilyIndex = queue_family_indices[QueueType::GRAPHIC];
+			queue_create_info[0].queueCount = graphicsQueueCount;
+			queue_create_info[0].pQueuePriorities = priorities;
 
-			if (db->computeQueueFamilyIndex != db->graphicsQueueFamilyIndex) {
-				queueCreateInfo[queueCreateInfoCount].sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-				queueCreateInfo[queueCreateInfoCount].queueFamilyIndex = db->computeQueueFamilyIndex;	
-				queueCreateInfo[queueCreateInfoCount].queueCount = 1;
-				queueCreateInfo[queueCreateInfoCount].pQueuePriorities = priorities + queueCreateInfoCount;
-				queueCreateInfoCount++;	
+			if (queue_family_indices[QueueType::GRAPHIC] != queue_family_indices[QueueType::COMPUTE]) {
+				queue_create_info[queue_create_info_count].sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+				queue_create_info[queue_create_info_count].queueFamilyIndex = queue_family_indices[QueueType::COMPUTE];
+				queue_create_info[queue_create_info_count].queueCount = 1;
+				queue_create_info[queue_create_info_count].pQueuePriorities = priorities + queue_create_info_count;
+				queue_create_info_count++;
 			}
 
-			if (db->transferQueueFamilyIndex != db->graphicsQueueFamilyIndex) {
-				queueCreateInfo[queueCreateInfoCount].sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-				queueCreateInfo[queueCreateInfoCount].queueFamilyIndex = db->transferQueueFamilyIndex;	
-				queueCreateInfo[queueCreateInfoCount].queueCount = 1;
-				queueCreateInfo[queueCreateInfoCount].pQueuePriorities = priorities + queueCreateInfoCount;
-				queueCreateInfoCount++;	
-			}
-
-			if (db->presentQueueFamilyIndex != db->graphicsQueueFamilyIndex && 
-				db->presentQueueFamilyIndex != db->computeQueueFamilyIndex && 
-				db->presentQueueFamilyIndex != db->transferQueueFamilyIndex) {
-				queueCreateInfo[queueCreateInfoCount].sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-				queueCreateInfo[queueCreateInfoCount].queueFamilyIndex = db->presentQueueFamilyIndex;	
-				queueCreateInfo[queueCreateInfoCount].queueCount = 1;
-				queueCreateInfo[queueCreateInfoCount].pQueuePriorities = priorities + queueCreateInfoCount;
-				queueCreateInfoCount++;	
+			if (queue_family_indices[QueueType::TRANSFER] != queue_family_indices[QueueType::GRAPHIC]) {
+				queue_create_info[queue_create_info_count].sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+				queue_create_info[queue_create_info_count].queueFamilyIndex = queue_family_indices[QueueType::TRANSFER];
+				queue_create_info[queue_create_info_count].queueCount = 1;
+				queue_create_info[queue_create_info_count].pQueuePriorities = priorities + queue_create_info_count;
+				queue_create_info_count++;
 			}
 
 			// TODO(kevinyu): This is temporary hack to avoid molten vk bug when queue family is not sorted in queueCreateInfo
-			queueCreateInfo[3] = queueCreateInfo[0];
-			queueCreateInfo[0] = queueCreateInfo[1];
-			queueCreateInfo[1] = queueCreateInfo[2];
-			queueCreateInfo[2] = queueCreateInfo[3];
+			queue_create_info[3] = queue_create_info[0];
+			queue_create_info[0] = queue_create_info[1];
+			queue_create_info[1] = queue_create_info[2];
+			queue_create_info[2] = queue_create_info[3];
 
-			VkPhysicalDeviceFeatures deviceFeatures = {};
-
-			VkDeviceCreateInfo deviceCreateInfo = {VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO};
-			deviceCreateInfo.pQueueCreateInfos = queueCreateInfo;
-			deviceCreateInfo.queueCreateInfoCount = queueCreateInfoCount;
-			deviceCreateInfo.pEnabledFeatures = &deviceFeatures;
-
-			static const char* deviceExtensions[] = {
-				VK_KHR_SWAPCHAIN_EXTENSION_NAME
+			VkPhysicalDeviceFeatures device_features = {
+				.geometryShader = VK_TRUE,
+				.fillModeNonSolid = VK_TRUE,
+				.fragmentStoresAndAtomics = VK_TRUE
 			};
-			const uint32 deviceExtensionCount = sizeof(deviceExtensions) / sizeof(deviceExtensions[0]);
+			VkPhysicalDeviceDescriptorIndexingFeatures indexing_features = {
+				.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES,
+				.descriptorBindingSampledImageUpdateAfterBind = VK_TRUE,
+				.descriptorBindingStorageImageUpdateAfterBind = VK_TRUE,
+				.descriptorBindingStorageBufferUpdateAfterBind = VK_TRUE,
+				.descriptorBindingUpdateUnusedWhilePending = VK_TRUE,
+				.descriptorBindingPartiallyBound = VK_TRUE,
+				.descriptorBindingVariableDescriptorCount = VK_TRUE,
+				.runtimeDescriptorArray = VK_TRUE
+			};
+			VkPhysicalDeviceVulkanMemoryModelFeatures memory_model_features = {
+				.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_MEMORY_MODEL_FEATURES,
+				.pNext = &indexing_features,
+				.vulkanMemoryModel = VK_TRUE
+			};
+			const VkPhysicalDeviceFeatures2 device_features2 = {
+				.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2,
+				.pNext = &memory_model_features,
+				.features = device_features
+			};
 
-			deviceCreateInfo.enabledExtensionCount = deviceExtensionCount;
-			deviceCreateInfo.ppEnabledExtensionNames = deviceExtensions;
+			const VkDeviceCreateInfo device_create_info = {
+				.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
+				.pNext = &device_features2,
+				.queueCreateInfoCount = queue_create_info_count,
+				.pQueueCreateInfos = queue_create_info,
+				.enabledExtensionCount = DEVICE_REQUIRED_EXTENSION_COUNT,
+				.ppEnabledExtensionNames = device_required_extensions,
+				.pEnabledFeatures = nullptr
+			};
 
-			SOUL_ASSERT(0, db->graphicsQueueFamilyIndex == db->presentQueueFamilyIndex, "Different queue for graphics and present not supported yet!");
-
-			SOUL_VK_CHECK(vkCreateDevice(db->physicalDevice, &deviceCreateInfo, nullptr, &db->device), "Vulkan logical device creation fail!");
+			VkDevice device;
+			SOUL_VK_CHECK(vkCreateDevice(physicalDevice, &device_create_info, nullptr, &device),
+			              "Vulkan logical device creation fail!");
 			SOUL_LOG_INFO("Vulkan logical device creation sucessful");
-
-			vkGetDeviceQueue(db->device, db->graphicsQueueFamilyIndex, graphicsQueueIndex, &db->graphicsQueue);
-			SOUL_LOG_INFO("Vulkan retrieve graphics queue successful");
-			db->presentQueue = db->graphicsQueue;
-
-			vkGetDeviceQueue(db->device, db->computeQueueFamilyIndex, computeQueueIndex, &db->computeQueue);
-			SOUL_LOG_INFO("Vulkan retrieve compute queue successful");
-
-			vkGetDeviceQueue(db->device, db->transferQueueFamilyIndex, transferQueueIndex, &db->transferQueue);
-			SOUL_LOG_INFO("Vulkan retrieve transfer queue successful");
-
-			db->queues[QueueType::GRAPHIC] = db->graphicsQueue;
-			db->queues[QueueType::COMPUTE] = db->computeQueue;
-			db->queues[QueueType::TRANSFER] = db->transferQueue;
-
-			SOUL_LOG_INFO("Vulkan device queue retrieval sucessful");
-
+			return std::make_tuple(device, queueIndex);
 		};
-		createDevice(&_db);
 
-		static const auto createSwapchain = [this](_Database* db, uint32 swapchainWidth, uint32 swapchainHeight) {
-			SOUL_LOG_INFO("createSwapchain");
-			static const auto pickSurfaceFormat = [](VkPhysicalDevice physicalDevice, VkSurfaceKHR surface) -> VkSurfaceFormatKHR {
-				SOUL_LOG_INFO("Picking surface format.");
-				Array<VkSurfaceFormatKHR> formats;
-				uint32 formatCount;
-				vkGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice, surface, &formatCount, nullptr);
-				SOUL_ASSERT(0, formatCount != 0, "Surface format count is zero!");
-				formats.resize(formatCount);
-				vkGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice, surface, &formatCount, formats.data());
+		auto [device, queueIndex] = create_device_and_queue(_db.physical_device, queue_family_indices);
+		_db.device = device;
+		for (const auto queue_type : FlagIter<QueueType>())
+		{
+			_db.queues[queue_type].init(device, queue_family_indices[queue_type], queueIndex[queue_type]);
+		}
 
-				for (int i = 0; i < formats.size(); i++) {
-					const VkSurfaceFormatKHR& surfaceFormat = formats[0];
-					if (surfaceFormat.format == VK_FORMAT_B8G8R8A8_UNORM && surfaceFormat.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
-						formats.cleanup();
-						return surfaceFormat;
+		auto create_swapchain = [this, &queue_family_indices](Database *db, const uint32 swapchain_width, const uint32 swapchain_height) {
+
+			auto pick_surface_format = [](VkPhysicalDevice physicalDevice,
+				                       VkSurfaceKHR surface) -> VkSurfaceFormatKHR {
+					runtime::ScopeAllocator<> scope_allocator("GPU::System::init::pickSurfaceFormat");
+					SOUL_LOG_INFO("Picking surface format.");
+					Vector<VkSurfaceFormatKHR> formats(&scope_allocator);
+					uint32 format_count;
+					vkGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice, surface, &format_count, nullptr);
+					SOUL_ASSERT(0, format_count != 0, "Surface format count is zero!");
+					formats.resize(format_count);
+					vkGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice, surface, &format_count, formats.data());
+					for (const VkSurfaceFormatKHR surface_format : formats) {
+						if (surface_format.format == VK_FORMAT_B8G8R8A8_UNORM
+							&& surface_format.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
+							return surface_format;
+						}
 					}
-				}
-				VkSurfaceFormatKHR format = formats[0];
-				formats.cleanup();
-				return format;
-			};
-			db->swapchain.format = pickSurfaceFormat(db->physicalDevice, db->surface);
-			
-			static const auto pickSurfaceExtent = [](VkSurfaceCapabilitiesKHR capabilities, uint32 swapchainWidth, uint32 swapchainHeight) -> VkExtent2D {
+					return formats[0];
+				};
+			db->swapchain.format = pick_surface_format(db->physical_device, db->surface);
+
+			auto pick_surface_extent = [](const VkSurfaceCapabilitiesKHR capabilities, const uint32 swapchain_width,
+				   const uint32 swapchain_height) -> VkExtent2D {
 				SOUL_LOG_INFO("Picking vulkan swap extent");
 				if (capabilities.currentExtent.width != std::numeric_limits<uint32_t>::max()) {
-					SOUL_LOG_INFO("vulkanPickSwapExtent | Extent = %d %d", capabilities.currentExtent.width, capabilities.currentExtent.height);
+					SOUL_LOG_INFO("vulkanPickSwapExtent | Extent = %d %d",
+					              capabilities.currentExtent.width,
+					              capabilities.currentExtent.height);
 					return capabilities.currentExtent;
-				} else {
-					VkExtent2D actualExtent = {static_cast<uint32>(swapchainWidth), static_cast<uint32>(swapchainHeight)};
-
-					actualExtent.width = max(capabilities.minImageExtent.width, min(capabilities.maxImageExtent.width, actualExtent.width));
-					actualExtent.height = max(capabilities.minImageExtent.height, min(capabilities.maxImageExtent.height, actualExtent.height));
-
-					return actualExtent;
+				}
+				else {
+					VkExtent2D actual_extent = {static_cast<uint32>(swapchain_width),
+						static_cast<uint32>(swapchain_height)};
+					actual_extent.width =
+						std::max(capabilities.minImageExtent.width,
+						         std::min(capabilities.maxImageExtent.width, actual_extent.width));
+					actual_extent.height =
+						std::max(capabilities.minImageExtent.height,
+						         std::min(capabilities.maxImageExtent.height, actual_extent.height));
+					return actual_extent;
 				}
 			};
-			db->swapchain.extent = pickSurfaceExtent(db->surfaceCaps, swapchainWidth, swapchainHeight);
+			db->swapchain.extent = pick_surface_extent(db->surfaceCaps, swapchain_width, swapchain_height);
 
-			uint32 imageCount = db->surfaceCaps.minImageCount + 1;
-			if (db->surfaceCaps.maxImageCount > 0 && imageCount > db->surfaceCaps.maxImageCount) {
-				imageCount = db->surfaceCaps.maxImageCount;
+            auto image_count = db->surfaceCaps.minImageCount + 1;
+			if (db->surfaceCaps.maxImageCount > 0 && image_count > db->surfaceCaps.maxImageCount) {
+				image_count = db->surfaceCaps.maxImageCount;
 			}
-			SOUL_LOG_INFO("Swapchain image count = %d", imageCount);
+			SOUL_LOG_INFO("Swapchain image count = %d", image_count);
 
-			uint32_t queueFamily = db->presentQueueFamilyIndex;
-			SOUL_ASSERT(0, db->presentQueueFamilyIndex == db->graphicsQueueFamilyIndex, "");
-			 VkSwapchainCreateInfoKHR swapchainInfo {
+			const VkSwapchainCreateInfoKHR swapchain_info = {
 				.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
 				.surface = db->surface,
-				.minImageCount = imageCount,
+				.minImageCount = image_count,
 				.imageFormat = db->swapchain.format.format,
 				.imageColorSpace = db->swapchain.format.colorSpace,
 				.imageExtent = db->swapchain.extent,
@@ -545,70 +688,69 @@ namespace Soul { namespace GPU {
 				.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT,
 				.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE,
 				.queueFamilyIndexCount = 1,
-				.pQueueFamilyIndices = &queueFamily,
+				.pQueueFamilyIndices = &queue_family_indices[QueueType::GRAPHIC],
 				.preTransform = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR,
-				.presentMode = VK_PRESENT_MODE_FIFO_KHR,
 				.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR,
-				.clipped = VK_TRUE
+				.presentMode = VK_PRESENT_MODE_MAILBOX_KHR,
+				.clipped = VK_TRUE,
 			};
-			SOUL_VK_CHECK(vkCreateSwapchainKHR(db->device, &swapchainInfo, nullptr, &db->swapchain.vkHandle), "Fail to create vulkan swapchain!");
+			SOUL_VK_CHECK(vkCreateSwapchainKHR(db->device, &swapchain_info, nullptr, &db->swapchain.vk_handle),
+			              "Fail to create vulkan swapchain!");
+			vkGetSwapchainImagesKHR(db->device, db->swapchain.vk_handle, &image_count, nullptr);
+			db->swapchain.images.resize(image_count);
+			vkGetSwapchainImagesKHR(db->device, db->swapchain.vk_handle, &image_count, db->swapchain.images.data());
 
-			vkGetSwapchainImagesKHR(db->device, db->swapchain.vkHandle, &imageCount, nullptr);
-			db->swapchain.images.resize(imageCount);
-			vkGetSwapchainImagesKHR(db->device, db->swapchain.vkHandle, &imageCount, db->swapchain.images.data());
-			
-			db->swapchain.imageViews.resize(imageCount);
-			for (int i = 0; i < imageCount; i++) {
-				VkImageViewCreateInfo createInfo {
+			db->swapchain.image_views.reserve(image_count);
+			std::ranges::transform(db->swapchain.images, std::back_inserter(db->swapchain.image_views), [format = db->swapchain.format.format, device = db->device](VkImage image)
+			{
+				VkImageView image_view;
+				const VkImageViewCreateInfo image_view_info = {
 					.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
-					.image = db->swapchain.images[i],
+					.image = image,
 					.viewType = VK_IMAGE_VIEW_TYPE_2D,
-					.format = db->swapchain.format.format,
-					.components.r = VK_COMPONENT_SWIZZLE_IDENTITY,
-					.components.g = VK_COMPONENT_SWIZZLE_IDENTITY,
-					.components.b = VK_COMPONENT_SWIZZLE_IDENTITY,
-					.components.a = VK_COMPONENT_SWIZZLE_IDENTITY,
-					.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-					.subresourceRange.baseMipLevel = 0,
-					.subresourceRange.levelCount = 1,
-					.subresourceRange.baseArrayLayer = 0,
-					.subresourceRange.layerCount = 1
+					.format = format,
+					.components = {
+					VK_COMPONENT_SWIZZLE_IDENTITY,
+					VK_COMPONENT_SWIZZLE_IDENTITY,
+					VK_COMPONENT_SWIZZLE_IDENTITY,
+					VK_COMPONENT_SWIZZLE_IDENTITY
+					},
+					.subresourceRange = {
+						.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+						.baseMipLevel = 0,
+						.levelCount = 1,
+						.baseArrayLayer = 0,
+						.layerCount = 1
+					}
 				};
-				SOUL_VK_CHECK(vkCreateImageView(db->device, &createInfo, nullptr, &db->swapchain.imageViews[i]), "Fail to creat swapchain imageview %d", i);
-			}
+				SOUL_VK_CHECK(vkCreateImageView(device, &image_view_info, nullptr, &image_view),
+					"Fail to create swapchain imageview");
+				return image_view;
+			});
 
-			db->swapchain.textures.resize(imageCount);
-			for (int i = 0; i < imageCount; i++) {
-				db->swapchain.textures[i] = TextureID(db->textures.add(_Texture()));
-				_Texture& texture = *_texturePtr(db->swapchain.textures[i]);
-				texture.vkHandle = db->swapchain.images[i];
-				texture.view = db->swapchain.imageViews[i];
+			db->swapchain.textures.reserve(image_count);
+			std::ranges::transform(db->swapchain.images, db->swapchain.image_views, std::back_inserter(db->swapchain.textures), 
+				[db, this, image_sharing_mode = swapchain_info.imageSharingMode](VkImage image, VkImageView image_view)
+			{
+				const auto texture_id = TextureID(db->texture_pool.create());
+				Texture& texture = *get_texture_ptr(texture_id);
+				texture.desc = TextureDesc::d2("Swapchain Texture", TextureFormat::BGRA8, 1, {}, {}, vec2ui32(db->swapchain.extent.width, db->swapchain.extent.height));
+				texture.vk_handle = image;
+				texture.view.vk_handle = image_view;
 				texture.layout = VK_IMAGE_LAYOUT_UNDEFINED;
-				texture.extent.width = db->swapchain.extent.width;
-				texture.extent.height = db->swapchain.extent.height;
-				// TODO: Is depth always 1?
-				texture.extent.depth = 1;
-				texture.sharingMode = swapchainInfo.imageSharingMode;
-				// TODO: Fix the format
-				texture.format = TextureFormat::BGRA8;
-				// TODO: Fix the type
-				texture.type = TextureType::D2;
+				texture.sharing_mode = image_sharing_mode;
 				texture.owner = ResourceOwner::NONE;
-			}
+				return texture_id;
+			});
 
-			db->swapchain.fences.resize(imageCount);
-			for (int i = 0; i < imageCount; i++) {
-				db->swapchain.fences[i] = VK_NULL_HANDLE;
-			}
+			db->swapchain.fences.resize(image_count);
+			std::ranges::fill(db->swapchain.fences,VK_NULL_HANDLE);
 			SOUL_LOG_INFO("Vulkan swapchain creation sucessful");
 		};
-		createSwapchain(&_db, config.swapchainWidth, config.swapchainHeight);
+		create_swapchain(&_db, config.swapchain_width, config.swapchain_height);
 
-		SOUL_ASSERT(0, _db.graphicsQueueFamilyIndex == _db.presentQueueFamilyIndex, "Current implementation does not support different queue family for graphics and presentation yet!");
-		_frameContextInit(config);
-
-		static const auto initAllocator = [](_Database* db) {
-			VmaVulkanFunctions vulkanFunctions = {
+		auto init_allocator = [](Database *db, const Config& config) {
+			const VmaVulkanFunctions vulkan_functions = {
 				.vkGetPhysicalDeviceProperties = vkGetPhysicalDeviceProperties,
 				.vkGetPhysicalDeviceMemoryProperties = vkGetPhysicalDeviceMemoryProperties,
 				.vkAllocateMemory = vkAllocateMemory,
@@ -618,7 +760,7 @@ namespace Soul { namespace GPU {
 				.vkFlushMappedMemoryRanges = vkFlushMappedMemoryRanges,
 				.vkInvalidateMappedMemoryRanges = vkInvalidateMappedMemoryRanges,
 				.vkBindBufferMemory = vkBindBufferMemory,
-       			.vkBindImageMemory = vkBindImageMemory,
+				.vkBindImageMemory = vkBindImageMemory,
 				.vkGetBufferMemoryRequirements = vkGetBufferMemoryRequirements,
 				.vkGetImageMemoryRequirements = vkGetImageMemoryRequirements,
 				.vkCreateBuffer = vkCreateBuffer,
@@ -629,1151 +771,1238 @@ namespace Soul { namespace GPU {
 				.vkGetBufferMemoryRequirements2KHR = vkGetBufferMemoryRequirements2KHR,
 				.vkGetImageMemoryRequirements2KHR = vkGetImageMemoryRequirements2KHR,
 				.vkBindBufferMemory2KHR = vkBindBufferMemory2KHR,
-				.vkBindImageMemory2KHR = vkBindImageMemory2KHR
+				.vkBindImageMemory2KHR = vkBindImageMemory2KHR,
+				.vkGetPhysicalDeviceMemoryProperties2KHR = vkGetPhysicalDeviceMemoryProperties2KHR
 			};
-			VmaAllocatorCreateInfo allocatorInfo = {
-				.physicalDevice = db->physicalDevice,
+
+			const VkAllocationCallbacks allocation_callbacks = {
+				&(db->vulkan_cpu_allocator),
+				vma_alloc_callback,
+				vma_reallocation_callback,
+				vma_free_callback,
+				nullptr,
+				nullptr
+			};
+
+			const VmaAllocatorCreateInfo allocator_info = {
+				.physicalDevice = db->physical_device,
 				.device = db->device,
 				.preferredLargeHeapBlockSize = 0,
-				.pAllocationCallbacks = nullptr,
+				.pAllocationCallbacks = &allocation_callbacks,
 				.pDeviceMemoryCallbacks = nullptr,
-				.frameInUseCount = 0,
-				.pHeapSizeLimit = 0,
-				.pVulkanFunctions = &vulkanFunctions
+				.pVulkanFunctions = &vulkan_functions,
+				.instance = db->instance
 			};
-		
-			vmaCreateAllocator(&allocatorInfo, &db->allocator);
 
+			vmaCreateAllocator(&allocator_info, &db->gpu_allocator);
+
+			db->linear_pools.resize(db->physical_device_memory_properties.memoryTypeCount);
+			for (uint32 memory_index = 0; memory_index < db->linear_pools.size(); memory_index++)
+			{
+				const VmaPoolCreateInfo pool_create_info = {
+				    .memoryTypeIndex = memory_index,
+				    .flags = VMA_POOL_CREATE_LINEAR_ALGORITHM_BIT,
+				    .blockSize = config.transient_pool_size,
+				    .maxBlockCount = 1
+				};
+				vmaCreatePool(db->gpu_allocator, &pool_create_info, &db->linear_pools[memory_index]);
+			}
+			
 			SOUL_LOG_INFO("Vulkan init allocator sucessful");
 		};
-		initAllocator(&_db);
-
+		init_allocator(&_db, config);
+		_db.descriptor_allocator.init(_db.device);
+		init_frame_context(config);
 		_frameBegin();
 	}
 
-	void System::_frameContextInit(const System::Config& config) {
+	void System::init_frame_context(const System::Config &config) {
 		SOUL_ASSERT_MAIN_THREAD();
-
 		SOUL_LOG_INFO("Frame Context Init");
-		_db.frameContexts.resize(config.maxFrameInFlight);
-		for (int i = 0; i < _db.frameContexts.size(); i++) {
-			_FrameContext& frameContext = _db.frameContexts[i];
-			frameContext.threadContexts.resize(config.threadCount);
+		_db.frame_contexts.reserve(config.max_frame_in_flight);
+		std::fill_n(std::back_inserter(_db.frame_contexts), _db.frame_contexts.capacity(), FrameContext(&_db.cpu_allocator));
+		std::ranges::for_each(_db.frame_contexts, [this, config](FrameContext& frame_context)
+		{
+			frame_context.command_pools.init(_db.device, _db.queues, config.thread_count);
+			frame_context.gpu_resource_initializer.init(_db.gpu_allocator, &frame_context.command_pools);
+			frame_context.gpu_resource_finalizer.init();
 
-			for (int j = 0; j < config.threadCount; j++) {
-				_ThreadContext& threadContext = frameContext.threadContexts[j];
-				threadContext = {};
-			}
+			const VkFenceCreateInfo fence_info = {
+				.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
+				.flags = VK_FENCE_CREATE_SIGNALED_BIT
+			};
+			SOUL_VK_CHECK(vkCreateFence(_db.device, &fence_info, nullptr, &frame_context.fence), "Fail to create Fence");
 
-			for (int j = 0; j < uint64(QueueType::COUNT); j++) {
-				QueueType queueType = QueueType(j);
-				if (queueType == QueueType::NONE) continue;
-				VkCommandPoolCreateInfo cmdPoolCreateInfo = {VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO};
-				cmdPoolCreateInfo.flags = VK_COMMAND_POOL_CREATE_TRANSIENT_BIT | VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
-				cmdPoolCreateInfo.queueFamilyIndex = _db.queueFamilyIndices[queueType];
-				vkCreateCommandPool(_db.device, &cmdPoolCreateInfo, nullptr, &frameContext.commandPools[queueType]);
-			}
-
-			VkFenceCreateInfo fenceInfo = {VK_STRUCTURE_TYPE_FENCE_CREATE_INFO};
-			fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
-			SOUL_VK_CHECK(vkCreateFence(_db.device, &fenceInfo, nullptr, &frameContext.fence), "");
-
-			VkSemaphoreCreateInfo semaphoreInfo = {VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO};
-			frameContext.imageAvailableSemaphore = _semaphoreCreate();
-			frameContext.renderFinishedSemaphore = _semaphoreCreate();
-
-			VkDescriptorPoolSize poolSizes[2] = {};
-
-			poolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
-			poolSizes[0].descriptorCount = 100;
-
-			poolSizes[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-			poolSizes[1].descriptorCount = 200;
-
-			VkDescriptorPoolCreateInfo poolInfo = {VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO};
-			poolInfo.poolSizeCount = sizeof(poolSizes) / sizeof(poolSizes[0]);
-			poolInfo.pPoolSizes = poolSizes;
-			poolInfo.maxSets = 100;
-
-			SOUL_VK_CHECK(vkCreateDescriptorPool(_db.device, &poolInfo, nullptr, &frameContext.descriptorPool), "");
-		}
-	}
-
-
-	_QueueData System::_getQueueDataFromQueueFlags(QueueFlags flags) {
-		_QueueData queueData;
-		const uint32 queueIndexMapping[] = {
-			_db.graphicsQueueFamilyIndex,
-			_db.computeQueueFamilyIndex,
-			_db.transferQueueFamilyIndex
-		};
-		Util::ForEachBit(flags, [&queueData, &queueIndexMapping] (uint32 bit) {
-			SOUL_ASSERT(0, bit < SOUL_ARRAY_LEN(queueIndexMapping), "");
-			queueData.indices[queueData.count++] = queueIndexMapping[bit];
+			frame_context.image_available_semaphore = create_semaphore();
+			frame_context.render_finished_semaphore = create_semaphore();
 		});
-		return queueData;
 	}
 
+	QueueData System::get_queue_data_from_queue_flags(QueueFlags flags) const {
+		QueueData queue_data;
+		const auto& queues = _db.queues;
+		flags.for_each([&queue_data, queues](QueueType type)
+		{
+			queue_data.indices[queue_data.count++] = queues[type].get_family_index();
+		});
+		return queue_data;
+	}
 
-	TextureID System::textureCreate(const TextureDesc& desc) {
-		SOUL_ASSERT_MAIN_THREAD();
+	TextureID System::create_texture(const TextureDesc &desc) {
+		SOUL_PROFILE_ZONE();
 
-		TextureID textureID = TextureID(_db.textures.add(_Texture()));
-		_Texture& texture = *_texturePtr(textureID);
-
-		VkFormat format = vkCast(desc.format);
-
-		VkImageCreateInfo imageInfo = { VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO };
-		imageInfo.imageType = vkCast(desc.type);
-		imageInfo.format = format;
-		imageInfo.extent = { desc.width, desc.height, desc.depth };
-		imageInfo.mipLevels = desc.mipLevels;
-		imageInfo.arrayLayers = 1;
-		imageInfo.samples = VK_SAMPLE_COUNT_1_BIT;
-		imageInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
-		imageInfo.usage = vkCastImageUsageFlags(desc.usageFlags);
-		_QueueData queueData = _getQueueDataFromQueueFlags(desc.queueFlags);
-		imageInfo.sharingMode = queueData.count == 1 ? VK_SHARING_MODE_EXCLUSIVE : VK_SHARING_MODE_CONCURRENT;
-		imageInfo.queueFamilyIndexCount = queueData.count;
-		imageInfo.pQueueFamilyIndices = queueData.indices;
-		imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-
-		VmaAllocationCreateInfo allocInfo = {
-				.usage = VMA_MEMORY_USAGE_GPU_ONLY
+		SOUL_ASSERT(0, desc.layer_count >= 1, "");
+		const auto texture_id = TextureID(_db.texture_pool.create());
+		Texture& texture = *_db.texture_pool.get(texture_id.id);
+		const VkFormat format = vkCast(desc.format);
+		const QueueData queue_data = get_queue_data_from_queue_flags(desc.queue_flags);
+		const VkImageCreateFlags image_create_flags = desc.type == TextureType::CUBE ? VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT | VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT : VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT;
+		const VkImageCreateInfo image_info = {
+			.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
+			.flags = image_create_flags,
+			.imageType = vkCast(desc.type),
+			.format = format,
+			.extent = get_vk_extent_3d(desc.extent),
+			.mipLevels = desc.mip_levels,
+			.arrayLayers = desc.layer_count,
+			.samples = vkCast(desc.sample_count),
+			.tiling = VK_IMAGE_TILING_OPTIMAL,
+			.usage = vkCast(desc.usage_flags),
+			.sharingMode = queue_data.count == 1 ? VK_SHARING_MODE_EXCLUSIVE : VK_SHARING_MODE_CONCURRENT,
+			.queueFamilyIndexCount = queue_data.count,
+			.pQueueFamilyIndices = queue_data.indices,
+			.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
 		};
-		SOUL_VK_CHECK(vmaCreateImage(_db.allocator,
-			 &imageInfo, &allocInfo, &texture.vkHandle,
-			 &texture.allocation, nullptr), "");
 
-		auto formatToAspectMask = [](VkFormat format) -> VkImageAspectFlags {
-			switch (format) {
-				case VK_FORMAT_UNDEFINED:
-					return 0;
+		const VmaAllocationCreateInfo alloc_info = {
+			.usage = VMA_MEMORY_USAGE_GPU_ONLY
+		};
 
-				case VK_FORMAT_S8_UINT:
-					return VK_IMAGE_ASPECT_STENCIL_BIT;
+		SOUL_VK_CHECK(vmaCreateImage(_db.gpu_allocator,
+			              &image_info, &alloc_info, &texture.vk_handle,
+			              &texture.allocation, nullptr), "Fail to create image");
 
-				case VK_FORMAT_D16_UNORM_S8_UINT:
-				case VK_FORMAT_D24_UNORM_S8_UINT:
-				case VK_FORMAT_D32_SFLOAT_S8_UINT:
-					return VK_IMAGE_ASPECT_STENCIL_BIT | VK_IMAGE_ASPECT_DEPTH_BIT;
-
-				case VK_FORMAT_D16_UNORM:
-				case VK_FORMAT_D32_SFLOAT:
-				case VK_FORMAT_X8_D24_UNORM_PACK32:
-					return VK_IMAGE_ASPECT_DEPTH_BIT;
-
-				default:
-					return VK_IMAGE_ASPECT_COLOR_BIT;
+        auto image_aspect = vkCastFormatToAspectFlags(desc.format);
+		if (image_aspect & VK_IMAGE_ASPECT_STENCIL_BIT)
+		{
+			SOUL_LOG_WARN("Texture creation with stencil format detected. Current version will remove the aspect stencil bit so the texture cannot be used for depth stencil. The reason is because Vulkan spec stated that descriptor cannot have more than one aspect.");
+			image_aspect &= ~(VK_IMAGE_ASPECT_STENCIL_BIT);
+		}
+		
+		const VkImageViewCreateInfo image_view_info = {
+			.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+			.image = texture.vk_handle,
+			.viewType = vkCastToImageViewType(desc.type),
+			.format = format,
+			.components = {},
+			.subresourceRange = {
+				image_aspect,
+				0,
+				VK_REMAINING_MIP_LEVELS,
+				0,
+				VK_REMAINING_ARRAY_LAYERS
 			}
 		};
 
-		VkImageViewCreateInfo imageViewInfo = { VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO };
-		imageViewInfo.image = texture.vkHandle;
-		imageViewInfo.viewType = vkCastToImageViewType(desc.type);
-		imageViewInfo.format = format;
-		imageViewInfo.components = {};
-		imageViewInfo.subresourceRange = {
-			formatToAspectMask(format),
-			0,
-			1,
-			0,
-			1
-		};
 		SOUL_VK_CHECK(vkCreateImageView(_db.device,
-			&imageViewInfo, nullptr, &texture.view), "Create Image View fail");
+			              &image_view_info, nullptr, &texture.view.vk_handle), "Fail to create image view");
+		if (desc.usage_flags.test(TextureUsage::SAMPLED))
+		{
+			texture.view.sampled_image_gpu_handle = _db.descriptor_allocator.create_sampled_image_descriptor(texture.view.vk_handle);
+		}
+		if (desc.usage_flags.test(TextureUsage::STORAGE))
+		{
+			texture.view.storage_image_gpu_handle = _db.descriptor_allocator.create_storage_image_descriptor(texture.view.vk_handle);
+		}
 
 		texture.layout = VK_IMAGE_LAYOUT_UNDEFINED;
-		texture.extent = imageInfo.extent;
-		texture.sharingMode = imageInfo.sharingMode;
-		texture.format = desc.format;
-		texture.type = desc.type;
+		texture.sharing_mode = image_info.sharingMode;
 		texture.owner = ResourceOwner::NONE;
+		texture.views = nullptr;
+		texture.desc = desc;
 
-		return textureID;
+		if (desc.name != nullptr) {
+			char tex_name[1024];
+			sprintf(tex_name, "%s(%d)", desc.name, _db.frame_counter);
+			const VkDebugUtilsObjectNameInfoEXT image_name_info = {
+				VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
+				nullptr,
+				VK_OBJECT_TYPE_IMAGE,
+				reinterpret_cast<uint64>(texture.vk_handle),
+				tex_name,
+			};
+
+			vkSetDebugUtilsObjectNameEXT(_db.device, &image_name_info);
+		}
+		return texture_id;
 	}
 
-	TextureID System::textureCreate(const TextureDesc& desc, const byte* data, uint32 dataSize) {
-		SOUL_ASSERT_MAIN_THREAD();
-		SOUL_ASSERT(0, data != nullptr, "");
-		SOUL_ASSERT(0, dataSize != 0, "");
-		TextureDesc newDesc  = desc;
-		if (data != nullptr) {
-			SOUL_ASSERT(0, dataSize != 0, "");
-			newDesc.usageFlags |= TEXTURE_USAGE_TRANSFER_DST_BIT;
-			newDesc.queueFlags |= QUEUE_TRANSFER_BIT;
+	TextureID System::create_texture(const TextureDesc &desc, const TextureLoadDesc& load_desc) {
+		SOUL_ASSERT(0, load_desc.data != nullptr, "");
+		SOUL_ASSERT(0, load_desc.data_size != 0, "");
+		SOUL_ASSERT(0, load_desc.regions != nullptr, "");
+		SOUL_ASSERT(0, load_desc.region_count != 0, "");
+
+		TextureDesc new_desc = desc;
+		new_desc.usage_flags |= { TextureUsage::TRANSFER_DST };
+		new_desc.queue_flags |= { QueueType::TRANSFER };
+		if (load_desc.generate_mipmap) {
+			new_desc.usage_flags |= { TextureUsage::TRANSFER_SRC };
+		}
+	
+		const TextureID texture_id = create_texture(new_desc);
+		Texture &texture = *get_texture_ptr(texture_id);
+
+		get_frame_context().gpu_resource_initializer.load(texture, load_desc);
+
+		if (load_desc.generate_mipmap && desc.mip_levels > 1) {
+			get_frame_context().gpu_resource_initializer.generate_mipmap(texture);
 		}
 
-		TextureID textureID = textureCreate(newDesc);
-		_Texture& texture = *_texturePtr(textureID);
-
-		VkImageMemoryBarrier beforeTransferBarrier = {VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER};
-		beforeTransferBarrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-		beforeTransferBarrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-		beforeTransferBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-		beforeTransferBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-		beforeTransferBarrier.image = texture.vkHandle;
-		beforeTransferBarrier.subresourceRange.aspectMask = vkCastFormatToAspectFlags(desc.format);
-		beforeTransferBarrier.subresourceRange.baseMipLevel = 0;
-		beforeTransferBarrier.subresourceRange.levelCount = VK_REMAINING_MIP_LEVELS;
-		beforeTransferBarrier.subresourceRange.baseArrayLayer = 0;
-		beforeTransferBarrier.subresourceRange.layerCount = VK_REMAINING_ARRAY_LAYERS;
-		beforeTransferBarrier.srcAccessMask = 0;
-		beforeTransferBarrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-
-		if (!_frameContext().stagingAvailable) _stagingSetup();
-		vkCmdPipelineBarrier(
-				_frameContext().stagingCommandBuffer,
-				VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
-				0,
-				0, nullptr,
-				0, nullptr,
-				1, &beforeTransferBarrier);
-
-		_stagingTransferToTexture(dataSize, data, desc, textureID);
-
-		texture.layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-		texture.owner = ResourceOwner::TRANSFER_QUEUE;
-
-		return textureID;
+		return texture_id;
 	}
 
-	void System::textureDestroy(TextureID id) {
-		SOUL_ASSERT_MAIN_THREAD();
-		_frameContext().garbages.textures.add(id);
+	TextureID System::create_texture(const TextureDesc& desc, const ClearValue clear_value) {
+		TextureDesc new_desc = desc;
+		new_desc.usage_flags |= { TextureUsage::TRANSFER_DST };
+		new_desc.queue_flags |= { QueueType::GRAPHIC };
+
+		TextureID texture_id = create_texture(new_desc);
+		Texture &texture = *get_texture_ptr(texture_id);
+
+		get_frame_context().gpu_resource_initializer.clear(texture, clear_value);
+
+		return texture_id;
 	}
 
-	_Texture* System::_texturePtr(TextureID textureID) {
-		SOUL_ASSERT_MAIN_THREAD();
-		return &_db.textures[textureID.id];
+	void System::flush_texture(const TextureID texture_id, const TextureUsageFlags usage_flags)
+	{
+		get_frame_context().gpu_resource_finalizer.finalize(*get_texture_ptr(texture_id), usage_flags);
 	}
 
-	void System::_stagingFrameBegin() {
-		SOUL_ASSERT_MAIN_THREAD();
-		_FrameContext& frameContext = _frameContext();
-		for (const _Buffer& buffer : frameContext.stagingBuffers) {
-			vkDestroyBuffer(_db.device, buffer.vkHandle, nullptr);
-		}
-		_frameContext().stagingBuffers.resize(0);
+	uint32 System::get_texture_mip_levels(const TextureID texture_id) const
+	{
+		return get_texture(texture_id).desc.mip_levels;
 	}
 
-	void System::_stagingFrameEnd() {
-		if (!_frameContext().stagingSynced) _stagingFlush();
+	const TextureDesc& System::get_texture_desc(const TextureID texture_id) const
+	{
+		return get_texture(texture_id).desc;
 	}
 
-	void System::_stagingSetup() {
-		SOUL_ASSERT_MAIN_THREAD();
-
-		_FrameContext& frameContext = _frameContext();
-		frameContext.stagingCommandBuffer = _queueRequestCommandBuffer(QueueType::TRANSFER);
-		frameContext.stagingAvailable = true;
-		frameContext.stagingSynced = false;
-	}
-
-	void System::_stagingFlush() {
-		SOUL_ASSERT_MAIN_THREAD();
-		_FrameContext& frameContext = _frameContext();
-
-		_queueSubmitCommandBuffer(QueueType::TRANSFER, frameContext.stagingCommandBuffer,
-				0, nullptr,
-				VK_NULL_HANDLE);
-
-		frameContext.stagingCommandBuffer = VK_NULL_HANDLE;
-		frameContext.stagingAvailable = false;
-		frameContext.stagingSynced = true;
-	}
-
-	void System::_transferBufferToBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, size_t size) {
-		SOUL_ASSERT_MAIN_THREAD();
-
-		if (!_frameContext().stagingAvailable) _stagingSetup();
-
-		VkBufferCopy copyRegion = {};
-		copyRegion.srcOffset = 0;
-		copyRegion.dstOffset = 0;
-		copyRegion.size = size;
-
-		_ThreadContext& threadContext = _threadContext();
-
-		vkCmdCopyBuffer(_frameContext().stagingCommandBuffer, srcBuffer, dstBuffer, 1, &copyRegion);
-	}
-
-	_Buffer System::_stagingBufferRequest(const byte *data, uint32 size) {
-		SOUL_ASSERT_MAIN_THREAD();
-
-		SOUL_ASSERT(0, data != nullptr, "");
-		_Buffer stagingBuffer = {};
-		VkBufferCreateInfo bufferInfo = {VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO};
-		bufferInfo.size = size;
-		bufferInfo.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
-
-		VmaAllocationCreateInfo allocInfo = {};
-		allocInfo.usage = VMA_MEMORY_USAGE_CPU_ONLY;
-		SOUL_VK_CHECK(vmaCreateBuffer(_db.allocator, &bufferInfo, &allocInfo, &stagingBuffer.vkHandle, &stagingBuffer.allocation, nullptr), "");
-
-		_ThreadContext& threadContext = _threadContext();
-		_frameContext().stagingBuffers.add(stagingBuffer);
-
-		void* mappedData;
-		vmaMapMemory(_db.allocator, stagingBuffer.allocation, &mappedData);
-		memcpy(mappedData, data, size);
-		vmaUnmapMemory(_db.allocator, stagingBuffer.allocation);
-
-		return stagingBuffer;
-	}
-
-	void System::_stagingTransferToBuffer(const byte *data, uint32 size, BufferID bufferID) {
-		SOUL_ASSERT_MAIN_THREAD();
-
-		_Buffer stagingBuffer = _stagingBufferRequest(data, size);
-		_transferBufferToBuffer(stagingBuffer.vkHandle, _bufferPtr(bufferID)->vkHandle, size);
-	}
-
-	void System::_stagingTransferToTexture(uint32 size, const byte *data, const TextureDesc& desc, TextureID textureID) {
-		SOUL_ASSERT_MAIN_THREAD();
-
-		_Buffer stagingBuffer = _stagingBufferRequest(data, size);
-
-		VkBufferImageCopy copyRegion = {};
-		copyRegion.bufferOffset = 0;
-		copyRegion.bufferRowLength = 0;
-		copyRegion.bufferImageHeight = 0;
-		copyRegion.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-		copyRegion.imageSubresource.mipLevel = 0;
-		copyRegion.imageSubresource.baseArrayLayer = 0;
-		copyRegion.imageSubresource.layerCount = 1;
-		copyRegion.imageOffset.x = 0;
-		copyRegion.imageOffset.y = 0;
-		copyRegion.imageOffset.z = 0;
-		copyRegion.imageExtent.width = desc.width;
-		copyRegion.imageExtent.height = desc.height;
-		copyRegion.imageExtent.depth = 1;
-
-		_ThreadContext& threadContext = _threadContext();
-
-		vkCmdCopyBufferToImage(_frameContext().stagingCommandBuffer,
-				stagingBuffer.vkHandle,
-				_texturePtr(textureID)->vkHandle,
-				VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-				1,
-				&copyRegion);
-	}
-
-	BufferID System::bufferCreate(const BufferDesc& desc) {
-		SOUL_ASSERT_MAIN_THREAD();
-		SOUL_ASSERT(0, desc.count > 0, "");
-		SOUL_ASSERT(0, desc.typeSize > 0, "");
-		SOUL_ASSERT(0, desc.typeAlignment > 0, "");
-		SOUL_ASSERT(0, desc.usageFlags != 0, "");
-
-		BufferID bufferID = BufferID(_db.buffers.add({}));
-		_Buffer& buffer = *_bufferPtr(bufferID);
-
-		int queueCount = 0;
-		uint32 queueIndices[3] = {};
-		const uint32 queueIndexMapping[] = {
-			_db.graphicsQueueFamilyIndex,
-			_db.computeQueueFamilyIndex,
-			_db.transferQueueFamilyIndex
+	void System::destroy_texture_descriptor(TextureID texture_id)
+	{
+		auto destroy_texture_view_descriptor = [this](const TextureView& texture_view)
+		{
+			_db.descriptor_allocator.destroy_sampled_image_descriptor(texture_view.sampled_image_gpu_handle);
+			_db.descriptor_allocator.destroy_storage_image_descriptor(texture_view.storage_image_gpu_handle);
 		};
-
-		Util::ForEachBit(desc.queueFlags, [&queueCount, &queueIndices, &queueIndexMapping] (uint32 bit) {
-			SOUL_ASSERT(0, bit < SOUL_ARRAY_LEN(queueIndexMapping), "");
-			queueIndices[queueCount++] = queueIndexMapping[bit];
-		});
-
-		SOUL_ASSERT(0, queueCount > 0, "");
-
-		uint32 alignment = desc.typeSize;
-
-		if (desc.usageFlags & BUFFER_USAGE_UNIFORM_BIT) {
-			size_t minUboAlignment = _db.physicalDeviceProperties.limits.minUniformBufferOffsetAlignment;
-			SOUL_ASSERT(0, isPowerOfTwo(minUboAlignment), "");
-			size_t dynamicAlignment = (desc.typeSize + minUboAlignment - 1) & ~(minUboAlignment - 1);
-			alignment = max(alignment, dynamicAlignment);
-		}
-
-		if (desc.usageFlags & BUFFER_USAGE_STORAGE_BIT) {
-			size_t minSsboAlignment = _db.physicalDeviceProperties.limits.minStorageBufferOffsetAlignment;
-			SOUL_ASSERT(0, isPowerOfTwo(minSsboAlignment), "");
-			size_t dynamicAlignment = (desc.typeSize + minSsboAlignment - 1) & ~(minSsboAlignment - 1);
-			alignment = max(alignment, dynamicAlignment);
-		}
-
-		VkBufferCreateInfo bufferInfo = {VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO};
-		bufferInfo.size = alignment * desc.count;
-		bufferInfo.usage = vkCastBufferUsageFlags(desc.usageFlags);
-		bufferInfo.sharingMode = queueCount > 1 ? VK_SHARING_MODE_CONCURRENT : VK_SHARING_MODE_EXCLUSIVE;
-		bufferInfo.queueFamilyIndexCount = queueCount;
-		bufferInfo.pQueueFamilyIndices = queueIndices;
-
-		VmaAllocationCreateInfo allocInfo = {};
-		allocInfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
-
-		SOUL_VK_CHECK(vmaCreateBuffer(_db.allocator, &bufferInfo, &allocInfo, &buffer.vkHandle, &buffer.allocation, nullptr), "");
-
-		buffer.unitCount = desc.count;
-		buffer.unitSize = alignment;
-		buffer.usageFlags = desc.usageFlags;
-		buffer.queueFlags = desc.queueFlags;
-		buffer.owner = ResourceOwner::NONE;
-
-		return bufferID;
+		const Texture& texture = *get_texture_ptr(texture_id);
+		destroy_texture_view_descriptor(texture.view);
+		const auto view_count = texture.desc.mip_levels * texture.desc.layer_count;
+		if (texture.views != nullptr) std::for_each_n(texture.views, view_count, destroy_texture_view_descriptor);
 	}
 
-	void System::bufferDestroy(BufferID id) {
+	void System::destroy_texture(TextureID id) {
 		SOUL_ASSERT_MAIN_THREAD();
-		_frameContext().garbages.buffers.add(id);
+		get_frame_context().garbages.textures.push_back(id);
 	}
 
-	_Buffer* System::_bufferPtr(BufferID bufferID) {
-		SOUL_ASSERT_MAIN_THREAD();
-		return &_db.buffers[bufferID.id];
+	Texture *System:: get_texture_ptr(const TextureID texture_id) {
+		return _db.texture_pool.get(texture_id.id);
 	}
 
-	_FrameContext& System::_frameContext() {
-		return _db.frameContexts[_db.currentFrame % _db.frameContexts.size()];
+	Texture& System::get_texture(const TextureID texture_id) {
+		return *_db.texture_pool.get(texture_id.id);
 	}
 
-	_ThreadContext& System::_threadContext() {
-		return _frameContext().threadContexts[Job::System::Get().getThreadID()];
+	const Texture& System::get_texture(const TextureID texture_id) const {
+		const Texture* texture = _db.texture_pool.get(texture_id.id);
+		return *texture;
 	}
 
-	ShaderID System::shaderCreate(const ShaderDesc& desc, ShaderStage stage) {
-		SOUL_ASSERT_MAIN_THREAD();
+	TextureView System::get_texture_view(const TextureID texture_id, const uint32 level,
+	                                                        const uint32 layer) {
+		Texture& texture = *get_texture_ptr(texture_id);
+		SOUL_ASSERT(0, level < texture.desc.mip_levels, "");
 
-		SOUL_ASSERT(0, desc.sourceSize > 0, "");
-		SOUL_ASSERT(0, desc.source != nullptr, "");
-		SOUL_ASSERT(0, desc.name != nullptr, "");
+		const auto layer_count = texture.desc.type == TextureType::D2_ARRAY ? texture.desc.extent.z : 1;
 
-		ShaderID shaderID = ShaderID(_db.shaders.add({}));
-		_Shader& shader = _db.shaders[shaderID.id];
-
-		shaderc::Compiler glslCompiler;
-
-		uint32 shadercShaderStageMap[uint32(ShaderStage::COUNT)] = {
-				0,
-				shaderc_shader_kind::shaderc_glsl_vertex_shader,
-				shaderc_shader_kind::shaderc_glsl_geometry_shader,
-				shaderc_shader_kind::shaderc_glsl_fragment_shader,
-				shaderc_shader_kind::shaderc_glsl_compute_shader
-		};
-
-		shaderc::CompileOptions options;
-		shaderc::SpvCompilationResult glslCompileResult = glslCompiler.CompileGlslToSpv(
-				desc.source,
-				desc.sourceSize,
-				(shaderc_shader_kind)shadercShaderStageMap[(uint32)stage],
-				desc.name,
-				options);
-
-		std::string errorMessage = glslCompileResult.GetErrorMessage();
-
-		SOUL_ASSERT(0, glslCompileResult.GetCompilationStatus() == shaderc_compilation_status_success,
-					"Fail when compiling pass : %d, shader_type = vertex shader.\n"
-					"Error : \n %s\n", desc.name, errorMessage.c_str());
-
-		VkShaderModuleCreateInfo moduleInfo = {VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO};
-		const uint32* spirvCode = glslCompileResult.begin();
-		size_t spirvCodeSize = glslCompileResult.end() - spirvCode;
-		moduleInfo.pCode = spirvCode;
-		moduleInfo.codeSize = spirvCodeSize * sizeof(uint32);
-
-		SOUL_VK_CHECK(vkCreateShaderModule(_db.device, &moduleInfo, nullptr, &shader.module),
-					  "Fail creating vertex shader module");
-
-		spirv_cross::Compiler spirvCompiler(spirvCode, spirvCodeSize);
-		spirv_cross::ShaderResources resources = spirvCompiler.get_shader_resources();
-
-		for (spirv_cross::Resource& resource : resources.sampled_images) {
-			unsigned set = spirvCompiler.get_decoration(resource.id, spv::DecorationDescriptorSet);
-			unsigned binding = spirvCompiler.get_decoration(resource.id, spv::DecorationBinding);
-			const spirv_cross::SPIRType& type = spirvCompiler.get_type(resource.type_id);
-			shader.bindings[set][binding].type = DescriptorType::SAMPLED_IMAGE;
-			if (type.array.empty()) {
-				shader.bindings[set][binding].count = 1;
-			} else {
-				SOUL_ASSERT(0, type.array.size() == 1, "Array must be one dimensional");
-				SOUL_ASSERT(0, type.array_size_literal.front(), "Array size must be literal");
-				shader.bindings[set][binding].count = type.array[0];
-			}
+		if (texture.desc.mip_levels == 1) return texture.view;
+		if (texture.views == nullptr) {
+			texture.views = _db.cpu_allocator.allocate_array<TextureView>(soul::cast<uint64>(layer_count) * texture.desc.mip_levels);
+			std::fill_n(texture.views, texture.desc.mip_levels, TextureView());
 		}
-
-		SOUL_ASSERT(0, resources.separate_images.empty(), "texture2D is not supported yet!");
-		SOUL_ASSERT(0, resources.storage_images.empty(), "image2D is not supported yet!");
-		SOUL_ASSERT(0, resources.subpass_inputs.empty(), "subpassInput is not supported yet!");
-		SOUL_ASSERT(0, resources.push_constant_buffers.empty(), "push_constant is not supported yet!");
-		SOUL_ASSERT(0, resources.storage_buffers.empty(), "SSBO is not supported yet!");
-
-		for (spirv_cross::Resource& resource : resources.uniform_buffers) {
-			unsigned set = spirvCompiler.get_decoration(resource.id, spv::DecorationDescriptorSet);
-			unsigned binding = spirvCompiler.get_decoration(resource.id, spv::DecorationBinding);
-			const spirv_cross::SPIRType& type = spirvCompiler.get_type(resource.type_id);
-			shader.bindings[set][binding].type = DescriptorType::UNIFORM_BUFFER;
-			if (type.array.empty()) {
-				shader.bindings[set][binding].count = 1;
-			} else {
-				SOUL_ASSERT(0, type.array.size() == 1, "Array must be one dimensional");
-				SOUL_ASSERT(0, type.array_size_literal.front(), "Array size must be literal");
-				shader.bindings[set][binding].count = type.array[0];
-			}
-		}
-
-		SOUL_ASSERT(0, resources.stage_inputs.size() <= MAX_INPUT_PER_SHADER, "");
-
-		if (stage != ShaderStage::VERTEX) {
-			return shaderID;
-		}
-
-		struct AttrExtraInfo {
-			uint8 location;
-			uint8 alignment;
-			uint8 size;
-		};
-
-		Array<AttrExtraInfo> attrExtraInfos;
-		attrExtraInfos.resize(resources.stage_inputs.size());
-
-		for (int i = 0; i < resources.stage_inputs.size(); i++) {
-			spirv_cross::Resource &resource = resources.stage_inputs[i];
-			unsigned location = spirvCompiler.get_decoration(resource.id, spv::DecorationLocation);
-			const spirv_cross::SPIRType& type = spirvCompiler.get_type(resource.base_type_id);
-
-			AttrExtraInfo& extraInfo = attrExtraInfos[location];
-			extraInfo.location = location;
-
-			SOUL_ASSERT(0, type.columns <= 1, "");
-
-			VkFormat floatVecSizeToVkFormat[4] = {
-					VK_FORMAT_R32_SFLOAT,
-					VK_FORMAT_R32G32_SFLOAT,
-					VK_FORMAT_R32G32B32_SFLOAT,
-					VK_FORMAT_R32G32B32A32_SFLOAT
-			};
-			VkFormat doubleVecSizeToVkFormat[4] = {
-					VK_FORMAT_R64_SFLOAT,
-					VK_FORMAT_R64G64_SFLOAT,
-					VK_FORMAT_R64G64B64_SFLOAT,
-					VK_FORMAT_R64G64B64A64_SFLOAT
-			};
-			VkFormat intVecSizeToVkFormat[4] = {
-					VK_FORMAT_R32_SINT,
-					VK_FORMAT_R32G32_SINT,
-					VK_FORMAT_R32G32B32_SINT,
-					VK_FORMAT_R32G32B32A32_SINT
-			};
-			VkFormat uintVecSizeToVkFormat[4] = {
-					VK_FORMAT_R32_UINT,
-					VK_FORMAT_R32G32_UINT,
-					VK_FORMAT_R32G32B32_UINT,
-					VK_FORMAT_R32G32B32A32_UINT
-			};
-
-			VkFormat* vecSizeToVkFormat = nullptr;
-			switch (type.basetype) {
-				case spirv_cross::SPIRType::Float:
-					vecSizeToVkFormat = floatVecSizeToVkFormat;
-					extraInfo.alignment = alignof(float);
-					extraInfo.size = sizeof(float) * type.vecsize;
-					break;
-				case spirv_cross::SPIRType::UInt:
-					vecSizeToVkFormat = uintVecSizeToVkFormat;
-					extraInfo.alignment = alignof(uint32);
-					extraInfo.size = sizeof(uint32) * type.vecsize;
-					break;
-				case spirv_cross::SPIRType::Int:
-					vecSizeToVkFormat = intVecSizeToVkFormat;
-					extraInfo.alignment = alignof(int32);
-					extraInfo.size = sizeof(int32) * type.vecsize;
-					break;
-				case spirv_cross::SPIRType::Double:
-					vecSizeToVkFormat = doubleVecSizeToVkFormat;
-					extraInfo.alignment = alignof(double);
-					extraInfo.size = sizeof(double) * type.vecsize;
-					break;
-				default:
-					SOUL_PANIC(0, "Basetype %d is not supported", type.basetype);
-			}
-			shader.inputs[location].format = vecSizeToVkFormat[type.vecsize - 1];
-		}
-
-		uint32 currentOffset = 0;
-		uint32 vertexAlignment = 0;
-		for (int i = 0; i < resources.stage_inputs.size(); i++) {
-			int location = attrExtraInfos[i].location;
-			uint32 alignmentMinusOne = attrExtraInfos[i].alignment - 1;
-			shader.inputs[location].offset = (currentOffset + alignmentMinusOne) & ~alignmentMinusOne;
-			currentOffset += attrExtraInfos[i].size;
-			vertexAlignment = max(vertexAlignment, attrExtraInfos[i].alignment);
-		}
-
-		uint32 vertexSize = (currentOffset + vertexAlignment - 1) & ~(vertexAlignment - 1);
-		shader.inputStride = vertexSize;
-
-		attrExtraInfos.cleanup();
-
-		return shaderID;
-	}
-
-	void System::shaderDestroy(ShaderID shaderID) {
-		_frameContext().garbages.shaders.add(shaderID);
-	}
-
-	_Shader* System::_shaderPtr(ShaderID shaderID) {
-		return &_db.shaders[shaderID.id];
-	}
-
-	ProgramID System::programCreate(const GraphicBaseNode& node) {
-		SOUL_ASSERT_MAIN_THREAD();
-
-		const GraphicPipelineConfig& pipelineConfig = node.pipelineConfig;
-
-		SOUL_ASSERT(0, pipelineConfig.vertexShaderID != SHADER_ID_NULL, "");
-		SOUL_ASSERT(0, pipelineConfig.fragmentShaderID != SHADER_ID_NULL, "");
-
-		_FrameContext& frameContext = _frameContext();
-
-		ProgramID programID = ProgramID(_db.programs.add({}));
-		_Program& program = _db.programs[programID.id];
-
-		ShaderID shaderIDs[uint32(ShaderStage::COUNT)] = {};
-		shaderIDs[uint32(ShaderStage::VERTEX)] = pipelineConfig.vertexShaderID;
-		shaderIDs[uint32(ShaderStage::FRAGMENT)] = pipelineConfig.fragmentShaderID;
-
-		for (int i = 0; i < MAX_SET_PER_SHADER_PROGRAM; i++) {
-			for (int j = 0; j < uint32(ShaderStage::COUNT); j++) {
-				ShaderID shaderID = shaderIDs[j];
-				if (shaderID == SHADER_ID_NULL) continue;
-				const _Shader& shader = *_shaderPtr(shaderID);
-
-				for (int k = 0; k < MAX_BINDING_PER_SET; k++) {
-
-					VkShaderStageFlags vulkanShaderStageBitsMap[uint64(ShaderStage::COUNT)] = {
-						0,
-						VK_SHADER_STAGE_VERTEX_BIT,
-						VK_SHADER_STAGE_GEOMETRY_BIT,
-						VK_SHADER_STAGE_FRAGMENT_BIT,
-						VK_SHADER_STAGE_COMPUTE_BIT
-					};
-
-					VkPipelineStageFlags vulkanPipelineStageBitsMap[uint32(ShaderStage::COUNT)] = {
-						0,
-						VK_PIPELINE_STAGE_VERTEX_SHADER_BIT,
-						VK_PIPELINE_STAGE_GEOMETRY_SHADER_BIT,
-						VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
-						VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT
-					};
-
-					_ProgramDescriptorBinding& progBinding = program.bindings[i][k];
-					const _ShaderDescriptorBinding& shaderBinding = shader.bindings[i][k];
-
-					if (shader.bindings[i][k].count == 0) continue;
-
-					if (progBinding.shaderStageFlags == 0) {
-						progBinding.type = shaderBinding.type;
-						progBinding.count = shaderBinding.count;
-					} else {
-						SOUL_ASSERT(0, program.bindings[i][k].type == shader.bindings[i][k].type, "");
-						SOUL_ASSERT(0, program.bindings[i][k].count == shader.bindings[i][k].count, "");
-					}
-					progBinding.shaderStageFlags |= vulkanShaderStageBitsMap[j];
-					progBinding.pipelineStageFlags |= vulkanPipelineStageBitsMap[j];
+		const soul_size view_idx = layer * texture.desc.mip_levels + level;
+		if (texture.views[view_idx].vk_handle == VK_NULL_HANDLE) {
+			TextureView& texture_view = texture.views[level];
+			const VkImageViewCreateInfo image_view_info = {
+				.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+				.image = texture.vk_handle,
+				.viewType = vkCastToImageViewType(texture.desc.type),
+				.format = vkCast(texture.desc.format),
+				.components = {},
+				.subresourceRange = {
+					vkCastFormatToAspectFlags(texture.desc.format),
+					level,
+					1,
+					layer,
+					1
 				}
+			};
+			SOUL_VK_CHECK(vkCreateImageView(_db.device,
+				              &image_view_info, nullptr, &texture_view.vk_handle), "Fail to create image view");
+			if (texture.desc.usage_flags.test(TextureUsage::SAMPLED))
+			{
+				texture_view.sampled_image_gpu_handle = _db.descriptor_allocator.create_sampled_image_descriptor(texture_view.vk_handle);
+			}
+			if (texture.desc.usage_flags.test(TextureUsage::STORAGE))
+			{
+				texture_view.storage_image_gpu_handle = _db.descriptor_allocator.create_storage_image_descriptor(texture_view.vk_handle);
 			}
 		}
-
-		for (int i = 0; i < MAX_SET_PER_SHADER_PROGRAM; i++) {
-			Array<VkDescriptorSetLayoutBinding> bindings;
-			for (int j = 0; j < MAX_BINDING_PER_SET; j++) {
-				const _ProgramDescriptorBinding& progBinding = program.bindings[i][j];
-				if (progBinding.shaderStageFlags == 0) continue;
-				bindings.add({});
-
-				bindings.back().stageFlags = progBinding.shaderStageFlags;
-				bindings.back().descriptorType = vkCast(progBinding.type);
-				bindings.back().descriptorCount = progBinding.count;
-				bindings.back().binding = j;
-			}
-			VkDescriptorSetLayoutCreateInfo layoutInfo = {VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO};
-			layoutInfo.bindingCount = bindings.size();
-			layoutInfo.pBindings = bindings.data();
-			SOUL_VK_CHECK(vkCreateDescriptorSetLayout(_db.device, &layoutInfo, nullptr, &program.descriptorLayouts[i]), "");
-			bindings.cleanup();
-		}
-
-		VkPipelineLayoutCreateInfo pipelineLayoutInfo = {VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO};
-		pipelineLayoutInfo.setLayoutCount = MAX_SET_PER_SHADER_PROGRAM;
-		pipelineLayoutInfo.pSetLayouts = program.descriptorLayouts;
-
-		SOUL_VK_CHECK(vkCreatePipelineLayout(_db.device, &pipelineLayoutInfo, nullptr, &program.pipelineLayout), "");
-
-		return programID;
+		return texture.views[level];
 	}
 
-	void System::programDestroy(ProgramID programID) {
+	TextureView System::get_texture_view(const TextureID texture_id, const SubresourceIndex subresource_index)
+	{
+		return get_texture_view(texture_id, subresource_index.get_level(), subresource_index.get_layer());
+	}
+
+	TextureView System::get_texture_view(const TextureID texture_id, const std::optional<SubresourceIndex> subresource_index)
+	{
+		if (subresource_index)
+		{
+			return get_texture_view(texture_id, *subresource_index);
+		}
+		return get_texture(texture_id).view;
+	}
+
+	BufferID System::create_buffer(const BufferDesc &desc) {
 		SOUL_ASSERT_MAIN_THREAD();
-		_frameContext().garbages.programs.add(programID);
+		SOUL_ASSERT(0, desc.size > 0, "");
+		SOUL_ASSERT(0, desc.usage_flags.any(), "");
+
+		const auto buffer_id = BufferID(_db.buffer_pool.create());
+		Buffer &buffer = *get_buffer_ptr(buffer_id);
+
+		const QueueData queue_data = get_queue_data_from_queue_flags(desc.queue_flags);
+		SOUL_ASSERT(0, queue_data.count > 0, "");
+
+		const VkBufferCreateInfo buffer_info = {
+			.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
+			.size = desc.size,
+			.usage = vkCastBufferUsageFlags(desc.usage_flags),
+			.sharingMode = queue_data.count > 1 ? VK_SHARING_MODE_CONCURRENT : VK_SHARING_MODE_EXCLUSIVE,
+			.queueFamilyIndexCount = queue_data.count,
+			.pQueueFamilyIndices = queue_data.indices
+		};
+
+		const auto alloc_info = [](const std::optional<MemoryOption> option) -> VmaAllocationCreateInfo
+		{
+		    if (option)
+		    {
+				return {
+				    .requiredFlags = vk_cast(option->required),
+			    	.preferredFlags = vk_cast(option->preferred)
+				};
+		    }
+			return {
+				.preferredFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
+			};
+			
+		}(desc.memory_option);
+
+		SOUL_VK_CHECK(vmaCreateBuffer(_db.gpu_allocator, &buffer_info, &alloc_info, &buffer.vk_handle, &buffer.allocation, nullptr), "Fail to create buffer");
+		
+		buffer.desc = desc;
+		buffer.owner = ResourceOwner::NONE;
+		if (buffer.desc.usage_flags.test(BufferUsage::STORAGE))
+			buffer.storage_buffer_gpu_handle = _db.descriptor_allocator.create_storage_buffer_descriptor(buffer.vk_handle);
+
+		vmaGetAllocationMemoryProperties(_db.gpu_allocator, buffer.allocation, &buffer.memory_property_flags);
+
+		return buffer_id;
 	}
 
-	_Program* System::_programPtr(ProgramID programID) {
-		return &_db.programs[programID.id];
+	BufferID System::create_buffer(const BufferDesc& desc, const void* data) {
+		SOUL_PROFILE_ZONE();
+		BufferDesc new_desc = desc;
+		new_desc.usage_flags |= { BufferUsage::TRANSFER_DST };
+		new_desc.queue_flags |= { QueueType::TRANSFER };
+
+		const BufferID buffer_id = create_buffer(new_desc);
+		impl::Buffer& buffer = *get_buffer_ptr(buffer_id);
+
+		get_frame_context().gpu_resource_initializer.load(buffer, data);
+
+		return buffer_id;
 	}
 
-	VkPipeline System::_pipelineCreate(const GraphicBaseNode& node, ProgramID programID, VkRenderPass renderPass) {
-		const GraphicPipelineConfig& pipelineConfig = node.pipelineConfig;
+    BufferID System::create_transient_buffer(const BufferDesc& desc)
+    {
+		SOUL_ASSERT(0, desc.size > 0, "");
+		const auto buffer_id = BufferID(_db.buffer_pool.create());
+		Buffer& buffer = *get_buffer_ptr(buffer_id);
 
-		Array<VkPipelineShaderStageCreateInfo> shaderStageInfos;
-		const _Shader& vertShader = *_shaderPtr(pipelineConfig.vertexShaderID);
-		VkPipelineShaderStageCreateInfo vertShaderStageInfo = {VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO};
-		vertShaderStageInfo.module = vertShader.module;
-		vertShaderStageInfo.stage = VK_SHADER_STAGE_VERTEX_BIT;
-		vertShaderStageInfo.pName = "main";
-		shaderStageInfos.add(vertShaderStageInfo);
+		const QueueData queue_data = get_queue_data_from_queue_flags(desc.queue_flags);
+		SOUL_ASSERT(0, queue_data.count > 0, "");
 
-		const _Shader& fragShader = *_shaderPtr(pipelineConfig.fragmentShaderID);
-		VkPipelineShaderStageCreateInfo fragShaderStageInfo = {VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO};
-		fragShaderStageInfo.module = fragShader.module;
-		fragShaderStageInfo.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
-		fragShaderStageInfo.pName = "main";
-		shaderStageInfos.add(fragShaderStageInfo);
+		const VkBufferCreateInfo buffer_info = {
+			.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
+			.size = desc.size,
+			.usage = vkCastBufferUsageFlags(desc.usage_flags),
+			.sharingMode = queue_data.count > 1 ? VK_SHARING_MODE_CONCURRENT : VK_SHARING_MODE_EXCLUSIVE,
+			.queueFamilyIndexCount = queue_data.count,
+			.pQueueFamilyIndices = queue_data.indices
+		};
 
-		static VkPrimitiveTopology primitiveTopologyMap[(uint32)Topology::COUNT] = {
+		const auto alloc_create_info = [&desc]() -> VmaAllocationCreateInfo
+		{
+			if (desc.memory_option)
+				return {
+					.requiredFlags = vk_cast(desc.memory_option->required),
+					.preferredFlags = vk_cast(desc.memory_option->preferred)
+			};
+			else
+				return {.usage = VMA_MEMORY_USAGE_AUTO};
+		}();
+
+	    uint32 memory_index;
+		vmaFindMemoryTypeIndexForBufferInfo(_db.gpu_allocator, &buffer_info, &alloc_create_info, &memory_index);
+		const VmaAllocationCreateInfo allocation_create_info = {
+			.pool = _db.linear_pools[memory_index]
+		};
+
+		SOUL_VK_CHECK(vmaCreateBuffer(_db.gpu_allocator, &buffer_info, &allocation_create_info, &buffer.vk_handle, &buffer.allocation, nullptr), "Fail to create buffer");
+
+		buffer.desc = desc;
+		buffer.owner = ResourceOwner::NONE;
+		if (buffer.desc.usage_flags.test(BufferUsage::STORAGE))
+			buffer.storage_buffer_gpu_handle = _db.descriptor_allocator.create_storage_buffer_descriptor(buffer.vk_handle);
+		vmaGetAllocationMemoryProperties(_db.gpu_allocator, buffer.allocation, &buffer.memory_property_flags);
+		get_frame_context().garbages.buffers.add(buffer_id);
+
+		return buffer_id;
+    }
+
+	BufferID System::create_staging_buffer(const soul_size size)
+    {
+		return create_transient_buffer({
+			.size = size,
+			.usage_flags = {BufferUsage::TRANSFER_SRC},
+			.queue_flags = {QueueType::TRANSFER},
+			.memory_option = MemoryOption{
+				.required = {MemoryProperty::HOST_VISIBLE},
+				.preferred = { MemoryProperty::DEVICE_LOCAL}
+			}
+		});
+    }
+
+    VmaAllocator System::get_gpu_allocator()
+    {
+		return _db.gpu_allocator;
+    }
+
+    void System::flush_buffer(const BufferID buffer_id)
+	{
+		get_frame_context().gpu_resource_finalizer.finalize(*get_buffer_ptr(buffer_id));
+	}
+
+	void System::destroy_buffer_descriptor(BufferID buffer_id)
+	{
+		_db.descriptor_allocator.destroy_storage_buffer_descriptor(get_buffer_ptr(buffer_id)->storage_buffer_gpu_handle);
+	}
+
+	void System::destroy_buffer(BufferID id) {
+		SOUL_ASSERT_MAIN_THREAD();
+		get_frame_context().garbages.buffers.push_back(id);
+	}
+
+	Buffer *System::get_buffer_ptr(const BufferID buffer_id) {
+		return _db.buffer_pool.get(buffer_id.id);
+	}
+
+    impl::Buffer& System::get_buffer(const BufferID buffer_id)
+    {
+		SOUL_ASSERT(0, !buffer_id.is_null(), "");
+		return *_db.buffer_pool.get(buffer_id.id);
+    }
+
+    const Buffer& System::get_buffer(const BufferID buffer_id) const {
+		SOUL_ASSERT(0, !buffer_id.is_null(), "");
+		return *_db.buffer_pool.get(buffer_id.id);
+	}
+
+	FrameContext &System::get_frame_context() {
+		return _db.frame_contexts[_db.current_frame % _db.frame_contexts.size()];
+	}
+
+	PipelineStateID System::request_pipeline_state(const GraphicPipelineStateDesc& desc, VkRenderPass renderPass, const TextureSampleCount sample_count) {
+		//TODO(kevinyu): Do we need to hash renderPass and sample_count as well?
+        const PipelineStateDesc key(desc);
+		if (const auto id = _db.pipeline_state_cache.find(key); id != PipelineStateCache::NULLVAL)
+		{
+			return PipelineStateID(id);
+		}
+
+		auto create_graphic_pipeline_state = [this](const GraphicPipelineStateDesc& desc, VkRenderPass render_pass, const TextureSampleCount sample_count) -> PipelineState
+		{
+			runtime::ScopeAllocator<> scope_allocator("create_graphic_pipeline_state");
+
+			Program* program = get_program_ptr(desc.program_id);
+
+			Vector<VkPipelineShaderStageCreateInfo> shader_stage_infos(&scope_allocator);
+
+			for (ShaderStage stage : FlagIter<ShaderStage>())
+			{
+				const Shader& shader = program->shaders[stage];
+				if (shader.vk_handle == VK_NULL_HANDLE) continue;
+				const VkPipelineShaderStageCreateInfo shader_stage_info = {
+					.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+					.stage = vkCast(stage),
+					.module = shader.vk_handle,
+					.pName = shader.entry_point.data()
+				};
+				shader_stage_infos.push_back(shader_stage_info);
+			}
+
+			static auto PRIMITIVE_TOPOLOGY_MAP = FlagMap<Topology, VkPrimitiveTopology>::build_from_list({
 				VK_PRIMITIVE_TOPOLOGY_POINT_LIST,
 				VK_PRIMITIVE_TOPOLOGY_LINE_LIST,
 				VK_PRIMITIVE_TOPOLOGY_LINE_STRIP,
 				VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
 				VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP,
 				VK_PRIMITIVE_TOPOLOGY_TRIANGLE_FAN
+			});
+
+			const VkPipelineInputAssemblyStateCreateInfo input_assembly_state = {
+				.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO,
+				.topology = PRIMITIVE_TOPOLOGY_MAP[desc.input_layout.topology],
+				.primitiveRestartEnable = VK_FALSE
+			};
+
+			const VkViewport viewport = {
+				.x = desc.viewport.x,
+				.y = desc.viewport.y,
+				.width = desc.viewport.width,
+				.height = desc.viewport.height ,
+				.minDepth = 0.0f,
+				.maxDepth = 1.0f
+			};
+
+			const VkRect2D scissor = {
+				.offset = { desc.scissor.offset.x, desc.scissor.offset.y },
+				.extent = { desc.scissor.extent.x, desc.scissor.extent.y }
+			};
+
+			const VkPipelineViewportStateCreateInfo viewport_state = {
+				.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO,
+				.viewportCount = 1,
+				.pViewports = &viewport,
+				.scissorCount = 1,
+				.pScissors = &scissor
+			};
+
+			static auto POLYGON_MODE_MAP = FlagMap<PolygonMode, VkPolygonMode>::build_from_list({
+				VK_POLYGON_MODE_FILL,
+				VK_POLYGON_MODE_LINE,
+				VK_POLYGON_MODE_POINT
+				});
+
+			const VkPipelineRasterizationStateCreateInfo rasterizer_state = {
+				.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO,
+				.depthClampEnable = VK_FALSE,
+				.rasterizerDiscardEnable = VK_FALSE,
+				.polygonMode = POLYGON_MODE_MAP[desc.raster.polygon_mode],
+				.depthBiasEnable = (desc.depth_bias.slope != 0.0f || desc.depth_bias.constant != 0.0f) ? VK_TRUE : VK_FALSE,
+				.depthBiasConstantFactor = desc.depth_bias.constant,
+				.depthBiasSlopeFactor = desc.depth_bias.slope,
+				.lineWidth = desc.raster.line_width
+			};
+
+			const VkPipelineMultisampleStateCreateInfo multisample_state = {
+				.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO,
+				.rasterizationSamples = vkCast(sample_count),
+				.sampleShadingEnable = VK_FALSE
+			};
+
+			VkVertexInputAttributeDescription attr_descs[MAX_INPUT_PER_SHADER];
+			uint32 attr_desc_count = 0;
+			for (uint32 i = 0; i < MAX_INPUT_PER_SHADER; i++) {
+				auto& input_attribute = desc.input_attributes[i];
+				if (input_attribute.type == VertexElementType::DEFAULT) continue;
+				attr_descs[attr_desc_count].format = vkCast(input_attribute.type, input_attribute.flags);
+				attr_descs[attr_desc_count].binding = desc.input_attributes[i].binding;
+				attr_descs[attr_desc_count].location = i;
+				attr_descs[attr_desc_count].offset = desc.input_attributes[i].offset;
+				attr_desc_count++;
+			}
+
+			VkVertexInputBindingDescription input_binding_descs[MAX_INPUT_BINDING_PER_SHADER];
+			uint32 input_binding_desc_count = 0;
+			for (uint32 i = 0; i < MAX_INPUT_BINDING_PER_SHADER; i++) {
+				if (desc.input_bindings[i].stride == 0) continue;
+				input_binding_descs[input_binding_desc_count] = {
+					i,
+					desc.input_bindings[i].stride,
+					VK_VERTEX_INPUT_RATE_VERTEX
+				};
+				input_binding_desc_count++;
+			}
+
+			const VkPipelineVertexInputStateCreateInfo inputStateInfo = {
+				.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
+				.vertexBindingDescriptionCount = attr_desc_count > 0 ? input_binding_desc_count : 0,
+				.pVertexBindingDescriptions = attr_desc_count > 0 ? input_binding_descs : nullptr,
+				.vertexAttributeDescriptionCount = attr_desc_count,
+				.pVertexAttributeDescriptions = attr_descs,
+			};
+
+			VkPipelineColorBlendAttachmentState color_blend_attachments[MAX_COLOR_ATTACHMENT_PER_SHADER];
+			std::transform(desc.color_attachments, desc.color_attachments + MAX_COLOR_ATTACHMENT_PER_SHADER, color_blend_attachments,
+				[](const auto& attachment) -> VkPipelineColorBlendAttachmentState
+				{
+					return {
+						.blendEnable = attachment.blend_enable ? VK_TRUE : VK_FALSE,
+						.srcColorBlendFactor = vkCast(attachment.src_color_blend_factor),
+						.dstColorBlendFactor = vkCast(attachment.dst_color_blend_factor),
+						.colorBlendOp = vkCast(attachment.color_blend_op),
+						.srcAlphaBlendFactor = vkCast(attachment.src_alpha_blend_factor),
+						.dstAlphaBlendFactor = vkCast(attachment.dst_alpha_blend_factor),
+						.alphaBlendOp = vkCast(attachment.alpha_blend_op),
+						.colorWriteMask = soul::cast<uint32>(attachment.color_write ? 0xf : 0x0)
+					};
+				});
+
+			const VkPipelineColorBlendStateCreateInfo color_blending = {
+				.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO,
+				.logicOpEnable = VK_FALSE,
+				.logicOp = VK_LOGIC_OP_COPY,
+				.attachmentCount = desc.color_attachment_count,
+				.pAttachments = color_blend_attachments,
+				.blendConstants = {}
+			};
+
+			const VkPipelineDepthStencilStateCreateInfo depth_stencil_info = {
+				.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO,
+				.depthTestEnable = desc.depth_stencil_attachment.depth_test_enable,
+				.depthWriteEnable = desc.depth_stencil_attachment.depth_write_enable,
+				.depthCompareOp = vkCast(desc.depth_stencil_attachment.depth_compare_op),
+				.depthBoundsTestEnable = VK_FALSE,
+				.stencilTestEnable = VK_FALSE,
+				.front = {},
+				.back = {},
+				.minDepthBounds = 0.0f,
+				.maxDepthBounds = 1.0f
+			};
+
+			const VkGraphicsPipelineCreateInfo pipeline_info = {
+				.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
+				.stageCount = soul::cast<uint32>(shader_stage_infos.size()),
+				.pStages = shader_stage_infos.data(),
+				.pVertexInputState = &inputStateInfo,
+				.pInputAssemblyState = &input_assembly_state,
+				.pViewportState = &viewport_state,
+				.pRasterizationState = &rasterizer_state,
+				.pMultisampleState = &multisample_state,
+				.pDepthStencilState = &depth_stencil_info,
+				.pColorBlendState = &color_blending,
+				.pDynamicState = nullptr,
+				.layout = get_bindless_pipeline_layout(),
+				.renderPass = render_pass,
+				.subpass = 0,
+				.basePipelineHandle = VK_NULL_HANDLE
+			};
+
+			VkPipeline pipeline;
+			{
+				SOUL_PROFILE_ZONE_WITH_NAME("vkCreateGraphicsPipelines");
+				SOUL_VK_CHECK(vkCreateGraphicsPipelines(_db.device, VK_NULL_HANDLE, 1, &pipeline_info, nullptr, &pipeline), "Fail to create graphics pipelines");
+			}
+
+			shader_stage_infos.cleanup();
+			return { pipeline, VK_PIPELINE_BIND_POINT_GRAPHICS, desc.program_id };
 		};
-		VkPipelineInputAssemblyStateCreateInfo inputAssemblyState = {VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO};
-		inputAssemblyState.topology = primitiveTopologyMap[(uint32)pipelineConfig.inputLayout.topology];
-		inputAssemblyState.primitiveRestartEnable = VK_FALSE;
+		return PipelineStateID(_db.pipeline_state_cache.create(key, create_graphic_pipeline_state, desc, renderPass, sample_count));
 
-		VkViewport viewport = {};
-		viewport.x = pipelineConfig.viewport.offsetX;
-		viewport.y = pipelineConfig.viewport.offsetY;
-		viewport.width = pipelineConfig.viewport.width;
-		viewport.height = pipelineConfig.viewport.height;
-		viewport.minDepth = 0.0f;
-		viewport.maxDepth = 1.0f;
-
-		VkRect2D scissor = {};
-		scissor.offset = {int32(pipelineConfig.scissor.offsetX), int32(pipelineConfig.scissor.offsetY)};
-		scissor.extent = {uint32(pipelineConfig.scissor.width), uint32(pipelineConfig.scissor.height)};
-
-		VkPipelineViewportStateCreateInfo viewportState = {VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO};
-		viewportState.viewportCount = 1;
-		viewportState.pViewports = &viewport;
-		viewportState.scissorCount = 1;
-		viewportState.pScissors = &scissor;
-
-		static VkPolygonMode polygonModeMap[(uint32)PolygonMode::COUNT] = {
-			VK_POLYGON_MODE_FILL,
-			VK_POLYGON_MODE_LINE,
-			VK_POLYGON_MODE_POINT
-		};
-
-		VkPipelineRasterizationStateCreateInfo rasterizerState = {VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO};
-		rasterizerState.depthClampEnable = VK_FALSE;
-		rasterizerState.rasterizerDiscardEnable = VK_FALSE;
-		rasterizerState.polygonMode = polygonModeMap[(uint32)pipelineConfig.raster.polygonMode];
-		rasterizerState.lineWidth = pipelineConfig.raster.lineWidth;
-
-		// TODO(kevinyu) : Enable multisampling configuration
-		VkPipelineMultisampleStateCreateInfo multisampleState = {VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO};
-		multisampleState.sampleShadingEnable = VK_FALSE;
-		multisampleState.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
-
-		VkPipelineColorBlendAttachmentState colorBlendAttachmentState = {};
-
-		VkVertexInputAttributeDescription attrDescs[MAX_INPUT_PER_SHADER];
-		uint32 attrDescCount = 0;
-		for (int i = 0; i < MAX_INPUT_PER_SHADER; i++) {
-			if (vertShader.inputs[i].format == VK_FORMAT_UNDEFINED) continue;
-			attrDescs[attrDescCount].format = vertShader.inputs[i].format;
-			attrDescs[attrDescCount].binding = 0;
-			attrDescs[attrDescCount].location = i;
-			attrDescs[attrDescCount].offset = vertShader.inputs[i].offset;
-			attrDescCount++;
-		}
-
-		VkVertexInputBindingDescription inputBindingDesc = {};
-		inputBindingDesc.binding = 0;
-		inputBindingDesc.stride = vertShader.inputStride;
-		inputBindingDesc.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
-
-		VkPipelineVertexInputStateCreateInfo inputStateInfo = {VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO};
-		inputStateInfo.vertexAttributeDescriptionCount = attrDescCount;
-		inputStateInfo.pVertexAttributeDescriptions = attrDescs;
-		inputStateInfo.vertexBindingDescriptionCount = 1;
-		inputStateInfo.pVertexBindingDescriptions = &inputBindingDesc;
-
-		VkGraphicsPipelineCreateInfo pipelineInfo = {VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO};
-		pipelineInfo.stageCount = shaderStageInfos.size();
-		pipelineInfo.pStages = shaderStageInfos.data();
-		pipelineInfo.pVertexInputState = &inputStateInfo;
-		pipelineInfo.pInputAssemblyState = &inputAssemblyState;
-		pipelineInfo.pViewportState = &viewportState;
-		pipelineInfo.pRasterizationState = &rasterizerState;
-		pipelineInfo.pMultisampleState = &multisampleState;
-
-		VkPipelineColorBlendAttachmentState colorBlendAttachments[MAX_COLOR_ATTACHMENT_PER_SHADER];
-		for (int i = 0; i < node.colorAttachments.size(); i++) {
-			VkPipelineColorBlendAttachmentState& blendState = colorBlendAttachments[i];
-			const ColorAttachment& attachment = node.colorAttachments[i];
-			blendState.blendEnable = attachment.desc.blendEnable ? VK_TRUE : VK_FALSE;
-			blendState.srcColorBlendFactor = vkCast(attachment.desc.srcColorBlendFactor);
-			blendState.dstColorBlendFactor = vkCast(attachment.desc.dstColorBlendFactor);
-			blendState.colorBlendOp = vkCast(attachment.desc.colorBlendOp);
-			blendState.srcAlphaBlendFactor = vkCast(attachment.desc.srcAlphaBlendFactor);
-			blendState.dstAlphaBlendFactor = vkCast(attachment.desc.dstAlphaBlendFactor);
-			blendState.alphaBlendOp = vkCast(attachment.desc.alphaBlendOp);
-			blendState.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
-		}
-		VkPipelineColorBlendStateCreateInfo colorBlending = {};
-		colorBlending.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
-		colorBlending.logicOpEnable = VK_FALSE;
-		colorBlending.logicOp = VK_LOGIC_OP_COPY;
-		colorBlending.attachmentCount = node.colorAttachments.size();
-		colorBlending.pAttachments = colorBlendAttachments;
-		colorBlending.blendConstants[0] = 0.0f;
-		colorBlending.blendConstants[1] = 0.0f;
-		colorBlending.blendConstants[2] = 0.0f;
-		colorBlending.blendConstants[3] = 0.0f;
-		pipelineInfo.pColorBlendState = &colorBlending;
-
-		VkPipelineDepthStencilStateCreateInfo depthStencilInfo = {VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO};
-		depthStencilInfo.depthTestEnable = node.depthStencilAttachment.desc.depthTestEnable;
-		depthStencilInfo.depthWriteEnable = node.depthStencilAttachment.desc.depthWriteEnable;
-		depthStencilInfo.depthCompareOp = vkCast(node.depthStencilAttachment.desc.depthCompareOp);
-		depthStencilInfo.depthBoundsTestEnable = VK_FALSE;
-		depthStencilInfo.stencilTestEnable = VK_FALSE;
-		depthStencilInfo.front = {};
-		depthStencilInfo.back = {};
-		depthStencilInfo.minDepthBounds = 0.0f;
-		depthStencilInfo.maxDepthBounds = 1.0f;
-		pipelineInfo.pDepthStencilState = &depthStencilInfo;
-
-		if (pipelineConfig.scissor.dynamic) {
-			VkPipelineDynamicStateCreateInfo dynamicStateInfo = {VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO};
-			VkDynamicState dynamicStates[] = {VK_DYNAMIC_STATE_SCISSOR};
-			dynamicStateInfo.dynamicStateCount = 1;
-			dynamicStateInfo.pDynamicStates = dynamicStates;
-			pipelineInfo.pDynamicState = &dynamicStateInfo;
-		}
-
-		pipelineInfo.layout = _programPtr(programID)->pipelineLayout;
-		pipelineInfo.renderPass = renderPass;
-		pipelineInfo.subpass = 0;
-		pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
-
-		VkPipeline pipeline;
-		SOUL_VK_CHECK(vkCreateGraphicsPipelines(_db.device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &pipeline), "");
-
-		shaderStageInfos.cleanup();
-
-		return pipeline;
 	}
 
-	void System::_pipelineDestroy(VkPipeline pipeline) {
-		SOUL_ASSERT(0, pipeline != VK_NULL_HANDLE, "");
-		_frameContext().garbages.pipelines.add(pipeline);
-	}
-
-	SamplerID System::samplerRequest(const SamplerDesc &desc) {
-		uint64 hashKey = hashFNV1((const uint8*) &desc, sizeof(SamplerDesc));
-		if (_db.samplerMap.isExist(hashKey)) {
-			return SamplerID(_db.samplerMap[hashKey]);
+	PipelineStateID System::request_pipeline_state(const ComputePipelineStateDesc& desc)
+	{
+        const PipelineStateDesc key(desc);
+		if (const auto id = _db.pipeline_state_cache.find(key); id != PipelineStateCache::NULLVAL)
+		{
+			return PipelineStateID(id);
 		}
 
-		VkSamplerCreateInfo samplerCreateInfo = {VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO};
-		samplerCreateInfo.minFilter = vkCast(desc.minFilter);
-		samplerCreateInfo.magFilter = vkCast(desc.magFilter);
-		samplerCreateInfo.mipmapMode = vkCastMipmapFilter(desc.mipmapFilter);
-		samplerCreateInfo.addressModeU = vkCast(desc.wrapU);
-		samplerCreateInfo.addressModeV = vkCast(desc.wrapV);
-		samplerCreateInfo.addressModeW = vkCast(desc.wrapW);
-		samplerCreateInfo.anisotropyEnable = desc.anisotropyEnable;
-		samplerCreateInfo.maxAnisotropy = desc.maxAnisotropy;
-		samplerCreateInfo.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
-		samplerCreateInfo.unnormalizedCoordinates = VK_FALSE;
-		samplerCreateInfo.compareEnable = VK_FALSE;
-		samplerCreateInfo.compareOp = VK_COMPARE_OP_ALWAYS;
+		auto create_compute_pipeline_state = [this](const ComputePipelineStateDesc& desc) -> PipelineState
+		{
+			const Program* program = get_program_ptr(desc.program_id);
+
+			const Shader& compute_shader = program->shaders[ShaderStage::COMPUTE];
+			const VkPipelineShaderStageCreateInfo compute_shader_stage_create_info = {
+				.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+				.stage = VK_SHADER_STAGE_COMPUTE_BIT,
+				.module = compute_shader.vk_handle,
+				.pName = compute_shader.entry_point.data()
+			};
+
+			const VkComputePipelineCreateInfo create_info = {
+				.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO,
+				.stage = compute_shader_stage_create_info,
+				.layout = get_bindless_pipeline_layout()
+			};
+
+			VkPipeline pipeline;
+			{
+				SOUL_PROFILE_ZONE_WITH_NAME("vkCreateGraphicsPipelines");
+				SOUL_VK_CHECK(vkCreateComputePipelines(_db.device, VK_NULL_HANDLE, 1, &create_info, nullptr, &pipeline), "Fail to create compute pipelines");
+			}
+			return { pipeline, VK_PIPELINE_BIND_POINT_COMPUTE, desc.program_id };
+		};
+
+		return PipelineStateID(_db.pipeline_state_cache.create(key, create_compute_pipeline_state, desc));
+	}
+
+
+	PipelineState* System::get_pipeline_state_ptr(const PipelineStateID pipeline_state_id) {
+		return _db.pipeline_state_cache.get(pipeline_state_id.id);
+	}
+
+	const PipelineState& System::get_pipeline_state(PipelineStateID pipeline_state_id) {
+		return *_db.pipeline_state_cache.get(pipeline_state_id.id);
+	}
+
+	VkPipelineLayout System::get_bindless_pipeline_layout() const
+	{
+		return _db.descriptor_allocator.get_pipeline_layout();
+	}
+
+	BindlessDescriptorSets System::get_bindless_descriptor_sets() const
+	{
+		return _db.descriptor_allocator.get_bindless_descriptor_sets();
+	}
+
+    expected<ProgramID, Error> System::create_program_dxc(const ProgramDesc& program_desc)
+    {
+		runtime::ScopeAllocator<> scope_allocator("gpu::System::create_program_dxc");
+
+		const auto program_id = ProgramID(_db.programs.create());
+		Program& program = _db.programs[program_id.id];
+		
+        // ReSharper disable once CppLocalVariableMayBeConst
+        auto* session = get_dxc_session();
+
+		soul::Vector<const CString*> shader_sources(&scope_allocator);
+		shader_sources.reserve(program_desc.source_count);
+		soul::Vector<CString> shader_file_sources(&scope_allocator);
+		shader_file_sources.reserve(program_desc.source_count);
+
+		for (auto& source : std::span(program_desc.sources, program_desc.source_count)) {
+			if (std::holds_alternative<ShaderFile>(source))
+			{
+				const ShaderFile& shader_file = std::get<ShaderFile>(source);
+				const std::filesystem::path& path = shader_file.path;
+				const std::filesystem::path full_path = [&path, &program_desc]()->std::filesystem::path
+				{
+					if (path.is_absolute())
+					{
+						SOUL_ASSERT(0, std::filesystem::exists(path), "%s does not exist", path.string().c_str());
+						return std::filesystem::canonical(path);
+					}
+					else {
+						for (const auto& search_path : std::span(program_desc.search_paths, program_desc.search_path_count))
+						{
+							auto full_path_candidate = search_path / path;
+							if (std::filesystem::exists(full_path_candidate)) return std::filesystem::canonical(full_path_candidate);
+						}
+						SOUL_ASSERT(0, false, "Cannot find file %s in any search path", path.string().c_str());
+						return "";
+					}
+				}();
+				auto full_path_str = full_path.string();
+				shader_file_sources.push_back(util::load_file(full_path_str.c_str(), scope_allocator));
+				shader_sources.push_back(&shader_file_sources.back());
+			}
+			else
+			{
+				const ShaderString& shader_string = std::get<ShaderString>(source);
+				shader_sources.push_back(&shader_string.source);
+			}
+		}
+
+		const auto total_source_size = std::accumulate(shader_sources.begin(), shader_sources.end(), 0, 
+			[](const soul_size prev_size, const CString* source) -> soul_size
+		{
+				return prev_size + source->size();
+		});
+
+		CString full_source_string(&scope_allocator);
+		full_source_string.reserve(RESOURCE_HLSL_SIZE + total_source_size);
+		full_source_string.appendf("%s", RESOURCE_HLSL);
+		for (const auto* shader_source : shader_sources)
+		{
+			full_source_string.append(*shader_source);
+		}
+		SOUL_LOG_INFO("Full source : %s", full_source_string.data());
+
+		auto code_page = soul::cast<uint32>(CP_ACP);
+		wrl::ComPtr<IDxcBlobEncoding> source_blob;
+		if (auto result = session->utils->CreateBlob(full_source_string.data(), soul::cast<uint32>(full_source_string.size()), 
+			code_page, source_blob.GetAddressOf()); FAILED(result))
+		{
+			SOUL_PANIC("Fail to create source blob");
+		}
+
+		for (const auto stage : FlagIter<ShaderStage>())
+		{
+			const char* entry_point_name = program_desc.entry_point_names[stage];
+			if (entry_point_name == nullptr) continue;
+
+			// Tell the compiler to output SPIR-V
+			soul::Vector<LPCWSTR> arguments;
+
+			arguments.push_back(L"-HV");
+			arguments.push_back(L"2021");
+			arguments.push_back(L"-spirv");
+			// memory layout for resources
+			arguments.push_back(L"-fvk-use-dx-layout");
+			// Vulkan version
+			arguments.push_back(L"-fspv-target-env=vulkan1.2");
+			// useful extensions
+			arguments.push_back(L"-fspv-extension=SPV_EXT_descriptor_indexing");
+
+			const auto entry_point_name_size = strlen(program_desc.entry_point_names[stage]) + 1;
+			auto* entry_point_wide_chars = scope_allocator.allocate_array<wchar_t>(entry_point_name_size);
+			size_t entry_point_out_size;
+			mbstowcs_s(&entry_point_out_size, entry_point_wide_chars, entry_point_name_size,
+				program_desc.entry_point_names[stage], entry_point_name_size);
+			arguments.push_back(L"-E");
+			arguments.push_back(entry_point_wide_chars);
+
+			static constexpr FlagMap<ShaderStage, LPCWSTR> target_profile_map = {
+				{ShaderStage::VERTEX, L"vs_6_5"},
+				{ShaderStage::FRAGMENT, L"ps_6_5"},
+				{ShaderStage::COMPUTE, L"cs_6_5"}
+			};
+			arguments.push_back(L"-T");
+			arguments.push_back(target_profile_map[stage]);
+
+			arguments.push_back(L"-I");
+			std::vector<std::wstring> search_paths;
+		    for (soul_size search_path_idx = 0; search_path_idx < program_desc.search_path_count; search_path_idx++)
+			{
+				search_paths.push_back(program_desc.search_paths[search_path_idx].wstring());
+				arguments.push_back(search_paths.back().c_str());
+			}
+
+			DxcBuffer source_buffer = {
+				.Ptr = source_blob->GetBufferPointer(),
+				.Size = source_blob->GetBufferSize(),
+				.Encoding = 0
+			};
+
+			// Compile shader
+			wrl::ComPtr<IDxcResult> result_op;
+			auto hres = session->compiler->Compile(
+				&source_buffer,
+				arguments.data(),
+				soul::cast<uint32_t>(arguments.size()),
+				session->default_include_handler.Get(),
+				IID_PPV_ARGS(result_op.GetAddressOf()));
+
+ 			if (SUCCEEDED(hres)) {
+				result_op->GetStatus(&hres);
+			}
+
+			wrl::ComPtr<IDxcBlobUtf8> pErrors = nullptr;
+			// Note that d3dcompiler would return null if no errors or warnings are present.
+			// IDxcCompiler3::Compile will always return an error buffer,
+			// but its length will be zero if there are no warnings or errors.
+			if (SUCCEEDED(result_op->GetOutput(DXC_OUT_ERRORS, IID_PPV_ARGS(&pErrors), nullptr)) &&
+				pErrors != nullptr && pErrors->GetStringLength() != 0)
+				wprintf(L"Warnings and Errors:\n%S\n", pErrors->GetStringPointer());
+
+
+			// Get compilation result
+			wrl::ComPtr<IDxcBlob> code;
+			result_op->GetResult(&code);
+
+			// Create a Vulkan shader module from the compilation result
+			const VkShaderModuleCreateInfo shader_module_ci = {
+				.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
+				.codeSize = code->GetBufferSize(),
+				.pCode = soul::cast<uint32*>(code->GetBufferPointer())
+			};
+			Shader& shader = program.shaders[stage];
+			vkCreateShaderModule(_db.device, &shader_module_ci, nullptr, &shader.vk_handle);
+			shader.entry_point = entry_point_name;
+		}
+
+		return program_id;
+    }
+
+    Program *System::get_program_ptr(const ProgramID program_id) {
+		SOUL_ASSERT(0, program_id.is_valid(), "");
+		return &_db.programs[program_id.id];
+	}
+
+	const Program& System::get_program(const ProgramID program_id) {
+		SOUL_ASSERT(0, program_id.is_valid(), "");
+		return _db.programs[program_id.id];
+	}
+
+	SamplerID System::request_sampler(const SamplerDesc &desc) {
+		const auto hash_key = util::hash_fnv1(&desc);
+		if (_db.sampler_map.isExist(hash_key)) return _db.sampler_map[hash_key];
+
+		const VkSamplerCreateInfo sampler_create_info = {
+			.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
+			.magFilter = vkCast(desc.mag_filter),
+			.minFilter = vkCast(desc.min_filter),
+			.mipmapMode = vkCastMipmapFilter(desc.mipmap_filter),
+			.addressModeU = vkCast(desc.wrap_u),
+			.addressModeV = vkCast(desc.wrap_v),
+			.addressModeW = vkCast(desc.wrap_w),
+			.anisotropyEnable = desc.anisotropy_enable,
+			.maxAnisotropy = desc.max_anisotropy,
+			.compareEnable = desc.compare_enable ? VK_TRUE : VK_FALSE,
+			.compareOp = vkCast(desc.compare_op),
+			.minLod = 0,
+			.maxLod = VK_LOD_CLAMP_NONE,
+			.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK,
+			.unnormalizedCoordinates = VK_FALSE
+		};
 
 		VkSampler sampler;
-		SOUL_VK_CHECK(vkCreateSampler(_db.device, &samplerCreateInfo, nullptr, &sampler), "");
-		_db.samplerMap.add(hashKey, sampler);
+		SOUL_VK_CHECK(vkCreateSampler(_db.device, &sampler_create_info, nullptr, &sampler), "Fail to create sampler");
+        const DescriptorID descriptor_id = _db.descriptor_allocator.create_sampler_descriptor(sampler);
+		const SamplerID sampler_id = { sampler, descriptor_id };
+		_db.sampler_map.add(hash_key, sampler_id);
 
-		return SamplerID(sampler);
+		return sampler_id;
 	}
 
-	ShaderArgSetID System::_shaderArgSetRequest(const ShaderArgSetDesc& desc, ProgramID programID, uint32 set) {
-		uint64 hash = 0;
-		int offsetCount = 0;
-		int offset[MAX_DYNAMIC_BUFFER_PER_SET];
-		for (int i = 0; i < desc.bindingCount; i++) {
-			Descriptor& descriptorDesc = desc.bindingDescriptions[i];
-			switch (descriptorDesc.type) {
-				case DescriptorType::UNIFORM_BUFFER: {
-					const UniformDescriptor& uniformDescriptor = descriptorDesc.uniformInfo;
-					hash = hashFNV1((uint8 *) &descriptorDesc.type, sizeof(descriptorDesc.type), hash);
-					hash = hashFNV1((uint8 *) &descriptorDesc.uniformInfo.bufferID, sizeof(BufferID), hash);
-					offset[offsetCount++] = uniformDescriptor.unitIndex * _bufferPtr(uniformDescriptor.bufferID)->unitSize;
-					break;
-				}
-				case DescriptorType::SAMPLED_IMAGE: {
-					hash = hashFNV1((uint8 *) &descriptorDesc.type, sizeof(descriptorDesc.type), hash);
-					hash = hashFNV1((uint8 *) &descriptorDesc.sampledImageInfo.textureID, sizeof(TextureID), hash);
-					hash = hashFNV1((uint8 *) &descriptorDesc.sampledImageInfo.samplerID, sizeof(SamplerID), hash);
-					break;
-				}
-				default: {
-					SOUL_NOT_IMPLEMENTED();
-					break;
-				}
+	VkRenderPass System::request_render_pass(const RenderPassKey& key)
+	{
+		SOUL_PROFILE_ZONE();
+		SOUL_ASSERT_MAIN_THREAD();
+		if (_db.render_pass_maps.contains(key)) 
+		{
+			return _db.render_pass_maps[key];
+		}
+
+		auto attachment_flag_to_load_op = [](const AttachmentFlags flags) -> VkAttachmentLoadOp
+		{
+			if (flags & ATTACHMENT_CLEAR_BIT)
+			{
+				return VK_ATTACHMENT_LOAD_OP_CLEAR;
+			}
+			if ((flags & ATTACHMENT_FIRST_PASS_BIT) && !(flags & ATTACHMENT_EXTERNAL_BIT))
+			{
+				return VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+			}
+			
+			return VK_ATTACHMENT_LOAD_OP_LOAD;
+			
+		};
+
+		auto attachment_flag_to_store_op = [](const AttachmentFlags flags) -> VkAttachmentStoreOp
+		{
+			if ((flags & ATTACHMENT_LAST_PASS_BIT) && !(flags & ATTACHMENT_EXTERNAL_BIT))
+			{
+				return VK_ATTACHMENT_STORE_OP_DONT_CARE;
+			}
+			return VK_ATTACHMENT_STORE_OP_STORE;
+		};
+
+		VkAttachmentDescription attachments[MAX_COLOR_ATTACHMENT_PER_SHADER  * 2 + MAX_INPUT_ATTACHMENT_PER_SHADER + 1] = {};
+		VkAttachmentReference attachment_refs[MAX_COLOR_ATTACHMENT_PER_SHADER + 1];
+		uint8 attachment_count = 0;
+
+		for (const auto color_attachment : key.color_attachments)
+		{
+			if (color_attachment.flags & ATTACHMENT_ACTIVE_BIT)
+			{
+				VkAttachmentDescription& attachment = attachments[attachment_count];
+				attachment.format = vkCast(color_attachment.format);
+				attachment.samples = vkCast(color_attachment.sampleCount);
+				const auto flags = color_attachment.flags;
+				
+				attachment.loadOp = attachment_flag_to_load_op(flags);
+				attachment.storeOp = attachment_flag_to_store_op(flags);
+				
+				attachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+				attachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+
+				attachment.initialLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+				attachment.finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+				attachment_refs[attachment_count].attachment = attachment_count;
+				attachment_refs[attachment_count].layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+				attachment_count++;
 			}
 		}
-		VkDescriptorSet  descriptorSet;
-		if (_db.descriptorSets.isExist(hash)) {
-			descriptorSet = _db.descriptorSets[hash];
-		} else {
-			VkDescriptorSetAllocateInfo allocInfo = {VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO};
-			allocInfo.descriptorPool = _frameContext().descriptorPool;
-			allocInfo.descriptorSetCount = 1;
-			allocInfo.pSetLayouts = &(_programPtr(programID)->descriptorLayouts[set]);
+		const uint8 color_attachment_count = attachment_count;
 
-			SOUL_VK_CHECK(vkAllocateDescriptorSets(_db.device, &allocInfo, &descriptorSet), "");
+		for (auto input_attachment : key.input_attachments)
+		{
+			const Attachment& attachment_key = input_attachment;
+			if (attachment_key.flags & ATTACHMENT_ACTIVE_BIT) {
+				VkAttachmentDescription& attachment = attachments[attachment_count];
+				attachment.format = vkCast(attachment_key.format);
+				attachment.samples = vkCast(input_attachment.sampleCount);
 
-			for (int i = 0; i < desc.bindingCount; i++) {
-				VkWriteDescriptorSet descriptorWrite = {VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET};
-				descriptorWrite.dstSet = descriptorSet;
-				descriptorWrite.dstBinding = i;
-				descriptorWrite.dstArrayElement = 0;
-				descriptorWrite.descriptorCount = 1;
+				const AttachmentFlags flags = attachment_key.flags;
 
-				Descriptor& descriptorDesc = desc.bindingDescriptions[i];
-				descriptorWrite.descriptorType = DESCRIPTOR_TYPE_MAP[uint64(descriptorDesc.type)];
+				attachment.loadOp = attachment_flag_to_load_op(flags);
+				attachment.storeOp = attachment_flag_to_store_op(flags);
 
-				VkDescriptorBufferInfo bufferInfo;
-				VkDescriptorImageInfo imageInfo;
-				switch (descriptorDesc.type) {
-					case DescriptorType::UNIFORM_BUFFER: {
-						bufferInfo.buffer = _bufferPtr(descriptorDesc.uniformInfo.bufferID)->vkHandle;
-						bufferInfo.offset = 0;
-						bufferInfo.range = VK_WHOLE_SIZE;
-						descriptorWrite.pBufferInfo = &bufferInfo;
-						break;
-					}
-					case DescriptorType::SAMPLED_IMAGE: {
-						imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-						TextureID texID = descriptorDesc.sampledImageInfo.textureID;
-						imageInfo.imageView = _texturePtr(texID)->view;
-						imageInfo.sampler = descriptorDesc.sampledImageInfo.samplerID.id;
-						descriptorWrite.pImageInfo = &imageInfo;
-						break;
-					}
-					default: {
-						SOUL_NOT_IMPLEMENTED();
-						break;
-					}
-				}
+				attachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+				attachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
 
-				vkUpdateDescriptorSets(_db.device, 1, &descriptorWrite, 0, nullptr);
+				attachment.initialLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+				attachment.finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+				attachment_refs[attachment_count].attachment = attachment_count;
+				attachment_refs[attachment_count].layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+
+				attachment_count++;
 			}
-			_db.descriptorSets.add(hash, descriptorSet);
+		}
+		const uint8 input_attachment_count = attachment_count - color_attachment_count;
+
+		for (const auto resolve_attachment : key.resolve_attachments)
+		{
+			if (resolve_attachment.flags & ATTACHMENT_ACTIVE_BIT)
+			{
+				VkAttachmentDescription& attachment = attachments[attachment_count];
+				attachment.format = vkCast(resolve_attachment.format);
+				attachment.samples = vkCast(resolve_attachment.sampleCount);
+				const AttachmentFlags flags = resolve_attachment.flags;
+
+				attachment.loadOp = attachment_flag_to_load_op(flags);
+				attachment.storeOp = attachment_flag_to_store_op(flags);
+
+				attachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+				attachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+
+				attachment.initialLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+				attachment.finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+				attachment_refs[attachment_count].attachment = attachment_count;
+				attachment_refs[attachment_count].layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+				attachment_count++;
+			}
+		}
+		const uint8 resolve_attachment_count = attachment_count - (input_attachment_count + color_attachment_count);
+
+		SOUL_ASSERT(0, resolve_attachment_count == color_attachment_count || resolve_attachment_count == 0, "");
+		VkSubpassDescription subpass = {
+			.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS,
+			.inputAttachmentCount = input_attachment_count,
+			.pInputAttachments = attachment_refs + color_attachment_count,
+			.colorAttachmentCount = color_attachment_count,
+			.pColorAttachments = attachment_refs,
+			.pResolveAttachments =  resolve_attachment_count > 0 ? attachment_refs + color_attachment_count + input_attachment_count  : nullptr
+		};
+
+		if (key.depth_attachment.flags & ATTACHMENT_ACTIVE_BIT)
+		{
+			const AttachmentFlags flags = key.depth_attachment.flags;
+			VkAttachmentDescription& attachment = attachments[attachment_count];
+			attachment.format = vkCast(key.depth_attachment.format);
+			attachment.samples = vkCast(key.depth_attachment.sampleCount);
+
+			attachment.loadOp = attachment_flag_to_load_op(flags);
+			attachment.storeOp = attachment_flag_to_store_op(flags);
+
+			attachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+			attachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+
+			attachment.initialLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+			attachment.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+
+			VkAttachmentReference& depthAttachmentRef = attachment_refs[attachment_count];
+			depthAttachmentRef.attachment = attachment_count;
+			depthAttachmentRef.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+
+			subpass.pDepthStencilAttachment = &depthAttachmentRef;
+			attachment_count++;
 		}
 
-		ShaderArgSetID argSetID = ShaderArgSetID(_db.shaderArgSets.add(_ShaderArgSet()));
-		_ShaderArgSet& argSet = _db.shaderArgSets[argSetID.id];
+		const VkRenderPassCreateInfo render_pass_info = {
+			.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
+			.attachmentCount = attachment_count,
+			.pAttachments = attachments,
+			.subpassCount = 1,
+			.pSubpasses = &subpass,
+			.dependencyCount = 0,
+			.pDependencies = nullptr
+		};
 
-		argSet.vkHandle = descriptorSet;
-		argSet.offsetCount = offsetCount;
-		for (int i = 0; i < offsetCount; i++) {
-			argSet.offset[i] = offset[i];
-		}
+		VkRenderPass render_pass;
+		SOUL_VK_CHECK(vkCreateRenderPass(_db.device, &render_pass_info, nullptr, &render_pass), "Fail to create render pass");
 
-		return argSetID;
+		_db.render_pass_maps.insert(key, render_pass);
+		
+		return render_pass;
 	}
-
-	VkRenderPass System::_renderPassCreate(const VkRenderPassCreateInfo& info) {
-		VkRenderPass renderPass;
-		SOUL_VK_CHECK(vkCreateRenderPass(_db.device, &info, nullptr, &renderPass), "");
-		return renderPass;
-	}
-
-	void System::_renderPassDestroy(VkRenderPass renderPass) {
-		_frameContext().garbages.renderPasses.add(renderPass);
-	}
-
-	VkFramebuffer System::_framebufferCreate(const VkFramebufferCreateInfo& info) {
+	
+	VkFramebuffer System::create_framebuffer(const VkFramebufferCreateInfo &info) {
+		SOUL_PROFILE_ZONE();
 		VkFramebuffer framebuffer;
-		SOUL_VK_CHECK(vkCreateFramebuffer(_db.device, &info, nullptr, &framebuffer), "");
+		SOUL_VK_CHECK(vkCreateFramebuffer(_db.device, &info, nullptr, &framebuffer), "Fail to create framebuffer");
 		return framebuffer;
 	}
 
-	void System::_framebufferDestroy(VkFramebuffer framebuffer) {
-		_frameContext().garbages.frameBuffers.add(framebuffer);
+	void System::destroy_framebuffer(VkFramebuffer framebuffer) {
+		get_frame_context().garbages.frameBuffers.push_back(framebuffer);
 	}
 
-	VkEvent System::_eventCreate() {
+	VkEvent System::create_event() {
 		SOUL_ASSERT_MAIN_THREAD();
 		VkEvent event;
-		VkEventCreateInfo eventInfo = {VK_STRUCTURE_TYPE_EVENT_CREATE_INFO};
-		SOUL_VK_CHECK(vkCreateEvent(_db.device, &eventInfo, nullptr, &event), "");
+		const VkEventCreateInfo event_info = {.sType = VK_STRUCTURE_TYPE_EVENT_CREATE_INFO};
+		SOUL_VK_CHECK(vkCreateEvent(_db.device, &event_info, nullptr, &event), "Fail to create event");
 		return event;
 	}
 
-	void System::_eventDestroy(VkEvent event) {
+	void System::destroy_event(VkEvent event) {
 		SOUL_ASSERT_MAIN_THREAD();
-		_frameContext().garbages.events.add(event);
+		get_frame_context().garbages.events.push_back(event);
 	}
 
-	SemaphoreID System::_semaphoreCreate() {
+	SemaphoreID System::create_semaphore() {
 		SOUL_ASSERT_MAIN_THREAD();
-		SemaphoreID semaphoreID = SemaphoreID(_db.semaphores.add(_Semaphore()));
-		_Semaphore& semaphore = _db.semaphores[semaphoreID.id];
-		VkSemaphoreCreateInfo semaphoreInfo = {VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO};
-		SOUL_VK_CHECK(vkCreateSemaphore(_db.device, &semaphoreInfo, nullptr, &semaphore.vkHandle), "");
+		SemaphoreID semaphoreID = SemaphoreID(_db.semaphores.create());
+		Semaphore &semaphore = _db.semaphores[semaphoreID.id];
+		semaphore = {};
+		const VkSemaphoreCreateInfo semaphore_info = {.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO};
+		SOUL_VK_CHECK(vkCreateSemaphore(_db.device, &semaphore_info, nullptr, &semaphore.vk_handle), "Fail to create semaphore");
 		return semaphoreID;
 	}
 
-	void System::_semaphoreReset(SemaphoreID ID) {
+	void System::reset_semaphore(SemaphoreID ID) {
 		SOUL_ASSERT_MAIN_THREAD();
-		_semaphorePtr(ID)->stageFlags = 0;
+		get_semaphore_ptr(ID)->stage_flags = 0;
+		get_semaphore_ptr(ID)->state = SemaphoreState::INITIAL;
 	}
 
-	_Semaphore* System::_semaphorePtr(SemaphoreID ID) {
+	Semaphore *System::get_semaphore_ptr(SemaphoreID ID) {
 		SOUL_ASSERT_MAIN_THREAD();
 		return &_db.semaphores[ID.id];
 	}
 
-	void System::_semaphoreDestroy(SemaphoreID ID) {
+	void System::destroy_semaphore(SemaphoreID ID) {
 		SOUL_ASSERT_MAIN_THREAD();
-		_frameContext().garbages.semaphores.add(ID);
+		get_frame_context().garbages.semaphores.push_back(ID);
 	}
 
-	void System::_queueFlush(QueueType queueType,
-							 uint32 semaphoreCount, SemaphoreID* semaphoreID,
-							 VkFence fence) {
+	void CommandQueue::init(VkDevice inDevice, uint32 inFamilyIndex, uint32 queue_index)
+	{
+		device_ = inDevice;
+		family_index_ = inFamilyIndex;
+		vkGetDeviceQueue(device_, family_index_, queue_index, &vk_handle_);
+	}
+
+	void CommandQueue::wait(Semaphore* semaphore, VkPipelineStageFlags waitStage)
+	{
 		SOUL_ASSERT_MAIN_THREAD();
-		SOUL_PROFILE_ZONE();
+		SOUL_ASSERT(0, waitStage != 0, "");
 
-		VkSubmitInfo submitInfo = { VK_STRUCTURE_TYPE_SUBMIT_INFO };
-		submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-		_Submission& submission = _db.submissions[queueType];
-		submitInfo.commandBufferCount = submission.commands.size();
-		submitInfo.pCommandBuffers = submission.commands.data();
-		SOUL_ASSERT(0, submission.waitSemaphores.size() == submission.waitStages.size(), "");
-		submitInfo.waitSemaphoreCount = submission.waitSemaphores.size();
-		submitInfo.pWaitSemaphores = submission.waitSemaphores.data();
-		submitInfo.pWaitDstStageMask = submission.waitStages.data();
+		SOUL_ASSERT(0, semaphore->state == SemaphoreState::SUBMITTED, "");
+		semaphore->state = SemaphoreState::PENDING;
 
-		VkSemaphore signalSemaphores[MAX_SIGNAL_SEMAPHORE];
-		for (int i = 0; i < semaphoreCount; i++) {
-			signalSemaphores[i] = _semaphorePtr(semaphoreID[i])->vkHandle;
+		if (!commands_.empty()) {
+			flush(0, nullptr, VK_NULL_HANDLE);
 		}
-
-		submitInfo.signalSemaphoreCount = semaphoreCount;
-		submitInfo.pSignalSemaphores = signalSemaphores;
-
-		vkQueueSubmit(_db.queues[queueType], 1, &submitInfo, fence);
-
-		submission.commands.resize(0);
-		submission.waitSemaphores.resize(0);
-		submission.waitStages.resize(0);
+		wait_semaphores_.push_back(semaphore->vk_handle);
+		wait_stages_.push_back(waitStage);
 	}
 
-	VkCommandBuffer System::_queueRequestCommandBuffer(QueueType queueType) {
-		SOUL_ASSERT_MAIN_THREAD();
-
-		_FrameContext& frameContext = _frameContext();
-
-		Array<VkCommandBuffer>& cmdBuffers = frameContext.commandBuffers[queueType];
-
-		if (frameContext.usedCommandBuffers[queueType] == cmdBuffers.size()) {
-			VkCommandBuffer cmdBuffer;
-			VkCommandBufferAllocateInfo allocInfo = {
-					.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
-					.commandPool = frameContext.commandPools[queueType],
-					.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
-					.commandBufferCount = (uint32_t) 1
-			};
-
-			SOUL_VK_CHECK(vkAllocateCommandBuffers(_db.device, &allocInfo, &cmdBuffer), "");
-			cmdBuffers.add(cmdBuffer);
-		}
-
-		VkCommandBuffer cmdBuffer = cmdBuffers[frameContext.usedCommandBuffers[queueType]];
-
-		VkCommandBufferBeginInfo beginInfo = {VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO};
-		beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-		vkBeginCommandBuffer(cmdBuffer, &beginInfo);
-
-		frameContext.usedCommandBuffers[queueType]++;
-
-		return cmdBuffer;
+	void CommandQueue::submit(VkCommandBuffer commandBuffer, const Vector<Semaphore*>& semaphores, VkFence fence)
+	{
+		submit(commandBuffer, soul::cast<uint32>(semaphores.size()), semaphores.data(), fence);
 	}
 
-	void System::_queueSubmitCommandBuffer(QueueType queueType, VkCommandBuffer commandBuffer,
-										   uint32 semaphoreCount, SemaphoreID *semaphoreID, VkFence fence) {
+	void CommandQueue::submit(VkCommandBuffer commandBuffer, Semaphore* semaphore, VkFence fence)
+	{
+		submit(commandBuffer, 1, &semaphore, fence);
+	}
+
+	void CommandQueue::submit(VkCommandBuffer commandBuffer, uint32 semaphoreCount, Semaphore* const* semaphores, VkFence fence)
+	{
 		SOUL_ASSERT_MAIN_THREAD();
 		SOUL_ASSERT(0, semaphoreCount <= MAX_SIGNAL_SEMAPHORE, "");
 		SOUL_PROFILE_ZONE();
 
-		vkEndCommandBuffer(commandBuffer);
+		SOUL_VK_CHECK(vkEndCommandBuffer(commandBuffer), "Fail to end command buffer");
 
-		_Submission& submission = _db.submissions[queueType];
-		_db.submissions[queueType].commands.add(commandBuffer);
+		commands_.push_back(commandBuffer);
+
+		for (soul_size semaphore_idx = 0; semaphore_idx < semaphoreCount; semaphore_idx++) {
+			Semaphore* semaphore = semaphores[semaphore_idx];
+			SOUL_ASSERT(0, semaphore->state == SemaphoreState::INITIAL, "");
+			semaphore->state = SemaphoreState::SUBMITTED;
+		}
 
 		// TODO : Fix this
 		if (semaphoreCount != 0 || fence != VK_NULL_HANDLE) {
-			_queueFlush(queueType, semaphoreCount, semaphoreID, fence);
+			flush(semaphoreCount, semaphores, fence);
 		}
-
 	}
 
-	void System::_queueWaitSemaphore(QueueType queueType, SemaphoreID ID, VkPipelineStageFlags waitStages) {
-		SOUL_ASSERT_MAIN_THREAD();
-		SOUL_ASSERT(0, queueType != QueueType::NONE, "");
-		SOUL_ASSERT(0, waitStages != 0, "");
-
-		_Semaphore* semaphore = _semaphorePtr(ID);
-		if ((waitStages & semaphore->stageFlags) == waitStages) {
-			return;
-		}
-
-		_Submission& submission = _db.submissions[queueType];
-		bool found = false;
-		for (int i = 0; i < submission.waitSemaphores.size(); i++) {
-			if (submission.waitSemaphores[i] == semaphore->vkHandle) {
-				found = true;
-				submission.waitStages[i] |= waitStages;
-			}
-		}
-
-		if (!found) {
-			if (submission.commands.size() != 0) {
-				_queueFlush(queueType, 0, nullptr, VK_NULL_HANDLE);
-			}
-			submission.waitSemaphores.add(semaphore->vkHandle);
-			submission.waitStages.add(waitStages);
-		}
-
-		semaphore->stageFlags |= waitStages;
-	}
-
-	void System::renderGraphExecute(const RenderGraph& renderGraph) {
+	void CommandQueue::flush(const uint32 semaphore_count, Semaphore* const* semaphores, VkFence fence)
+	{
 		SOUL_ASSERT_MAIN_THREAD();
 		SOUL_PROFILE_ZONE();
-		if (!_frameContext().stagingSynced) _stagingFlush();
+		VkSubmitInfo submitInfo = {};
+		submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+		submitInfo.commandBufferCount = soul::cast<uint32>(commands_.size());
+		submitInfo.pCommandBuffers = commands_.data();
 
-		_RenderGraphExecution execution(&renderGraph, this);
+
+		SOUL_ASSERT(0, wait_semaphores_.size() == wait_stages_.size(), "");
+		submitInfo.waitSemaphoreCount = soul::cast<uint32>(wait_semaphores_.size());
+		submitInfo.pWaitSemaphores = wait_semaphores_.data();
+		submitInfo.pWaitDstStageMask = wait_stages_.data();
+
+		VkSemaphore signalSemaphores[MAX_SIGNAL_SEMAPHORE];
+		for (soul_size i = 0; i < semaphore_count; i++) {
+			signalSemaphores[i] = semaphores[i]->vk_handle;
+		}
+
+		submitInfo.signalSemaphoreCount = semaphore_count;
+		submitInfo.pSignalSemaphores = signalSemaphores;
+
+		SOUL_VK_CHECK(vkQueueSubmit(vk_handle_, 1, &submitInfo, fence), "Fail to submit queue");
+		commands_.resize(0);
+		wait_semaphores_.resize(0);
+		wait_stages_.resize(0);
+	}
+
+	void CommandQueue::present(const VkPresentInfoKHR& present_info)
+	{
+		SOUL_VK_CHECK(vkQueuePresentKHR(vk_handle_, &present_info), "Fail to present queue");
+	}
+	
+	void System::execute(const RenderGraph &render_graph) {
+		SOUL_ASSERT_MAIN_THREAD();
+		SOUL_PROFILE_ZONE();
+
+		RenderGraphExecution execution(&render_graph, this, runtime::get_context_allocator(), _db.queues, get_frame_context().command_pools);
 		execution.init();
+		get_frame_context().gpu_resource_initializer.flush(_db.queues, *this);
+		get_frame_context().gpu_resource_finalizer.flush(get_frame_context().command_pools, _db.queues, *this);
 		execution.run();
 		execution.cleanup();
 	}
 
-	void System::frameFlush() {
+	void System::flush_frame() {
 		SOUL_ASSERT_MAIN_THREAD();
 		SOUL_PROFILE_ZONE();
 		_frameEnd();
@@ -1784,144 +2013,156 @@ namespace Soul { namespace GPU {
 		SOUL_PROFILE_ZONE();
 		SOUL_ASSERT_MAIN_THREAD();
 
-		SOUL_LOG_INFO("Frame begin()");
-
-		_FrameContext& frameContext = _frameContext();
-		vkWaitForFences(_db.device, 1, &frameContext.fence, VK_TRUE, UINT64_MAX);
-
-		for (int i = 0; i < uint64(QueueType::COUNT); i++) {
-			QueueType queueType = QueueType(i);
-			if (queueType == QueueType::NONE) continue;
-			vkResetCommandPool(_db.device, frameContext.commandPools[queueType], 0);
+		FrameContext &frameContext = get_frame_context();
+		{
+			SOUL_PROFILE_ZONE_WITH_NAME("Wait fence");
+			SOUL_VK_CHECK(vkWaitForFences(_db.device, 1, &frameContext.fence, VK_TRUE, UINT64_MAX), "Fail to wait fences");
 		}
-		for (uint16& usedCommandBuffer : frameContext.usedCommandBuffers) {
-			usedCommandBuffer = 0;
+		
+		{
+			SOUL_PROFILE_ZONE_WITH_NAME("Reset command pools");
+			frameContext.command_pools.reset();
 		}
+		
+		frameContext.gpu_resource_initializer.reset();
 
-		_stagingFrameBegin();
-
-		_semaphoreReset(frameContext.imageAvailableSemaphore);
-		_semaphoreReset(frameContext.renderFinishedSemaphore);
+		reset_semaphore(frameContext.image_available_semaphore);
+		reset_semaphore(frameContext.render_finished_semaphore);
 
 		uint32 swapchainIndex;
-		vkAcquireNextImageKHR(_db.device, _db.swapchain.vkHandle, UINT64_MAX,
-				_semaphorePtr(frameContext.imageAvailableSemaphore)->vkHandle, VK_NULL_HANDLE, &swapchainIndex);
-		frameContext.swapchainIndex = swapchainIndex;
-		TextureID swapchainTextureID = _db.swapchain.textures[swapchainIndex];
-		_Texture* swapchainTexture = _texturePtr(swapchainTextureID);
-		swapchainTexture->owner = ResourceOwner::PRESENTATION_ENGINE;
-		swapchainTexture->layout = VK_IMAGE_LAYOUT_UNDEFINED;
-
-		vkResetDescriptorPool(_db.device, frameContext.descriptorPool, 0);
-
-		for (TextureID textureID : frameContext.garbages.textures) {
-			_Texture& texture = *_texturePtr(textureID);
-			vmaDestroyImage(_db.allocator, texture.vkHandle, texture.allocation);
+		{
+			SOUL_PROFILE_ZONE_WITH_NAME("Acquire Next Image KHR");
+			vkAcquireNextImageKHR(_db.device, _db.swapchain.vk_handle, UINT64_MAX,
+			                      get_semaphore_ptr(frameContext.image_available_semaphore)->vk_handle, VK_NULL_HANDLE,
+			                      &swapchainIndex);
 		}
-		frameContext.garbages.textures.resize(0);
+		
+		get_semaphore_ptr(frameContext.image_available_semaphore)->state = SemaphoreState::SUBMITTED;
+		frameContext.swapchain_index = swapchainIndex;
+		const TextureID swapchain_texture_id = _db.swapchain.textures[swapchainIndex];
+		Texture *swapchain_texture = get_texture_ptr(swapchain_texture_id);
+		swapchain_texture->owner = ResourceOwner::PRESENTATION_ENGINE;
+		swapchain_texture->layout = VK_IMAGE_LAYOUT_UNDEFINED;
 
-		for (BufferID bufferID : frameContext.garbages.buffers) {
-			_Buffer& buffer = *_bufferPtr(bufferID);
-			vmaDestroyBuffer(_db.allocator, buffer.vkHandle, buffer.allocation);
-		}
-		frameContext.garbages.buffers.resize(0);
-
-		for (ShaderID shaderID : frameContext.garbages.shaders) {
-			_Shader& shader = _db.shaders[shaderID.id];
-			vkDestroyShaderModule(_db.device, shader.module, nullptr);
-			_db.shaders.remove(shaderID.id);
-		}
-		frameContext.garbages.shaders.resize(0);
-
-		for (ProgramID programID : frameContext.garbages.programs) {
-			_Program program = _db.programs[programID.id];
-			vkDestroyPipelineLayout(_db.device, program.pipelineLayout, nullptr);
-			for (int i = 0; i < MAX_SET_PER_SHADER_PROGRAM; i++) {
-				vkDestroyDescriptorSetLayout(_db.device, program.descriptorLayouts[i], nullptr);
+		{
+			SOUL_PROFILE_ZONE_WITH_NAME("Destroy images");
+			auto destroy_texture_view = [this](TextureView& texture_view)
+			{
+				vkDestroyImageView(_db.device, texture_view.vk_handle, nullptr);
+			};
+			for (const auto texture_id : frameContext.garbages.textures) {
+				destroy_texture_descriptor(texture_id);
+				Texture& texture = *get_texture_ptr(texture_id);
+				vmaDestroyImage(_db.gpu_allocator, texture.vk_handle, texture.allocation);
+				destroy_texture_view(texture.view);
+				const auto view_count = texture.desc.mip_levels * texture.desc.layer_count;
+				if (texture.views != nullptr) {
+					std::for_each_n(texture.views, view_count, destroy_texture_view);
+					_db.cpu_allocator.deallocate_array(texture.views, view_count);
+					texture.views = nullptr;
+				}
+				_db.texture_pool.destroy(texture_id.id);
 			}
-			_db.programs.remove(programID.id);
+			frameContext.garbages.textures.resize(0);
 		}
-		frameContext.garbages.programs.resize(0);
+		
 
-		for (VkRenderPass renderPass: frameContext.garbages.renderPasses) {
-			vkDestroyRenderPass(_db.device, renderPass, nullptr);
+		{
+			SOUL_PROFILE_ZONE_WITH_NAME("Destroy buffers");
+			for (const BufferID buffer_id : frameContext.garbages.buffers) {
+				destroy_buffer_descriptor(buffer_id);
+				const Buffer& buffer = *get_buffer_ptr(buffer_id);
+				vmaDestroyBuffer(_db.gpu_allocator, buffer.vk_handle, buffer.allocation);
+				_db.buffer_pool.destroy(buffer_id.id);
+			}
+			frameContext.garbages.buffers.resize(0);
 		}
-		frameContext.garbages.renderPasses.resize(0);
 
-		for (VkFramebuffer framebuffer : frameContext.garbages.frameBuffers) {
+		{
+			SOUL_PROFILE_ZONE_WITH_NAME("Destroy render passes");
+			for (const auto renderPass : frameContext.garbages.renderPasses) {
+				vkDestroyRenderPass(_db.device, renderPass, nullptr);
+			}
+			frameContext.garbages.renderPasses.resize(0);
+		}
+		
+
+		for (const auto framebuffer : frameContext.garbages.frameBuffers) {
 			vkDestroyFramebuffer(_db.device, framebuffer, nullptr);
 		}
 		frameContext.garbages.frameBuffers.resize(0);
 
-		for (VkPipeline pipeline: frameContext.garbages.pipelines) {
+		for (const auto pipeline: frameContext.garbages.pipelines) {
 			vkDestroyPipeline(_db.device, pipeline, nullptr);
 		}
 		frameContext.garbages.pipelines.resize(0);
 
-		for (VkEvent event : frameContext.garbages.events) {
+		for (const auto event : frameContext.garbages.events) {
 			vkDestroyEvent(_db.device, event, nullptr);
 		}
 		frameContext.garbages.events.resize(0);
 
-		for (SemaphoreID semaphoreID: frameContext.garbages.semaphores) {
-			vkDestroySemaphore(_db.device, _semaphorePtr(semaphoreID)->vkHandle, nullptr);
-			_db.semaphores.remove(semaphoreID.id);
+		for (const auto semaphore_id: frameContext.garbages.semaphores) {
+			vkDestroySemaphore(_db.device, get_semaphore_ptr(semaphore_id)->vk_handle, nullptr);
+			_db.semaphores.remove(semaphore_id.id);
 		}
 		frameContext.garbages.semaphores.resize(0);
 
-		frameContext.stagingAvailable = false;
-		frameContext.stagingSynced = true;
-
-		_db.shaderArgSets.resize(1);
+		_db.pipeline_state_cache.on_new_frame();
 	}
 
 	void System::_frameEnd() {
 		SOUL_ASSERT_MAIN_THREAD();
 		SOUL_PROFILE_ZONE();
-		_FrameContext& frameContext = _frameContext();
-		uint32 swapchainIndex = frameContext.swapchainIndex;
-		if (_db.swapchain.fences[swapchainIndex] != VK_NULL_HANDLE) {
-			vkWaitForFences(_db.device, 1, &_db.swapchain.fences[swapchainIndex], VK_TRUE, UINT64_MAX);
+		FrameContext &frame_context = get_frame_context();
+		const auto swapchain_index = frame_context.swapchain_index;
+		if (_db.swapchain.fences[swapchain_index] != VK_NULL_HANDLE) {
+			SOUL_VK_CHECK(vkWaitForFences(_db.device, 1, &_db.swapchain.fences[swapchain_index], VK_TRUE, UINT64_MAX), "Fail to wait fences");
 		}
-		_db.swapchain.fences[swapchainIndex] = frameContext.fence;
+		_db.swapchain.fences[swapchain_index] = frame_context.fence;
 
-		_Texture& swapchainTexture = *_texturePtr(_db.swapchain.textures[swapchainIndex]);
-		vkResetFences(_db.device, 1, &frameContext.fence);
+		Texture &swapchain_texture = *get_texture_ptr(_db.swapchain.textures[swapchain_index]);
+		SOUL_VK_CHECK(vkResetFences(_db.device, 1, &frame_context.fence), "Fail to reset fences");
 		{
 			SOUL_PROFILE_ZONE_WITH_NAME("GPU::System::LastSubmission");
-			_stagingFrameEnd();
+			frame_context.gpu_resource_initializer.flush(_db.queues, *this);
+			frame_context.gpu_resource_finalizer.flush(get_frame_context().command_pools, _db.queues, *this);
 
-			SOUL_ASSERT(0, swapchainTexture.owner == ResourceOwner::GRAPHIC_QUEUE, "");
+			SOUL_ASSERT(0,
+			            swapchain_texture.owner == ResourceOwner::GRAPHIC_QUEUE
+			            || swapchain_texture.owner == ResourceOwner::PRESENTATION_ENGINE,
+			            "");
 			// TODO: Handle when swapchain texture is untouch (ResourceOwner is PRESENTATION_ENGINE)
-			VkCommandBuffer cmdBuffer = _queueRequestCommandBuffer(QueueType::GRAPHIC);
+			const auto cmdBuffer = frame_context.command_pools.requestCommandBuffer(QueueType::GRAPHIC);
 
-			VkImageMemoryBarrier imageBarrier = {VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER};
-			imageBarrier.srcAccessMask = VK_ACCESS_MEMORY_WRITE_BIT;
-			imageBarrier.dstAccessMask = 0;
-			imageBarrier.oldLayout = swapchainTexture.layout;
-			imageBarrier.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-			imageBarrier.image = swapchainTexture.vkHandle;
-			imageBarrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-			imageBarrier.subresourceRange.baseArrayLayer = 0;
-			imageBarrier.subresourceRange.layerCount = VK_REMAINING_ARRAY_LAYERS;
-			imageBarrier.subresourceRange.baseMipLevel = 0;
-			imageBarrier.subresourceRange.levelCount = VK_REMAINING_MIP_LEVELS;
-			imageBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-			imageBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+			VkImageMemoryBarrier image_barrier = {};
+			image_barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+			image_barrier.srcAccessMask = VK_ACCESS_MEMORY_WRITE_BIT;
+			image_barrier.dstAccessMask = 0;
+			image_barrier.oldLayout = swapchain_texture.layout;
+			image_barrier.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+			image_barrier.image = swapchain_texture.vk_handle;
+			image_barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+			image_barrier.subresourceRange.baseArrayLayer = 0;
+			image_barrier.subresourceRange.layerCount = VK_REMAINING_ARRAY_LAYERS;
+			image_barrier.subresourceRange.baseMipLevel = 0;
+			image_barrier.subresourceRange.levelCount = VK_REMAINING_MIP_LEVELS;
+			image_barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+			image_barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 
 			vkCmdPipelineBarrier(cmdBuffer,
-				VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
-				VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
-				0,
-				0,
-				nullptr,
-				0,
-				nullptr,
-				1,
-				&imageBarrier);
+			                     VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+			                     VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
+			                     0,
+			                     0,
+			                     nullptr,
+			                     0,
+			                     nullptr,
+			                     1,
+			                     &image_barrier);
 
-			EnumArray<ResourceOwner, QueueType> RESOURCE_ONWER_TO_QUEUE_TYPE({
-				QueueType::NONE,
+			static auto  RESOURCE_OWNER_TO_QUEUE_TYPE = FlagMap<ResourceOwner, QueueType>::build_from_list({
+				QueueType::COUNT,
 				QueueType::GRAPHIC,
 				QueueType::COMPUTE,
 				QueueType::TRANSFER,
@@ -1929,55 +2170,768 @@ namespace Soul { namespace GPU {
 			});
 
 			auto _syncQueueToGraphic = [this](QueueType queueType) {
-				SemaphoreID semaphoreID = _semaphoreCreate();
-				_queueWaitSemaphore(QueueType::GRAPHIC, semaphoreID, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT);
-				VkCommandBuffer cmdBuffer = _queueRequestCommandBuffer(queueType);
-				_queueSubmitCommandBuffer(queueType, cmdBuffer, 1, &semaphoreID, VK_NULL_HANDLE);
-				_semaphoreDestroy(semaphoreID);
+                const SemaphoreID semaphore_id = create_semaphore();
+				const auto cmd_buffer = get_frame_context().command_pools.requestCommandBuffer(queueType);
+				Semaphore* semaphore_ptr = get_semaphore_ptr(semaphore_id);
+				_db.queues[queueType].submit(cmd_buffer, 1, &semaphore_ptr);
+				_db.queues[QueueType::GRAPHIC].wait(semaphore_ptr, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT);
+				destroy_semaphore(semaphore_id);
 			};
 
 			{
-				SOUL_PROFILE_ZONE_WITH_NAME("Sync transfer");
+				SOUL_PROFILE_ZONE_WITH_NAME("Sync Transfer");
 				_syncQueueToGraphic(QueueType::TRANSFER);
 			}
 
-
 			{
-				SOUL_PROFILE_ZONE_WITH_NAME("Sync compute");
+				SOUL_PROFILE_ZONE_WITH_NAME("Sync Compute");
 				_syncQueueToGraphic(QueueType::COMPUTE);
 			}
 
-			_queueSubmitCommandBuffer(RESOURCE_ONWER_TO_QUEUE_TYPE[swapchainTexture.owner], cmdBuffer,
-									  1, &_frameContext().renderFinishedSemaphore, frameContext.fence);
-			swapchainTexture.layout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+			if (swapchain_texture.owner == ResourceOwner::PRESENTATION_ENGINE) {
+				_db.queues[QueueType::GRAPHIC].wait(get_semaphore_ptr(get_frame_context().image_available_semaphore), VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT);
+			}
+
+			_db.queues[RESOURCE_OWNER_TO_QUEUE_TYPE[swapchain_texture.owner]].submit(cmdBuffer, get_semaphore_ptr(get_frame_context().render_finished_semaphore), frame_context.fence);
+			swapchain_texture.layout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
 		}
 
-		VkPresentInfoKHR presentInfo = {VK_STRUCTURE_TYPE_PRESENT_INFO_KHR};
-		presentInfo.waitSemaphoreCount = 1;
-		presentInfo.pWaitSemaphores = &_semaphorePtr(frameContext.renderFinishedSemaphore)->vkHandle;
-		presentInfo.swapchainCount = 1;
-		presentInfo.pSwapchains = &_db.swapchain.vkHandle;
-		presentInfo.pImageIndices = &frameContext.swapchainIndex;
+		const VkPresentInfoKHR present_info = {
+			.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
+			.waitSemaphoreCount = 1,
+			.pWaitSemaphores = &get_semaphore_ptr(frame_context.render_finished_semaphore)->vk_handle,
+			.swapchainCount = 1,
+			.pSwapchains = &_db.swapchain.vk_handle,
+			.pImageIndices = &frame_context.swapchain_index
+		};
 
 		{
 			SOUL_PROFILE_ZONE_WITH_NAME("GPU::System::QueuePresent");
-			vkQueuePresentKHR(_db.presentQueue, &presentInfo);
+			_db.queues[QueueType::GRAPHIC].present(present_info);
 		}
-
-
-		_db.currentFrame += 1;
-		_db.currentFrame %= _db.frameContexts.size();
-
-		_db.descriptorSets.clear();
+		
+		_db.frame_counter++;
+		_db.current_frame += 1;
+		_db.current_frame %= _db.frame_contexts.size();
 	}
 
-	Vec2ui32 System::getSwapchainExtent() {
+	vec2ui32 System::get_swapchain_extent() {
 		return {_db.swapchain.extent.width, _db.swapchain.extent.height};
 	}
 
-	TextureID System::getSwapchainTexture() {
-		return _db.swapchain.textures[_frameContext().swapchainIndex];
+	TextureID System::get_swapchain_texture() {
+		return _db.swapchain.textures[get_frame_context().swapchain_index];
 	}
 
+	DescriptorID System::get_ssbo_descriptor_id(BufferID buffer_id) const
+	{
+		return get_buffer(buffer_id).storage_buffer_gpu_handle;
+	}
 
-}}
+	DescriptorID System::get_srv_descriptor_id(TextureID texture_id, std::optional<SubresourceIndex> subresource_index)
+	{
+		return get_texture_view(texture_id, subresource_index).sampled_image_gpu_handle;
+	}
+
+	DescriptorID System::get_uav_descriptor_id(TextureID texture_id, std::optional<SubresourceIndex> subresource_index)
+	{
+		return get_texture_view(texture_id, subresource_index).storage_image_gpu_handle;
+	}
+
+	DescriptorID System::get_sampler_descriptor_id(SamplerID sampler_id) const
+	{
+		return sampler_id.descriptorID;
+	}
+
+	void PrimaryCommandBuffer::begin_render_pass(const VkRenderPassBeginInfo& render_pass_begin_info, VkSubpassContents subpass_contents)
+	{
+		vkCmdBeginRenderPass(vk_handle_, &render_pass_begin_info, subpass_contents);
+	}
+
+	void PrimaryCommandBuffer::end_render_pass()
+	{
+		vkCmdEndRenderPass(vk_handle_);
+	}
+
+	void PrimaryCommandBuffer::execute_secondary_command_buffers(uint32_t count, const SecondaryCommandBuffer* secondary_command_buffers)
+	{
+		static_assert(sizeof(SecondaryCommandBuffer) == sizeof(VkCommandBuffer));
+		auto command_buffers = reinterpret_cast<const VkCommandBuffer*>(secondary_command_buffers);
+		vkCmdExecuteCommands(vk_handle_, count, command_buffers);
+	}
+
+	void SecondaryCommandBuffer::end()
+	{
+		vkEndCommandBuffer(vk_handle_);
+	}
+
+	void CommandPool::init(VkDevice device, const VkCommandBufferLevel level, const uint32 queue_family_index)
+	{
+		SOUL_ASSERT(0, device != VK_NULL_HANDLE, "Device is invalid!");
+		device_ = device;
+		level_ = level;
+		const VkCommandPoolCreateInfo cmd_pool_create_info = {
+			.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
+			.flags = VK_COMMAND_POOL_CREATE_TRANSIENT_BIT,
+			.queueFamilyIndex = queue_family_index
+		};
+		vkCreateCommandPool(device_, &cmd_pool_create_info, nullptr, &vk_handle_);
+		count_ = 0;
+	}
+
+	VkCommandBuffer CommandPool::request()
+	{
+		if (allocated_buffers_.size() == count_) {
+			VkCommandBuffer cmd_buffer;
+			VkCommandBufferAllocateInfo alloc_info = {};
+			alloc_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+			alloc_info.commandPool = vk_handle_;
+			alloc_info.level = level_;
+			alloc_info.commandBufferCount = 1;
+
+			SOUL_VK_CHECK(vkAllocateCommandBuffers(device_, &alloc_info, &cmd_buffer), "Fail to allocate command buffers");
+			allocated_buffers_.push_back(cmd_buffer);
+		}
+
+        const auto cmd_buffer = allocated_buffers_[count_];
+		count_++;
+		return cmd_buffer;
+	}
+
+	void CommandPool::reset()
+	{
+		vkResetCommandPool(device_, vk_handle_, 0);
+		count_ = 0;
+	}
+	
+	void CommandPools::init(VkDevice device, const CommandQueues& queues, soul_size thread_count)
+	{
+		SOUL_ASSERT_MAIN_THREAD();
+		runtime::push_allocator(allocator_);
+
+		secondary_pools_.resize(thread_count);
+		for (auto& pool: secondary_pools_)
+		{
+			pool.init(device, VK_COMMAND_BUFFER_LEVEL_SECONDARY, queues[QueueType::GRAPHIC].get_family_index());
+		}
+
+		primary_pools_.resize(thread_count);
+		for (auto& pools : primary_pools_)
+		{
+			for (const auto queue_type : FlagIter<QueueType>())
+			{
+				pools[queue_type].init(device, VK_COMMAND_BUFFER_LEVEL_PRIMARY, queues[queue_type].get_family_index());
+			}
+		}
+
+		runtime::pop_allocator();
+	}
+
+	void CommandPools::reset()
+	{
+		for (auto& pools : primary_pools_)
+		{
+			for (auto& pool : pools)
+			{
+				pool.reset();
+			}
+		}
+
+		for (auto& pool : secondary_pools_)
+		{
+			pool.reset();
+		}
+	}
+
+	VkCommandBuffer CommandPools::requestCommandBuffer(QueueType queueType)
+	{
+		VkCommandBuffer cmdBuffer = primary_pools_[runtime::get_thread_id()][queueType].request();
+		VkCommandBufferBeginInfo beginInfo = {
+			.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+			.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT
+		};
+		SOUL_VK_CHECK(vkBeginCommandBuffer(cmdBuffer, &beginInfo), "");
+		return cmdBuffer;
+	}
+
+	PrimaryCommandBuffer CommandPools::request_command_buffer(const QueueType queue_type)
+	{
+		const auto cmd_buffer = primary_pools_[runtime::get_thread_id()][queue_type].request();
+		const VkCommandBufferBeginInfo begin_info = {
+			.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+			.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT
+		};
+		SOUL_VK_CHECK(vkBeginCommandBuffer(cmd_buffer, &begin_info), "");
+		return PrimaryCommandBuffer(cmd_buffer);
+	}
+
+	SecondaryCommandBuffer CommandPools::request_secondary_command_buffer(VkRenderPass render_pass, const uint32_t subpass, VkFramebuffer framebuffer)
+	{
+		const auto cmd_buffer = secondary_pools_[runtime::get_thread_id()].request();
+		const VkCommandBufferInheritanceInfo inheritance_info = {
+			.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO,
+			.renderPass = render_pass,
+			.subpass = subpass,
+			.framebuffer = framebuffer
+		};
+
+		const VkCommandBufferBeginInfo begin_info = {
+			.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+			.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT | VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT,
+			.pInheritanceInfo = &inheritance_info
+		};
+		
+		vkBeginCommandBuffer(cmd_buffer, &begin_info);
+
+		return SecondaryCommandBuffer(cmd_buffer);
+	}
+
+	GPUResourceInitializer::ThreadContext& GPUResourceInitializer::get_thread_context()
+	{
+		return thread_contexts_[runtime::get_thread_id()];
+	}
+
+	GPUResourceInitializer::StagingBuffer GPUResourceInitializer::get_staging_buffer(soul_size size)
+	{
+		const VkBufferCreateInfo staging_buffer_info = {
+			.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
+			.size = size,
+			.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT
+		};
+		const VmaAllocationCreateInfo staging_alloc_info = {
+			.usage = VMA_MEMORY_USAGE_CPU_ONLY
+		};
+		
+		StagingBuffer staging_buffer = {};
+		SOUL_VK_CHECK(vmaCreateBuffer(gpu_allocator_, &staging_buffer_info, &staging_alloc_info, &staging_buffer.vk_handle,
+			&staging_buffer.allocation, nullptr), "");
+		get_thread_context().staging_buffers.push_back(staging_buffer);
+		return staging_buffer;
+	}
+
+	PrimaryCommandBuffer GPUResourceInitializer::get_transfer_command_buffer()
+	{
+		if (get_thread_context().transfer_command_buffer.is_null())
+		{
+			get_thread_context().transfer_command_buffer = command_pools_->request_command_buffer(QueueType::TRANSFER);
+		}
+		return get_thread_context().transfer_command_buffer;
+	}
+
+	PrimaryCommandBuffer GPUResourceInitializer::get_mipmap_gen_command_buffer()
+	{
+		if (get_thread_context().mipmap_gen_command_buffer.is_null())
+		{
+			get_thread_context().mipmap_gen_command_buffer = command_pools_->request_command_buffer(QueueType::GRAPHIC);
+		}
+		return get_thread_context().mipmap_gen_command_buffer;
+	}
+
+	PrimaryCommandBuffer GPUResourceInitializer::get_clear_command_buffer()
+	{
+		if (get_thread_context().clear_command_buffer.is_null())
+		{
+			get_thread_context().clear_command_buffer = command_pools_->request_command_buffer(QueueType::GRAPHIC);
+		}
+		return get_thread_context().clear_command_buffer;
+	}
+
+	void GPUResourceInitializer::load_staging_buffer(const StagingBuffer& buffer, const void* data, soul_size size)
+	{
+		void* mapped_data;
+		vmaMapMemory(gpu_allocator_, buffer.allocation, &mapped_data);
+		memcpy(mapped_data, data, size);
+		vmaUnmapMemory(gpu_allocator_, buffer.allocation);
+	}
+
+	void GPUResourceInitializer::load_staging_buffer(const StagingBuffer& buffer, const void* data, const soul_size count, const soul_size type_size, const soul_size stride)
+	{
+		void* mapped_data;
+		vmaMapMemory(gpu_allocator_, buffer.allocation, &mapped_data);
+		const auto* src_base = soul::cast<byte*>(mapped_data);
+		const auto* dst_base = soul::cast<byte*>(data);
+		for (soul_size i = 0; i < count; i++)
+		{
+			memcpy(soul::cast<void*>(src_base + (i * stride)), soul::cast<void*>(dst_base + (i * type_size)), type_size);
+		}
+		vmaUnmapMemory(gpu_allocator_, buffer.allocation);
+	}
+
+	void GPUResourceInitializer::init(VmaAllocator gpu_allocator, CommandPools* command_pools)
+	{
+		gpu_allocator_ = gpu_allocator;
+		command_pools_ = command_pools;
+		thread_contexts_.resize(runtime::get_thread_count());
+		for (auto& context : thread_contexts_)
+		{
+			memory::Allocator* default_allocator = get_default_allocator();
+			context.staging_buffers = Vector<StagingBuffer>(default_allocator);
+		}
+	}
+
+	void GPUResourceInitializer::load(Buffer& buffer, const void* data)
+	{
+		SOUL_ASSERT(0, buffer.owner == ResourceOwner::NONE, "Buffer must be uninitialized!");
+		const auto buffer_size = buffer.desc.size;
+		if (buffer.memory_property_flags & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT)
+		{
+			SOUL_ASSERT(0, buffer.memory_property_flags & VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, "");
+			void* mapped_data;
+			vmaMapMemory(gpu_allocator_, buffer.allocation, &mapped_data);
+			memcpy(mapped_data, data, buffer.desc.size);
+			vmaUnmapMemory(gpu_allocator_, buffer.allocation);
+		}
+		else
+		{
+			const StagingBuffer staging_buffer = get_staging_buffer(buffer_size);
+			load_staging_buffer(staging_buffer, data, 1, buffer.desc.size, buffer.desc.size);
+
+			const VkBufferCopy copy_region = {
+				.size = buffer_size
+			};
+
+			const auto* name = "Unknown texture";
+			const VkDebugUtilsLabelEXT pass_label = {
+				VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT,
+				nullptr,
+				name,
+				{},
+			};
+
+			const auto transfer_command_buffer = get_transfer_command_buffer().get_vk_handle();
+			vkCmdBeginDebugUtilsLabelEXT(transfer_command_buffer, &pass_label);
+			vkCmdCopyBuffer(transfer_command_buffer, staging_buffer.vk_handle, buffer.vk_handle, 1, &copy_region);
+			vkCmdEndDebugUtilsLabelEXT(transfer_command_buffer);
+
+			buffer.owner = ResourceOwner::TRANSFER_QUEUE;
+		}
+	}
+
+	void GPUResourceInitializer::load(Texture& texture, const TextureLoadDesc& load_desc)
+	{
+		SOUL_ASSERT(0, texture.layout == VK_IMAGE_LAYOUT_UNDEFINED, "Texture must be uninitialized!");
+		SOUL_ASSERT(0, texture.owner == ResourceOwner::NONE, "Texture must be uninitialized!");
+		
+		const auto staging_buffer = get_staging_buffer(load_desc.data_size);
+		load_staging_buffer(staging_buffer, load_desc.data, load_desc.data_size);
+
+		const VkImageMemoryBarrier before_transfer_barrier = {
+			.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+			.srcAccessMask = 0,
+			.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT,
+			.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+			.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+			.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+			.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+			.image = texture.vk_handle,
+			.subresourceRange = {
+				.aspectMask = vkCastFormatToAspectFlags(texture.desc.format),
+				.baseMipLevel = 0,
+				.levelCount = VK_REMAINING_MIP_LEVELS,
+				.baseArrayLayer = 0,
+				.layerCount = VK_REMAINING_ARRAY_LAYERS
+			}
+		};
+
+		const auto transfer_command_buffer = get_transfer_command_buffer().get_vk_handle();
+
+		vkCmdPipelineBarrier(
+			transfer_command_buffer,
+			VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
+			0,
+			0, nullptr,
+			0, nullptr,
+			1, &before_transfer_barrier);
+
+		for (soul_size load_idx = 0; load_idx < load_desc.region_count; load_idx++)
+		{
+			const TextureRegionUpdate& region_load = load_desc.regions[load_idx];
+
+			const VkBufferImageCopy copy_region = {
+				.bufferOffset = region_load.buffer_offset,
+				.bufferRowLength = region_load.buffer_row_length,
+				.bufferImageHeight = region_load.buffer_image_height,
+				.imageSubresource = {
+					.aspectMask = vkCastFormatToAspectFlags(texture.desc.format),
+					.mipLevel = region_load.subresource.mip_level,
+					.baseArrayLayer = region_load.subresource.base_array_layer,
+					.layerCount = region_load.subresource.layer_count
+				},
+				.imageOffset = {
+					.x = region_load.offset.x,
+					.y = region_load.offset.y,
+					.z = region_load.offset.z
+				},
+				.imageExtent = {
+					.width = region_load.extent.x,
+					.height = region_load.extent.y,
+					.depth = region_load.extent.z
+				}
+			};
+			// SOUL_ASSERT(0, region_load.extent.z == 1, "3D texture is not supported yet");
+			
+			vkCmdCopyBufferToImage(transfer_command_buffer,
+				staging_buffer.vk_handle,
+				texture.vk_handle,
+				VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+				1,
+				&copy_region);
+		}
+
+		texture.layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+		texture.owner = ResourceOwner::TRANSFER_QUEUE;
+	}
+
+	void GPUResourceInitializer::clear(Texture& texture, ClearValue clear_value)
+	{
+		const VkImageMemoryBarrier barrier = {
+			.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+			.srcAccessMask = 0,
+			.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT,
+			.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+			.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+			.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+			.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+			.image = texture.vk_handle,
+			.subresourceRange = {
+				.aspectMask = vkCastFormatToAspectFlags(texture.desc.format),
+				.baseMipLevel = 0,
+				.levelCount = VK_REMAINING_MIP_LEVELS,
+				.baseArrayLayer = 0,
+				.layerCount = VK_REMAINING_ARRAY_LAYERS
+
+			}
+		};
+
+		VkCommandBuffer clear_command_buffer = get_clear_command_buffer().get_vk_handle();
+		vkCmdPipelineBarrier(
+			clear_command_buffer,
+			VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
+			0,
+			0, nullptr,
+			0, nullptr,
+			1, &barrier);
+
+		const VkImageSubresourceRange range = {
+			.aspectMask = vkCastFormatToAspectFlags(texture.desc.format),
+			.levelCount = texture.desc.mip_levels,
+			.layerCount = 1
+		};
+		if (range.aspectMask & VK_IMAGE_ASPECT_DEPTH_BIT) {
+			const VkClearDepthStencilValue vk_clear_value = { clear_value.depth_stencil.depth, clear_value.depth_stencil.stencil };
+			SOUL_ASSERT(0, !(range.aspectMask & VK_IMAGE_ASPECT_COLOR_BIT), "");
+			vkCmdClearDepthStencilImage(
+				clear_command_buffer,
+				texture.vk_handle,
+				VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+				&vk_clear_value,
+				1,
+				&range);
+		}
+		else {
+
+			VkClearColorValue vk_clear_value;
+			memcpy(&vk_clear_value, &clear_value, sizeof(vk_clear_value));
+			vkCmdClearColorImage(
+				clear_command_buffer,
+				texture.vk_handle,
+				VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+				&vk_clear_value,
+				1,
+				&range);
+		}
+		texture.layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+		texture.owner = ResourceOwner::GRAPHIC_QUEUE;
+	}
+
+	void GPUResourceInitializer::generate_mipmap(Texture& texture)
+	{
+		VkImageMemoryBarrier barrier{};
+		barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+		barrier.image = texture.vk_handle;
+		barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+		barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+		barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+		barrier.subresourceRange.baseArrayLayer = 0;
+		barrier.subresourceRange.layerCount = 1;
+		barrier.subresourceRange.levelCount = 1;
+
+		auto mip_width = cast<int32>(texture.desc.extent.x);
+		auto mip_height = cast<int32>(texture.desc.extent.y);
+
+		const auto command_buffer = get_mipmap_gen_command_buffer().get_vk_handle();
+
+		for (uint32 i = 1; i < texture.desc.mip_levels; i++) {
+			barrier.subresourceRange.baseMipLevel = i - 1;
+			barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+			barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+			barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+			barrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+
+			vkCmdPipelineBarrier(command_buffer,
+				VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0,
+				0, nullptr,
+				0, nullptr,
+				1, &barrier);
+
+			VkImageBlit blit{};
+			blit.srcOffsets[0] = { 0, 0, 0 };
+			blit.srcOffsets[1] = { mip_width, mip_height, 1 };
+			blit.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+			blit.srcSubresource.mipLevel = i - 1;
+			blit.srcSubresource.baseArrayLayer = 0;
+			blit.srcSubresource.layerCount = 1;
+			blit.dstOffsets[0] = { 0, 0, 0 };
+			blit.dstOffsets[1] = { mip_width > 1 ? mip_width / 2 : 1, mip_height > 1 ? mip_height / 2 : 1, 1 };
+			blit.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+			blit.dstSubresource.mipLevel = i;
+			blit.dstSubresource.baseArrayLayer = 0;
+			blit.dstSubresource.layerCount = 1;
+
+			vkCmdBlitImage(command_buffer,
+				texture.vk_handle, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+				texture.vk_handle, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+				1, &blit,
+				VK_FILTER_LINEAR);
+
+			barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+			barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+			barrier.srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+			barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+
+			vkCmdPipelineBarrier(command_buffer,
+				VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0,
+				0, nullptr,
+				0, nullptr,
+				1, &barrier);
+
+			if (mip_width > 1) mip_width /= 2;
+			if (mip_height > 1) mip_height /= 2;
+		}
+
+		barrier.subresourceRange.baseMipLevel = texture.desc.mip_levels - 1;
+		barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+		barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+		barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+		barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+
+		vkCmdPipelineBarrier(command_buffer,
+			VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0,
+			0, nullptr,
+			0, nullptr,
+			1, &barrier);
+
+		texture.layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+		texture.owner = ResourceOwner::GRAPHIC_QUEUE;
+	}
+
+	void GPUResourceInitializer::flush(CommandQueues& command_queues, System& gpu_system)
+	{
+		SOUL_ASSERT_MAIN_THREAD();
+		for (auto& thread_context : thread_contexts_)
+		{
+			if (!thread_context.clear_command_buffer.is_null())
+			{
+				command_queues[QueueType::GRAPHIC].submit(thread_context.clear_command_buffer.get_vk_handle());
+			}
+			if (!thread_context.transfer_command_buffer.is_null() && thread_context.mipmap_gen_command_buffer.is_null())
+			{
+				command_queues[QueueType::TRANSFER].submit(thread_context.transfer_command_buffer.get_vk_handle());
+			}
+			else if (thread_context.transfer_command_buffer.is_null() && !thread_context.mipmap_gen_command_buffer.is_null())
+			{
+				command_queues[QueueType::GRAPHIC].submit(thread_context.mipmap_gen_command_buffer.get_vk_handle());
+			}
+			else if (!thread_context.transfer_command_buffer.is_null() && !thread_context.mipmap_gen_command_buffer.is_null())
+			{
+                const SemaphoreID mipmap_semaphore = gpu_system.create_semaphore();
+				Semaphore* mipmap_semaphore_ptr = gpu_system.get_semaphore_ptr(mipmap_semaphore);
+				command_queues[QueueType::TRANSFER].submit(thread_context.transfer_command_buffer.get_vk_handle(), 1, &mipmap_semaphore_ptr);
+				command_queues[QueueType::GRAPHIC].wait(mipmap_semaphore_ptr, VK_PIPELINE_STAGE_TRANSFER_BIT);
+				command_queues[QueueType::GRAPHIC].submit(thread_context.mipmap_gen_command_buffer.get_vk_handle());
+			}
+
+			thread_context.clear_command_buffer = PrimaryCommandBuffer();
+			thread_context.mipmap_gen_command_buffer = PrimaryCommandBuffer();
+			thread_context.transfer_command_buffer = PrimaryCommandBuffer();
+		}
+		
+	}
+
+	void GPUResourceInitializer::reset()
+	{
+		SOUL_ASSERT_MAIN_THREAD();
+
+		for (auto& thread_context : thread_contexts_)
+		{
+			for (const StagingBuffer& buffer : thread_context.staging_buffers) {
+				vmaDestroyBuffer(gpu_allocator_, buffer.vk_handle, buffer.allocation);
+			}
+			thread_context.staging_buffers.resize(0);
+		}
+	}
+
+	void GPUResourceFinalizer::init()
+	{
+		thread_contexts_.resize(runtime::get_thread_count());
+
+	}
+
+	void GPUResourceFinalizer::finalize(Buffer& buffer)
+	{
+		if (buffer.owner == ResourceOwner::NONE) return;
+		thread_contexts_[runtime::get_thread_id()].sync_dst_queues_[RESOURCE_OWNER_TO_QUEUE_TYPE[buffer.owner]] |= buffer.desc.queue_flags;
+		buffer.owner = ResourceOwner::NONE;
+	}
+
+	void GPUResourceFinalizer::finalize(Texture& texture, TextureUsageFlags usage_flags)
+	{
+		if (texture.owner == ResourceOwner::NONE) {
+			return;
+		}
+
+		static auto get_finalize_layout = [](TextureUsageFlags usage) -> VkImageLayout
+		{
+			VkImageLayout result = VK_IMAGE_LAYOUT_UNDEFINED;
+			static constexpr auto USAGE_LAYOUT_MAP = FlagMap<TextureUsage, VkImageLayout>::build_from_list({
+				VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+				VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+				VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+				VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+				VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+				VK_IMAGE_LAYOUT_UNDEFINED,
+				VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+			});
+			static_assert(std::size(USAGE_LAYOUT_MAP) == to_underlying(TextureUsage::COUNT));
+
+			usage.for_each([&result](TextureUsage texture_usage)
+			{
+			    if (result != VK_IMAGE_LAYOUT_UNDEFINED && result != USAGE_LAYOUT_MAP[texture_usage])
+                {
+                    result = VK_IMAGE_LAYOUT_GENERAL;   
+                }
+                else
+                {
+                    result = USAGE_LAYOUT_MAP[texture_usage];    
+                }
+            });
+			SOUL_ASSERT(0, result != VK_IMAGE_LAYOUT_UNDEFINED, "");
+			return result;
+		};
+
+		VkImageLayout finalize_layout = get_finalize_layout(usage_flags);
+		if (texture.layout != finalize_layout)
+		{
+			// TODO(kevinyu): Check if use specific read access (for example use VK_ACCESS_TRANSFER_SRC_BIT only for VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL) is faster
+			const VkImageMemoryBarrier barrier = {
+				.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+				.srcAccessMask = VK_ACCESS_MEMORY_WRITE_BIT,
+				.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT,
+				.oldLayout = texture.layout,
+				.newLayout = finalize_layout,
+				.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+				.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+				.image = texture.vk_handle,
+				.subresourceRange = {
+					.aspectMask = vkCastFormatToAspectFlags(texture.desc.format),
+					.baseMipLevel = 0,
+					.levelCount = VK_REMAINING_MIP_LEVELS,
+					.baseArrayLayer = 0,
+					.layerCount = VK_REMAINING_ARRAY_LAYERS
+
+				}
+			};
+			thread_contexts_[runtime::get_thread_id()].image_barriers_[RESOURCE_OWNER_TO_QUEUE_TYPE[texture.owner]].push_back(barrier);
+
+			texture.layout = finalize_layout;
+		}
+
+		thread_contexts_[runtime::get_thread_id()].sync_dst_queues_[RESOURCE_OWNER_TO_QUEUE_TYPE[texture.owner]] |= texture.desc.queue_flags;
+		texture.owner = ResourceOwner::NONE;
+	}
+
+	void GPUResourceFinalizer::flush(CommandPools& command_pools, CommandQueues& command_queues, System& gpu_system)
+	{
+		SOUL_ASSERT_MAIN_THREAD();
+		runtime::ScopeAllocator scope_allocator("Resource Finalizer Flush");
+
+		FlagMap<QueueType, VkCommandBuffer> command_buffers(VK_NULL_HANDLE);
+		FlagMap<QueueType, Vector<Semaphore*>> signal_semaphores((Vector<Semaphore*>(&scope_allocator)));
+		FlagMap<QueueType, Vector<SemaphoreID>> wait_semaphores((Vector<SemaphoreID>(&scope_allocator)));
+
+		// create command buffer and create semaphore
+		for (auto queue_type : FlagIter<QueueType>())
+		{
+			QueueFlags sync_dst_queue = std::accumulate(thread_contexts_.begin(), thread_contexts_.end(), QueueFlags({}),
+				[queue_type](const QueueFlags flag, const ThreadContext& thread_context) -> QueueFlags
+				{
+					return flag | thread_context.sync_dst_queues_[queue_type];
+				});
+
+			const auto image_barrier_capacity = std::accumulate(thread_contexts_.begin(), thread_contexts_.end(), 0u,
+				[queue_type](const soul_size capacity, const ThreadContext& thread_context) -> soul_size
+				{
+					return capacity + thread_context.image_barriers_[queue_type].size();
+				});
+			Vector<VkImageMemoryBarrier> image_barriers(&scope_allocator);
+			image_barriers.reserve(image_barrier_capacity);
+			for (const auto& thread_context : thread_contexts_)
+			{
+				image_barriers.append(thread_context.image_barriers_[queue_type]);
+			}
+
+			sync_dst_queue.for_each([&](const QueueType dst_queue_type)
+			{
+				if (dst_queue_type == queue_type)
+				{
+					command_buffers[queue_type] = command_pools.request_command_buffer(queue_type).get_vk_handle();
+					const VkMemoryBarrier barrier = {
+						.sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER,
+						.srcAccessMask = VK_ACCESS_MEMORY_WRITE_BIT,
+						.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT
+					};
+
+					vkCmdPipelineBarrier(command_buffers[queue_type], VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0,
+						1, &barrier,
+						0, nullptr,
+						soul::cast<uint32>(image_barriers.size()), image_barriers.data());
+				} else
+				{
+					const SemaphoreID semaphore_id = gpu_system.create_semaphore();
+					Semaphore* semaphore = gpu_system.get_semaphore_ptr(semaphore_id);
+					signal_semaphores[queue_type].push_back(semaphore);
+					wait_semaphores[dst_queue_type].push_back(semaphore_id);
+				}
+			});
+		}
+
+		// submit command buffer
+		for (const auto queue_type : FlagIter<QueueType>())
+		{
+			if (const auto command_buffer = command_buffers[queue_type]; command_buffer != VK_NULL_HANDLE)
+			{
+				command_queues[queue_type].submit(command_buffer, signal_semaphores[queue_type]);
+			}
+		}
+
+		// wait and destroy semaphore
+		for (const auto queue_type : FlagIter<QueueType>())
+		{
+			for (const auto semaphore_id : wait_semaphores[queue_type])
+			{
+				command_queues[queue_type].wait(gpu_system.get_semaphore_ptr(semaphore_id), VK_PIPELINE_STAGE_ALL_COMMANDS_BIT);
+				gpu_system.destroy_semaphore(semaphore_id);
+			}
+		}
+
+		for (auto& context : thread_contexts_)
+		{
+			for (auto& image_barrier_list : context.image_barriers_)
+			{
+				image_barrier_list.resize(0);
+			}
+			context.sync_dst_queues_ = FlagMap<QueueType, QueueFlags>(QueueFlags());
+		}
+	}
+	
+}

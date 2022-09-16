@@ -2,196 +2,266 @@
 
 #include "gpu/render_graph.h"
 
-namespace Soul { namespace GPU {
+#include "gpu/system.h"
 
-	TextureNodeID RenderGraph::importTexture(const char* name, TextureID textureID) {
-		TextureNodeID nodeID = TextureNodeID(_textureNodes.add(_TextureNode()));
-		_TextureNode& node = _textureNodes.back();
+namespace soul::gpu
+{
+	using namespace impl;
 
-		uint32 resourceIndex = _externalTextures.add(_RGExternalTexture());
-		_RGExternalTexture& externalTexture = _externalTextures.back();
-		externalTexture.name = name;
-		externalTexture.textureID = textureID;
-
-		node.resourceID = _RGResourceID::ExternalID(resourceIndex);
-
-		return nodeID;
+	TextureNodeID RenderGraph::import_texture(const char* name, TextureID texture_id) {
+		const auto node_id = TextureNodeID(texture_nodes_.add(TextureNode()));
+		TextureNode& node = texture_nodes_.back();
+		const auto resource_index = soul::cast<uint32>(external_textures_.add(RGExternalTexture(
+			{
+				.name = name,
+				.texture_id = texture_id
+			}
+		)));
+		node.resource_id = RGResourceID::external_id(resource_index);
+		return node_id;
 	}
 
-	TextureNodeID RenderGraph::createTexture(const char* name, const RGTextureDesc& desc) {
-		TextureNodeID nodeID = TextureNodeID(_textureNodes.add(_TextureNode()));
-		_TextureNode& node = _textureNodes.back();
+	TextureNodeID RenderGraph::create_texture(const char* name, const RGTextureDesc& desc) {
+		const auto node_id = TextureNodeID(texture_nodes_.add(TextureNode()));
+		TextureNode& node = texture_nodes_.back();
 
-		uint32 resourceIndex = _internalTextures.add(_RGInternalTexture());
-		_RGInternalTexture& internalTexture = _internalTextures.back();
-		internalTexture.name = name;
-		internalTexture.type = desc.type;
-		internalTexture.width = desc.width;
-		internalTexture.height = desc.height;
-		internalTexture.depth = desc.depth;
-		internalTexture.mipLevels = desc.mipLevels;
-		internalTexture.format = desc.format;
+		const auto resource_index = soul::cast<uint32>(internal_textures_.add(RGInternalTexture()));
+		RGInternalTexture& internal_texture = internal_textures_.back();
+		internal_texture.name = name;
+		internal_texture.type = desc.type;
+		internal_texture.extent = desc.extent;
+		internal_texture.mip_levels = desc.mip_levels;
+		internal_texture.format = desc.format;
+		internal_texture.clear = desc.clear;
+		internal_texture.clear_value = desc.clear_value;
+		internal_texture.sample_count = desc.sample_count;
 
-		node.resourceID = _RGResourceID::InternalID(resourceIndex);
+		node.resource_id = RGResourceID::internal_id(resource_index);
 
-		return nodeID;
+		return node_id;
 	}
 
-	BufferNodeID RenderGraph::importBuffer(const char* name, BufferID bufferID) {
-		BufferNodeID nodeID = BufferNodeID(_bufferNodes.add(_BufferNode()));
-		_BufferNode& node = _bufferNodes.back();
+	BufferNodeID RenderGraph::import_buffer(const char* name, const BufferID buffer_id) {
+		const BufferNodeID node_id = BufferNodeID(buffer_nodes_.add(BufferNode()));
+		BufferNode& node = buffer_nodes_.back();
 
-		uint32 resourceIndex = _externalBuffers.add(_RGExternalBuffer());
-		_RGExternalBuffer& externalBuffer = _externalBuffers.back();
-		externalBuffer.name = name;
-		externalBuffer.bufferID = bufferID;
+		const auto resource_index = external_buffers_.add(RGExternalBuffer());
+		RGExternalBuffer& external_buffer = external_buffers_.back();
+		external_buffer.name = name;
+		external_buffer.buffer_id = buffer_id;
 
-		node.resourceID = _RGResourceID::ExternalID(resourceIndex);
+		node.resource_id = RGResourceID::external_id(resource_index);
 
-		return nodeID;
+		return node_id;
 	}
 
-	BufferNodeID RenderGraph::createBuffer(const char* name, const RGBufferDesc& desc) {
-		BufferNodeID nodeID = BufferNodeID(_bufferNodes.add(_BufferNode()));
-		_BufferNode& node = _bufferNodes.back();
+	BufferNodeID RenderGraph::create_buffer(const char* name, const RGBufferDesc& desc) {
+		SOUL_ASSERT(0, desc.size > 0, "Render Graph buffer size must be greater than zero!, name = %s", name);
+		const auto node_id = BufferNodeID(buffer_nodes_.add(BufferNode()));
+		BufferNode& node = buffer_nodes_.back();
 
-		uint32 resourceIndex = _internalBuffers.add(_RGInternalBuffer());
-		_RGInternalBuffer& internalBuffer = _internalBuffers.back();
-		internalBuffer.name = name;
-		internalBuffer.count = desc.count;
-		internalBuffer.typeSize = desc.typeSize;
-		internalBuffer.typeAlignment = desc.typeAlignment;
+		const auto resource_index = soul::cast<uint32>(internal_buffers_.add(RGInternalBuffer()));
+		RGInternalBuffer& internal_buffer = internal_buffers_.back();
+		internal_buffer.name = name;
+		internal_buffer.size = desc.size;
+		
+		node.resource_id = RGResourceID::internal_id(resource_index);
 
-		node.resourceID = _RGResourceID::InternalID(resourceIndex);
+		return node_id;
+	}
 
-		return nodeID;
+	RGTextureDesc RenderGraph::get_texture_desc(TextureNodeID node_id, const gpu::System& system) const
+	{
+		const impl::TextureNode& node = texture_nodes_[node_id.id];
+		if (node.resource_id.is_external())
+		{
+			const RGExternalTexture& external_texture = external_textures_[node.resource_id.get_index()];
+			const gpu::TextureDesc& desc = system.get_texture(external_texture.texture_id).desc;
+			return {
+				.type = desc.type,
+				.format = desc.format,
+				.extent = desc.extent,
+				.mip_levels = desc.mip_levels,
+				.layer_count = desc.layer_count,
+				.sample_count = desc.sample_count,
+				.clear = external_texture.clear,
+				.clear_value = external_texture.clear_value
+			};
+		}
+		const RGInternalTexture& internal_texture = internal_textures_[node.resource_id.get_index()];
+		return {
+			.type = internal_texture.type,
+			.format = internal_texture.format,
+			.extent = internal_texture.extent,
+			.mip_levels = internal_texture.mip_levels,
+			.layer_count = internal_texture.layer_count,
+			.sample_count = internal_texture.sample_count,
+			.clear = internal_texture.clear,
+			.clear_value = internal_texture.clear_value
+		};
+	}
+
+	RGBufferDesc RenderGraph::get_buffer_desc(BufferNodeID node_id, const gpu::System& system) const
+	{
+		const impl::BufferNode& node = buffer_nodes_[node_id.id];
+		if (node.resource_id.is_external())
+		{
+			const RGExternalBuffer& external_buffer = external_buffers_[node.resource_id.get_index()];
+			const gpu::BufferDesc& desc = system.get_buffer(external_buffer.buffer_id).desc;
+			return {
+				.size = desc.size
+			};
+		}
+		const RGInternalBuffer& internal_buffer = internal_buffers_[node.resource_id.get_index()];
+		return {
+			.size = internal_buffer.size
+		};
 	}
 
 	void RenderGraph::cleanup() {
 		SOUL_PROFILE_ZONE();
-		for (PassNode* passNode : _passNodes) {
-			passNode->cleanup();
+		for (PassNode* passNode : pass_nodes_) {
+			allocator_->destroy(passNode);
 		}
-		_passNodes.cleanup();
+		pass_nodes_.cleanup();
 
-		for (_BufferNode& node : _bufferNodes) {
-			node.readers.cleanup();
+		buffer_nodes_.cleanup();
+
+		texture_nodes_.cleanup();
+
+		internal_buffers_.cleanup();
+		internal_textures_.cleanup();
+		external_buffers_.cleanup();
+		external_textures_.cleanup();
+	}
+
+	RenderGraph::~RenderGraph()
+	{
+		cleanup();
+	}
+
+	void RenderGraph::read_buffer_node(BufferNodeID buffer_node_id, PassNodeID pass_node_id) {
+		get_buffer_node(buffer_node_id).readers.push_back(pass_node_id);
+	}
+
+	BufferNodeID RenderGraph::write_buffer_node(BufferNodeID buffer_node_id, PassNodeID pass_node_id) {
+		BufferNode& src_buffer_node = get_buffer_node(buffer_node_id);
+
+		if (src_buffer_node.writer.is_null())
+		{
+			src_buffer_node.writer = pass_node_id;
+			const auto dst_buffer_node_id = BufferNodeID(soul::cast<uint16>(buffer_nodes_.add(BufferNode())));
+			BufferNode& dst_buffer_node = get_buffer_node(dst_buffer_node_id);
+			dst_buffer_node.resource_id = get_buffer_node(buffer_node_id).resource_id;
+			dst_buffer_node.creator = pass_node_id;
+			src_buffer_node.write_target_node = dst_buffer_node_id;
 		}
-		_bufferNodes.cleanup();
+		SOUL_ASSERT(0, src_buffer_node.writer == pass_node_id, "");
 
-		for (_TextureNode& node : _textureNodes) {
-			node.readers.cleanup();
+		return src_buffer_node.write_target_node;
+	}
+
+	void RenderGraph::read_texture_node(TextureNodeID node_id, PassNodeID pass_node_id) {
+		get_texture_node(node_id).readers.push_back(pass_node_id);
+	}
+
+	TextureNodeID RenderGraph::write_texture_node(TextureNodeID texture_node_id, PassNodeID pass_node_id) {
+		TextureNode& src_texture_node = get_texture_node(texture_node_id);
+		if (src_texture_node.writer.is_null())
+		{
+			src_texture_node.writer = pass_node_id;
+			const TextureNodeID dst_texture_node_id = TextureNodeID(texture_nodes_.add(TextureNode()));
+			TextureNode& dst_texture_node = get_texture_node(dst_texture_node_id);
+			dst_texture_node.resource_id = get_texture_node(texture_node_id).resource_id;
+			dst_texture_node.creator = pass_node_id;
+			src_texture_node.write_target_node = dst_texture_node_id;
 		}
-		_textureNodes.cleanup();
-
-		_internalBuffers.cleanup();
-		_internalTextures.cleanup();
-		_externalBuffers.cleanup();
-		_externalTextures.cleanup();
+		return src_texture_node.write_target_node;
 	}
 
-	void RenderGraph::_bufferNodeRead(BufferNodeID bufferNodeID, PassNodeID passNodeID) {
-		_bufferNodePtr((bufferNodeID))->readers.add(passNodeID);
+	const BufferNode& RenderGraph::get_buffer_node(const BufferNodeID node_id) const
+	{
+		return buffer_nodes_[node_id.id];
 	}
 
-	BufferNodeID RenderGraph::_bufferNodeWrite(BufferNodeID bufferNodeID, PassNodeID passNodeID) {
-		_bufferNodeRead(bufferNodeID, passNodeID);
-		BufferNodeID dstBufferNodeID = BufferNodeID(_bufferNodes.add(_BufferNode()));
-		_BufferNode* dstBufferNode = _bufferNodePtr(dstBufferNodeID);
-		dstBufferNode->resourceID = _bufferNodePtr(bufferNodeID)->resourceID;
-		dstBufferNode->writer = passNodeID;
-		return dstBufferNodeID;
+	BufferNode& RenderGraph::get_buffer_node(const BufferNodeID node_id)
+	{
+		return buffer_nodes_[node_id.id];
 	}
 
-	void RenderGraph::_textureNodeRead(TextureNodeID textureNodeID, PassNodeID passNodeID) {
-		_textureNodePtr(textureNodeID)->readers.add(passNodeID);
+	const TextureNode& RenderGraph::get_texture_node(const TextureNodeID node_id) const
+	{
+		return texture_nodes_[node_id.id];
 	}
 
-	TextureNodeID RenderGraph::_textureNodeWrite(TextureNodeID textureNodeID, PassNodeID passNodeID) {
-		_textureNodeRead(textureNodeID, passNodeID);
-		TextureNodeID dstTextureNodeID = TextureNodeID(_textureNodes.add(_TextureNode()));
-		_TextureNode* dstTextureNode = _textureNodePtr(dstTextureNodeID);
-		dstTextureNode->resourceID = _textureNodePtr(textureNodeID)->resourceID;
-		dstTextureNode->writer = passNodeID;
-		return dstTextureNodeID;
+	TextureNode& RenderGraph::get_texture_node(const TextureNodeID node_id)
+	{
+		return texture_nodes_[node_id.id];
 	}
 
-	const _BufferNode* RenderGraph::_bufferNodePtr(BufferNodeID nodeID) const {
-		return &_bufferNodes[nodeID.id];
+	BufferNodeID RGShaderPassDependencyBuilder::add_vertex_buffer(const BufferNodeID node_id) {
+		render_graph_.read_buffer_node(node_id, pass_id_);
+		shader_node_.vertex_buffers_.push_back(node_id);
+		return node_id;
 	}
 
-	_BufferNode* RenderGraph::_bufferNodePtr(BufferNodeID nodeID) {
-		return &_bufferNodes[nodeID.id];
+	BufferNodeID RGShaderPassDependencyBuilder::add_index_buffer(const BufferNodeID node_id) {
+		render_graph_.read_buffer_node(node_id, pass_id_);
+		shader_node_.index_buffers_.push_back(node_id);
+		return node_id;
 	}
 
-	const _TextureNode* RenderGraph::_textureNodePtr(TextureNodeID nodeID) const {
-		return &_textureNodes[nodeID.id];
+	BufferNodeID RGShaderPassDependencyBuilder::add_shader_buffer(const BufferNodeID node_id, const ShaderStageFlags stage_flags, const ShaderBufferReadUsage usage) {
+		render_graph_.read_buffer_node(node_id, pass_id_);
+		shader_node_.shader_buffer_read_accesses_.push_back({ node_id, stage_flags, usage });
+		return node_id;
 	}
 
-	_TextureNode* RenderGraph::_textureNodePtr(TextureNodeID nodeID) {
-		return &_textureNodes[nodeID.id];
+	BufferNodeID RGShaderPassDependencyBuilder::add_shader_buffer(const BufferNodeID node_id, const ShaderStageFlags stage_flags, const ShaderBufferWriteUsage usage) {
+		BufferNodeID out_node_id = render_graph_.write_buffer_node(node_id, pass_id_);
+		shader_node_.shader_buffer_write_accesses_.push_back({ node_id, out_node_id, stage_flags, usage });
+		return out_node_id;
 	}
 
-	BufferNodeID GraphicNodeBuilder::addVertexBuffer(BufferNodeID nodeID) {
-		_renderGraph->_bufferNodeRead(nodeID, _passID);
-		_graphicNode->vertexBuffers.add(nodeID);
-		return nodeID;
+	TextureNodeID RGShaderPassDependencyBuilder::add_shader_texture(const TextureNodeID node_id, const ShaderStageFlags stage_flags, const ShaderTextureReadUsage usage, const SubresourceIndexRange view_range) {
+		SOUL_ASSERT(0, node_id.is_valid(), "");
+		render_graph_.read_texture_node(node_id, pass_id_);
+		shader_node_.shader_texture_read_accesses_.push_back({ node_id, stage_flags, usage , view_range});
+		return node_id;
 	}
 
-	BufferNodeID GraphicNodeBuilder::addIndexBuffer(BufferNodeID nodeID) {
-		_renderGraph->_bufferNodeRead(nodeID, _passID);
-		_graphicNode->indexBuffers.add(nodeID);
-		return nodeID;
+	TextureNodeID RGShaderPassDependencyBuilder::add_shader_texture(const TextureNodeID node_id, const ShaderStageFlags stage_flags, const ShaderTextureWriteUsage usage, const SubresourceIndexRange view_range) {
+		TextureNodeID out_node_id = render_graph_.write_texture_node(node_id, pass_id_);
+		shader_node_.shader_texture_write_accesses_.add({ node_id, out_node_id, stage_flags, usage , view_range});
+		return out_node_id;
 	}
 
-	BufferNodeID GraphicNodeBuilder::addInShaderBuffer(BufferNodeID nodeID, uint8 set, uint8 binding) {
-		_renderGraph->_bufferNodeRead(nodeID, _passID);
-		_graphicNode->inShaderBuffers.add(ShaderBuffer(nodeID, set, binding));
-		return nodeID;
+	BufferNodeID RGTransferPassDependencyBuilder::add_src_buffer(const BufferNodeID node_id)
+    {
+		render_graph_.read_buffer_node(node_id, pass_id_);
+		copy_base_node_.source_buffers_.add({ node_id });
+		return node_id;
 	}
 
-	BufferNodeID GraphicNodeBuilder::addOutShaderBuffer(BufferNodeID nodeID, uint8 set, uint8 binding) {
-		BufferNodeID dstBufferNodeID = _renderGraph->_bufferNodeWrite(nodeID, _passID);
-		_graphicNode->outShaderBuffers.add(ShaderBuffer(dstBufferNodeID, set, binding));
-		return dstBufferNodeID;
+	BufferNodeID RGTransferPassDependencyBuilder::add_dst_buffer(const BufferNodeID node_id, const TransferDataSource data_source)
+    {
+		BufferNodeID out_node_id = render_graph_.write_buffer_node(node_id, pass_id_);
+		copy_base_node_.destination_buffers_.add({.data_source = data_source, .input_node_id = node_id, .output_node_id = out_node_id});
+		return out_node_id;
 	}
 
-	TextureNodeID GraphicNodeBuilder::addInShaderTexture(TextureNodeID nodeID, uint8 set, uint8 binding) {
-		_renderGraph->_textureNodeRead(nodeID, _passID);
-		_graphicNode->inShaderTextures.add(ShaderTexture(nodeID, set, binding));
-		return nodeID;
+	TextureNodeID RGTransferPassDependencyBuilder::add_src_texture(const TextureNodeID node_id)
+    {
+		render_graph_.read_texture_node(node_id, pass_id_);
+		copy_base_node_.source_textures_.add({node_id});
+		return node_id;
 	}
 
-	TextureNodeID GraphicNodeBuilder::addOutShaderTexture(TextureNodeID nodeID, uint8 set, uint8 binding) {
-		TextureNodeID outNodeID = _renderGraph->_textureNodeWrite(nodeID, _passID);
-		_graphicNode->outShaderTextures.add(ShaderTexture(outNodeID, set, binding));
-		return outNodeID;
+	TextureNodeID RGTransferPassDependencyBuilder::add_dst_texture(const TextureNodeID node_id, const TransferDataSource data_source)
+    {
+		TextureNodeID out_node_id = render_graph_.write_texture_node(node_id, pass_id_);
+		copy_base_node_.destination_textures_.add({.data_source = data_source, .input_node_id = node_id, .output_node_id = out_node_id});
+		return out_node_id;
 	}
 
-	TextureNodeID GraphicNodeBuilder::addInputAttachment(TextureNodeID nodeID) {
-		_renderGraph->_textureNodeRead(nodeID, _passID);
-		_graphicNode->inputAttachments.add(nodeID);
-		return nodeID;
-	}
-
-	TextureNodeID GraphicNodeBuilder::addColorAttachment(TextureNodeID nodeID, const ColorAttachmentDesc& desc) {
-		TextureNodeID outNodeID = _renderGraph->_textureNodeWrite(nodeID, _passID);
-		_graphicNode->colorAttachments.add(ColorAttachment(nodeID, desc));
-		return outNodeID;
-	}
-
-	TextureNodeID GraphicNodeBuilder::setDepthStencilAttachment(TextureNodeID nodeID, const DepthStencilAttachmentDesc& desc) {
-		if (desc.depthWriteEnable) {
-			TextureNodeID dstTextureNodeID = _renderGraph->_textureNodeWrite(nodeID, _passID);
-			_graphicNode->depthStencilAttachment = DepthStencilAttachment(dstTextureNodeID, desc);
-			return dstTextureNodeID;
-		}
-		_renderGraph->_textureNodeRead(nodeID, _passID);
-		_graphicNode->depthStencilAttachment = DepthStencilAttachment(nodeID, desc);
-		return nodeID;
-	}
-
-	void GraphicNodeBuilder::setPipelineConfig(const GraphicPipelineConfig &config) {
-		_graphicNode->pipelineConfig = config;
-	}
-}}
+}

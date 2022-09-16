@@ -1,4 +1,14 @@
-#define SOUL_CACHELINE_SIZE 64
+#pragma once
 
-#define SOUL_USE_STD_HARDWARE_THREAD_COUNT
-#define SOUL_HARDWARE_THREAD_COUNT 4
+#include "core/type.h"
+
+#include <thread>
+
+inline constexpr uint64 SOUL_CACHELINE_SIZE = 64;
+inline constexpr uint64 SOUL_DEFAULT_HARDWARE_THREAD_COUNT = 8;
+
+inline soul_size get_hardware_thread_count()
+{
+    const uint64 count = std::thread::hardware_concurrency();
+    return count != 0 ? count : SOUL_DEFAULT_HARDWARE_THREAD_COUNT;
+}

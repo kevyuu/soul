@@ -1,30 +1,30 @@
 //
 // Created by Kevin Yudi Utama on 4/1/20.
 //
-#include "core/dev_util.h"
-#include "core/math.h"
-
-#include "job/system.h"
-
 #include "gpu/render_graph_registry.h"
 #include "gpu/system.h"
 #include "gpu/intern/render_graph_execution.h"
 
-#include <volk/volk.h>
+namespace soul::gpu
+{
 
-namespace Soul {namespace GPU {
-	BufferID RenderGraphRegistry::getBuffer(BufferNodeID bufferNodeID) const {
-		SOUL_ASSERT_MAIN_THREAD();
-		return _execution->getBufferID(bufferNodeID);
+	using namespace impl;
+
+	BufferID RenderGraphRegistry::get_buffer(BufferNodeID bufferNodeID) const {
+		return execution_->get_buffer_id(bufferNodeID);
 	}
 
-	TextureID RenderGraphRegistry::getTexture(TextureNodeID textureNodeId) const {
-		SOUL_ASSERT_MAIN_THREAD();
-		return _execution->getTextureID(textureNodeId);
+	TextureID RenderGraphRegistry::get_texture(TextureNodeID textureNodeId) const {
+		return execution_->get_texture_id(textureNodeId);
 	}
 
-	ShaderArgSetID RenderGraphRegistry::getShaderArgSet(uint32 set, const ShaderArgSetDesc &desc) {
-		SOUL_ASSERT_MAIN_THREAD();
-		return _system->_shaderArgSetRequest(desc, _programID, set);
+	PipelineStateID RenderGraphRegistry::get_pipeline_state(const GraphicPipelineStateDesc& desc) {
+		return system_->request_pipeline_state(desc, render_pass_, sample_count_);
 	}
-}}
+
+	PipelineStateID RenderGraphRegistry::get_pipeline_state(const ComputePipelineStateDesc& desc)
+	{
+		return system_->request_pipeline_state(desc);
+	}
+
+}

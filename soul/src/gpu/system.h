@@ -1,142 +1,126 @@
 #pragma once
-#include "core/util.h"
 
-#include "gpu/data.h"
+#include "core/cstring.h"
+#include "gpu/type.h"
+#include "gpu/intern/bindless_descriptor_allocator.h"
 
+#if defined(SOUL_ASSERT_ENABLE)
 #define SOUL_VK_CHECK(result, message, ...) SOUL_ASSERT(0, result == VK_SUCCESS, "result = %d | " message, result, ##__VA_ARGS__)
+#else
+#include <cstdlib>
+#define SOUL_VK_CHECK(expr, message, ...) do { VkResult _result = expr; if (_result != VK_SUCCESS) { SOUL_LOG_ERROR("Vulkan error| expr = %s, result = %s ", #expr, _result); SOUL_LOG_ERROR("Message = %s", ##__VA_ARGS__); } } while(0)
+#endif
 
-namespace Soul { namespace GPU {
+namespace soul::gpu::impl
+{
+	class RenderCompiler;
+	class RenderGraphExecution;
+}
 
-	struct GraphicBaseNode;
-	struct RenderGraph;
+namespace soul::gpu
+{
+	class RenderGraph;
+	class GraphicBaseNode;
 
-	struct System {
+	class System {
+	public:
+		explicit System(memory::Allocator* allocator) : _db(allocator) {}
 
 		struct Config {
-			void* windowHandle = nullptr;
-			uint32 swapchainWidth = 0;
-			uint32 swapchainHeight = 0;
-			uint16 maxFrameInFlight = 0;
-			uint16 threadCount = 0;
+			void* window_handle = nullptr;
+			uint32 swapchain_width = 0;
+			uint32 swapchain_height = 0;
+			uint16 max_frame_in_flight = 0;
+			uint16 thread_count = 0;
+			soul_size transient_pool_size = 16 * ONE_MEGABYTE;
 		};
 
 		void init(const Config& config);
-		void _frameContextInit(const System::Config& config);
+		void init_frame_context(const System::Config& config);
 
 		void shutdown();
 
-		BufferID bufferCreate(const BufferDesc& desc);
+		BufferID create_buffer(const BufferDesc& desc);
+		BufferID create_buffer(const BufferDesc& desc, const void* data);
+		
+		void flush_buffer(BufferID buffer_id);
+		void destroy_buffer_descriptor(BufferID buffer_id);
+		void destroy_buffer(BufferID buffer_id);
+		impl::Buffer* get_buffer_ptr(BufferID buffer_id);
+		impl::Buffer& get_buffer(BufferID buffer_id);
+		const impl::Buffer& get_buffer(BufferID buffer_id) const;
 
-		template <SOUL_TEMPLATE_ARG_LAMBDA(DataGenFunc, void(int, byte*))>
-		BufferID bufferCreate(const BufferDesc& desc, DataGenFunc dataGenFunc) {
-			BufferDesc desc2 = desc;
-			desc2.usageFlags |= BUFFER_USAGE_TRANSFER_DST_BIT;
-			desc2.queueFlags |= QUEUE_TRANSFER_BIT;
-			BufferID bufferID = bufferCreate(desc2);
+		TextureID create_texture(const TextureDesc& desc);
+		TextureID create_texture(const TextureDesc& desc, const TextureLoadDesc& load_desc);
+		TextureID create_texture(const TextureDesc& desc, ClearValue clear_value);
+		void flush_texture(TextureID texture_id, TextureUsageFlags usage_flags);
+		uint32 get_texture_mip_levels(TextureID texture_id) const;
+		const TextureDesc& get_texture_desc(const TextureID texture_id) const;
+		void destroy_texture_descriptor(TextureID texture_id);
+		void destroy_texture(TextureID textureID);
+		impl::Texture* get_texture_ptr(TextureID texture_id);
+		impl::Texture& get_texture(TextureID texture_id);
+		const impl::Texture& get_texture(TextureID texture_id) const;
+		impl::TextureView get_texture_view(TextureID texture_id, uint32 level, uint32 layer = 0);
+		impl::TextureView get_texture_view(TextureID texture_id, SubresourceIndex subresource_index);
+		impl::TextureView get_texture_view(TextureID texture_id, const std::optional<SubresourceIndex> subresource);
+		
+		expected<ProgramID, Error> create_program_dxc(const ProgramDesc& program_desc);
+		impl::Program* get_program_ptr(ProgramID program_id);
+		const impl::Program& get_program(ProgramID program_id);
 
-			_Buffer &buffer = *_bufferPtr(bufferID);
+		PipelineStateID request_pipeline_state(const GraphicPipelineStateDesc& key, VkRenderPass renderPass, const TextureSampleCount sample_count);
+		PipelineStateID request_pipeline_state(const ComputePipelineStateDesc& key);
+		impl::PipelineState* get_pipeline_state_ptr(PipelineStateID pipeline_state_id);
+		const impl::PipelineState& get_pipeline_state(PipelineStateID pipeline_state_id);
+		VkPipelineLayout get_bindless_pipeline_layout() const;
+		impl::BindlessDescriptorSets get_bindless_descriptor_sets() const;
 
-			_Buffer stagingBuffer = {};
-			size_t size = buffer.unitCount * buffer.unitSize;
-			VkBufferCreateInfo stagingBufferInfo = {VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO};
-			stagingBufferInfo.size = size;
-			stagingBufferInfo.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+		SamplerID request_sampler(const SamplerDesc& desc);
 
-			VmaAllocationCreateInfo stagingAllocInfo = {};
-			stagingAllocInfo.usage = VMA_MEMORY_USAGE_CPU_ONLY;
-			SOUL_VK_CHECK(vmaCreateBuffer(_db.allocator, &stagingBufferInfo, &stagingAllocInfo, &stagingBuffer.vkHandle,
-										  &stagingBuffer.allocation, nullptr), "");
+		DescriptorID get_ssbo_descriptor_id(BufferID buffer_id) const;
+		DescriptorID get_srv_descriptor_id(TextureID texture_id, std::optional<SubresourceIndex> subresource_index = std::nullopt);
+		DescriptorID get_uav_descriptor_id(TextureID texture_id, std::optional<SubresourceIndex> subresource_index = std::nullopt);
+		DescriptorID get_sampler_descriptor_id(SamplerID sampler_id) const;
 
-			_frameContext().stagingBuffers.add(stagingBuffer);
+		SemaphoreID create_semaphore();
+		void reset_semaphore(SemaphoreID ID);
+		void destroy_semaphore(SemaphoreID id);
+		impl::Semaphore* get_semaphore_ptr(SemaphoreID id);
 
-			void *mappedData;
-			vmaMapMemory(_db.allocator, stagingBuffer.allocation, &mappedData);
-			for (int i = 0; i < buffer.unitCount; i++) {
-				dataGenFunc(i, (byte *) mappedData + i * buffer.unitSize);
-			}
-			vmaUnmapMemory(_db.allocator, stagingBuffer.allocation);
+		VkEvent create_event();
+		void destroy_event(VkEvent event);
 
-			_transferBufferToBuffer(stagingBuffer.vkHandle, buffer.vkHandle, size);
+		void execute(const RenderGraph& render_graph);
 
-			buffer.owner = ResourceOwner::TRANSFER_QUEUE;
-
-			return bufferID;
-		}
-
-		void bufferDestroy(BufferID bufferID);
-		_Buffer* _bufferPtr(BufferID bufferID);
-
-		TextureID textureCreate(const TextureDesc& desc);
-		TextureID textureCreate(const TextureDesc& desc, const byte* data, uint32 dataSize);
-		void textureDestroy(TextureID textureID);
-		_Texture* _texturePtr(TextureID textureID);
-
-		ShaderID shaderCreate(const ShaderDesc& desc, ShaderStage stage);
-		void shaderDestroy(ShaderID shaderID);
-		_Shader* _shaderPtr(ShaderID shaderID);
-
-		ProgramID programCreate(const GraphicBaseNode& node);
-		void programDestroy(ProgramID programID);
-		_Program* _programPtr(ProgramID programID);
-
-		VkPipeline _pipelineCreate(const GraphicBaseNode& node, ProgramID programID, VkRenderPass renderPass);
-		void _pipelineDestroy(VkPipeline pipeline);
-
-		SamplerID samplerRequest(const SamplerDesc& desc);
-
-		ShaderArgSetID _shaderArgSetRequest(const ShaderArgSetDesc& desc, ProgramID programID, uint32 set);
-
-		SemaphoreID _semaphoreCreate();
-		void _semaphoreReset(SemaphoreID ID);
-		void _semaphoreDestroy(SemaphoreID id);
-		_Semaphore* _semaphorePtr(SemaphoreID id);
-
-		VkEvent _eventCreate();
-		void _eventDestroy(VkEvent event);
-
-		void renderGraphExecute(const RenderGraph& renderGraph);
-
-		void _queueFlush(QueueType queueType,
-						 uint32 semaphoreCount, SemaphoreID* semaphoreID,
-						 VkFence fence);
-		void _queueWaitSemaphore(QueueType queueType, SemaphoreID ID, VkPipelineStageFlags waitStages);
-		void _queueSubmitCommandBuffer(QueueType queueType, VkCommandBuffer commandBuffer,
-									   uint32 semaphoreCount, SemaphoreID *semaphoreID,
-									   VkFence = VK_NULL_HANDLE);
-		VkCommandBuffer _queueRequestCommandBuffer(QueueType queueType);
-
-		void frameFlush();
+		void flush_frame();
 		void _frameBegin();
 		void _frameEnd();
 
-		Vec2ui32 getSwapchainExtent();
-		TextureID getSwapchainTexture();
+		vec2ui32 get_swapchain_extent();
+		TextureID get_swapchain_texture();
 
-		void _stagingFrameBegin();
-		void _stagingFrameEnd();
-		void _stagingSetup();
-		void _stagingFlush();
-		void _stagingTransferToBuffer(const byte *data, uint32 size, BufferID bufferID);
-		void _stagingTransferToTexture(uint32 size, const byte *data, const TextureDesc& desc, TextureID textureID);
-		void _transferBufferToBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, size_t size);
+		void create_surface(void* window_handle, VkSurfaceKHR* surface);
 
+		impl::FrameContext& get_frame_context();
 
-		void _surfaceCreate(void* windowHandle, VkSurfaceKHR* surface);
+		VkRenderPass request_render_pass(const impl::RenderPassKey& key);
 
-		_Buffer _stagingBufferRequest(const byte *data, uint32 size);
+		VkFramebuffer create_framebuffer(const VkFramebufferCreateInfo& info);
+		void destroy_framebuffer(VkFramebuffer framebuffer);
 
-		_FrameContext& _frameContext();
-		_ThreadContext& _threadContext();
+		impl::QueueData get_queue_data_from_queue_flags(QueueFlags flags) const;
 
-		VkRenderPass _renderPassCreate(const VkRenderPassCreateInfo& info);
-		void _renderPassDestroy(VkRenderPass renderPass);
+		impl::Database _db;
 
-		VkFramebuffer _framebufferCreate(const VkFramebufferCreateInfo& info);
-		void _framebufferDestroy(VkFramebuffer framebuffer);
+		friend class impl::RenderCompiler;
+		friend class impl::RenderGraphExecution;
 
-		_QueueData _getQueueDataFromQueueFlags(QueueFlags flags);
+	private:
+        BufferID create_transient_buffer(const BufferDesc& desc);
+		BufferID create_staging_buffer(soul_size size);
+		VmaAllocator get_gpu_allocator();
 
-		_Database _db;
+		Config config_;
 	};
-
-}}
+}

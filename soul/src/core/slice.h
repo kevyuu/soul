@@ -2,49 +2,54 @@
 // Created by Kevin Yudi Utama on 23/12/19.
 //
 #pragma once
-#include "core/array.h"
+
+#include "core/vector.h"
 #include "core/type.h"
 
-namespace Soul {
+namespace soul {
+
 	template <typename T>
 	class Slice
 	{
 	public:
 
-		Slice(): _array(nullptr), _beginIdx(0), _endIdx(0), _size(0) {}
-		Slice(Array<T>* array, int begin, int end): _array(array), _beginIdx(begin), _endIdx(end), _size(_endIdx - _beginIdx) {}
+		Slice() = default;
+		Slice(Vector<T>* array, soul_size begin, soul_size end): vector_(array), begin_idx_(begin), end_idx_(end), size_(end_idx_ - begin_idx_) {}
+		Slice(const Slice& other) = default;
+		Slice& operator=(const Slice& other) = default;
+		Slice(Slice&& other) = default;
+		Slice& operator=(Slice&& other) = default;
+		~Slice() = default;
 
-		void set(Array<T>* array, int begin, int end) {
-			_array = array;
-			_beginIdx = begin;
-			_endIdx = end;
-			_size = _endIdx - _beginIdx;
+		void set(Vector<T>* array, soul_size begin, soul_size end) {
+			vector_ = array;
+			begin_idx_ = begin;
+			end_idx_ = end;
+			size_ = end_idx_ - begin_idx_;
 		}
 
-		inline T& operator[](int idx) {
-			SOUL_ASSERT(0, idx < _size, "");
-			return (*_array)[_beginIdx + idx];
+		[[nodiscard]] T& operator[](soul_size idx) {
+			SOUL_ASSERT(0, idx < size_, "");
+			return (*vector_)[begin_idx_ + idx];
 		}
 
-		inline const T& operator[](int idx) const {
-			SOUL_ASSERT(0, idx < _size, "");
+		[[nodiscard]] const T& operator[](soul_size idx) const {
+			SOUL_ASSERT(0, idx < size_, "");
 			return this->operator[](idx);
 		}
 
-		inline int size() const {
-			return _size;
-		}
+		[[nodiscard]] soul_size size() const { return size_; }
 
-		const T* begin() const { return _array->data() + _beginIdx; }
-		const T* end() const { return _array->data + _endIdx; }
+		[[nodiscard]] const T* begin() const { return vector_->data() + begin_idx_; }
+		[[nodiscard]] const T* end() const { return vector_->data() + end_idx_; }
 
-		T* begin() { return _array->data() + _beginIdx; }
-		T* end() { return _array->data() + _endIdx; }
+		[[nodiscard]] T* begin() { return vector_->data() + begin_idx_; }
+		[[nodiscard]] T* end() { return vector_->data() + end_idx_; }
 	private:
-		Array<T>* _array;
-		uint32 _beginIdx;
-		uint32 _endIdx;
-		uint32 _size;
+		Vector<T>* vector_ = nullptr;
+		soul_size begin_idx_ = 0;
+		soul_size end_idx_ = 0;
+		soul_size size_ = 0;
 	};
 
 }

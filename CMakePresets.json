@@ -1,0 +1,159 @@
+{
+  "version": 3,
+  "configurePresets": [
+    {
+      "name": "base",
+      "displayName": "Basic Config",
+      "description": "Basic build using Ninja generator",
+      "generator": "Ninja",
+      "hidden": true,
+      "binaryDir": "${sourceDir}/out/build/${presetName}",
+      "cacheVariables": { "CMAKE_INSTALL_PREFIX": "${sourceDir}/out/install/${presetName}" }
+    },
+
+    {
+      "name": "x64",
+      "architecture": {
+        "value": "x64",
+        "strategy": "external"
+      },
+      "cacheVariables": { "SOUL_ARCH": "x64" },
+      "hidden": true
+    },
+    {
+      "name": "x86",
+      "architecture": {
+        "value": "x86",
+        "strategy": "external"
+      },
+      "cacheVariables": { "SOUL_ARCH": "x86" },
+      "hidden": true
+    },
+    {
+      "name": "ARM",
+      "architecture": {
+        "value": "arm",
+        "strategy": "external"
+      },
+      "cacheVariables": { "SOUL_ARCH": "arm" },
+      "hidden": true
+    },
+    {
+      "name": "ARM64",
+      "architecture": {
+        "value": "arm64",
+        "strategy": "external"
+      },
+      "cacheVariables": { "SOUL_ARCH": "arm64" },
+      "hidden": true
+    },
+
+    {
+      "name": "Debug",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "SOUL_LOG_ENABLE": true,
+        "SOUL_ASSERT_ENABLE": true,
+        "SOUL_VULKAN_VALIDATION_ENABLE": true,
+        "SOUL_PROFILE_CPU_BACKEND": "DISABLED",
+        "SOUL_ASSERT_PARANOIA_LEVEL": "1",
+        "SOUL_ENABLE_EXCEPTION": true,
+        "SOUL_ENABLE_RTTI": true
+      },
+      "hidden": true
+    },
+    {
+      "name": "Release",
+      "cacheVariables": { 
+        "CMAKE_BUILD_TYPE": "Release" ,
+        "SOUL_LOG_ENABLE": true,
+        "SOUL_VULKAN_VALIDATION_ENABLE": false
+      },
+      "hidden": true
+    },
+
+    {
+      "name": "MSVC",
+      "hidden": true,
+      "cacheVariables": {
+        "CMAKE_CXX_COMPILER": "cl.exe"
+      },
+      "toolset": {
+        "value": "host=x64",
+        "strategy": "external"
+      }
+    },
+    {
+      "name": "Clang",
+      "hidden": true,
+      "cacheVariables": {
+        "CMAKE_CXX_COMPILER": "clang-cl.exe"
+      },
+      "toolset": {
+        "value": "host=x64",
+        "strategy": "external"
+      }
+    },
+    {
+      "name": "GNUC",
+      "hidden": true,
+      "cacheVariables": {
+        "CMAKE_CXX_COMPILER": "g++.exe"
+      },
+      "toolset": {
+        "value": "host=x64",
+        "strategy": "external"
+      }
+    },
+
+    {
+      "name": "VCPKG",
+      "cacheVariables": {
+        "CMAKE_TOOLCHAIN_FILE": {
+          "value": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
+          "type": "FILEPATH"
+        },
+        "VCPKG_TARGET_TRIPLET":  "x64-windows-static"
+      },
+      "hidden": true
+    },
+
+    {
+      "name": "Profile-Tracy",
+      "cacheVariables": {
+        "SOUL_PROFILE_CPU_BACKEND": "TRACY",
+        "SOUL_MEMPROFILE_CPU_BACKEND": "TRACY",
+        "SOUL_TRACY_STACKTRACE_DEPTH": "3"
+      },
+      "hidden": true
+    },
+    {
+      "name": "Asan",
+      "cacheVariables": {
+        "SOUL_ASAN_ENABLE": true
+      },
+      "hidden": true
+    },
+
+    {
+      "name": "x64-Debug-VCPKG",
+      "description": "MSVC for x64 (Debug) using VCPKG",
+      "inherits": [ "base", "x64", "Debug", "MSVC", "VCPKG" ]
+    },
+    {
+      "name": "x64-Release-VCPKG",
+      "description": "MSVC for x64 (Release) using VCPKG",
+      "inherits": [ "base", "x64", "Release", "MSVC", "VCPKG" ]
+    },
+    {
+      "name": "x64-Release-VCPKG-Asan",
+      "description": "MSVC for x64 (Release) using VCPKG and Asan enabled",
+      "inherits": ["base", "x64", "Release", "MSVC", "VCPKG", "Asan"]
+    },
+    {
+      "name": "x64-Release-VCPKG-Profile-Tracy",
+      "description": "MSVC for x64(Release) using VCPKG and tracy profiler enabled",
+      "inherits": ["base", "x64", "Release", "MSVC", "VCPKG", "Profile-Tracy"]
+    }
+  ]
+}

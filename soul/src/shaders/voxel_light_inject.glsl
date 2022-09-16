@@ -17,11 +17,10 @@ uniform float emissiveScale;
 
 layout(rgba16f) uniform writeonly image3D lightVoxelBuffer;
 
-
 void main() {
 
 	voxel_gi_init();
-	
+
 	ivec3 voxelIdx = ivec3(gl_GlobalInvocationID.xyz);
 	vec4 albedo = texelFetch(voxelAlbedoBuffer, voxelIdx, 0);
 	vec4 normal = normalize(texelFetch(voxelNormalBuffer, voxelIdx, 0) * 2.0f - 1.0f);
