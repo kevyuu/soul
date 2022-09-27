@@ -65,7 +65,7 @@ TEST(TestVectorConstructor, TestCustomAllocatorConstructor)
     TestObject::reset();
     TestAllocator::reset_all();
     TestAllocator test_allocator;
-
+    
     soul::Vector<int, TestAllocator> vec_int(&test_allocator);
     ASSERT_TRUE(vec_int.empty());
 
@@ -411,9 +411,6 @@ TEST_F(TestVectorManipulation, TestVectorSwap)
 TEST_F(TestVectorManipulation, TestVectorResize)
 {
     auto test_resize = []<typename T>(soul::Vector<T> test_vector, const soul_size size) {
-        auto arr = new T[size];
-        SCOPE_EXIT(delete[] arr);
-
         soul::Vector<T> test_copy(test_vector);
         if constexpr (std::same_as<T, TestObject> || std::same_as<T, ListTestObject>)
         {
@@ -435,7 +432,7 @@ TEST_F(TestVectorManipulation, TestVectorResize)
             }
             if constexpr (std::same_as<T, ListTestObject>)
             {
-                soul_size destructed_objects_count = std::accumulate(test_copy.begin() + size, test_copy.end(), 0,
+                const auto destructed_objects_count = std::accumulate(test_copy.begin() + size, test_copy.end(), 0,
                     [](const soul_size prev, const ListTestObject& curr) { return prev + curr.size(); });
                 SOUL_TEST_ASSERT_EQ(TestObject::sTODtorCount - TestObject::sTOCtorCount, destructed_objects_count);
             }
@@ -463,7 +460,7 @@ TEST_F(TestVectorManipulation, TestVectorReserve)
 {
     auto test_reserve = []<typename T>(soul::Vector<T>& test_vector, const soul_size new_capacity) {
        
-        soul_size old_capacity = test_vector.capacity();
+        const auto old_capacity = test_vector.capacity();
         soul::Vector<T> test_copy(test_vector);
         test_vector.reserve(new_capacity);
         SOUL_TEST_ASSERT_TRUE(std::ranges::equal(test_vector, test_copy));

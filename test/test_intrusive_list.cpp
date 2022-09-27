@@ -1,5 +1,4 @@
 #include <algorithm>
-#include <random>
 #include <ranges>
 
 #define USE_CUSTOM_DEFAULT_ALLOCATOR
@@ -27,18 +26,6 @@ struct IntNode : public soul::IntrusiveListNode
 
     bool operator==(const IntNode& rhs) const { return x == rhs.x; }
 };
-
-template <typename T>
-static std::vector<T> generate_random_vector(const soul_size size)
-{
-    std::random_device random_device;
-    std::mt19937 random_engine(random_device());
-    std::uniform_int_distribution<int> dist(1, 100);
-
-    std::vector<T> result(size);
-    std::generate(result.begin(), result.end(), [&]() { return T(dist(random_engine)); });
-    return result;
-}
 
 template <typename T>
 void test_constructor()
@@ -111,11 +98,11 @@ TEST(TestIntrusiveListPushBack, TestIntrusiveListPushBack) {
     };
 
     soul::IntrusiveList<IntNode> list;
-    auto vec_val_single = generate_random_vector<IntNode>(1);
+    auto vec_val_single = generate_random_sequence<IntNode>(1);
     SOUL_TEST_RUN(test_push_back(list, vec_val_single));
 
     static constexpr soul_size MULTI_PUSH_BACK_COUNT = 30;
-    auto vec_val_multi = generate_random_vector<IntNode>(MULTI_PUSH_BACK_COUNT);
+    auto vec_val_multi = generate_random_sequence<IntNode>(MULTI_PUSH_BACK_COUNT);
     SOUL_TEST_RUN(test_push_back(list, vec_val_multi));
     
 }
@@ -147,11 +134,11 @@ TEST(TestIntrusiveListPushFront, TestIntrusiveListPushFront)
     };
 
     soul::IntrusiveList<IntNode> list;
-    auto vec_val_single = generate_random_vector<IntNode>(1);
+    auto vec_val_single = generate_random_sequence<IntNode>(1);
     SOUL_TEST_RUN(test_push_front(list, vec_val_single));
 
     static constexpr soul_size MULTI_PUSH_FRONT_COUNT = 10;
-    auto vec_val_multi = generate_random_vector<IntNode>(MULTI_PUSH_FRONT_COUNT);
+    auto vec_val_multi = generate_random_sequence<IntNode>(MULTI_PUSH_FRONT_COUNT);
     SOUL_TEST_RUN(test_push_front(list, vec_val_multi));
 
 }
@@ -159,7 +146,7 @@ TEST(TestIntrusiveListPushFront, TestIntrusiveListPushFront)
 template <typename T>
 void generate_random_intrusive_list(soul::IntrusiveList<T>& list, std::vector<T>& vec, const soul_size size)
 {
-    vec = generate_random_vector<T>(size);
+    vec = generate_random_sequence<T>(size);
     for (T& val : vec)
     {
         list.push_back(val);
@@ -280,13 +267,13 @@ TEST(TestIntrusiveListInsert, TestIntrusiveListInsert)
     soul::IntrusiveList<IntNode> list;
     std::vector<IntNode> objects;
     generate_random_intrusive_list(list, objects, 10);
-    auto inserted_objects_middle = generate_random_vector<IntNode>(5);
+    auto inserted_objects_middle = generate_random_sequence<IntNode>(5);
     SOUL_TEST_RUN(test_insert(list, list.size() / 2, inserted_objects_middle ));
     
-    auto inserted_objects_begin = generate_random_vector<IntNode>(1);
+    auto inserted_objects_begin = generate_random_sequence<IntNode>(1);
     SOUL_TEST_RUN(test_insert(list, 0, inserted_objects_begin));
 
-    auto inserted_objects_end = generate_random_vector<IntNode>(1);
+    auto inserted_objects_end = generate_random_sequence<IntNode>(1);
     SOUL_TEST_RUN(test_insert(list, list.size(), inserted_objects_end));
 }
 

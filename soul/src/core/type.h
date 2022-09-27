@@ -52,9 +52,32 @@ namespace soul {
 	template <typename T>
 	concept bit_block_type = std::unsigned_integral<T>;
 
+	template <typename T, soul_size N>
+	struct RawBuffer {
+		alignas(T) std::byte buffer[sizeof(T) * N];
+		T* data()
+		{
+			return reinterpret_cast<T*>(buffer);
+		}
+
+		const T* data() const
+		{
+			return reinterpret_cast<const T*>(buffer);
+		}
+	};
+
 	template <typename T>
-	struct raw_buffer {
-		alignas(T) std::byte data[sizeof(T)];
+	struct RawBuffer<T, 0>
+	{
+	    T* data()
+	    {
+			return nullptr;
+	    }
+
+		const T* data() const
+	    {
+			return nullptr;
+	    }
 	};
 
 	template <soul_size Dim, typename T>

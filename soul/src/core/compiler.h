@@ -88,6 +88,12 @@ namespace soul {
 #define SOUL_FORMAT_STRING _In_z_ _Printf_format_string_
 #endif
 
+#if _MSC_VER >= 1929 // VS2019 v16.10 and later (_MSC_FULL_VER >= 192829913 for VS 2019 v16.9)
+#define SOUL_NO_UNIQUE_ADDRESS [[msvc::no_unique_address]]
+#else
+#define SOUL_NO_UNIQUE_ADDRESS [[no_unique_address]]
+#endif
+
 namespace soul
 {
     inline size_t pop_count_16(const uint16_t val)
