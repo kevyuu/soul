@@ -7,6 +7,7 @@
 #include <gtest/gtest.h>
 #include <vector>
 #include <string>
+#include <random>
 
 constexpr uint32_t K_MAGIC_VALUE = 0x01f1cbe8;
 
@@ -73,6 +74,7 @@ struct TestObject
 		test_object.x = 0;   // We are swapping our contents with the TestObject, so give it our "previous" value.
 		if (throwOnCopy)
 		{
+			std::cout << "Disallowd TestObject copy" << std::endl;
 			throw "Disallowed TestObject copy";
 		}
 	}
@@ -226,3 +228,40 @@ struct SoulTestMessageScope
 #define SOUL_TEST_ASSERT_LT(expr1, expr2) ASSERT_LT(expr1, expr2) << "Case : " << get_soul_test_message()
 #define SOUL_TEST_ASSERT_TRUE(expr) ASSERT_TRUE(expr) << "Case : " << get_soul_test_message()
 #define SOUL_TEST_ASSERT_FALSE(expr) ASSERT_FALSE(expr) << "Case : " << get_soul_test_message()
+
+template <typename T>
+using Sequence = std::vector<T>;
+
+template <typename T>
+static Sequence<T> generate_random_sequence(const soul_size size)
+{
+	std::random_device random_device;
+	std::mt19937 random_engine(random_device());
+	std::uniform_int_distribution<int> dist(1, 100);
+
+	Sequence<T> result(size);
+	std::generate(result.begin(), result.end(), [&]() { return T(dist(random_engine)); });
+	return result;
+}
+
+template <typename T>
+static Sequence<T> generate_sequence(const soul_size size, T val)
+{
+	Sequence<T> sequence(size, val);
+	return sequence;
+}
+
+template <typename T, std::input_iterator Iterator>
+static Sequence<T> generate_sequence(Iterator first, Iterator last)
+{
+	Sequence<T> sequence(first, last);
+	return sequence;
+}
+
+template <typename T>
+static Sequence<T> generate_sequence(const Sequence<T>& sequence1, const Sequence<T>& sequence2)
+{
+	Sequence<T> sequence(sequence1);
+	sequence.insert(sequence.end(), sequence2.begin(), sequence2.end());
+	return sequence;
+}
