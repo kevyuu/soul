@@ -27,9 +27,7 @@ namespace soul::gpu
 		explicit System(memory::Allocator* allocator) : _db(allocator) {}
 
 		struct Config {
-			void* window_handle = nullptr;
-			uint32 swapchain_width = 0;
-			uint32 swapchain_height = 0;
+			WSI* wsi = nullptr;
 			uint16 max_frame_in_flight = 0;
 			uint16 thread_count = 0;
 			soul_size transient_pool_size = 16 * ONE_MEGABYTE;
@@ -94,9 +92,10 @@ namespace soul::gpu
 		void execute(const RenderGraph& render_graph);
 
 		void flush_frame();
-		void _frameBegin();
-		void _frameEnd();
+		void begin_frame();
+		void end_frame();
 
+		void recreate_swapchain();
 		vec2ui32 get_swapchain_extent();
 		TextureID get_swapchain_texture();
 
@@ -120,6 +119,8 @@ namespace soul::gpu
         BufferID create_transient_buffer(const BufferDesc& desc);
 		BufferID create_staging_buffer(soul_size size);
 		VmaAllocator get_gpu_allocator();
+
+		VkResult acquire_swapchain();
 
 		Config config_;
 	};

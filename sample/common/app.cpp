@@ -7,6 +7,7 @@
 #include "memory/allocators/page_allocator.h"
 #include "runtime/runtime.h"
 #include "gpu/gpu.h"
+#include "gpu/glfw_wsi.h"
 
 #include <GLFW/glfw3.h>
 #include <imgui/imgui.h>
@@ -19,6 +20,13 @@ using namespace soul;
 void glfw_print_error_callback(const int code, const char* message)
 {
 	SOUL_LOG_INFO("GLFW Error. Error code : %d. Message = %s", code, message);
+}
+
+void glfw_framebuffer_size_callback(GLFWwindow* window, int width, int height)
+{
+	SOUL_LOG_INFO("GLFW Framebuffer size callback. Size = (%d, %d).", width, height);
+	auto window_data = static_cast<WindowData*>(glfwGetWindowUserPointer(window));
+	window_data->resized = true;
 }
 
 App::App(const AppConfig& app_config) :
@@ -44,6 +52,15 @@ App::App(const AppConfig& app_config) :
 {
 	SOUL_PROFILE_THREAD_SET_NAME("Main Thread");
 
+	runtime::init({
+		0,
+		4096,
+		&temp_allocator_,
+		20 * soul::ONE_MEGABYTE,
+		&default_allocator_
+		});
+
+
 	glfwSetErrorCallback(glfw_print_error_callback);
 	const bool glfw_init_success = glfwInit();
 	SOUL_ASSERT(0, glfw_init_success, "GLFW initialization failed!");
@@ -66,20 +83,15 @@ App::App(const AppConfig& app_config) :
 		glfwMaximizeWindow(window_);
 	}
 	SOUL_LOG_INFO("GLFW window creation sucessful");
+	wsi_ = default_allocator_.create<gpu::GLFWWsi>(window_);
 
-	runtime::init({
-		0,
-		4096,
-		&temp_allocator_,
-		20 * soul::ONE_MEGABYTE,
-		&default_allocator_
-		});
+	glfwSetWindowUserPointer(window_, &window_data_);
+	glfwSetFramebufferSizeCallback(window_, glfw_framebuffer_size_callback);
 
+	
 	gpu_system_ = default_allocator_.create<gpu::System>(runtime::get_context_allocator());
 	const gpu::System::Config config = {
-		.window_handle = window_,
-		.swapchain_width = 3360,
-		.swapchain_height = 2010,
+        .wsi = wsi_,
 		.max_frame_in_flight = 3,
 		.thread_count = runtime::get_thread_count()
 	};
@@ -106,7 +118,8 @@ App::~App()
 		runtime::get_context_allocator()->destroy(imgui_render_graph_pass_);
 	}
 	default_allocator_.destroy(gpu_system_);
-	glfwDestroyWindow(window_);
+	default_allocator_.destroy(wsi_);
+    glfwDestroyWindow(window_);
 	glfwTerminate();
 }
 
@@ -124,6 +137,18 @@ void App::run()
 	    {
 			SOUL_PROFILE_ZONE_WITH_NAME("GLFW Poll Events");
 			glfwPollEvents();
+			if (window_data_.resized)
+			{
+				int width, height;
+				glfwGetFramebufferSize(window_, &width, &height);
+				if (width == 0 || height == 0)
+				{
+					glfwWaitEvents();
+					continue;
+				}
+				gpu_system_->recreate_swapchain();
+				window_data_.resized = false;
+			}
 		}
 		gpu::RenderGraph render_graph;
 		
@@ -151,6 +176,7 @@ void App::run()
 		}
 
 		gpu_system_->execute(render_graph);
+		
 		gpu_system_->flush_frame();
 	}
 }

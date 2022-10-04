@@ -18,6 +18,7 @@
 
 #include "core/type.h"
 #include "core/vector.h"
+#include "core/sbo_vector.h"
 #include "core/flag_map.h"
 #include "core/pool.h"
 #include "core/cstring.h"
@@ -35,6 +36,14 @@ namespace soul::gpu
 {
 	class System;
 	class RenderGraph;
+
+	class WSI
+	{
+	public:
+		virtual [[nodiscard]] VkSurfaceKHR create_vulkan_surface(VkInstance instance) = 0;
+		virtual [[nodiscard]] vec2ui32 get_framebuffer_size() const = 0;
+		virtual ~WSI() = default;
+	};
 
 	using Offset2D = vec2i32;
 	using Extent2D = vec2ui32;
@@ -787,13 +796,15 @@ namespace soul::gpu
 		};
 
 		struct Swapchain {
+			WSI* wsi;
 			VkSwapchainKHR vk_handle = VK_NULL_HANDLE;
 			VkSurfaceFormatKHR format = {};
 			VkExtent2D extent = {};
-			Vector<TextureID> textures;
-			Vector<VkImage> images;
-			Vector<VkImageView> image_views;
-			Vector<VkFence> fences;
+			uint32 image_count = 0;
+			SBOVector<TextureID> textures;
+			SBOVector<VkImage> images;
+			SBOVector<VkImageView> image_views;
+			SBOVector<VkFence> fences;
 		};
 
 		struct DescriptorSetLayoutBinding {
@@ -1054,6 +1065,12 @@ namespace soul::gpu
 				Vector<VkPipeline> pipelines;
 				Vector<VkEvent> events;
 				Vector<SemaphoreID> semaphores;
+
+				struct SwapchainGarbage
+				{
+					VkSwapchainKHR vk_handle = VK_NULL_HANDLE;
+					SBOVector<VkImageView> image_views;
+				} swapchain;
 			} garbages;
 
 			GPUResourceInitializer gpu_resource_initializer;
@@ -1090,7 +1107,8 @@ namespace soul::gpu
 			VkPhysicalDeviceProperties physical_device_properties = {};
 			VkPhysicalDeviceMemoryProperties physical_device_memory_properties = {};
 			VkPhysicalDeviceFeatures physical_device_features = {};
-			
+			FlagMap<QueueType, uint32> queue_family_indices;
+
 			CommandQueues queues;
 
 			VkSurfaceKHR surface = VK_NULL_HANDLE;
