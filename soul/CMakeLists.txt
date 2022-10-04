@@ -56,7 +56,7 @@ set (SOUL_SOURCES
 	
 	src/core/cstring.cpp
 
-	src/gpu/intern/gpu_system_glfw.cpp
+	src/gpu/intern/glfw_wsi.cpp
 	src/gpu/intern/gpu_system.cpp
 	src/gpu/intern/render_graph.cpp
 	

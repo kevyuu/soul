@@ -113,6 +113,42 @@ namespace soul::gpu
         wrl::ComPtr<IDxcIncludeHandler> default_include_handler;
 	};
 
+	static auto pick_surface_extent(const VkSurfaceCapabilitiesKHR capabilities, const vec2ui32 dimension) -> VkExtent2D {
+		SOUL_LOG_INFO("Picking vulkan swap extent");
+		if (capabilities.currentExtent.width != std::numeric_limits<uint32_t>::max()) {
+			SOUL_LOG_INFO("vulkanPickSwapExtent | Extent = %d %d",
+				capabilities.currentExtent.width,
+				capabilities.currentExtent.height);
+			return capabilities.currentExtent;
+		}
+		return {
+			.width = std::max(capabilities.minImageExtent.width,
+				std::min(capabilities.maxImageExtent.width, dimension.x)),
+			.height = std::max(capabilities.minImageExtent.height,
+				std::min(capabilities.maxImageExtent.height, dimension.y))
+		};
+		
+	};
+
+	static auto pick_surface_format(VkPhysicalDevice physical_device,
+		VkSurfaceKHR surface) -> VkSurfaceFormatKHR {
+		runtime::ScopeAllocator<> scope_allocator("GPU::System::init::pickSurfaceFormat");
+		SOUL_LOG_INFO("Picking surface format.");
+		Vector<VkSurfaceFormatKHR> formats(&scope_allocator);
+		uint32 format_count;
+		vkGetPhysicalDeviceSurfaceFormatsKHR(physical_device, surface, &format_count, nullptr);
+		SOUL_ASSERT(0, format_count != 0, "Surface format count is zero!");
+		formats.resize(format_count);
+		vkGetPhysicalDeviceSurfaceFormatsKHR(physical_device, surface, &format_count, formats.data());
+		for (const VkSurfaceFormatKHR surface_format : formats) {
+			if (surface_format.format == VK_FORMAT_B8G8R8A8_UNORM
+				&& surface_format.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
+				return surface_format;
+			}
+		}
+		return formats[0];
+	};
+
 	DxcSession create_dxc_session()
 	{
 		DxcSession dxc_session;
@@ -205,7 +241,7 @@ namespace soul::gpu
 		_db.semaphores.reserve(1000);
 		_db.sampler_map.reserve(128);
 
-		SOUL_ASSERT(0, config.window_handle != nullptr, "Invalid configuration value | windowHandle = nullptr");
+		SOUL_ASSERT(0, config.wsi != nullptr, "Invalid configuration value | wsi = nullptr, headless rendering is not supported yet");
 		SOUL_ASSERT(0, config.thread_count > 0, "Invalid configuration value | threadCount = %d",
 		            config.thread_count);
 		SOUL_ASSERT(0,
@@ -252,7 +288,7 @@ namespace soul::gpu
 				available_layers.resize(layer_count);
 				vkEnumerateInstanceLayerProperties(&layer_count, available_layers.data());
 				for (const char* required_layer : REQUIRED_LAYERS) {
-					bool layer_found = false;
+					auto layer_found = false;
 					for (const auto& layer : available_layers)
 					{
 						if (strcmp(required_layer, layer.layerName) == 0) {
@@ -317,7 +353,7 @@ namespace soul::gpu
 		};
 		_db.debug_messenger = create_debug_utils_messenger(_db.instance);
 
-		create_surface(config.window_handle, &_db.surface);
+		_db.surface = config.wsi->create_vulkan_surface(_db.instance);
 		auto pick_physical_device = [](Database *db, int required_extension_count,
 			                        const char *required_extensions[])-> FlagMap<QueueType, uint32> {
 				SOUL_LOG_INFO("Picking vulkan physical device.");
@@ -429,9 +465,9 @@ namespace soul::gpu
 						VkBool32 present_support = false;
 						vkGetPhysicalDeviceSurfaceSupportKHR(device, j, db->surface, &present_support);
 
-						const VkQueueFamilyProperties &queueProps = queue_families[j];
-						if (VkQueueFlags required_flags = VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_COMPUTE_BIT; present_support && queueProps.queueCount > 0 &&
-							(queueProps.queueFlags & required_flags) == required_flags) {
+						const VkQueueFamilyProperties &queue_props = queue_families[j];
+						if (VkQueueFlags required_flags = VK_QUEUE_GRAPHICS_BIT | VK_QUEUE_COMPUTE_BIT; present_support && queue_props.queueCount > 0 &&
+							(queue_props.queueFlags & required_flags) == required_flags) {
 							graphics_queue_family_index = j;
 						}
 					}
@@ -526,7 +562,7 @@ namespace soul::gpu
 			VK_KHR_SWAPCHAIN_EXTENSION_NAME
 		};
 		static constexpr uint32_t DEVICE_REQUIRED_EXTENSION_COUNT = std::size(device_required_extensions);
-		FlagMap<QueueType, uint32> queue_family_indices = pick_physical_device(&_db, DEVICE_REQUIRED_EXTENSION_COUNT, device_required_extensions);
+		_db.queue_family_indices = pick_physical_device(&_db, DEVICE_REQUIRED_EXTENSION_COUNT, device_required_extensions);
 
 		auto create_device_and_queue = 
 			[](VkPhysicalDevice physicalDevice, FlagMap<QueueType, uint32>& queue_family_indices)
@@ -619,68 +655,33 @@ namespace soul::gpu
 			return std::make_tuple(device, queueIndex);
 		};
 
-		auto [device, queueIndex] = create_device_and_queue(_db.physical_device, queue_family_indices);
+		auto [device, queueIndex] = create_device_and_queue(_db.physical_device, _db.queue_family_indices);
 		_db.device = device;
 		for (const auto queue_type : FlagIter<QueueType>())
 		{
-			_db.queues[queue_type].init(device, queue_family_indices[queue_type], queueIndex[queue_type]);
+			_db.queues[queue_type].init(device, _db.queue_family_indices[queue_type], queueIndex[queue_type]);
 		}
 
-		auto create_swapchain = [this, &queue_family_indices](Database *db, const uint32 swapchain_width, const uint32 swapchain_height) {
-
-			auto pick_surface_format = [](VkPhysicalDevice physicalDevice,
-				                       VkSurfaceKHR surface) -> VkSurfaceFormatKHR {
-					runtime::ScopeAllocator<> scope_allocator("GPU::System::init::pickSurfaceFormat");
-					SOUL_LOG_INFO("Picking surface format.");
-					Vector<VkSurfaceFormatKHR> formats(&scope_allocator);
-					uint32 format_count;
-					vkGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice, surface, &format_count, nullptr);
-					SOUL_ASSERT(0, format_count != 0, "Surface format count is zero!");
-					formats.resize(format_count);
-					vkGetPhysicalDeviceSurfaceFormatsKHR(physicalDevice, surface, &format_count, formats.data());
-					for (const VkSurfaceFormatKHR surface_format : formats) {
-						if (surface_format.format == VK_FORMAT_B8G8R8A8_UNORM
-							&& surface_format.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
-							return surface_format;
-						}
-					}
-					return formats[0];
-				};
+		auto create_swapchain = [this](Database *db, WSI* wsi) {
+			_db.swapchain.wsi = wsi;
+			const auto framebuffer_size = wsi->get_framebuffer_size();
 			db->swapchain.format = pick_surface_format(db->physical_device, db->surface);
-
-			auto pick_surface_extent = [](const VkSurfaceCapabilitiesKHR capabilities, const uint32 swapchain_width,
-				   const uint32 swapchain_height) -> VkExtent2D {
-				SOUL_LOG_INFO("Picking vulkan swap extent");
-				if (capabilities.currentExtent.width != std::numeric_limits<uint32_t>::max()) {
-					SOUL_LOG_INFO("vulkanPickSwapExtent | Extent = %d %d",
-					              capabilities.currentExtent.width,
-					              capabilities.currentExtent.height);
-					return capabilities.currentExtent;
+			db->swapchain.extent = pick_surface_extent(db->surfaceCaps, framebuffer_size);
+			db->swapchain.image_count = [db]()
+			{
+				auto image_count = db->surfaceCaps.minImageCount + 1;
+				if (db->surfaceCaps.maxImageCount > 0 && image_count > db->surfaceCaps.maxImageCount) {
+					image_count = db->surfaceCaps.maxImageCount;
 				}
-				else {
-					VkExtent2D actual_extent = {static_cast<uint32>(swapchain_width),
-						static_cast<uint32>(swapchain_height)};
-					actual_extent.width =
-						std::max(capabilities.minImageExtent.width,
-						         std::min(capabilities.maxImageExtent.width, actual_extent.width));
-					actual_extent.height =
-						std::max(capabilities.minImageExtent.height,
-						         std::min(capabilities.maxImageExtent.height, actual_extent.height));
-					return actual_extent;
-				}
-			};
-			db->swapchain.extent = pick_surface_extent(db->surfaceCaps, swapchain_width, swapchain_height);
-
-            auto image_count = db->surfaceCaps.minImageCount + 1;
-			if (db->surfaceCaps.maxImageCount > 0 && image_count > db->surfaceCaps.maxImageCount) {
-				image_count = db->surfaceCaps.maxImageCount;
-			}
-			SOUL_LOG_INFO("Swapchain image count = %d", image_count);
+				return image_count;
+			}();
+            
+			SOUL_LOG_INFO("Swapchain image count = %d", db->swapchain.image_count);
 
 			const VkSwapchainCreateInfoKHR swapchain_info = {
 				.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
 				.surface = db->surface,
-				.minImageCount = image_count,
+				.minImageCount = db->swapchain.image_count,
 				.imageFormat = db->swapchain.format.format,
 				.imageColorSpace = db->swapchain.format.colorSpace,
 				.imageExtent = db->swapchain.extent,
@@ -688,7 +689,7 @@ namespace soul::gpu
 				.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT,
 				.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE,
 				.queueFamilyIndexCount = 1,
-				.pQueueFamilyIndices = &queue_family_indices[QueueType::GRAPHIC],
+				.pQueueFamilyIndices = &_db.queue_family_indices[QueueType::GRAPHIC],
 				.preTransform = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR,
 				.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR,
 				.presentMode = VK_PRESENT_MODE_MAILBOX_KHR,
@@ -696,11 +697,11 @@ namespace soul::gpu
 			};
 			SOUL_VK_CHECK(vkCreateSwapchainKHR(db->device, &swapchain_info, nullptr, &db->swapchain.vk_handle),
 			              "Fail to create vulkan swapchain!");
-			vkGetSwapchainImagesKHR(db->device, db->swapchain.vk_handle, &image_count, nullptr);
-			db->swapchain.images.resize(image_count);
-			vkGetSwapchainImagesKHR(db->device, db->swapchain.vk_handle, &image_count, db->swapchain.images.data());
+			vkGetSwapchainImagesKHR(db->device, db->swapchain.vk_handle, &db->swapchain.image_count, nullptr);
+			db->swapchain.images.resize(db->swapchain.image_count);
+			vkGetSwapchainImagesKHR(db->device, db->swapchain.vk_handle, &db->swapchain.image_count, db->swapchain.images.data());
 
-			db->swapchain.image_views.reserve(image_count);
+			db->swapchain.image_views.reserve(db->swapchain.image_count);
 			std::ranges::transform(db->swapchain.images, std::back_inserter(db->swapchain.image_views), [format = db->swapchain.format.format, device = db->device](VkImage image)
 			{
 				VkImageView image_view;
@@ -728,7 +729,7 @@ namespace soul::gpu
 				return image_view;
 			});
 
-			db->swapchain.textures.reserve(image_count);
+			db->swapchain.textures.reserve(db->swapchain.image_count);
 			std::ranges::transform(db->swapchain.images, db->swapchain.image_views, std::back_inserter(db->swapchain.textures), 
 				[db, this, image_sharing_mode = swapchain_info.imageSharingMode](VkImage image, VkImageView image_view)
 			{
@@ -743,11 +744,11 @@ namespace soul::gpu
 				return texture_id;
 			});
 
-			db->swapchain.fences.resize(image_count);
+			db->swapchain.fences.resize(db->swapchain.image_count);
 			std::ranges::fill(db->swapchain.fences,VK_NULL_HANDLE);
 			SOUL_LOG_INFO("Vulkan swapchain creation sucessful");
 		};
-		create_swapchain(&_db, config.swapchain_width, config.swapchain_height);
+		create_swapchain(&_db, config.wsi);
 
 		auto init_allocator = [](Database *db, const Config& config) {
 			const VmaVulkanFunctions vulkan_functions = {
@@ -813,7 +814,7 @@ namespace soul::gpu
 		init_allocator(&_db, config);
 		_db.descriptor_allocator.init(_db.device);
 		init_frame_context(config);
-		_frameBegin();
+		begin_frame();
 	}
 
 	void System::init_frame_context(const System::Config &config) {
@@ -1202,6 +1203,27 @@ namespace soul::gpu
     VmaAllocator System::get_gpu_allocator()
     {
 		return _db.gpu_allocator;
+    }
+
+    VkResult System::acquire_swapchain()
+    {
+		auto& frame_context = get_frame_context();
+		uint32 swapchain_index;
+		SOUL_PROFILE_ZONE_WITH_NAME("Acquire Next Image KHR");
+		const auto result = vkAcquireNextImageKHR(_db.device, _db.swapchain.vk_handle, UINT64_MAX,
+			get_semaphore_ptr(frame_context.image_available_semaphore)->vk_handle, VK_NULL_HANDLE,
+			&swapchain_index);
+		if (result < 0)
+			return result;
+
+		get_semaphore_ptr(frame_context.image_available_semaphore)->state = SemaphoreState::SUBMITTED;
+		frame_context.swapchain_index = swapchain_index;
+		const TextureID swapchain_texture_id = _db.swapchain.textures[swapchain_index];
+		Texture* swapchain_texture = get_texture_ptr(swapchain_texture_id);
+		swapchain_texture->owner = ResourceOwner::PRESENTATION_ENGINE;
+		swapchain_texture->layout = VK_IMAGE_LAYOUT_UNDEFINED;
+
+		return result;
     }
 
     void System::flush_buffer(const BufferID buffer_id)
@@ -2005,44 +2027,42 @@ namespace soul::gpu
 	void System::flush_frame() {
 		SOUL_ASSERT_MAIN_THREAD();
 		SOUL_PROFILE_ZONE();
-		_frameEnd();
-		_frameBegin();
+		end_frame();
+		begin_frame();
 	}
 
-	void System::_frameBegin() {
+	void System::begin_frame() {
 		SOUL_PROFILE_ZONE();
 		SOUL_ASSERT_MAIN_THREAD();
 
-		FrameContext &frameContext = get_frame_context();
+		_db.current_frame += 1;
+		_db.current_frame %= _db.frame_contexts.size();
+
+		FrameContext &frame_context = get_frame_context();
 		{
 			SOUL_PROFILE_ZONE_WITH_NAME("Wait fence");
-			SOUL_VK_CHECK(vkWaitForFences(_db.device, 1, &frameContext.fence, VK_TRUE, UINT64_MAX), "Fail to wait fences");
+			SOUL_VK_CHECK(vkWaitForFences(_db.device, 1, &frame_context.fence, VK_TRUE, UINT64_MAX), "Fail to wait fences");
 		}
 		
 		{
 			SOUL_PROFILE_ZONE_WITH_NAME("Reset command pools");
-			frameContext.command_pools.reset();
+			frame_context.command_pools.reset();
 		}
-		
-		frameContext.gpu_resource_initializer.reset();
 
-		reset_semaphore(frameContext.image_available_semaphore);
-		reset_semaphore(frameContext.render_finished_semaphore);
+		frame_context.gpu_resource_initializer.reset();
 
-		uint32 swapchainIndex;
+		reset_semaphore(frame_context.image_available_semaphore);
+		reset_semaphore(frame_context.render_finished_semaphore);
+
+		auto& garbages = frame_context.garbages;
+
 		{
-			SOUL_PROFILE_ZONE_WITH_NAME("Acquire Next Image KHR");
-			vkAcquireNextImageKHR(_db.device, _db.swapchain.vk_handle, UINT64_MAX,
-			                      get_semaphore_ptr(frameContext.image_available_semaphore)->vk_handle, VK_NULL_HANDLE,
-			                      &swapchainIndex);
+			// clear swapchain garbage
+			for (const auto image_view : garbages.swapchain.image_views) vkDestroyImageView(_db.device, image_view, nullptr);
+			garbages.swapchain.image_views.resize(0);
+			if (garbages.swapchain.vk_handle != VK_NULL_HANDLE)
+				vkDestroySwapchainKHR(_db.device, garbages.swapchain.vk_handle, nullptr);
 		}
-		
-		get_semaphore_ptr(frameContext.image_available_semaphore)->state = SemaphoreState::SUBMITTED;
-		frameContext.swapchain_index = swapchainIndex;
-		const TextureID swapchain_texture_id = _db.swapchain.textures[swapchainIndex];
-		Texture *swapchain_texture = get_texture_ptr(swapchain_texture_id);
-		swapchain_texture->owner = ResourceOwner::PRESENTATION_ENGINE;
-		swapchain_texture->layout = VK_IMAGE_LAYOUT_UNDEFINED;
 
 		{
 			SOUL_PROFILE_ZONE_WITH_NAME("Destroy images");
@@ -2050,7 +2070,7 @@ namespace soul::gpu
 			{
 				vkDestroyImageView(_db.device, texture_view.vk_handle, nullptr);
 			};
-			for (const auto texture_id : frameContext.garbages.textures) {
+			for (const auto texture_id : garbages.textures) {
 				destroy_texture_descriptor(texture_id);
 				Texture& texture = *get_texture_ptr(texture_id);
 				vmaDestroyImage(_db.gpu_allocator, texture.vk_handle, texture.allocation);
@@ -2063,55 +2083,58 @@ namespace soul::gpu
 				}
 				_db.texture_pool.destroy(texture_id.id);
 			}
-			frameContext.garbages.textures.resize(0);
+			garbages.textures.resize(0);
 		}
 		
 
 		{
 			SOUL_PROFILE_ZONE_WITH_NAME("Destroy buffers");
-			for (const BufferID buffer_id : frameContext.garbages.buffers) {
+			for (const BufferID buffer_id : garbages.buffers) {
 				destroy_buffer_descriptor(buffer_id);
 				const Buffer& buffer = *get_buffer_ptr(buffer_id);
 				vmaDestroyBuffer(_db.gpu_allocator, buffer.vk_handle, buffer.allocation);
 				_db.buffer_pool.destroy(buffer_id.id);
 			}
-			frameContext.garbages.buffers.resize(0);
+			garbages.buffers.resize(0);
 		}
 
 		{
 			SOUL_PROFILE_ZONE_WITH_NAME("Destroy render passes");
-			for (const auto renderPass : frameContext.garbages.renderPasses) {
+			for (const auto renderPass : garbages.renderPasses) {
 				vkDestroyRenderPass(_db.device, renderPass, nullptr);
 			}
-			frameContext.garbages.renderPasses.resize(0);
+			garbages.renderPasses.resize(0);
 		}
 		
 
-		for (const auto framebuffer : frameContext.garbages.frameBuffers) {
+		for (const auto framebuffer : garbages.frameBuffers) {
 			vkDestroyFramebuffer(_db.device, framebuffer, nullptr);
 		}
-		frameContext.garbages.frameBuffers.resize(0);
+		garbages.frameBuffers.resize(0);
 
-		for (const auto pipeline: frameContext.garbages.pipelines) {
+		for (const auto pipeline: garbages.pipelines) {
 			vkDestroyPipeline(_db.device, pipeline, nullptr);
 		}
-		frameContext.garbages.pipelines.resize(0);
+		garbages.pipelines.resize(0);
 
-		for (const auto event : frameContext.garbages.events) {
+		for (const auto event : garbages.events) {
 			vkDestroyEvent(_db.device, event, nullptr);
 		}
-		frameContext.garbages.events.resize(0);
+		garbages.events.resize(0);
 
-		for (const auto semaphore_id: frameContext.garbages.semaphores) {
+		for (const auto semaphore_id: garbages.semaphores) {
 			vkDestroySemaphore(_db.device, get_semaphore_ptr(semaphore_id)->vk_handle, nullptr);
 			_db.semaphores.remove(semaphore_id.id);
 		}
-		frameContext.garbages.semaphores.resize(0);
+		garbages.semaphores.resize(0);
 
 		_db.pipeline_state_cache.on_new_frame();
+
+		const auto result = acquire_swapchain();
+		SOUL_ASSERT(0, result == VK_SUCCESS, "");
 	}
 
-	void System::_frameEnd() {
+	void System::end_frame() {
 		SOUL_ASSERT_MAIN_THREAD();
 		SOUL_PROFILE_ZONE();
 		FrameContext &frame_context = get_frame_context();
@@ -2122,6 +2145,7 @@ namespace soul::gpu
 		_db.swapchain.fences[swapchain_index] = frame_context.fence;
 
 		Texture &swapchain_texture = *get_texture_ptr(_db.swapchain.textures[swapchain_index]);
+		const auto render_finished_semaphore = get_semaphore_ptr(frame_context.render_finished_semaphore);
 		SOUL_VK_CHECK(vkResetFences(_db.device, 1, &frame_context.fence), "Fail to reset fences");
 		{
 			SOUL_PROFILE_ZONE_WITH_NAME("GPU::System::LastSubmission");
@@ -2133,24 +2157,27 @@ namespace soul::gpu
 			            || swapchain_texture.owner == ResourceOwner::PRESENTATION_ENGINE,
 			            "");
 			// TODO: Handle when swapchain texture is untouch (ResourceOwner is PRESENTATION_ENGINE)
-			const auto cmdBuffer = frame_context.command_pools.requestCommandBuffer(QueueType::GRAPHIC);
+			const auto cmd_buffer = frame_context.command_pools.request_command_buffer(QueueType::GRAPHIC);
 
-			VkImageMemoryBarrier image_barrier = {};
-			image_barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-			image_barrier.srcAccessMask = VK_ACCESS_MEMORY_WRITE_BIT;
-			image_barrier.dstAccessMask = 0;
-			image_barrier.oldLayout = swapchain_texture.layout;
-			image_barrier.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-			image_barrier.image = swapchain_texture.vk_handle;
-			image_barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-			image_barrier.subresourceRange.baseArrayLayer = 0;
-			image_barrier.subresourceRange.layerCount = VK_REMAINING_ARRAY_LAYERS;
-			image_barrier.subresourceRange.baseMipLevel = 0;
-			image_barrier.subresourceRange.levelCount = VK_REMAINING_MIP_LEVELS;
-			image_barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-			image_barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+			const VkImageMemoryBarrier image_barrier = {
+				.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+				.srcAccessMask = VK_ACCESS_MEMORY_WRITE_BIT,
+				.dstAccessMask = 0,
+				.oldLayout = swapchain_texture.layout,
+				.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+				.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+				.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+				.image = swapchain_texture.vk_handle,
+				.subresourceRange = {
+					.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+					.baseMipLevel = 0,
+					.levelCount = VK_REMAINING_MIP_LEVELS,
+					.baseArrayLayer = 0,
+					.layerCount = VK_REMAINING_ARRAY_LAYERS
+				}
+			};
 
-			vkCmdPipelineBarrier(cmdBuffer,
+			vkCmdPipelineBarrier(cmd_buffer.get_vk_handle(),
 			                     VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
 			                     VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
 			                     0,
@@ -2161,45 +2188,38 @@ namespace soul::gpu
 			                     1,
 			                     &image_barrier);
 
-			static auto  RESOURCE_OWNER_TO_QUEUE_TYPE = FlagMap<ResourceOwner, QueueType>::build_from_list({
-				QueueType::COUNT,
-				QueueType::GRAPHIC,
-				QueueType::COMPUTE,
-				QueueType::TRANSFER,
-				QueueType::GRAPHIC
-			});
-
-			auto _syncQueueToGraphic = [this](QueueType queueType) {
+			auto sync_queue_to_graphic = [this](const QueueType queue_type) {
                 const SemaphoreID semaphore_id = create_semaphore();
-				const auto cmd_buffer = get_frame_context().command_pools.requestCommandBuffer(queueType);
+				const auto cmd_buffer = get_frame_context().command_pools.requestCommandBuffer(queue_type);
 				Semaphore* semaphore_ptr = get_semaphore_ptr(semaphore_id);
-				_db.queues[queueType].submit(cmd_buffer, 1, &semaphore_ptr);
+				_db.queues[queue_type].submit(cmd_buffer, 1, &semaphore_ptr);
 				_db.queues[QueueType::GRAPHIC].wait(semaphore_ptr, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT);
 				destroy_semaphore(semaphore_id);
 			};
 
 			{
 				SOUL_PROFILE_ZONE_WITH_NAME("Sync Transfer");
-				_syncQueueToGraphic(QueueType::TRANSFER);
+				sync_queue_to_graphic(QueueType::TRANSFER);
 			}
 
 			{
 				SOUL_PROFILE_ZONE_WITH_NAME("Sync Compute");
-				_syncQueueToGraphic(QueueType::COMPUTE);
+				sync_queue_to_graphic(QueueType::COMPUTE);
 			}
 
 			if (swapchain_texture.owner == ResourceOwner::PRESENTATION_ENGINE) {
-				_db.queues[QueueType::GRAPHIC].wait(get_semaphore_ptr(get_frame_context().image_available_semaphore), VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT);
+				_db.queues[QueueType::GRAPHIC].wait(get_semaphore_ptr(frame_context.image_available_semaphore), VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT);
 			}
 
-			_db.queues[RESOURCE_OWNER_TO_QUEUE_TYPE[swapchain_texture.owner]].submit(cmdBuffer, get_semaphore_ptr(get_frame_context().render_finished_semaphore), frame_context.fence);
+			const auto swapchain_owner = RESOURCE_OWNER_TO_QUEUE_TYPE[swapchain_texture.owner];
+			_db.queues[swapchain_owner ].submit(cmd_buffer.get_vk_handle(), render_finished_semaphore, frame_context.fence);
 			swapchain_texture.layout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
 		}
-
+		
 		const VkPresentInfoKHR present_info = {
 			.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
 			.waitSemaphoreCount = 1,
-			.pWaitSemaphores = &get_semaphore_ptr(frame_context.render_finished_semaphore)->vk_handle,
+			.pWaitSemaphores = &(render_finished_semaphore->vk_handle),
 			.swapchainCount = 1,
 			.pSwapchains = &_db.swapchain.vk_handle,
 			.pImageIndices = &frame_context.swapchain_index
@@ -2209,13 +2229,105 @@ namespace soul::gpu
 			SOUL_PROFILE_ZONE_WITH_NAME("GPU::System::QueuePresent");
 			_db.queues[QueueType::GRAPHIC].present(present_info);
 		}
-		
+
 		_db.frame_counter++;
-		_db.current_frame += 1;
-		_db.current_frame %= _db.frame_contexts.size();
 	}
 
-	vec2ui32 System::get_swapchain_extent() {
+    void System::recreate_swapchain()
+    {
+		const auto framebuffer_size = _db.swapchain.wsi->get_framebuffer_size();
+		auto& frame_context = get_frame_context();
+		destroy_semaphore(frame_context.image_available_semaphore);
+		frame_context.image_available_semaphore = create_semaphore();
+		vkDeviceWaitIdle(_db.device);
+
+		SOUL_LOG_INFO("Recreate swapchain. Framebuffer Size = %zu %zu", framebuffer_size.x, framebuffer_size.y);
+		vkGetPhysicalDeviceSurfaceCapabilitiesKHR(_db.physical_device, _db.surface, &_db.surfaceCaps);
+		auto& swapchain_garbage = get_frame_context().garbages.swapchain;
+		swapchain_garbage.vk_handle = _db.swapchain.vk_handle;
+
+	    _db.swapchain.extent = pick_surface_extent(_db.surfaceCaps, framebuffer_size);
+
+		const VkSwapchainCreateInfoKHR swapchain_info = {
+			.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
+			.surface = _db.surface,
+			.minImageCount = _db.swapchain.image_count,
+			.imageFormat = _db.swapchain.format.format,
+			.imageColorSpace = _db.swapchain.format.colorSpace,
+			.imageExtent = _db.swapchain.extent,
+			.imageArrayLayers = 1,
+			.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT,
+			.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE,
+			.queueFamilyIndexCount = 1,
+			.pQueueFamilyIndices = &_db.queue_family_indices[QueueType::GRAPHIC],
+			.preTransform = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR,
+			.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR,
+			.presentMode = VK_PRESENT_MODE_MAILBOX_KHR,
+			.clipped = VK_TRUE,
+			.oldSwapchain = _db.swapchain.vk_handle
+		};
+		SOUL_VK_CHECK(vkCreateSwapchainKHR(_db.device, &swapchain_info, nullptr, &_db.swapchain.vk_handle),
+			"Fail to create vulkan swapchain!");
+		vkGetSwapchainImagesKHR(_db.device, _db.swapchain.vk_handle, &_db.swapchain.image_count, nullptr);
+		vkGetSwapchainImagesKHR(_db.device, _db.swapchain.vk_handle, &_db.swapchain.image_count, _db.swapchain.images.data());
+		
+		for (VkImageView image_view : _db.swapchain.image_views)
+		{
+			swapchain_garbage.image_views.push_back(image_view);
+		}
+		std::ranges::transform(_db.swapchain.images, _db.swapchain.image_views.begin(), 
+			[format = _db.swapchain.format.format, device = _db.device](VkImage image)
+		{
+			VkImageView image_view;
+			const VkImageViewCreateInfo image_view_info = {
+				.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+				.image = image,
+				.viewType = VK_IMAGE_VIEW_TYPE_2D,
+				.format = format,
+				.components = {
+				VK_COMPONENT_SWIZZLE_IDENTITY,
+				VK_COMPONENT_SWIZZLE_IDENTITY,
+				VK_COMPONENT_SWIZZLE_IDENTITY,
+				VK_COMPONENT_SWIZZLE_IDENTITY
+				},
+				.subresourceRange = {
+					.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+					.baseMipLevel = 0,
+					.levelCount = 1,
+					.baseArrayLayer = 0,
+					.layerCount = 1
+				}
+			};
+			SOUL_VK_CHECK(vkCreateImageView(device, &image_view_info, nullptr, &image_view),
+				"Fail to create swapchain imageview");
+			return image_view;
+		});
+
+		for (const auto texture_id : _db.swapchain.textures)
+		{
+			_db.texture_pool.destroy(texture_id.id);
+		}
+		std::ranges::transform(_db.swapchain.images, _db.swapchain.image_views, _db.swapchain.textures.begin(),
+			[this, image_sharing_mode = swapchain_info.imageSharingMode](VkImage image, VkImageView image_view)
+		{
+			const auto texture_id = TextureID(_db.texture_pool.create());
+			Texture& texture = *get_texture_ptr(texture_id);
+			texture.desc = TextureDesc::d2("Swapchain Texture", TextureFormat::BGRA8, 1, {}, {}, vec2ui32(_db.swapchain.extent.width, _db.swapchain.extent.height));
+			texture.vk_handle = image;
+			texture.view.vk_handle = image_view;
+			texture.layout = VK_IMAGE_LAYOUT_UNDEFINED;
+			texture.sharing_mode = image_sharing_mode;
+			texture.owner = ResourceOwner::NONE;
+			return texture_id;
+		});
+
+		SOUL_LOG_INFO("Vulkan swapchain recreation sucessful");
+
+		const auto result = acquire_swapchain();
+		SOUL_ASSERT(0, result == VK_SUCCESS, "");
+    }
+
+    vec2ui32 System::get_swapchain_extent() {
 		return {_db.swapchain.extent.width, _db.swapchain.extent.height};
 	}
 

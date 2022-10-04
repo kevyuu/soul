@@ -13,6 +13,7 @@ namespace soul::gpu
 {
 	class System;
 	class RenderGraph;
+	class GLFWWsi;
 }
 
 struct ScreenDimension
@@ -25,6 +26,11 @@ struct AppConfig
 {
 	std::optional<ScreenDimension> screen_dimension = std::nullopt;
 	bool enable_imgui = false;
+};
+
+struct WindowData
+{
+	bool resized = false;
 };
 
 class App
@@ -52,7 +58,11 @@ private:
 	GLFWwindow* window_ = nullptr;
 	ImGuiRenderGraphPass* imgui_render_graph_pass_ = nullptr;
 
+	soul::gpu::GLFWWsi* wsi_ = nullptr;
+	WindowData window_data_;
+
 	const AppConfig app_config_;
+	bool first_frame_ = true;
 
 	const std::chrono::steady_clock::time_point start_ = std::chrono::steady_clock::now();
 

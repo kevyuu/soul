@@ -1,0 +1,14 @@
+// Hint files help the Visual Studio IDE interpret Visual C++ identifiers
+// such as names of functions and macros.
+// For more information see https://go.microsoft.com/fwlink/?linkid=865984
+#define SOUL_PROFILE_ZONE_WITH_NAME(x) ZoneScopedN(x) (void)0
+#define SOUL_PROFILE_ZONE_WITH_NAME(x) NVTXScope(x)
+#define SOUL_PROFILE_ZONE_WITH_NAME(x)
+#define SOUL_VK_CHECK(result, message, __VA_ARGS__) SOUL_ASSERT(0, result == VK_SUCCESS, "result = %d | " message, result,##__VA_ARGS__)
+#define SOUL_VK_CHECK(expr, message, __VA_ARGS__) do { VkResult _result = expr; if (_result != VK_SUCCESS) { SOUL_LOG_ERROR("Vulkan error| expr = %s, result = %s ", #expr, _result); SOUL_LOG_ERROR("Message = %s",##__VA_ARGS__); } } while(0)
+#define UINT64_MAX UINT64_C(18446744073709551615)
+#define UINT64_MAX
+#define SOUL_PROFILE_ZONE() ZoneScoped (void)0
+#define SOUL_PROFILE_ZONE() NVTXScope nvtx_scope(__FUNCTION__)
+#define SOUL_PROFILE_ZONE
+#define SOUL_ASSERT_MAIN_THREAD() SOUL_ASSERT(0, soul::runtime::System::Get().getThreadID() == 0, "This method is not thread safe. Please only call it only from main thread!")
