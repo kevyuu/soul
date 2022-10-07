@@ -260,10 +260,10 @@ namespace soul::gpu
 				.applicationVersion = VK_MAKE_VERSION(0, 0, 1),
 				.pEngineName = "Soul",
 				.engineVersion = VK_MAKE_VERSION(0, 0, 1),
-				.apiVersion = VK_API_VERSION_1_2
+				.apiVersion = VK_API_VERSION_1_3
 			};
 
-			static constexpr const char* REQUIRED_EXTENSIONS[] = {
+			static constexpr const char* INSTANCE_REQUIRED_EXTENSIONS[] = {
 				VK_KHR_SURFACE_EXTENSION_NAME,
 	#if defined(SOUL_OS_WINDOWS)
 				"VK_KHR_win32_surface",
@@ -319,8 +319,8 @@ namespace soul::gpu
 				.pApplicationInfo = &app_info,
 				.enabledLayerCount = required_layers_count,
 				.ppEnabledLayerNames = REQUIRED_LAYERS,
-				.enabledExtensionCount = std::size(REQUIRED_EXTENSIONS),
-				.ppEnabledExtensionNames = REQUIRED_EXTENSIONS
+				.enabledExtensionCount = std::size(INSTANCE_REQUIRED_EXTENSIONS),
+				.ppEnabledExtensionNames = INSTANCE_REQUIRED_EXTENSIONS
 			};
 			VkInstance instance;
 			SOUL_VK_CHECK(vkCreateInstance(&instance_create_info, nullptr, &instance),
@@ -354,8 +354,18 @@ namespace soul::gpu
 		_db.debug_messenger = create_debug_utils_messenger(_db.instance);
 
 		_db.surface = config.wsi->create_vulkan_surface(_db.instance);
-		auto pick_physical_device = [](Database *db, int required_extension_count,
-			                        const char *required_extensions[])-> FlagMap<QueueType, uint32> {
+
+		static constexpr const char* DEVICE_REQUIRED_EXTENSIONS[] = {
+	        VK_KHR_VULKAN_MEMORY_MODEL_EXTENSION_NAME,
+	        VK_KHR_SWAPCHAIN_EXTENSION_NAME,
+	        VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME,
+	        VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME,
+	        VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME,
+	        VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME,
+	        VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME
+		};
+		static constexpr uint32_t DEVICE_REQUIRED_EXTENSION_COUNT = std::size(DEVICE_REQUIRED_EXTENSIONS);
+		auto pick_physical_device = [](Database *db)-> FlagMap<QueueType, uint32> {
 				SOUL_LOG_INFO("Picking vulkan physical device.");
 				db->physical_device = VK_NULL_HANDLE;
 				uint32 device_count = 0;
@@ -376,9 +386,13 @@ namespace soul::gpu
 
 				for (VkPhysicalDevice device : devices) {
 
+					VkPhysicalDeviceAccelerationStructureFeaturesKHR accel_features = {
+						.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR,
+						.pNext = nullptr
+					};
 					VkPhysicalDeviceDescriptorIndexingFeatures indexing_features = {
 						.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES_EXT,
-						.pNext = nullptr
+						.pNext = &accel_features
 					};
 					VkPhysicalDeviceFeatures2 device_features{
 						.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2,
@@ -424,7 +438,8 @@ namespace soul::gpu
 							return strcmp(properties.extensionName, required_extension);
 						});
 					};
-					const auto all_extension_found = std::any_of(required_extensions, required_extensions + required_extension_count, is_extension_available);
+					const auto all_extension_found = std::any_of(DEVICE_REQUIRED_EXTENSIONS, 
+						DEVICE_REQUIRED_EXTENSIONS + DEVICE_REQUIRED_EXTENSION_COUNT, is_extension_available);
 					if (!all_extension_found) {
 						continue;
 					}
@@ -557,12 +572,8 @@ namespace soul::gpu
 				SOUL_ASSERT(0, db->physical_device != VK_NULL_HANDLE, "Fail to find a suitable GPU!");
 				return queue_family_indices;
 			};
-		static const char* device_required_extensions[] = {
-			VK_KHR_VULKAN_MEMORY_MODEL_EXTENSION_NAME,
-			VK_KHR_SWAPCHAIN_EXTENSION_NAME
-		};
-		static constexpr uint32_t DEVICE_REQUIRED_EXTENSION_COUNT = std::size(device_required_extensions);
-		_db.queue_family_indices = pick_physical_device(&_db, DEVICE_REQUIRED_EXTENSION_COUNT, device_required_extensions);
+
+		_db.queue_family_indices = pick_physical_device(&_db);
 
 		auto create_device_and_queue = 
 			[](VkPhysicalDevice physicalDevice, FlagMap<QueueType, uint32>& queue_family_indices)
@@ -617,24 +628,22 @@ namespace soul::gpu
 				.fillModeNonSolid = VK_TRUE,
 				.fragmentStoresAndAtomics = VK_TRUE
 			};
-			VkPhysicalDeviceDescriptorIndexingFeatures indexing_features = {
-				.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES,
+
+			VkPhysicalDeviceVulkan12Features device_1_2_features = {
+				.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES,
 				.descriptorBindingSampledImageUpdateAfterBind = VK_TRUE,
 				.descriptorBindingStorageImageUpdateAfterBind = VK_TRUE,
 				.descriptorBindingStorageBufferUpdateAfterBind = VK_TRUE,
 				.descriptorBindingUpdateUnusedWhilePending = VK_TRUE,
 				.descriptorBindingPartiallyBound = VK_TRUE,
 				.descriptorBindingVariableDescriptorCount = VK_TRUE,
-				.runtimeDescriptorArray = VK_TRUE
-			};
-			VkPhysicalDeviceVulkanMemoryModelFeatures memory_model_features = {
-				.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_MEMORY_MODEL_FEATURES,
-				.pNext = &indexing_features,
+				.runtimeDescriptorArray = VK_TRUE,
 				.vulkanMemoryModel = VK_TRUE
 			};
+
 			const VkPhysicalDeviceFeatures2 device_features2 = {
 				.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2,
-				.pNext = &memory_model_features,
+				.pNext = &device_1_2_features,
 				.features = device_features
 			};
 
@@ -644,7 +653,7 @@ namespace soul::gpu
 				.queueCreateInfoCount = queue_create_info_count,
 				.pQueueCreateInfos = queue_create_info,
 				.enabledExtensionCount = DEVICE_REQUIRED_EXTENSION_COUNT,
-				.ppEnabledExtensionNames = device_required_extensions,
+				.ppEnabledExtensionNames = DEVICE_REQUIRED_EXTENSIONS,
 				.pEnabledFeatures = nullptr
 			};
 
@@ -1591,7 +1600,7 @@ namespace soul::gpu
 			// memory layout for resources
 			arguments.push_back(L"-fvk-use-dx-layout");
 			// Vulkan version
-			arguments.push_back(L"-fspv-target-env=vulkan1.2");
+			arguments.push_back(L"-fspv-target-env=vulkan1.3");
 			// useful extensions
 			arguments.push_back(L"-fspv-extension=SPV_EXT_descriptor_indexing");
 

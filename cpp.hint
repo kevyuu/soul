@@ -12,3 +12,4 @@
 #define SOUL_PROFILE_ZONE() NVTXScope nvtx_scope(__FUNCTION__)
 #define SOUL_PROFILE_ZONE
 #define SOUL_ASSERT_MAIN_THREAD() SOUL_ASSERT(0, soul::runtime::System::Get().getThreadID() == 0, "This method is not thread safe. Please only call it only from main thread!")
+#define IID_PPV_ARGS(ppType) __uuidof(**(ppType)), IID_PPV_ARGS_Helper(ppType)
