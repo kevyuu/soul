@@ -191,3 +191,6 @@ constexpr void soul_intern_assert(const int paranoia, const int line, const char
 	#define SOUL_MEMPROFILE_FRAME() SOUL_NOOP
 
 #endif // SOUL_MEMPROFILE_CPU_BACKEND
+
+void soul_exit_failure(const int line, const char* const file, _In_z_ _Printf_format_string_ const char* const format, ...);
+#define SOUL_EXIT_FAILURE(format, ...) soul_exit_failure(__LINE__, __FILE__, format, ##__VA_ARGS__)
