@@ -631,6 +631,7 @@ namespace soul::gpu
 
 			VkPhysicalDeviceVulkan12Features device_1_2_features = {
 				.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES,
+				.descriptorIndexing = VK_TRUE,
 				.descriptorBindingSampledImageUpdateAfterBind = VK_TRUE,
 				.descriptorBindingStorageImageUpdateAfterBind = VK_TRUE,
 				.descriptorBindingStorageBufferUpdateAfterBind = VK_TRUE,
