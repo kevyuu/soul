@@ -670,8 +670,8 @@ namespace soul::gpu::impl
 
 			if (!semaphores.empty()) {
 				const QueueType src_queue_type = PASS_TYPE_TO_QUEUE_TYPE_MAP[src_pass_type];
-                const auto sync_semaphore_cmd_buffer = command_pools_.requestCommandBuffer(src_queue_type);
-				command_queues_[src_queue_type].submit(sync_semaphore_cmd_buffer, semaphores);
+                const auto sync_semaphore_cmd_buffer = command_pools_.request_command_buffer(src_queue_type);
+				command_queues_[src_queue_type].submit(sync_semaphore_cmd_buffer.get_vk_handle(), semaphores);
 			}
 		}
 
@@ -689,7 +689,7 @@ namespace soul::gpu::impl
 
 	}
 
-	void RenderGraphExecution::execute_pass(const uint32 pass_index, VkCommandBuffer command_buffer) {
+	void RenderGraphExecution::execute_pass(const uint32 pass_index, PrimaryCommandBuffer command_buffer) {
 		SOUL_PROFILE_ZONE();
 		PassNode* pass_node = render_graph_->get_pass_nodes()[pass_index];
 		// Run render pass here
@@ -700,7 +700,7 @@ namespace soul::gpu::impl
 		case PassType::TRANSFER: {
 
 			auto copy_node = soul::downcast<TransferBaseNode*>(pass_node);
-			RenderCompiler render_compiler(*gpu_system_, command_buffer);
+			RenderCompiler render_compiler(*gpu_system_, command_buffer.get_vk_handle());
 			TransferCommandList command_list(render_compiler);
 			RenderGraphRegistry registry(gpu_system_, this);
 			copy_node->execute_pass(registry, command_list);
@@ -709,9 +709,9 @@ namespace soul::gpu::impl
 		}
 		case PassType::COMPUTE: {
 			auto compute_node = soul::downcast<ComputeBaseNode*>(pass_node);
-			RenderCompiler render_compiler(*gpu_system_, command_buffer);
+			RenderCompiler render_compiler(*gpu_system_, command_buffer.get_vk_handle());
 			ComputeCommandList command_list(
-				impl::PrimaryCommandBuffer(command_buffer), 
+				command_buffer, 
 				render_compiler, *gpu_system_);
 
             RenderGraphRegistry registry(gpu_system_, this);
@@ -763,7 +763,7 @@ namespace soul::gpu::impl
 			
 			RenderGraphRegistry registry(gpu_system_, this, render_pass, render_target.sample_count);
 			GraphicCommandList command_list(
-				impl::PrimaryCommandBuffer(command_buffer),
+				command_buffer,
 				render_pass_begin_info,
 				command_pools_,
 				*gpu_system_
@@ -815,7 +815,7 @@ namespace soul::gpu::impl
 			QueueType queue_type = PASS_TYPE_TO_QUEUE_TYPE_MAP[pass_node->get_type()];
 			PassExecInfo& pass_info = pass_infos_[i];
 
-			VkCommandBuffer cmd_buffer = command_pools_.requestCommandBuffer(queue_type);
+			const auto cmd_buffer = command_pools_.request_command_buffer(queue_type);
 
 				vec4f color = { (rand() % 125) / 255.0f, (rand() % 125) / 255.0f, (rand() % 125) / 255.0f, 1.0f };
 			const VkDebugUtilsLabelEXT passLabel = {
@@ -824,7 +824,7 @@ namespace soul::gpu::impl
 				pass_node->get_name(),                    // pLabelName
 				{color.x, color.y, color.z, color.w}, // color
 			};
-			vkCmdBeginDebugUtilsLabelEXT(cmd_buffer, &passLabel);
+			vkCmdBeginDebugUtilsLabelEXT(cmd_buffer.get_vk_handle(), &passLabel);
 
 			pipeline_buffer_barriers.clear();
 			pipeline_image_barriers.clear();
@@ -988,7 +988,7 @@ namespace soul::gpu::impl
 				}
 				SOUL_ASSERT(0, pipeline_dst_stage_flags != 0, "");
 				vkCmdPipelineBarrier(
-				    cmd_buffer,
+				    cmd_buffer.get_vk_handle(),
 				    pipeline_src_stage_flags, pipeline_dst_stage_flags,
 				    0,
 				    0, nullptr,
@@ -998,7 +998,7 @@ namespace soul::gpu::impl
 			}
 
 			if (!events.empty()) {
-				vkCmdWaitEvents(cmd_buffer,
+				vkCmdWaitEvents(cmd_buffer.get_vk_handle(),
                     soul::cast<uint32>(events.size()), events.data(),
                     event_src_stage_flags, event_dst_stage_flags,
                     0, nullptr,
@@ -1008,7 +1008,7 @@ namespace soul::gpu::impl
 			}
 
 			if (!semaphore_layout_barriers.empty()) {
-			    vkCmdPipelineBarrier(cmd_buffer,
+			    vkCmdPipelineBarrier(cmd_buffer.get_vk_handle(),
                     semaphore_dst_stage_flags, semaphore_dst_stage_flags,
                     0,
                     0, nullptr,
@@ -1090,7 +1090,7 @@ namespace soul::gpu::impl
 			}
 
 			if (event != VK_NULL_HANDLE) {
-				vkCmdSetEvent(cmd_buffer, event, unsync_write_stage_flags);
+				vkCmdSetEvent(cmd_buffer.get_vk_handle(), event, unsync_write_stage_flags);
 			}
 
 			Vector<Semaphore*> semaphores(&passNodeScopeAllocator);
@@ -1134,8 +1134,8 @@ namespace soul::gpu::impl
 				texture_view_info.pass_counter += 1;
 			}
 
-			vkCmdEndDebugUtilsLabelEXT(cmd_buffer);
-			command_queues_[queue_type].submit(cmd_buffer, semaphores);
+			vkCmdEndDebugUtilsLabelEXT(cmd_buffer.get_vk_handle());
+			command_queues_[queue_type].submit(cmd_buffer.get_vk_handle(), semaphores);
 		}
 
 		// Update resource owner for external resource

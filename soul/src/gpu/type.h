@@ -966,7 +966,6 @@ namespace soul::gpu
 			}
 			void init(VkDevice device, const CommandQueues& queues, soul_size thread_count);
 			void reset();
-			VkCommandBuffer requestCommandBuffer(QueueType queueType);
 
 			PrimaryCommandBuffer request_command_buffer(const QueueType queue_type);
 			SecondaryCommandBuffer request_secondary_command_buffer(VkRenderPass render_pass, const uint32_t subpass, VkFramebuffer framebuffer);

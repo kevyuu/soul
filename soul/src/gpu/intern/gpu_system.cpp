@@ -2200,9 +2200,9 @@ namespace soul::gpu
 
 			auto sync_queue_to_graphic = [this](const QueueType queue_type) {
                 const SemaphoreID semaphore_id = create_semaphore();
-				const auto cmd_buffer = get_frame_context().command_pools.requestCommandBuffer(queue_type);
+				const auto sync_command_buffer = get_frame_context().command_pools.request_command_buffer(queue_type);
 				Semaphore* semaphore_ptr = get_semaphore_ptr(semaphore_id);
-				_db.queues[queue_type].submit(cmd_buffer, 1, &semaphore_ptr);
+				_db.queues[queue_type].submit(sync_command_buffer.get_vk_handle(), 1, &semaphore_ptr);
 				_db.queues[QueueType::GRAPHIC].wait(semaphore_ptr, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT);
 				destroy_semaphore(semaphore_id);
 			};
@@ -2463,17 +2463,6 @@ namespace soul::gpu
 		{
 			pool.reset();
 		}
-	}
-
-	VkCommandBuffer CommandPools::requestCommandBuffer(QueueType queueType)
-	{
-		VkCommandBuffer cmdBuffer = primary_pools_[runtime::get_thread_id()][queueType].request();
-		VkCommandBufferBeginInfo beginInfo = {
-			.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
-			.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT
-		};
-		SOUL_VK_CHECK(vkBeginCommandBuffer(cmdBuffer, &beginInfo), "");
-		return cmdBuffer;
 	}
 
 	PrimaryCommandBuffer CommandPools::request_command_buffer(const QueueType queue_type)
