@@ -31,6 +31,7 @@ namespace soul::gpu
 
 		[[nodiscard]] BufferID get_buffer(BufferNodeID bufferNodeID) const;
 		[[nodiscard]] TextureID get_texture(TextureNodeID textureNodeId) const;
+		[[nodiscard]] TlasID get_tlas(TlasNodeID tlas_node_id) const;
 		PipelineStateID get_pipeline_state(const GraphicPipelineStateDesc& desc);
 		PipelineStateID get_pipeline_state(const ComputePipelineStateDesc& desc);
 

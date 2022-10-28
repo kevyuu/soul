@@ -28,5 +28,8 @@ namespace soulsl
 
     using float3x3 = soul::mat3f;
     using float4x4 = soul::mat4f;
+
+    using address = soul::gpu::GPUAddress;
+    using duint = uint64;
     
 }

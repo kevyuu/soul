@@ -164,5 +164,11 @@ namespace soul::util
 			get_random_number<float>(0.0f, 1.0f)
 		};
 	}
+	
+	template <std::integral Integral>
+	constexpr Integral align_up(Integral x, soul_size a) noexcept
+	{
+		return Integral((x + (Integral(a) - 1)) & ~Integral(a - 1));
+	}
 };
 

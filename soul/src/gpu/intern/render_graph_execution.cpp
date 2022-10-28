@@ -81,6 +81,16 @@ namespace soul::gpu::impl
 		});
 		SOUL_ASSERT(0, !texture_info->view->passes.empty(), "");
 	};
+	
+	void update_resource_info(const QueueType queue_type, const PassNodeID pass_id, ResourceExecInfo* resource_info)
+	{
+		resource_info->queue_flags |= {queue_type};
+		if (resource_info->first_pass.is_null()) {
+			resource_info->first_pass = pass_id;
+		}
+		resource_info->last_pass = pass_id;
+		resource_info->passes.push_back(pass_id);
+	}
 
     PassDependencyGraph::PassDependencyGraph(soul_size pass_node_count, 
 		std::span<const impl::ResourceNode> resource_nodes) :
@@ -184,6 +194,11 @@ namespace soul::gpu::impl
 		internal_texture_infos_.set(&texture_infos_, 0, internal_textures.size());
 		external_texture_infos_.set(&texture_infos_, internal_textures.size(), texture_infos_.size());
 
+		resource_infos_.resize(render_graph_->get_external_tlas_list().size() + render_graph_->get_external_blas_group_list().size());
+		external_tlas_resource_infos_.set(&resource_infos_, 0, render_graph_->get_external_tlas_list().size());
+		external_blas_group_resource_infos_.set(&resource_infos_, external_tlas_resource_infos_.get_end_idx(),
+			external_tlas_resource_infos_.get_end_idx() + render_graph_->get_external_blas_group_list().size());
+
 		constexpr auto fold_internal_texture_view_count = [](soul_size count, const RGInternalTexture& internal_texture)
 		{
 			return count + internal_texture.get_view_count();
@@ -219,15 +234,18 @@ namespace soul::gpu::impl
 
 		for (const auto pass_node_id : pass_order_) {
 			const auto pass_index = pass_node_id.id;
-			const PassBaseNode& pass_node = *render_graph_->get_pass_nodes()[pass_index];
+			PassBaseNode& pass_node = *render_graph_->get_pass_nodes()[pass_index];
 			const auto pass_queue_type = pass_node.get_queue_type();
 			PassExecInfo& pass_info = pass_infos_[pass_index];
-
+			pass_info.pass_node = &pass_node;
+			
 			init_shader_buffers(pass_node.get_buffer_read_accesses(), pass_node_id, pass_queue_type);
 			init_shader_buffers(pass_node.get_buffer_write_accesses(), pass_node_id, pass_queue_type);
 			init_shader_textures(pass_node.get_texture_read_accesses(), pass_node_id, pass_queue_type);
 			init_shader_textures(pass_node.get_texture_write_accesses(), pass_node_id, pass_queue_type);
-
+			init_shader_tlas_accesses(pass_node.get_shader_tlas_read_accesses(), pass_node_id, pass_queue_type);
+			init_shader_blas_group_accesses(pass_node.get_shader_blas_group_read_accesses(), pass_node_id, pass_queue_type);
+	
 			for (const BufferNodeID node_id : pass_node.get_vertex_buffers()) {
 				SOUL_ASSERT(0, node_id.is_valid(), "");
 
@@ -371,6 +389,56 @@ namespace soul::gpu::impl
 				};
 				std::ranges::transform(dst_texture.view_range, std::back_inserter(pass_info.texture_accesses), generate_invalidate_barrier);
 
+			}
+
+			for (const auto& buffer : pass_node.get_as_build_input_buffers())
+			{
+				const auto resource_info_index = get_buffer_info_index(buffer);
+				update_buffer_info(pass_node.get_queue_type(), { BufferUsage::AS_BUILD_INPUT }, pass_node_id, &buffer_infos_[resource_info_index]);
+
+				pass_info.buffer_accesses.push_back({
+					.stage_flags = { PipelineStage::AS_BUILD },
+					.access_flags = { AccessType::SHADER_READ },
+					.buffer_info_idx = resource_info_index
+				});
+				
+			}
+
+			for (const auto& blas_group : pass_node.get_as_build_input_blas_groups())
+			{
+				const auto resource_info_index = get_blas_group_resource_info_index(blas_group);
+				update_resource_info(pass_node.get_queue_type(), pass_node_id, &resource_infos_[resource_info_index]);
+
+				pass_info.resource_accesses.push_back({
+					.stage_flags = { PipelineStage::AS_BUILD },
+					.access_flags = { AccessType::AS_READ },
+					.resource_info_idx = resource_info_index
+				});
+			}
+
+			for (const auto& dst_tlas : pass_node.get_as_build_destination_tlas_list())
+			{
+				const auto resource_info_index = get_tlas_resource_info_index(dst_tlas.output_node_id);
+				update_resource_info(pass_node.get_queue_type(), pass_node_id, &resource_infos_[resource_info_index]);
+
+				pass_info.resource_accesses.push_back({
+					.stage_flags = { PipelineStage::AS_BUILD },
+					.access_flags = { AccessType::AS_READ, AccessType::AS_WRITE },
+					.resource_info_idx = resource_info_index
+				});
+				
+			}
+
+			for (const auto& dst_blas_group : pass_node.get_as_build_destination_blas_group_list())
+			{
+				const auto resource_info_index = get_blas_group_resource_info_index(dst_blas_group.output_node_id);
+				update_resource_info(pass_node.get_queue_type(), pass_node_id, &resource_infos_[resource_info_index]);
+
+				pass_info.resource_accesses.push_back({
+					.stage_flags = { PipelineStage::AS_BUILD },
+					.access_flags = { AccessType::AS_READ, AccessType::AS_WRITE },
+					.resource_info_idx = resource_info_index
+				});
 			}
 		}
 
@@ -557,30 +625,6 @@ namespace soul::gpu::impl
 			event = VK_NULL_HANDLE;
 		}
 
-		for (auto& buffer_info : external_buffer_infos_)
-		{
-			if (buffer_info.passes.empty()) continue;
-			const auto first_queue_type = render_graph_->get_pass_nodes()[buffer_info.passes[0].id]->get_queue_type();
-			const auto& buffer = gpu_system_->get_buffer(buffer_info.buffer_id);
-			const auto owner = buffer.cache_state.queue_owner;
-			const auto external_queue_type = owner;
-			buffer_info.cache_state = buffer.cache_state;
-			if (external_queue_type == first_queue_type) {
-				if (buffer.cache_state.unavailable_pipeline_stages.none() && buffer.cache_state.unavailable_accesses.none()) continue;
-				VkEvent& external_event = external_events_[first_queue_type];
-				if (external_event == VK_NULL_HANDLE && external_queue_type != QueueType::TRANSFER) {
-					external_event = gpu_system_->create_event();
-				}
-				buffer_info.pending_event = external_event;
-				external_events_stage_flags_[first_queue_type] |= buffer.cache_state.unavailable_pipeline_stages;
-				buffer_info.pending_semaphore = TimelineSemaphore::null();
-			}
-			else if (owner != QueueType::NONE) {
-				buffer_info.pending_event = VK_NULL_HANDLE;
-				buffer_info.pending_semaphore = command_queues_[external_queue_type].get_timeline_semaphore();
-			}
-		}
-
 		for (auto& texture_info : texture_infos_)
 		{
 			const auto& texture = gpu_system_->get_texture(texture_info.texture_id);
@@ -613,6 +657,61 @@ namespace soul::gpu::impl
 					}
 				}
 			});
+		}
+
+		std::ranges::for_each(texture_infos_, [this](const TextureExecInfo& texture_info)
+		{
+			const Texture& texture = gpu_system_->get_texture(texture_info.texture_id);
+			std::for_each(texture_info.view, texture_info.view + texture_info.get_view_count(), [layout = texture.layout](TextureViewExecInfo& view_info)
+			{
+				view_info.layout = layout;
+			});
+		});
+
+		auto compute_non_texture_sync_info = [this]
+		    (const ResourceCacheState& external_cache_state, auto& resource_exec_info)
+		{
+			const auto external_queue_type = external_cache_state.queue_owner;
+			const auto first_queue_type = render_graph_->get_pass_nodes()[resource_exec_info.first_pass.id]->get_queue_type();
+
+			resource_exec_info.cache_state = external_cache_state;
+			if (external_queue_type == first_queue_type) {
+				if (external_cache_state.unavailable_pipeline_stages.none() && external_cache_state.unavailable_accesses.none()) return;
+				VkEvent& external_event = external_events_[first_queue_type];
+				if (external_event == VK_NULL_HANDLE && external_queue_type != QueueType::TRANSFER) {
+					external_event = gpu_system_->create_event();
+				}
+				resource_exec_info.pending_event = external_event;
+				external_events_stage_flags_[first_queue_type] |= external_cache_state.unavailable_pipeline_stages;
+				resource_exec_info.pending_semaphore = TimelineSemaphore::null();
+			}
+			else if (external_queue_type != QueueType::COUNT) {
+				resource_exec_info.pending_event = VK_NULL_HANDLE;
+				resource_exec_info.pending_semaphore = command_queues_[external_queue_type].get_timeline_semaphore();
+			}
+		};
+
+		for (auto& buffer_info : external_buffer_infos_)
+		{
+			if (buffer_info.passes.empty()) continue;
+			const auto& buffer = gpu_system_->get_buffer(buffer_info.buffer_id);
+			compute_non_texture_sync_info(buffer.cache_state, buffer_info);
+		}
+		
+		for (soul_size tlas_idx = 0; tlas_idx < external_tlas_resource_infos_.size(); tlas_idx++)
+		{
+			auto& resource_exec_info = external_tlas_resource_infos_[tlas_idx];
+			const auto& rg_external_tlas = render_graph_->get_external_tlas_list()[tlas_idx];
+			const auto& tlas = gpu_system_->get_tlas(rg_external_tlas.tlas_id);
+			compute_non_texture_sync_info(tlas.cache_state, resource_exec_info);
+		}
+
+		for (soul_size blas_group_idx = 0; blas_group_idx < external_blas_group_resource_infos_.size(); blas_group_idx++)
+		{
+			auto& resource_exec_info = external_blas_group_resource_infos_[blas_group_idx];
+			const auto& rg_external_blas_group = render_graph_->get_external_blas_group_list()[blas_group_idx];
+			const auto& blas_group = gpu_system_->get_blas_group(rg_external_blas_group.blas_group_id);
+			compute_non_texture_sync_info(blas_group.cache_state, resource_exec_info);
 		}
 
 		// Sync events
@@ -683,7 +782,8 @@ namespace soul::gpu::impl
 				constexpr auto MAPPING = FlagMap<PipelineType, VkPipelineBindPoint>::build_from_list({
 					VK_PIPELINE_BIND_POINT_MAX_ENUM,
 					VK_PIPELINE_BIND_POINT_GRAPHICS,
-					VK_PIPELINE_BIND_POINT_COMPUTE
+					VK_PIPELINE_BIND_POINT_COMPUTE,
+					VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR,
 				});
 				const auto bind_point = MAPPING[pipeline_type];
 				if (bind_point != VK_PIPELINE_BIND_POINT_MAX_ENUM) render_compiler.bind_descriptor_sets(bind_point);
@@ -700,8 +800,10 @@ namespace soul::gpu::impl
 
 		Vector<VkEvent> garbage_events;
 
+		Vector<VkMemoryBarrier> pipeline_barriers;
 		Vector<VkBufferMemoryBarrier> pipeline_buffer_barriers;
 		Vector<VkImageMemoryBarrier> pipeline_image_barriers;
+		Vector<VkMemoryBarrier> event_barriers;
 		Vector<VkBufferMemoryBarrier> event_buffer_barriers;
 		Vector<VkImageMemoryBarrier> event_image_barriers;
 		
@@ -739,6 +841,61 @@ namespace soul::gpu::impl
 			PipelineStageFlags event_src_stage_flags;
 			PipelineStageFlags event_dst_stage_flags;
 			PipelineStageFlags semaphore_dst_stage_flags;
+
+			for (const auto& barrier : pass_info.resource_accesses)
+			{
+				ResourceExecInfo& resource_info = resource_infos_[barrier.resource_info_idx];
+				if (resource_info.cache_state.unavailable_accesses.any())
+				{
+					for (auto& access_flags : resource_info.cache_state.visible_access_matrix) {
+						access_flags = AccessFlags{};
+					}
+				}
+
+				const auto queue_owner = resource_info.cache_state.queue_owner;
+				const auto unavailable_pipeline_stages = resource_info.cache_state.unavailable_pipeline_stages;
+				const auto unavailable_accesses = resource_info.cache_state.unavailable_accesses;
+
+				if (is_semaphore_null(resource_info.pending_semaphore) &&
+					unavailable_accesses.none() &&
+					!resource_info.cache_state.need_invalidate(barrier.stage_flags, barrier.access_flags)) {
+					continue;
+				}
+
+				if (is_semaphore_valid(resource_info.pending_semaphore)) {
+					command_queues_[current_queue_type].wait(resource_info.pending_semaphore, vk_cast(barrier.stage_flags));
+					resource_info.pending_semaphore = TimelineSemaphore::null();
+					resource_info.cache_state.commit_wait_semaphore(queue_owner, current_queue_type, barrier.stage_flags);
+				}
+				else {
+					if (unavailable_pipeline_stages.none() || unavailable_pipeline_stages == PipelineStageFlags{ PipelineStage::TOP_OF_PIPE })
+						SOUL_ASSERT(0, resource_info.cache_state.unavailable_accesses.none(), "");
+					VkMemoryBarrier mem_barrier = {
+						.sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER,
+						.srcAccessMask = vk_cast(unavailable_accesses),
+						.dstAccessMask = vk_cast(barrier.access_flags)
+					};
+
+					if (resource_info.pending_event != VK_NULL_HANDLE)
+					{
+						event_barriers.push_back(mem_barrier);
+						events.push_back(resource_info.pending_event);
+						event_src_stage_flags |= unavailable_pipeline_stages;
+						event_dst_stage_flags |= barrier.stage_flags;
+						resource_info.pending_event = VK_NULL_HANDLE;
+					}
+					else
+					{
+						pipeline_barriers.push_back(mem_barrier);
+						pipeline_src_stage_flags |= unavailable_pipeline_stages;
+						pipeline_dst_stage_flags |= barrier.stage_flags;
+					}
+					resource_info.cache_state.commit_wait_event_or_barrier(current_queue_type, 
+						unavailable_pipeline_stages, unavailable_accesses, 
+						barrier.stage_flags, barrier.access_flags);
+				}
+				resource_info.cache_state.commit_access(current_queue_type, barrier.stage_flags, barrier.access_flags);
+			}
 
 			for (const BufferAccess& barrier: pass_info.buffer_accesses) {
 				BufferExecInfo& buffer_info = buffer_infos_[barrier.buffer_info_idx];
@@ -884,7 +1041,7 @@ namespace soul::gpu::impl
 				    cmd_buffer.get_vk_handle(),
 				    vk_cast(pipeline_src_stage_flags), vk_cast(pipeline_dst_stage_flags),
 				    0,
-				    0, nullptr,
+				    soul::cast<uint32>(pipeline_barriers.size()), pipeline_barriers.data(),
 				    soul::cast<uint32>(pipeline_buffer_barriers.size()), pipeline_buffer_barriers.data(),
 				    soul::cast<uint32>(pipeline_image_barriers.size()), pipeline_image_barriers.data()
 				);
@@ -894,7 +1051,7 @@ namespace soul::gpu::impl
 				vkCmdWaitEvents(cmd_buffer.get_vk_handle(),
                     soul::cast<uint32>(events.size()), events.data(),
                     vk_cast(event_src_stage_flags), vk_cast(event_dst_stage_flags),
-                    0, nullptr,
+                    soul::cast<uint32>(event_barriers.size()), event_barriers.data(),
                     soul::cast<uint32>(event_buffer_barriers.size()), event_buffer_barriers.data(),
                     soul::cast<uint32>(event_image_barriers.size()), event_image_barriers.data()
 				);
@@ -928,6 +1085,16 @@ namespace soul::gpu::impl
 				if (texture_view_info.pass_counter != texture_view_info.passes.size() - 1)
 				{
 					uint32 next_pass_idx = texture_view_info.passes[texture_view_info.pass_counter + 1].id;
+					const auto next_queue_type = render_graph_->get_pass_nodes()[next_pass_idx]->get_queue_type();
+					is_queue_type_dependent[next_queue_type] = true;
+				}
+			}
+
+			for (const ResourceAccess& access : pass_info.resource_accesses)
+			{
+				const ResourceExecInfo& resource_info = resource_infos_[access.resource_info_idx];
+				if (resource_info.pass_counter != resource_info.passes.size() - 1) {
+					uint32 next_pass_idx = resource_info.passes[resource_info.pass_counter + 1].id;
 					const auto next_queue_type = render_graph_->get_pass_nodes()[next_pass_idx]->get_queue_type();
 					is_queue_type_dependent[next_queue_type] = true;
 				}
@@ -978,6 +1145,23 @@ namespace soul::gpu::impl
 				texture_view_info.layout = barrier.layout;
 			}
 
+			for (const ResourceAccess& access : pass_info.resource_accesses)
+			{
+				ResourceExecInfo& resource_info = resource_infos_[access.resource_info_idx];
+				if (resource_info.pass_counter != resource_info.passes.size() - 1) {
+					const auto next_pass_idx = resource_info.passes[resource_info.pass_counter + 1].id;
+					const auto next_queue_type = render_graph_->get_pass_nodes()[next_pass_idx]->get_queue_type();
+
+					if (current_queue_type != next_queue_type) {
+						pending_semaphores.push_back(&resource_info.pending_semaphore);
+					}
+					else {
+						resource_info.pending_event = event;
+						unsync_write_stage_flags |= access.stage_flags;
+					}
+				}
+			}
+			
 			if (event != VK_NULL_HANDLE) {
 				vkCmdSetEvent(cmd_buffer.get_vk_handle(), event, vk_cast(unsync_write_stage_flags));
 			}
@@ -988,6 +1172,7 @@ namespace soul::gpu::impl
 			for(Semaphore* pending_semaphore : pending_semaphores)
 				*pending_semaphore = command_queue.get_timeline_semaphore();
 
+			// Update unsync stage
 			for (const BufferAccess& barrier : pass_info.buffer_accesses) {
 				BufferExecInfo& buffer_info = buffer_infos_[barrier.buffer_info_idx];
 				buffer_info.pass_counter += 1;
@@ -997,6 +1182,12 @@ namespace soul::gpu::impl
 				TextureExecInfo& texture_info = texture_infos_[barrier.texture_info_idx];
 				TextureViewExecInfo& texture_view_info = *texture_info.get_view(barrier.view);
 				texture_view_info.pass_counter += 1;
+			}
+
+			for (const auto& access : pass_info.resource_accesses)
+			{
+				ResourceExecInfo& resource_info = resource_infos_[access.resource_info_idx];
+				resource_info.pass_counter += 1;
 			}
 		}
 
@@ -1010,6 +1201,7 @@ namespace soul::gpu::impl
 					return view_info.layout == layout;
 				}), "");
 
+			if (texture_info.view->passes.empty()) continue;
 			uint64 last_pass_idx = texture_info.view->passes.back().id;
 			SOUL_ASSERT(0, std::all_of(texture_info.view, texture_info.view + texture_info.get_view_count(),
 				[last_pass_idx](const TextureViewExecInfo& view_info)
@@ -1028,6 +1220,14 @@ namespace soul::gpu::impl
 			if (buffer_info.passes.empty()) continue;
 			auto& buffer = gpu_system_->get_buffer(buffer_info.buffer_id);
 			buffer.cache_state = buffer_info.cache_state;
+		}
+
+		const auto external_tlas_list = render_graph_->get_external_tlas_list();
+		for (auto external_tlas_idx = 0u; external_tlas_idx < external_tlas_list.size(); external_tlas_idx++)
+		{
+		    auto& tlas = gpu_system_->get_tlas(external_tlas_list[external_tlas_idx].tlas_id);
+			const auto& resource_info = external_tlas_resource_infos_[external_tlas_idx];
+			tlas.cache_state = resource_info.cache_state;
 		}
 
 		for (VkEvent event : garbage_events) {
@@ -1053,6 +1253,13 @@ namespace soul::gpu::impl
 		const auto info_idx = get_texture_info_index(node_id);
 		return texture_infos_[info_idx].texture_id;
 	}
+	
+    TlasID RenderGraphExecution::get_tlas_id(TlasNodeID node_id) const
+    {
+		const auto& node = render_graph_->get_resource_node(node_id);
+		SOUL_ASSERT(0, node.resource_id.is_external());
+		return render_graph_->get_external_tlas_list()[node.resource_id.get_index()].tlas_id;
+    }
 
 	Buffer& RenderGraphExecution::get_buffer(const BufferNodeID node_id) const {
 		return gpu_system_->get_buffer(get_buffer_id(node_id));
@@ -1077,6 +1284,19 @@ namespace soul::gpu::impl
 		}
 		return node.resource_id.get_index();
 	}
+
+	uint32 RenderGraphExecution::get_tlas_resource_info_index(TlasNodeID node_id) const {
+		const auto& node = render_graph_->get_resource_node(node_id);
+		SOUL_ASSERT(0, node.resource_id.is_external());
+		return soul::cast<uint32>(external_tlas_resource_infos_.get_begin_idx()) + node.resource_id.get_index();
+	}
+
+	uint32 RenderGraphExecution::get_blas_group_resource_info_index(BlasGroupNodeID node_id) const
+    {
+		const auto& node = render_graph_->get_resource_node(node_id);
+		SOUL_ASSERT(0, node.resource_id.is_external());
+		return soul::cast<uint32>(external_blas_group_resource_infos_.get_begin_idx()) + node.resource_id.get_index();
+    }
 
 	void RenderGraphExecution::cleanup() {
 
@@ -1189,5 +1409,46 @@ namespace soul::gpu::impl
 
 		}
 	}
-	
+
+    void RenderGraphExecution::init_shader_tlas_accesses(const std::span<const ShaderTlasReadAccess> access_list,
+                                                         PassNodeID pass_node_id, const QueueType queue_type)
+    {
+		PassExecInfo& pass_info = pass_infos_[pass_node_id.id];
+		for (const ShaderTlasReadAccess& shader_access : access_list) {
+			SOUL_ASSERT(0, shader_access.node_id.is_valid(), "");
+
+			const auto resource_info_id = get_tlas_resource_info_index(shader_access.node_id);
+
+			const auto stage_flags = cast_to_pipeline_stage_flags(shader_access.stage_flags);
+
+			pass_info.resource_accesses.push_back({
+				.stage_flags = stage_flags,
+				.access_flags = { AccessType::AS_READ },
+				.resource_info_idx = resource_info_id
+			});
+			
+			update_resource_info(queue_type, PassNodeID(pass_node_id), &resource_infos_[resource_info_id]);
+		}
+    }
+
+    void RenderGraphExecution::init_shader_blas_group_accesses(std::span<const ShaderBlasGroupReadAccess> access_list,
+        PassNodeID pass_node_id, QueueType queue_type)
+    {
+		PassExecInfo& pass_info = pass_infos_[pass_node_id.id];
+		for (const ShaderBlasGroupReadAccess& shader_access : access_list) {
+			SOUL_ASSERT(0, shader_access.node_id.is_valid(), "");
+
+			const auto resource_info_id = get_blas_group_resource_info_index(shader_access.node_id);
+
+			const auto stage_flags = cast_to_pipeline_stage_flags(shader_access.stage_flags);
+
+			pass_info.resource_accesses.push_back({
+				.stage_flags = stage_flags,
+				.access_flags = { AccessType::AS_READ },
+				.resource_info_idx = resource_info_id
+				});
+
+			update_resource_info(queue_type, PassNodeID(pass_node_id), &resource_infos_[resource_info_id]);
+		}
+    }
 }

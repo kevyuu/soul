@@ -60,6 +60,8 @@ namespace soul::gpu
 		VK_FORMAT_R16G16B16_UINT,
 		VK_FORMAT_R16G16B16_SINT,
 		VK_FORMAT_B10G11R11_UFLOAT_PACK32,
+
+		VK_FORMAT_R32G32B32_SFLOAT,
 	});
 	SOUL_ALWAYS_INLINE VkFormat vk_cast(const TextureFormat format) {
 		return FORMAT_MAP[format];
@@ -112,6 +114,8 @@ namespace soul::gpu
 			VK_IMAGE_ASPECT_COLOR_BIT,
 			VK_IMAGE_ASPECT_COLOR_BIT,
 			VK_IMAGE_ASPECT_COLOR_BIT,
+
+			VK_IMAGE_ASPECT_COLOR_BIT
 		});
 		return IMAGE_ASPECT_FLAGS_MAP[format];
 	}
@@ -193,14 +197,26 @@ namespace soul::gpu
 	}
 
 	constexpr VkBufferUsageFlags vk_cast(const BufferUsageFlags usage_flags) {
-		return usage_flags.map<VkBufferUsageFlags>({
+		auto result = usage_flags.map<VkBufferUsageFlags>({
 			VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
 			VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
 			VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
 			VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
 			VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-			VK_BUFFER_USAGE_TRANSFER_DST_BIT
+			VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+			VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_STORAGE_BIT_KHR,
+			VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR,
+			VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+			VK_BUFFER_USAGE_SHADER_BINDING_TABLE_BIT_KHR
 		});
+		constexpr VkBufferUsageFlags need_buffer_device_address_bit =
+			VK_BUFFER_USAGE_STORAGE_BUFFER_BIT |
+			VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_STORAGE_BIT_KHR |
+			VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR |
+			VK_BUFFER_USAGE_SHADER_BINDING_TABLE_BIT_KHR;
+		if (result & need_buffer_device_address_bit)
+			result |= VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT_KHR;
+		return result;
 	}
 
 	constexpr PipelineStageFlags cast_to_pipeline_stage_flags(const ShaderStageFlags stage_flags)
@@ -209,7 +225,10 @@ namespace soul::gpu
 			{PipelineStage::VERTEX_SHADER},
 			{PipelineStage::GEOMETRY_SHADER},
 			{PipelineStage::FRAGMENT_SHADER},
-			{PipelineStage::COMPUTE_SHADER}
+			{PipelineStage::COMPUTE_SHADER},
+			{PipelineStage::RAY_TRACING_SHADER},
+			{PipelineStage::RAY_TRACING_SHADER},
+			{PipelineStage::RAY_TRACING_SHADER}
 		});
 	}
 
@@ -218,7 +237,10 @@ namespace soul::gpu
 			VK_PIPELINE_STAGE_VERTEX_SHADER_BIT,
 			VK_PIPELINE_STAGE_GEOMETRY_SHADER_BIT,
 			VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
-			VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT
+			VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+			VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR,
+			VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR,
+			VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR
 		});
 	}
 
@@ -228,6 +250,9 @@ namespace soul::gpu
 			VK_SHADER_STAGE_GEOMETRY_BIT,
 			VK_SHADER_STAGE_FRAGMENT_BIT,
 			VK_SHADER_STAGE_COMPUTE_BIT,
+			VK_SHADER_STAGE_RAYGEN_BIT_KHR,
+			VK_SHADER_STAGE_MISS_BIT_KHR,
+			VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR
 		});
 	}
 
@@ -237,6 +262,9 @@ namespace soul::gpu
 			VK_SHADER_STAGE_GEOMETRY_BIT,
 			VK_SHADER_STAGE_FRAGMENT_BIT,
 			VK_SHADER_STAGE_COMPUTE_BIT,
+			VK_SHADER_STAGE_RAYGEN_BIT_KHR,
+			VK_SHADER_STAGE_MISS_BIT_KHR,
+			VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR
 		});
 		return MAPPING[shader_stage];
 	}
@@ -392,6 +420,24 @@ namespace soul::gpu
 			VK_MEMORY_PROPERTY_HOST_CACHED_BIT
 		});
 	}
+	
+	
+	SOUL_ALWAYS_INLINE VkGeometryTypeKHR vk_cast(const RTGeometryType type)
+	{
+		static constexpr auto MAP = FlagMap<RTGeometryType, VkGeometryTypeKHR>::build_from_list({
+			VK_GEOMETRY_TYPE_TRIANGLES_KHR,
+			VK_GEOMETRY_TYPE_AABBS_KHR
+		});
+		return MAP[type];
+	}
+
+	SOUL_ALWAYS_INLINE VkGeometryFlagsKHR vk_cast(const RTGeometryFlags flags)
+	{
+		return flags.map<VkGeometryFlagsKHR>({
+			VK_GEOMETRY_OPAQUE_BIT_KHR,
+			VK_GEOMETRY_NO_DUPLICATE_ANY_HIT_INVOCATION_BIT_KHR
+		});
+	}
 
 	SOUL_ALWAYS_INLINE VkPipelineStageFlags vk_cast(const PipelineStageFlags flags)
 	{
@@ -438,6 +484,26 @@ namespace soul::gpu
 		    VK_ACCESS_MEMORY_WRITE_BIT,
 		    VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR,
 		    VK_ACCESS_ACCELERATION_STRUCTURE_WRITE_BIT_KHR,
+		});
+	}
+
+	SOUL_ALWAYS_INLINE VkBuildAccelerationStructureModeKHR vk_cast(const RTBuildMode build_mode)
+	{
+		static constexpr auto MAP = FlagMap<RTBuildMode, VkBuildAccelerationStructureModeKHR>::build_from_list({
+			VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR,
+			VK_BUILD_ACCELERATION_STRUCTURE_MODE_UPDATE_KHR
+		});
+		return MAP[build_mode];
+	}
+
+	SOUL_ALWAYS_INLINE VkBuildAccelerationStructureFlagsKHR vk_cast(const RTBuildFlags flags)
+	{
+		return flags.map<VkBuildAccelerationStructureFlagsKHR>({
+			VK_BUILD_ACCELERATION_STRUCTURE_ALLOW_UPDATE_BIT_KHR,
+			VK_BUILD_ACCELERATION_STRUCTURE_ALLOW_COMPACTION_BIT_KHR,
+			VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR,
+			VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_BUILD_BIT_KHR,
+			VK_BUILD_ACCELERATION_STRUCTURE_LOW_MEMORY_BIT_KHR
 		});
 	}
 }

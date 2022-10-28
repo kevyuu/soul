@@ -24,6 +24,13 @@ namespace soul::gpu::impl
 		SubresourceIndex view;
 	};
 
+	struct ResourceAccess
+	{
+		PipelineStageFlags stage_flags;
+		AccessFlags access_flags;
+		uint32 resource_info_idx;
+	};
+
 	struct BufferExecInfo {
 		PassNodeID first_pass;
 		PassNodeID last_pass;
@@ -74,7 +81,19 @@ namespace soul::gpu::impl
 		}
 	};
 
-	
+	struct ResourceExecInfo
+	{
+		PassNodeID first_pass;
+		PassNodeID last_pass;
+		QueueFlags queue_flags;
+
+		VkEvent pending_event = VK_NULL_HANDLE;
+		Semaphore pending_semaphore = TimelineSemaphore::null();
+		ResourceCacheState cache_state;
+
+		Vector<PassNodeID> passes;
+		uint32 pass_counter = 0;
+	};
 
 	class PassDependencyGraph
 	{
@@ -119,6 +138,7 @@ namespace soul::gpu::impl
 		PassBaseNode* pass_node = nullptr;
 		Vector<BufferAccess> buffer_accesses;
 		Vector<TextureAccess> texture_accesses;
+		Vector<ResourceAccess> resource_accesses;
 	};
 
 	class RenderGraphExecution {
@@ -148,10 +168,13 @@ namespace soul::gpu::impl
 		[[nodiscard]] bool is_external(const TextureExecInfo& info) const;
 		[[nodiscard]] BufferID get_buffer_id(BufferNodeID node_id) const;
 		[[nodiscard]] TextureID get_texture_id(TextureNodeID node_id) const;
+		[[nodiscard]] TlasID get_tlas_id(TlasNodeID node_id) const;
 		[[nodiscard]] Buffer& get_buffer(BufferNodeID node_id) const;
 		[[nodiscard]] Texture& get_texture(TextureNodeID node_id) const;
 		[[nodiscard]] uint32 get_buffer_info_index(BufferNodeID node_id) const;
 		[[nodiscard]] uint32 get_texture_info_index(TextureNodeID nodeID) const;
+		[[nodiscard]] uint32 get_tlas_resource_info_index(TlasNodeID node_id) const;
+		[[nodiscard]] uint32 get_blas_group_resource_info_index(BlasGroupNodeID node_id) const;
 
 	private:
 		const RenderGraph* render_graph_;
@@ -171,6 +194,10 @@ namespace soul::gpu::impl
 		Slice<TextureExecInfo> external_texture_infos_;
 		Vector<TextureViewExecInfo> texture_view_infos_;
 
+		Vector<ResourceExecInfo> resource_infos_;
+		Slice<ResourceExecInfo> external_tlas_resource_infos_;
+		Slice<ResourceExecInfo> external_blas_group_resource_infos_;
+
 		Vector<PassExecInfo> pass_infos_;
 		
 		PassDependencyGraph pass_dependency_graph_;
@@ -189,6 +216,8 @@ namespace soul::gpu::impl
 		void init_shader_buffers(std::span<const ShaderBufferWriteAccess> access_list, PassNodeID pass_node_id, QueueType queue_type);
 		void init_shader_textures(std::span<const ShaderTextureReadAccess> access_list, PassNodeID pass_node_id, QueueType queue_type);
 		void init_shader_textures(std::span<const ShaderTextureWriteAccess> access_list, PassNodeID pass_node_id, QueueType queue_type);
+		void init_shader_tlas_accesses(std::span<const ShaderTlasReadAccess> access_list, PassNodeID pass_node_id, QueueType queue_type);
+		void init_shader_blas_group_accesses(std::span<const ShaderBlasGroupReadAccess> access_list, PassNodeID pass_node_id, QueueType queue_type);
 
 	};
 }

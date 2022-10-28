@@ -49,3 +49,9 @@ target_include_directories(tiny_gltf
 	INTERFACE ${CMAKE_CURRENT_SOURCE_DIR})
 target_compile_definitions(tiny_gltf
 	INTERFACE TINYGLTF_IMPLEMENTATION)
+
+add_library(tiny_obj_loader INTERFACE)
+target_include_directories(tiny_obj_loader
+	INTERFACE ${CMAKE_CURRENT_SOURCE_DIR})
+target_compile_definitions(tiny_obj_loader
+	INTERFACE TINYOBJLOADER_IMPLEMENTATION)

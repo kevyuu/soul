@@ -4,8 +4,9 @@
 #include "gpu/intern/render_graph_execution.h"
 #include "gpu/intern/bindless_descriptor_allocator.h"
 
-#include "runtime/system.h"
+#include "math/math.h"
 
+#include "runtime/system.h"
 #include "runtime/scope_allocator.h"
 
 #include "core/vector.h"
@@ -23,6 +24,7 @@
 #include <variant>
 #include <span>
 
+#include "common.h"
 #include "memory/allocator.h"
 
 static constexpr const char* RESOURCE_HLSL = R"HLSL(
@@ -33,12 +35,12 @@ namespace soul
 {
     typedef vector <uint, 2> vec2ui32;
 
-	typedef vector <float, 2> vec2f;
-	typedef vector <float, 3> vec3f;
-	typedef vector <float, 4> vec4f;
+    typedef vector <float, 2> vec2f;
+    typedef vector <float, 3> vec3f;
+    typedef vector <float, 4> vec4f;
 
-	typedef matrix <float, 3, 3> mat3f;
-	typedef matrix <float, 4, 4> mat4f;
+    typedef matrix <float, 3, 3> mat3f;
+    typedef matrix <float, 4, 4> mat4f;
 }
 
 namespace soulsl
@@ -58,9 +60,9 @@ namespace soulsl
     };
     static const DescriptorID DESCRIPTOR_ID_NULL = { UINT_MAX };
 
-	typedef vector <float, 2> float2;
-	typedef vector <float, 3> float3;
-	typedef vector <float, 4> float4;
+    typedef vector <float, 2> float2;
+    typedef vector <float, 3> float3;
+    typedef vector <float, 4> float4;
 
     typedef vector <double, 2> double2;
     typedef vector <double, 3> double3;
@@ -70,8 +72,12 @@ namespace soulsl
     typedef vector <uint, 3> uint3;
     typedef vector <uint, 4> uint4;
 
-	typedef matrix <float, 3, 3> float3x3;
-	typedef matrix <float, 4, 4> float4x4;
+    typedef matrix <float, 3, 3> float3x3;
+    typedef matrix <float, 4, 4> float4x4;
+
+    typedef uint64_t address;
+    typedef uint64_t duint;
+
 }
 
 [[vk::binding(0, 0)]] ByteAddressBuffer global_buffer_arr[];
@@ -79,11 +85,16 @@ namespace soulsl
 [[vk::binding(0, 2)]] Texture2D global_texture_2d_arr[];
 [[vk::binding(0, 2)]] Texture3D global_texture_3d_arr[];
 [[vk::binding(0, 2)]] TextureCube global_texture_cube_arr[];
-[[vk::binding(0, 3)]] RWTexture2D<float4> global_rw_texture_2d_float4_arr[]; 
+[[vk::binding(0, 3)]] RWTexture2D<float4> global_rw_texture_2d_float4_arr[];
 
 template<typename T>
 T get_buffer(soulsl::DescriptorID descriptor_id, uint offset) {
 	return global_buffer_arr[descriptor_id.id].Load<T>(offset);
+}
+
+template<typename T>
+T get_buffer_array(soulsl::DescriptorID descriptor_id, uint index) {
+    return global_buffer_arr[descriptor_id.id].Load<T>(index * sizeof(T));
 }
 
 SamplerState get_sampler(soulsl::DescriptorID descriptor_id) {
@@ -105,8 +116,22 @@ TextureCube get_texture_cube(soulsl::DescriptorID descriptor_id) {
 RWTexture2D<float4> get_rw_texture_2d_float4(soulsl::DescriptorID descriptor_id) {
     return global_rw_texture_2d_float4_arr[descriptor_id.id];
 }
+
 )HLSL";
 static constexpr soul_size RESOURCE_HLSL_SIZE = std::char_traits<char>::length(RESOURCE_HLSL);
+
+static constexpr const char* RESOURCE_RT_EXT_HLSL = R"HLSL(
+
+[[vk::binding(0, 4)]] RaytracingAccelerationStructure global_as_arr[];
+
+RaytracingAccelerationStructure get_as(soulsl::DescriptorID descriptor_id) {
+    return global_as_arr[descriptor_id.id];
+    return global_as_arr[descriptor_id.id];
+}
+
+)HLSL";
+
+static constexpr soul_size RESOURCE_RT_EXT_HLSL_SIZE = std::char_traits<char>::length(RESOURCE_RT_EXT_HLSL);
 
 #include <Windows.h>
 #include <dxc/dxcapi.h>
@@ -338,7 +363,7 @@ namespace soul::gpu
 			SOUL_VK_CHECK(vkCreateInstance(&instance_create_info, nullptr, &instance),
 				"Vulkan instance creation fail!");
 			SOUL_LOG_INFO("Vulkan instance creation succesful");
-			volkLoadInstance(instance);
+			volkLoadInstanceOnly(instance);
 			SOUL_LOG_INFO("Instance version = %d, %d", VK_VERSION_MAJOR(volkGetInstanceVersion()), VK_VERSION_MINOR(volkGetInstanceVersion()));
 			return instance;
 		};
@@ -374,6 +399,7 @@ namespace soul::gpu
 	        VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME,
 	        VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME,
 	        VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME,
+			VK_KHR_RAY_QUERY_EXTENSION_NAME,
 	        VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME,
 	        VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME,
 			VK_KHR_SYNCHRONIZATION_2_EXTENSION_NAME
@@ -557,6 +583,11 @@ namespace soul::gpu
 				            "Cannot find physical device that satisfy the requirements.");
 
 				vkGetPhysicalDeviceProperties(db->physical_device, &db->physical_device_properties);
+				VkPhysicalDeviceProperties2 physical_device_properties2 = {
+				    .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2,
+					.pNext = &db->as_properties
+				};
+				vkGetPhysicalDeviceProperties2(db->physical_device, &physical_device_properties2);
 				vkGetPhysicalDeviceMemoryProperties(db->physical_device, &db->physical_device_memory_properties);
 				vkGetPhysicalDeviceFeatures(db->physical_device, &db->physical_device_features);
 
@@ -588,6 +619,7 @@ namespace soul::gpu
 			};
 
 		_db.queue_family_indices = pick_physical_device(&_db);
+
 
 		auto create_device_and_queue = 
 			[](VkPhysicalDevice physicalDevice, FlagMap<QueueType, uint32>& queue_family_indices)
@@ -640,11 +672,31 @@ namespace soul::gpu
 			VkPhysicalDeviceFeatures device_features = {
 				.geometryShader = VK_TRUE,
 				.fillModeNonSolid = VK_TRUE,
-				.fragmentStoresAndAtomics = VK_TRUE
+				.fragmentStoresAndAtomics = VK_TRUE,
+				.shaderInt64 = VK_TRUE
+			};
+
+			VkPhysicalDeviceRayQueryFeaturesKHR ray_query_features = {
+			    .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_QUERY_FEATURES_KHR,
+			    .rayQuery = VK_TRUE
+			};
+
+			VkPhysicalDeviceRayTracingPipelineFeaturesKHR rt_pipeline_features = {
+				.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_FEATURES_KHR,
+				.pNext = &ray_query_features,
+				.rayTracingPipeline = VK_TRUE
+			};
+
+			VkPhysicalDeviceAccelerationStructureFeaturesKHR as_features = {
+				.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR,
+				.pNext = &rt_pipeline_features,
+				.accelerationStructure = VK_TRUE,
+				.descriptorBindingAccelerationStructureUpdateAfterBind = VK_TRUE
 			};
 
 			VkPhysicalDeviceVulkan13Features device_1_3_features = {
 				.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES,
+				.pNext = &as_features,
 				.synchronization2 = VK_TRUE
 			};
 
@@ -660,6 +712,7 @@ namespace soul::gpu
 				.descriptorBindingVariableDescriptorCount = VK_TRUE,
 				.runtimeDescriptorArray = VK_TRUE,
 				.timelineSemaphore = VK_TRUE,
+				.bufferDeviceAddress = VK_TRUE,
 				.vulkanMemoryModel = VK_TRUE
 			};
 
@@ -688,6 +741,7 @@ namespace soul::gpu
 
 		auto [device, queueIndex] = create_device_and_queue(_db.physical_device, _db.queue_family_indices);
 		_db.device = device;
+		volkLoadDevice(device);
 		for (const auto queue_type : FlagIter<QueueType>())
 		{
 			_db.queues[queue_type].init(device, _db.queue_family_indices[queue_type], queueIndex[queue_type]);
@@ -815,6 +869,7 @@ namespace soul::gpu
 			};
 
 			const VmaAllocatorCreateInfo allocator_info = {
+				.flags = VMA_ALLOCATOR_CREATE_BUFFER_DEVICE_ADDRESS_BIT,
 				.physicalDevice = db->physical_device,
 				.device = db->device,
 				.preferredLargeHeapBlockSize = 0,
@@ -857,7 +912,6 @@ namespace soul::gpu
 			frame_context.command_pools.init(_db.device, _db.queues, config.thread_count);
 			frame_context.gpu_resource_initializer.init(_db.gpu_allocator, &frame_context.command_pools);
 			frame_context.gpu_resource_finalizer.init();
-			
 			frame_context.frame_end_semaphore = TimelineSemaphore::null();
 			frame_context.image_available_semaphore = create_binary_semaphore();
 			frame_context.render_finished_semaphore = create_binary_semaphore();
@@ -1114,7 +1168,193 @@ namespace soul::gpu
 		return get_texture(texture_id).view;
 	}
 
-	BufferID System::create_buffer(const BufferDesc &desc) {
+    soul_size System::get_blas_size_requirement(const BlasBuildDesc& build_desc)
+    {
+		const auto size_info = get_as_build_size_info(build_desc);
+		return size_info.accelerationStructureSize;
+    }
+
+    BlasID System::create_blas(const BlasDesc& desc, const BlasGroupID blas_group_id)
+    {
+		runtime::ScopeAllocator<> scope_allocator("create_blas(const BlasDesc&, BlasGroupID)");
+		const char* as_storage_name = nullptr;
+		if (desc.name != nullptr)
+		{
+			CString as_storage_name_string(&scope_allocator);
+			as_storage_name_string.appendf("%s_storage_buffer", desc.name);
+			as_storage_name = as_storage_name_string.data();
+		}
+
+		const BufferDesc as_buffer_desc = {
+			.size = desc.size,
+			.usage_flags = { BufferUsage::AS_STORAGE },
+			.queue_flags = { QueueType::GRAPHIC, QueueType::COMPUTE },
+			.name = as_storage_name
+		};
+		const auto storage_buffer_id = create_buffer(as_buffer_desc);
+		const VkAccelerationStructureCreateInfoKHR create_info = {
+			.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_CREATE_INFO_KHR,
+			.buffer = get_buffer(storage_buffer_id).vk_handle,
+			.size = desc.size,
+			.type = VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR
+		};
+		VkAccelerationStructureKHR vk_handle;
+		vkCreateAccelerationStructureKHR(_db.device, &create_info, nullptr, &vk_handle);
+
+		if (desc.name != nullptr)
+		{
+			CString as_name_string(&scope_allocator);
+			as_name_string.appendf("%s(%d)", desc.name, _db.frame_counter);
+			const VkDebugUtilsObjectNameInfoEXT as_name_info = {
+				VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
+				nullptr,
+				VK_OBJECT_TYPE_ACCELERATION_STRUCTURE_KHR,
+				reinterpret_cast<uint64>(vk_handle),
+				as_name_string.data(),
+			};
+			vkSetDebugUtilsObjectNameEXT(_db.device, &as_name_info);
+		}
+
+		const auto blas_id = BlasID(_db.blas_pool.create(Blas{
+			.desc = desc,
+			.vk_handle = vk_handle,
+			.buffer = storage_buffer_id,
+			.cache_state = ResourceCacheState()
+		}));
+
+		add_to_blas_group(blas_id, blas_group_id);
+		return blas_id;
+
+    }
+
+	void System::destroy_blas(BlasID blas_id)
+	{
+		remove_from_blas_group(blas_id);
+		const auto& blas = get_blas(blas_id);
+		auto& frame_context = get_frame_context();
+		frame_context.garbages.as_vk_handles.push_back(blas.vk_handle);
+		destroy_buffer(blas.buffer);
+		_db.blas_pool.destroy(blas_id.id);
+	}
+
+    const impl::Blas& System::get_blas(BlasID blas_id) const
+    {
+		return *_db.blas_pool.get(blas_id.id);
+    }
+
+    impl::Blas& System::get_blas(BlasID blas_id)
+    {
+		return *_db.blas_pool.get(blas_id.id);
+    }
+
+    GPUAddress System::get_gpu_address(BlasID blas_id) const
+	{
+		const VkAccelerationStructureDeviceAddressInfoKHR addr_info = {
+			.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_DEVICE_ADDRESS_INFO_KHR,
+			.accelerationStructure = get_blas(blas_id).vk_handle
+		};
+
+		return GPUAddress(vkGetAccelerationStructureDeviceAddressKHR(_db.device, &addr_info));
+	}
+
+    BlasGroupID System::create_blas_group(const char* name)
+    {
+		const BlasGroup blas_group = {
+			.name = name
+		};
+		return BlasGroupID(_db.blas_group_pool.create(blas_group));
+    }
+
+	void System::destroy_blas_group(BlasGroupID blas_group_id)
+	{
+		SOUL_ASSERT_MAIN_THREAD();
+		auto& blas_group = get_blas_group(blas_group_id);
+		auto& frame_context = get_frame_context();
+		for (const auto& blas_id : blas_group.blas_list)
+		{
+			auto& blas = get_blas(blas_id);
+			frame_context.garbages.as_vk_handles.push_back(blas.vk_handle);
+			destroy_buffer(blas.buffer);
+		}
+		_db.blas_group_pool.destroy(blas_group_id.id);
+	}
+
+    const impl::BlasGroup& System::get_blas_group(BlasGroupID blas_group_id) const
+    {
+		return *_db.blas_group_pool.get(blas_group_id.id);
+    }
+
+    impl::BlasGroup& System::get_blas_group(BlasGroupID blas_group_id)
+    {
+		return *_db.blas_group_pool.get(blas_group_id.id);
+    }
+
+    soul_size System::get_tlas_size_requirement(const TlasBuildDesc& build_desc)
+    {
+		const auto size_info = get_as_build_size_info(build_desc);
+		return size_info.accelerationStructureSize;
+    }
+
+    TlasID System::create_tlas(const TlasDesc& desc)
+    {
+		runtime::ScopeAllocator<> scope_allocator("gpu::System::create_tlas(const TlasDesc& desc)");
+		const char* as_storage_name = nullptr;
+		if (desc.name != nullptr)
+		{
+			CString as_storage_name_string(&scope_allocator);
+			as_storage_name_string.appendf("%s_storage_buffer", desc.name);
+			as_storage_name = as_storage_name_string.data();
+		}
+		const BufferDesc as_buffer_desc = {
+			.size = desc.size,
+			.usage_flags = { BufferUsage::AS_STORAGE },
+			.queue_flags = { QueueType::GRAPHIC, QueueType::COMPUTE },
+			.name = as_storage_name
+		};
+		const auto as_storage_buffer_id = create_buffer(as_buffer_desc);
+
+		const VkAccelerationStructureCreateInfoKHR create_info = {
+			.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_CREATE_INFO_KHR,
+			.buffer = get_buffer(as_storage_buffer_id).vk_handle,
+			.size = desc.size,
+			.type = VK_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL_KHR
+		};
+		VkAccelerationStructureKHR vk_handle;
+		vkCreateAccelerationStructureKHR(_db.device, &create_info, nullptr, &vk_handle);
+
+		const auto descriptor_id = _db.descriptor_allocator.create_as_descriptor(vk_handle);
+		
+		const auto tlas_id = TlasID(_db.tlas_pool.create(Tlas{
+			.desc = desc,
+			.vk_handle = vk_handle,
+			.buffer = as_storage_buffer_id,
+			.descriptor_id = descriptor_id,
+			.cache_state = ResourceCacheState()
+		}));
+		return tlas_id;
+    }
+
+    void System::destroy_tlas(TlasID tlas_id)
+    {
+		auto& tlas = get_tlas(tlas_id);
+		auto& frame_context = get_frame_context();
+	    frame_context.garbages.as_vk_handles.push_back(tlas.vk_handle);
+		frame_context.garbages.as_descriptors.push_back(tlas.descriptor_id);
+		destroy_buffer(tlas.buffer);
+		_db.tlas_pool.destroy(tlas_id.id);
+    }
+
+    const impl::Tlas& System::get_tlas(TlasID tlas_id) const
+    {
+		return *_db.tlas_pool.get(tlas_id.id);
+    }
+
+    impl::Tlas& System::get_tlas(TlasID tlas_id)
+    {
+		return *_db.tlas_pool.get(tlas_id.id);
+    }
+
+    BufferID System::create_buffer(const BufferDesc &desc) {
 		SOUL_ASSERT_MAIN_THREAD();
 		return create_buffer(desc, false);
 	}
@@ -1136,8 +1376,8 @@ namespace soul::gpu
     BufferID System::create_transient_buffer(const BufferDesc& desc)
     {
 		const auto buffer_id = create_buffer(desc, true);
-		get_frame_context().garbages.buffers.add(buffer_id);
-
+	    get_frame_context().garbages.buffers.add(buffer_id);
+		
 		return buffer_id;
     }
 
@@ -1152,9 +1392,11 @@ namespace soul::gpu
 		SOUL_ASSERT(0, desc.size > 0, "");
 		SOUL_ASSERT(0, desc.usage_flags.any(), "");
 
+	    auto queue_flags = desc.queue_flags;
+		const auto usage_flags = desc.usage_flags;
 		
-		const auto queue_flags = desc.queue_flags;
-		
+		if (usage_flags.test(BufferUsage::AS_BUILD_INPUT)) queue_flags |= { QueueType::COMPUTE };
+
 		const QueueData queue_data = get_queue_data_from_queue_flags(queue_flags);
 		SOUL_ASSERT(0, queue_data.count > 0, "");
 		const VkBufferCreateInfo buffer_info = {
@@ -1186,10 +1428,18 @@ namespace soul::gpu
 			};
 		}
 
+		std::optional<VkDeviceSize> alignment = std::nullopt;
+		if (desc.usage_flags.test(BufferUsage::AS_SCRATCH_BUFFER)) alignment = _db.as_properties.minAccelerationStructureScratchOffsetAlignment;
+
 		VkBuffer vk_handle;
 		VmaAllocation allocation;
-		SOUL_VK_CHECK(vmaCreateBuffer(_db.gpu_allocator, &buffer_info, &alloc_create_info, &vk_handle, &allocation, nullptr), "Fail to create buffer");
-
+		if (alignment)
+		{
+			SOUL_VK_CHECK(vmaCreateBufferWithAlignment(_db.gpu_allocator, &buffer_info, &alloc_create_info, alignment.value(), &vk_handle, &allocation, nullptr), "Fail to create buffer");
+		}
+		else {
+			SOUL_VK_CHECK(vmaCreateBuffer(_db.gpu_allocator, &buffer_info, &alloc_create_info, &vk_handle, &allocation, nullptr), "Fail to create buffer");
+		}
 		const auto buffer_id = BufferID(_db.buffer_pool.create(Buffer{
 			.desc = desc,
 			.vk_handle = vk_handle,
@@ -1207,6 +1457,7 @@ namespace soul::gpu
 			runtime::ScopeAllocator<> scope_allocator("Buffer name");
 			CString buffer_name(&scope_allocator);
 			buffer_name.appendf("%s(f%d)", desc.name, _db.frame_counter);
+
 			const VkDebugUtilsObjectNameInfoEXT image_name_info = {
 				VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
 				nullptr,
@@ -1297,7 +1548,17 @@ namespace soul::gpu
 		return *_db.buffer_pool.get(buffer_id.id);
 	}
 
-	FrameContext &System::get_frame_context() {
+    GPUAddress System::get_gpu_address(BufferID buffer_id) const
+    {
+		const VkBufferDeviceAddressInfo addr_info = {
+			.sType = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO,
+			.buffer = get_buffer(buffer_id).vk_handle
+		};
+
+		return GPUAddress(vkGetBufferDeviceAddress(_db.device, &addr_info));
+    }
+
+    FrameContext &System::get_frame_context() {
 		return _db.frame_contexts[_db.current_frame % _db.frame_contexts.size()];
 	}
 
@@ -1591,15 +1852,18 @@ namespace soul::gpu
 			}
 		}
 
-		const auto total_source_size = std::accumulate(shader_sources.begin(), shader_sources.end(), 0, 
+		auto total_source_size = std::accumulate(shader_sources.begin(), shader_sources.end(), 0, 
 			[](const soul_size prev_size, const CString* source) -> soul_size
 		{
 				return prev_size + source->size();
 		});
 
 		CString full_source_string(&scope_allocator);
-		full_source_string.reserve(RESOURCE_HLSL_SIZE + total_source_size);
+		total_source_size += RESOURCE_HLSL_SIZE;
+		total_source_size += RESOURCE_RT_EXT_HLSL_SIZE;
+	    full_source_string.reserve(total_source_size);
 		full_source_string.appendf("%s", RESOURCE_HLSL);
+		full_source_string.appendf("%s", RESOURCE_RT_EXT_HLSL);
 		for (const auto* shader_source : shader_sources)
 		{
 			full_source_string.append(*shader_source);
@@ -1626,12 +1890,15 @@ namespace soul::gpu
 			arguments.push_back(L"-HV");
 			arguments.push_back(L"2021");
 			arguments.push_back(L"-spirv");
+			
 			// memory layout for resources
 			arguments.push_back(L"-fvk-use-dx-layout");
 			// Vulkan version
 			arguments.push_back(L"-fspv-target-env=vulkan1.3");
 			// useful extensions
-			arguments.push_back(L"-fspv-extension=SPV_EXT_descriptor_indexing");
+		    arguments.push_back(L"-fspv-extension=SPV_EXT_descriptor_indexing");
+			arguments.push_back(L"-fspv-extension=SPV_KHR_ray_tracing");
+			arguments.push_back(L"-fspv-extension=SPV_KHR_ray_query");
 
 			const auto entry_point_name_size = strlen(entry_point.name) + 1;
 			auto* entry_point_wide_chars = scope_allocator.allocate_array<wchar_t>(entry_point_name_size);
@@ -1646,11 +1913,15 @@ namespace soul::gpu
 				{ShaderStage::FRAGMENT, L"ps_6_5"},
 				{ShaderStage::COMPUTE, L"cs_6_5"},
 				{ShaderStage::GEOMETRY, L"gs_6_5"},
+				{ShaderStage::RAYGEN, L"lib_6_5"},
+				{ShaderStage::CLOSEST_HIT, L"lib_6_5"},
+				{ShaderStage::MISS, L"lib_6_5"}
 			};
 			arguments.push_back(L"-T");
 			arguments.push_back(target_profile_map[stage]);
 
 			arguments.push_back(L"-I");
+
 			std::vector<std::wstring> search_paths;
 		    for (soul_size search_path_idx = 0; search_path_idx < program_desc.search_path_count; search_path_idx++)
 			{
@@ -1718,7 +1989,173 @@ namespace soul::gpu
 		return _db.programs[program_id.id];
 	}
 
-	SamplerID System::request_sampler(const SamplerDesc &desc) {
+    ShaderTableID System::create_shader_table(const ShaderTableDesc& shader_table_desc)
+    {
+		runtime::ScopeAllocator<> scope_allocator("gpu::System::create_shader_table(const ShaderTableDesc&)");
+		const auto& program = get_program(shader_table_desc.program_id);
+		const auto id = ShaderTableID(_db.shader_table_pool.create());
+		auto& shader_table = get_shader_table(id);
+
+		SBOVector<VkRayTracingShaderGroupCreateInfoKHR> sh_group_infos;
+
+		const VkRayTracingShaderGroupCreateInfoKHR sh_raygen_group_create_info = {
+			.sType = VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_KHR,
+			.type = VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR,
+			.generalShader = shader_table_desc.raygen_group.entry_point,
+			.closestHitShader = VK_SHADER_UNUSED_KHR,
+			.anyHitShader = VK_SHADER_UNUSED_KHR,
+			.intersectionShader = VK_SHADER_UNUSED_KHR
+		};
+		sh_group_infos.push_back(sh_raygen_group_create_info);
+
+		for (uint32 miss_group_id = 0; miss_group_id < shader_table_desc.miss_group_count; miss_group_id++)
+		{
+			const VkRayTracingShaderGroupCreateInfoKHR sh_group_create_info = {
+				.sType = VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_KHR,
+				.type = VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR,
+				.generalShader = shader_table_desc.miss_groups[miss_group_id].entry_point,
+				.closestHitShader = VK_SHADER_UNUSED_KHR,
+				.anyHitShader = VK_SHADER_UNUSED_KHR,
+				.intersectionShader = VK_SHADER_UNUSED_KHR
+			};
+			sh_group_infos.push_back(sh_group_create_info);
+		}
+
+		for (uint32 hit_group_id = 0; hit_group_id < shader_table_desc.hit_group_count; hit_group_id++)
+		{
+			const VkRayTracingShaderGroupCreateInfoKHR sh_group_create_info = {
+				.sType = VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_KHR,
+				.type = VK_RAY_TRACING_SHADER_GROUP_TYPE_TRIANGLES_HIT_GROUP_KHR,
+				.generalShader = VK_SHADER_UNUSED_KHR,
+				.closestHitShader = shader_table_desc.hit_groups[hit_group_id].closest_hit_entry_point,
+				.anyHitShader = shader_table_desc.hit_groups[hit_group_id].any_hit_entry_point,
+				.intersectionShader = shader_table_desc.hit_groups[hit_group_id].intersection_entry_point
+			};
+			sh_group_infos.push_back(sh_group_create_info);
+		}
+
+		SBOVector<VkPipelineShaderStageCreateInfo> shader_stage_infos;
+		for (const auto& shader : program.shaders)
+		{
+			if (shader.vk_handle == VK_NULL_HANDLE) continue;
+			const VkPipelineShaderStageCreateInfo shader_stage_info = {
+				.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
+				.stage = vk_cast(shader.stage),
+				.module = shader.vk_handle,
+				.pName = shader.entry_point.data()
+			};
+			shader_stage_infos.push_back(shader_stage_info);
+		}
+
+		const VkRayTracingPipelineCreateInfoKHR rt_pipeline_create_info = {
+			.sType = VK_STRUCTURE_TYPE_RAY_TRACING_PIPELINE_CREATE_INFO_KHR,
+			.stageCount = soul::cast<uint32>(shader_stage_infos.size()),
+			.pStages = shader_stage_infos.data(),
+			.groupCount = soul::cast<uint32>(sh_group_infos.size()),
+			.pGroups = sh_group_infos.data(),
+			.maxPipelineRayRecursionDepth = shader_table_desc.max_recursion_depth,
+			.layout = get_bindless_pipeline_layout()
+		};
+		vkCreateRayTracingPipelinesKHR(_db.device, {}, {}, 1, &rt_pipeline_create_info, nullptr, &shader_table.pipeline);
+
+		if (shader_table_desc.name != nullptr)
+		{
+			CString pipeline_name_string(&scope_allocator);
+			pipeline_name_string.appendf("%s_pipeline(%d)", shader_table_desc.name, _db.frame_counter);
+			const VkDebugUtilsObjectNameInfoEXT pipeline_name_info = {
+				VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
+				nullptr,
+				VK_OBJECT_TYPE_PIPELINE,
+				reinterpret_cast<uint64>(shader_table.pipeline),
+				pipeline_name_string.data(),
+			};
+			vkSetDebugUtilsObjectNameEXT(_db.device, &pipeline_name_info);
+		}
+
+		const auto total_group_count = 1 + shader_table_desc.miss_group_count + shader_table_desc.hit_group_count;
+
+		const auto handle_size = _db.ray_tracing_properties.shaderGroupHandleSize;
+        const auto sbt_size = total_group_count * handle_size;
+		auto shader_handle_storage = scope_allocator.allocate_array<uint8>(sbt_size);
+
+		SOUL_VK_CHECK(vkGetRayTracingShaderGroupHandlesKHR(_db.device, shader_table.pipeline, 0, total_group_count, sbt_size, shader_handle_storage), "Fail to get ray tracing shader group handles");
+
+
+		const auto handle_size_aligned = util::align_up(handle_size, _db.ray_tracing_properties.shaderGroupHandleAlignment);
+		const auto handle_base_alignment = _db.ray_tracing_properties.shaderGroupBaseAlignment;
+
+		FlagMap<ShaderGroup, soul_size> group_counts;
+		group_counts[ShaderGroup::RAYGEN] = 1;
+		group_counts[ShaderGroup::MISS] = shader_table_desc.miss_group_count;
+		group_counts[ShaderGroup::HIT] = shader_table_desc.hit_group_count;
+		group_counts[ShaderGroup::CALLABLE] = 0;
+
+		FlagMap<ShaderGroup, soul_size> strides;
+
+		std::ranges::fill(strides, handle_size_aligned);
+		strides[ShaderGroup::RAYGEN] = util::align_up(handle_size_aligned, handle_base_alignment);
+
+		FlagMap<ShaderGroup, const char*> group_names = {
+			{ShaderGroup::RAYGEN, "raygen"},
+			{ShaderGroup::MISS, "miss"},
+			{ShaderGroup::HIT, "hit"},
+			{ShaderGroup::CALLABLE, "callable"}
+		};
+
+		soul_size current_storage_offset = 0;
+		for (auto shader_group : FlagIter<ShaderGroup>())
+		{
+			const auto buffer_size = group_counts[shader_group] * strides[shader_group];
+			if (buffer_size == 0) continue;
+		    auto records = scope_allocator.allocate_array<uint8>(buffer_size);
+			memcpy(records, shader_handle_storage + current_storage_offset, handle_size * group_counts[shader_group]);
+			current_storage_offset += handle_size * group_counts[shader_group];
+			
+			CString buffer_name(&scope_allocator);
+		    if (shader_table_desc.name != nullptr)
+			{
+				buffer_name.appendf("%s_%s", shader_table_desc.name, group_names[shader_group]);
+			}
+
+			const BufferDesc buffer_desc = {
+				.size = buffer_size,
+				.usage_flags = {BufferUsage::SHADER_BINDING_TABLE},
+				.queue_flags = { QueueType::COMPUTE },
+				.name = buffer_name.data()
+			};
+			shader_table.buffers[shader_group] = create_buffer(buffer_desc, records);
+			flush_buffer(shader_table.buffers[shader_group]);
+
+			shader_table.vk_regions[shader_group] = {
+			    .deviceAddress = get_gpu_address(shader_table.buffers[shader_group]).id,
+			    .stride = strides[shader_group],
+			    .size = buffer_size
+			};
+		}
+
+		return id;
+    }
+
+    void System::destroy_shader_table(ShaderTableID shader_table_id)
+    {
+		auto& shader_table = get_shader_table(shader_table_id);
+		auto& frame_context = get_frame_context();
+		frame_context.garbages.pipelines.push_back(shader_table.pipeline);
+		for (const auto buffer_id : shader_table.buffers) destroy_buffer(buffer_id);
+		_db.shader_table_pool.destroy(shader_table_id.id);
+    }
+
+    const impl::ShaderTable& System::get_shader_table(ShaderTableID shader_table_id) const
+    {
+		return *_db.shader_table_pool.get(shader_table_id.id);
+    }
+
+    impl::ShaderTable& System::get_shader_table(ShaderTableID shader_table_id)
+    {
+		return *_db.shader_table_pool.get(shader_table_id.id);
+    }
+
+    SamplerID System::request_sampler(const SamplerDesc &desc) {
 		const auto hash_key = util::hash_fnv1(&desc);
 		if (_db.sampler_map.isExist(hash_key)) return _db.sampler_map[hash_key];
 
@@ -1964,7 +2401,146 @@ namespace soul::gpu
 		};
 	}
 
-	void CommandQueue::init(VkDevice inDevice, uint32 inFamilyIndex, uint32 queue_index)
+    VkAccelerationStructureBuildSizesInfoKHR System::get_as_build_size_info(const TlasBuildDesc& build_desc)
+    {
+		const VkAccelerationStructureGeometryInstancesDataKHR as_instance = {
+			.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_INSTANCES_DATA_KHR,
+			.data = {}
+		};
+
+		const VkAccelerationStructureGeometryKHR as_geometry = {
+			.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR,
+			.geometryType = VK_GEOMETRY_TYPE_INSTANCES_KHR,
+			.geometry = {
+				.instances = as_instance
+			}
+		};
+
+		const VkAccelerationStructureBuildGeometryInfoKHR build_info = {
+			.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR,
+			.type = VK_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL_KHR,
+			.flags = vk_cast(build_desc.build_flags),
+			.mode = VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR,
+			.geometryCount = 1,
+			.pGeometries = &as_geometry
+		};
+
+		VkAccelerationStructureBuildSizesInfoKHR size_info =
+		{
+			.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_SIZES_INFO_KHR
+		};
+		vkGetAccelerationStructureBuildSizesKHR(_db.device, VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR, &build_info,
+			&build_desc.instance_count, &size_info);
+
+		return size_info;
+    }
+
+    VkAccelerationStructureBuildSizesInfoKHR System::get_as_build_size_info(const BlasBuildDesc& build_desc)
+    {
+
+		Vector<VkAccelerationStructureGeometryKHR> as_geometries(build_desc.geometry_count);
+		std::ranges::transform(build_desc.geometry_descs, build_desc.geometry_descs + build_desc.geometry_count, as_geometries.begin(),
+			[](const RTGeometryDesc& geometry_desc) -> VkAccelerationStructureGeometryKHR
+			{
+				const auto geometry_data = [](const RTGeometryDesc& desc)-> VkAccelerationStructureGeometryDataKHR
+				{
+					if (desc.type == RTGeometryType::TRIANGLE)
+					{
+						const auto& triangle_desc = desc.content.triangles;
+						return {
+							.triangles = {
+								.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_TRIANGLES_DATA_KHR,
+								.vertexFormat = vk_cast(triangle_desc.vertex_format),
+								.vertexStride = triangle_desc.vertex_stride,
+								.maxVertex = triangle_desc.vertex_count,
+								.indexType = vk_cast(triangle_desc.index_type),
+							}
+						};
+					}
+					SOUL_ASSERT(0, desc.type == RTGeometryType::AABB, "");
+					const auto& aabb_desc = desc.content.aabbs;
+					return {
+						.aabbs = {
+							.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_AABBS_DATA_KHR,
+							.stride = aabb_desc.stride
+						}
+					};
+				}(geometry_desc);
+
+				return {
+					.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR,
+					.geometryType = vk_cast(geometry_desc.type),
+					.geometry = geometry_data,
+					.flags = vk_cast(geometry_desc.flags)
+				};
+			});
+
+		const VkAccelerationStructureBuildGeometryInfoKHR build_info = {
+			.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR,
+			.type = VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR,
+			.flags = vk_cast(build_desc.flags),
+			.mode = VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR,
+			.geometryCount = soul::cast<uint32>(as_geometries.size()),
+			.pGeometries = as_geometries.data()
+		};
+
+		Vector<uint32> max_primitives_counts(build_desc.geometry_count);
+		std::transform(build_desc.geometry_descs, build_desc.geometry_descs + build_desc.geometry_count, max_primitives_counts.begin(),
+			[](const RTGeometryDesc& desc)->uint32
+			{
+				if (desc.type == RTGeometryType::TRIANGLE)
+					return desc.content.triangles.index_count / 3;
+				SOUL_ASSERT(0, desc.type == RTGeometryType::AABB, "");
+				return desc.content.aabbs.count;
+			});
+
+		VkAccelerationStructureBuildSizesInfoKHR size_info = {
+			.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_SIZES_INFO_KHR
+		};
+		vkGetAccelerationStructureBuildSizesKHR(_db.device, VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR,
+			&build_info, max_primitives_counts.data(), &size_info);
+		return size_info;
+    }
+
+    VkAccelerationStructureBuildSizesInfoKHR System::get_as_build_size_info(
+        const VkAccelerationStructureBuildGeometryInfoKHR& build_info, const uint32* max_primitives_counts)
+    {
+		VkAccelerationStructureBuildSizesInfoKHR size_info = {
+			.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_SIZES_INFO_KHR
+		};
+		vkGetAccelerationStructureBuildSizesKHR(_db.device, VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR,
+			&build_info, max_primitives_counts, &size_info);
+		return size_info;
+    }
+
+    void System::add_to_blas_group(BlasID blas_id, BlasGroupID blas_group_id)
+    {
+		SOUL_ASSERT_MAIN_THREAD();
+		auto& blas = get_blas(blas_id);
+		auto& blas_group = get_blas_group(blas_group_id);
+		blas.group_data = {
+			.group_id = blas_group_id,
+			.index = blas_group.blas_list.add(blas_id)
+		};
+    }
+
+    void System::remove_from_blas_group(BlasID blas_id)
+    {
+		SOUL_ASSERT_MAIN_THREAD();
+		auto& blas = get_blas(blas_id);
+		auto& blas_group = get_blas_group(blas.group_data.group_id);
+		auto& blas_list = blas_group.blas_list;
+		if (blas_list.back() != blas_id)
+		{
+			auto& last_blas = get_blas(blas_list.back());
+			last_blas.group_data.index = blas.group_data.index;
+		    blas_list[blas.group_data.index] = blas_list.back();
+		}
+		blas.group_data.group_id = BlasGroupID::null();
+		blas_list.pop_back();
+    }
+
+    void CommandQueue::init(VkDevice inDevice, uint32 inFamilyIndex, uint32 queue_index)
 	{
 		device_ = inDevice;
 		family_index_ = inFamilyIndex;
@@ -2125,11 +2701,20 @@ namespace soul::gpu
 		execution.init();
 		get_frame_context().gpu_resource_initializer.flush(_db.queues, *this);
 		get_frame_context().gpu_resource_finalizer.flush(get_frame_context().command_pools, _db.queues, *this);
-		execution.run();
+	    execution.run();
 		execution.cleanup();
 	}
 
-	void System::flush_frame() {
+    void System::flush()
+    {
+		for (auto& queue : _db.queues)
+		{
+			queue.flush();
+		}
+		vkDeviceWaitIdle(_db.device);
+    }
+
+    void System::flush_frame() {
 		SOUL_ASSERT_MAIN_THREAD();
 		SOUL_PROFILE_ZONE();
 		end_frame();
@@ -2206,6 +2791,24 @@ namespace soul::gpu
 				_db.buffer_pool.destroy(buffer_id.id);
 			}
 			garbages.buffers.resize(0);
+		}
+
+		{
+			SOUL_PROFILE_ZONE_WITH_NAME("Destroy acceleration structures");
+			for (const auto as_vk_handle : garbages.as_vk_handles)
+			{
+				vkDestroyAccelerationStructureKHR(_db.device, as_vk_handle, nullptr);
+			}
+			garbages.as_vk_handles.clear();
+		}
+
+		{
+			SOUL_PROFILE_ZONE_WITH_NAME("Destroy as descriptors");
+			for (const auto as_descriptor_id : garbages.as_descriptors)
+			{
+				_db.descriptor_allocator.destroy_as_descriptor(as_descriptor_id);
+			}
+			garbages.as_descriptors.clear();
 		}
 
 		{
@@ -2320,7 +2923,6 @@ namespace soul::gpu
 		}
 
 		frame_context.frame_end_semaphore = _db.queues[QueueType::GRAPHIC].get_timeline_semaphore();
-
 		_db.frame_counter++;
 	}
 
@@ -2445,6 +3047,11 @@ namespace soul::gpu
 	{
 		return sampler_id.descriptorID;
 	}
+
+    DescriptorID System::get_as_descriptor_id(TlasID tlas_id) const
+    {
+		return get_tlas(tlas_id).descriptor_id;
+    }
 
 	void SecondaryCommandBuffer::end()
 	{
@@ -2759,7 +3366,7 @@ namespace soul::gpu
 			{ PipelineStage::TRANSFER }, { AccessType::TRANSFER_WRITE });
 	}
 
-	void GPUResourceInitializer::clear(Texture& texture, ClearValue clear_value)
+    void GPUResourceInitializer::clear(Texture& texture, ClearValue clear_value)
 	{
 		const VkImageMemoryBarrier barrier = {
 			.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
@@ -3115,5 +3722,18 @@ namespace soul::gpu
 			context.sync_dst_queues_ = FlagMap<QueueType, QueueFlags>(QueueFlags());
 		}
 	}
-	
+
+	RTInstanceDesc::RTInstanceDesc(const mat4f in_transform, 
+		const uint32 instance_id, const uint32 instance_mask,
+        const uint32 sbt_offset,
+        const RTGeometryInstanceFlags flags, const GPUAddress blas_gpu_address) :
+        instance_id(instance_id),
+        instance_mask(instance_mask),
+        sbt_offset(sbt_offset),
+        flags(flags.to_uint32()),
+	    blas_gpu_address(blas_gpu_address)
+	{
+		const auto vk_transform = math::transpose(in_transform);
+		std::memcpy(transform, &vk_transform, sizeof(transform));
+	}
 }

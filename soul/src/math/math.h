@@ -61,6 +61,12 @@ namespace soul::math
         return mat4f(glm::inverse(mat.mat));
     }
 
+    template <soul_size Row, soul_size Column, typename T>
+    SOUL_ALWAYS_INLINE matrix<Row, Column, T> transpose(const matrix<Row, Column, T>& mat)
+    {
+        return mat4f(glm::transpose(mat.mat));
+    }
+
     template <typename T>
     T radians(T degrees)
     {
@@ -85,4 +91,25 @@ namespace soul::math
         return glm::dot(x, y);
     }
 
+    template <typename T>
+    SOUL_ALWAYS_INLINE T min(T x, T y)
+    {
+        return glm::min(x, y);
+    }
+
+    template <typename T>
+    SOUL_ALWAYS_INLINE T max(T x, T y)
+    {
+        return glm::max(x, y);
+    }
+
+    SOUL_ALWAYS_INLINE AABB combine(const AABB aabb, const vec3f point)
+    {
+        return { min(aabb.min, point), max(aabb.max, point) };
+    }
+
+    SOUL_ALWAYS_INLINE AABB combine(const AABB x, const AABB y)
+    {
+        return { min(x.min, y.min), max(x.max, y.max) };
+    }
 }

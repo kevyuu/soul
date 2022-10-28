@@ -2,6 +2,7 @@
 
 #include "runtime/scope_allocator.h"
 
+#include "gpu/intern/common.h"
 #include "gpu/intern/enum_mapping.h"
 #include "gpu/intern/render_compiler.h"
 #include "gpu/system.h"
@@ -243,17 +244,241 @@ namespace soul::gpu::impl
 		vkCmdDispatch(command_buffer_, command.group_count.x, command.group_count.y, command.group_count.z);
 	}
 
-	void RenderCompiler::apply_pipeline_state(PipelineStateID pipeline_state_id) {
+    void RenderCompiler::compile_command(const RenderCommandRayTrace& command)
+    {
+		SOUL_PROFILE_ZONE();
+		apply_push_constant(command.push_constant_data, command.push_constant_size);
+		const auto& shader_table = gpu_system_.get_shader_table(command.shader_table_id);
+	    apply_pipeline_state(shader_table.pipeline, VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR);
+		vkCmdTraceRaysKHR(command_buffer_,
+			&shader_table.vk_regions[ShaderGroup::RAYGEN],
+			&shader_table.vk_regions[ShaderGroup::MISS],
+			&shader_table.vk_regions[ShaderGroup::HIT],
+			&shader_table.vk_regions[ShaderGroup::CALLABLE],
+			command.dimension.x,
+			command.dimension.y,
+			command.dimension.z
+		);
+    }
+
+    void RenderCompiler::compile_command(const RenderCommandBuildTlas& command)
+    {
+		const auto& tlas = gpu_system_.get_tlas(command.tlas_id);
+		const auto& build_desc = command.build_desc;
+
+		const auto size_info = gpu_system_.get_as_build_size_info(command.build_desc);
+
+        const BufferDesc scratch_buffer_desc = {
+		    .size = size_info.buildScratchSize,
+		    .usage_flags = { BufferUsage::AS_SCRATCH_BUFFER },
+		    .queue_flags = { QueueType::COMPUTE },
+		    .memory_option = MemoryOption{
+				.required = { MemoryProperty::DEVICE_LOCAL }
+		    }
+		};
+		const auto scratch_buffer_id = gpu_system_.create_transient_buffer(scratch_buffer_desc);
+		const auto scratch_buffer_address = gpu_system_.get_gpu_address(scratch_buffer_id);
+
+		const VkAccelerationStructureGeometryInstancesDataKHR as_instance = {
+			.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_INSTANCES_DATA_KHR,
+			.data = {
+				.deviceAddress = build_desc.instance_data.id
+			}
+		};
+
+		const VkAccelerationStructureGeometryKHR as_geometry = {
+			.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR,
+			.geometryType = VK_GEOMETRY_TYPE_INSTANCES_KHR,
+			.geometry = {
+				.instances = as_instance
+			},
+			.flags = vk_cast(build_desc.geometry_flags)
+		};
+
+		const VkAccelerationStructureBuildGeometryInfoKHR build_info = {
+			.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR,
+			.type = VK_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL_KHR,
+			.flags = vk_cast(build_desc.build_flags),
+			.mode = VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR,
+			.dstAccelerationStructure = tlas.vk_handle,
+			.geometryCount = 1,
+			.pGeometries = &as_geometry,
+			.scratchData = {
+				.deviceAddress = scratch_buffer_address.id
+			}
+		};
+		const VkAccelerationStructureBuildRangeInfoKHR  build_offset_info{ build_desc.instance_count, build_desc.instance_offset, 0, 0 };
+		const VkAccelerationStructureBuildRangeInfoKHR* p_build_offset_info = &build_offset_info;
+		vkCmdBuildAccelerationStructuresKHR(command_buffer_, 1, &build_info, &p_build_offset_info);
+    }
+
+    void RenderCompiler::compile_command(const RenderCommandBuildBlas& command)
+    {
+		runtime::ScopeAllocator<> scope_allocator("compile_command(const RenderCommandBuildBlas&)");
+
+		const auto& dst_blas = gpu_system_.get_blas(command.dst_blas_id);
+		const auto& build_desc = command.build_desc;
+
+		Vector<VkAccelerationStructureGeometryKHR> as_geometries(build_desc.geometry_count, scope_allocator);
+		auto build_info = compute_as_geometry_info(build_desc, command.build_mode, as_geometries.data());
+
+		Vector<uint32> max_primitives_counts(build_desc.geometry_count, scope_allocator);
+		compute_max_primitives_counts(build_desc, max_primitives_counts.data());
+
+		const auto size_info = gpu_system_.get_as_build_size_info(build_info, max_primitives_counts.data());
+		const char* as_scratch_buffer_name = nullptr;
+		if (dst_blas.desc.name != nullptr)
+		{
+			CString as_scratch_buffer_name_string(&scope_allocator);
+			as_scratch_buffer_name_string.appendf("%s_scratch_buffer", dst_blas.desc.name);
+			as_scratch_buffer_name = as_scratch_buffer_name_string.data();
+		}
+
+		const BufferDesc scratch_buffer_desc = {
+			.size = size_info.buildScratchSize,
+			.usage_flags = { BufferUsage::AS_SCRATCH_BUFFER },
+			.queue_flags = { QueueType::COMPUTE },
+			.memory_option = MemoryOption{
+				.required = { MemoryProperty::DEVICE_LOCAL }
+			},
+			.name = as_scratch_buffer_name
+		};
+		const auto scratch_buffer_id = gpu_system_.create_transient_buffer(scratch_buffer_desc);
+		const auto scratch_buffer_address = gpu_system_.get_gpu_address(scratch_buffer_id);
+
+		if (command.src_blas_id.is_valid())
+		{
+			const auto& src_blas = gpu_system_.get_blas(command.src_blas_id);
+			build_info.srcAccelerationStructure = src_blas.vk_handle;
+		}
+		build_info.dstAccelerationStructure = dst_blas.vk_handle;
+		build_info.scratchData.deviceAddress = scratch_buffer_address.id;
+		Vector<VkAccelerationStructureBuildRangeInfoKHR> build_ranges(build_desc.geometry_count, scope_allocator);
+		std::ranges::transform(max_primitives_counts, build_ranges.begin(),
+			[](uint32 count) -> VkAccelerationStructureBuildRangeInfoKHR
+			{
+				return {
+				   .primitiveCount = count
+				};
+			});
+		const VkAccelerationStructureBuildRangeInfoKHR* build_range_info = build_ranges.data();
+		vkCmdBuildAccelerationStructuresKHR(command_buffer_, 1, &build_info, &build_range_info);
+
+    }
+
+    void RenderCompiler::compile_command(const RenderCommandBatchBuildBlas& command)
+    {
+		runtime::ScopeAllocator<> scope_allocator("compile_command(const RenderCommandBatchBuildBlas&)");
+		Vector<VkAccelerationStructureBuildGeometryInfoKHR> build_infos(&scope_allocator);
+		build_infos.reserve(command.build_count);
+
+		using ASGeometryList = SBOVector<VkAccelerationStructureGeometryKHR, 1>;
+		Vector<ASGeometryList> as_geometry_list_vec(&scope_allocator);
+		as_geometry_list_vec.reserve(command.build_count);
+
+        Vector<VkAccelerationStructureBuildRangeInfoKHR*> build_range_list_vec(&scope_allocator);
+		build_range_list_vec.reserve(command.build_count);
+
+		Vector<soul_size> build_scratch_sizes(&scope_allocator);
+		build_scratch_sizes.reserve(command.build_count);
+
+		auto total_size = 0u;
+		for (const auto& blas_build : std::span(command.builds, command.build_count))
+		{
+			const auto& build_desc = blas_build.build_desc;
+			as_geometry_list_vec.push_back(ASGeometryList(build_desc.geometry_count, scope_allocator));
+			auto build_info = compute_as_geometry_info(build_desc, blas_build.build_mode, as_geometry_list_vec.back().data());
+
+			Vector<uint32> max_primitives_counts(build_desc.geometry_count, scope_allocator);
+			compute_max_primitives_counts(build_desc, max_primitives_counts.data());
+
+			const auto& dst_blas = gpu_system_.get_blas(blas_build.dst_blas_id);
+			if (blas_build.src_blas_id.is_valid())
+			{
+				const auto& src_blas = gpu_system_.get_blas(blas_build.src_blas_id);
+				build_info.srcAccelerationStructure = src_blas.vk_handle;
+			}
+			build_info.dstAccelerationStructure = dst_blas.vk_handle;
+			build_infos.push_back(build_info);
+
+			build_range_list_vec.push_back(scope_allocator.allocate_array<VkAccelerationStructureBuildRangeInfoKHR>(build_desc.geometry_count));
+			std::ranges::transform(max_primitives_counts, build_range_list_vec.back(),
+				[](uint32 count) -> VkAccelerationStructureBuildRangeInfoKHR
+				{
+					return {
+					   .primitiveCount = count
+					};
+				});
+
+			const auto size_info = gpu_system_.get_as_build_size_info(build_info, max_primitives_counts.data());
+			const auto scratch_size = blas_build.build_mode == RTBuildMode::REBUILD ? size_info.buildScratchSize : size_info.updateScratchSize;
+			build_scratch_sizes.push_back(scratch_size);
+			SOUL_LOG_INFO("Scratch size = %d", scratch_size);
+			total_size += scratch_size;
+		}
+
+		const auto scratch_buffer_size = std::min<soul_size>(command.max_build_memory_size, total_size);
+		const BufferDesc scratch_buffer_desc = {
+	        .size = scratch_buffer_size,
+	        .usage_flags = { BufferUsage::AS_SCRATCH_BUFFER },
+	        .queue_flags = { QueueType::COMPUTE },
+	        .memory_option = MemoryOption{
+		        .required = { MemoryProperty::DEVICE_LOCAL }
+	        },
+	        .name = "Batch blas scratch buffer"
+		};
+		const auto scratch_buffer = gpu_system_.create_transient_buffer(scratch_buffer_desc);
+		const auto scratch_buffer_addr = gpu_system_.get_gpu_address(scratch_buffer).id;
+
+		uint32 current_build_base_idx = 0;
+		uint32 current_build_count = 0;
+		soul_size current_build_scratch_size = 0;
+
+		for (uint32 build_idx = 0; build_idx < command.build_count; build_idx++)
+		{
+			auto current_scratch_size = build_scratch_sizes[build_idx];
+			if (current_build_scratch_size + current_scratch_size > command.max_build_memory_size)
+			{
+				vkCmdBuildAccelerationStructuresKHR(command_buffer_,
+					current_build_count,
+					build_infos.data() + current_build_base_idx,
+					build_range_list_vec.data() + current_build_base_idx);
+				current_build_count = 0;
+				current_build_base_idx = build_idx;
+				current_build_scratch_size = 0;
+			}
+			build_infos[build_idx].scratchData.deviceAddress = scratch_buffer_addr + current_build_scratch_size;
+			current_build_count++;
+			current_build_scratch_size += current_scratch_size;
+		}
+
+		if (current_build_count != 0)
+		{
+			vkCmdBuildAccelerationStructuresKHR(command_buffer_,
+				current_build_count,
+				build_infos.data() + current_build_base_idx,
+				build_range_list_vec.data() + current_build_base_idx);
+		}
+
+    }
+
+    void RenderCompiler::apply_pipeline_state(PipelineStateID pipeline_state_id) {
 		SOUL_PROFILE_ZONE();
 		SOUL_ASSERT(0, pipeline_state_id.is_valid(), "");
 		const PipelineState& pipeline_state = gpu_system_.get_pipeline_state(pipeline_state_id);
-		if (pipeline_state.vk_handle != current_pipeline_) {
-			vkCmdBindPipeline(command_buffer_, pipeline_state.bind_point, pipeline_state.vk_handle);
-			current_pipeline_ = pipeline_state.vk_handle;
-		}
+		apply_pipeline_state(pipeline_state.vk_handle, pipeline_state.bind_point);
 	}
 
-	void RenderCompiler::apply_push_constant(void* push_constant_data, uint32 push_constant_size)
+    void RenderCompiler::apply_pipeline_state(VkPipeline pipeline, VkPipelineBindPoint pipeline_bind_point)
+    {
+		if (pipeline != current_pipeline_)
+		{
+			vkCmdBindPipeline(command_buffer_, pipeline_bind_point, pipeline);
+			current_pipeline_ = pipeline;
+		}
+    }
+
+    void RenderCompiler::apply_push_constant(void* push_constant_data, uint32 push_constant_size)
 	{
 		if (push_constant_data == nullptr) return;
 		SOUL_PROFILE_ZONE();

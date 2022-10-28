@@ -14,6 +14,10 @@ namespace soul::gpu
 	struct RenderCommandUpdateBuffer;
 	struct RenderCommandCopyBuffer;
 	struct RenderCommandDispatch;
+	struct RenderCommandBuildBlas;
+	struct RenderCommandBatchBuildBlas;
+	struct RenderCommandBuildTlas;
+	struct RenderCommandRayTrace;
 
 	namespace impl
 	{
@@ -25,7 +29,7 @@ namespace soul::gpu::impl
 {
 	class RenderCompiler {
 	public:
-		constexpr RenderCompiler(System& gpu_system, const VkCommandBuffer command_buffer) :
+		constexpr RenderCompiler(System& gpu_system, VkCommandBuffer command_buffer) :
 			gpu_system_(gpu_system), command_buffer_(command_buffer),
 			current_pipeline_(VK_NULL_HANDLE) {}
 
@@ -42,9 +46,14 @@ namespace soul::gpu::impl
 		void compile_command(const RenderCommandUpdateBuffer& command);
 		void compile_command(const RenderCommandCopyBuffer& command);
 		void compile_command(const RenderCommandDispatch& command);
+		void compile_command(const RenderCommandBuildBlas& command);
+		void compile_command(const RenderCommandBatchBuildBlas& command);
+		void compile_command(const RenderCommandBuildTlas& command);
+		void compile_command(const RenderCommandRayTrace& command);
 
 	private:
 		void apply_pipeline_state(PipelineStateID pipeline_state_id);
+		void apply_pipeline_state(VkPipeline pipeline, VkPipelineBindPoint pipeline_bind_point);
 		void apply_push_constant(void* push_constant_data, uint32 push_constant_size);
 
 		System& gpu_system_;

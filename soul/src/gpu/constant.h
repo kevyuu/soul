@@ -23,10 +23,11 @@ namespace soul::gpu
 	constexpr uint32 MAX_VERTEX_BINDING = 16;
 
 	constexpr uint32 PUSH_CONSTANT_SIZE = 256;
-	constexpr uint32 BINDLESS_SET_COUNT = 4;
+	constexpr uint32 BINDLESS_SET_COUNT = 5;
 	constexpr uint32 STORAGE_BUFFER_DESCRIPTOR_SET_INDEX = 0;
 	constexpr uint32 SAMPLER_DESCRIPTOR_SET_INDEX = 1;
 	constexpr uint32 SAMPLED_IMAGE_DESCRIPTOR_SET_INDEX = 2;
 	constexpr uint32 STORAGE_IMAGE_DESCRIPTOR_SET_INDEX = 3;
+	constexpr uint32 AS_DESCRIPTOR_SET_INDEX = 4;
 
 }

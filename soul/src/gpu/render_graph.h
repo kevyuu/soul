@@ -45,10 +45,14 @@ namespace soul::gpu
 		using RGTextureID = RGResourceID;
 		constexpr RGTextureID RG_TEXTURE_ID_NULL = RG_RESOURCE_ID_NULL;
 
+		using RGTlasID = RGResourceID;
+		constexpr RGTlasID RG_TLAS_ID_NULL = RG_RESOURCE_ID_NULL;
+
 		struct RGInternalTexture;
 		struct RGExternalTexture;
 		struct RGInternalBuffer;
 		struct RGExternalBuffer;
+		struct RGExternalTlas;
 		class RenderGraphExecution;
 	}
 
@@ -72,6 +76,9 @@ namespace soul::gpu
 	template <typename Func, typename Data>
 	concept compute_pass_setup = pass_setup<Func, Data, PIPELINE_FLAGS_COMPUTE>;
 
+	template <typename Func, typename Data>
+	concept ray_tracing_pass_setup = pass_setup < Func, Data, PIPELINE_FLAGS_RAY_TRACING>;
+
 	
 	template <typename Func, typename Data, PipelineFlags pipeline_flags>
 	concept pass_executable = std::invocable<Func, const Data&, gpu::RenderGraphRegistry&, CommandList<pipeline_flags>&> &&
@@ -86,6 +93,9 @@ namespace soul::gpu
 	template <typename Func, typename Data>
 	concept compute_pass_executable = pass_executable <Func, Data, PIPELINE_FLAGS_COMPUTE>;
 
+	template <typename Func, typename Data>
+	concept ray_tracing_pass_executable = pass_executable <Func, Data, PIPELINE_FLAGS_RAY_TRACING>;
+
 	//ID
 	using PassNodeID = ID<PassBaseNode, uint16>;
 	using ResourceNodeID = ID<impl::ResourceNode, uint16>;
@@ -94,6 +104,9 @@ namespace soul::gpu
 	{
 	    BUFFER,
 		TEXTURE,
+		TLAS,
+		BLAS_GROUP,
+		USER_RESOURCE,
 		COUNT
 	};
 
@@ -109,6 +122,9 @@ namespace soul::gpu
 	};
 	using BufferNodeID = TypedResourceNodeID<RGResourceType::BUFFER>;
 	using TextureNodeID = TypedResourceNodeID<RGResourceType::TEXTURE>;
+	using TlasNodeID = TypedResourceNodeID<RGResourceType::TLAS>;
+	using BlasGroupNodeID = TypedResourceNodeID<RGResourceType::BLAS_GROUP>;
+	using UserResourceNodeID = TypedResourceNodeID<RGResourceType::USER_RESOURCE>;
 
 	struct RGTextureDesc
 	{
@@ -258,6 +274,18 @@ namespace soul::gpu
 		SubresourceIndexRange view_range;
 	};
 
+	struct ShaderTlasReadAccess
+	{
+		TlasNodeID node_id;
+		ShaderStageFlags stage_flags;
+	};
+
+	struct ShaderBlasGroupReadAccess
+	{
+		BlasGroupNodeID node_id;
+		ShaderStageFlags stage_flags;
+	};
+
 	template <typename AttachmentDesc>
 	struct AttachmentAccess
 	{
@@ -300,6 +328,88 @@ namespace soul::gpu
 		TextureNodeID output_node_id;
 		SubresourceIndexRange view_range;
 	};
+
+	struct AsBuildDstTlasAccess
+	{
+		TlasNodeID input_node_id;
+		TlasNodeID output_node_id;
+	};
+
+	struct AsBuildDstBlasGroupAccess
+	{
+		BlasGroupNodeID input_node_id;
+		BlasGroupNodeID output_node_id;
+	};
+
+	namespace impl
+	{
+		struct RGInternalTexture
+		{
+			const char* name = nullptr;
+			TextureType type = TextureType::D2;
+			TextureFormat format = TextureFormat::COUNT;
+			vec3ui32 extent = {};
+			uint32 mip_levels = 1;
+			uint16 layer_count = 1;
+			TextureSampleCount sample_count = TextureSampleCount::COUNT_1;
+			bool clear = false;
+			ClearValue clear_value = {};
+
+			[[nodiscard]] soul_size get_view_count() const
+			{
+				return soul::cast<uint64>(mip_levels) * layer_count;
+			}
+		};
+
+		struct RGExternalTexture
+		{
+			const char* name = nullptr;
+			TextureID texture_id;
+			bool clear = false;
+			ClearValue clear_value = {};
+		};
+
+		struct RGInternalBuffer
+		{
+			const char* name = nullptr;
+			soul_size size = 0;
+			bool clear = false;
+		};
+
+		struct RGExternalBuffer
+		{
+			const char* name = nullptr;
+			BufferID buffer_id;
+			bool clear = false;
+		};
+
+		struct RGExternalTlas
+		{
+			const char* name = nullptr;
+			TlasID tlas_id;
+		};
+
+		struct RGExternalBlasGroup
+		{
+			const char* name = nullptr;
+			BlasGroupID blas_group_id;
+		};
+
+		struct ResourceNode
+		{
+			RGResourceType resource_type;
+			impl::RGResourceID resource_id;
+			PassNodeID creator;
+			PassNodeID writer;
+			ResourceNodeID write_target_node;
+			Vector<PassNodeID> readers;
+
+			ResourceNode(RGResourceType resource_type, impl::RGResourceID resource_id) : resource_type(resource_type), resource_id(resource_id) {}
+			ResourceNode(RGResourceType resource_type, impl::RGResourceID resource_id, PassNodeID creator) :
+				resource_type(resource_type), resource_id(resource_id), creator(creator) {}
+		};
+
+	}
 
 	struct RGRenderTargetDesc
 	{
@@ -349,6 +459,8 @@ namespace soul::gpu
 			ShaderTextureReadUsage usage_type, SubresourceIndexRange view = SubresourceIndexRange());
 		TextureNodeID add_shader_texture(TextureNodeID node_id, ShaderStageFlags stage_flags,
 			ShaderTextureWriteUsage usage_type, SubresourceIndexRange view = SubresourceIndexRange());
+		TlasNodeID add_shader_tlas(TlasNodeID node_id, ShaderStageFlags stage_flags);
+		BlasGroupNodeID add_shader_blas_group(BlasGroupNodeID node_id, ShaderStageFlags stage_flags);
 		BufferNodeID add_vertex_buffer(BufferNodeID node_id);
 		BufferNodeID add_index_buffer(BufferNodeID node_id);
 
@@ -356,6 +468,11 @@ namespace soul::gpu
 		BufferNodeID add_dst_buffer(BufferNodeID node_id, TransferDataSource data_source = TransferDataSource::GPU);
 		TextureNodeID add_src_texture(TextureNodeID node_id);
 		TextureNodeID add_dst_texture(TextureNodeID node_id, TransferDataSource data_source = TransferDataSource::GPU);
+
+		BufferNodeID add_as_build_input(BufferNodeID node_id);
+		BlasGroupNodeID add_as_build_input(BlasGroupNodeID node_id);
+	    TlasNodeID add_as_build_dst(TlasNodeID node_id);
+		BlasGroupNodeID add_as_build_dst(BlasGroupNodeID node_id);
 
 		void set_render_target(const RGRenderTargetDesc& render_target_desc);
 
@@ -387,12 +504,17 @@ namespace soul::gpu
 		[[nodiscard]] std::span<const ShaderBufferWriteAccess> get_buffer_write_accesses() const { return shader_buffer_write_accesses_; }
 		[[nodiscard]] std::span<const ShaderTextureReadAccess> get_texture_read_accesses() const { return shader_texture_read_accesses_; }
 		[[nodiscard]] std::span<const ShaderTextureWriteAccess> get_texture_write_accesses() const { return shader_texture_write_accesses_; }
-		[[nodiscard]] std::span<const TransferSrcBufferAccess> get_source_buffers() const { return source_buffers_; }
+		[[nodiscard]] std::span<const ShaderTlasReadAccess> get_shader_tlas_read_accesses() const { return shader_tlas_read_accesses_; }
+		[[nodiscard]] std::span<const ShaderBlasGroupReadAccess> get_shader_blas_group_read_accesses() const { return shader_blas_group_read_accesses_; }
+	    [[nodiscard]] std::span<const TransferSrcBufferAccess> get_source_buffers() const { return source_buffers_; }
 		[[nodiscard]] std::span<const TransferDstBufferAccess> get_destination_buffers() const { return destination_buffers_; }
 		[[nodiscard]] std::span<const TransferSrcTextureAccess> get_source_textures() const { return source_textures_; }
 		[[nodiscard]] std::span<const TransferDstTextureAccess> get_destination_textures() const { return destination_textures_; }
-
-		[[nodiscard]] const RGRenderTarget& get_render_target() const { return render_target_; }
+		[[nodiscard]] std::span<const BufferNodeID> get_as_build_input_buffers() const { return as_build_input_buffers_; }
+		[[nodiscard]] std::span<const BlasGroupNodeID> get_as_build_input_blas_groups() const { return as_build_input_blas_groups_; }
+	    [[nodiscard]] std::span<const AsBuildDstTlasAccess> get_as_build_destination_tlas_list() const { return as_build_dst_tlas_list_; }
+		[[nodiscard]] std::span<const AsBuildDstBlasGroupAccess> get_as_build_destination_blas_group_list() const { return as_build_dst_blas_group_list_;  }
+	    [[nodiscard]] const RGRenderTarget& get_render_target() const { return render_target_; }
 		[[nodiscard]] TextureNodeID get_color_attachment_node_id() const { return render_target_.color_attachments[0].out_node_id; }
 
 	protected:
@@ -414,10 +536,17 @@ namespace soul::gpu
 		Vector<TransferSrcTextureAccess> source_textures_;
 		Vector<TransferDstTextureAccess> destination_textures_;
 
+		Vector<BufferNodeID> as_build_input_buffers_;
+		Vector<BlasGroupNodeID> as_build_input_blas_groups_;
+		Vector<AsBuildDstTlasAccess> as_build_dst_tlas_list_;
+		Vector<AsBuildDstBlasGroupAccess> as_build_dst_blas_group_list_;
+
 		Vector<ShaderBufferReadAccess> shader_buffer_read_accesses_;
 		Vector<ShaderBufferWriteAccess> shader_buffer_write_accesses_;
 		Vector<ShaderTextureReadAccess> shader_texture_read_accesses_;
 		Vector<ShaderTextureWriteAccess> shader_texture_write_accesses_;
+		Vector<ShaderTlasReadAccess> shader_tlas_read_accesses_;
+		Vector<ShaderBlasGroupReadAccess> shader_blas_group_read_accesses_;
 		Vector<BufferNodeID> vertex_buffers_;
 		Vector<BufferNodeID> index_buffers_;
 
@@ -542,6 +671,20 @@ namespace soul::gpu
 			return add_pass<Parameter, PIPELINE_FLAGS_NON_SHADER>(name, queue_type, 
 				std::forward<Setup>(setup), std::forward<Executable>(execute));
 		}
+
+		template <
+			typename Parameter,
+			typename Setup,
+			typename Executable
+		>
+		const auto& add_ray_tracing_pass(const char* name, Setup&& setup, Executable&& execute)
+		{
+			static_assert(ray_tracing_pass_setup<Setup, Parameter>);
+			static_assert(ray_tracing_pass_executable<Executable, Parameter>);
+
+			return add_pass<Parameter, PIPELINE_FLAGS_RAY_TRACING>(name, gpu::QueueType::COMPUTE,
+				std::forward<Setup>(setup), std::forward<Executable>(execute));
+		}
 		
 		TextureNodeID import_texture(const char* name, TextureID texture_id);
 		TextureNodeID create_texture(const char* name, const RGTextureDesc& desc);
@@ -549,11 +692,16 @@ namespace soul::gpu
 		BufferNodeID import_buffer(const char* name, BufferID buffer_id);
 		BufferNodeID create_buffer(const char* name, const RGBufferDesc& desc);
 
+		TlasNodeID import_tlas(const char* name, TlasID tlas_id);
+		BlasGroupNodeID import_blas_group(const char* name, BlasGroupID blas_group_id);
+
 		[[nodiscard]] const Vector<PassBaseNode*>& get_pass_nodes() const { return pass_nodes_; }
 		[[nodiscard]] const Vector<impl::RGInternalBuffer>& get_internal_buffers() const { return internal_buffers_; }
 		[[nodiscard]] const Vector<impl::RGInternalTexture>& get_internal_textures() const { return internal_textures_; }
 		[[nodiscard]] const Vector<impl::RGExternalBuffer>& get_external_buffers() const { return external_buffers_; }
 		[[nodiscard]] const Vector<impl::RGExternalTexture>& get_external_textures() const { return external_textures_; }
+		[[nodiscard]] std::span<const impl::RGExternalTlas> get_external_tlas_list() const { return external_tlas_list_; }
+		[[nodiscard]] std::span<const impl::RGExternalBlasGroup> get_external_blas_group_list() const { return external_blas_group_list_; }
 
 		[[nodiscard]] RGTextureDesc get_texture_desc(TextureNodeID node_id, const gpu::System& gpu_system) const;
 		[[nodiscard]] RGBufferDesc get_buffer_desc(BufferNodeID node_id, const gpu::System& gpu_system) const;
@@ -568,6 +716,9 @@ namespace soul::gpu
 
 		Vector<impl::RGExternalBuffer> external_buffers_;
 		Vector<impl::RGExternalTexture> external_textures_;
+
+		Vector<impl::RGExternalTlas> external_tlas_list_;
+		Vector<impl::RGExternalBlasGroup> external_blas_group_list_;
 		
 		memory::Allocator* allocator_;
 
@@ -608,63 +759,7 @@ namespace soul::gpu
 
 	};
 
-	namespace impl
-	{
-		struct RGInternalTexture
-		{
-			const char* name = nullptr;
-			TextureType type = TextureType::D2;
-			TextureFormat format = TextureFormat::COUNT;
-			vec3ui32 extent = {};
-			uint32 mip_levels = 1;
-			uint16 layer_count = 1;
-			TextureSampleCount sample_count = TextureSampleCount::COUNT_1;
-			bool clear = false;
-			ClearValue clear_value = {};
-
-			[[nodiscard]] soul_size get_view_count() const
-			{
-				return soul::cast<uint64>(mip_levels) * layer_count;
-			}
-		};
-
-		struct RGExternalTexture
-		{
-			const char* name = nullptr;
-			TextureID texture_id;
-			bool clear = false;
-			ClearValue clear_value = {};
-		};
-
-		struct RGInternalBuffer
-		{
-			const char* name = nullptr;
-			soul_size size = 0;
-			bool clear = false;
-		};
-
-		struct RGExternalBuffer
-		{
-			const char* name = nullptr;
-			BufferID buffer_id;
-			bool clear = false;
-		};
-
-		struct ResourceNode
-		{
-			RGResourceType resource_type;
-			impl::RGResourceID resource_id;
-			PassNodeID creator;
-			PassNodeID writer;
-			ResourceNodeID write_target_node;
-			Vector<PassNodeID> readers;
-
-			ResourceNode(RGResourceType resource_type, impl::RGResourceID resource_id) : resource_type(resource_type), resource_id(resource_id) {}
-			ResourceNode(RGResourceType resource_type, impl::RGResourceID resource_id, PassNodeID creator) :
-		        resource_type(resource_type), resource_id(resource_id), creator(creator) {}
-		};
-
-	}
+	
 
     template <PipelineFlags pipeline_flags>
     RGDependencyBuilder<pipeline_flags>::RGDependencyBuilder(const PassNodeID pass_id, PassBaseNode& pass_node,
@@ -675,7 +770,7 @@ namespace soul::gpu
 	template<PipelineFlags pipeline_flags>
 	inline BufferNodeID RGDependencyBuilder<pipeline_flags>::add_shader_buffer(BufferNodeID node_id, ShaderStageFlags stage_flags, ShaderBufferReadUsage usage_type)
 	{
-		static_assert(pipeline_flags.test_any({PipelineType::RASTER, PipelineType::COMPUTE }));
+		static_assert(pipeline_flags.test_any({PipelineType::RASTER, PipelineType::COMPUTE, PipelineType::RAY_TRACING }));
 		render_graph_.read_resource_node(node_id, pass_id_);
 		pass_node_.shader_buffer_read_accesses_.push_back({ node_id, stage_flags, usage_type });
 		return node_id;
@@ -684,7 +779,7 @@ namespace soul::gpu
 	template<PipelineFlags pipeline_flags>
 	inline BufferNodeID RGDependencyBuilder<pipeline_flags>::add_shader_buffer(BufferNodeID node_id, ShaderStageFlags stage_flags, ShaderBufferWriteUsage usage_type)
 	{
-		static_assert(pipeline_flags.test_any({PipelineType::RASTER, PipelineType::COMPUTE}));
+		static_assert(pipeline_flags.test_any({PipelineType::RASTER, PipelineType::COMPUTE, PipelineType::RAY_TRACING}));
 		const auto out_node_id = render_graph_.write_resource_node(node_id, pass_id_);
 		pass_node_.shader_buffer_write_accesses_.push_back({ node_id, out_node_id, stage_flags, usage_type });
 		return out_node_id;
@@ -693,7 +788,7 @@ namespace soul::gpu
 	template<PipelineFlags pipeline_flags>
 	inline TextureNodeID RGDependencyBuilder<pipeline_flags>::add_shader_texture(TextureNodeID node_id, ShaderStageFlags stage_flags, ShaderTextureReadUsage usage_type, SubresourceIndexRange view)
 	{
-		static_assert(pipeline_flags.test_any({PipelineType::RASTER, PipelineType::COMPUTE}));
+		static_assert(pipeline_flags.test_any({ PipelineType::RASTER, PipelineType::COMPUTE, PipelineType::RAY_TRACING }));
 		render_graph_.read_resource_node(node_id, pass_id_);
 		pass_node_.shader_texture_read_accesses_.push_back({ node_id, stage_flags, usage_type, view });
 		return node_id;
@@ -702,13 +797,31 @@ namespace soul::gpu
 	template<PipelineFlags pipeline_flags>
 	inline TextureNodeID RGDependencyBuilder<pipeline_flags>::add_shader_texture(TextureNodeID node_id, ShaderStageFlags stage_flags, ShaderTextureWriteUsage usage_type, SubresourceIndexRange view)
 	{
-		static_assert(pipeline_flags.test_any({PipelineType::RASTER,PipelineType::COMPUTE}));
+		static_assert(pipeline_flags.test_any({PipelineType::RASTER, PipelineType::COMPUTE, PipelineType::RAY_TRACING}));
 		const auto out_node_id = render_graph_.write_resource_node(node_id, pass_id_);
 		pass_node_.shader_texture_write_accesses_.push_back({ node_id, out_node_id, stage_flags, usage_type, view });
 		return out_node_id;
 	}
 
-	template<PipelineFlags pipeline_flags>
+    template <PipelineFlags pipeline_flags>
+    TlasNodeID RGDependencyBuilder<pipeline_flags>::add_shader_tlas(TlasNodeID node_id, ShaderStageFlags stage_flags)
+    {
+		static_assert(pipeline_flags.test_any({ PipelineType::RAY_TRACING }));
+		render_graph_.read_resource_node(node_id, pass_id_);
+		pass_node_.shader_tlas_read_accesses_.push_back({ node_id, stage_flags });
+		return node_id;
+    }
+
+    template <PipelineFlags pipeline_flags>
+    BlasGroupNodeID RGDependencyBuilder<pipeline_flags>::add_shader_blas_group(BlasGroupNodeID node_id,
+        ShaderStageFlags stage_flags)
+    {
+		render_graph_.read_resource_node(node_id, pass_id_);
+		pass_node_.shader_blas_group_read_accesses_.push_back({ node_id, stage_flags });
+		return node_id;
+    }
+
+    template<PipelineFlags pipeline_flags>
 	inline BufferNodeID RGDependencyBuilder<pipeline_flags>::add_vertex_buffer(BufferNodeID node_id)
 	{
 		static_assert(pipeline_flags.test(PipelineType::RASTER));
@@ -760,6 +873,42 @@ namespace soul::gpu
 		static_assert(pipeline_flags.test(PipelineType::NON_SHADER));
 		TextureNodeID out_node_id = render_graph_.write_resource_node(node_id, pass_id_);
 		pass_node_.destination_textures_.add({ .data_source = data_source, .input_node_id = node_id, .output_node_id = out_node_id });
+		return out_node_id;
+    }
+
+    template <PipelineFlags pipeline_flags>
+    BufferNodeID RGDependencyBuilder<pipeline_flags>::add_as_build_input(BufferNodeID node_id)
+    {
+		static_assert(pipeline_flags.test(PipelineType::NON_SHADER));
+		render_graph_.read_resource_node(node_id, pass_id_);
+		pass_node_.as_build_input_buffers_.add({ node_id });
+		return node_id;
+    }
+
+    template <PipelineFlags pipeline_flags>
+    BlasGroupNodeID RGDependencyBuilder<pipeline_flags>::add_as_build_input(BlasGroupNodeID node_id)
+    {
+		static_assert(pipeline_flags.test(PipelineType::NON_SHADER));
+		render_graph_.read_resource_node(node_id, pass_id_);
+		pass_node_.as_build_input_blas_groups_.add({ node_id });
+		return node_id;
+    }
+
+    template <PipelineFlags pipeline_flags>
+    TlasNodeID RGDependencyBuilder<pipeline_flags>::add_as_build_dst(TlasNodeID node_id)
+    {
+		static_assert(pipeline_flags.test(PipelineType::NON_SHADER));
+		const auto out_node_id = render_graph_.write_resource_node(node_id, pass_id_);
+		pass_node_.as_build_dst_tlas_list_.add({ .input_node_id = node_id, .output_node_id = out_node_id });
+		return out_node_id;
+    }
+
+    template <PipelineFlags pipeline_flags>
+    BlasGroupNodeID RGDependencyBuilder<pipeline_flags>::add_as_build_dst(BlasGroupNodeID node_id)
+    {
+		static_assert(pipeline_flags.test(PipelineType::NON_SHADER));
+		const auto out_node_id = render_graph_.write_resource_node(node_id, pass_id_);
+		pass_node_.as_build_dst_blas_group_list_.add({ .input_node_id = node_id, .output_node_id = out_node_id });
 		return out_node_id;
     }
 

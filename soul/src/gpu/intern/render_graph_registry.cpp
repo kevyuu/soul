@@ -18,7 +18,12 @@ namespace soul::gpu
 		return execution_.get_texture_id(textureNodeId);
 	}
 
-	PipelineStateID RenderGraphRegistry::get_pipeline_state(const GraphicPipelineStateDesc& desc) {
+    TlasID RenderGraphRegistry::get_tlas(TlasNodeID tlas_node_id) const
+    {
+		return execution_.get_tlas_id(tlas_node_id);
+    }
+
+    PipelineStateID RenderGraphRegistry::get_pipeline_state(const GraphicPipelineStateDesc& desc) {
 		return system_.request_pipeline_state(desc, render_pass_, sample_count_);
 	}
 

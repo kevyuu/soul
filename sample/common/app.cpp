@@ -15,6 +15,8 @@
 #include "imgui_pass.h"
 #include "memory/allocators/proxy_allocator.h"
 
+#include <windows.h>
+
 using namespace soul;
 
 void glfw_print_error_callback(const int code, const char* message)
@@ -169,8 +171,14 @@ void App::run()
 			}
 		}
 
+		if (io.MouseWheel != 0.0f && io.KeyShift)
+		{
+			camera_man_.zoom(io.MouseWheel);
+		}
+
 		const auto swapchain_texture_node_id = render_graph.import_texture("Swapchain Texture", gpu_system_->get_swapchain_texture());
 		const auto render_target_node_id = render(swapchain_texture_node_id, render_graph);
+
 		ImGui::Render();
 	    if (app_config_.enable_imgui)
 		{
@@ -180,6 +188,7 @@ void App::run()
 		gpu_system_->execute(render_graph);
 		
 		gpu_system_->flush_frame();
+		frame_index_++;
 	}
 }
 
@@ -189,4 +198,29 @@ float App::get_elapsed_seconds() const
     const std::chrono::duration<double> elapsed_seconds = end - start_;
 	const auto elapsed_seconds_float = static_cast<float>(elapsed_seconds.count());
 	return elapsed_seconds_float;
+}
+
+soul_size App::get_frame_index() const
+{
+	return frame_index_;
+}
+
+std::filesystem::path App::get_exe_path()
+{
+	static std::string s_exe_path;
+	static bool        s_exe_path_init = false;
+	if (!s_exe_path_init)
+	{
+		char   module_path[MAX_PATH];
+        const size_t modulePathLength = GetModuleFileNameA(NULL, module_path, MAX_PATH);
+		s_exe_path = std::string(module_path, modulePathLength);
+		s_exe_path_init = true;
+	}
+
+	return s_exe_path;
+}
+
+std::filesystem::path App::get_media_path()
+{
+	return get_exe_path().parent_path().parent_path() / "media";
 }

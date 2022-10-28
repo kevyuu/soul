@@ -10,7 +10,8 @@ namespace soul::gpu::impl
 		storage_buffer_descriptor_set_(STORAGE_BUFFER_DESCRIPTOR_COUNT, VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, allocator),
 		sampler_descriptor_set_(SAMPLER_DESCRIPTOR_COUNT, VK_DESCRIPTOR_TYPE_SAMPLER, allocator),
 		sampled_image_descriptor_set_(SAMPLED_IMAGE_DESCRIPTOR_COUNT, VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, allocator),
-		storage_image_descriptor_set_(STORAGE_IMAGE_DESCRIPTOR_COUNT, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, allocator)
+		storage_image_descriptor_set_(STORAGE_IMAGE_DESCRIPTOR_COUNT, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, allocator),
+	    as_descriptor_set_(AS_DESCRIPTOR_COUNT, VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR, allocator)
 	{}
 
 	BindlessDescriptorAllocator::~BindlessDescriptorAllocator()
@@ -41,6 +42,10 @@ namespace soul::gpu::impl
 			{
 				.type = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
 				.descriptorCount = STORAGE_IMAGE_DESCRIPTOR_COUNT
+			},
+			{
+				.type = VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR,
+				.descriptorCount = AS_DESCRIPTOR_COUNT
 			}
 		};
 		const VkDescriptorPoolCreateInfo pool_info = {
@@ -56,12 +61,14 @@ namespace soul::gpu::impl
 		sampler_descriptor_set_.init(device, descriptor_pool_);
 		sampled_image_descriptor_set_.init(device, descriptor_pool_);
 		storage_image_descriptor_set_.init(device, descriptor_pool_);
+		as_descriptor_set_.init(device, descriptor_pool_);
 
 		VkDescriptorSetLayout descriptor_set_layouts[BINDLESS_SET_COUNT] = {};
 		descriptor_set_layouts[STORAGE_BUFFER_DESCRIPTOR_SET_INDEX] = storage_buffer_descriptor_set_.get_descriptor_set_layout();
 		descriptor_set_layouts[SAMPLER_DESCRIPTOR_SET_INDEX] = sampler_descriptor_set_.get_descriptor_set_layout();
 		descriptor_set_layouts[SAMPLED_IMAGE_DESCRIPTOR_SET_INDEX] = sampled_image_descriptor_set_.get_descriptor_set_layout();
 		descriptor_set_layouts[STORAGE_IMAGE_DESCRIPTOR_SET_INDEX] = storage_image_descriptor_set_.get_descriptor_set_layout();
+		descriptor_set_layouts[AS_DESCRIPTOR_SET_INDEX] = as_descriptor_set_.get_descriptor_set_layout();
 
 		VkPushConstantRange push_constant_range = {
 			.stageFlags = VK_SHADER_STAGE_ALL,
@@ -138,7 +145,17 @@ namespace soul::gpu::impl
 		sampler_descriptor_set_.destroy_descriptor(device_, id);
 	}
 
-	BindlessDescriptorSet::BindlessDescriptorSet(const uint32 capacity, VkDescriptorType descriptor_type, soul::memory::Allocator* allocator) : allocator_(allocator), free_head_(1), list_(allocator->allocate_array<uint32>(capacity)), capacity_(capacity), descriptor_type_(descriptor_type)
+	DescriptorID BindlessDescriptorAllocator::create_as_descriptor(VkAccelerationStructureKHR as)
+	{
+		return as_descriptor_set_.create_descriptor(device_, as);
+	}
+
+    void BindlessDescriptorAllocator::destroy_as_descriptor(DescriptorID id)
+    {
+		as_descriptor_set_.destroy_descriptor(device_, id);
+    }
+
+    BindlessDescriptorSet::BindlessDescriptorSet(const uint32 capacity, VkDescriptorType descriptor_type, soul::memory::Allocator* allocator) : allocator_(allocator), free_head_(0), list_(allocator->allocate_array<uint32>(capacity)), capacity_(capacity), descriptor_type_(descriptor_type)
 	{
 		for (auto i = free_head_; i < capacity_; i++)
 		{
@@ -221,7 +238,31 @@ namespace soul::gpu::impl
 		return DescriptorID(index);
 	}
 
-	void BindlessDescriptorSet::destroy_descriptor(VkDevice device, DescriptorID id)
+    DescriptorID BindlessDescriptorSet::create_descriptor(VkDevice device, VkAccelerationStructureKHR as)
+    {
+		std::unique_lock lock(mutex_);
+		auto index = free_head_;
+		free_head_ = list_[free_head_];
+		const VkWriteDescriptorSetAccelerationStructureKHR as_descriptor_write = {
+			.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET_ACCELERATION_STRUCTURE_KHR,
+			.accelerationStructureCount = 1,
+			.pAccelerationStructures = &as
+		};
+		const VkWriteDescriptorSet descriptor_write = {
+			.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+			.pNext = &as_descriptor_write,
+			.dstSet = descriptor_set_,
+			.dstBinding = 0,
+			.dstArrayElement = index,
+			.descriptorCount = 1,
+			.descriptorType = descriptor_type_,
+		};
+
+		vkUpdateDescriptorSets(device, 1, &descriptor_write, 0, nullptr);
+		return DescriptorID(index);
+    }
+
+    void BindlessDescriptorSet::destroy_descriptor(VkDevice device, DescriptorID id)
 	{
 		if (id.is_null()) return;
 		const VkCopyDescriptorSet copy_descriptor_set = {

@@ -131,10 +131,23 @@ namespace soul::gpu
 		GEOMETRY,
 		FRAGMENT,
 		COMPUTE,
+		RAYGEN,
+		MISS,
+		CLOSEST_HIT,
 		COUNT
 	};
 	using ShaderStageFlags = FlagSet<ShaderStage>;
 	constexpr ShaderStageFlags SHADER_STAGES_VERTEX_FRAGMENT = ShaderStageFlags( { gpu::ShaderStage::VERTEX, gpu::ShaderStage::FRAGMENT });
+	constexpr ShaderStageFlags SHADER_STAGES_RAY_TRACING = ShaderStageFlags({ gpu::ShaderStage::RAYGEN, gpu::ShaderStage::MISS, gpu::ShaderStage::CLOSEST_HIT });
+
+	enum class ShaderGroup : uint8
+	{
+	    RAYGEN,
+		MISS,
+		HIT,
+		CALLABLE,
+		COUNT
+	};
 
 	enum class PipelineStage : uint32
 	{
@@ -200,12 +213,14 @@ namespace soul::gpu
 		NON_SHADER,
 	    RASTER,
 		COMPUTE,
+		RAY_TRACING,
 		COUNT
 	};
 	using PipelineFlags = FlagSet<PipelineType>;
 	constexpr auto PIPELINE_FLAGS_NON_SHADER = PipelineFlags{ PipelineType::NON_SHADER };
 	constexpr auto PIPELINE_FLAGS_RASTER = PipelineFlags({ PipelineType::RASTER });
 	constexpr auto PIPELINE_FLAGS_COMPUTE = PipelineFlags{ PipelineType::COMPUTE };
+	constexpr auto PIPELINE_FLAGS_RAY_TRACING = PipelineFlags{ PipelineType::RAY_TRACING };
 
 	enum class QueueType : uint8 {
 		GRAPHIC,
@@ -225,6 +240,10 @@ namespace soul::gpu
 		STORAGE,
 		TRANSFER_SRC,
 		TRANSFER_DST,
+		AS_STORAGE,
+		AS_BUILD_INPUT,
+		AS_SCRATCH_BUFFER,
+		SHADER_BINDING_TABLE,
 		COUNT
 	};
 	using BufferUsageFlags = FlagSet<BufferUsage>;
@@ -266,13 +285,15 @@ namespace soul::gpu
 		DEPTH32F,
 		RGBA16F,
 		R32UI,
-		SRGBA_8,
+		SRGBA8,
 
 		RGB16,
 		RGB16F,
 		RGB16UI,
 		RGB16I,
 		R11F_G11F_B10F,
+
+		RGB32F,
 
 		COUNT
 	};
@@ -685,6 +706,129 @@ namespace soul::gpu
 		}
 	};
 
+	enum class RTBuildMode : uint8
+	{
+	    REBUILD,
+		UPDATE,
+		COUNT
+	};
+
+	enum class RTBuildFlag : uint8
+	{
+		ALLOW_UPDATE,
+		ALLOW_COMPACTION,
+	    PREFER_FAST_TRACE,
+		PREFER_FAST_BUILD,
+		LOW_MEMORY,
+		COUNT
+	};
+	using RTBuildFlags = FlagSet<RTBuildFlag>;
+
+	enum class RTGeometryType : uint8
+	{
+	    TRIANGLE,
+		AABB,
+		COUNT
+	};
+
+	enum class RTGeometryFlag : uint8
+	{
+	    OPAQUE,
+		NO_DUPLICATE_ANY_HIT_INVOCATION,
+		COUNT
+	};
+	using RTGeometryFlags = FlagSet<RTGeometryFlag>;
+
+	struct RTTriangleDesc
+	{
+		TextureFormat vertex_format;
+		GPUAddress vertex_data;
+		uint64 vertex_stride;
+		uint32 vertex_count;
+		IndexType index_type;
+		GPUAddress index_data;
+		GPUAddress transform_data;
+	    uint32 index_count;
+		uint32 index_offset;
+		uint32 first_vertex;
+		uint32 transform_offset;
+	};
+
+	struct RTAABBDesc
+	{
+		uint32 count;
+		GPUAddress data;
+		uint64_t stride;
+	};
+
+	struct RTGeometryDesc
+	{
+		RTGeometryType type;
+		RTGeometryFlags flags;
+		union
+		{
+			RTTriangleDesc triangles;
+			RTAABBDesc aabbs;
+		} content;
+	};
+
+	enum class RTGeometryInstanceFlag : uint32
+	{
+		// The enum values are kept consistent with D3D12_RAYTRACING_INSTANCE_FLAGS
+		// and VkGeometryInstanceFlagBitsKHR.
+		TRIANGLE_FACING_CULL_DISABLE,
+		TRIANGLE_FRONT_COUNTER_CLOCKWISE,
+		FORCE_OPAQUE,
+		NO_OPAQUE,
+		COUNT
+	};
+	using RTGeometryInstanceFlags = FlagSet<RTGeometryInstanceFlag>;
+
+	struct RTInstanceDesc
+	{
+		float transform[3][4] = {};
+		uint32 instance_id : 24 = {};
+		uint32 instance_mask : 8 = {};
+		uint32 sbt_offset : 24 = {};
+		uint32 flags : 8 = {};
+		GPUAddress blas_gpu_address;
+
+		RTInstanceDesc() = default;
+		RTInstanceDesc(mat4f in_transform,
+			uint32 instance_id, uint32 instance_mask,
+			uint32 sbt_offset,
+			RTGeometryInstanceFlags flags, 
+			GPUAddress blas_gpu_address);
+	};
+
+	struct TlasDesc
+	{
+		const char* name = nullptr;
+		soul_size size = 0;
+	};
+
+	struct BlasDesc
+	{
+		const char* name = nullptr;
+		soul_size size = 0;
+	};
+	
+	struct TlasBuildDesc
+	{
+		RTBuildFlags build_flags;
+		RTGeometryFlags geometry_flags;
+		GPUAddress instance_data;
+		uint32 instance_count = 0;
+		uint32 instance_offset = 0;
+	};
+
+	struct BlasBuildDesc
+	{
+		RTBuildFlags flags;
+		uint32 geometry_count;
+		const RTGeometryDesc* geometry_descs;
+	};
+
 	struct ShaderFile
 	{
 		std::filesystem::path path;
@@ -705,7 +849,21 @@ namespace soul::gpu
 		const char* name;
 	};
 
-	struct ShaderDefine
+	static constexpr auto ENTRY_POINT_UNUSED = VK_SHADER_UNUSED_KHR;
+
+	struct RTGeneralShaderGroup
+	{
+		uint32 entry_point = ENTRY_POINT_UNUSED;
+	};
+
+	struct RTTriangleHitGroup
+	{
+		uint32 any_hit_entry_point = ENTRY_POINT_UNUSED;
+		uint32 closest_hit_entry_point = ENTRY_POINT_UNUSED;
+		uint32 intersection_entry_point = ENTRY_POINT_UNUSED;
+	};
+	
+    struct ShaderDefine
 	{
 		const char* key;
 		const char* value;
@@ -721,6 +879,26 @@ namespace soul::gpu
 		soul_size entry_point_count = 0;
 		const ShaderEntryPoint* entry_points = nullptr;
 	};
+
+	struct ShaderTableDesc
+	{
+		ProgramID program_id;
+		const RTGeneralShaderGroup raygen_group;
+		uint32 miss_group_count;
+		const RTGeneralShaderGroup* miss_groups;
+		uint32 hit_group_count;
+		const RTTriangleHitGroup* hit_groups;
+		uint32 max_recursion_depth;
+		const char* name;
+	};
+
+	enum class RTPipelineFlag : uint8
+	{
+		SKIP_TRIANGLE,
+		SKIP_PROCEDURAL_PRIMITIVES,
+		COUNT
+	};
+	using RTPipelineFlags = FlagSet<RTPipelineFlag>;
 
 	using AttachmentFlagBits = enum {
 		ATTACHMENT_ACTIVE_BIT = 0x1,
@@ -821,6 +999,11 @@ namespace soul::gpu
 		}
 	};
 
+	struct RayTracingPipelineStateDesc
+	{
+		ProgramID program_id;
+	};
+	
 	struct GPUProperties
 	{
 	    struct GPULimit
@@ -1036,11 +1219,51 @@ namespace soul::gpu
 			ResourceCacheState cache_state;
 		};
 
+		struct Blas
+		{
+			struct BlasGroupData
+			{
+				BlasGroupID group_id;
+				soul_size index = 0;
+			};
+			BlasDesc desc;
+			VkAccelerationStructureKHR vk_handle = VK_NULL_HANDLE;
+			BufferID buffer;
+			ResourceCacheState cache_state;
+			BlasGroupData group_data;
+		};
+
+		struct BlasGroup
+		{
+			Vector<BlasID> blas_list = Vector<BlasID>();
+		    ResourceCacheState cache_state = ResourceCacheState();
+			const char* name = nullptr;
+		};
+
+		struct Tlas
+		{
+			TlasDesc desc;
+			VkAccelerationStructureKHR vk_handle = VK_NULL_HANDLE;
+			BufferID buffer;
+			DescriptorID descriptor_id;
+			ResourceCacheState cache_state;
+		};
+
 		struct Shader
 		{
 			ShaderStage stage;
 			VkShaderModule vk_handle = VK_NULL_HANDLE;
 			CString entry_point;
+		};
+
+		struct ShaderTable
+		{
+			using Buffers = FlagMap<ShaderGroup, BufferID>;
+			using Regions = FlagMap<ShaderGroup, VkStridedDeviceAddressRegionKHR>;
+
+			VkPipeline pipeline = VK_NULL_HANDLE;
+            Buffers buffers = Buffers(BufferID::null());
+		    Regions vk_regions = Regions({});
 		};
 
 		struct Program {
@@ -1099,6 +1322,7 @@ namespace soul::gpu
 			void wait(Semaphore semaphore, VkPipelineStageFlags wait_stages);
 			void wait(BinarySemaphore* semaphore, VkPipelineStageFlags wait_stages);
 			void wait(TimelineSemaphore semaphore, VkPipelineStageFlags wait_stages);
+			VkQueue get_vk_handle() const { return vk_handle_; }
 			TimelineSemaphore get_timeline_semaphore();
 			void submit(PrimaryCommandBuffer command_buffer, BinarySemaphore* = nullptr);
 			void flush(BinarySemaphore* binary_semaphore = nullptr);
@@ -1211,6 +1435,7 @@ namespace soul::gpu
 				PrimaryCommandBuffer transfer_command_buffer;
 				PrimaryCommandBuffer clear_command_buffer;
 				PrimaryCommandBuffer mipmap_gen_command_buffer;
+				PrimaryCommandBuffer as_command_buffer;
 				Vector<StagingBuffer> staging_buffers;
 			};
 
@@ -1255,7 +1480,6 @@ namespace soul::gpu
 			Vector<ThreadContext> thread_contexts_;
 		};
 
-
 		struct FrameContext {
 
 			runtime::AllocatorInitializer allocator_initializer;
@@ -1270,6 +1494,8 @@ namespace soul::gpu
 			struct Garbages {
 				Vector<TextureID> textures;
 				Vector<BufferID> buffers;
+				Vector<VkAccelerationStructureKHR> as_vk_handles;
+				Vector<DescriptorID> as_descriptors;
 				Vector<VkRenderPass> render_passes;
 				Vector<VkFramebuffer> frame_buffers;
 				Vector<VkPipeline> pipelines;
@@ -1315,7 +1541,9 @@ namespace soul::gpu
 			VkDevice device = VK_NULL_HANDLE;
 			VkPhysicalDevice physical_device = VK_NULL_HANDLE;
 			VkPhysicalDeviceProperties physical_device_properties = {};
-			GPUProperties gpu_properties = {};
+			VkPhysicalDeviceRayTracingPipelinePropertiesKHR ray_tracing_properties = {.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_PROPERTIES_KHR};
+			VkPhysicalDeviceAccelerationStructurePropertiesKHR as_properties = { .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_PROPERTIES_KHR, .pNext = &ray_tracing_properties };
+		    GPUProperties gpu_properties = {};
 			VkPhysicalDeviceMemoryProperties physical_device_memory_properties = {};
 			VkPhysicalDeviceFeatures physical_device_features = {};
 			FlagMap<QueueType, uint32> queue_family_indices;
@@ -1334,13 +1562,17 @@ namespace soul::gpu
 			VmaAllocator gpu_allocator = VK_NULL_HANDLE;
 			soul::Vector<VmaPool> linear_pools;
 
-			ConcurrentObjectPool<Buffer> buffer_pool;
-			ConcurrentObjectPool<Texture> texture_pool;
-			ConcurrentObjectPool<Shader> shaders;
+			BufferPool buffer_pool;
+			TexturePool texture_pool;
+			BlasPool blas_pool;
+			BlasGroupPool blas_group_pool;
+			TlasPool tlas_pool;
+		    ShaderPool shaders;
 
 			PipelineStateCache pipeline_state_cache;
 			
 			Pool<Program> programs;
+			ShaderTablePool shader_table_pool;
 
 			HashMap<RenderPassKey, VkRenderPass> render_pass_maps;
 
@@ -1368,6 +1600,10 @@ namespace soul::gpu
 		COPY_BUFFER,
 		DISPATCH,
 		CLEAR_COLOR,
+		RAY_TRACE,
+		BUILD_TLAS,
+		BUILD_BLAS,
+		BATCH_BUILD_BLAS,
 		COUNT
 	};
 
@@ -1456,11 +1692,43 @@ namespace soul::gpu
 		vec3ui32 group_count;
 	};
 
+	struct RenderCommandRayTrace : RenderCommandTyped<RenderCommandType::RAY_TRACE>
+	{
+		static constexpr PipelineType PIPELINE_TYPE = PipelineType::RAY_TRACING;
+		ShaderTableID shader_table_id;
+		void* push_constant_data = nullptr;
+		uint32 push_constant_size = 0;
+		vec3ui32 dimension;
+	};
+
+	struct RenderCommandBuildTlas : RenderCommandTyped<RenderCommandType::BUILD_TLAS>
+	{
+		static constexpr PipelineType PIPELINE_TYPE = PipelineType::NON_SHADER;
+	    TlasID tlas_id;
+		TlasBuildDesc build_desc;
+	};
+
+	struct RenderCommandBuildBlas : RenderCommandTyped<RenderCommandType::BUILD_BLAS>
+	{
+		static constexpr PipelineType PIPELINE_TYPE = PipelineType::NON_SHADER;
+		BlasID src_blas_id;
+	    BlasID dst_blas_id;
+		RTBuildMode build_mode;
+		BlasBuildDesc build_desc;
+	};
+
+	struct RenderCommandBatchBuildBlas : RenderCommandTyped<RenderCommandType::BATCH_BUILD_BLAS>
+	{
+		static constexpr PipelineType PIPELINE_TYPE = PipelineType::NON_SHADER;
+		uint32 build_count;
+		RenderCommandBuildBlas* builds;
+	    soul_size max_build_memory_size;
+	};
+
 	template <typename Func, typename RenderCommandType>
 	concept command_generator = std::invocable<Func, soul_size> && std::same_as<RenderCommandType, std::invoke_result_t<Func, soul_size>>;
 
 	template <typename T, PipelineFlags pipeline_flags>
 	concept render_command = std::derived_from<T, RenderCommand> && pipeline_flags.test(T::PIPELINE_TYPE);
 
-	static_assert(render_command<RenderCommandDraw, gpu::PipelineFlags({ PipelineType::RASTER })>);
 }

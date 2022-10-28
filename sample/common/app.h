@@ -1,4 +1,5 @@
 #pragma once
+#include <filesystem>
 #include <optional>
 
 #include "gpu/render_graph.h"
@@ -46,7 +47,11 @@ public:
 
 	void run();
 	float get_elapsed_seconds() const;
-	
+	soul_size get_frame_index() const;
+
+	static std::filesystem::path get_exe_path();
+	static std::filesystem::path get_media_path();
+
 private:
 
 	soul::memory::MallocAllocator malloc_allocator_;
@@ -63,6 +68,7 @@ private:
 	WindowData window_data_;
 
 	const AppConfig app_config_;
+	soul_size frame_index_ = 0;
 
 	const std::chrono::steady_clock::time_point start_ = std::chrono::steady_clock::now();
 

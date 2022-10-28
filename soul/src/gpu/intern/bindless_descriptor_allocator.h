@@ -32,6 +32,7 @@ namespace soul::gpu::impl
 	    void init(VkDevice device, VkDescriptorPool descriptor_pool);
 		DescriptorID create_descriptor(VkDevice device, const VkDescriptorBufferInfo& buffer_info);
 		DescriptorID create_descriptor(VkDevice device, const VkDescriptorImageInfo& image_info);
+		DescriptorID create_descriptor(VkDevice device, VkAccelerationStructureKHR as);
 		void destroy_descriptor(VkDevice device, DescriptorID id);
 		VkDescriptorSet get_descriptor_set() const { return descriptor_set_; }
 		VkDescriptorSetLayout get_descriptor_set_layout() const { return descriptor_set_layout_; }
@@ -67,15 +68,21 @@ namespace soul::gpu::impl
 		DescriptorID create_sampler_descriptor(VkSampler sampler);
 		void destroy_sampler_descriptor(DescriptorID id);
 
+		DescriptorID create_as_descriptor(VkAccelerationStructureKHR as);
+		void destroy_as_descriptor(DescriptorID id);
+
 		VkPipelineLayout get_pipeline_layout() const { return pipeline_layout_; }
 
 		BindlessDescriptorSets get_bindless_descriptor_sets() const
 		{
 			return {
-				storage_buffer_descriptor_set_.get_descriptor_set(),
-				sampler_descriptor_set_.get_descriptor_set(),
-				sampled_image_descriptor_set_.get_descriptor_set(),
-				storage_image_descriptor_set_.get_descriptor_set()
+				{
+				    storage_buffer_descriptor_set_.get_descriptor_set(),
+				    sampler_descriptor_set_.get_descriptor_set(),
+				    sampled_image_descriptor_set_.get_descriptor_set(),
+				    storage_image_descriptor_set_.get_descriptor_set(),
+					as_descriptor_set_.get_descriptor_set()
+				}
 			};
 		}
 
@@ -84,12 +91,14 @@ namespace soul::gpu::impl
 		static constexpr uint32 SAMPLER_DESCRIPTOR_COUNT = 4u * 1024;
 		static constexpr uint32 SAMPLED_IMAGE_DESCRIPTOR_COUNT = 512u * 1024;
 		static constexpr uint32 STORAGE_IMAGE_DESCRIPTOR_COUNT = 512u * 1024;
+		static constexpr uint32 AS_DESCRIPTOR_COUNT = 512u;
 		
 		VkDescriptorPool descriptor_pool_ = VK_NULL_HANDLE;
 		BindlessDescriptorSet storage_buffer_descriptor_set_;
 		BindlessDescriptorSet sampler_descriptor_set_;
 		BindlessDescriptorSet sampled_image_descriptor_set_;
 		BindlessDescriptorSet storage_image_descriptor_set_;
+		BindlessDescriptorSet as_descriptor_set_;
 		VkPipelineLayout pipeline_layout_ = VK_NULL_HANDLE;
 		VkDevice device_ = VK_NULL_HANDLE;
 	};

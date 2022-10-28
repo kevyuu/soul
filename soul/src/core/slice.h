@@ -45,6 +45,9 @@ namespace soul {
 
 		[[nodiscard]] T* begin() { return vector_->data() + begin_idx_; }
 		[[nodiscard]] T* end() { return vector_->data() + end_idx_; }
+
+		[[nodiscard]] soul_size get_begin_idx() const { return begin_idx_; }
+		[[nodiscard]] soul_size get_end_idx() const { return end_idx_; }
 	private:
 		Vector<T>* vector_ = nullptr;
 		soul_size begin_idx_ = 0;

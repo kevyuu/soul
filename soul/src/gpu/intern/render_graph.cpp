@@ -50,7 +50,27 @@ namespace soul::gpu
 		return create_resource_node<RGResourceType::BUFFER>(RGResourceID::internal_id(resource_index));
 	}
 
-	RGTextureDesc RenderGraph::get_texture_desc(TextureNodeID node_id, const gpu::System& system) const
+    TlasNodeID RenderGraph::import_tlas(const char* name, TlasID tlas_id)
+    {
+	    const auto resource_index = soul::cast<uint32>(external_tlas_list_.add({
+			.name = name,
+			.tlas_id = tlas_id
+		}));
+
+		return create_resource_node<RGResourceType::TLAS>(RGResourceID::external_id(resource_index));
+    }
+
+    BlasGroupNodeID RenderGraph::import_blas_group(const char* name, BlasGroupID blas_group_id)
+    {
+		const auto resource_index = soul::cast<uint32>(external_blas_group_list_.add({
+			.name = name,
+			.blas_group_id = blas_group_id
+		}));
+
+		return create_resource_node<RGResourceType::BLAS_GROUP>(RGResourceID::external_id(resource_index));
+    }
+
+    RGTextureDesc RenderGraph::get_texture_desc(TextureNodeID node_id, const gpu::System& system) const
 	{
 		const auto& node = get_resource_node(node_id.id);
 		if (node.resource_id.is_external())

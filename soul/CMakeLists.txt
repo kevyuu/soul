@@ -24,6 +24,7 @@ set (SOUL_HEADERS
 	src/gpu/type.h
 	src/gpu/system.h
 	src/gpu/render_graph.h
+	src/gpu/common.h
 	src/gpu/intern/enum_mapping.h
 	src/gpu/intern/render_graph_execution.h
 	src/gpu/intern/render_compiler.h
@@ -56,6 +57,7 @@ set (SOUL_SOURCES
 	
 	src/core/cstring.cpp
 
+	src/gpu/intern/common.cpp
 	src/gpu/intern/glfw_wsi.cpp
 	src/gpu/intern/gpu_system.cpp
 	src/gpu/intern/render_graph.cpp
@@ -83,7 +85,7 @@ add_library(soul STATIC ${SOUL_SOURCES})
 target_include_directories(soul
 	PUBLIC src ${NVTX_INCLUDE_DIR} ${PROJECT_SOURCE_DIR}/dependencies)
 target_link_system_libraries(soul
-	PUBLIC glfw ${NVTX} Vulkan::Vulkan volk::volk volk::volk_headers vk_mem_alloc Tracy::TracyClient
+	PUBLIC glfw ${NVTX} Vulkan::Vulkan volk::volk vk_mem_alloc Tracy::TracyClient
 	PRIVATE dxc)
 target_compile_definitions(soul PUBLIC TRACY_ENABLE NOMINMAX)
 

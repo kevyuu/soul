@@ -11,6 +11,8 @@
 #define SOUL_VK_CHECK(expr, message, ...) do { VkResult _result = expr; if (_result != VK_SUCCESS) { SOUL_LOG_ERROR("Vulkan error| expr = %s, result = %s ", #expr, _result); SOUL_LOG_ERROR("Message = %s", ##__VA_ARGS__); } } while(0)
 #endif
 
+#include <span>
+
 namespace soul::gpu::impl
 {
 	class RenderCompiler;
@@ -42,12 +44,12 @@ namespace soul::gpu
 		BufferID create_buffer(const BufferDesc& desc);
 		BufferID create_buffer(const BufferDesc& desc, const void* data);
 		BufferID create_transient_buffer(const BufferDesc& desc);
-		
 		void flush_buffer(BufferID buffer_id);
 		void destroy_buffer_descriptor(BufferID buffer_id);
 		void destroy_buffer(BufferID buffer_id);
 		impl::Buffer& get_buffer(BufferID buffer_id);
 		const impl::Buffer& get_buffer(BufferID buffer_id) const;
+		GPUAddress get_gpu_address(BufferID buffer_id) const;
 
 		TextureID create_texture(const TextureDesc& desc);
 		TextureID create_texture(const TextureDesc& desc, const TextureLoadDesc& load_desc);
@@ -62,10 +64,33 @@ namespace soul::gpu
 		impl::TextureView get_texture_view(TextureID texture_id, uint32 level, uint32 layer = 0);
 		impl::TextureView get_texture_view(TextureID texture_id, SubresourceIndex subresource_index);
 		impl::TextureView get_texture_view(TextureID texture_id, std::optional<SubresourceIndex> subresource);
-		
-		expected<ProgramID, Error> create_program(const ProgramDesc& program_desc);
-		impl::Program* get_program_ptr(ProgramID program_id);
+
+		soul_size get_blas_size_requirement(const BlasBuildDesc& build_desc);
+		BlasID create_blas(const BlasDesc& desc, BlasGroupID blas_group_id = BlasGroupID::null());
+		void destroy_blas(BlasID blas_id);
+		const impl::Blas& get_blas(BlasID blas_id) const;
+		impl::Blas& get_blas(BlasID blas_id);
+		GPUAddress get_gpu_address(BlasID blas_id) const;
+
+		BlasGroupID create_blas_group(const char* name);
+		void destroy_blas_group(BlasGroupID blas_group_id);
+		const impl::BlasGroup& get_blas_group(BlasGroupID blas_group_id) const;
+		impl::BlasGroup& get_blas_group(BlasGroupID blas_group_id);
+
+		soul_size get_tlas_size_requirement(const TlasBuildDesc& build_desc);
+		TlasID create_tlas(const TlasDesc& desc);
+		void destroy_tlas(TlasID tlas_id);
+		const impl::Tlas& get_tlas(TlasID tlas_id) const;
+		impl::Tlas& get_tlas(TlasID tlas_id);
+
+	    expected<ProgramID, Error> create_program(const ProgramDesc& program_desc);
+	    impl::Program* get_program_ptr(ProgramID program_id);
 		const impl::Program& get_program(ProgramID program_id);
+		
+		ShaderTableID create_shader_table(const ShaderTableDesc& shader_table_desc);
+		void destroy_shader_table(ShaderTableID shader_table_id);
+		const impl::ShaderTable& get_shader_table(ShaderTableID shader_table_id) const;
+		impl::ShaderTable& get_shader_table(ShaderTableID shader_table_id);
 
 		auto request_pipeline_state(const GraphicPipelineStateDesc& key, VkRenderPass render_pass, TextureSampleCount sample_count) -> PipelineStateID;
 		PipelineStateID request_pipeline_state(const ComputePipelineStateDesc& key);
@@ -79,6 +104,7 @@ namespace soul::gpu
 		DescriptorID get_srv_descriptor_id(TextureID texture_id, std::optional<SubresourceIndex> subresource_index = std::nullopt);
 		DescriptorID get_uav_descriptor_id(TextureID texture_id, std::optional<SubresourceIndex> subresource_index = std::nullopt);
 		DescriptorID get_sampler_descriptor_id(SamplerID sampler_id) const;
+		DescriptorID get_as_descriptor_id(TlasID tlas_id) const;
 
 		impl::BinarySemaphore create_binary_semaphore();
 		void destroy_binary_semaphore(impl::BinarySemaphore id);
@@ -88,6 +114,7 @@ namespace soul::gpu
 
 		void execute(const RenderGraph& render_graph);
 
+		void flush();
 		void flush_frame();
 		void begin_frame();
 		void end_frame();
@@ -122,6 +149,13 @@ namespace soul::gpu
 		void wait_sync_counter(impl::TimelineSemaphore sync_counter);
 
 		void calculate_gpu_properties();
+
+		VkAccelerationStructureBuildSizesInfoKHR get_as_build_size_info(const TlasBuildDesc& build_desc);
+		VkAccelerationStructureBuildSizesInfoKHR get_as_build_size_info(const BlasBuildDesc& build_desc);
+		VkAccelerationStructureBuildSizesInfoKHR get_as_build_size_info(const VkAccelerationStructureBuildGeometryInfoKHR& build_info, const uint32* max_primitives_counts);
+
+		void add_to_blas_group(BlasID blas_id, BlasGroupID blas_group_id);
+		void remove_from_blas_group(BlasID blas_id);
 
 		Config config_;
 	};
