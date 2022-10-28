@@ -1956,25 +1956,25 @@ namespace soul::gpu
 		wait_stages_.push_back(waitStage);
 	}
 
-	void CommandQueue::submit(VkCommandBuffer commandBuffer, const Vector<Semaphore*>& semaphores, VkFence fence)
+	void CommandQueue::submit(PrimaryCommandBuffer command_buffer, const Vector<Semaphore*>& semaphores, VkFence fence)
 	{
-		submit(commandBuffer, soul::cast<uint32>(semaphores.size()), semaphores.data(), fence);
+		submit(command_buffer, soul::cast<uint32>(semaphores.size()), semaphores.data(), fence);
 	}
 
-	void CommandQueue::submit(VkCommandBuffer commandBuffer, Semaphore* semaphore, VkFence fence)
+	void CommandQueue::submit(PrimaryCommandBuffer command_buffer, Semaphore* semaphore, VkFence fence)
 	{
-		submit(commandBuffer, 1, &semaphore, fence);
+		submit(command_buffer, 1, &semaphore, fence);
 	}
 
-	void CommandQueue::submit(VkCommandBuffer commandBuffer, uint32 semaphoreCount, Semaphore* const* semaphores, VkFence fence)
+	void CommandQueue::submit(PrimaryCommandBuffer command_buffer, uint32 semaphoreCount, Semaphore* const* semaphores, VkFence fence)
 	{
 		SOUL_ASSERT_MAIN_THREAD();
 		SOUL_ASSERT(0, semaphoreCount <= MAX_SIGNAL_SEMAPHORE, "");
 		SOUL_PROFILE_ZONE();
 
-		SOUL_VK_CHECK(vkEndCommandBuffer(commandBuffer), "Fail to end command buffer");
+		SOUL_VK_CHECK(vkEndCommandBuffer(command_buffer.get_vk_handle()), "Fail to end command buffer");
 
-		commands_.push_back(commandBuffer);
+		commands_.push_back(command_buffer.get_vk_handle());
 
 		for (soul_size semaphore_idx = 0; semaphore_idx < semaphoreCount; semaphore_idx++) {
 			Semaphore* semaphore = semaphores[semaphore_idx];
@@ -2200,9 +2200,9 @@ namespace soul::gpu
 
 			auto sync_queue_to_graphic = [this](const QueueType queue_type) {
                 const SemaphoreID semaphore_id = create_semaphore();
-				const auto cmd_buffer = get_frame_context().command_pools.requestCommandBuffer(queue_type);
+				const auto sync_command_buffer = get_frame_context().command_pools.request_command_buffer(queue_type);
 				Semaphore* semaphore_ptr = get_semaphore_ptr(semaphore_id);
-				_db.queues[queue_type].submit(cmd_buffer, 1, &semaphore_ptr);
+				_db.queues[queue_type].submit(sync_command_buffer, 1, &semaphore_ptr);
 				_db.queues[QueueType::GRAPHIC].wait(semaphore_ptr, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT);
 				destroy_semaphore(semaphore_id);
 			};
@@ -2222,7 +2222,7 @@ namespace soul::gpu
 			}
 
 			const auto swapchain_owner = RESOURCE_OWNER_TO_QUEUE_TYPE[swapchain_texture.owner];
-			_db.queues[swapchain_owner ].submit(cmd_buffer.get_vk_handle(), render_finished_semaphore, frame_context.fence);
+			_db.queues[swapchain_owner ].submit(cmd_buffer, render_finished_semaphore, frame_context.fence);
 			swapchain_texture.layout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
 		}
 		
@@ -2463,17 +2463,6 @@ namespace soul::gpu
 		{
 			pool.reset();
 		}
-	}
-
-	VkCommandBuffer CommandPools::requestCommandBuffer(QueueType queueType)
-	{
-		VkCommandBuffer cmdBuffer = primary_pools_[runtime::get_thread_id()][queueType].request();
-		VkCommandBufferBeginInfo beginInfo = {
-			.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
-			.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT
-		};
-		SOUL_VK_CHECK(vkBeginCommandBuffer(cmdBuffer, &beginInfo), "");
-		return cmdBuffer;
 	}
 
 	PrimaryCommandBuffer CommandPools::request_command_buffer(const QueueType queue_type)
@@ -2854,23 +2843,23 @@ namespace soul::gpu
 		{
 			if (!thread_context.clear_command_buffer.is_null())
 			{
-				command_queues[QueueType::GRAPHIC].submit(thread_context.clear_command_buffer.get_vk_handle());
+				command_queues[QueueType::GRAPHIC].submit(thread_context.clear_command_buffer);
 			}
 			if (!thread_context.transfer_command_buffer.is_null() && thread_context.mipmap_gen_command_buffer.is_null())
 			{
-				command_queues[QueueType::TRANSFER].submit(thread_context.transfer_command_buffer.get_vk_handle());
+				command_queues[QueueType::TRANSFER].submit(thread_context.transfer_command_buffer);
 			}
 			else if (thread_context.transfer_command_buffer.is_null() && !thread_context.mipmap_gen_command_buffer.is_null())
 			{
-				command_queues[QueueType::GRAPHIC].submit(thread_context.mipmap_gen_command_buffer.get_vk_handle());
+				command_queues[QueueType::GRAPHIC].submit(thread_context.mipmap_gen_command_buffer);
 			}
 			else if (!thread_context.transfer_command_buffer.is_null() && !thread_context.mipmap_gen_command_buffer.is_null())
 			{
                 const SemaphoreID mipmap_semaphore = gpu_system.create_semaphore();
 				Semaphore* mipmap_semaphore_ptr = gpu_system.get_semaphore_ptr(mipmap_semaphore);
-				command_queues[QueueType::TRANSFER].submit(thread_context.transfer_command_buffer.get_vk_handle(), 1, &mipmap_semaphore_ptr);
+				command_queues[QueueType::TRANSFER].submit(thread_context.transfer_command_buffer, 1, &mipmap_semaphore_ptr);
 				command_queues[QueueType::GRAPHIC].wait(mipmap_semaphore_ptr, VK_PIPELINE_STAGE_TRANSFER_BIT);
-				command_queues[QueueType::GRAPHIC].submit(thread_context.mipmap_gen_command_buffer.get_vk_handle());
+				command_queues[QueueType::GRAPHIC].submit(thread_context.mipmap_gen_command_buffer);
 			}
 
 			thread_context.clear_command_buffer = PrimaryCommandBuffer();
@@ -2977,7 +2966,7 @@ namespace soul::gpu
 		SOUL_ASSERT_MAIN_THREAD();
 		runtime::ScopeAllocator scope_allocator("Resource Finalizer Flush");
 
-		FlagMap<QueueType, VkCommandBuffer> command_buffers(VK_NULL_HANDLE);
+		FlagMap<QueueType, PrimaryCommandBuffer> command_buffers(PrimaryCommandBuffer(VK_NULL_HANDLE));
 		FlagMap<QueueType, Vector<Semaphore*>> signal_semaphores((Vector<Semaphore*>(&scope_allocator)));
 		FlagMap<QueueType, Vector<SemaphoreID>> wait_semaphores((Vector<SemaphoreID>(&scope_allocator)));
 
@@ -3006,14 +2995,14 @@ namespace soul::gpu
 			{
 				if (dst_queue_type == queue_type)
 				{
-					command_buffers[queue_type] = command_pools.request_command_buffer(queue_type).get_vk_handle();
+					command_buffers[queue_type] = command_pools.request_command_buffer(queue_type);
 					const VkMemoryBarrier barrier = {
 						.sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER,
 						.srcAccessMask = VK_ACCESS_MEMORY_WRITE_BIT,
 						.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT
 					};
 
-					vkCmdPipelineBarrier(command_buffers[queue_type], VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0,
+					vkCmdPipelineBarrier(command_buffers[queue_type].get_vk_handle(), VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0,
 						1, &barrier,
 						0, nullptr,
 						soul::cast<uint32>(image_barriers.size()), image_barriers.data());
@@ -3030,7 +3019,7 @@ namespace soul::gpu
 		// submit command buffer
 		for (const auto queue_type : FlagIter<QueueType>())
 		{
-			if (const auto command_buffer = command_buffers[queue_type]; command_buffer != VK_NULL_HANDLE)
+			if (const auto command_buffer = command_buffers[queue_type]; !command_buffer.is_null())
 			{
 				command_queues[queue_type].submit(command_buffer, signal_semaphores[queue_type]);
 			}

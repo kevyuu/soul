@@ -754,8 +754,9 @@ namespace soul::gpu
 
 	namespace impl
 	{
+        class PrimaryCommandBuffer;
 
-		struct PipelineState {
+        struct PipelineState {
 			VkPipeline vk_handle = VK_NULL_HANDLE;
 			VkPipelineBindPoint bind_point = VK_PIPELINE_BIND_POINT_MAX_ENUM;
 			ProgramID program_id;
@@ -894,9 +895,9 @@ namespace soul::gpu
 		public:
 			void init(VkDevice device, uint32 family_index, uint32 queue_index);
 			void wait(Semaphore* semaphore, VkPipelineStageFlags wait_stages);
-			void submit(VkCommandBuffer command_buffer, const Vector<Semaphore*>& semaphores, VkFence fence = VK_NULL_HANDLE);
-			void submit(VkCommandBuffer command_buffer, Semaphore* semaphore, VkFence fence = VK_NULL_HANDLE);
-			void submit(VkCommandBuffer command_buffer, uint32 semaphore_count = 0, Semaphore* const* semaphores = nullptr, VkFence fence = VK_NULL_HANDLE);
+			void submit(PrimaryCommandBuffer command_buffer, const Vector<Semaphore*>& semaphores, VkFence fence = VK_NULL_HANDLE);
+			void submit(PrimaryCommandBuffer command_buffer, Semaphore* semaphore, VkFence fence = VK_NULL_HANDLE);
+			void submit(PrimaryCommandBuffer command_buffer, uint32 semaphore_count = 0, Semaphore* const* semaphores = nullptr, VkFence fence = VK_NULL_HANDLE);
 			void flush(uint32 semaphore_count, Semaphore* const* semaphores, VkFence fence);
 			void present(const VkPresentInfoKHR& present_info);
 			[[nodiscard]] uint32 get_family_index() const { return family_index_; }
@@ -966,7 +967,6 @@ namespace soul::gpu
 			}
 			void init(VkDevice device, const CommandQueues& queues, soul_size thread_count);
 			void reset();
-			VkCommandBuffer requestCommandBuffer(QueueType queueType);
 
 			PrimaryCommandBuffer request_command_buffer(const QueueType queue_type);
 			SecondaryCommandBuffer request_secondary_command_buffer(VkRenderPass render_pass, const uint32_t subpass, VkFramebuffer framebuffer);
