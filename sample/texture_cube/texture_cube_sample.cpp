@@ -67,15 +67,12 @@ class TextureCubeSampleApp final : public App
 	gpu::TextureID skybox_texture_ = gpu::TextureID();
 	gpu::SamplerID skybox_sampler_ = gpu::SamplerID();
 
-	void render(gpu::RenderGraph& render_graph) override
+	void render(gpu::TextureNodeID render_target, gpu::RenderGraph& render_graph) override
 	{
-		const gpu::TextureID swapchain_texture_id = gpu_system_->get_swapchain_texture();
-		const gpu::TextureNodeID render_target = render_graph.import_texture("Color Output", swapchain_texture_id);
 		const gpu::ColorAttachmentDesc color_attachment_desc = {
 			.node_id = render_target,
 			.clear = true
 		};
-
 
 		const vec2ui32 viewport = gpu_system_->get_swapchain_extent();
 		struct RenderPassParameter {};

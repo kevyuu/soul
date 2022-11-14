@@ -44,10 +44,8 @@ class Texture2DSampleApp final : public App
 
 	const std::chrono::steady_clock::time_point start_ = std::chrono::steady_clock::now();
 
-	void render(gpu::RenderGraph& render_graph) override
+	void render(gpu::TextureNodeID render_target, gpu::RenderGraph& render_graph) override
 	{
-		const gpu::TextureID swapchain_texture_id = gpu_system_->get_swapchain_texture();
-		const gpu::TextureNodeID render_target = render_graph.import_texture("Color Output", swapchain_texture_id);
 		const gpu::ColorAttachmentDesc color_attachment_desc = {
 			.node_id = render_target,
 			.clear = true

@@ -81,11 +81,9 @@ namespace soul::gpu
 		DescriptorID get_uav_descriptor_id(TextureID texture_id, std::optional<SubresourceIndex> subresource_index = std::nullopt);
 		DescriptorID get_sampler_descriptor_id(SamplerID sampler_id) const;
 
-		SemaphoreID create_semaphore();
-		void reset_semaphore(SemaphoreID ID);
-		void destroy_semaphore(SemaphoreID id);
-		impl::Semaphore* get_semaphore_ptr(SemaphoreID id);
-
+		impl::BinarySemaphore create_binary_semaphore();
+		void destroy_binary_semaphore(impl::BinarySemaphore id);
+		
 		VkEvent create_event();
 		void destroy_event(VkEvent event);
 
@@ -121,6 +119,8 @@ namespace soul::gpu
 		VmaAllocator get_gpu_allocator();
 
 		VkResult acquire_swapchain();
+
+		void wait_sync_counter(impl::TimelineSemaphore sync_counter);
 
 		Config config_;
 	};

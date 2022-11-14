@@ -238,7 +238,6 @@ namespace soul::gpu
 		_db.current_frame = 0;
 		_db.frame_counter = 0;
 		
-		_db.semaphores.reserve(1000);
 		_db.sampler_map.reserve(128);
 
 		SOUL_ASSERT(0, config.wsi != nullptr, "Invalid configuration value | wsi = nullptr, headless rendering is not supported yet");
@@ -358,11 +357,13 @@ namespace soul::gpu
 		static constexpr const char* DEVICE_REQUIRED_EXTENSIONS[] = {
 	        VK_KHR_VULKAN_MEMORY_MODEL_EXTENSION_NAME,
 	        VK_KHR_SWAPCHAIN_EXTENSION_NAME,
+			VK_KHR_TIMELINE_SEMAPHORE_EXTENSION_NAME,
 	        VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME,
 	        VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME,
 	        VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME,
 	        VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME,
-	        VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME
+	        VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME,
+			VK_KHR_SYNCHRONIZATION_2_EXTENSION_NAME
 		};
 		static constexpr uint32_t DEVICE_REQUIRED_EXTENSION_COUNT = std::size(DEVICE_REQUIRED_EXTENSIONS);
 		auto pick_physical_device = [](Database *db)-> FlagMap<QueueType, uint32> {
@@ -629,8 +630,14 @@ namespace soul::gpu
 				.fragmentStoresAndAtomics = VK_TRUE
 			};
 
+			VkPhysicalDeviceVulkan13Features device_1_3_features = {
+				.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES,
+				.synchronization2 = VK_TRUE
+			};
+
 			VkPhysicalDeviceVulkan12Features device_1_2_features = {
 				.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES,
+				.pNext = &device_1_3_features,
 				.descriptorIndexing = VK_TRUE,
 				.descriptorBindingSampledImageUpdateAfterBind = VK_TRUE,
 				.descriptorBindingStorageImageUpdateAfterBind = VK_TRUE,
@@ -639,6 +646,7 @@ namespace soul::gpu
 				.descriptorBindingPartiallyBound = VK_TRUE,
 				.descriptorBindingVariableDescriptorCount = VK_TRUE,
 				.runtimeDescriptorArray = VK_TRUE,
+				.timelineSemaphore = VK_TRUE,
 				.vulkanMemoryModel = VK_TRUE
 			};
 
@@ -753,9 +761,7 @@ namespace soul::gpu
 				texture.owner = ResourceOwner::NONE;
 				return texture_id;
 			});
-
-			db->swapchain.fences.resize(db->swapchain.image_count);
-			std::ranges::fill(db->swapchain.fences,VK_NULL_HANDLE);
+			
 			SOUL_LOG_INFO("Vulkan swapchain creation sucessful");
 		};
 		create_swapchain(&_db, config.wsi);
@@ -837,15 +843,10 @@ namespace soul::gpu
 			frame_context.command_pools.init(_db.device, _db.queues, config.thread_count);
 			frame_context.gpu_resource_initializer.init(_db.gpu_allocator, &frame_context.command_pools);
 			frame_context.gpu_resource_finalizer.init();
-
-			const VkFenceCreateInfo fence_info = {
-				.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
-				.flags = VK_FENCE_CREATE_SIGNALED_BIT
-			};
-			SOUL_VK_CHECK(vkCreateFence(_db.device, &fence_info, nullptr, &frame_context.fence), "Fail to create Fence");
-
-			frame_context.image_available_semaphore = create_semaphore();
-			frame_context.render_finished_semaphore = create_semaphore();
+			
+			frame_context.frame_end_semaphore = TimelineSemaphore::null();
+			frame_context.image_available_semaphore = create_binary_semaphore();
+			frame_context.render_finished_semaphore = create_binary_semaphore();
 		});
 	}
 
@@ -945,6 +946,7 @@ namespace soul::gpu
 
 			vkSetDebugUtilsObjectNameEXT(_db.device, &image_name_info);
 		}
+
 		return texture_id;
 	}
 
@@ -1221,12 +1223,11 @@ namespace soul::gpu
 		uint32 swapchain_index;
 		SOUL_PROFILE_ZONE_WITH_NAME("Acquire Next Image KHR");
 		const auto result = vkAcquireNextImageKHR(_db.device, _db.swapchain.vk_handle, UINT64_MAX,
-			get_semaphore_ptr(frame_context.image_available_semaphore)->vk_handle, VK_NULL_HANDLE,
+			frame_context.image_available_semaphore.vk_handle, VK_NULL_HANDLE,
 			&swapchain_index);
 		if (result < 0)
 			return result;
-
-		get_semaphore_ptr(frame_context.image_available_semaphore)->state = SemaphoreState::SUBMITTED;
+		
 		frame_context.swapchain_index = swapchain_index;
 		const TextureID swapchain_texture_id = _db.swapchain.textures[swapchain_index];
 		Texture* swapchain_texture = get_texture_ptr(swapchain_texture_id);
@@ -1235,6 +1236,18 @@ namespace soul::gpu
 
 		return result;
     }
+
+	void System::wait_sync_counter(impl::TimelineSemaphore sync_counter)
+	{
+		const VkSemaphoreWaitInfo wait_info = {
+			.sType = VK_STRUCTURE_TYPE_SEMAPHORE_WAIT_INFO,
+			.flags = 0,
+			.semaphoreCount = 1,
+			.pSemaphores = &sync_counter.vk_handle,
+			.pValues = &sync_counter.counter
+		};
+		vkWaitSemaphores(_db.device, &wait_info, UINT64_MAX);
+	}
 
     void System::flush_buffer(const BufferID buffer_id)
 	{
@@ -1908,30 +1921,17 @@ namespace soul::gpu
 		get_frame_context().garbages.events.push_back(event);
 	}
 
-	SemaphoreID System::create_semaphore() {
+	BinarySemaphore System::create_binary_semaphore() {
 		SOUL_ASSERT_MAIN_THREAD();
-		SemaphoreID semaphoreID = SemaphoreID(_db.semaphores.create());
-		Semaphore &semaphore = _db.semaphores[semaphoreID.id];
-		semaphore = {};
+		BinarySemaphore semaphore = { VK_NULL_HANDLE };
 		const VkSemaphoreCreateInfo semaphore_info = {.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO};
 		SOUL_VK_CHECK(vkCreateSemaphore(_db.device, &semaphore_info, nullptr, &semaphore.vk_handle), "Fail to create semaphore");
-		return semaphoreID;
+		return semaphore;
 	}
 
-	void System::reset_semaphore(SemaphoreID ID) {
+	void System::destroy_binary_semaphore(BinarySemaphore semaphore) {
 		SOUL_ASSERT_MAIN_THREAD();
-		get_semaphore_ptr(ID)->stage_flags = 0;
-		get_semaphore_ptr(ID)->state = SemaphoreState::INITIAL;
-	}
-
-	Semaphore *System::get_semaphore_ptr(SemaphoreID ID) {
-		SOUL_ASSERT_MAIN_THREAD();
-		return &_db.semaphores[ID.id];
-	}
-
-	void System::destroy_semaphore(SemaphoreID ID) {
-		SOUL_ASSERT_MAIN_THREAD();
-		get_frame_context().garbages.semaphores.push_back(ID);
+		get_frame_context().garbages.semaphores.push_back(semaphore);
 	}
 
 	void CommandQueue::init(VkDevice inDevice, uint32 inFamilyIndex, uint32 queue_index)
@@ -1939,90 +1939,143 @@ namespace soul::gpu
 		device_ = inDevice;
 		family_index_ = inFamilyIndex;
 		vkGetDeviceQueue(device_, family_index_, queue_index, &vk_handle_);
+		init_timeline_semaphore();
 	}
 
-	void CommandQueue::wait(Semaphore* semaphore, VkPipelineStageFlags waitStage)
-	{
-		SOUL_ASSERT_MAIN_THREAD();
-		SOUL_ASSERT(0, waitStage != 0, "");
-
-		SOUL_ASSERT(0, semaphore->state == SemaphoreState::SUBMITTED, "");
-		semaphore->state = SemaphoreState::PENDING;
-
-		if (!commands_.empty()) {
-			flush(0, nullptr, VK_NULL_HANDLE);
+    void CommandQueue::wait(Semaphore semaphore, VkPipelineStageFlags wait_stages)
+    {
+		if (std::holds_alternative<BinarySemaphore>(semaphore)) 
+		{
+			wait(std::get<BinarySemaphore>(semaphore), wait_stages);
 		}
-		wait_semaphores_.push_back(semaphore->vk_handle);
-		wait_stages_.push_back(waitStage);
-	}
+	    else
+		{
+			wait(std::get<TimelineSemaphore>(semaphore), wait_stages);
+		}
+    }
 
-	void CommandQueue::submit(PrimaryCommandBuffer command_buffer, const Vector<Semaphore*>& semaphores, VkFence fence)
-	{
-		submit(command_buffer, soul::cast<uint32>(semaphores.size()), semaphores.data(), fence);
-	}
-
-	void CommandQueue::submit(PrimaryCommandBuffer command_buffer, Semaphore* semaphore, VkFence fence)
-	{
-		submit(command_buffer, 1, &semaphore, fence);
-	}
-
-	void CommandQueue::submit(PrimaryCommandBuffer command_buffer, uint32 semaphoreCount, Semaphore* const* semaphores, VkFence fence)
+    void CommandQueue::wait(BinarySemaphore semaphore, const VkPipelineStageFlags wait_stages)
 	{
 		SOUL_ASSERT_MAIN_THREAD();
-		SOUL_ASSERT(0, semaphoreCount <= MAX_SIGNAL_SEMAPHORE, "");
+		SOUL_ASSERT(0, wait_stages != 0, "");
+
+		if (!commands_.empty()) flush();
+		
+		wait_semaphores_.push_back(semaphore.vk_handle);
+		wait_stages_.push_back(wait_stages);
+		wait_timeline_values_.push_back(0);
+	}
+
+	void CommandQueue::wait(TimelineSemaphore sync_counter, VkPipelineStageFlags wait_stages)
+	{
+		SOUL_ASSERT_MAIN_THREAD();
+		SOUL_ASSERT(0, wait_stages != 0, "");
+
+		if (!commands_.empty()) flush();
+
+		wait_semaphores_.push_back(sync_counter.vk_handle);
+		wait_stages_.push_back(wait_stages);
+		wait_timeline_values_.push_back(sync_counter.counter);
+	}
+
+    TimelineSemaphore CommandQueue::get_timeline_semaphore()
+    {
+		if (!wait_semaphores_.empty() || !commands_.empty()) flush();
+		return { family_index_, timeline_semaphore_, current_timeline_values_ };
+    }
+
+	void CommandQueue::submit(const PrimaryCommandBuffer command_buffer, BinarySemaphore binary_semaphore)
+	{
+		SOUL_ASSERT_MAIN_THREAD();
 		SOUL_PROFILE_ZONE();
 
 		SOUL_VK_CHECK(vkEndCommandBuffer(command_buffer.get_vk_handle()), "Fail to end command buffer");
 
 		commands_.push_back(command_buffer.get_vk_handle());
 
-		for (soul_size semaphore_idx = 0; semaphore_idx < semaphoreCount; semaphore_idx++) {
-			Semaphore* semaphore = semaphores[semaphore_idx];
-			SOUL_ASSERT(0, semaphore->state == SemaphoreState::INITIAL, "");
-			semaphore->state = SemaphoreState::SUBMITTED;
-		}
-
 		// TODO : Fix this
-		if (semaphoreCount != 0 || fence != VK_NULL_HANDLE) {
-			flush(semaphoreCount, semaphores, fence);
+		if (binary_semaphore.vk_handle != VK_NULL_HANDLE) {
+			flush(binary_semaphore);
 		}
 	}
 
-	void CommandQueue::flush(const uint32 semaphore_count, Semaphore* const* semaphores, VkFence fence)
+	void CommandQueue::flush(BinarySemaphore binary_semaphore)
 	{
 		SOUL_ASSERT_MAIN_THREAD();
 		SOUL_PROFILE_ZONE();
-		VkSubmitInfo submitInfo = {};
-		submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-		submitInfo.commandBufferCount = soul::cast<uint32>(commands_.size());
-		submitInfo.pCommandBuffers = commands_.data();
+	    SOUL_ASSERT(0, wait_semaphores_.size() == wait_stages_.size(), "");
+		SOUL_ASSERT(0, wait_semaphores_.size() == wait_timeline_values_.size(), "");
 
+		current_timeline_values_++;
 
-		SOUL_ASSERT(0, wait_semaphores_.size() == wait_stages_.size(), "");
-		submitInfo.waitSemaphoreCount = soul::cast<uint32>(wait_semaphores_.size());
-		submitInfo.pWaitSemaphores = wait_semaphores_.data();
-		submitInfo.pWaitDstStageMask = wait_stages_.data();
+		const uint32 binary_semaphore_count = binary_semaphore.is_null() ? 0 : 1;
 
-		VkSemaphore signalSemaphores[MAX_SIGNAL_SEMAPHORE];
-		for (soul_size i = 0; i < semaphore_count; i++) {
-			signalSemaphores[i] = semaphores[i]->vk_handle;
-		}
+		VkSemaphore signal_semaphores[MAX_SIGNAL_SEMAPHORE + 1];
+		if (!binary_semaphore.is_null()) signal_semaphores[0] = binary_semaphore.vk_handle;
+		signal_semaphores[binary_semaphore_count] = timeline_semaphore_;
 
-		submitInfo.signalSemaphoreCount = semaphore_count;
-		submitInfo.pSignalSemaphores = signalSemaphores;
+		uint64 signal_semaphore_values[MAX_SIGNAL_SEMAPHORE + 1];
+		std::fill_n(signal_semaphore_values, binary_semaphore_count, 0);
+		signal_semaphore_values[binary_semaphore_count] = current_timeline_values_;
 
-		SOUL_VK_CHECK(vkQueueSubmit(vk_handle_, 1, &submitInfo, fence), "Fail to submit queue");
-		commands_.resize(0);
-		wait_semaphores_.resize(0);
-		wait_stages_.resize(0);
+		const VkTimelineSemaphoreSubmitInfo timeline_submit_info = {
+			.sType = VK_STRUCTURE_TYPE_TIMELINE_SEMAPHORE_SUBMIT_INFO,
+			.waitSemaphoreValueCount = soul::cast<uint32>(wait_timeline_values_.size()),
+			.pWaitSemaphoreValues =  wait_timeline_values_.data(),
+			.signalSemaphoreValueCount = binary_semaphore_count + 1,
+			.pSignalSemaphoreValues = signal_semaphore_values
+		};
+
+		const VkSubmitInfo submit_info = {
+			.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+			.pNext = &timeline_submit_info,
+			.waitSemaphoreCount = soul::cast<uint32>(wait_semaphores_.size()),
+			.pWaitSemaphores = wait_semaphores_.data(),
+			.pWaitDstStageMask = wait_stages_.data(),
+			.commandBufferCount = soul::cast<uint32>(commands_.size()),
+			.pCommandBuffers = commands_.data(),
+			.signalSemaphoreCount = binary_semaphore_count + 1,
+			.pSignalSemaphores = signal_semaphores,
+		};
+
+		SOUL_VK_CHECK(vkQueueSubmit(vk_handle_, 1, &submit_info, VK_NULL_HANDLE), "Fail to submit queue");
+		commands_.clear();
+		wait_semaphores_.clear();
+		wait_timeline_values_.clear();
+		wait_stages_.clear();
 	}
 
 	void CommandQueue::present(const VkPresentInfoKHR& present_info)
 	{
 		SOUL_VK_CHECK(vkQueuePresentKHR(vk_handle_, &present_info), "Fail to present queue");
 	}
-	
-	void System::execute(const RenderGraph &render_graph) {
+
+    bool CommandQueue::is_waiting_binary_semaphore() const
+    {
+		return std::ranges::any_of(wait_timeline_values_, [](uint64 timeline_value) { return timeline_value == 0; });
+    }
+
+    bool CommandQueue::is_waiting_timeline_semaphore() const
+    {
+		return std::ranges::any_of(wait_timeline_values_, [](uint64 timeline_value) { return timeline_value != 0; });
+    }
+
+    void CommandQueue::init_timeline_semaphore()
+    {
+		const VkSemaphoreTypeCreateInfo type_create_info = {
+			.sType = VK_STRUCTURE_TYPE_SEMAPHORE_TYPE_CREATE_INFO,
+			.semaphoreType = VK_SEMAPHORE_TYPE_TIMELINE,
+			.initialValue = 0
+		};
+		const VkSemaphoreCreateInfo create_info = {
+			.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
+			.pNext = &type_create_info
+		};
+		vkCreateSemaphore(device_, &create_info, nullptr, &timeline_semaphore_);
+		current_timeline_values_ = 0;
+    }
+
+    void System::execute(const RenderGraph &render_graph) {
 		SOUL_ASSERT_MAIN_THREAD();
 		SOUL_PROFILE_ZONE();
 
@@ -2047,11 +2100,19 @@ namespace soul::gpu
 
 		_db.current_frame += 1;
 		_db.current_frame %= _db.frame_contexts.size();
-
+		
 		FrameContext &frame_context = get_frame_context();
 		{
 			SOUL_PROFILE_ZONE_WITH_NAME("Wait fence");
-			SOUL_VK_CHECK(vkWaitForFences(_db.device, 1, &frame_context.fence, VK_TRUE, UINT64_MAX), "Fail to wait fences");
+			if (frame_context.frame_end_semaphore.is_valid()) {
+				const VkSemaphoreWaitInfo wait_info = {
+					.sType = VK_STRUCTURE_TYPE_SEMAPHORE_WAIT_INFO,
+					.semaphoreCount = 1,
+					.pSemaphores = &frame_context.frame_end_semaphore.vk_handle,
+					.pValues = &frame_context.frame_end_semaphore.counter
+				};
+				SOUL_VK_CHECK(vkWaitSemaphores(_db.device, &wait_info, UINT64_MAX));
+			}
 		}
 		
 		{
@@ -2060,9 +2121,6 @@ namespace soul::gpu
 		}
 
 		frame_context.gpu_resource_initializer.reset();
-
-		reset_semaphore(frame_context.image_available_semaphore);
-		reset_semaphore(frame_context.render_finished_semaphore);
 
 		auto& garbages = frame_context.garbages;
 
@@ -2132,9 +2190,8 @@ namespace soul::gpu
 		}
 		garbages.events.resize(0);
 
-		for (const auto semaphore_id: garbages.semaphores) {
-			vkDestroySemaphore(_db.device, get_semaphore_ptr(semaphore_id)->vk_handle, nullptr);
-			_db.semaphores.remove(semaphore_id.id);
+		for (const auto semaphore: garbages.semaphores) {
+			vkDestroySemaphore(_db.device, semaphore.vk_handle, nullptr);
 		}
 		garbages.semaphores.resize(0);
 
@@ -2147,25 +2204,20 @@ namespace soul::gpu
 	void System::end_frame() {
 		SOUL_ASSERT_MAIN_THREAD();
 		SOUL_PROFILE_ZONE();
-		FrameContext &frame_context = get_frame_context();
+		FrameContext& frame_context = get_frame_context();
 		const auto swapchain_index = frame_context.swapchain_index;
-		if (_db.swapchain.fences[swapchain_index] != VK_NULL_HANDLE) {
-			SOUL_VK_CHECK(vkWaitForFences(_db.device, 1, &_db.swapchain.fences[swapchain_index], VK_TRUE, UINT64_MAX), "Fail to wait fences");
-		}
-		_db.swapchain.fences[swapchain_index] = frame_context.fence;
 
-		Texture &swapchain_texture = *get_texture_ptr(_db.swapchain.textures[swapchain_index]);
-		const auto render_finished_semaphore = get_semaphore_ptr(frame_context.render_finished_semaphore);
-		SOUL_VK_CHECK(vkResetFences(_db.device, 1, &frame_context.fence), "Fail to reset fences");
+		Texture& swapchain_texture = *get_texture_ptr(_db.swapchain.textures[swapchain_index]);
+		const auto render_finished_semaphore = frame_context.render_finished_semaphore;
 		{
 			SOUL_PROFILE_ZONE_WITH_NAME("GPU::System::LastSubmission");
 			frame_context.gpu_resource_initializer.flush(_db.queues, *this);
 			frame_context.gpu_resource_finalizer.flush(get_frame_context().command_pools, _db.queues, *this);
 
 			SOUL_ASSERT(0,
-			            swapchain_texture.owner == ResourceOwner::GRAPHIC_QUEUE
-			            || swapchain_texture.owner == ResourceOwner::PRESENTATION_ENGINE,
-			            "");
+				swapchain_texture.owner == ResourceOwner::GRAPHIC_QUEUE
+				|| swapchain_texture.owner == ResourceOwner::PRESENTATION_ENGINE,
+				"");
 			// TODO: Handle when swapchain texture is untouch (ResourceOwner is PRESENTATION_ENGINE)
 			const auto cmd_buffer = frame_context.command_pools.request_command_buffer(QueueType::GRAPHIC);
 
@@ -2188,23 +2240,20 @@ namespace soul::gpu
 			};
 
 			vkCmdPipelineBarrier(cmd_buffer.get_vk_handle(),
-			                     VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
-			                     VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
-			                     0,
-			                     0,
-			                     nullptr,
-			                     0,
-			                     nullptr,
-			                     1,
-			                     &image_barrier);
+				VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+				VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
+				0,
+				0,
+				nullptr,
+				0,
+				nullptr,
+				1,
+				&image_barrier);
 
 			auto sync_queue_to_graphic = [this](const QueueType queue_type) {
-                const SemaphoreID semaphore_id = create_semaphore();
-				const auto sync_command_buffer = get_frame_context().command_pools.request_command_buffer(queue_type);
-				Semaphore* semaphore_ptr = get_semaphore_ptr(semaphore_id);
-				_db.queues[queue_type].submit(sync_command_buffer, 1, &semaphore_ptr);
-				_db.queues[QueueType::GRAPHIC].wait(semaphore_ptr, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT);
-				destroy_semaphore(semaphore_id);
+				const auto sync_counter = _db.queues[queue_type].get_timeline_semaphore();
+				wait_sync_counter(sync_counter);
+				_db.queues[QueueType::GRAPHIC].wait(_db.queues[queue_type].get_timeline_semaphore(), VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT);
 			};
 
 			{
@@ -2218,18 +2267,18 @@ namespace soul::gpu
 			}
 
 			if (swapchain_texture.owner == ResourceOwner::PRESENTATION_ENGINE) {
-				_db.queues[QueueType::GRAPHIC].wait(get_semaphore_ptr(frame_context.image_available_semaphore), VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT);
+				_db.queues[QueueType::GRAPHIC].wait(frame_context.image_available_semaphore, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT);
 			}
 
 			const auto swapchain_owner = RESOURCE_OWNER_TO_QUEUE_TYPE[swapchain_texture.owner];
-			_db.queues[swapchain_owner ].submit(cmd_buffer, render_finished_semaphore, frame_context.fence);
+			_db.queues[swapchain_owner].submit(cmd_buffer, render_finished_semaphore);
 			swapchain_texture.layout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
 		}
-		
+
 		const VkPresentInfoKHR present_info = {
 			.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
 			.waitSemaphoreCount = 1,
-			.pWaitSemaphores = &(render_finished_semaphore->vk_handle),
+			.pWaitSemaphores = &(render_finished_semaphore.vk_handle),
 			.swapchainCount = 1,
 			.pSwapchains = &_db.swapchain.vk_handle,
 			.pImageIndices = &frame_context.swapchain_index
@@ -2240,6 +2289,8 @@ namespace soul::gpu
 			_db.queues[QueueType::GRAPHIC].present(present_info);
 		}
 
+		frame_context.frame_end_semaphore = _db.queues[QueueType::GRAPHIC].get_timeline_semaphore();
+
 		_db.frame_counter++;
 	}
 
@@ -2247,8 +2298,8 @@ namespace soul::gpu
     {
 		const auto framebuffer_size = _db.swapchain.wsi->get_framebuffer_size();
 		auto& frame_context = get_frame_context();
-		destroy_semaphore(frame_context.image_available_semaphore);
-		frame_context.image_available_semaphore = create_semaphore();
+		destroy_binary_semaphore(frame_context.image_available_semaphore);
+		frame_context.image_available_semaphore = create_binary_semaphore();
 		vkDeviceWaitIdle(_db.device);
 
 		SOUL_LOG_INFO("Recreate swapchain. Framebuffer Size = %zu %zu", framebuffer_size.x, framebuffer_size.y);
@@ -2855,10 +2906,8 @@ namespace soul::gpu
 			}
 			else if (!thread_context.transfer_command_buffer.is_null() && !thread_context.mipmap_gen_command_buffer.is_null())
 			{
-                const SemaphoreID mipmap_semaphore = gpu_system.create_semaphore();
-				Semaphore* mipmap_semaphore_ptr = gpu_system.get_semaphore_ptr(mipmap_semaphore);
-				command_queues[QueueType::TRANSFER].submit(thread_context.transfer_command_buffer, 1, &mipmap_semaphore_ptr);
-				command_queues[QueueType::GRAPHIC].wait(mipmap_semaphore_ptr, VK_PIPELINE_STAGE_TRANSFER_BIT);
+				command_queues[QueueType::TRANSFER].submit(thread_context.transfer_command_buffer);
+				command_queues[QueueType::GRAPHIC].wait(command_queues[QueueType::TRANSFER].get_timeline_semaphore(), VK_PIPELINE_STAGE_TRANSFER_BIT);
 				command_queues[QueueType::GRAPHIC].submit(thread_context.mipmap_gen_command_buffer);
 			}
 
@@ -2967,9 +3016,7 @@ namespace soul::gpu
 		runtime::ScopeAllocator scope_allocator("Resource Finalizer Flush");
 
 		FlagMap<QueueType, PrimaryCommandBuffer> command_buffers(PrimaryCommandBuffer(VK_NULL_HANDLE));
-		FlagMap<QueueType, Vector<Semaphore*>> signal_semaphores((Vector<Semaphore*>(&scope_allocator)));
-		FlagMap<QueueType, Vector<SemaphoreID>> wait_semaphores((Vector<SemaphoreID>(&scope_allocator)));
-
+		
 		// create command buffer and create semaphore
 		for (auto queue_type : FlagIter<QueueType>())
 		{
@@ -3008,10 +3055,7 @@ namespace soul::gpu
 						soul::cast<uint32>(image_barriers.size()), image_barriers.data());
 				} else
 				{
-					const SemaphoreID semaphore_id = gpu_system.create_semaphore();
-					Semaphore* semaphore = gpu_system.get_semaphore_ptr(semaphore_id);
-					signal_semaphores[queue_type].push_back(semaphore);
-					wait_semaphores[dst_queue_type].push_back(semaphore_id);
+					command_queues[dst_queue_type].wait(command_queues[queue_type].get_timeline_semaphore(), VK_PIPELINE_STAGE_ALL_COMMANDS_BIT);
 				}
 			});
 		}
@@ -3021,17 +3065,7 @@ namespace soul::gpu
 		{
 			if (const auto command_buffer = command_buffers[queue_type]; !command_buffer.is_null())
 			{
-				command_queues[queue_type].submit(command_buffer, signal_semaphores[queue_type]);
-			}
-		}
-
-		// wait and destroy semaphore
-		for (const auto queue_type : FlagIter<QueueType>())
-		{
-			for (const auto semaphore_id : wait_semaphores[queue_type])
-			{
-				command_queues[queue_type].wait(gpu_system.get_semaphore_ptr(semaphore_id), VK_PIPELINE_STAGE_ALL_COMMANDS_BIT);
-				gpu_system.destroy_semaphore(semaphore_id);
+				command_queues[queue_type].submit(command_buffer);
 			}
 		}
 

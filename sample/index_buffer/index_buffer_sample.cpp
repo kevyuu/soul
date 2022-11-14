@@ -36,10 +36,8 @@ class IndexBufferSampleApp final : public App
 	gpu::BufferID vertex_buffer_id_;
 	gpu::BufferID index_buffer_id_;
 
-	void render(gpu::RenderGraph& render_graph) override
+	void render(gpu::TextureNodeID render_target, gpu::RenderGraph& render_graph) override
 	{
-		const gpu::TextureID swapchain_texture_id = gpu_system_->get_swapchain_texture();
-		const gpu::TextureNodeID render_target = render_graph.import_texture("Color Output", swapchain_texture_id);
 		const gpu::ColorAttachmentDesc color_attachment_desc = {
 			.node_id = render_target,
 			.clear = true

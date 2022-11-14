@@ -790,12 +790,6 @@ namespace soul::gpu
 			uint32 indices[3] = {};
 		};
 
-		enum class SemaphoreState : uint8 {
-			INITIAL,
-			SUBMITTED,
-			PENDING
-		};
-
 		struct Swapchain {
 			WSI* wsi;
 			VkSwapchainKHR vk_handle = VK_NULL_HANDLE;
@@ -805,7 +799,6 @@ namespace soul::gpu
 			SBOVector<TextureID> textures;
 			SBOVector<VkImage> images;
 			SBOVector<VkImageView> image_views;
-			SBOVector<VkFence> fences;
 		};
 
 		struct DescriptorSetLayoutBinding {
@@ -882,32 +875,68 @@ namespace soul::gpu
 			FlagMap<ShaderStage, Shader> shaders;
 		};
 
-		struct Semaphore {
+		struct BinarySemaphore {
 			VkSemaphore vk_handle = VK_NULL_HANDLE;
-			VkPipelineStageFlags stage_flags = 0;
-			SemaphoreState state = SemaphoreState::INITIAL;
-
-			[[nodiscard]] bool is_pending() const { return state == SemaphoreState::PENDING; }
+			static BinarySemaphore null() { return { VK_NULL_HANDLE }; }
+			[[nodiscard]] bool is_null() const { return vk_handle == VK_NULL_HANDLE; }
+			[[nodiscard]] bool is_valid() const { return !is_null(); }
 		};
+
+		struct TimelineSemaphore
+		{
+			uint32 queue_family_index;
+			VkSemaphore vk_handle;
+			uint64 counter;
+
+			static TimelineSemaphore null() { return {}; }
+			[[nodiscard]] bool is_null() const { return counter == 0; }
+			[[nodiscard]] bool is_valid() const { return !is_null(); }
+		};
+
+		using Semaphore = std::variant<BinarySemaphore, TimelineSemaphore>;
+
+		[[nodiscard]] inline bool is_semaphore_valid(Semaphore semaphore)
+		{
+			if (std::holds_alternative<BinarySemaphore>(semaphore)) return std::get<BinarySemaphore>(semaphore).is_valid();
+			return std::get<TimelineSemaphore>(semaphore).is_valid();
+		}
+
+		[[nodiscard]] inline bool is_semaphore_null(Semaphore semaphore)
+		{
+			if (std::holds_alternative<BinarySemaphore>(semaphore)) return std::get<BinarySemaphore>(semaphore).is_null();
+			return std::get<TimelineSemaphore>(semaphore).is_null();
+		}
 
 		class CommandQueue {
 
 		public:
+
 			void init(VkDevice device, uint32 family_index, uint32 queue_index);
-			void wait(Semaphore* semaphore, VkPipelineStageFlags wait_stages);
-			void submit(PrimaryCommandBuffer command_buffer, const Vector<Semaphore*>& semaphores, VkFence fence = VK_NULL_HANDLE);
-			void submit(PrimaryCommandBuffer command_buffer, Semaphore* semaphore, VkFence fence = VK_NULL_HANDLE);
-			void submit(PrimaryCommandBuffer command_buffer, uint32 semaphore_count = 0, Semaphore* const* semaphores = nullptr, VkFence fence = VK_NULL_HANDLE);
-			void flush(uint32 semaphore_count, Semaphore* const* semaphores, VkFence fence);
+			void wait(Semaphore semaphore, VkPipelineStageFlags wait_stages);
+			void wait(BinarySemaphore semaphore, VkPipelineStageFlags wait_stages);
+			void wait(TimelineSemaphore semaphore, VkPipelineStageFlags wait_stages);
+			TimelineSemaphore get_timeline_semaphore();
+			void submit(PrimaryCommandBuffer command_buffer, BinarySemaphore = BinarySemaphore::null());
+			void flush(BinarySemaphore binary_semaphore = BinarySemaphore::null());
 			void present(const VkPresentInfoKHR& present_info);
 			[[nodiscard]] uint32 get_family_index() const { return family_index_; }
+			[[nodiscard]] bool is_waiting_binary_semaphore() const;
+			[[nodiscard]] bool is_waiting_timeline_semaphore() const;
+
 		private:
+
+			void init_timeline_semaphore();
+
 			VkDevice device_ = VK_NULL_HANDLE;
 			VkQueue vk_handle_ = VK_NULL_HANDLE;
 			uint32 family_index_ = 0;
-			Vector<VkSemaphore> wait_semaphores_;
-			Vector<VkPipelineStageFlags> wait_stages_;
-			Vector<VkCommandBuffer> commands_;
+			SBOVector<VkSemaphore> wait_semaphores_;
+			SBOVector<VkPipelineStageFlags> wait_stages_;
+			SBOVector<uint64> wait_timeline_values_;
+			SBOVector<VkCommandBuffer> commands_;
+			
+			VkSemaphore timeline_semaphore_ = VK_NULL_HANDLE;
+			uint64 current_timeline_values_ = 0;
 		};
 
 		class SecondaryCommandBuffer
@@ -1050,10 +1079,10 @@ namespace soul::gpu
 
 			runtime::AllocatorInitializer allocatorInitializer;
 			CommandPools command_pools;
-			
-			VkFence fence = VK_NULL_HANDLE;
-			SemaphoreID image_available_semaphore;
-			SemaphoreID render_finished_semaphore;
+
+			TimelineSemaphore frame_end_semaphore;
+			BinarySemaphore image_available_semaphore;
+			BinarySemaphore render_finished_semaphore;
 
 			uint32 swapchain_index = 0;
 
@@ -1064,7 +1093,7 @@ namespace soul::gpu
 				Vector<VkFramebuffer> frameBuffers;
 				Vector<VkPipeline> pipelines;
 				Vector<VkEvent> events;
-				Vector<SemaphoreID> semaphores;
+				Vector<BinarySemaphore> semaphores;
 
 				struct SwapchainGarbage
 				{
@@ -1132,8 +1161,6 @@ namespace soul::gpu
 			Pool<Program> programs;
 
 			HashMap<RenderPassKey, VkRenderPass> render_pass_maps;
-
-			Pool<Semaphore> semaphores;
 
 			UInt64HashMap<SamplerID> sampler_map;
 			BindlessDescriptorAllocator descriptor_allocator;

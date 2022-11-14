@@ -1,6 +1,8 @@
 #pragma once
 #include <optional>
 
+#include "gpu/render_graph.h"
+
 struct GLFWwindow;
 class ImGuiRenderGraphPass;
 
@@ -12,7 +14,6 @@ class ImGuiRenderGraphPass;
 namespace soul::gpu
 {
 	class System;
-	class RenderGraph;
 	class GLFWWsi;
 }
 
@@ -66,7 +67,7 @@ private:
 
 	const std::chrono::steady_clock::time_point start_ = std::chrono::steady_clock::now();
 
-	virtual void render(soul::gpu::RenderGraph& render_graph) = 0;
+	virtual void render(soul::gpu::TextureNodeID render_target, soul::gpu::RenderGraph& render_graph) = 0;
 	virtual void handle_input() {}
 
 protected:

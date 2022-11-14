@@ -121,7 +121,7 @@ ImGuiRenderGraphPass::~ImGuiRenderGraphPass()
 	ImGui::DestroyContext();
 }
 
-void ImGuiRenderGraphPass::add_pass(soul::gpu::RenderGraph& render_graph)
+void ImGuiRenderGraphPass::add_pass(soul::gpu::TextureNodeID render_target, soul::gpu::RenderGraph& render_graph)
 {
 	const vec2ui32 viewport = gpu_system_->get_swapchain_extent();
 	const auto& draw_data = *ImGui::GetDrawData();
@@ -129,8 +129,6 @@ void ImGuiRenderGraphPass::add_pass(soul::gpu::RenderGraph& render_graph)
 	if (draw_data.TotalVtxCount == 0)
 		return;
 
-	const gpu::TextureID swapchain_texture_id = gpu_system_->get_swapchain_texture();
-	const gpu::TextureNodeID render_target = render_graph.import_texture("Color Output", swapchain_texture_id);
 	const gpu::ColorAttachmentDesc color_attachment_desc = {
 		.node_id = render_target,
 		.clear = false

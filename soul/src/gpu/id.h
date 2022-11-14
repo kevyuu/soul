@@ -20,13 +20,13 @@ namespace soul::gpu::impl
 	struct Buffer;
 	struct Sampler {};
 	struct Program;
-	struct Semaphore;
+	struct BinarySemaphore;
 	struct Database;
 	struct PipelineState;
 	struct ShaderArgSet;
 	struct Shader;
 	struct Program;
-	struct Semaphore;
+	struct BinarySemaphore;
 	struct DescriptorSetLayoutKey;
 }
 
@@ -68,5 +68,4 @@ namespace soul::gpu
 
 	using PipelineStateID = ID<impl::PipelineState, PipelineStateCache::ID, PipelineStateCache::NULLVAL>;
 	using ProgramID = ID<impl::Program, uint16>;
-	using SemaphoreID = ID<impl::Semaphore, uint32>;
 }

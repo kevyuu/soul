@@ -9,6 +9,7 @@ public:
 	struct Parameter
 	{
 		soul::gpu::TextureNodeID sampled_texture;
+		soul::gpu::TextureNodeID render_target;
 	};
 
 	Texture2DRGPass(soul::gpu::System* gpu_system);
