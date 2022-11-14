@@ -32,7 +32,7 @@ namespace soul::gpu::impl
 		BufferID buffer_id;
 
 		VkEvent pending_event = VK_NULL_HANDLE;
-		SemaphoreID pending_semaphore = SemaphoreID::null();
+		Semaphore pending_semaphore = TimelineSemaphore::null();
 		VkPipelineStageFlags unsync_write_stage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
 		VkAccessFlags unsync_write_access = 0;
 
@@ -44,7 +44,7 @@ namespace soul::gpu::impl
 
 	struct TextureViewExecInfo {
 		VkEvent pending_event = VK_NULL_HANDLE;
-		SemaphoreID pending_semaphore = SemaphoreID::null();
+		Semaphore pending_semaphore = TimelineSemaphore::null();
 		VkPipelineStageFlags unsync_write_stage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
 		VkAccessFlags unsync_write_access = 0;
 		VkAccessFlags visible_access_matrix[32] = {};
@@ -131,7 +131,6 @@ namespace soul::gpu::impl
 		System* gpu_system_;
 
 		FlagMap<PassType, VkEvent> external_events_;
-		FlagMap<PassType, FlagMap<PassType, SemaphoreID>> external_semaphores_;
 		CommandQueues& command_queues_;
 		CommandPools& command_pools_;
 
@@ -150,7 +149,7 @@ namespace soul::gpu::impl
 
 		[[nodiscard]] VkRenderPass create_render_pass(uint32 pass_index);
 		[[nodiscard]] VkFramebuffer create_framebuffer(uint32 pass_index, VkRenderPass render_pass);
-		void submit_external_sync_primitive();
+		void sync_external();
 		void execute_pass(uint32 pass_index, PrimaryCommandBuffer command_buffer);
 
 		void init_shader_buffers(const Vector<ShaderBufferReadAccess>& access_list, soul_size index, QueueType queue_type);

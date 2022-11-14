@@ -168,11 +168,13 @@ void App::run()
 			}
 		}
 
-		render(render_graph);
+		const auto render_target = render_graph.import_texture("Swapchain Texture", gpu_system_->get_swapchain_texture());
+
+		render(render_target, render_graph);
 		ImGui::Render();
 	    if (app_config_.enable_imgui)
 		{
-			imgui_render_graph_pass_->add_pass(render_graph);
+			imgui_render_graph_pass_->add_pass(render_target, render_graph);
 		}
 
 		gpu_system_->execute(render_graph);

@@ -394,16 +394,6 @@ namespace soul::gpu::impl
 			}
 		}
 
-		for (VkEvent& event : external_events_) {
-			event = VK_NULL_HANDLE;
-		}
-
-		for (auto src_pass_type : FlagIter<PassType>()) {
-			for (auto dst_pass_type : FlagIter<PassType>()) {
-				external_semaphores_[src_pass_type][dst_pass_type] = SemaphoreID::null();
-			}
-		}
-
 		for (soul_size i = 0; i < render_graph_->get_internal_buffers().size(); i++) {
 			const RGInternalBuffer& rg_buffer = render_graph_->get_internal_buffers()[i];
 			BufferExecInfo& buffer_info = buffer_infos_[i];
@@ -418,34 +408,7 @@ namespace soul::gpu::impl
 		for (soul_size i = 0; i < external_buffer_infos_.size(); i++) {
 			BufferExecInfo& buffer_info = external_buffer_infos_[i];
 			if (buffer_info.passes.empty()) continue;
-
 			buffer_info.buffer_id = render_graph_->get_external_buffers()[i].buffer_id;
-
-			PassType first_pass_type = render_graph_->get_pass_nodes()[buffer_info.passes[0].id]->get_type();
-			ResourceOwner owner = gpu_system_->get_buffer(buffer_info.buffer_id).owner;
-			PassType external_pass_type = RESOURCE_OWNER_TO_PASS_TYPE_MAP[owner];
-			SOUL_ASSERT(0, owner != ResourceOwner::PRESENTATION_ENGINE, "");
-			if (external_pass_type == first_pass_type) {
-				VkEvent& external_event = external_events_[first_pass_type];
-				if (external_event == VK_NULL_HANDLE && external_pass_type != PassType::TRANSFER) {
-					external_event = gpu_system_->create_event();
-				}
-			    buffer_info.pending_event = external_event;
-				buffer_info.pending_semaphore = SemaphoreID::null();
-				buffer_info.unsync_write_stage = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
-				buffer_info.unsync_write_access = VK_ACCESS_MEMORY_WRITE_BIT;
-			} else if (owner != ResourceOwner::NONE) {
-				SemaphoreID& external_semaphore = external_semaphores_[external_pass_type][first_pass_type];
-				if (external_semaphore == SemaphoreID::null()) {
-					external_semaphore = gpu_system_->create_semaphore();
-				}
-
-				buffer_info.pending_event = VK_NULL_HANDLE;
-				buffer_info.pending_semaphore = external_semaphore;
-				buffer_info.unsync_write_stage = 0;
-				buffer_info.unsync_write_access = 0;
-			}
-
 		}
 
 		for (soul_size i = 0; i < render_graph_->get_internal_textures().size(); i++) {
@@ -469,92 +432,13 @@ namespace soul::gpu::impl
 			} else {
 				desc.usage_flags |= { TextureUsage::SAMPLED };
 				texture_info.texture_id = gpu_system_->create_texture(desc, rg_texture.clear_value);
-				std::for_each(texture_info.view, texture_info.view + texture_info.get_view_count(), [this](TextureViewExecInfo& view_info)
-				{
-					if (view_info.passes.empty()) return;
-                    const auto first_pass_type = render_graph_->get_pass_nodes()[view_info.passes[0].id]->get_type();
-					if (first_pass_type == PassType::GRAPHIC)
-					{
-						auto& external_event = external_events_[PassType::GRAPHIC];
-						
-						if (external_event == VK_NULL_HANDLE) {
-							external_event = gpu_system_->create_event();
-						}
-						view_info.pending_event = external_event;
-						view_info.pending_semaphore = SemaphoreID::null();
-						view_info.unsync_write_stage = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
-						view_info.unsync_write_access = VK_ACCESS_MEMORY_WRITE_BIT;
-					}
-					else
-					{
-						SemaphoreID& external_semaphore_id = external_semaphores_[PassType::GRAPHIC][first_pass_type];
-						if (external_semaphore_id == SemaphoreID::null()) {
-							external_semaphore_id = gpu_system_->create_semaphore();
-						}
-						view_info.pending_event = VK_NULL_HANDLE;
-						view_info.pending_semaphore = external_semaphore_id;
-						view_info.unsync_write_stage = 0;
-						view_info.unsync_write_access = 0;
-					}
-				});
 			}
 		}
 
 		for (soul_size i = 0; i < external_texture_infos_.size(); i++) {
 			TextureExecInfo& texture_info = external_texture_infos_[i];
 			texture_info.texture_id = render_graph_->get_external_textures()[i].texture_id;
-
-			const ResourceOwner owner = gpu_system_->get_texture_ptr(texture_info.texture_id)->owner;
-			const PassType external_pass_type = RESOURCE_OWNER_TO_PASS_TYPE_MAP[owner];
-
-			std::for_each(texture_info.view, texture_info.view + texture_info.get_view_count(), [this, owner, external_pass_type](TextureViewExecInfo& view_info)
-			{
-				if (!view_info.passes.empty())
-				{
-					const PassType first_pass_type = render_graph_->get_pass_nodes()[view_info.passes[0].id]->get_type();
-					if (first_pass_type == PassType::NONE) {
-						view_info.pending_event = VK_NULL_HANDLE;
-						view_info.pending_semaphore = SemaphoreID::null();
-					}
-					else if (owner == ResourceOwner::PRESENTATION_ENGINE) {
-						view_info.pending_event = VK_NULL_HANDLE;
-						view_info.pending_semaphore = gpu_system_->get_frame_context().image_available_semaphore;
-						view_info.unsync_write_stage = 0;
-						view_info.unsync_write_access = 0;
-					}
-					else if (external_pass_type == first_pass_type) {
-						VkEvent& external_event = external_events_[first_pass_type];
-						if (external_event == VK_NULL_HANDLE && external_pass_type != PassType::TRANSFER) {
-							external_event = gpu_system_->create_event();
-						}
-						view_info.pending_event = external_event;
-						view_info.pending_semaphore = SemaphoreID::null();
-						view_info.unsync_write_stage = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
-						view_info.unsync_write_access = VK_ACCESS_MEMORY_WRITE_BIT;
-					}
-					else if (owner != ResourceOwner::NONE) {
-						SemaphoreID& external_semaphore_id = external_semaphores_[external_pass_type][first_pass_type];
-						if (external_semaphore_id == SemaphoreID::null()) {
-							external_semaphore_id = gpu_system_->create_semaphore();
-						}
-						view_info.pending_event = VK_NULL_HANDLE;
-						view_info.pending_semaphore = external_semaphore_id;
-						view_info.unsync_write_stage = 0;
-						view_info.unsync_write_access = 0;
-					}
-				}
-			});
-
 		}
-
-		std::ranges::for_each(texture_infos_, [this](const TextureExecInfo& texture_info)
-		{
-			const Texture& texture = gpu_system_->get_texture(texture_info.texture_id);
-			std::for_each(texture_info.view, texture_info.view + texture_info.get_view_count(), [layout = texture.layout](TextureViewExecInfo& view_info)
-			{
-				view_info.layout = layout;
-			});
-		});
 	}
 
 	VkRenderPass RenderGraphExecution::create_render_pass(const uint32 pass_index) {
@@ -654,26 +538,120 @@ namespace soul::gpu::impl
 		return gpu_system_->create_framebuffer(framebuffer_info);
 	}
 
-	void RenderGraphExecution::submit_external_sync_primitive() {
+	void RenderGraphExecution::sync_external() {
 
-		// Sync semaphores
-		for(const auto src_pass_type : FlagIter<PassType>()) {
-			runtime::ScopeAllocator scope_allocator("Sync semaphore allocator", runtime::get_temp_allocator());
-			Vector<Semaphore*> semaphores(&scope_allocator);
-			semaphores.reserve(to_underlying(PassType::COUNT));
+		for (VkEvent& event : external_events_) {
+			event = VK_NULL_HANDLE;
+		}
 
-			for (auto semaphore_id : external_semaphores_[src_pass_type])
-			{
-				if (semaphore_id.is_null()) continue;
-				semaphores.add(gpu_system_->get_semaphore_ptr(semaphore_id));
+		for (auto& buffer_info : external_buffer_infos_)
+		{
+			if (buffer_info.passes.empty()) continue;
+			const auto first_pass_type = render_graph_->get_pass_nodes()[buffer_info.passes[0].id]->get_type();
+			const auto owner = gpu_system_->get_buffer(buffer_info.buffer_id).owner;
+			const auto external_pass_type = RESOURCE_OWNER_TO_PASS_TYPE_MAP[owner];
+			const auto external_queue_type = RESOURCE_OWNER_TO_QUEUE_TYPE[owner];
+			SOUL_ASSERT(0, owner != ResourceOwner::PRESENTATION_ENGINE, "");
+			if (external_pass_type == first_pass_type) {
+				VkEvent& external_event = external_events_[first_pass_type];
+				if (external_event == VK_NULL_HANDLE && external_pass_type != PassType::TRANSFER) {
+					external_event = gpu_system_->create_event();
+				}
+				buffer_info.pending_event = external_event;
+				buffer_info.pending_semaphore = TimelineSemaphore::null();
+				buffer_info.unsync_write_stage = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
+				buffer_info.unsync_write_access = VK_ACCESS_MEMORY_WRITE_BIT;
 			}
-
-			if (!semaphores.empty()) {
-				const QueueType src_queue_type = PASS_TYPE_TO_QUEUE_TYPE_MAP[src_pass_type];
-                const auto sync_semaphore_cmd_buffer = command_pools_.request_command_buffer(src_queue_type);
-				command_queues_[src_queue_type].submit(sync_semaphore_cmd_buffer, semaphores);
+			else if (owner != ResourceOwner::NONE) {
+				buffer_info.pending_event = VK_NULL_HANDLE;
+				buffer_info.pending_semaphore = command_queues_[external_queue_type].get_timeline_semaphore();
+				buffer_info.unsync_write_stage = 0;
+				buffer_info.unsync_write_access = 0;
 			}
 		}
+
+		for (auto& texture_info : external_texture_infos_)
+		{
+			const ResourceOwner owner = gpu_system_->get_texture_ptr(texture_info.texture_id)->owner;
+			const PassType external_pass_type = RESOURCE_OWNER_TO_PASS_TYPE_MAP[owner];
+			const auto external_queue_type = RESOURCE_OWNER_TO_QUEUE_TYPE[owner];
+
+			std::for_each(texture_info.view, texture_info.view + texture_info.get_view_count(),
+			[this, owner, external_pass_type, external_queue_type](TextureViewExecInfo& view_info)
+			{
+				if (!view_info.passes.empty())
+				{
+					const PassType first_pass_type = render_graph_->get_pass_nodes()[view_info.passes[0].id]->get_type();
+					if (first_pass_type == PassType::NONE) {
+						view_info.pending_event = VK_NULL_HANDLE;
+						view_info.pending_semaphore = TimelineSemaphore::null();
+					}
+					else if (owner == ResourceOwner::PRESENTATION_ENGINE) {
+						view_info.pending_event = VK_NULL_HANDLE;
+						view_info.pending_semaphore = gpu_system_->get_frame_context().image_available_semaphore;
+						view_info.unsync_write_stage = 0;
+						view_info.unsync_write_access = 0;
+					}
+					else if (external_pass_type == first_pass_type) {
+						VkEvent& external_event = external_events_[first_pass_type];
+						if (external_event == VK_NULL_HANDLE && external_pass_type != PassType::TRANSFER) {
+							external_event = gpu_system_->create_event();
+						}
+						view_info.pending_event = external_event;
+						view_info.pending_semaphore = TimelineSemaphore::null();
+						view_info.unsync_write_stage = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
+						view_info.unsync_write_access = VK_ACCESS_MEMORY_WRITE_BIT;
+					}
+					else if (owner != ResourceOwner::NONE) {
+						view_info.pending_event = VK_NULL_HANDLE;
+						view_info.pending_semaphore = command_queues_[external_queue_type].get_timeline_semaphore();
+						view_info.unsync_write_stage = 0;
+						view_info.unsync_write_access = 0;
+					}
+				}
+			});
+		}
+
+		for (auto& texture_info : internal_texture_infos_)
+		{
+			auto ex_texture_info = gpu_system_->get_texture(texture_info.texture_id);
+			if (ex_texture_info.owner == ResourceOwner::NONE) continue;
+			const auto owner = ex_texture_info.owner;
+			const auto external_pass_type = RESOURCE_OWNER_TO_PASS_TYPE_MAP[owner];
+			const auto external_queue_type = RESOURCE_OWNER_TO_QUEUE_TYPE[owner];
+			std::for_each(texture_info.view, texture_info.view + texture_info.get_view_count(), 
+			[this, external_pass_type, external_queue_type](TextureViewExecInfo& view_info)
+			{
+				if (view_info.passes.empty()) return;
+				const auto first_pass_type = render_graph_->get_pass_nodes()[view_info.passes[0].id]->get_type();
+				if (first_pass_type == external_pass_type)
+				{
+					auto& external_event = external_events_[external_pass_type];
+					if (external_event == VK_NULL_HANDLE) {
+						external_event = gpu_system_->create_event();
+					}
+					view_info.pending_event = external_event;
+					view_info.unsync_write_stage = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
+					view_info.unsync_write_access = VK_ACCESS_MEMORY_WRITE_BIT;
+				}
+				else
+				{
+					view_info.pending_event = VK_NULL_HANDLE;
+					view_info.pending_semaphore = command_queues_[external_queue_type].get_timeline_semaphore();
+					view_info.unsync_write_stage = 0;
+					view_info.unsync_write_access = 0;
+				}
+			});
+		}
+
+		std::ranges::for_each(texture_infos_, [this](const TextureExecInfo& texture_info)
+		{
+			const Texture& texture = gpu_system_->get_texture(texture_info.texture_id);
+			std::for_each(texture_info.view, texture_info.view + texture_info.get_view_count(), [layout = texture.layout](TextureViewExecInfo& view_info)
+			{
+				view_info.layout = layout;
+			});
+		});
 
 		// Sync events
 		for(const auto pass_type : FlagIter<PassType>()) {
@@ -784,10 +762,9 @@ namespace soul::gpu::impl
 		SOUL_ASSERT_MAIN_THREAD();
 		SOUL_PROFILE_ZONE();
 
-		submit_external_sync_primitive();
+		sync_external();
 
 		Vector<VkEvent> garbage_events;
-		Vector<SemaphoreID> garbage_semaphores;
 
 		Vector<VkBufferMemoryBarrier> pipeline_buffer_barriers;
 		Vector<VkImageMemoryBarrier> pipeline_image_barriers;
@@ -812,8 +789,9 @@ namespace soul::gpu::impl
 		for (soul_size i = 0; i < render_graph_->get_pass_nodes().size(); i++) {
 			runtime::ScopeAllocator passNodeScopeAllocator("Pass Node Scope Allocator", runtime::get_temp_allocator());
 			PassNode* pass_node = render_graph_->get_pass_nodes()[i];
-			QueueType queue_type = PASS_TYPE_TO_QUEUE_TYPE_MAP[pass_node->get_type()];
-			PassExecInfo& pass_info = pass_infos_[i];
+			auto queue_type = PASS_TYPE_TO_QUEUE_TYPE_MAP[pass_node->get_type()];
+			auto& command_queue = command_queues_[queue_type];
+			auto& pass_info = pass_infos_[i];
 
 			const auto cmd_buffer = command_pools_.request_command_buffer(queue_type);
 
@@ -848,20 +826,15 @@ namespace soul::gpu::impl
 					}
 				}
 
-				if (buffer_info.pending_semaphore.is_null() &&
+				if (is_semaphore_null(buffer_info.pending_semaphore) &&
 					buffer_info.unsync_write_access == 0 &&
 					!need_invalidate(buffer_info.visible_access_matrix, barrier.access_flags, barrier.stage_flags)) {
 					continue;
 				}
 
-				if (buffer_info.pending_semaphore.is_valid()) {
-					Semaphore& semaphore = *gpu_system_->get_semaphore_ptr(buffer_info.pending_semaphore);
-
-					if (!semaphore.is_pending()) {
-						command_queues_[queue_type].wait(gpu_system_->get_semaphore_ptr(buffer_info.pending_semaphore), VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT);
-					}
-
-					buffer_info.pending_semaphore = SemaphoreID::null();
+				if (is_semaphore_valid(buffer_info.pending_semaphore)) {
+				    command_queues_[queue_type].wait(buffer_info.pending_semaphore, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT);
+					buffer_info.pending_semaphore = TimelineSemaphore::null();
 				} else {
 					if (buffer_info.unsync_write_stage == 0 || buffer_info.unsync_write_stage == VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT) 
 						SOUL_ASSERT(0, buffer_info.unsync_write_access ==0, "");
@@ -914,7 +887,7 @@ namespace soul::gpu::impl
 					}
 				}
 
-				if (view_info.pending_semaphore.is_null() &&
+				if (is_semaphore_null(view_info.pending_semaphore) &&
 					!layout_change &&
 					view_info.unsync_write_access == 0 &&
 					!need_invalidate(view_info.visible_access_matrix, barrier.access_flags, barrier.stage_flags)) {
@@ -937,7 +910,7 @@ namespace soul::gpu::impl
 					}
 				};
 
-				if (view_info.pending_semaphore.is_valid()) {
+				if (is_semaphore_valid(view_info.pending_semaphore)) {
 					semaphore_dst_stage_flags |= barrier.stage_flags;
 					if (layout_change) {
 
@@ -946,11 +919,8 @@ namespace soul::gpu::impl
 						semaphore_layout_barriers.push_back(mem_barrier);
 
 					}
-					Semaphore& semaphore = *gpu_system_->get_semaphore_ptr(view_info.pending_semaphore);
-					if (!semaphore.is_pending()) {
-						command_queues_[queue_type].wait(gpu_system_->get_semaphore_ptr(view_info.pending_semaphore), VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT);
-					}
-					view_info.pending_semaphore = SemaphoreID::null();
+					command_queue.wait(view_info.pending_semaphore, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT);
+					view_info.pending_semaphore = TimelineSemaphore::null();
 				} else {
 					const auto dst_access_flags = barrier.access_flags;
 
@@ -1040,7 +1010,7 @@ namespace soul::gpu::impl
 				}
 			}
 
-			FlagMap<PassType, SemaphoreID> semaphores_map(SemaphoreID::null());
+			FlagMap<PassType, TimelineSemaphore> semaphores_map(TimelineSemaphore::null());
 			VkEvent event = VK_NULL_HANDLE;
 			VkPipelineStageFlags unsync_write_stage_flags = 0;
 
@@ -1048,11 +1018,10 @@ namespace soul::gpu::impl
 				if (is_pass_type_dependent[pass_type] && pass_type == pass_node->get_type() && pass_type != PassType::TRANSFER) {
 					event = gpu_system_->create_event();
 					garbage_events.push_back(event);
-				} else if (is_pass_type_dependent[pass_type] && pass_type != pass_node->get_type()) {
-					semaphores_map[pass_type] = gpu_system_->create_semaphore();
-					garbage_semaphores.push_back(semaphores_map[pass_type]);
 				}
 			}
+
+			SBOVector<Semaphore*> pending_semaphores;
 
 			for (const BufferBarrier& barrier : pass_info.buffer_flushes) {
 				BufferExecInfo& buffer_info = buffer_infos_[barrier.buffer_info_idx];
@@ -1061,27 +1030,25 @@ namespace soul::gpu::impl
 					PassType next_pass_type = render_graph_->get_pass_nodes()[next_pass_idx]->get_type();
 
 					if (pass_node->get_type() != next_pass_type) {
-						SemaphoreID semaphore_id = semaphores_map[next_pass_type];
-						SOUL_ASSERT(0, semaphore_id != SemaphoreID::null(), "");
-						buffer_info.pending_semaphore = semaphore_id;
-					} else {
+						pending_semaphores.push_back(&buffer_info.pending_semaphore);
+					}
+					else {
 						buffer_info.pending_event = event;
 						unsync_write_stage_flags |= barrier.stage_flags;
 					}
 				}
 			}
 
-			for (const TextureBarrier& barrier: pass_info.texture_flushes) {
+			for (const TextureBarrier& barrier : pass_info.texture_flushes) {
 				TextureExecInfo& texture_info = texture_infos_[barrier.texture_info_idx];
 				TextureViewExecInfo& texture_view_info = *texture_info.get_view(barrier.view);
 				if (texture_view_info.pass_counter != texture_view_info.passes.size() - 1) {
 					uint32 next_pass_idx = texture_view_info.passes[texture_view_info.pass_counter + 1].id;
 					PassType next_pass_type = render_graph_->get_pass_nodes()[next_pass_idx]->get_type();
 					if (pass_node->get_type() != next_pass_type) {
-						SemaphoreID semaphore_id = semaphores_map[next_pass_type];
-						SOUL_ASSERT(0, semaphore_id != SemaphoreID::null(), "");
-						texture_view_info.pending_semaphore = semaphore_id;
-					} else {
+						pending_semaphores.push_back(&texture_view_info.pending_semaphore);
+					}
+					else {
 						texture_view_info.pending_event = event;
 						unsync_write_stage_flags |= barrier.stage_flags;
 					}
@@ -1093,31 +1060,29 @@ namespace soul::gpu::impl
 				vkCmdSetEvent(cmd_buffer.get_vk_handle(), event, unsync_write_stage_flags);
 			}
 
-			Vector<Semaphore*> semaphores(&passNodeScopeAllocator);
-			semaphores.reserve(to_underlying(PassType::COUNT));
-			for (SemaphoreID semaphore_id : semaphores_map) {
-				if (semaphore_id.is_valid()) {
-					semaphores.add(gpu_system_->get_semaphore_ptr(semaphore_id));
-				}
-			}
+			vkCmdEndDebugUtilsLabelEXT(cmd_buffer.get_vk_handle());
+			command_queue.submit(cmd_buffer);
+
+			for(Semaphore* pending_semaphore : pending_semaphores)
+				*pending_semaphore = command_queue.get_timeline_semaphore();
 
 			auto update_resource_unsync_status = [this](const PassType pass_type,
 				VkAccessFlags barrier_access_flags,
-				VkPipelineStageFlags event_stage_flags, 
+				VkPipelineStageFlags event_stage_flags,
 				auto& resource_info) {
-				const bool is_resource_in_last_pass = resource_info.pass_counter != resource_info.passes.size() - 1;
-				if (is_resource_in_last_pass) {
-					const uint32 next_pass_idx = resource_info.passes[resource_info.pass_counter + 1].id;
-					const PassType next_pass_type = render_graph_->get_pass_nodes()[next_pass_idx]->get_type();
-					if (pass_type != next_pass_type) {
-						resource_info.unsync_write_access = 0;
-						resource_info.unsync_write_stage = 0;
+					const bool is_resource_in_last_pass = resource_info.pass_counter != resource_info.passes.size() - 1;
+					if (is_resource_in_last_pass) {
+						const uint32 next_pass_idx = resource_info.passes[resource_info.pass_counter + 1].id;
+						const PassType next_pass_type = render_graph_->get_pass_nodes()[next_pass_idx]->get_type();
+						if (pass_type != next_pass_type) {
+							resource_info.unsync_write_access = 0;
+							resource_info.unsync_write_stage = 0;
+						}
+						else {
+							resource_info.unsync_write_access = barrier_access_flags;
+							resource_info.unsync_write_stage = event_stage_flags;
+						}
 					}
-					else {
-						resource_info.unsync_write_access = barrier_access_flags;
-						resource_info.unsync_write_stage = event_stage_flags;
-					}
-				}
 			};
 
 			// Update unsync stage
@@ -1127,15 +1092,12 @@ namespace soul::gpu::impl
 				buffer_info.pass_counter += 1;
 			}
 
-			for (const TextureBarrier& barrier: pass_info.texture_flushes) {
+			for (const TextureBarrier& barrier : pass_info.texture_flushes) {
 				TextureExecInfo& texture_info = texture_infos_[barrier.texture_info_idx];
 				TextureViewExecInfo& texture_view_info = *texture_info.get_view(barrier.view);
 				update_resource_unsync_status(pass_node->get_type(), barrier.access_flags, unsync_write_stage_flags, texture_view_info);
 				texture_view_info.pass_counter += 1;
 			}
-
-			vkCmdEndDebugUtilsLabelEXT(cmd_buffer.get_vk_handle());
-			command_queues_[queue_type].submit(cmd_buffer, semaphores);
 		}
 
 		// Update resource owner for external resource
@@ -1180,9 +1142,6 @@ namespace soul::gpu::impl
 			gpu_system_->destroy_event(event);
 		}
 
-		for (SemaphoreID semaphore_id : garbage_semaphores) {
-			gpu_system_->destroy_semaphore(semaphore_id);
-		}
 	}
 
 	bool RenderGraphExecution::is_external(const BufferExecInfo& info) const {
@@ -1231,12 +1190,6 @@ namespace soul::gpu::impl
 
 		for (const auto event : external_events_) {
 			if (event != VK_NULL_HANDLE) gpu_system_->destroy_event(event);
-		}
-
-		for (const auto src_pass_type : FlagIter<PassType>()) {
-			for (auto semaphore_id : external_semaphores_[src_pass_type]) {
-				if (semaphore_id.is_valid()) gpu_system_->destroy_semaphore(semaphore_id);
-			}
 		}
 
 		for (const auto& texture_info : internal_texture_infos_) {

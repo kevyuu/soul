@@ -7,7 +7,6 @@ struct GLFWwindow;
 namespace soul::gpu
 {
 	class System;
-	class RenderGraph;
 }
 
 class ImGuiRenderGraphPass
@@ -15,7 +14,7 @@ class ImGuiRenderGraphPass
 public:
 	ImGuiRenderGraphPass(soul::gpu::System* gpu_system);
 	~ImGuiRenderGraphPass();
-	void add_pass(soul::gpu::RenderGraph& render_graph);
+	void add_pass(soul::gpu::TextureNodeID render_target, soul::gpu::RenderGraph& render_graph);
 
 private:
 

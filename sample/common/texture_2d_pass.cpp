@@ -110,8 +110,7 @@ Texture2DRGPass::~Texture2DRGPass()
 
 void Texture2DRGPass::add_pass(const Parameter& parameter, soul::gpu::RenderGraph& render_graph)
 {
-	const gpu::TextureID swapchain_texture_id = gpu_system_->get_swapchain_texture();
-	const gpu::TextureNodeID render_target = render_graph.import_texture("Color Output", swapchain_texture_id);
+	const gpu::TextureNodeID render_target = parameter.render_target;
 	const gpu::ColorAttachmentDesc color_attachment_desc = {
 			.node_id = render_target,
 			.clear = true

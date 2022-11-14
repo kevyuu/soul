@@ -19,7 +19,7 @@ class ComputeShaderSampleApp final : public App
 
 	const std::chrono::steady_clock::time_point start_ = std::chrono::steady_clock::now();
 
-	void render(gpu::RenderGraph& render_graph) override
+	void render(gpu::TextureNodeID render_target, gpu::RenderGraph& render_graph) override
 	{
 		const vec2ui32 viewport = gpu_system_->get_swapchain_extent();
 
@@ -67,7 +67,8 @@ class ComputeShaderSampleApp final : public App
 		};
 
 		const Texture2DRGPass::Parameter texture_2d_parameter = {
-			.sampled_texture = target_texture
+			.sampled_texture = target_texture,
+			.render_target = render_target
 		};
 		texture_2d_pass.add_pass(texture_2d_parameter, render_graph);
 	}
