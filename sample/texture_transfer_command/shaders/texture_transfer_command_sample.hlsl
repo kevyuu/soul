@@ -6,8 +6,8 @@ struct VSInput {
 
 [[vk::push_constant]]
 struct push_constant {
-	uint texture_descriptor_id;
-	uint sampler_descriptor_id;
+	soulsl::DescriptorID texture_descriptor_id;
+	soulsl::DescriptorID sampler_descriptor_id;
 } push_constant;
 
 struct VSOutput

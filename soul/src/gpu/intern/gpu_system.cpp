@@ -43,7 +43,20 @@ namespace soul
 
 namespace soulsl
 {
-    typedef uint DescriptorID;
+    static const uint UINT_MAX = 4294967295;
+    struct DescriptorID
+    {
+        uint id;
+
+        bool is_null() {
+            return id == UINT_MAX;
+        }
+
+        bool is_valid() {
+            return id != UINT_MAX;
+        }
+    };
+    static const DescriptorID DESCRIPTOR_ID_NULL = { UINT_MAX };
 
 	typedef vector <float, 2> float2;
 	typedef vector <float, 3> float3;
@@ -69,28 +82,28 @@ namespace soulsl
 [[vk::binding(0, 3)]] RWTexture2D<float4> global_rw_texture_2d_float4_arr[]; 
 
 template<typename T>
-T get_buffer(uint descriptor_id, uint offset) {
-	return global_buffer_arr[descriptor_id].Load<T>(offset);
+T get_buffer(soulsl::DescriptorID descriptor_id, uint offset) {
+	return global_buffer_arr[descriptor_id.id].Load<T>(offset);
 }
 
-SamplerState get_sampler(uint descriptor_id) {
-	return global_sampler_arr[descriptor_id];
+SamplerState get_sampler(soulsl::DescriptorID descriptor_id) {
+	return global_sampler_arr[descriptor_id.id];
 }
 
-Texture2D get_texture_2d(uint descriptor_id) {
-	return global_texture_2d_arr[descriptor_id];
+Texture2D get_texture_2d(soulsl::DescriptorID descriptor_id) {
+	return global_texture_2d_arr[descriptor_id.id];
 }
 
-Texture3D get_texture_3d(uint descriptor_id) {
-    return global_texture_3d_arr[descriptor_id];
+Texture3D get_texture_3d(soulsl::DescriptorID descriptor_id) {
+    return global_texture_3d_arr[descriptor_id.id];
 }
 
-TextureCube get_texture_cube(uint descriptor_id) {
-    return global_texture_cube_arr[descriptor_id];
+TextureCube get_texture_cube(soulsl::DescriptorID descriptor_id) {
+    return global_texture_cube_arr[descriptor_id.id];
 }
 
-RWTexture2D<float4> get_rw_texture_2d_float4(uint descriptor_id) {
-    return global_rw_texture_2d_float4_arr[descriptor_id];
+RWTexture2D<float4> get_rw_texture_2d_float4(soulsl::DescriptorID descriptor_id) {
+    return global_rw_texture_2d_float4_arr[descriptor_id.id];
 }
 )HLSL";
 static constexpr soul_size RESOURCE_HLSL_SIZE = std::char_traits<char>::length(RESOURCE_HLSL);

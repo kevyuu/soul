@@ -7,7 +7,7 @@ struct VSInput {
 
 [[vk::push_constant]]
 struct push_constant {
-	soulsl::DescriptorID transform_gpu_handle;
+	soulsl::DescriptorID transform_descriptor_id;
 	uint offset;
 } push_constant;
 
@@ -21,7 +21,7 @@ struct VSOutput
 VSOutput vsMain(VSInput input)
 {
 	VSOutput output;
-	Transform transform = get_buffer<Transform>(push_constant.transform_gpu_handle, push_constant.offset);
+	Transform transform = get_buffer<Transform>(push_constant.transform_descriptor_id, push_constant.offset);
 	output.position = mul(transform.translation, mul(transform.rotation, mul(transform.scale, float4(input.position, 0, 1))));
 	output.color = transform.color + input.color;
 	return output;
