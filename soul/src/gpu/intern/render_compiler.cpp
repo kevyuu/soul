@@ -95,7 +95,7 @@ namespace soul::gpu::impl
 				.bufferRowLength = region.buffer_row_length,
 				.bufferImageHeight = region.buffer_image_height,
 				.imageSubresource = {
-					.aspectMask = vkCastFormatToAspectFlags(format),
+					.aspectMask = vk_cast_format_to_aspect_flags(format),
 					.mipLevel = region.subresource.mip_level,
 					.baseArrayLayer = region.subresource.base_array_layer,
 					.layerCount = region.subresource.layer_count
@@ -130,8 +130,8 @@ namespace soul::gpu::impl
 		const Texture* src_texture = gpu_system_.get_texture_ptr(command.src_texture);
 		const Texture* dst_texture = gpu_system_.get_texture_ptr(command.dst_texture);
 
-		const auto src_aspect_mask = vkCastFormatToAspectFlags(src_texture->desc.format);
-		const auto dst_aspect_mask = vkCastFormatToAspectFlags(dst_texture->desc.format);
+		const auto src_aspect_mask = vk_cast_format_to_aspect_flags(src_texture->desc.format);
+		const auto dst_aspect_mask = vk_cast_format_to_aspect_flags(dst_texture->desc.format);
 
 		runtime::ScopeAllocator scope_allocator("compile_command copy texture");
 		Vector<VkImageCopy> image_copies(&scope_allocator);

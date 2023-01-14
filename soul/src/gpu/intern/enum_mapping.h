@@ -1,6 +1,5 @@
 #pragma once
 #include "core/type.h"
-#include "core/util.h"
 #include "gpu/type.h"
 
 namespace soul::gpu
@@ -13,7 +12,7 @@ namespace soul::gpu
 		QueueType::GRAPHIC
 	});
 
-	SOUL_ALWAYS_INLINE VkCompareOp vkCast(CompareOp compareOp) {
+	SOUL_ALWAYS_INLINE VkCompareOp vk_cast(const CompareOp compare_op) {
 		auto COMPARE_OP_MAP = FlagMap<CompareOp, VkCompareOp>::build_from_list({
 			VK_COMPARE_OP_NEVER,
 			VK_COMPARE_OP_LESS,
@@ -25,10 +24,10 @@ namespace soul::gpu
 			VK_COMPARE_OP_ALWAYS
 		});
 		
-		return COMPARE_OP_MAP[compareOp];
+		return COMPARE_OP_MAP[compare_op];
 	}
 
-	SOUL_ALWAYS_INLINE VkImageLayout vkCast(TextureLayout layout) {
+	SOUL_ALWAYS_INLINE VkImageLayout vk_cast(const TextureLayout layout) {
 		auto IMAGE_LAYOUT_MAP = FlagMap<TextureLayout, VkImageLayout>::build_from_list({
 			VK_IMAGE_LAYOUT_UNDEFINED,
 			VK_IMAGE_LAYOUT_UNDEFINED,
@@ -69,7 +68,7 @@ namespace soul::gpu
 		VK_FORMAT_R16G16B16_SINT,
 		VK_FORMAT_B10G11R11_UFLOAT_PACK32,
 	});
-	SOUL_ALWAYS_INLINE VkFormat vkCast(TextureFormat format) {
+	SOUL_ALWAYS_INLINE VkFormat vk_cast(const TextureFormat format) {
 		return FORMAT_MAP[format];
 	}
 
@@ -81,12 +80,12 @@ namespace soul::gpu
 		VK_IMAGE_TYPE_2D,
 	});
 	
-	SOUL_ALWAYS_INLINE VkImageType vkCast(TextureType type) {
+	SOUL_ALWAYS_INLINE VkImageType vk_cast(const TextureType type) {
 		return IMAGE_TYPE_MAP[type];
 	}
 
-	SOUL_ALWAYS_INLINE VkImageViewType vkCastToImageViewType(TextureType type) {
-		static auto IMAGE_VIEW_TYPE_MAP = FlagMap<TextureType, VkImageViewType>::build_from_list({
+	SOUL_ALWAYS_INLINE VkImageViewType vk_cast_to_image_view_type(const TextureType type) {
+		static constexpr auto IMAGE_VIEW_TYPE_MAP = FlagMap<TextureType, VkImageViewType>::build_from_list({
 			VK_IMAGE_VIEW_TYPE_1D,
 			VK_IMAGE_VIEW_TYPE_2D,
 			VK_IMAGE_VIEW_TYPE_2D_ARRAY,
@@ -96,8 +95,8 @@ namespace soul::gpu
 		return IMAGE_VIEW_TYPE_MAP[type];
 	}
 
-	SOUL_ALWAYS_INLINE VkImageAspectFlags vkCastFormatToAspectFlags(TextureFormat format) {
-		static auto IMAGE_ASPECT_FLAGS_MAP = FlagMap<TextureFormat, VkImageAspectFlags>::build_from_list({
+	SOUL_ALWAYS_INLINE VkImageAspectFlags vk_cast_format_to_aspect_flags(const TextureFormat format) {
+		static constexpr auto IMAGE_ASPECT_FLAGS_MAP = FlagMap<TextureFormat, VkImageAspectFlags>::build_from_list({
 			VK_IMAGE_ASPECT_COLOR_BIT,
 
 		    VK_IMAGE_ASPECT_DEPTH_BIT,
@@ -128,7 +127,7 @@ namespace soul::gpu
 		VK_FILTER_NEAREST,
 		VK_FILTER_LINEAR
 	});
-	SOUL_ALWAYS_INLINE VkFilter vkCast(TextureFilter filter) {
+	SOUL_ALWAYS_INLINE VkFilter vk_cast(const TextureFilter filter) {
 		return FILTER_MAP[filter];
 	}
 
@@ -137,12 +136,12 @@ namespace soul::gpu
 		VK_SAMPLER_MIPMAP_MODE_LINEAR
 	});
 	
-	SOUL_ALWAYS_INLINE VkSamplerMipmapMode vkCastMipmapFilter(TextureFilter filter) {
+	SOUL_ALWAYS_INLINE VkSamplerMipmapMode vk_cast_mipmap_filter(const TextureFilter filter) {
 		return MIPMAP_FILTER_MAP[filter];
 	}
 
-	SOUL_ALWAYS_INLINE VkSamplerAddressMode vkCast(TextureWrap wrap) {
-		static auto MAPPING = FlagMap<TextureWrap, VkSamplerAddressMode>::build_from_list({
+	SOUL_ALWAYS_INLINE VkSamplerAddressMode vk_cast(const TextureWrap wrap) {
+		static constexpr auto MAPPING = FlagMap<TextureWrap, VkSamplerAddressMode>::build_from_list({
 			VK_SAMPLER_ADDRESS_MODE_REPEAT,
 			VK_SAMPLER_ADDRESS_MODE_MIRRORED_REPEAT,
 			VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
@@ -152,8 +151,8 @@ namespace soul::gpu
 		return MAPPING[wrap];
 	}
 
-	SOUL_ALWAYS_INLINE VkBlendFactor vkCast(BlendFactor blendFactor) {
-		static auto MAPPING = FlagMap<BlendFactor, VkBlendFactor>::build_from_list({
+	SOUL_ALWAYS_INLINE VkBlendFactor vk_cast(const BlendFactor blend_factor) {
+		static constexpr auto MAPPING = FlagMap<BlendFactor, VkBlendFactor>::build_from_list({
 			VK_BLEND_FACTOR_ZERO,
 			VK_BLEND_FACTOR_ONE,
 			VK_BLEND_FACTOR_SRC_COLOR,
@@ -174,22 +173,22 @@ namespace soul::gpu
 			VK_BLEND_FACTOR_SRC1_ALPHA,
 			VK_BLEND_FACTOR_ONE_MINUS_SRC1_ALPHA
 		});
-		return MAPPING[blendFactor];
+		return MAPPING[blend_factor];
 	}
 
-	SOUL_ALWAYS_INLINE VkBlendOp vkCast(BlendOp blendOp) {
-		static auto MAPPING = FlagMap<BlendOp, VkBlendOp>::build_from_list({
+	SOUL_ALWAYS_INLINE VkBlendOp vk_cast(const BlendOp blend_op) {
+		static constexpr auto MAPPING = FlagMap<BlendOp, VkBlendOp>::build_from_list({
 			VK_BLEND_OP_ADD,
 			VK_BLEND_OP_SUBTRACT,
 			VK_BLEND_OP_REVERSE_SUBTRACT,
 			VK_BLEND_OP_MIN,
 			VK_BLEND_OP_MAX
 		});
-		return MAPPING[blendOp];
+		return MAPPING[blend_op];
 	}
 
-	constexpr VkImageUsageFlags vkCast(TextureUsageFlags usageFlags) {
-		return usageFlags.map<VkImageUsageFlags>({
+	constexpr VkImageUsageFlags vk_cast(const TextureUsageFlags usage_flags) {
+		return usage_flags.map<VkImageUsageFlags>({
 			VK_IMAGE_USAGE_SAMPLED_BIT,
 			VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
 			VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
@@ -200,8 +199,8 @@ namespace soul::gpu
 		});
 	}
 
-	constexpr VkBufferUsageFlags vkCastBufferUsageFlags(BufferUsageFlags usageFlags) {
-		return usageFlags.map<VkBufferUsageFlags>({
+	constexpr VkBufferUsageFlags vk_cast(const BufferUsageFlags usage_flags) {
+		return usage_flags.map<VkBufferUsageFlags>({
 			VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
 			VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
 			VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
@@ -211,8 +210,8 @@ namespace soul::gpu
 		});
 	}
 
-	constexpr VkPipelineStageFlags vkCastShaderStageToPipelineStageFlags(ShaderStageFlags stageFlags) {
-		return stageFlags.map<VkPipelineStageFlags>({
+	constexpr VkPipelineStageFlags vk_cast_shader_stage_to_pipeline_stage_flags(const ShaderStageFlags stage_flags) {
+		return stage_flags.map<VkPipelineStageFlags>({
 			VK_PIPELINE_STAGE_VERTEX_SHADER_BIT,
 			VK_PIPELINE_STAGE_GEOMETRY_SHADER_BIT,
 			VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
@@ -220,8 +219,8 @@ namespace soul::gpu
 		});
 	}
 
-	constexpr VkShaderStageFlags vkCast(ShaderStageFlags stageFlags) noexcept {
-		return stageFlags.map<VkShaderStageFlags>({
+	constexpr VkShaderStageFlags vk_cast(const ShaderStageFlags stage_flags) noexcept {
+		return stage_flags.map<VkShaderStageFlags>({
 			VK_SHADER_STAGE_VERTEX_BIT,
 			VK_SHADER_STAGE_GEOMETRY_BIT,
 			VK_SHADER_STAGE_FRAGMENT_BIT,
@@ -229,17 +228,17 @@ namespace soul::gpu
 		});
 	}
 
-	SOUL_ALWAYS_INLINE VkShaderStageFlagBits vkCast(ShaderStage stageFlag) noexcept {
-		static auto MAPPING = FlagMap<ShaderStage, VkShaderStageFlagBits>::build_from_list({
+	SOUL_ALWAYS_INLINE VkShaderStageFlagBits vk_cast(const ShaderStage shader_stage) noexcept {
+		static constexpr auto MAPPING = FlagMap<ShaderStage, VkShaderStageFlagBits>::build_from_list({
 			VK_SHADER_STAGE_VERTEX_BIT,
 			VK_SHADER_STAGE_GEOMETRY_BIT,
 			VK_SHADER_STAGE_FRAGMENT_BIT,
 			VK_SHADER_STAGE_COMPUTE_BIT,
 		});
-		return MAPPING[stageFlag];
+		return MAPPING[shader_stage];
 	}
 
-	SOUL_ALWAYS_INLINE VkFormat vkCast(VertexElementType type, VertexElementFlags flags) {
+	SOUL_ALWAYS_INLINE VkFormat vk_cast(const VertexElementType type, const VertexElementFlags flags) {
 		const bool integer = flags & VERTEX_ELEMENT_INTEGER_TARGET;
 		const bool normalized =flags & VERTEX_ELEMENT_NORMALIZED;
 		using ElementType = VertexElementType;
@@ -276,7 +275,6 @@ namespace soul::gpu
 			case ElementType::HALF3:
 			case ElementType::HALF4:
 			case ElementType::COUNT:
-			default:
 				SOUL_NOT_IMPLEMENTED();
 				return VK_FORMAT_UNDEFINED;
 			}
@@ -313,13 +311,12 @@ namespace soul::gpu
 		case ElementType::HALF4: return VK_FORMAT_R16G16B16A16_SFLOAT;
 		case ElementType::FLOAT4: return VK_FORMAT_R32G32B32A32_SFLOAT;
 		case ElementType::COUNT:
-		default:
 			SOUL_NOT_IMPLEMENTED();
 		}
 		return VK_FORMAT_UNDEFINED;
 	}
 
-	SOUL_ALWAYS_INLINE VkSampleCountFlagBits vkCast(TextureSampleCount sampleCount)
+	SOUL_ALWAYS_INLINE VkSampleCountFlagBits vk_cast(const TextureSampleCount sample_count)
 	{
 		static_assert(to_underlying(TextureSampleCount::COUNT_1) == VK_SAMPLE_COUNT_1_BIT);
 		static_assert(to_underlying(TextureSampleCount::COUNT_2) == VK_SAMPLE_COUNT_2_BIT);
@@ -328,7 +325,7 @@ namespace soul::gpu
 		static_assert(to_underlying(TextureSampleCount::COUNT_16) == VK_SAMPLE_COUNT_16_BIT);
 		static_assert(to_underlying(TextureSampleCount::COUNT_32) == VK_SAMPLE_COUNT_32_BIT);
 		static_assert(to_underlying(TextureSampleCount::COUNT_64) == VK_SAMPLE_COUNT_64_BIT);
-		return static_cast<VkSampleCountFlagBits>(to_underlying(sampleCount));
+		return static_cast<VkSampleCountFlagBits>(to_underlying(sample_count));
 	}
 
 	constexpr VkOffset3D get_vk_offset_3d(const vec3i32 val)
@@ -341,7 +338,7 @@ namespace soul::gpu
 		return { val.x, val.y, val.z };
 	}
 
-	constexpr VkImageSubresourceLayers get_vk_subresource_layers(const TextureSubresourceLayers& subresource_layers, VkImageAspectFlags aspect_flags)
+	constexpr VkImageSubresourceLayers get_vk_subresource_layers(const TextureSubresourceLayers& subresource_layers, const VkImageAspectFlags aspect_flags)
 	{
 		return {
 			.aspectMask = aspect_flags,

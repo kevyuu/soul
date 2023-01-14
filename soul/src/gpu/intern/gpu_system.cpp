@@ -879,20 +879,20 @@ namespace soul::gpu
 		SOUL_ASSERT(0, desc.layer_count >= 1, "");
 		const auto texture_id = TextureID(_db.texture_pool.create());
 		Texture& texture = *_db.texture_pool.get(texture_id.id);
-		const VkFormat format = vkCast(desc.format);
+		const VkFormat format = vk_cast(desc.format);
 		const QueueData queue_data = get_queue_data_from_queue_flags(desc.queue_flags);
 		const VkImageCreateFlags image_create_flags = desc.type == TextureType::CUBE ? VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT | VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT : VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT;
 		const VkImageCreateInfo image_info = {
 			.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
 			.flags = image_create_flags,
-			.imageType = vkCast(desc.type),
+			.imageType = vk_cast(desc.type),
 			.format = format,
 			.extent = get_vk_extent_3d(desc.extent),
 			.mipLevels = desc.mip_levels,
 			.arrayLayers = desc.layer_count,
-			.samples = vkCast(desc.sample_count),
+			.samples = vk_cast(desc.sample_count),
 			.tiling = VK_IMAGE_TILING_OPTIMAL,
-			.usage = vkCast(desc.usage_flags),
+			.usage = vk_cast(desc.usage_flags),
 			.sharingMode = queue_data.count == 1 ? VK_SHARING_MODE_EXCLUSIVE : VK_SHARING_MODE_CONCURRENT,
 			.queueFamilyIndexCount = queue_data.count,
 			.pQueueFamilyIndices = queue_data.indices,
@@ -907,7 +907,7 @@ namespace soul::gpu
 			              &image_info, &alloc_info, &texture.vk_handle,
 			              &texture.allocation, nullptr), "Fail to create image");
 
-        auto image_aspect = vkCastFormatToAspectFlags(desc.format);
+        auto image_aspect = vk_cast_format_to_aspect_flags(desc.format);
 		if (image_aspect & VK_IMAGE_ASPECT_STENCIL_BIT)
 		{
 			SOUL_LOG_WARN("Texture creation with stencil format detected. Current version will remove the aspect stencil bit so the texture cannot be used for depth stencil. The reason is because Vulkan spec stated that descriptor cannot have more than one aspect.");
@@ -917,7 +917,7 @@ namespace soul::gpu
 		const VkImageViewCreateInfo image_view_info = {
 			.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
 			.image = texture.vk_handle,
-			.viewType = vkCastToImageViewType(desc.type),
+			.viewType = vk_cast_to_image_view_type(desc.type),
 			.format = format,
 			.components = {},
 			.subresourceRange = {
@@ -1065,11 +1065,11 @@ namespace soul::gpu
 			const VkImageViewCreateInfo image_view_info = {
 				.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
 				.image = texture.vk_handle,
-				.viewType = vkCastToImageViewType(texture.desc.type),
-				.format = vkCast(texture.desc.format),
+				.viewType = vk_cast_to_image_view_type(texture.desc.type),
+				.format = vk_cast(texture.desc.format),
 				.components = {},
 				.subresourceRange = {
-					vkCastFormatToAspectFlags(texture.desc.format),
+					vk_cast_format_to_aspect_flags(texture.desc.format),
 					level,
 					1,
 					layer,
@@ -1118,7 +1118,7 @@ namespace soul::gpu
 		const VkBufferCreateInfo buffer_info = {
 			.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
 			.size = desc.size,
-			.usage = vkCastBufferUsageFlags(desc.usage_flags),
+			.usage = vk_cast(desc.usage_flags),
 			.sharingMode = queue_data.count > 1 ? VK_SHARING_MODE_CONCURRENT : VK_SHARING_MODE_EXCLUSIVE,
 			.queueFamilyIndexCount = queue_data.count,
 			.pQueueFamilyIndices = queue_data.indices
@@ -1177,7 +1177,7 @@ namespace soul::gpu
 		const VkBufferCreateInfo buffer_info = {
 			.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
 			.size = desc.size,
-			.usage = vkCastBufferUsageFlags(desc.usage_flags),
+			.usage = vk_cast(desc.usage_flags),
 			.sharingMode = queue_data.count > 1 ? VK_SHARING_MODE_CONCURRENT : VK_SHARING_MODE_EXCLUSIVE,
 			.queueFamilyIndexCount = queue_data.count,
 			.pQueueFamilyIndices = queue_data.indices
@@ -1318,7 +1318,7 @@ namespace soul::gpu
 				if (shader.vk_handle == VK_NULL_HANDLE) continue;
 				const VkPipelineShaderStageCreateInfo shader_stage_info = {
 					.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
-					.stage = vkCast(stage),
+					.stage = vk_cast(stage),
 					.module = shader.vk_handle,
 					.pName = shader.entry_point.data()
 				};
@@ -1381,7 +1381,7 @@ namespace soul::gpu
 
 			const VkPipelineMultisampleStateCreateInfo multisample_state = {
 				.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO,
-				.rasterizationSamples = vkCast(sample_count),
+				.rasterizationSamples = vk_cast(sample_count),
 				.sampleShadingEnable = VK_FALSE
 			};
 
@@ -1390,7 +1390,7 @@ namespace soul::gpu
 			for (uint32 i = 0; i < MAX_INPUT_PER_SHADER; i++) {
 				auto& input_attribute = desc.input_attributes[i];
 				if (input_attribute.type == VertexElementType::DEFAULT) continue;
-				attr_descs[attr_desc_count].format = vkCast(input_attribute.type, input_attribute.flags);
+				attr_descs[attr_desc_count].format = vk_cast(input_attribute.type, input_attribute.flags);
 				attr_descs[attr_desc_count].binding = desc.input_attributes[i].binding;
 				attr_descs[attr_desc_count].location = i;
 				attr_descs[attr_desc_count].offset = desc.input_attributes[i].offset;
@@ -1423,12 +1423,12 @@ namespace soul::gpu
 				{
 					return {
 						.blendEnable = attachment.blend_enable ? VK_TRUE : VK_FALSE,
-						.srcColorBlendFactor = vkCast(attachment.src_color_blend_factor),
-						.dstColorBlendFactor = vkCast(attachment.dst_color_blend_factor),
-						.colorBlendOp = vkCast(attachment.color_blend_op),
-						.srcAlphaBlendFactor = vkCast(attachment.src_alpha_blend_factor),
-						.dstAlphaBlendFactor = vkCast(attachment.dst_alpha_blend_factor),
-						.alphaBlendOp = vkCast(attachment.alpha_blend_op),
+						.srcColorBlendFactor = vk_cast(attachment.src_color_blend_factor),
+						.dstColorBlendFactor = vk_cast(attachment.dst_color_blend_factor),
+						.colorBlendOp = vk_cast(attachment.color_blend_op),
+						.srcAlphaBlendFactor = vk_cast(attachment.src_alpha_blend_factor),
+						.dstAlphaBlendFactor = vk_cast(attachment.dst_alpha_blend_factor),
+						.alphaBlendOp = vk_cast(attachment.alpha_blend_op),
 						.colorWriteMask = soul::cast<uint32>(attachment.color_write ? 0xf : 0x0)
 					};
 				});
@@ -1446,7 +1446,7 @@ namespace soul::gpu
 				.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO,
 				.depthTestEnable = desc.depth_stencil_attachment.depth_test_enable,
 				.depthWriteEnable = desc.depth_stencil_attachment.depth_write_enable,
-				.depthCompareOp = vkCast(desc.depth_stencil_attachment.depth_compare_op),
+				.depthCompareOp = vk_cast(desc.depth_stencil_attachment.depth_compare_op),
 				.depthBoundsTestEnable = VK_FALSE,
 				.stencilTestEnable = VK_FALSE,
 				.front = {},
@@ -1717,16 +1717,16 @@ namespace soul::gpu
 
 		const VkSamplerCreateInfo sampler_create_info = {
 			.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
-			.magFilter = vkCast(desc.mag_filter),
-			.minFilter = vkCast(desc.min_filter),
-			.mipmapMode = vkCastMipmapFilter(desc.mipmap_filter),
-			.addressModeU = vkCast(desc.wrap_u),
-			.addressModeV = vkCast(desc.wrap_v),
-			.addressModeW = vkCast(desc.wrap_w),
+			.magFilter = vk_cast(desc.mag_filter),
+			.minFilter = vk_cast(desc.min_filter),
+			.mipmapMode = vk_cast_mipmap_filter(desc.mipmap_filter),
+			.addressModeU = vk_cast(desc.wrap_u),
+			.addressModeV = vk_cast(desc.wrap_v),
+			.addressModeW = vk_cast(desc.wrap_w),
 			.anisotropyEnable = desc.anisotropy_enable,
 			.maxAnisotropy = desc.max_anisotropy,
 			.compareEnable = desc.compare_enable ? VK_TRUE : VK_FALSE,
-			.compareOp = vkCast(desc.compare_op),
+			.compareOp = vk_cast(desc.compare_op),
 			.minLod = 0,
 			.maxLod = VK_LOD_CLAMP_NONE,
 			.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK,
@@ -1784,8 +1784,8 @@ namespace soul::gpu
 			if (color_attachment.flags & ATTACHMENT_ACTIVE_BIT)
 			{
 				VkAttachmentDescription& attachment = attachments[attachment_count];
-				attachment.format = vkCast(color_attachment.format);
-				attachment.samples = vkCast(color_attachment.sampleCount);
+				attachment.format = vk_cast(color_attachment.format);
+				attachment.samples = vk_cast(color_attachment.sampleCount);
 				const auto flags = color_attachment.flags;
 				
 				attachment.loadOp = attachment_flag_to_load_op(flags);
@@ -1810,8 +1810,8 @@ namespace soul::gpu
 			const Attachment& attachment_key = input_attachment;
 			if (attachment_key.flags & ATTACHMENT_ACTIVE_BIT) {
 				VkAttachmentDescription& attachment = attachments[attachment_count];
-				attachment.format = vkCast(attachment_key.format);
-				attachment.samples = vkCast(input_attachment.sampleCount);
+				attachment.format = vk_cast(attachment_key.format);
+				attachment.samples = vk_cast(input_attachment.sampleCount);
 
 				const AttachmentFlags flags = attachment_key.flags;
 
@@ -1837,8 +1837,8 @@ namespace soul::gpu
 			if (resolve_attachment.flags & ATTACHMENT_ACTIVE_BIT)
 			{
 				VkAttachmentDescription& attachment = attachments[attachment_count];
-				attachment.format = vkCast(resolve_attachment.format);
-				attachment.samples = vkCast(resolve_attachment.sampleCount);
+				attachment.format = vk_cast(resolve_attachment.format);
+				attachment.samples = vk_cast(resolve_attachment.sampleCount);
 				const AttachmentFlags flags = resolve_attachment.flags;
 
 				attachment.loadOp = attachment_flag_to_load_op(flags);
@@ -1872,8 +1872,8 @@ namespace soul::gpu
 		{
 			const AttachmentFlags flags = key.depth_attachment.flags;
 			VkAttachmentDescription& attachment = attachments[attachment_count];
-			attachment.format = vkCast(key.depth_attachment.format);
-			attachment.samples = vkCast(key.depth_attachment.sampleCount);
+			attachment.format = vk_cast(key.depth_attachment.format);
+			attachment.samples = vk_cast(key.depth_attachment.sampleCount);
 
 			attachment.loadOp = attachment_flag_to_load_op(flags);
 			attachment.storeOp = attachment_flag_to_store_op(flags);
@@ -2700,7 +2700,7 @@ namespace soul::gpu
 			.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
 			.image = texture.vk_handle,
 			.subresourceRange = {
-				.aspectMask = vkCastFormatToAspectFlags(texture.desc.format),
+				.aspectMask = vk_cast_format_to_aspect_flags(texture.desc.format),
 				.baseMipLevel = 0,
 				.levelCount = VK_REMAINING_MIP_LEVELS,
 				.baseArrayLayer = 0,
@@ -2727,7 +2727,7 @@ namespace soul::gpu
 				.bufferRowLength = region_load.buffer_row_length,
 				.bufferImageHeight = region_load.buffer_image_height,
 				.imageSubresource = {
-					.aspectMask = vkCastFormatToAspectFlags(texture.desc.format),
+					.aspectMask = vk_cast_format_to_aspect_flags(texture.desc.format),
 					.mipLevel = region_load.subresource.mip_level,
 					.baseArrayLayer = region_load.subresource.base_array_layer,
 					.layerCount = region_load.subresource.layer_count
@@ -2769,7 +2769,7 @@ namespace soul::gpu
 			.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
 			.image = texture.vk_handle,
 			.subresourceRange = {
-				.aspectMask = vkCastFormatToAspectFlags(texture.desc.format),
+				.aspectMask = vk_cast_format_to_aspect_flags(texture.desc.format),
 				.baseMipLevel = 0,
 				.levelCount = VK_REMAINING_MIP_LEVELS,
 				.baseArrayLayer = 0,
@@ -2788,7 +2788,7 @@ namespace soul::gpu
 			1, &barrier);
 
 		const VkImageSubresourceRange range = {
-			.aspectMask = vkCastFormatToAspectFlags(texture.desc.format),
+			.aspectMask = vk_cast_format_to_aspect_flags(texture.desc.format),
 			.levelCount = texture.desc.mip_levels,
 			.layerCount = 1
 		};
@@ -3006,7 +3006,7 @@ namespace soul::gpu
 				.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
 				.image = texture.vk_handle,
 				.subresourceRange = {
-					.aspectMask = vkCastFormatToAspectFlags(texture.desc.format),
+					.aspectMask = vk_cast_format_to_aspect_flags(texture.desc.format),
 					.baseMipLevel = 0,
 					.levelCount = VK_REMAINING_MIP_LEVELS,
 					.baseArrayLayer = 0,

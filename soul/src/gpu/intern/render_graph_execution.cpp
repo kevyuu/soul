@@ -902,7 +902,7 @@ namespace soul::gpu::impl
 					.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
 					.image = texture->vk_handle,
 					.subresourceRange = {
-						.aspectMask = vkCastFormatToAspectFlags(texture->desc.format),
+						.aspectMask = vk_cast_format_to_aspect_flags(texture->desc.format),
 						.baseMipLevel = barrier.view.get_level(),
 						.levelCount = 1,
 						.baseArrayLayer = barrier.view.get_layer(),
@@ -1205,7 +1205,7 @@ namespace soul::gpu::impl
 
 			const auto buffer_info_id = get_buffer_info_index(shader_access.node_id);
 
-			const auto stage_flags = vkCastShaderStageToPipelineStageFlags(shader_access.stage_flags);
+			const auto stage_flags = vk_cast_shader_stage_to_pipeline_stage_flags(shader_access.stage_flags);
 
 			BufferBarrier invalidate_barrier;
 			invalidate_barrier.stage_flags = stage_flags;
@@ -1231,7 +1231,7 @@ namespace soul::gpu::impl
 
             const auto buffer_info_id = get_buffer_info_index(shader_access.output_node_id);
 
-            const auto stage_flags = vkCastShaderStageToPipelineStageFlags(shader_access.stage_flags);
+            const auto stage_flags = vk_cast_shader_stage_to_pipeline_stage_flags(shader_access.stage_flags);
 
 			BufferBarrier invalidate_barrier;
 			invalidate_barrier.stage_flags = stage_flags;
@@ -1256,7 +1256,7 @@ namespace soul::gpu::impl
 			SOUL_ASSERT(0, shader_access.node_id.is_valid(), "");
 
 			const auto texture_info_id = get_texture_info_index(shader_access.node_id);
-			VkPipelineStageFlags stage_flags = vkCastShaderStageToPipelineStageFlags(shader_access.stage_flags);
+			VkPipelineStageFlags stage_flags = vk_cast_shader_stage_to_pipeline_stage_flags(shader_access.stage_flags);
 
 			update_texture_info(queue_type, get_texture_usage_flags(shader_access.usage),PassNodeID(index), shader_access.view_range, &texture_infos_[texture_info_id]);
 
@@ -1302,7 +1302,7 @@ namespace soul::gpu::impl
 			SOUL_ASSERT(0, shader_access.output_node_id.is_valid(), "");
 
 			const auto texture_info_id = get_texture_info_index(shader_access.output_node_id);
-			const auto stage_flags = vkCastShaderStageToPipelineStageFlags(shader_access.stage_flags);
+			const auto stage_flags = vk_cast_shader_stage_to_pipeline_stage_flags(shader_access.stage_flags);
 
 			update_texture_info(queue_type, get_texture_usage_flags(shader_access.usage), PassNodeID(index), shader_access.view_range, &texture_infos_[texture_info_id]);
 
