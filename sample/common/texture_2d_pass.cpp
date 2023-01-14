@@ -87,17 +87,19 @@ Texture2DRGPass::Texture2DRGPass(soul::gpu::System* gpu_system) : gpu_system_(gp
 	program_id_ = result.value();
 
 	vertex_buffer_id_ = gpu_system_->create_buffer({
-			.size = sizeof(Vertex) * std::size(VERTICES),
-			.usage_flags = { gpu::BufferUsage::VERTEX },
-			.queue_flags = { gpu::QueueType::GRAPHIC }
-		}, VERTICES);
+		.size = sizeof(Vertex) * std::size(VERTICES),
+		.usage_flags = { gpu::BufferUsage::VERTEX },
+		.queue_flags = { gpu::QueueType::GRAPHIC },
+		.name = "Texture2DRGPass vertex buffer"
+	}, VERTICES);
 	gpu_system_->flush_buffer(vertex_buffer_id_);
 
 	index_buffer_id_ = gpu_system_->create_buffer({
 		.size = sizeof(Index) * std::size(INDICES),
 		.usage_flags = { gpu::BufferUsage::INDEX },
-		.queue_flags = { gpu::QueueType::GRAPHIC }
-		}, INDICES);
+		.queue_flags = { gpu::QueueType::GRAPHIC },
+		.name = "Texture2DRGPass index buffer"
+	}, INDICES);
 	gpu_system_->flush_buffer(index_buffer_id_);
 
 	sampler_id_ = gpu_system_->request_sampler(gpu::SamplerDesc::same_filter_wrap(gpu::TextureFilter::LINEAR, gpu::TextureWrap::REPEAT));

@@ -308,22 +308,25 @@ public:
 		vertex_buffer_id_ = gpu_system_->create_buffer({
 			.size = sizeof(Vertex) * std::size(VERTICES),
 			.usage_flags = { gpu::BufferUsage::VERTEX },
-			.queue_flags = { gpu::QueueType::GRAPHIC }
-			}, VERTICES);
+			.queue_flags = { gpu::QueueType::GRAPHIC },
+			.name = "Vertex buffer"
+		}, VERTICES);
 		gpu_system_->flush_buffer(vertex_buffer_id_);
 
 		index_buffer_id_ = gpu_system_->create_buffer({
 			.size = sizeof(Index) * std::size(INDICES),
 			.usage_flags = { gpu::BufferUsage::INDEX },
-			.queue_flags = { gpu::QueueType::GRAPHIC }
-			}, INDICES);
+			.queue_flags = { gpu::QueueType::GRAPHIC },
+			.name = "Index buffer"
+		}, INDICES);
 		gpu_system_->flush_buffer(index_buffer_id_);
 		
 		fill_transform_vector(transforms_q1_, -1.0f, -1.0f, 0.0f, 0.0f, ROW_COUNT, COL_COUNT);
 		transform_q1_buffer_id_ = gpu_system_->create_buffer({
 			.size = TRANSFORM_COUNT * sizeof(Transform),
 			.usage_flags = {gpu::BufferUsage::STORAGE, gpu::BufferUsage::TRANSFER_SRC},
-			.queue_flags = {gpu::QueueType::GRAPHIC, gpu::QueueType::TRANSFER}
+			.queue_flags = {gpu::QueueType::GRAPHIC, gpu::QueueType::TRANSFER},
+			.name = "Transform q1 buffer"
 		}, transforms_q1_.data());
 
 
@@ -335,7 +338,8 @@ public:
 			.memory_option = gpu::MemoryOption {
 				.required = { gpu::MemoryProperty::HOST_COHERENT },
 				.preferred = {gpu::MemoryProperty::DEVICE_LOCAL }
-			}
+			},
+			.name = "Transform q2 buffer"
 		}, transforms_q2_.data());
 
 		fill_transform_vector(transient_transforms_, -1.0f, 0.0f, 1.0f, 1.0f, ROW_COUNT, COL_COUNT * 2);

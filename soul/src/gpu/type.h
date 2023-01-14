@@ -467,6 +467,7 @@ namespace soul::gpu
 		BufferUsageFlags usage_flags;
 		QueueFlags  queue_flags = QUEUE_DEFAULT;
 		std::optional<MemoryOption> memory_option = std::nullopt;
+		const char* name = nullptr;
 	};
 
 	struct TextureSubresourceLayers

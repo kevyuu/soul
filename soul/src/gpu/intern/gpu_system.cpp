@@ -1106,49 +1106,7 @@ namespace soul::gpu
 
 	BufferID System::create_buffer(const BufferDesc &desc) {
 		SOUL_ASSERT_MAIN_THREAD();
-		SOUL_ASSERT(0, desc.size > 0, "");
-		SOUL_ASSERT(0, desc.usage_flags.any(), "");
-
-		const auto buffer_id = BufferID(_db.buffer_pool.create());
-		Buffer &buffer = *get_buffer_ptr(buffer_id);
-
-		const QueueData queue_data = get_queue_data_from_queue_flags(desc.queue_flags);
-		SOUL_ASSERT(0, queue_data.count > 0, "");
-
-		const VkBufferCreateInfo buffer_info = {
-			.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
-			.size = desc.size,
-			.usage = vk_cast(desc.usage_flags),
-			.sharingMode = queue_data.count > 1 ? VK_SHARING_MODE_CONCURRENT : VK_SHARING_MODE_EXCLUSIVE,
-			.queueFamilyIndexCount = queue_data.count,
-			.pQueueFamilyIndices = queue_data.indices
-		};
-
-		const auto alloc_info = [](const std::optional<MemoryOption> option) -> VmaAllocationCreateInfo
-		{
-		    if (option)
-		    {
-				return {
-				    .requiredFlags = vk_cast(option->required),
-			    	.preferredFlags = vk_cast(option->preferred)
-				};
-		    }
-			return {
-				.preferredFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT
-			};
-			
-		}(desc.memory_option);
-
-		SOUL_VK_CHECK(vmaCreateBuffer(_db.gpu_allocator, &buffer_info, &alloc_info, &buffer.vk_handle, &buffer.allocation, nullptr), "Fail to create buffer");
-		
-		buffer.desc = desc;
-		buffer.owner = ResourceOwner::NONE;
-		if (buffer.desc.usage_flags.test(BufferUsage::STORAGE))
-			buffer.storage_buffer_gpu_handle = _db.descriptor_allocator.create_storage_buffer_descriptor(buffer.vk_handle);
-
-		vmaGetAllocationMemoryProperties(_db.gpu_allocator, buffer.allocation, &buffer.memory_property_flags);
-
-		return buffer_id;
+		return create_buffer(desc, false);
 	}
 
 	BufferID System::create_buffer(const BufferDesc& desc, const void* data) {
@@ -1167,13 +1125,24 @@ namespace soul::gpu
 
     BufferID System::create_transient_buffer(const BufferDesc& desc)
     {
+		const auto buffer_id = create_buffer(desc, true);
+		get_frame_context().garbages.buffers.add(buffer_id);
+
+		return buffer_id;
+    }
+
+	BufferID System::create_buffer(const BufferDesc& desc, const bool use_linear_pool)
+	{
 		SOUL_ASSERT(0, desc.size > 0, "");
+		SOUL_ASSERT(0, desc.usage_flags.any(), "");
+
 		const auto buffer_id = BufferID(_db.buffer_pool.create());
-		Buffer& buffer = *get_buffer_ptr(buffer_id);
+		Buffer& buffer = get_buffer(buffer_id);
 
-		const QueueData queue_data = get_queue_data_from_queue_flags(desc.queue_flags);
+		const auto queue_flags = desc.queue_flags;
+		
+		const QueueData queue_data = get_queue_data_from_queue_flags(queue_flags);
 		SOUL_ASSERT(0, queue_data.count > 0, "");
-
 		const VkBufferCreateInfo buffer_info = {
 			.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
 			.size = desc.size,
@@ -1183,34 +1152,51 @@ namespace soul::gpu
 			.pQueueFamilyIndices = queue_data.indices
 		};
 
-		const auto alloc_create_info = [&desc]() -> VmaAllocationCreateInfo
+		auto alloc_create_info = [](const BufferDesc& buffer_desc) -> VmaAllocationCreateInfo
 		{
-			if (desc.memory_option)
+			if (buffer_desc.memory_option)
 				return {
-					.requiredFlags = vk_cast(desc.memory_option->required),
-					.preferredFlags = vk_cast(desc.memory_option->preferred)
+					.requiredFlags = vk_cast(buffer_desc.memory_option->required),
+					.preferredFlags = vk_cast(buffer_desc.memory_option->preferred)
 			};
 			else
-				return {.usage = VMA_MEMORY_USAGE_AUTO};
-		}();
+				return { .usage = VMA_MEMORY_USAGE_AUTO };
+		}(desc);
 
-	    uint32 memory_index;
-		vmaFindMemoryTypeIndexForBufferInfo(_db.gpu_allocator, &buffer_info, &alloc_create_info, &memory_index);
-		const VmaAllocationCreateInfo allocation_create_info = {
-			.pool = _db.linear_pools[memory_index]
-		};
+		if (use_linear_pool)
+		{
+			uint32 memory_index;
+			vmaFindMemoryTypeIndexForBufferInfo(_db.gpu_allocator, &buffer_info, &alloc_create_info, &memory_index);
+			alloc_create_info = {
+				.pool = _db.linear_pools[memory_index]
+			};
+		}
 
-		SOUL_VK_CHECK(vmaCreateBuffer(_db.gpu_allocator, &buffer_info, &allocation_create_info, &buffer.vk_handle, &buffer.allocation, nullptr), "Fail to create buffer");
+		SOUL_VK_CHECK(vmaCreateBuffer(_db.gpu_allocator, &buffer_info, &alloc_create_info, &buffer.vk_handle, &buffer.allocation, nullptr), "Fail to create buffer");
 
 		buffer.desc = desc;
 		buffer.owner = ResourceOwner::NONE;
 		if (buffer.desc.usage_flags.test(BufferUsage::STORAGE))
 			buffer.storage_buffer_gpu_handle = _db.descriptor_allocator.create_storage_buffer_descriptor(buffer.vk_handle);
 		vmaGetAllocationMemoryProperties(_db.gpu_allocator, buffer.allocation, &buffer.memory_property_flags);
-		get_frame_context().garbages.buffers.add(buffer_id);
+
+		if (desc.name != nullptr)
+		{
+			runtime::ScopeAllocator<> scope_allocator("Buffer name");
+			CString buffer_name(&scope_allocator);
+			buffer_name.appendf("%s(f%d)", desc.name, _db.frame_counter);
+			const VkDebugUtilsObjectNameInfoEXT image_name_info = {
+				VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
+				nullptr,
+				VK_OBJECT_TYPE_BUFFER,
+				reinterpret_cast<uint64>(buffer.vk_handle),
+				buffer_name.data(),
+			};
+			vkSetDebugUtilsObjectNameEXT(_db.device, &image_name_info);
+		}
 
 		return buffer_id;
-    }
+	}
 
 	BufferID System::create_staging_buffer(const soul_size size)
     {

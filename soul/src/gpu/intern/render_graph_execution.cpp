@@ -401,7 +401,8 @@ namespace soul::gpu::impl
 			buffer_info.buffer_id = gpu_system_->create_transient_buffer({
 				.size = rg_buffer.size,
 				.usage_flags = buffer_info.usage_flags,
-				.queue_flags = buffer_info.queue_flags
+				.queue_flags = buffer_info.queue_flags,
+				.name = rg_buffer.name
 			});
 		}
 

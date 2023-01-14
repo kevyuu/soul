@@ -40,6 +40,7 @@ namespace soul::gpu
 
 		BufferID create_buffer(const BufferDesc& desc);
 		BufferID create_buffer(const BufferDesc& desc, const void* data);
+		BufferID create_transient_buffer(const BufferDesc& desc);
 		
 		void flush_buffer(BufferID buffer_id);
 		void destroy_buffer_descriptor(BufferID buffer_id);
@@ -114,7 +115,8 @@ namespace soul::gpu
 		friend class impl::RenderGraphExecution;
 
 	private:
-        BufferID create_transient_buffer(const BufferDesc& desc);
+
+		BufferID create_buffer(const BufferDesc& desc, bool use_linear_pool);
 		BufferID create_staging_buffer(soul_size size);
 		VmaAllocator get_gpu_allocator();
 

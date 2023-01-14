@@ -115,15 +115,17 @@ public:
 		vertex_buffer_id_ = gpu_system_->create_buffer({
 			.size = std::size(VERTICES) * sizeof(Vertex),
 			.usage_flags = { gpu::BufferUsage::VERTEX },
-			.queue_flags = { gpu::QueueType::GRAPHIC }
-			}, VERTICES);
+			.queue_flags = { gpu::QueueType::GRAPHIC },
+			.name = "Vertex buffer"
+		}, VERTICES);
 		gpu_system_->flush_buffer(vertex_buffer_id_);
 
 		index_buffer_id_ = gpu_system_->create_buffer({
 			.size = std::size(INDICES) * sizeof(Index),
 			.usage_flags = { gpu::BufferUsage::INDEX },
-			.queue_flags = { gpu::QueueType::GRAPHIC }
-			}, INDICES);
+			.queue_flags = { gpu::QueueType::GRAPHIC },
+			.name = "Index buffer"
+		}, INDICES);
 		gpu_system_->flush_buffer(index_buffer_id_);
 
 	}

@@ -159,15 +159,17 @@ public:
 		skybox_vertex_buffer_id_ = gpu_system_->create_buffer({
 			.size = sizeof(SkyboxVertex) * std::size(SKYBOX_VERTICES),
 			.usage_flags = { gpu::BufferUsage::VERTEX },
-			.queue_flags = { gpu::QueueType::GRAPHIC }
-			}, SKYBOX_VERTICES);
+			.queue_flags = { gpu::QueueType::GRAPHIC },
+			.name = "Skybox vertex buffer"
+		}, SKYBOX_VERTICES);
 		gpu_system_->flush_buffer(skybox_vertex_buffer_id_);
 
 		skybox_index_buffer_id_ = gpu_system_->create_buffer({
 			.size = sizeof(SkyboxIndex) * std::size(SKYBOX_INDICES),
 			.usage_flags = { gpu::BufferUsage::INDEX },
-			.queue_flags = { gpu::QueueType::GRAPHIC }
-			}, SKYBOX_INDICES);
+			.queue_flags = { gpu::QueueType::GRAPHIC },
+			.name = "Skybox index buffer"
+		}, SKYBOX_INDICES);
 		gpu_system_->flush_buffer(skybox_index_buffer_id_);
 
 
