@@ -181,8 +181,8 @@ namespace soul {
 
 		AABB() = default;
 		AABB(const vec3f& min, const vec3f& max) noexcept : min{min}, max{max} {}
-		bool isEmpty() const { return (min.x >= max.x || min.y >= max.y || min.z >= max.z); }
-		bool isInside(const vec3f& point) const
+		[[nodiscard]] bool is_empty() const { return (min.x >= max.x || min.y >= max.y || min.z >= max.z); }
+		[[nodiscard]] bool is_inside(const vec3f& point) const
 		{
 			return (point.x >= min.x && point.x <= max.x) && (point.y >= min.y && point.y <= max.y) && (point.z >= min.z && point.z <= max.z);
 		}
@@ -193,7 +193,7 @@ namespace soul {
 			vec3f vertices[COUNT];
 		};
 
-		Corners getCorners() const
+		[[nodiscard]] Corners get_corners() const
 		{
 			return {
 				vec3f(min.x, min.y, min.z),
@@ -205,6 +205,11 @@ namespace soul {
 				vec3f(max.x, max.y, min.z),
 				vec3f(max.x, max.y, max.z)
 			};
+		}
+
+		[[nodiscard]] vec3f center() const
+		{
+			return (min + max) / 2.0f;
 		}
 
 	};
@@ -220,7 +225,7 @@ namespace soul {
 		if constexpr (!std::is_same_v<PointerDst, void*>) {
 			SOUL_ASSERT(0, reinterpret_cast<uintptr>(srcPtr) % alignof(Dst) == 0, "Source pointer is not aligned in PointerDst alignment!");
 		}
-		return (PointerDst)(srcPtr);
+		return static_cast<PointerDst>(srcPtr);
 	}
 
 	template<
