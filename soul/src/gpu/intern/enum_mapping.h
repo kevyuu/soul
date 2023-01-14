@@ -200,8 +200,8 @@ namespace soul::gpu
 		});
 	}
 
-	constexpr VkBufferUsageFlags vkCastBufferUsageFlags(BufferUsageFlags usageFlags) {
-		return usageFlags.map<VkBufferUsageFlags>({
+	constexpr VkBufferUsageFlags vk_cast(const BufferUsageFlags usage_flags) {
+		auto result = usage_flags.map<VkBufferUsageFlags>({
 			VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
 			VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
 			VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
@@ -209,6 +209,13 @@ namespace soul::gpu
 			VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
 			VK_BUFFER_USAGE_TRANSFER_DST_BIT
 		});
+		constexpr VkBufferUsageFlags need_buffer_device_address_bit =
+			VK_BUFFER_USAGE_VERTEX_BUFFER_BIT |
+			VK_BUFFER_USAGE_INDEX_BUFFER_BIT|
+			VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
+		if (result & need_buffer_device_address_bit)
+			result |= VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT_KHR;
+		return result;
 	}
 
 	constexpr VkPipelineStageFlags vkCastShaderStageToPipelineStageFlags(ShaderStageFlags stageFlags) {

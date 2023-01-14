@@ -32,6 +32,9 @@ namespace soul::gpu::impl
 
 namespace soul::gpu
 {
+	struct GPUAddressStub {};
+	using GPUAddress = ID<GPUAddressStub, VkDeviceAddress, 0>;
+	static_assert(sizeof(GPUAddress) == sizeof(uint64), "GPUAddress size is not the same as uint64");
 
 	using TexturePool = ConcurrentObjectPool<impl::Texture>;
 	using BufferPool = ConcurrentObjectPool<impl::Buffer>;

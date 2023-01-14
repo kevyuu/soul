@@ -58,6 +58,20 @@ namespace soulsl
     };
     static const DescriptorID DESCRIPTOR_ID_NULL = { UINT_MAX };
 
+    struct GPUAddress
+    {
+        uint64_t id;
+
+        bool is_null() {
+            return id == 0;
+        }
+
+        bool is_valid() {
+            return id != 0;
+        }
+    };
+    static const GPUAddress GPU_ADDRESS_NULL = { 0 };
+
 	typedef vector <float, 2> float2;
 	typedef vector <float, 3> float3;
 	typedef vector <float, 4> float4;
@@ -376,7 +390,8 @@ namespace soul::gpu
 	        VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME,
 	        VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME,
 	        VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME,
-			VK_KHR_SYNCHRONIZATION_2_EXTENSION_NAME
+			VK_KHR_SYNCHRONIZATION_2_EXTENSION_NAME,
+			VK_EXT_SCALAR_BLOCK_LAYOUT_EXTENSION_NAME
 		};
 		static constexpr uint32_t DEVICE_REQUIRED_EXTENSION_COUNT = std::size(DEVICE_REQUIRED_EXTENSIONS);
 		auto pick_physical_device = [](Database *db)-> FlagMap<QueueType, uint32> {
@@ -640,7 +655,8 @@ namespace soul::gpu
 			VkPhysicalDeviceFeatures device_features = {
 				.geometryShader = VK_TRUE,
 				.fillModeNonSolid = VK_TRUE,
-				.fragmentStoresAndAtomics = VK_TRUE
+				.fragmentStoresAndAtomics = VK_TRUE,
+				.shaderInt64 = VK_TRUE
 			};
 
 			VkPhysicalDeviceVulkan13Features device_1_3_features = {
@@ -659,7 +675,9 @@ namespace soul::gpu
 				.descriptorBindingPartiallyBound = VK_TRUE,
 				.descriptorBindingVariableDescriptorCount = VK_TRUE,
 				.runtimeDescriptorArray = VK_TRUE,
+				.scalarBlockLayout = VK_TRUE,
 				.timelineSemaphore = VK_TRUE,
+				.bufferDeviceAddress = VK_TRUE,
 				.vulkanMemoryModel = VK_TRUE
 			};
 
@@ -815,6 +833,7 @@ namespace soul::gpu
 			};
 
 			const VmaAllocatorCreateInfo allocator_info = {
+				.flags = VMA_ALLOCATOR_CREATE_BUFFER_DEVICE_ADDRESS_BIT,
 				.physicalDevice = db->physical_device,
 				.device = db->device,
 				.preferredLargeHeapBlockSize = 0,
@@ -1118,7 +1137,7 @@ namespace soul::gpu
 		const VkBufferCreateInfo buffer_info = {
 			.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
 			.size = desc.size,
-			.usage = vkCastBufferUsageFlags(desc.usage_flags),
+			.usage = vk_cast(desc.usage_flags),
 			.sharingMode = queue_data.count > 1 ? VK_SHARING_MODE_CONCURRENT : VK_SHARING_MODE_EXCLUSIVE,
 			.queueFamilyIndexCount = queue_data.count,
 			.pQueueFamilyIndices = queue_data.indices
@@ -1177,7 +1196,7 @@ namespace soul::gpu
 		const VkBufferCreateInfo buffer_info = {
 			.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
 			.size = desc.size,
-			.usage = vkCastBufferUsageFlags(desc.usage_flags),
+			.usage = vk_cast(desc.usage_flags),
 			.sharingMode = queue_data.count > 1 ? VK_SHARING_MODE_CONCURRENT : VK_SHARING_MODE_EXCLUSIVE,
 			.queueFamilyIndexCount = queue_data.count,
 			.pQueueFamilyIndices = queue_data.indices
@@ -1292,7 +1311,17 @@ namespace soul::gpu
 		return *_db.buffer_pool.get(buffer_id.id);
 	}
 
-	FrameContext &System::get_frame_context() {
+    GPUAddress System::get_gpu_address(BufferID buffer_id) const
+    {
+		const VkBufferDeviceAddressInfo addr_info = {
+			.sType = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO,
+			.buffer = get_buffer(buffer_id).vk_handle
+		};
+
+		return GPUAddress(vkGetBufferDeviceAddress(_db.device, &addr_info));
+    }
+
+    FrameContext &System::get_frame_context() {
 		return _db.frame_contexts[_db.current_frame % _db.frame_contexts.size()];
 	}
 
@@ -1625,11 +1654,12 @@ namespace soul::gpu
 			arguments.push_back(L"2021");
 			arguments.push_back(L"-spirv");
 			// memory layout for resources
-			arguments.push_back(L"-fvk-use-dx-layout");
+			arguments.push_back(L"-fvk-use-scalar-layout");
 			// Vulkan version
 			arguments.push_back(L"-fspv-target-env=vulkan1.3");
 			// useful extensions
 			arguments.push_back(L"-fspv-extension=SPV_EXT_descriptor_indexing");
+			arguments.push_back(L"-fspv-extension=SPV_KHR_physical_storage_buffer");
 
 			const auto entry_point_name_size = strlen(program_desc.entry_point_names[stage]) + 1;
 			auto* entry_point_wide_chars = scope_allocator.allocate_array<wchar_t>(entry_point_name_size);

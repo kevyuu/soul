@@ -47,6 +47,7 @@ namespace soul::gpu
 		impl::Buffer* get_buffer_ptr(BufferID buffer_id);
 		impl::Buffer& get_buffer(BufferID buffer_id);
 		const impl::Buffer& get_buffer(BufferID buffer_id) const;
+		GPUAddress get_gpu_address(BufferID buffer_id) const;
 
 		TextureID create_texture(const TextureDesc& desc);
 		TextureID create_texture(const TextureDesc& desc, const TextureLoadDesc& load_desc);

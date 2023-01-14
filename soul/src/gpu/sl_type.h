@@ -5,6 +5,7 @@
 namespace soulsl
 {
     using DescriptorID = soul::gpu::DescriptorID;
+    using GPUAddress = soul::gpu::GPUAddress;
 
     using float1 = float;
     using float2 = soul::vec2f;
