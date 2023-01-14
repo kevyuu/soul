@@ -228,7 +228,7 @@ TEST_F(TestSBOVectorConstructorWithSourceData, TestIteratorConstructorWithCustom
     auto test_iterator_constructor_with_custom_allocator = []<typename T, soul_size N>(const soul::SBOVector<T,N> vector_src) {
         TestAllocator test_allocator;
 
-        soul::SBOVector<T,N> vector_dst(vector_src.begin(), vector_src.end(), &test_allocator);
+        soul::SBOVector<T,N> vector_dst(vector_src.begin(), vector_src.end(), test_allocator);
         verify_sbo_vector(vector_dst, vector_src);
         SOUL_TEST_ASSERT_EQ(test_allocator.allocCount, 1);
     };
@@ -299,7 +299,7 @@ void test_copy_assignment_operator(const soul_size src_size, const soul_size dst
     const auto dst_sequence = generate_random_sequence<T>(dst_size);
 
     soul::SBOVector<T, N> src_vector(src_sequence.begin(), src_sequence.end());
-    soul::SBOVector<T, N> dst_vector(dst_sequence.begin(), dst_sequence.end(), &test_allocator);
+    soul::SBOVector<T, N> dst_vector(dst_sequence.begin(), dst_sequence.end(), test_allocator);
 
     dst_vector = src_vector;
 
@@ -346,7 +346,7 @@ void test_move_assignment_operator(const soul_size src_size, const soul_size dst
     const auto dst_sequence = generate_random_sequence<T>(dst_size);
 
     soul::SBOVector<T, N> src_vector(src_sequence.begin(), src_sequence.end());
-    soul::SBOVector<T, N> dst_vector(dst_sequence.begin(), dst_sequence.end(), &test_allocator);
+    soul::SBOVector<T, N> dst_vector(dst_sequence.begin(), dst_sequence.end(), test_allocator);
 
     dst_vector = std::move(src_vector);
 

@@ -32,7 +32,7 @@ namespace soul
 		Vector(Vector&& other) noexcept;
 
 		template <std::input_iterator Iterator>
-		Vector(Iterator first, Iterator last, AllocatorType* allocator = get_default_allocator());
+		Vector(Iterator first, Iterator last, AllocatorType& allocator = *get_default_allocator());
 
 		Vector& operator=(const Vector& rhs);
 		Vector& operator=(Vector&& other) noexcept;
@@ -183,8 +183,8 @@ namespace soul
 
 	template <typename T, memory::allocator_type AllocatorType, soul_size N>
 	template <std::input_iterator Iterator>
-	Vector<T, AllocatorType, N>::Vector(Iterator first, Iterator last, AllocatorType* allocator)
-		: allocator_(allocator)
+	Vector<T, AllocatorType, N>::Vector(Iterator first, Iterator last, AllocatorType& allocator)
+		: allocator_(&allocator)
 	{
 		if constexpr (std::forward_iterator<Iterator>) {
 			const soul_size size = std::distance(first, last);

@@ -188,7 +188,7 @@ TEST_F(TestVectorConstructorWithSourceData, TestIteratorConstructorWithCustomAll
     auto test_iterator_constructor_with_custom_allocator = []<typename T>(const soul::Vector<T>&vector_src) {
         TestAllocator test_allocator;
 
-        soul::Vector<T> vector_dst(vector_src.begin(), vector_src.end(), &test_allocator);
+        soul::Vector<T> vector_dst(vector_src.begin(), vector_src.end(), test_allocator);
         SOUL_TEST_ASSERT_TRUE(std::ranges::equal(vector_src, vector_dst));
 
         SOUL_TEST_ASSERT_EQ(test_allocator.allocCount, 1);
