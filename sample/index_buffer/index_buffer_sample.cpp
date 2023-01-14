@@ -106,7 +106,7 @@ public:
 				{gpu::ShaderStage::FRAGMENT, "fsMain"}
 			})
 		};
-		auto result = gpu_system_->create_program_dxc(program_desc);
+		auto result = gpu_system_->create_program(program_desc);
         if (!result)
         {
 			SOUL_ASSERT(0, "Cannot create shader program");

@@ -64,7 +64,7 @@ namespace soul::gpu
 		impl::TextureView get_texture_view(TextureID texture_id, SubresourceIndex subresource_index);
 		impl::TextureView get_texture_view(TextureID texture_id, const std::optional<SubresourceIndex> subresource);
 		
-		expected<ProgramID, Error> create_program_dxc(const ProgramDesc& program_desc);
+		expected<ProgramID, Error> create_program(const ProgramDesc& program_desc);
 		impl::Program* get_program_ptr(ProgramID program_id);
 		const impl::Program& get_program(ProgramID program_id);
 

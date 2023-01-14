@@ -202,7 +202,7 @@ public:
 				{gpu::ShaderStage::FRAGMENT, "psMain"}
 			})
 		};
-		auto result = gpu_system_->create_program_dxc(program_desc);
+		auto result = gpu_system_->create_program(program_desc);
 		if (!result)
 		{
 			SOUL_PANIC("Fail to create program");

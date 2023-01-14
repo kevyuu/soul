@@ -67,7 +67,7 @@ public:
 				{gpu::ShaderStage::FRAGMENT, "fsMain"}
 			})
 		};
-		program_id_ = gpu_system_->create_program_dxc(program_desc).value();
+		program_id_ = gpu_system_->create_program(program_desc).value();
 	}
 };
 

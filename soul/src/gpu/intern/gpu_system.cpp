@@ -1528,9 +1528,9 @@ namespace soul::gpu
 		return _db.descriptor_allocator.get_bindless_descriptor_sets();
 	}
 
-    expected<ProgramID, Error> System::create_program_dxc(const ProgramDesc& program_desc)
+    expected<ProgramID, Error> System::create_program(const ProgramDesc& program_desc)
     {
-		runtime::ScopeAllocator<> scope_allocator("gpu::System::create_program_dxc");
+		runtime::ScopeAllocator<> scope_allocator("gpu::System::create_program(const ProgramDesc&");
 
 		const auto program_id = ProgramID(_db.programs.create());
 		Program& program = _db.programs[program_id.id];

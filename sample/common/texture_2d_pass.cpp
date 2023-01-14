@@ -79,7 +79,7 @@ Texture2DRGPass::Texture2DRGPass(soul::gpu::System* gpu_system) : gpu_system_(gp
 			{gpu::ShaderStage::FRAGMENT, "psMain"}
 		})
 	};
-	auto result = gpu_system_->create_program_dxc(program_desc);
+	auto result = gpu_system_->create_program(program_desc);
 	if (!result)
 	{
 		SOUL_PANIC("Fail to create program");
