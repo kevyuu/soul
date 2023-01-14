@@ -30,6 +30,14 @@ namespace soul
             requires is_lambda_v<Func, void(soul_size)>
             constexpr void for_each(Func func) const;
 
+            template <soul_size IBlockCount = BlockCount, bit_block_type IBlockType = BlockType>
+                requires (IBlockCount == 1 && sizeof(BlockType) <= 4)
+            [[nodiscard]] constexpr uint32 to_uint32() const;
+
+            template <soul_size IBlockCount = BlockCount, bit_block_type IBlockType = BlockType>
+                requires (IBlockCount == 1 && sizeof(BlockType) <= 8)
+            [[nodiscard]] constexpr uint64 to_uint64() const;
+             
         protected:
 
             constexpr void operator&=(const this_type& rhs);
@@ -74,6 +82,20 @@ namespace soul
                     pos = util::get_first_one_bit_pos(block);
                 }
             }
+        }
+
+        template <size_t BlockCount, bit_block_type BlockType>
+        template <soul_size IBlockCount, bit_block_type IBlockType> requires (IBlockCount == 1 && sizeof(BlockType) <= 4)
+        constexpr uint32 BitsetImpl<BlockCount, BlockType>::to_uint32() const
+        {
+            return blocks_[0];
+        }
+
+        template <size_t BlockCount, bit_block_type BlockType>
+        template <soul_size IBlockCount, bit_block_type IBlockType> requires (IBlockCount == 1 && sizeof(BlockType) <= 8)
+        constexpr auto BitsetImpl<BlockCount, BlockType>::to_uint64() const -> uint64
+        {
+            return blocks_[0];
         }
 
         template <size_t BlockCount, bit_block_type BlockType>

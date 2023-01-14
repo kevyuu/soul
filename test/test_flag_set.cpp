@@ -6,6 +6,7 @@
 #include "core/util.h"
 #include "core/flag_set.h"
 #include "util.h"
+#include "large_uint64_enum.h"
 
 enum class Uint8TestEnum : uint8
 {
@@ -437,4 +438,23 @@ TEST(TestFlagSetForEach, TestFlagSetForEach)
     test_empty_flag_set.for_each([&empty_vector_result](const Uint8TestEnum val)
                                  { empty_vector_result.push_back(val); });
     SOUL_TEST_ASSERT_EQ(empty_vector_result.size(), 0);
+}
+
+TEST(TestFlagSetToUint, TestFlagSetToUint)
+{
+
+    SOUL_TEST_ASSERT_EQ(Uint8FlagSet({}).to_uint32(), 0);
+    SOUL_TEST_ASSERT_EQ(Uint8FlagSet({ Uint8TestEnum::ONE, Uint8TestEnum::THREE }).to_uint32(), 5);
+    SOUL_TEST_ASSERT_EQ(Uint32FlagSet({Uint32TestEnum::ONE, Uint32TestEnum::THREE }).to_uint32(), 5);
+    SOUL_TEST_ASSERT_EQ(Uint64FlagSet({ Uint64TestEnum::ONE, Uint64TestEnum::THREE }).to_uint32(), 5);
+
+
+    SOUL_TEST_ASSERT_EQ(Uint8FlagSet({}).to_uint64(), 0u);
+    SOUL_TEST_ASSERT_EQ(Uint8FlagSet({ Uint8TestEnum::ONE, Uint8TestEnum::THREE }).to_uint64(), 5u);
+    SOUL_TEST_ASSERT_EQ(Uint32FlagSet({ Uint32TestEnum::ONE, Uint32TestEnum::THREE }).to_uint64(), 5u);
+    SOUL_TEST_ASSERT_EQ(Uint64FlagSet({ Uint64TestEnum::ONE, Uint64TestEnum::THREE }).to_uint64(), 5u);
+
+    // test fail compilation. Uncomment tests below, expected to generate compilation error since
+    // the LargeUint64TestEnum::COUNT exceeded the width of the uint32
+    // SOUL_TEST_ASSERT_EQ(LargeUint64FlagSet({ LargeUint64TestEnum::ONE, LargeUint64TestEnum::THREE }).to_uint32(), 5u);
 }

@@ -45,6 +45,14 @@ namespace soul
         [[nodiscard]] constexpr bool any() const;
         [[nodiscard]] constexpr bool none() const;
 
+        template<soul_size IFlagCount = FLAG_COUNT>
+            requires (IFlagCount <= 32)
+        [[nodiscard]] constexpr uint32 to_uint32() const;
+
+        template<soul_size IFlagCount = FLAG_COUNT>
+            requires (IFlagCount <= 64)
+        [[nodiscard]] constexpr uint64 to_uint64() const;
+
         template <std::integral DstFlags>
 		[[nodiscard]] constexpr DstFlags map(DstFlags const(&mapping)[to_underlying(flag_type::COUNT)]) const;
 
@@ -89,6 +97,20 @@ namespace soul
     constexpr bool FlagSet<Flag>::none() const
     {
         return flags_.none();
+    }
+
+    template <flag Flag>
+    template <soul_size IFlagCount> requires (IFlagCount <= 32)
+    constexpr uint32 FlagSet<Flag>::to_uint32() const
+    {
+        return flags_.to_uint32();
+    }
+
+    template <flag Flag>
+    template <soul_size IFlagCount> requires (IFlagCount <= 64)
+    constexpr uint64 FlagSet<Flag>::to_uint64() const
+    {
+        return flags_.to_uint64();
     }
 
     template <flag Flag>
