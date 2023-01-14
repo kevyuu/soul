@@ -150,11 +150,11 @@ namespace soul {
 	template <arithmetic T>
 	struct Quaternion {
 		union {
-			struct { T x, y, z, w; };
+			struct { T x, y, z, w; };  // NOLINT(clang-diagnostic-nested-anon-types)
 			vec4<T> xyzw;
 			vec3<T> xyz;
 			vec2<T> xy;
-			struct {
+			struct {  // NOLINT(clang-diagnostic-nested-anon-types)
 				vec3<T> vector;
 				T real;
 			};
@@ -225,7 +225,8 @@ namespace soul {
 		if constexpr (!std::is_same_v<PointerDst, void*>) {
 			SOUL_ASSERT(0, reinterpret_cast<uintptr>(srcPtr) % alignof(Dst) == 0, "Source pointer is not aligned in PointerDst alignment!");
 		}
-		return static_cast<PointerDst>(srcPtr);
+        // ReSharper disable once CppCStyleCast
+        return (PointerDst)(srcPtr);
 	}
 
 	template<
