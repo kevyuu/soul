@@ -1,5 +1,6 @@
 #include <algorithm>
 #include <random>
+#include <array>
 
 #define USE_CUSTOM_DEFAULT_ALLOCATOR
 #include "core/config.h"
@@ -44,6 +45,12 @@ template <typename T>
 bool all_equal(soul::Vector<T>& vec, const T& val)
 {
     return std::ranges::all_of(vec, [val](const T& x) { return x == val; });
+}
+
+template <typename T, soul_size N>
+bool verify_vector(const soul::Vector<T>& vec, const std::array<T, N>& arr)
+{
+    return std::equal(vec.begin(), vec.end(), std::begin(arr));
 }
 
 template<typename T>
@@ -679,3 +686,19 @@ TEST_F(TestVectorManipulation, TestVectorCleanup)
     SOUL_TEST_RUN(test_cleanup(vectorListTOArr));
 }
 
+TEST(TestVectorConstructurWithArray, TestVectorConstructorWithArray)
+{
+    const soul::Vector<int> vec1 = std::array<int, 0>{};
+    SOUL_TEST_ASSERT_EQ(vec1.size(), 0);
+
+    const soul::Vector<int> vec2 = std::array{ 5, 7, 1 };
+    SOUL_TEST_ASSERT_EQ(vec2.size(), 3);
+    SOUL_TEST_ASSERT_TRUE(verify_vector(vec2, std::array{ 5, 7, 1 }));
+
+    TestObject::reset();
+    const soul::Vector<TestObject> vec3 = std::array{ TestObject(3), TestObject(7), TestObject(9) };
+    SOUL_TEST_ASSERT_EQ(vec3.size(), 3);
+    SOUL_TEST_ASSERT_EQ(TestObject::sTOMoveCtorCount, 3);
+    SOUL_TEST_ASSERT_TRUE(verify_vector(vec3, std::array{ TestObject(3), TestObject(7), TestObject(9) }));
+
+}

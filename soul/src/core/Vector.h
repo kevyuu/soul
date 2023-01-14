@@ -1,5 +1,7 @@
 #pragma once
 
+#include <array>
+
 #include "core/config.h"
 #include "core/dev_util.h"
 #include "core/util.h"
@@ -33,6 +35,9 @@ namespace soul
 
 		template <std::input_iterator Iterator>
 		Vector(Iterator first, Iterator last, AllocatorType& allocator = *get_default_allocator());
+		
+		template <soul_size ArraySize>
+		Vector(std::array<T, ArraySize>&& arr, AllocatorType& allocator = *get_default_allocator());
 
 		Vector& operator=(const Vector& rhs);
 		Vector& operator=(Vector&& other) noexcept;
@@ -198,6 +203,16 @@ namespace soul
 				push_back(*first);
 			}
 		}
+	}
+
+	template <typename T, memory::allocator_type AllocatorType, soul_size N>
+	template <soul_size ArraySize>
+	Vector<T, AllocatorType, N>::Vector(std::array<T, ArraySize>&& arr, AllocatorType& allocator)
+		: allocator_(&allocator)
+	{
+		init_reserve(ArraySize);
+		std::uninitialized_copy(std::make_move_iterator(std::begin(arr)), std::make_move_iterator(std::end(arr)), buffer_);
+		size_ = ArraySize;
 	}
 
 	template <typename T, memory::allocator_type AllocatorType, soul_size N>

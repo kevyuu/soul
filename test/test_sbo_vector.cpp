@@ -70,6 +70,12 @@ void verify_sbo_vector(const soul::SBOVector<T, N>& vec, const Sequence<T>& sequ
 
 }
 
+template <typename T, soul_size VecSize, soul_size ArrSize>
+bool verify_sbo_vector(const soul::SBOVector<T, VecSize>& vec, const std::array<T, ArrSize>& arr)
+{
+    return std::equal(vec.begin(), vec.end(), std::begin(arr));
+}
+
 template<typename T, soul_size N = soul::get_sbo_vector_default_inline_element_count<T>()>
 void test_constructor()
 {
@@ -827,3 +833,23 @@ TEST(TestSBOVectorCleanup, TestSBOVectorCleanup)
     SOUL_TEST_RUN(type_set_test.operator()<ListTestObject>());
 }
 
+TEST(TestSBOVectorConstructurWithArray, TestSBOVectorConstructorWithArray)
+{
+    const soul::SBOVector<int> vec1 = std::array<int, 0>{};
+    SOUL_TEST_ASSERT_EQ(vec1.size(), 0);
+
+    const soul::SBOVector<int, 4> vec2 = std::array{ 5, 7, 1 };
+    SOUL_TEST_ASSERT_EQ(vec2.size(), 3);
+    SOUL_TEST_ASSERT_TRUE(verify_sbo_vector(vec2, std::array{ 5, 7, 1 }));
+    
+    const soul::SBOVector<int, 2> vec3 = std::array{ 5, 9, 3 };
+    SOUL_TEST_ASSERT_EQ(vec3.size(), 3);
+    SOUL_TEST_ASSERT_TRUE(verify_sbo_vector(vec3, std::array{ 5, 9, 3 }));
+
+    TestObject::reset();
+    const soul::SBOVector<TestObject> vec4 = std::array{ TestObject(3), TestObject(7), TestObject(9) };
+    SOUL_TEST_ASSERT_EQ(vec4.size(), 3);
+    SOUL_TEST_ASSERT_EQ(TestObject::sTOMoveCtorCount, 3);
+    SOUL_TEST_ASSERT_TRUE(verify_sbo_vector(vec4, std::array{ TestObject(3), TestObject(7), TestObject(9) }));
+
+}
