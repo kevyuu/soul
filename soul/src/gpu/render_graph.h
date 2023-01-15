@@ -88,15 +88,6 @@ namespace soul::gpu
 
 	using BufferNodeID = ID<impl::BufferNode, uint16>;
 
-	enum class PassType : uint8
-	{
-		NONE,
-		GRAPHIC,
-		COMPUTE,
-		TRANSFER,
-		COUNT
-	};
-
 	struct RGTextureDesc
 	{
 		TextureType type = TextureType::D2;

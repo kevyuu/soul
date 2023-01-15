@@ -145,6 +145,15 @@ namespace soul::gpu
 		COUNT
 	};
 
+	enum class PassType : uint8
+	{
+		NONE,
+		GRAPHIC,
+		COMPUTE,
+		TRANSFER,
+		COUNT
+	};
+
 	enum class QueueType : uint8 {
 		GRAPHIC,
 		COMPUTE,
@@ -1209,7 +1218,7 @@ namespace soul::gpu
 
 	struct RenderCommandDraw : RenderCommandTyped<RenderCommandType::DRAW>
 	{
-		static constexpr QueueType QUEUE_TYPE = QueueType::GRAPHIC;
+		static constexpr PassType PASS_TYPE = PassType::GRAPHIC;
 		PipelineStateID pipeline_state_id;
 		void* push_constant_data = nullptr;
 		uint32 push_constant_size = 0;
@@ -1222,7 +1231,7 @@ namespace soul::gpu
 	};
 
 	struct RenderCommandDrawIndex : RenderCommandTyped<RenderCommandType::DRAW_INDEX> {
-		static constexpr QueueType QUEUE_TYPE = QueueType::GRAPHIC;
+		static constexpr PassType PASS_TYPE = PassType::GRAPHIC;
 		PipelineStateID pipeline_state_id;
 		void* push_constant_data = nullptr;
 		uint32 push_constant_size = 0;
@@ -1237,7 +1246,7 @@ namespace soul::gpu
 
 	struct RenderCommandUpdateTexture : RenderCommandTyped<RenderCommandType::UPDATE_TEXTURE>
 	{
-		static constexpr QueueType QUEUE_TYPE = QueueType::TRANSFER;
+		static constexpr PassType PASS_TYPE = PassType::TRANSFER;
 		TextureID dst_texture = TextureID::null();
 		const void* data = nullptr;
 		soul_size data_size = 0;
@@ -1247,7 +1256,7 @@ namespace soul::gpu
 
 	struct RenderCommandCopyTexture : RenderCommandTyped<RenderCommandType::COPY_TEXTURE>
 	{
-		static constexpr QueueType QUEUE_TYPE = QueueType::TRANSFER;
+		static constexpr PassType PASS_TYPE = PassType::TRANSFER;
 		TextureID src_texture = TextureID::null();
 		TextureID dst_texture = TextureID::null();
 		uint32 region_count = 0;
@@ -1256,7 +1265,7 @@ namespace soul::gpu
 
 	struct RenderCommandUpdateBuffer : RenderCommandTyped<RenderCommandType::UPDATE_BUFFER>
 	{
-		static constexpr QueueType QUEUE_TYPE = QueueType::TRANSFER;
+		static constexpr PassType PASS_TYPE = PassType::TRANSFER;
 		BufferID dst_buffer = BufferID::null();
 		void* data = nullptr;
 		uint32 region_count = 0;
@@ -1265,7 +1274,7 @@ namespace soul::gpu
 
 	struct RenderCommandCopyBuffer : RenderCommandTyped<RenderCommandType::COPY_BUFFER>
 	{
-		static constexpr QueueType QUEUE_TYPE = QueueType::TRANSFER;
+		static constexpr PassType PASS_TYPE = PassType::TRANSFER;
 		BufferID src_buffer = BufferID::null();
 		BufferID dst_buffer = BufferID::null();
 		uint32 region_count = 0;
@@ -1274,7 +1283,7 @@ namespace soul::gpu
 
 	struct RenderCommandDispatch : RenderCommandTyped<RenderCommandType::DISPATCH>
 	{
-		static constexpr QueueType QUEUE_TYPE = QueueType::COMPUTE;
+		static constexpr PassType PASS_TYPE = PassType::COMPUTE;
 		PipelineStateID pipeline_state_id;
 		void* push_constant_data = nullptr;
 		uint32 push_constant_size = 0;
@@ -1288,12 +1297,12 @@ namespace soul::gpu
 	concept render_command = std::derived_from<T, RenderCommand>;
 
 	template <typename T>
-	concept graphic_render_command = render_command<T> && T::QUEUE_TYPE == QueueType::GRAPHIC;
+	concept graphic_render_command = render_command<T> && T::PASS_TYPE == PassType::GRAPHIC;
 
 	template <typename T>
-	concept transfer_render_command = render_command<T> && T::QUEUE_TYPE == QueueType::TRANSFER;
+	concept transfer_render_command = render_command<T> && T::PASS_TYPE == PassType::TRANSFER;
 
 	template <typename T>
-	concept compute_render_command = render_command<T> && T::QUEUE_TYPE == QueueType::COMPUTE;
+	concept compute_render_command = render_command<T> && T::PASS_TYPE == PassType::COMPUTE;
 
 }

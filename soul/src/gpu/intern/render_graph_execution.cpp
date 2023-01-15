@@ -22,14 +22,6 @@ namespace soul::gpu::impl
 		QueueType::TRANSFER,
 	});
 
-	auto RESOURCE_OWNER_TO_PASS_TYPE_MAP = FlagMap<ResourceOwner, PassType>::build_from_list({
-		PassType::NONE,
-		PassType::GRAPHIC,
-		PassType::COMPUTE,
-		PassType::TRANSFER,
-		PassType::NONE
-	});
-
 	auto SHADER_BUFFER_READ_USAGE_MAP = FlagMap<ShaderBufferReadUsage, BufferUsageFlags>::build_from_list({
 		BufferUsageFlags({ BufferUsage::UNIFORM }),
 		{ BufferUsage::STORAGE}
@@ -157,11 +149,11 @@ namespace soul::gpu::impl
 				break;
 			}
 			case PassType::COMPUTE: {
-					auto compute_node = soul::downcast<const ComputeBaseNode*>(&pass_node);
-                    init_shader_buffers(compute_node->get_buffer_read_accesses(), i, QueueType::COMPUTE);
-                    init_shader_buffers(compute_node->get_buffer_write_accesses(), i, QueueType::COMPUTE);
-                    init_shader_textures(compute_node->get_texture_read_accesses(), i, QueueType::COMPUTE);
-                    init_shader_textures(compute_node->get_texture_write_accesses(), i, QueueType::COMPUTE);
+				auto compute_node = soul::downcast<const ComputeBaseNode*>(&pass_node);
+                init_shader_buffers(compute_node->get_buffer_read_accesses(), i, QueueType::COMPUTE);
+                init_shader_buffers(compute_node->get_buffer_write_accesses(), i, QueueType::COMPUTE);
+                init_shader_textures(compute_node->get_texture_read_accesses(), i, QueueType::COMPUTE);
+                init_shader_textures(compute_node->get_texture_write_accesses(), i, QueueType::COMPUTE);
 				break;
 			}
 			case PassType::GRAPHIC: {
@@ -549,13 +541,13 @@ namespace soul::gpu::impl
 		{
 			if (buffer_info.passes.empty()) continue;
 			const auto first_pass_type = render_graph_->get_pass_nodes()[buffer_info.passes[0].id]->get_type();
+			const auto first_queue_type = PASS_TYPE_TO_QUEUE_TYPE_MAP[first_pass_type];
 			const auto owner = gpu_system_->get_buffer(buffer_info.buffer_id).owner;
-			const auto external_pass_type = RESOURCE_OWNER_TO_PASS_TYPE_MAP[owner];
 			const auto external_queue_type = RESOURCE_OWNER_TO_QUEUE_TYPE[owner];
 			SOUL_ASSERT(0, owner != ResourceOwner::PRESENTATION_ENGINE, "");
-			if (external_pass_type == first_pass_type) {
-				VkEvent& external_event = external_events_[first_pass_type];
-				if (external_event == VK_NULL_HANDLE && external_pass_type != PassType::TRANSFER) {
+			if (external_queue_type == first_queue_type) {
+				VkEvent& external_event = external_events_[first_queue_type];
+				if (external_event == VK_NULL_HANDLE && external_queue_type != QueueType::TRANSFER) {
 					external_event = gpu_system_->create_event();
 				}
 				buffer_info.pending_event = external_event;
@@ -574,15 +566,15 @@ namespace soul::gpu::impl
 		for (auto& texture_info : external_texture_infos_)
 		{
 			const ResourceOwner owner = gpu_system_->get_texture_ptr(texture_info.texture_id)->owner;
-			const PassType external_pass_type = RESOURCE_OWNER_TO_PASS_TYPE_MAP[owner];
 			const auto external_queue_type = RESOURCE_OWNER_TO_QUEUE_TYPE[owner];
 
 			std::for_each(texture_info.view, texture_info.view + texture_info.get_view_count(),
-			[this, owner, external_pass_type, external_queue_type](TextureViewExecInfo& view_info)
+			[this, owner, external_queue_type](TextureViewExecInfo& view_info)
 			{
 				if (!view_info.passes.empty())
 				{
-					const PassType first_pass_type = render_graph_->get_pass_nodes()[view_info.passes[0].id]->get_type();
+					const auto first_pass_type = render_graph_->get_pass_nodes()[view_info.passes[0].id]->get_type();
+					const auto first_queue_type = PASS_TYPE_TO_QUEUE_TYPE_MAP[first_pass_type];
 					if (first_pass_type == PassType::NONE) {
 						view_info.pending_event = VK_NULL_HANDLE;
 						view_info.pending_semaphore = TimelineSemaphore::null();
@@ -593,9 +585,9 @@ namespace soul::gpu::impl
 						view_info.unsync_write_stage = 0;
 						view_info.unsync_write_access = 0;
 					}
-					else if (external_pass_type == first_pass_type) {
-						VkEvent& external_event = external_events_[first_pass_type];
-						if (external_event == VK_NULL_HANDLE && external_pass_type != PassType::TRANSFER) {
+					else if (external_queue_type == first_queue_type) {
+						VkEvent& external_event = external_events_[first_queue_type];
+						if (external_event == VK_NULL_HANDLE && external_queue_type != QueueType::TRANSFER) {
 							external_event = gpu_system_->create_event();
 						}
 						view_info.pending_event = external_event;
@@ -618,16 +610,16 @@ namespace soul::gpu::impl
 			auto ex_texture_info = gpu_system_->get_texture(texture_info.texture_id);
 			if (ex_texture_info.owner == ResourceOwner::NONE) continue;
 			const auto owner = ex_texture_info.owner;
-			const auto external_pass_type = RESOURCE_OWNER_TO_PASS_TYPE_MAP[owner];
 			const auto external_queue_type = RESOURCE_OWNER_TO_QUEUE_TYPE[owner];
 			std::for_each(texture_info.view, texture_info.view + texture_info.get_view_count(), 
-			[this, external_pass_type, external_queue_type](TextureViewExecInfo& view_info)
+			[this, external_queue_type](TextureViewExecInfo& view_info)
 			{
 				if (view_info.passes.empty()) return;
 				const auto first_pass_type = render_graph_->get_pass_nodes()[view_info.passes[0].id]->get_type();
-				if (first_pass_type == external_pass_type)
+				const auto first_queue_type = PASS_TYPE_TO_QUEUE_TYPE_MAP[first_pass_type];
+				if (first_queue_type == external_queue_type)
 				{
-					auto& external_event = external_events_[external_pass_type];
+					auto& external_event = external_events_[external_queue_type];
 					if (external_event == VK_NULL_HANDLE) {
 						external_event = gpu_system_->create_event();
 					}
@@ -655,12 +647,10 @@ namespace soul::gpu::impl
 		});
 
 		// Sync events
-		for(const auto pass_type : FlagIter<PassType>()) {
-			if (external_events_[pass_type] != VK_NULL_HANDLE && pass_type != PassType::NONE) {
-				const auto queue_type = PASS_TYPE_TO_QUEUE_TYPE_MAP[pass_type];
-			    
+		for (const auto queue_type : FlagIter<QueueType>()) {
+			if (external_events_[queue_type] != VK_NULL_HANDLE) {
 				const auto sync_event_command_buffer = command_pools_.request_command_buffer(queue_type);
-				vkCmdSetEvent(sync_event_command_buffer.get_vk_handle(), external_events_[pass_type], VK_PIPELINE_STAGE_ALL_COMMANDS_BIT);
+				vkCmdSetEvent(sync_event_command_buffer.get_vk_handle(), external_events_[queue_type], VK_PIPELINE_STAGE_ALL_COMMANDS_BIT);
 				command_queues_[queue_type].submit(sync_event_command_buffer);
 				
 			}

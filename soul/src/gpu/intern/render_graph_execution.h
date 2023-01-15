@@ -130,7 +130,7 @@ namespace soul::gpu::impl
 		const RenderGraph* render_graph_;
 		System* gpu_system_;
 
-		FlagMap<PassType, VkEvent> external_events_;
+		FlagMap<QueueType, VkEvent> external_events_;
 		CommandQueues& command_queues_;
 		CommandPools& command_pools_;
 
