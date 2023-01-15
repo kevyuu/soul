@@ -28,19 +28,19 @@ namespace soul::gpu
 			if (count > SECONDARY_COMMAND_BUFFER_THRESHOLD)
 			{
 				primary_command_buffer_.begin_render_pass(render_pass_begin_info_, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
-				const uint32 thread_count = runtime::get_thread_count();
+				const auto thread_count = runtime::get_thread_count();
 
 				Vector<impl::SecondaryCommandBuffer> secondary_command_buffers;
 				secondary_command_buffers.resize(thread_count);
 
 				struct TaskData
 				{
-					Vector<impl::SecondaryCommandBuffer>& cmdBuffers;
-					soul_size commandCount;
-					VkRenderPass renderPass;
+					Vector<impl::SecondaryCommandBuffer>& command_buffers;
+					soul_size command_count;
+					VkRenderPass render_pass;
 					VkFramebuffer framebuffer;
-					impl::CommandPools& commandPools;
-					gpu::System& gpuSystem;
+					impl::CommandPools& command_pools;
+					gpu::System& gpu_system;
 				};
 				const TaskData task_data = {
 					secondary_command_buffers,
@@ -51,24 +51,24 @@ namespace soul::gpu
 					gpu_system_
 				};
 
-				runtime::TaskID task_id = runtime::parallel_for_task_create(
+				const auto task_id = runtime::parallel_for_task_create(
 					runtime::TaskID::ROOT(), thread_count, 1,
 					[&task_data, &generator](int index)
 					{
-						auto&& command_buffers = task_data.cmdBuffers;
-						const auto command_count = task_data.commandCount;
-						impl::SecondaryCommandBuffer command_buffer = task_data.commandPools.request_secondary_command_buffer(task_data.renderPass, 0, task_data.framebuffer);
+						auto&& command_buffers = task_data.command_buffers;
+						const auto command_count = task_data.command_count;
+						impl::SecondaryCommandBuffer command_buffer = task_data.command_pools.request_secondary_command_buffer(task_data.render_pass, 0, task_data.framebuffer);
 						const uint32 div = command_count / command_buffers.size();
 						const uint32 mod = command_count % command_buffers.size();
 
-						VkPipelineLayout pipeline_layout = task_data.gpuSystem.get_bindless_pipeline_layout();
-						impl::BindlessDescriptorSets bindless_descriptor_sets = task_data.gpuSystem.get_bindless_descriptor_sets();
+						const auto pipeline_layout = task_data.gpu_system.get_bindless_pipeline_layout();
+						const auto bindless_descriptor_sets = task_data.gpu_system.get_bindless_descriptor_sets();
 						vkCmdBindDescriptorSets(command_buffer.get_vk_handle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, BINDLESS_SET_COUNT, bindless_descriptor_sets.vk_handles, 0, 0);
 
-						impl::RenderCompiler render_compiler(task_data.gpuSystem, command_buffer.get_vk_handle());
+						impl::RenderCompiler render_compiler(task_data.gpu_system, command_buffer.get_vk_handle());
 						if (soul::cast<uint32>(index) < mod)
 						{
-							soul_size start = index * (div + 1);
+                            const soul_size start = index * (div + 1);
 
 							for (soul_size i = 0; i < div + 1; i++)
 							{
@@ -77,7 +77,7 @@ namespace soul::gpu
 						}
 						else
 						{
-							soul_size start = mod * (div + 1) + (index - mod) * div;
+                            const soul_size start = mod * (div + 1) + (index - mod) * div;
 							for (soul_size i = 0; i < div; i++)
 							{
 								render_compiler.compile_command(generator(start + i));
@@ -95,9 +95,10 @@ namespace soul::gpu
 			else
 			{
 				primary_command_buffer_.begin_render_pass(render_pass_begin_info_, VK_SUBPASS_CONTENTS_INLINE);
-				VkPipelineLayout pipeline_layout = gpu_system_.get_bindless_pipeline_layout();
-				impl::BindlessDescriptorSets bindless_descriptor_sets = gpu_system_.get_bindless_descriptor_sets();
-				vkCmdBindDescriptorSets(primary_command_buffer_.get_vk_handle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, BINDLESS_SET_COUNT, bindless_descriptor_sets.vk_handles, 0, 0);
+				const auto pipeline_layout = gpu_system_.get_bindless_pipeline_layout();
+				const auto bindless_descriptor_sets = gpu_system_.get_bindless_descriptor_sets();
+				vkCmdBindDescriptorSets(primary_command_buffer_.get_vk_handle(), VK_PIPELINE_BIND_POINT_GRAPHICS, 
+					pipeline_layout, 0, BINDLESS_SET_COUNT, bindless_descriptor_sets.vk_handles, 0, nullptr);
 
 				impl::RenderCompiler render_compiler(gpu_system_, primary_command_buffer_.get_vk_handle());
 				for (soul_size command_idx = 0; command_idx < count; command_idx++)
@@ -141,10 +142,10 @@ namespace soul::gpu
 		template<compute_render_command RenderCommandType>
 		void push(const RenderCommandType& command)
 		{
-			auto pipeline_layout = gpu_system_.get_bindless_pipeline_layout();
-			impl::BindlessDescriptorSets bindless_descriptor_sets = gpu_system_.get_bindless_descriptor_sets();
+			const auto pipeline_layout = gpu_system_.get_bindless_pipeline_layout();
+			const auto bindless_descriptor_sets = gpu_system_.get_bindless_descriptor_sets();
 			vkCmdBindDescriptorSets(command_buffer_.get_vk_handle(), VK_PIPELINE_BIND_POINT_COMPUTE, 
-				pipeline_layout, 0, BINDLESS_SET_COUNT, bindless_descriptor_sets.vk_handles, 0, 0);
+				pipeline_layout, 0, BINDLESS_SET_COUNT, bindless_descriptor_sets.vk_handles, 0, nullptr);
 
 			render_compiler_.compile_command(command);
 		}
