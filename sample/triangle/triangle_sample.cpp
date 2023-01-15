@@ -56,16 +56,18 @@ public:
 	explicit TriangleSampleApp(const AppConfig& app_config) : App(app_config)
 	{
 		gpu::ShaderSource shader_source = gpu::ShaderFile("triangle_sample.hlsl");
-		std::filesystem::path search_path = "shaders/";
+		const std::filesystem::path search_path = "shaders/";
+		const auto entry_points = std::to_array<gpu::ShaderEntryPoint>({
+			{gpu::ShaderStage::VERTEX, "vsMain"},
+			{gpu::ShaderStage::FRAGMENT, "fsMain"}
+		});
 		const gpu::ProgramDesc program_desc = {
-			.search_paths = &search_path,
 			.search_path_count = 1,
-			.sources = &shader_source,
+			.search_paths = &search_path,
 			.source_count = 1,
-			.entry_point_names = gpu::EntryPoints({
-				{gpu::ShaderStage::VERTEX, "vsMain"},
-				{gpu::ShaderStage::FRAGMENT, "fsMain"}
-			})
+			.sources = &shader_source,
+			.entry_point_count = entry_points.size(),
+			.entry_points = entry_points.data()
 		};
 		program_id_ = gpu_system_->create_program(program_desc).value();
 	}

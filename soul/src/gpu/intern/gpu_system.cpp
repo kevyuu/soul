@@ -1298,13 +1298,12 @@ namespace soul::gpu
 
 			Vector<VkPipelineShaderStageCreateInfo> shader_stage_infos(&scope_allocator);
 
-			for (ShaderStage stage : FlagIter<ShaderStage>())
+			for (const auto& shader : program->shaders)
 			{
-				const Shader& shader = program->shaders[stage];
 				if (shader.vk_handle == VK_NULL_HANDLE) continue;
 				const VkPipelineShaderStageCreateInfo shader_stage_info = {
 					.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
-					.stage = vk_cast(stage),
+					.stage = vk_cast(shader.stage),
 					.module = shader.vk_handle,
 					.pName = shader.entry_point.data()
 				};
@@ -1484,7 +1483,9 @@ namespace soul::gpu
 		{
 			const Program* program = get_program_ptr(desc.program_id);
 
-			const Shader& compute_shader = program->shaders[ShaderStage::COMPUTE];
+			SOUL_ASSERT(0, program->shaders.size() == 1, "");
+			const Shader& compute_shader = program->shaders[0];
+			SOUL_ASSERT(0, compute_shader.stage == ShaderStage::COMPUTE, "");
 			const VkPipelineShaderStageCreateInfo compute_shader_stage_create_info = {
 				.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
 				.stage = VK_SHADER_STAGE_COMPUTE_BIT,
@@ -1599,9 +1600,10 @@ namespace soul::gpu
 			SOUL_PANIC("Fail to create source blob");
 		}
 
-		for (const auto stage : FlagIter<ShaderStage>())
+		for (const auto& entry_point : std::span(program_desc.entry_points, program_desc.entry_point_count))
 		{
-			const char* entry_point_name = program_desc.entry_point_names[stage];
+			const auto stage = entry_point.stage;
+			const char* entry_point_name = entry_point.name;
 			if (entry_point_name == nullptr) continue;
 
 			// Tell the compiler to output SPIR-V
@@ -1617,18 +1619,19 @@ namespace soul::gpu
 			// useful extensions
 			arguments.push_back(L"-fspv-extension=SPV_EXT_descriptor_indexing");
 
-			const auto entry_point_name_size = strlen(program_desc.entry_point_names[stage]) + 1;
+			const auto entry_point_name_size = strlen(entry_point.name) + 1;
 			auto* entry_point_wide_chars = scope_allocator.allocate_array<wchar_t>(entry_point_name_size);
 			size_t entry_point_out_size;
 			mbstowcs_s(&entry_point_out_size, entry_point_wide_chars, entry_point_name_size,
-				program_desc.entry_point_names[stage], entry_point_name_size);
+				entry_point.name, entry_point_name_size);
 			arguments.push_back(L"-E");
 			arguments.push_back(entry_point_wide_chars);
 
 			static constexpr FlagMap<ShaderStage, LPCWSTR> target_profile_map = {
 				{ShaderStage::VERTEX, L"vs_6_5"},
 				{ShaderStage::FRAGMENT, L"ps_6_5"},
-				{ShaderStage::COMPUTE, L"cs_6_5"}
+				{ShaderStage::COMPUTE, L"cs_6_5"},
+				{ShaderStage::GEOMETRY, L"gs_6_5"},
 			};
 			arguments.push_back(L"-T");
 			arguments.push_back(target_profile_map[stage]);
@@ -1679,9 +1682,13 @@ namespace soul::gpu
 				.codeSize = code->GetBufferSize(),
 				.pCode = soul::cast<uint32*>(code->GetBufferPointer())
 			};
-			Shader& shader = program.shaders[stage];
-			vkCreateShaderModule(_db.device, &shader_module_ci, nullptr, &shader.vk_handle);
-			shader.entry_point = entry_point_name;
+			VkShaderModule shader_module;
+		    vkCreateShaderModule(_db.device, &shader_module_ci, nullptr, &shader_module);
+			program.shaders.push_back({
+				.stage = stage,
+				.vk_handle = shader_module,
+				.entry_point = entry_point.name
+			});
 		}
 
 		return program_id;

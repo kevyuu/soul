@@ -24,7 +24,7 @@ struct PSOutput
 };
 
 [shader("pixel")]
-PSOutput fsMain(VSOutput input)
+PSOutput psMain(VSOutput input)
 {
     PSOutput output;
     output.color = float4(input.color, 1.0);

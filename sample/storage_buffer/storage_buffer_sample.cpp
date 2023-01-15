@@ -116,15 +116,17 @@ public:
 	{
 		gpu::ShaderSource shader_source = gpu::ShaderFile("storage_buffer_sample.hlsl");
 		std::filesystem::path search_path = "shaders/";
+		constexpr auto entry_points = std::to_array<gpu::ShaderEntryPoint>({
+			{gpu::ShaderStage::VERTEX, "vsMain"},
+			{gpu::ShaderStage::FRAGMENT, "psMain"}
+		});
 		const gpu::ProgramDesc program_desc = {
-			.search_paths = &search_path,
 			.search_path_count = 1,
-			.sources = &shader_source,
+			.search_paths = &search_path,
 			.source_count = 1,
-			.entry_point_names = gpu::EntryPoints({
-				{gpu::ShaderStage::VERTEX, "vsMain"},
-				{gpu::ShaderStage::FRAGMENT, "psMain"}
-			})
+			.sources = &shader_source,
+			.entry_point_count = entry_points.size(),
+			.entry_points = entry_points.data()
 		};
 		auto result = gpu_system_->create_program(program_desc);
 		if (!result)

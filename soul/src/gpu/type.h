@@ -636,7 +636,11 @@ namespace soul::gpu
 		[[nodiscard]] const char* c_str() const { return source.data(); }
 	};
 	using ShaderSource = std::variant<ShaderFile, ShaderString>;
-	using EntryPoints = FlagMap<ShaderStage, const char*>;
+	struct ShaderEntryPoint
+	{
+		ShaderStage stage;
+		const char* name;
+	};
 
 	struct ShaderDefine
 	{
@@ -645,13 +649,14 @@ namespace soul::gpu
 	};
 
 	struct ProgramDesc {
-		std::filesystem::path* search_paths = nullptr;
 		soul_size search_path_count = 0;
-		ShaderDefine* shader_defines = nullptr;
+		const std::filesystem::path* search_paths = nullptr;
 		soul_size shader_define_count = 0;
-		ShaderSource* sources = nullptr;
+		const ShaderDefine* shader_defines = nullptr;
 		soul_size source_count = 0;
-		EntryPoints entry_point_names = FlagMap<ShaderStage, const char*>(nullptr);
+		const ShaderSource* sources = nullptr;
+		soul_size entry_point_count = 0;
+		const ShaderEntryPoint* entry_points = nullptr;
 	};
 
 	using AttachmentFlagBits = enum {
@@ -867,13 +872,14 @@ namespace soul::gpu
 
 		struct Shader
 		{
+			ShaderStage stage;
 			VkShaderModule vk_handle = VK_NULL_HANDLE;
 			CString entry_point;
 		};
 
 		struct Program {
 			VkPipelineLayout pipeline_layout = VK_NULL_HANDLE;
-			FlagMap<ShaderStage, Shader> shaders;
+			SBOVector<Shader> shaders;
 		};
 
 		struct BinarySemaphore {
