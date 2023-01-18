@@ -15,12 +15,11 @@ namespace soul
         using store_type = Bitset<FLAG_COUNT>;
 
         // Default constructor (all 0s)
-        FlagSet() = default;
-        FlagSet(const FlagSet& other) = default;
-        FlagSet& operator=(const FlagSet& other) = default;
-        FlagSet(FlagSet&& other) = default;
-        FlagSet& operator=(FlagSet&& other) = default;
-        ~FlagSet() = default;
+        constexpr FlagSet() = default;
+        constexpr FlagSet(const FlagSet& other) = default;
+        constexpr FlagSet& operator=(const FlagSet& other) = default;
+        constexpr FlagSet(FlagSet&& other) = default;
+        constexpr ~FlagSet() = default;
 
 		// Initializer list constructor
 		constexpr FlagSet(std::initializer_list<flag_type> init_list);
@@ -59,11 +58,13 @@ namespace soul
         template <typename T>
 		constexpr void for_each(T func) const;
 
+        store_type flags_;
+
     private:
         explicit constexpr FlagSet(store_type flags) : flags_(flags) {}
         constexpr store_type flags_from_init_list(const std::initializer_list<flag_type> init_list);
         static constexpr soul_size MASK = (1u << FLAG_COUNT) - 1;
-		store_type flags_;
+		
 	};
 
     template <flag Flag>

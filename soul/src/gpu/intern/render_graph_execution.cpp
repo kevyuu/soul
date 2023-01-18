@@ -141,7 +141,7 @@ namespace soul::gpu::impl
 
 		for (soul_size i = 0; i < pass_infos_.size(); i++) {
 			const auto pass_node_id = PassNodeID(soul::cast<uint16>(i));
-			const PassNode& pass_node = *render_graph_->get_pass_nodes()[i];
+			const PassBaseNode& pass_node = *render_graph_->get_pass_nodes()[i];
 			PassExecInfo& pass_info = pass_infos_[i];
 
 			switch (pass_node.get_type()) {
@@ -660,7 +660,7 @@ namespace soul::gpu::impl
 
 	void RenderGraphExecution::execute_pass(const uint32 pass_index, PrimaryCommandBuffer command_buffer) {
 		SOUL_PROFILE_ZONE();
-		PassNode* pass_node = render_graph_->get_pass_nodes()[pass_index];
+		PassBaseNode* pass_node = render_graph_->get_pass_nodes()[pass_index];
 		// Run render pass here
 		switch(pass_node->get_type()) {
 		case PassType::NONE:
@@ -779,7 +779,7 @@ namespace soul::gpu::impl
 
 		for (soul_size i = 0; i < render_graph_->get_pass_nodes().size(); i++) {
 			runtime::ScopeAllocator passNodeScopeAllocator("Pass Node Scope Allocator", runtime::get_temp_allocator());
-			PassNode* pass_node = render_graph_->get_pass_nodes()[i];
+			PassBaseNode* pass_node = render_graph_->get_pass_nodes()[i];
 			auto queue_type = PASS_TYPE_TO_QUEUE_TYPE_MAP[pass_node->get_type()];
 			auto& command_queue = command_queues_[queue_type];
 			auto& pass_info = pass_infos_[i];

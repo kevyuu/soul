@@ -37,7 +37,9 @@ namespace soul
             template <soul_size IBlockCount = BlockCount, bit_block_type IBlockType = BlockType>
                 requires (IBlockCount == 1 && sizeof(BlockType) <= 8)
             [[nodiscard]] constexpr uint64 to_uint64() const;
-             
+            
+            BlockType blocks_[BlockCount] = {};
+
         protected:
 
             constexpr void operator&=(const this_type& rhs);
@@ -57,8 +59,7 @@ namespace soul
             static constexpr soul_size get_block_index(soul_size index);
             static constexpr BlockType get_block_offset(soul_size index);
             static constexpr BlockType get_block_one_mask(soul_size index);
-            BlockType blocks_[BlockCount] = {};
-
+            
         };
 
         template <size_t BlockCount, bit_block_type BlockType>

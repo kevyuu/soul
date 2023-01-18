@@ -120,7 +120,7 @@ namespace soul::gpu
 
 	void RenderGraph::cleanup() {
 		SOUL_PROFILE_ZONE();
-		for (PassNode* passNode : pass_nodes_) {
+		for (PassBaseNode* passNode : pass_nodes_) {
 			allocator_->destroy(passNode);
 		}
 		pass_nodes_.cleanup();

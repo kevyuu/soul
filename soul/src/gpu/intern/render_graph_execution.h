@@ -89,7 +89,7 @@ namespace soul::gpu::impl
 	};
 
 	struct PassExecInfo {
-		PassNode* pass_node = nullptr;
+		PassBaseNode* pass_node = nullptr;
 		Vector<BufferBarrier> buffer_flushes;
 		Vector<BufferBarrier> buffer_invalidates;
 		Vector<TextureBarrier> texture_flushes;

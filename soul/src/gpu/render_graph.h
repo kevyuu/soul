@@ -8,6 +8,7 @@
 #include "gpu/type.h"
 #include "gpu/command_list.h"
 
+
 namespace soul::gpu
 {
 	namespace impl
@@ -52,7 +53,7 @@ namespace soul::gpu
 
 	class RenderGraph;
 	class RenderGraphRegistry;
-	class PassNode;
+	class PassBaseNode;
 	class RGShaderPassDependencyBuilder;
 	class RGTransferPassDependencyBuilder;
 
@@ -82,7 +83,7 @@ namespace soul::gpu
 		std::same_as<void, std::invoke_result_t<Func, gpu::RGTransferPassDependencyBuilder&, Data&>>;
 
 	//ID
-	using PassNodeID = ID<PassNode, uint16>;
+	using PassNodeID = ID<PassBaseNode, uint16>;
 
 	using TextureNodeID = ID<impl::TextureNode, uint16>;
 
@@ -321,205 +322,29 @@ namespace soul::gpu
 		DepthStencilAttachment depth_stencil_attachment;
 	};
 
-	class PassNode
+	enum class RGBuilderFlag : uint8
 	{
-	public:
-		PassNode(const PassType type, const char* name) : name_(name), type_(type) {}
-		PassNode(const PassNode&) = delete;
-		PassNode& operator=(const PassNode&) = delete;
-		PassNode(PassNode&&) = delete;
-		PassNode& operator=(PassNode&&) = delete;
-		virtual ~PassNode() = default;
-
-		[[nodiscard]] PassType get_type() const { return type_; }
-		[[nodiscard]] const char* get_name() const { return name_; }
-
-	protected:
-		const char* name_ = nullptr;
-		const PassType type_ = PassType::NONE;
+		RENDER_TARGET,
+		SHADER_RESOURCE,
+		TRANSFER,
+		COUNT
 	};
 
-	class RGShaderPassDependencyBuilder;
-	class ShaderNode : public PassNode
+	using RGBuilderFlags = FlagSet<RGBuilderFlag>;
+
+	template <RGBuilderFlags BuilderFlags>
+	class RGDependencyBuilder
 	{
+
 	private:
-		Vector<ShaderBufferReadAccess> shader_buffer_read_accesses_;
-		Vector<ShaderBufferWriteAccess> shader_buffer_write_accesses_;
-		Vector<ShaderTextureReadAccess> shader_texture_read_accesses_;
-		Vector<ShaderTextureWriteAccess> shader_texture_write_accesses_;
-		Vector<BufferNodeID> vertex_buffers_;
-		Vector<BufferNodeID> index_buffers_;
-
-		friend class RGShaderPassDependencyBuilder;
-
-	public:
-		ShaderNode(const PassType type, const char* name) : PassNode(type, name) {}
-		ShaderNode(const ShaderNode&) = delete;
-		ShaderNode& operator=(const ShaderNode&) = delete;
-		ShaderNode(ShaderNode&&) = delete;
-		ShaderNode& operator=(ShaderNode&&) = delete;
-		~ShaderNode() override = default;
-
-		[[nodiscard]] const Vector<BufferNodeID>& get_vertex_buffers() const { return vertex_buffers_;  }
-		[[nodiscard]] const Vector<BufferNodeID>& get_index_buffers() const { return index_buffers_; }
-		[[nodiscard]] const Vector<ShaderBufferReadAccess>& get_buffer_read_accesses() const { return shader_buffer_read_accesses_; }
-		[[nodiscard]] const Vector<ShaderBufferWriteAccess>& get_buffer_write_accesses() const { return shader_buffer_write_accesses_; }
-		[[nodiscard]] const Vector<ShaderTextureReadAccess>& get_texture_read_accesses() const { return shader_texture_read_accesses_; }
-		[[nodiscard]] const Vector<ShaderTextureWriteAccess>& get_texture_write_accesses() const { return shader_texture_write_accesses_;  }
-	};
-
-	class GraphicBaseNode : public ShaderNode
-	{
-	public:
-		explicit GraphicBaseNode(const char* name) : ShaderNode(PassType::GRAPHIC, name) {}
-		GraphicBaseNode(const GraphicBaseNode&) = delete;
-		GraphicBaseNode& operator=(const GraphicBaseNode&) = delete;
-		GraphicBaseNode(GraphicBaseNode&&) = delete;
-		GraphicBaseNode& operator=(GraphicBaseNode&&) = delete;
-		~GraphicBaseNode() override = default;
-		virtual void execute_pass(RenderGraphRegistry& registry, GraphicCommandList& command_list) = 0;
-		[[nodiscard]] const RGRenderTarget& get_render_target() const { return render_target_; }
-	private:
-		RGRenderTarget render_target_;
-		friend class RenderGraph;
-	};
-
-	template <typename Parameter,
-		graphic_pass_executable<Parameter> Execute>
-	class GraphicNode final : public GraphicBaseNode
-	{
-		Parameter parameter_;
-		Execute execute_;
-
-	public:
-		GraphicNode() = delete;
-		GraphicNode(const GraphicNode&) = delete;
-		GraphicNode& operator=(const GraphicNode&) = delete;
-		GraphicNode(GraphicNode&&) = delete;
-		GraphicNode& operator=(GraphicNode&&) = delete;
-		~GraphicNode() override = default;
-
-		GraphicNode(const char* name, Execute&& execute) : GraphicBaseNode(name) , execute_(std::forward<Execute>(execute)) {}
-
-		void execute_pass(RenderGraphRegistry& registry, GraphicCommandList& command_list) override
-		{
-			execute_(parameter_, registry, command_list);
-		}
-
-		[[nodiscard]] const Parameter& get_parameter() const { return parameter_; }
-		Parameter& get_parameter_() { return parameter_; }
-
-		friend class RenderGraph;
-
-	};
-
-	class ComputeBaseNode : public ShaderNode
-	{
-	public:
-		explicit ComputeBaseNode(const char* name) : ShaderNode(PassType::COMPUTE, name) {}
-		ComputeBaseNode(const ComputeBaseNode&) = delete;
-		ComputeBaseNode& operator=(const ComputeBaseNode&) = delete;
-		ComputeBaseNode(ComputeBaseNode&&) = delete;
-		ComputeBaseNode& operator=(ComputeBaseNode&&) = delete;
-		~ComputeBaseNode() override = default;
-
-		virtual void execute_pass(RenderGraphRegistry& registry, ComputeCommandList& command_list) = 0;
-	};
-
-	template <typename Parameter,
-		compute_pass_executable<Parameter> Execute>
-	class ComputeNode final : public ComputeBaseNode
-	{
-		Parameter parameter_;
-		Execute execute_;
-
-	public:
-
-		ComputeNode() = delete;
-		ComputeNode(const ComputeNode&) = delete;
-		ComputeNode& operator=(const ComputeNode&) = delete;
-		ComputeNode(ComputeNode&&) = delete;
-		ComputeNode& operator=(ComputeNode&&) = delete;
-		~ComputeNode() override = default;
-
-		ComputeNode(const char* name, Execute&& execute) : ComputeBaseNode(name) , execute_(std::forward<Execute>(execute)) {}
-
-		void execute_pass(RenderGraphRegistry& registry, ComputeCommandList& command_list) override
-		{
-			execute_(parameter_, registry, command_list);
-		}
-		[[nodiscard]] const Parameter& get_parameter() const { return parameter_; }
-		Parameter& get_parameter_() { return parameter_; }
-		
-	};
-
-	class TransferBaseNode : public ShaderNode
-	{
-	public:
-		explicit TransferBaseNode(const char* name) : ShaderNode(PassType::TRANSFER, name) {}
-		TransferBaseNode(const TransferBaseNode&) = delete;
-		TransferBaseNode& operator=(const TransferBaseNode&) = delete;
-		TransferBaseNode(TransferBaseNode&&) = delete;
-		TransferBaseNode& operator=(TransferBaseNode&&) = delete;
-		~TransferBaseNode() override = default;
-
-		[[nodiscard]] const Vector<TransferSrcBufferAccess>& get_source_buffers() const { return source_buffers_; }
-		[[nodiscard]] const Vector<TransferDstBufferAccess>& get_destination_buffers() const { return destination_buffers_; }
-		[[nodiscard]] const Vector<TransferSrcTextureAccess>& get_source_textures() const { return source_textures_; }
-		[[nodiscard]] const Vector<TransferDstTextureAccess>& get_destination_textures() const { return destination_textures_; }
-
-		virtual void execute_pass(RenderGraphRegistry& registry, TransferCommandList& command_list) = 0;
-
-		friend class RGTransferPassDependencyBuilder;
-	private:
-		Vector<TransferSrcBufferAccess> source_buffers_;
-		Vector<TransferDstBufferAccess> destination_buffers_;
-		Vector<TransferSrcTextureAccess> source_textures_;
-		Vector<TransferDstTextureAccess> destination_textures_;
-	};
-
-	template <typename Parameter,
-		copy_pass_executable<Parameter> Execute>
-	class TransferNode final : public TransferBaseNode
-	{
-		Parameter parameter_;
-		Execute execute_;
-	public:
-		TransferNode() = delete;
-		TransferNode(const TransferNode&) = delete;
-		TransferNode& operator=(const TransferNode&) = delete;
-		TransferNode(TransferNode&&) = delete;
-		TransferNode& operator=(TransferNode&&) = delete;
-		~TransferNode() override = default;
-
-		TransferNode(const char* name, Execute&& execute) : TransferBaseNode(name), execute_(std::forward<Execute>(execute)) {}
-
-		void execute_pass(RenderGraphRegistry& registry, TransferCommandList& command_list) override
-		{
-			execute_(parameter_, registry, command_list);
-		}
-		const Parameter& get_parameter() const { return parameter_; }
-		Parameter& get_parameter_() { return parameter_; }
-	};
-
-	class RGShaderPassDependencyBuilder
-	{
-	private:
+		RGDependencyBuilder(const PassNodeID pass_id, PassBaseNode& pass_node, RenderGraph& render_graph);
 		const PassNodeID pass_id_;
-		ShaderNode& shader_node_;
+		PassBaseNode& pass_node_;
 		RenderGraph& render_graph_;
 
 	public:
 
-		RGShaderPassDependencyBuilder(const PassNodeID pass_id, ShaderNode& shader_node, RenderGraph& render_graph)
-			: pass_id_(pass_id), shader_node_(shader_node), render_graph_(render_graph) {}
-		RGShaderPassDependencyBuilder(const RGShaderPassDependencyBuilder&) = delete;
-		RGShaderPassDependencyBuilder& operator=(const RGShaderPassDependencyBuilder&) = delete;
-		RGShaderPassDependencyBuilder(RGShaderPassDependencyBuilder&&) = delete;
-		RGShaderPassDependencyBuilder& operator=(RGShaderPassDependencyBuilder&&) = delete;
-		~RGShaderPassDependencyBuilder() = default;
-
-		BufferNodeID add_shader_buffer(BufferNodeID node_id, ShaderStageFlags stage_flags, 
+		BufferNodeID add_shader_buffer(BufferNodeID node_id, ShaderStageFlags stage_flags,
 			ShaderBufferReadUsage usage_type);
 		BufferNodeID add_shader_buffer(BufferNodeID node_id, ShaderStageFlags stage_flags,
 			ShaderBufferWriteUsage usage_type);
@@ -529,29 +354,135 @@ namespace soul::gpu
 			ShaderTextureWriteUsage usage_type, SubresourceIndexRange view = SubresourceIndexRange());
 		BufferNodeID add_vertex_buffer(BufferNodeID node_id);
 		BufferNodeID add_index_buffer(BufferNodeID node_id);
-	};
-	using RGGraphicPassDependencyBuilder = RGShaderPassDependencyBuilder;
-	using RGComputePassDependencyBuilder = RGShaderPassDependencyBuilder;
-
-	class RGTransferPassDependencyBuilder
-	{
-		const PassNodeID pass_id_;
-		TransferBaseNode& copy_base_node_;
-		RenderGraph& render_graph_;
-	public:
-		RGTransferPassDependencyBuilder(const PassNodeID pass_id, TransferBaseNode& copy_base_node, RenderGraph& render_graph)
-			: pass_id_(pass_id), copy_base_node_(copy_base_node), render_graph_(render_graph) {}
-		RGTransferPassDependencyBuilder(const RGTransferPassDependencyBuilder&) = delete;
-		RGTransferPassDependencyBuilder& operator=(const RGTransferPassDependencyBuilder&) = delete;
-		RGTransferPassDependencyBuilder(RGTransferPassDependencyBuilder&&) = delete;
-		RGTransferPassDependencyBuilder& operator=(RGTransferPassDependencyBuilder&&) = delete;
-		~RGTransferPassDependencyBuilder() = default;
 
 		BufferNodeID add_src_buffer(BufferNodeID node_id);
 		BufferNodeID add_dst_buffer(BufferNodeID node_id, TransferDataSource data_source = TransferDataSource::GPU);
 		TextureNodeID add_src_texture(TextureNodeID node_id);
 		TextureNodeID add_dst_texture(TextureNodeID node_id, TransferDataSource data_source = TransferDataSource::GPU);
 	};
+
+	template<RGBuilderFlags BuilderFlags>
+	inline BufferNodeID RGDependencyBuilder<BuilderFlags>::add_shader_buffer(BufferNodeID node_id, ShaderStageFlags stage_flags, ShaderBufferReadUsage usage_type)
+	{
+		static_assert(BuilderFlags.test(RGBuilderFlag::SHADER_RESOURCE));
+		render_graph_.read_buffer_node(node_id, pass_id_);
+		pass_node_.shader_buffer_read_accesses_.push_back({ node_id, stage_flags, usage });
+		return node_id;
+	}
+
+	template<RGBuilderFlags BuilderFlags>
+	inline BufferNodeID RGDependencyBuilder<BuilderFlags>::add_shader_buffer(BufferNodeID node_id, ShaderStageFlags stage_flags, ShaderBufferWriteUsage usage_type)
+	{
+		static_assert(BuilderFlags.test(RGBuilderFlag::SHADER_RESOURCE));
+		const auto out_node_id = render_graph_.write_buffer_node(node_id, pass_id_);
+		pass_node_.shader_buffer_write_accesses_.push_back({ node_id, out_node_id, stage_flags, usage });
+		return out_node_id;
+	}
+
+	template<RGBuilderFlags BuilderFlags>
+	inline TextureNodeID RGDependencyBuilder<BuilderFlags>::add_shader_texture(TextureNodeID node_id, ShaderStageFlags stage_flags, ShaderTextureReadUsage usage_type, SubresourceIndexRange view)
+	{
+		static_assert(BuilderFlags.test(RGBuilderFlag::SHADER_RESOURCE));
+		render_graph_.read_texture_node(node_id, pass_id_);
+		pass_node_.shader_texture_read_accesses_.push_back({ node_id, stage_flags, usage, view_range });
+		return node_id;
+	}
+
+	template<RGBuilderFlags BuilderFlags>
+	inline TextureNodeID RGDependencyBuilder<BuilderFlags>::add_shader_texture(TextureNodeID node_id, ShaderStageFlags stage_flags, ShaderTextureWriteUsage usage_type, SubresourceIndexRange view)
+	{
+		static_assert(BuilderFlags.test(RGBuilderFlag::SHADER_RESOURCE));
+		const auto out_node_id = render_graph_.write_texture_node(node_id, pass_id);
+		pass_node_.shader_texture_write_accesses_.push_back({ node_id, out_node_id, stage_flags, usage, view_range });
+		return out_node_id;
+	}
+
+	template<RGBuilderFlags BuilderFlags>
+	inline BufferNodeID RGDependencyBuilder<BuilderFlags>::add_vertex_buffer(BufferNodeID node_id)
+	{
+		render_graph_.read_buffer_node(node_id, pass_id_);
+		pass_node_.vertex_buffers_.push_back(node_id);
+		return node_id;
+	}
+
+	template<RGBuilderFlags BuilderFlags>
+	inline BufferNodeID RGDependencyBuilder<BuilderFlags>::add_index_buffer(BufferNodeID node_id)
+	{
+		render_graph_.read_buffer_node(node_id, pass_id_);
+		pass_node_.index_buffers_.push_back(node_id);
+		return node_id;
+	}
+
+	class PassBaseNode
+	{
+	public:
+		PassBaseNode(const PassType type, const char* name) : name_(name), type_(type) {}
+		PassBaseNode(const PassBaseNode&) = delete;
+		PassBaseNode& operator=(const PassBaseNode&) = delete;
+		PassBaseNode(PassBaseNode&&) = delete;
+		PassBaseNode& operator=(PassBaseNode&&) = delete;
+		virtual ~PassBaseNode() = default;
+
+		[[nodiscard]] PassType get_type() const { return type_; }
+		[[nodiscard]] const char* get_name() const { return name_; }
+
+		[[nodiscard]] const Vector<BufferNodeID>& get_vertex_buffers() const { return vertex_buffers_; }
+		[[nodiscard]] const Vector<BufferNodeID>& get_index_buffers() const { return index_buffers_; }
+		[[nodiscard]] const Vector<ShaderBufferReadAccess>& get_buffer_read_accesses() const { return shader_buffer_read_accesses_; }
+		[[nodiscard]] const Vector<ShaderBufferWriteAccess>& get_buffer_write_accesses() const { return shader_buffer_write_accesses_; }
+		[[nodiscard]] const Vector<ShaderTextureReadAccess>& get_texture_read_accesses() const { return shader_texture_read_accesses_; }
+		[[nodiscard]] const Vector<ShaderTextureWriteAccess>& get_texture_write_accesses() const { return shader_texture_write_accesses_; }
+
+		[[nodiscard]] const RGRenderTarget* get_render_target() const { return &render_target_.value(); }
+
+	protected:
+		const char* name_ = nullptr;
+		const PassType type_ = PassType::NONE;
+		const QueueType queue_type = QueueType::COUNT;
+
+	private:
+
+		Vector<TransferSrcBufferAccess> source_buffers_;
+		Vector<TransferDstBufferAccess> destination_buffers_;
+		Vector<TransferSrcTextureAccess> source_textures_;
+		Vector<TransferDstTextureAccess> destination_textures_;
+
+		Vector<ShaderBufferReadAccess> shader_buffer_read_accesses_;
+		Vector<ShaderBufferWriteAccess> shader_buffer_write_accesses_;
+		Vector<ShaderTextureReadAccess> shader_texture_read_accesses_;
+		Vector<ShaderTextureWriteAccess> shader_texture_write_accesses_;
+		Vector<BufferNodeID> vertex_buffers_;
+		Vector<BufferNodeID> index_buffers_;
+
+		std::optional<RGRenderTarget> render_target_;
+
+		template <RGBuilderFlags BuilderFlags>
+		friend class RGDependencyBuilder;
+	};
+
+	template <typename Parameter,
+        typename Execute>
+	class PassNode final : public PassBaseNode
+	{
+	public:
+		PassNode() = delete;
+		PassNode(const PassNode&) = delete;
+		PassNode& operator=(const PassNode&) = delete;
+		PassNode(PassNode&&) = delete;
+		PassNode& operator=(PassNode&&) = delete;
+		~PassNode() override = default;
+
+		PassNode(const char* name, Execute&& execute) : PassBaseNode(PassType::GRAPHIC, name), execute_(std::forward<Execute>(execute)) {}
+
+		[[nodiscard]] const Parameter& get_parameter() const { return parameter_; }
+		const Execute& get_execute() { return execute_; }
+		
+	private:
+		Parameter parameter_;
+		Execute execute_;
+	};
+
+
 
 
 	class RenderGraph
@@ -568,7 +499,7 @@ namespace soul::gpu
 			typename Parameter,
 			shader_pass_setup<Parameter&> Setup,
 			graphic_pass_executable<Parameter&> Executable,
-			typename Node = GraphicNode<Parameter, Executable>
+			typename Node = PassNode<Parameter, Executable>
 		>
 		const Node& add_graphic_pass(const char* name, const RGRenderTargetDesc& render_target, Setup&& setup, Executable&& execute)
 		{
@@ -611,7 +542,7 @@ namespace soul::gpu
 			typename Parameter,
 			shader_pass_setup<Parameter&> Setup,
 			compute_pass_executable<Parameter&> Executable,
-			typename Node = ComputeNode<Parameter, Executable>
+			typename Node = PassNode<Parameter, Executable>
 		>
 		const Node& add_compute_pass(const char* name, Setup&& setup, Executable&& execute)
 		{
@@ -626,7 +557,7 @@ namespace soul::gpu
 			typename Parameter,
 			copy_pass_setup<Parameter&> Setup,
 			copy_pass_executable<Parameter&> Executable,
-			typename Node = TransferNode<Parameter, Executable>
+			typename Node = PassNode<Parameter, Executable>
 		>
 		const Node& add_transfer_pass(const char* name, Setup&& setup, Executable&& execute)
 		{
@@ -657,7 +588,7 @@ namespace soul::gpu
 		[[nodiscard]] const impl::TextureNode& get_texture_node(TextureNodeID node_id) const;
 		impl::TextureNode& get_texture_node(TextureNodeID node_id);
 
-		[[nodiscard]] const Vector<PassNode*>& get_pass_nodes() const { return pass_nodes_; }
+		[[nodiscard]] const Vector<PassBaseNode*>& get_pass_nodes() const { return pass_nodes_; }
 		[[nodiscard]] const Vector<impl::BufferNode>& get_buffer_nodes() const { return buffer_nodes_; }
 		[[nodiscard]] const Vector<impl::TextureNode>& get_texture_nodes() const { return texture_nodes_; }
 		[[nodiscard]] const Vector<impl::RGInternalBuffer>& get_internal_buffers() const { return internal_buffers_; }
@@ -669,7 +600,7 @@ namespace soul::gpu
 		[[nodiscard]] RGBufferDesc get_buffer_desc(BufferNodeID node_id, const gpu::System& gpu_system) const;
 
 	private:
-		Vector<PassNode*> pass_nodes_;
+		Vector<PassBaseNode*> pass_nodes_;
 
 		Vector<impl::BufferNode> buffer_nodes_;
 		Vector<impl::TextureNode> texture_nodes_;
