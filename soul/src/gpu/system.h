@@ -36,6 +36,8 @@ namespace soul::gpu
 		void init(const Config& config);
 		void init_frame_context(const System::Config& config);
 
+		const GPUProperties& get_gpu_properties() const;
+
 		void shutdown();
 
 		BufferID create_buffer(const BufferDesc& desc);
@@ -123,6 +125,8 @@ namespace soul::gpu
 		VkResult acquire_swapchain();
 
 		void wait_sync_counter(impl::TimelineSemaphore sync_counter);
+
+		void calculate_gpu_properties();
 
 		Config config_;
 	};

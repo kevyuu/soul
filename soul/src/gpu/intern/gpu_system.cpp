@@ -559,7 +559,7 @@ namespace soul::gpu
 				vkGetPhysicalDeviceProperties(db->physical_device, &db->physical_device_properties);
 				vkGetPhysicalDeviceMemoryProperties(db->physical_device, &db->physical_device_memory_properties);
 				vkGetPhysicalDeviceFeatures(db->physical_device, &db->physical_device_features);
-			
+
 				const uint32_t api_version = db->physical_device_properties.apiVersion;
 				const uint32_t driver_version = db->physical_device_properties.driverVersion;
 				const uint32_t vendor_id = db->physical_device_properties.vendorID;
@@ -843,7 +843,8 @@ namespace soul::gpu
 		init_allocator(&_db, config);
 		_db.descriptor_allocator.init(_db.device);
 		init_frame_context(config);
-		begin_frame();
+		calculate_gpu_properties();
+	    begin_frame();
 	}
 
 	void System::init_frame_context(const System::Config &config) {
@@ -863,7 +864,12 @@ namespace soul::gpu
 		});
 	}
 
-	QueueData System::get_queue_data_from_queue_flags(QueueFlags flags) const {
+    const GPUProperties& System::get_gpu_properties() const
+    {
+		return _db.gpu_properties;
+    }
+
+    QueueData System::get_queue_data_from_queue_flags(QueueFlags flags) const {
 		QueueData queue_data;
 		const auto& queues = _db.queues;
 		flags.for_each([&queue_data, queues](QueueType type)
@@ -1283,8 +1289,8 @@ namespace soul::gpu
 	}
 
 	PipelineStateID System::request_pipeline_state(const GraphicPipelineStateDesc& desc, VkRenderPass renderPass, const TextureSampleCount sample_count) {
-		//TODO(kevinyu): Do we need to hash renderPass and sample_count as well?
-        const PipelineStateDesc key(desc);
+		//TODO(kevinyu): Do we need to hash renderPass as well?
+        const impl::PipelineStateKey key(GraphicPipelineStateKey{desc, sample_count});
 		if (const auto id = _db.pipeline_state_cache.find(key); id != PipelineStateCache::NULLVAL)
 		{
 			return PipelineStateID(id);
@@ -1473,7 +1479,7 @@ namespace soul::gpu
 
 	PipelineStateID System::request_pipeline_state(const ComputePipelineStateDesc& desc)
 	{
-        const PipelineStateDesc key(desc);
+		const impl::PipelineStateKey key(ComputePipelineStateKey{ desc });
 		if (const auto id = _db.pipeline_state_cache.find(key); id != PipelineStateCache::NULLVAL)
 		{
 			return PipelineStateID(id);
@@ -1938,6 +1944,16 @@ namespace soul::gpu
 	void System::destroy_binary_semaphore(BinarySemaphore semaphore) {
 		SOUL_ASSERT_MAIN_THREAD();
 		get_frame_context().garbages.semaphores.push_back(semaphore);
+	}
+
+	void System::calculate_gpu_properties()
+	{
+		_db.gpu_properties = {
+			.limit = {
+				.color_sample_count_flags = soul_cast(_db.physical_device_properties.limits.framebufferColorSampleCounts),
+				.depth_sample_count_flags = soul_cast(_db.physical_device_properties.limits.framebufferDepthSampleCounts)
+			}
+		};
 	}
 
 	void CommandQueue::init(VkDevice inDevice, uint32 inFamilyIndex, uint32 queue_index)

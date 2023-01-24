@@ -22,6 +22,9 @@ namespace soul::gpu::impl
 	struct Program;
 	struct BinarySemaphore;
 	struct Database;
+	struct GraphicPipelineStateKey;
+	struct ComputePipelineStateKey;
+	using PipelineStateKey = std::variant<impl::GraphicPipelineStateKey, impl::ComputePipelineStateKey>;
 	struct PipelineState;
 	struct ShaderArgSet;
 	struct Shader;
@@ -36,10 +39,7 @@ namespace soul::gpu
 	using TexturePool = ConcurrentObjectPool<impl::Texture>;
 	using BufferPool = ConcurrentObjectPool<impl::Buffer>;
 
-	struct GraphicPipelineStateDesc;
-	struct ComputePipelineStateDesc;
-	using PipelineStateDesc = std::variant<GraphicPipelineStateDesc, ComputePipelineStateDesc>;
-	using PipelineStateCache = ConcurrentObjectCache<PipelineStateDesc, impl::PipelineState>;
+	using PipelineStateCache = ConcurrentObjectCache<impl::PipelineStateKey, impl::PipelineState>;
 
 	using DescriptorSetLayoutCache = ConcurrentObjectCache<impl::DescriptorSetLayoutKey, VkDescriptorSetLayout>;
 	

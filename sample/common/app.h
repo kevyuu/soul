@@ -63,7 +63,6 @@ private:
 	WindowData window_data_;
 
 	const AppConfig app_config_;
-	bool first_frame_ = true;
 
 	const std::chrono::steady_clock::time_point start_ = std::chrono::steady_clock::now();
 
@@ -72,5 +71,6 @@ private:
 
 protected:
 	soul::gpu::System* gpu_system_ = nullptr;
+	soul::gpu::GPUProperties gpu_properties_ = {};
 	CameraManipulator camera_man_;
 };

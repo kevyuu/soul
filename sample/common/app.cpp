@@ -97,6 +97,7 @@ App::App(const AppConfig& app_config) :
 	};
 
 	gpu_system_->init(config);
+	gpu_properties_ = gpu_system_->get_gpu_properties();
 
 	ImGui::CreateContext();
 	ImGuiIO& io = ImGui::GetIO();

@@ -316,16 +316,39 @@ namespace soul::gpu
 		return VK_FORMAT_UNDEFINED;
 	}
 
+	SOUL_ALWAYS_INLINE TextureSampleCountFlags soul_cast(VkSampleCountFlags flags)
+	{
+		SOUL_ASSERT(0, util::get_last_one_bit_pos(flags) <= VK_SAMPLE_COUNT_64_BIT , "");
+		static constexpr TextureSampleCount MAP[] = {
+			TextureSampleCount::COUNT_1,
+			TextureSampleCount::COUNT_2,
+			TextureSampleCount::COUNT_4,
+			TextureSampleCount::COUNT_8,
+			TextureSampleCount::COUNT_16,
+			TextureSampleCount::COUNT_32,
+			TextureSampleCount::COUNT_64
+		};
+		TextureSampleCountFlags result;
+		util::for_each_one_bit_pos(flags, [&result](soul_size bit_position)
+		{
+			result.set(MAP[bit_position]);
+		});
+		return result;
+	    
+	}
+
 	SOUL_ALWAYS_INLINE VkSampleCountFlagBits vk_cast(const TextureSampleCount sample_count)
 	{
-		static_assert(to_underlying(TextureSampleCount::COUNT_1) == VK_SAMPLE_COUNT_1_BIT);
-		static_assert(to_underlying(TextureSampleCount::COUNT_2) == VK_SAMPLE_COUNT_2_BIT);
-		static_assert(to_underlying(TextureSampleCount::COUNT_4) == VK_SAMPLE_COUNT_4_BIT);
-		static_assert(to_underlying(TextureSampleCount::COUNT_8) == VK_SAMPLE_COUNT_8_BIT);
-		static_assert(to_underlying(TextureSampleCount::COUNT_16) == VK_SAMPLE_COUNT_16_BIT);
-		static_assert(to_underlying(TextureSampleCount::COUNT_32) == VK_SAMPLE_COUNT_32_BIT);
-		static_assert(to_underlying(TextureSampleCount::COUNT_64) == VK_SAMPLE_COUNT_64_BIT);
-		return static_cast<VkSampleCountFlagBits>(to_underlying(sample_count));
+		static constexpr auto MAP = FlagMap<TextureSampleCount, VkSampleCountFlagBits>::build_from_list({
+			VK_SAMPLE_COUNT_1_BIT,
+			VK_SAMPLE_COUNT_2_BIT,
+			VK_SAMPLE_COUNT_4_BIT,
+			VK_SAMPLE_COUNT_8_BIT,
+			VK_SAMPLE_COUNT_16_BIT,
+			VK_SAMPLE_COUNT_32_BIT,
+			VK_SAMPLE_COUNT_64_BIT
+		});
+		return MAP[sample_count];
 	}
 
 	constexpr VkOffset3D get_vk_offset_3d(const vec3i32 val)

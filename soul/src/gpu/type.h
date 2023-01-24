@@ -519,14 +519,16 @@ namespace soul::gpu
 
 	enum class TextureSampleCount : uint8
 	{
-		COUNT_1 = 1,
-		COUNT_2 = 2,
-		COUNT_4 = 4,
-		COUNT_8 = 8,
-		COUNT_16 = 16,
-		COUNT_32 = 32,
-		COUNT_64 = 64
+		COUNT_1,
+		COUNT_2,
+		COUNT_4,
+		COUNT_8,
+		COUNT_16,
+		COUNT_32,
+		COUNT_64,
+		COUNT
 	};
+	using TextureSampleCountFlags = FlagSet<TextureSampleCount>;
 
 	struct TextureDesc {
 		TextureType type = TextureType::D2;
@@ -767,9 +769,31 @@ namespace soul::gpu
 		}
 	};
 
+	struct GPUProperties
+	{
+	    struct GPULimit
+	    {
+			TextureSampleCountFlags color_sample_count_flags;
+			TextureSampleCountFlags depth_sample_count_flags;
+	    } limit;
+	};
+
 	namespace impl
 	{
         class PrimaryCommandBuffer;
+
+		struct GraphicPipelineStateKey
+		{
+			GraphicPipelineStateDesc desc;
+			TextureSampleCount sample_count = gpu::TextureSampleCount::COUNT_1;
+			bool operator==(const GraphicPipelineStateKey&) const = default;
+		};
+
+		struct ComputePipelineStateKey
+		{
+			ComputePipelineStateDesc desc;
+			bool operator==(const ComputePipelineStateKey&) const = default;
+		};
 
         struct PipelineState {
 			VkPipeline vk_handle = VK_NULL_HANDLE;
@@ -1150,6 +1174,7 @@ namespace soul::gpu
 			VkDevice device = VK_NULL_HANDLE;
 			VkPhysicalDevice physical_device = VK_NULL_HANDLE;
 			VkPhysicalDeviceProperties physical_device_properties = {};
+			GPUProperties gpu_properties = {};
 			VkPhysicalDeviceMemoryProperties physical_device_memory_properties = {};
 			VkPhysicalDeviceFeatures physical_device_features = {};
 			FlagMap<QueueType, uint32> queue_family_indices;
