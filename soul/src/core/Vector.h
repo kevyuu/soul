@@ -1,6 +1,7 @@
 #pragma once
 
 #include <array>
+#include <memory>
 
 #include "core/config.h"
 #include "core/dev_util.h"
