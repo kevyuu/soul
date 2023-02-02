@@ -186,7 +186,7 @@ namespace soul::gpu::impl
 				resolveAttachments, depthStencilAttachment] = pass_node.get_render_target();
 
 			for (const ColorAttachment& color_attachment : colorAttachments) {
-				SOUL_ASSERT(0, color_attachment.out_node_id.is_valid(), "");
+				SOUL_ASSERT(0, color_attachment.out_node_id.id.is_valid(), "");
 
 				const auto texture_info_id = get_texture_info_index(color_attachment.out_node_id);
 				update_texture_info(QueueType::GRAPHIC, { TextureUsage::COLOR_ATTACHMENT },
@@ -234,7 +234,7 @@ namespace soul::gpu::impl
 
 			}
 
-			if (depthStencilAttachment.out_node_id.is_valid()) {
+			if (depthStencilAttachment.out_node_id.id.is_valid()) {
 				const auto resource_info_index = get_texture_info_index(depthStencilAttachment.out_node_id);
 
 				const auto texture_info_id = get_texture_info_index(depthStencilAttachment.out_node_id);
@@ -432,7 +432,7 @@ namespace soul::gpu::impl
 		std::ranges::transform(render_target.color_attachments, render_pass_key.color_attachments, get_render_pass_attachment);
 		std::ranges::transform(render_target.resolve_attachments, render_pass_key.resolve_attachments, get_render_pass_attachment);
 
-		if (render_target.depth_stencil_attachment.out_node_id.is_valid()) {
+		if (render_target.depth_stencil_attachment.out_node_id.id.is_valid()) {
 			const DepthStencilAttachment& attachment = render_target.depth_stencil_attachment;
 			render_pass_key.depth_attachment = get_render_pass_attachment(attachment);
 		}
@@ -480,7 +480,7 @@ namespace soul::gpu::impl
 			imageViews[imageViewCount++] = texture->view;
 		} */
 
-		if (render_target.depth_stencil_attachment.out_node_id.is_valid()) {
+		if (render_target.depth_stencil_attachment.out_node_id.id.is_valid()) {
 			const auto info_idx = get_texture_info_index(render_target.depth_stencil_attachment.out_node_id);
 			const TextureExecInfo& texture_info = texture_infos_[info_idx];
 			const auto depth_attachment_desc = render_target.depth_stencil_attachment.desc;
@@ -649,7 +649,7 @@ namespace soul::gpu::impl
 				memcpy(&clear_values[clear_count++], &clear_value, sizeof(VkClearValue));
 			}
 
-			if (render_target.depth_stencil_attachment.out_node_id.is_valid()) {
+			if (render_target.depth_stencil_attachment.out_node_id.id.is_valid()) {
 				const DepthStencilAttachmentDesc& desc = render_target.depth_stencil_attachment.desc;
 				ClearValue clear_value = desc.clear_value;
 				clear_values[clear_count++].depthStencil = { clear_value.depth_stencil.depth, clear_value.depth_stencil.stencil };
@@ -1099,7 +1099,7 @@ namespace soul::gpu::impl
 	}
 
 	uint32 RenderGraphExecution::get_buffer_info_index(const BufferNodeID node_id) const {
-		const auto& node = render_graph_->get_buffer_node(node_id);
+		const auto& node = render_graph_->get_resource_node(node_id);
 		if (node.resource_id.is_external()) {
 			return soul::cast<uint32>(render_graph_->get_internal_buffers().size()) + node.resource_id.get_index();
 		}
@@ -1107,7 +1107,7 @@ namespace soul::gpu::impl
 	}
 
 	uint32 RenderGraphExecution::get_texture_info_index(TextureNodeID nodeID) const {
-		const auto& node = render_graph_->get_texture_node(nodeID);
+		const auto& node = render_graph_->get_resource_node(nodeID);
 		if (node.resource_id.is_external()) {
 			return soul::cast<uint32>(render_graph_->get_internal_textures().size()) + node.resource_id.get_index();
 		}

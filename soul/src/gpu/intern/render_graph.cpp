@@ -9,70 +9,50 @@ namespace soul::gpu
 	using namespace impl;
 
 	TextureNodeID RenderGraph::import_texture(const char* name, TextureID texture_id) {
-		const auto node_id = TextureNodeID(texture_nodes_.add(TextureNode()));
-		TextureNode& node = texture_nodes_.back();
 		const auto resource_index = soul::cast<uint32>(external_textures_.add(RGExternalTexture(
 			{
 				.name = name,
 				.texture_id = texture_id
 			}
 		)));
-		node.resource_id = RGResourceID::external_id(resource_index);
-		return node_id;
+		return create_resource_node<RGResourceType::TEXTURE>(RGResourceID::external_id(resource_index));
 	}
 
 	TextureNodeID RenderGraph::create_texture(const char* name, const RGTextureDesc& desc) {
-		const auto node_id = TextureNodeID(texture_nodes_.add(TextureNode()));
-		TextureNode& node = texture_nodes_.back();
-
-		const auto resource_index = soul::cast<uint32>(internal_textures_.add(RGInternalTexture()));
-		RGInternalTexture& internal_texture = internal_textures_.back();
-		internal_texture.name = name;
-		internal_texture.type = desc.type;
-		internal_texture.extent = desc.extent;
-		internal_texture.mip_levels = desc.mip_levels;
-		internal_texture.format = desc.format;
-		internal_texture.clear = desc.clear;
-		internal_texture.clear_value = desc.clear_value;
-		internal_texture.sample_count = desc.sample_count;
-
-		node.resource_id = RGResourceID::internal_id(resource_index);
-
-		return node_id;
+		const auto resource_index = soul::cast<uint32>(internal_textures_.add({
+			.name = name,
+			.type = desc.type,
+			.format = desc.format,
+			.extent = desc.extent,
+			.mip_levels = desc.mip_levels,
+			.sample_count = desc.sample_count,
+			.clear = desc.clear,
+			.clear_value = desc.clear_value
+		}));
+		return create_resource_node<RGResourceType::TEXTURE>(RGResourceID::internal_id(resource_index));
 	}
 
 	BufferNodeID RenderGraph::import_buffer(const char* name, const BufferID buffer_id) {
-		const BufferNodeID node_id = BufferNodeID(buffer_nodes_.add(BufferNode()));
-		BufferNode& node = buffer_nodes_.back();
-
-		const auto resource_index = external_buffers_.add(RGExternalBuffer());
-		RGExternalBuffer& external_buffer = external_buffers_.back();
-		external_buffer.name = name;
-		external_buffer.buffer_id = buffer_id;
-
-		node.resource_id = RGResourceID::external_id(resource_index);
-
-		return node_id;
+		const auto resource_index = soul::cast<uint32>(external_buffers_.add({
+			.name = name,
+			.buffer_id = buffer_id
+		}));
+		return create_resource_node<RGResourceType::BUFFER>(RGResourceID::external_id(resource_index));
 	}
 
 	BufferNodeID RenderGraph::create_buffer(const char* name, const RGBufferDesc& desc) {
 		SOUL_ASSERT(0, desc.size > 0, "Render Graph buffer size must be greater than zero!, name = %s", name);
-		const auto node_id = BufferNodeID(buffer_nodes_.add(BufferNode()));
-		BufferNode& node = buffer_nodes_.back();
 
-		const auto resource_index = soul::cast<uint32>(internal_buffers_.add(RGInternalBuffer()));
-		RGInternalBuffer& internal_buffer = internal_buffers_.back();
-		internal_buffer.name = name;
-		internal_buffer.size = desc.size;
-		
-		node.resource_id = RGResourceID::internal_id(resource_index);
-
-		return node_id;
+		const auto resource_index = soul::cast<uint32>(internal_buffers_.add({
+			.name = name,
+			.size = desc.size
+		}));
+		return create_resource_node<RGResourceType::BUFFER>(RGResourceID::internal_id(resource_index));
 	}
 
 	RGTextureDesc RenderGraph::get_texture_desc(TextureNodeID node_id, const gpu::System& system) const
 	{
-		const impl::TextureNode& node = texture_nodes_[node_id.id];
+		const auto& node = get_resource_node(node_id.id);
 		if (node.resource_id.is_external())
 		{
 			const RGExternalTexture& external_texture = external_textures_[node.resource_id.get_index()];
@@ -103,7 +83,7 @@ namespace soul::gpu
 
 	RGBufferDesc RenderGraph::get_buffer_desc(BufferNodeID node_id, const gpu::System& system) const
 	{
-		const impl::BufferNode& node = buffer_nodes_[node_id.id];
+		const auto& node = get_resource_node(node_id.id);
 		if (node.resource_id.is_external())
 		{
 			const RGExternalBuffer& external_buffer = external_buffers_[node.resource_id.get_index()];
@@ -118,85 +98,48 @@ namespace soul::gpu
 		};
 	}
 
-	void RenderGraph::cleanup() {
-		SOUL_PROFILE_ZONE();
-		for (PassBaseNode* passNode : pass_nodes_) {
-			allocator_->destroy(passNode);
-		}
-		pass_nodes_.cleanup();
-
-		buffer_nodes_.cleanup();
-
-		texture_nodes_.cleanup();
-
-		internal_buffers_.cleanup();
-		internal_textures_.cleanup();
-		external_buffers_.cleanup();
-		external_textures_.cleanup();
-	}
+    ResourceNodeID RenderGraph::create_resource_node(RGResourceType resource_type, impl::RGResourceID resource_id)
+    {
+		return ResourceNodeID(resource_nodes_.add(ResourceNode(resource_type, resource_id)));
+    }
 
 	RenderGraph::~RenderGraph()
 	{
-		cleanup();
-	}
-
-	void RenderGraph::read_buffer_node(BufferNodeID buffer_node_id, PassNodeID pass_node_id) {
-		get_buffer_node(buffer_node_id).readers.push_back(pass_node_id);
-	}
-
-	BufferNodeID RenderGraph::write_buffer_node(BufferNodeID buffer_node_id, PassNodeID pass_node_id) {
-		BufferNode& src_buffer_node = get_buffer_node(buffer_node_id);
-
-		if (src_buffer_node.writer.is_null())
-		{
-			src_buffer_node.writer = pass_node_id;
-			const auto dst_buffer_node_id = BufferNodeID(soul::cast<uint16>(buffer_nodes_.add(BufferNode())));
-			BufferNode& dst_buffer_node = get_buffer_node(dst_buffer_node_id);
-			dst_buffer_node.resource_id = get_buffer_node(buffer_node_id).resource_id;
-			dst_buffer_node.creator = pass_node_id;
-			src_buffer_node.write_target_node = dst_buffer_node_id;
+		for (auto* pass_node : pass_nodes_) {
+			allocator_->destroy(pass_node);
 		}
-		SOUL_ASSERT(0, src_buffer_node.writer == pass_node_id, "");
-
-		return src_buffer_node.write_target_node;
 	}
 
-	void RenderGraph::read_texture_node(TextureNodeID node_id, PassNodeID pass_node_id) {
-		get_texture_node(node_id).readers.push_back(pass_node_id);
-	}
+    void RenderGraph::read_resource_node(ResourceNodeID resource_node_id, PassNodeID pass_node_id)
+    {
+		get_resource_node(resource_node_id).readers.push_back(pass_node_id);
+    }
 
-	TextureNodeID RenderGraph::write_texture_node(TextureNodeID texture_node_id, PassNodeID pass_node_id) {
-		TextureNode& src_texture_node = get_texture_node(texture_node_id);
-		if (src_texture_node.writer.is_null())
+    ResourceNodeID RenderGraph::write_resource_node(ResourceNodeID resource_node_id, PassNodeID pass_node_id)
+    {
+		auto& src_resource_node = get_resource_node(resource_node_id);
+		if (src_resource_node.writer.is_null())
 		{
-			src_texture_node.writer = pass_node_id;
-			const auto dst_texture_node_id = TextureNodeID(texture_nodes_.add(TextureNode()));
-			TextureNode& dst_texture_node = get_texture_node(dst_texture_node_id);
-			dst_texture_node.resource_id = get_texture_node(texture_node_id).resource_id;
-			dst_texture_node.creator = pass_node_id;
-			src_texture_node.write_target_node = dst_texture_node_id;
+			src_resource_node.writer = pass_node_id;
+			const auto dst_resource_node_id = ResourceNodeID(resource_nodes_.add(ResourceNode(
+				src_resource_node.resource_type,
+				src_resource_node.resource_id,
+				pass_node_id
+			)));
+			src_resource_node.write_target_node = dst_resource_node_id;
 		}
-		return src_texture_node.write_target_node;
-	}
 
-	const BufferNode& RenderGraph::get_buffer_node(const BufferNodeID node_id) const
-	{
-		return buffer_nodes_[node_id.id];
-	}
+		return src_resource_node.write_target_node;
+    }
 
-	BufferNode& RenderGraph::get_buffer_node(const BufferNodeID node_id)
-	{
-		return buffer_nodes_[node_id.id];
-	}
+    const impl::ResourceNode& RenderGraph::get_resource_node(ResourceNodeID node_id) const
+    {
+		return resource_nodes_[node_id.id];
+    }
 
-	const TextureNode& RenderGraph::get_texture_node(const TextureNodeID node_id) const
-	{
-		return texture_nodes_[node_id.id];
-	}
-
-	TextureNode& RenderGraph::get_texture_node(const TextureNodeID node_id)
-	{
-		return texture_nodes_[node_id.id];
-	}
+    impl::ResourceNode& RenderGraph::get_resource_node(ResourceNodeID node_id)
+    {
+		return resource_nodes_[node_id.id];
+    }
 
 }
