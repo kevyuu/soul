@@ -94,14 +94,15 @@ class BufferTransferCommandSample final : public App
 			gpu::BufferNodeID transform_buffer_q2;
 			gpu::BufferNodeID transient_transform_buffer;
 		};
-		UpdatePassParameter update_pass_parameter = render_graph.add_transfer_pass<UpdatePassParameter>("Update Transform Pass",
-			[=](gpu::RGTransferPassDependencyBuilder& builder, UpdatePassParameter& parameter)
+		UpdatePassParameter update_pass_parameter = render_graph.add_non_shader_pass<UpdatePassParameter>("Update Transform Pass",
+			gpu::QueueType::TRANSFER,
+			[=](auto& parameter, auto& builder)
 			{
 				parameter.transform_buffer_q1 = builder.add_dst_buffer(transform_buffer_q1, gpu::TransferDataSource::CPU);
 				parameter.transform_buffer_q2 = builder.add_dst_buffer(transform_buffer_q2, gpu::TransferDataSource::CPU);
 				parameter.transient_transform_buffer = builder.add_dst_buffer(transient_transform_buffer, gpu::TransferDataSource::CPU);
 			},
-			[this, elapsed_seconds_float](const UpdatePassParameter& parameter, const gpu::RenderGraphRegistry& registry, gpu::TransferCommandList& command_list)
+			[this, elapsed_seconds_float](const auto& parameter, auto& registry, auto& command_list)
 			{
 				{
 					Transform transform = transforms_q1_.back();
@@ -165,15 +166,16 @@ class BufferTransferCommandSample final : public App
 		const auto copy_transform_buffer = render_graph.create_buffer("Copy Transform Buffer", {
 			.size = (transforms_q1_.size() + transforms_q2_.size() + transient_transforms_.size()) * sizeof(Transform)
 		});
-		CopyPassParameter copy_pass_parameter = render_graph.add_transfer_pass<CopyPassParameter>("Copy Transform Buffer",
-			[=](gpu::RGTransferPassDependencyBuilder& dependency_builder, CopyPassParameter& parameter)
+		CopyPassParameter copy_pass_parameter = render_graph.add_non_shader_pass<CopyPassParameter>("Copy Transform Buffer",
+			gpu::QueueType::TRANSFER,
+			[=](auto& parameter, auto& builder)
 			{
-				parameter.transform_buffer_q1 = dependency_builder.add_src_buffer(update_pass_parameter.transform_buffer_q1);
-				parameter.transform_buffer_q2 = dependency_builder.add_src_buffer(update_pass_parameter.transform_buffer_q2);
-				parameter.transient_transform_buffer = dependency_builder.add_src_buffer(update_pass_parameter.transient_transform_buffer);
-				parameter.copy_dst_transform_buffer = dependency_builder.add_dst_buffer(copy_transform_buffer, gpu::TransferDataSource::GPU);
+				parameter.transform_buffer_q1 = builder.add_src_buffer(update_pass_parameter.transform_buffer_q1);
+				parameter.transform_buffer_q2 = builder.add_src_buffer(update_pass_parameter.transform_buffer_q2);
+				parameter.transient_transform_buffer = builder.add_src_buffer(update_pass_parameter.transient_transform_buffer);
+				parameter.copy_dst_transform_buffer = builder.add_dst_buffer(copy_transform_buffer, gpu::TransferDataSource::GPU);
 			},
-			[this](const CopyPassParameter& parameter, const gpu::RenderGraphRegistry& registry, gpu::TransferCommandList& command_list)
+			[this](const auto& parameter, auto& registry, auto& command_list)
 			{
 				using Command = gpu::RenderCommandCopyBuffer;
 				const gpu::BufferRegionCopy region_copy_q1 = {
@@ -213,16 +215,16 @@ class BufferTransferCommandSample final : public App
 		{
 			gpu::BufferNodeID transform_buffer;
 		};
-		render_graph.add_graphic_pass<RenderPassParameter>("Render Pass",
+		render_graph.add_raster_pass<RenderPassParameter>("Render Pass",
 			gpu::RGRenderTargetDesc(
 				viewport,
 				color_attachment_desc
 			)
-			, [copy_pass_parameter](gpu::RGShaderPassDependencyBuilder& builder, RenderPassParameter& parameter)
+			, [copy_pass_parameter](auto& parameter, auto& builder)
 			{
 				parameter.transform_buffer = builder.add_shader_buffer(copy_pass_parameter.copy_dst_transform_buffer,
 					{ gpu::ShaderStage::VERTEX }, gpu::ShaderBufferReadUsage::STORAGE);
-			}, [viewport, this](const RenderPassParameter& parameter, gpu::RenderGraphRegistry& registry, gpu::GraphicCommandList& command_list)
+			}, [viewport, this](const auto& parameter, auto& registry, auto& command_list)
 			{
 
 				const gpu::GraphicPipelineStateDesc pipeline_desc = {

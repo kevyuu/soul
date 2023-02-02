@@ -2438,23 +2438,6 @@ namespace soul::gpu
 		return sampler_id.descriptorID;
 	}
 
-	void PrimaryCommandBuffer::begin_render_pass(const VkRenderPassBeginInfo& render_pass_begin_info, VkSubpassContents subpass_contents)
-	{
-		vkCmdBeginRenderPass(vk_handle_, &render_pass_begin_info, subpass_contents);
-	}
-
-	void PrimaryCommandBuffer::end_render_pass()
-	{
-		vkCmdEndRenderPass(vk_handle_);
-	}
-
-	void PrimaryCommandBuffer::execute_secondary_command_buffers(uint32_t count, const SecondaryCommandBuffer* secondary_command_buffers)
-	{
-		static_assert(sizeof(SecondaryCommandBuffer) == sizeof(VkCommandBuffer));
-		auto command_buffers = reinterpret_cast<const VkCommandBuffer*>(secondary_command_buffers);
-		vkCmdExecuteCommands(vk_handle_, count, command_buffers);
-	}
-
 	void SecondaryCommandBuffer::end()
 	{
 		vkEndCommandBuffer(vk_handle_);

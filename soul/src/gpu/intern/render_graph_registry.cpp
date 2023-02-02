@@ -11,20 +11,20 @@ namespace soul::gpu
 	using namespace impl;
 
 	BufferID RenderGraphRegistry::get_buffer(BufferNodeID bufferNodeID) const {
-		return execution_->get_buffer_id(bufferNodeID);
+		return execution_.get_buffer_id(bufferNodeID);
 	}
 
 	TextureID RenderGraphRegistry::get_texture(TextureNodeID textureNodeId) const {
-		return execution_->get_texture_id(textureNodeId);
+		return execution_.get_texture_id(textureNodeId);
 	}
 
 	PipelineStateID RenderGraphRegistry::get_pipeline_state(const GraphicPipelineStateDesc& desc) {
-		return system_->request_pipeline_state(desc, render_pass_, sample_count_);
+		return system_.request_pipeline_state(desc, render_pass_, sample_count_);
 	}
 
 	PipelineStateID RenderGraphRegistry::get_pipeline_state(const ComputePipelineStateDesc& desc)
 	{
-		return system_->request_pipeline_state(desc);
+		return system_.request_pipeline_state(desc);
 	}
 
 }

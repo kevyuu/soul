@@ -20,7 +20,6 @@ namespace soul::gpu::impl
 namespace soul::gpu
 {
 	class RenderGraph;
-	class GraphicBaseNode;
 
 	class System {
 	public:

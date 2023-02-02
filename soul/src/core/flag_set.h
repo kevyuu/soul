@@ -41,6 +41,8 @@ namespace soul
         [[nodiscard]] constexpr size_t count() const;
         [[nodiscard]] constexpr size_t size() const;
         [[nodiscard]] constexpr bool test(flag_type bit) const;
+        [[nodiscard]] constexpr bool test_any(FlagSet) const;
+        [[nodiscard]] constexpr bool test_any(std::initializer_list<flag_type>) const;
         [[nodiscard]] constexpr bool any() const;
         [[nodiscard]] constexpr bool none() const;
 
@@ -86,6 +88,18 @@ namespace soul
     constexpr bool FlagSet<Flag>::test(flag_type bit) const
     {
         return flags_.test(to_underlying(bit));
+    }
+
+    template <flag Flag>
+    constexpr bool FlagSet<Flag>::test_any(FlagSet other) const
+    {
+        return (*this & other).any();
+    }
+
+    template <flag Flag>
+    constexpr bool FlagSet<Flag>::test_any(std::initializer_list<flag_type> other) const
+    {
+        return (*this & FlagSet(other)).any();
     }
 
     template <flag Flag>

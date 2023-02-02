@@ -70,12 +70,13 @@ class Texture3DSampleApp final : public App
 		{
 			gpu::TextureNodeID persistent_texture;
 		};
-		const auto update_pass_parameter = render_graph.add_transfer_pass<UpdatePassParameter>("Update Texture Pass",
-			[=](gpu::RGTransferPassDependencyBuilder& builder, UpdatePassParameter& parameter)
+		const auto update_pass_parameter = render_graph.add_non_shader_pass<UpdatePassParameter>("Update Texture Pass",
+			gpu::QueueType::TRANSFER,
+			[=](auto& parameter, auto& builder)
 			{
 				parameter.persistent_texture = builder.add_dst_texture(persistent_texture_node_id, gpu::TransferDataSource::CPU);
 			},
-			[this](const UpdatePassParameter& parameter, const gpu::RenderGraphRegistry& registry, gpu::TransferCommandList& command_list)
+			[this](const auto& parameter, auto& registry, auto& command_list)
 			{
 				using Command = gpu::RenderCommandUpdateTexture;
 				const gpu::TextureRegionUpdate region = {
@@ -84,7 +85,7 @@ class Texture3DSampleApp final : public App
 					},
 					.extent = {width_, height_, 1}
 				};
-				command_list.push<Command>({
+				command_list.push(Command{
 					.dst_texture = registry.get_texture(parameter.persistent_texture),
 					.data = test_texture_data_,
 					.data_size = soul::cast<soul_size>(width_ * height_ * 4),
@@ -100,21 +101,21 @@ class Texture3DSampleApp final : public App
 			gpu::TextureNodeID src_texture;
 			gpu::TextureNodeID dst_texture;
 		};
-		auto copy_pass_parameter = render_graph.add_transfer_pass<CopyPassParameter>("Copy Texture Pass",
-			[=](gpu::RGTransferPassDependencyBuilder& builder, CopyPassParameter& parameter)
+		auto copy_pass_parameter = render_graph.add_non_shader_pass<CopyPassParameter>("Copy Texture Pass",
+			gpu::QueueType::TRANSFER,
+			[=](auto& parameter, auto& builder)
 			{
 				parameter.src_texture = builder.add_src_texture(update_pass_parameter.persistent_texture);
 				parameter.dst_texture = builder.add_dst_texture(dst_texture_node_id, gpu::TransferDataSource::GPU);
 			},
-			[this](const CopyPassParameter& parameter, const gpu::RenderGraphRegistry& registry, gpu::TransferCommandList& command_list)
+			[this](const auto& parameter, auto& registry, auto& command_list)
 			{
-				using Command = gpu::RenderCommandCopyTexture;
 				const gpu::TextureRegionCopy region = {
 					.src_subresource = {.layer_count = 1},
 					.dst_subresource = {.layer_count = 1},
 					.extent = {width_, height_, 1}
 				};
-				command_list.push<Command>({
+				command_list.push(gpu::RenderCommandCopyTexture{
 					.src_texture = registry.get_texture(parameter.src_texture),
 					.dst_texture = registry.get_texture(parameter.dst_texture),
 					.region_count = 1,
@@ -126,15 +127,15 @@ class Texture3DSampleApp final : public App
 		{
 			gpu::TextureNodeID persistent_texture;
 		};
-		render_graph.add_graphic_pass<RenderPassParameter>("Render Pass",
+		render_graph.add_raster_pass<RenderPassParameter>("Render Pass",
 			gpu::RGRenderTargetDesc(
 				viewport,
 				color_attachment_desc
 			)
-			, [copy_pass_parameter](gpu::RGShaderPassDependencyBuilder& builder, RenderPassParameter& parameter)
+			, [copy_pass_parameter](auto& parameter, auto& builder)
 			{
 				parameter.persistent_texture = builder.add_shader_texture(copy_pass_parameter.dst_texture, { gpu::ShaderStage::FRAGMENT }, gpu::ShaderTextureReadUsage::UNIFORM);
-			}, [viewport, this](const RenderPassParameter& parameter, gpu::RenderGraphRegistry& registry, gpu::GraphicCommandList& command_list)
+			}, [viewport, this](const auto& parameter, auto& registry, auto& command_list)
 			{
 
 				const gpu::GraphicPipelineStateDesc pipeline_desc = {
@@ -164,15 +165,13 @@ class Texture3DSampleApp final : public App
 					gpu::DescriptorID sampler_descriptor_id;
 				};
 
-				using Command = gpu::RenderCommandDrawIndex;
-
 				const gpu::TextureID persistent_texture = registry.get_texture(parameter.persistent_texture);
 				const PushConstant push_constant = {
 					.texture_descriptor_id = gpu_system_->get_srv_descriptor_id(persistent_texture),
 					.sampler_descriptor_id = gpu_system_->get_sampler_descriptor_id(test_sampler_id_)
 				};
 
-				command_list.push<Command>({
+				command_list.push(gpu::RenderCommandDrawIndex{
 					.pipeline_state_id = pipeline_state_id,
 					.push_constant_data = soul::cast<void*>(&push_constant),
 					.push_constant_size = sizeof(PushConstant),

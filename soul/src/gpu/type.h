@@ -145,14 +145,17 @@ namespace soul::gpu
 		COUNT
 	};
 
-	enum class PassType : uint8
+	enum class PipelineType : uint8
 	{
-		NONE,
-		GRAPHIC,
+		NON_SHADER,
+	    RASTER,
 		COMPUTE,
-		TRANSFER,
 		COUNT
 	};
+	using PipelineFlags = FlagSet<PipelineType>;
+	constexpr auto PIPELINE_FLAGS_NON_SHADER = PipelineFlags{ PipelineType::NON_SHADER };
+	constexpr auto PIPELINE_FLAGS_RASTER = PipelineFlags({ PipelineType::RASTER });
+	constexpr auto PIPELINE_FLAGS_COMPUTE = PipelineFlags{ PipelineType::COMPUTE };
 
 	enum class QueueType : uint8 {
 		GRAPHIC,
@@ -999,9 +1002,6 @@ namespace soul::gpu
 			explicit constexpr PrimaryCommandBuffer(VkCommandBuffer vk_handle) : vk_handle_(vk_handle) {}
 			[[nodiscard]] constexpr VkCommandBuffer get_vk_handle() const noexcept { return vk_handle_; }
 			[[nodiscard]] bool is_null() const noexcept { return vk_handle_ == VK_NULL_HANDLE; }
-			void begin_render_pass(const VkRenderPassBeginInfo& render_pass_begin_info, VkSubpassContents subpass_contents);
-			void end_render_pass();
-			void execute_secondary_command_buffers(uint32_t count, const SecondaryCommandBuffer* secondary_command_buffers);
 		};
 
 		using CommandQueues = FlagMap<QueueType, CommandQueue>;
@@ -1243,7 +1243,7 @@ namespace soul::gpu
 
 	struct RenderCommandDraw : RenderCommandTyped<RenderCommandType::DRAW>
 	{
-		static constexpr PassType PASS_TYPE = PassType::GRAPHIC;
+		static constexpr PipelineType PIPELINE_TYPE = PipelineType::RASTER;
 		PipelineStateID pipeline_state_id;
 		void* push_constant_data = nullptr;
 		uint32 push_constant_size = 0;
@@ -1256,7 +1256,7 @@ namespace soul::gpu
 	};
 
 	struct RenderCommandDrawIndex : RenderCommandTyped<RenderCommandType::DRAW_INDEX> {
-		static constexpr PassType PASS_TYPE = PassType::GRAPHIC;
+		static constexpr PipelineType PIPELINE_TYPE = PipelineType::RASTER;
 		PipelineStateID pipeline_state_id;
 		void* push_constant_data = nullptr;
 		uint32 push_constant_size = 0;
@@ -1271,7 +1271,7 @@ namespace soul::gpu
 
 	struct RenderCommandUpdateTexture : RenderCommandTyped<RenderCommandType::UPDATE_TEXTURE>
 	{
-		static constexpr PassType PASS_TYPE = PassType::TRANSFER;
+		static constexpr PipelineType PIPELINE_TYPE = PipelineType::NON_SHADER;
 		TextureID dst_texture = TextureID::null();
 		const void* data = nullptr;
 		soul_size data_size = 0;
@@ -1281,7 +1281,7 @@ namespace soul::gpu
 
 	struct RenderCommandCopyTexture : RenderCommandTyped<RenderCommandType::COPY_TEXTURE>
 	{
-		static constexpr PassType PASS_TYPE = PassType::TRANSFER;
+		static constexpr PipelineType PIPELINE_TYPE = PipelineType::NON_SHADER;
 		TextureID src_texture = TextureID::null();
 		TextureID dst_texture = TextureID::null();
 		uint32 region_count = 0;
@@ -1290,7 +1290,7 @@ namespace soul::gpu
 
 	struct RenderCommandUpdateBuffer : RenderCommandTyped<RenderCommandType::UPDATE_BUFFER>
 	{
-		static constexpr PassType PASS_TYPE = PassType::TRANSFER;
+		static constexpr PipelineType PIPELINE_TYPE = PipelineType::NON_SHADER;
 		BufferID dst_buffer = BufferID::null();
 		void* data = nullptr;
 		uint32 region_count = 0;
@@ -1299,7 +1299,7 @@ namespace soul::gpu
 
 	struct RenderCommandCopyBuffer : RenderCommandTyped<RenderCommandType::COPY_BUFFER>
 	{
-		static constexpr PassType PASS_TYPE = PassType::TRANSFER;
+		static constexpr PipelineType PIPELINE_TYPE = PipelineType::NON_SHADER;
 		BufferID src_buffer = BufferID::null();
 		BufferID dst_buffer = BufferID::null();
 		uint32 region_count = 0;
@@ -1308,7 +1308,7 @@ namespace soul::gpu
 
 	struct RenderCommandDispatch : RenderCommandTyped<RenderCommandType::DISPATCH>
 	{
-		static constexpr PassType PASS_TYPE = PassType::COMPUTE;
+		static constexpr PipelineType PIPELINE_TYPE = PipelineType::COMPUTE;
 		PipelineStateID pipeline_state_id;
 		void* push_constant_data = nullptr;
 		uint32 push_constant_size = 0;
@@ -1318,16 +1318,8 @@ namespace soul::gpu
 	template <typename Func, typename RenderCommandType>
 	concept command_generator = std::invocable<Func, soul_size> && std::same_as<RenderCommandType, std::invoke_result_t<Func, soul_size>>;
 
-	template <typename T>
-	concept render_command = std::derived_from<T, RenderCommand>;
+	template <typename T, PipelineFlags pipeline_flags>
+	concept render_command = std::derived_from<T, RenderCommand> && pipeline_flags.test(T::PIPELINE_TYPE);
 
-	template <typename T>
-	concept graphic_render_command = render_command<T> && T::PASS_TYPE == PassType::GRAPHIC;
-
-	template <typename T>
-	concept transfer_render_command = render_command<T> && T::PASS_TYPE == PassType::TRANSFER;
-
-	template <typename T>
-	concept compute_render_command = render_command<T> && T::PASS_TYPE == PassType::COMPUTE;
-
+	static_assert(render_command<RenderCommandDraw, gpu::PipelineFlags({ PipelineType::RASTER })>);
 }

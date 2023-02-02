@@ -54,14 +54,14 @@ class Texture2DSampleApp final : public App
 		const vec2ui32 viewport = gpu_system_->get_swapchain_extent();
 
 	    struct RenderPassParameter {};
-	    render_graph.add_graphic_pass<RenderPassParameter>("Render Pass",
+	    render_graph.add_raster_pass<RenderPassParameter>("Render Pass",
 		    gpu::RGRenderTargetDesc(
 			    viewport,
 			    color_attachment_desc
 		    )
-		    , [this](gpu::RGShaderPassDependencyBuilder& builder, RenderPassParameter& parameter)
+		    , [this](auto& parameter, auto& builder)
 		    {
-		    }, [viewport, this](const RenderPassParameter& parameter, gpu::RenderGraphRegistry& registry, gpu::GraphicCommandList& command_list)
+		    }, [viewport, this](const auto& parameter, auto& registry, auto& command_list)
 		    {
 
 			    const gpu::GraphicPipelineStateDesc pipeline_desc = {

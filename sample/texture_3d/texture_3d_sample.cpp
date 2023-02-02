@@ -220,12 +220,13 @@ class Texture3DSampleApp final : public App
 		    {
 				gpu::TextureNodeID noise_texture;
 		    };
-			const auto update_pass_parameter = render_graph.add_transfer_pass<UpdatePassParameter>("Update Noise Texture",
-				[noise_texture_node](gpu::RGTransferPassDependencyBuilder& builder, UpdatePassParameter& parameter)
+			const auto update_pass_parameter = render_graph.add_non_shader_pass<UpdatePassParameter>("Update Noise Texture",
+				gpu::QueueType::TRANSFER,
+				[noise_texture_node](auto& parameter, auto& builder)
 				{
 					parameter.noise_texture = builder.add_dst_texture(noise_texture_node, gpu::TransferDataSource::CPU);
 				},
-				[](const UpdatePassParameter& parameter, const gpu::RenderGraphRegistry& registry, gpu::TransferCommandList& command_list)
+				[](const auto& parameter, auto& registry, auto& command_list)
 				{
 					runtime::ScopeAllocator scope_allocator("Update Noise Execution");
 					const auto* data = create_noise_data(DIMENSION, scope_allocator);
@@ -259,15 +260,15 @@ class Texture3DSampleApp final : public App
 		const auto copy_dst_texture_node = render_graph.create_texture("Copy Dst Texture", 
 			gpu::RGTextureDesc::create_d3(
 			gpu::TextureFormat::R8, 1, DIMENSION));
-		const auto copy_pass_parameter = render_graph.add_transfer_pass<CopyPassParameter>("Copy Pass Parameter",
-			[=](gpu::RGTransferPassDependencyBuilder& builder, CopyPassParameter& parameter)
+		const auto copy_pass_parameter = render_graph.add_non_shader_pass<CopyPassParameter>("Copy Pass Parameter",
+			gpu::QueueType::TRANSFER,
+			[=](auto& parameter, auto& builder)
 			{
 				parameter.src_noise_texture = builder.add_src_texture(noise_texture_node);
 				parameter.dst_noise_texture = builder.add_dst_texture(copy_dst_texture_node);
 			},
-			[](const CopyPassParameter& parameter, const gpu::RenderGraphRegistry& registry, gpu::TransferCommandList& command_list)
+			[](const auto& parameter, auto& registry, auto& command_list)
 			{
-				using Command = gpu::RenderCommandCopyTexture;
 				const gpu::TextureRegionCopy region_copy = {
 					.src_subresource = {0, 0, 1},
 					.src_offset = {},
@@ -276,7 +277,7 @@ class Texture3DSampleApp final : public App
 					.extent = DIMENSION
 				};
 
-				command_list.push<Command>({
+				command_list.push(gpu::RenderCommandCopyTexture{
 					.src_texture = registry.get_texture(parameter.src_noise_texture),
 					.dst_texture = registry.get_texture(parameter.dst_noise_texture),
 					.region_count = 1,
@@ -289,20 +290,19 @@ class Texture3DSampleApp final : public App
 		{
 			gpu::TextureNodeID noise_texture;
 		};
-		render_graph.add_graphic_pass<RenderPassParameter>("Render Pass",
+		render_graph.add_raster_pass<RenderPassParameter>("Render Pass",
 			gpu::RGRenderTargetDesc(
 				viewport,
 				color_attachment_desc
 			)
-			, [noise_texture_node](gpu::RGShaderPassDependencyBuilder& builder, RenderPassParameter& parameter)
+			, [noise_texture_node](auto& parameter, auto& builder)
 			{
 				parameter.noise_texture = builder.add_shader_texture(noise_texture_node,
 					{ gpu::ShaderStage::VERTEX, gpu::ShaderStage::FRAGMENT },
 					gpu::ShaderTextureReadUsage::UNIFORM);
 			}, 
-			[viewport, this](const RenderPassParameter& parameter, gpu::RenderGraphRegistry& registry, gpu::GraphicCommandList& command_list)
+			[viewport, this](const auto& parameter, auto& registry, auto& command_list)
 			{
-
 				const gpu::GraphicPipelineStateDesc pipeline_desc = {
 					.program_id = program_id_,
 					.input_bindings = {
@@ -330,8 +330,6 @@ class Texture3DSampleApp final : public App
 					float depth = 0.0f;
 				};
 
-				using Command = gpu::RenderCommandDrawIndex;
-
 				depth_ = (fmod(get_elapsed_seconds(), CYCLE_DURATION) / static_cast<float>(DIMENSION.z));
 				
 				const PushConstant push_constant = {
@@ -340,7 +338,7 @@ class Texture3DSampleApp final : public App
 					.depth = depth_
 				};
 
-				command_list.push<Command>({
+				command_list.push(gpu::RenderCommandDrawIndex{
 					.pipeline_state_id = pipeline_state_id,
 					.push_constant_data = soul::cast<void*>(&push_constant),
 					.push_constant_size = sizeof(PushConstant),

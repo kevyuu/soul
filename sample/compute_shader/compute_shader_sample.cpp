@@ -32,11 +32,11 @@ class ComputeShaderSampleApp final : public App
 		    gpu::TextureNodeID target_texture;
 		};
 		render_graph.add_compute_pass<ComputePassParameter>("Compute Pass",
-			[target_texture](gpu::RGShaderPassDependencyBuilder& builder, ComputePassParameter& parameter)
+			[target_texture](auto& parameter, auto& builder)
 			{
 				parameter.target_texture = builder.add_shader_texture(target_texture, { gpu::ShaderStage::COMPUTE }, gpu::ShaderTextureWriteUsage::STORAGE);
 			},
-			[this, viewport](const ComputePassParameter& parameter, gpu::RenderGraphRegistry& registry, gpu::ComputeCommandList& command_list)
+			[this, viewport](const auto& parameter, auto& registry, auto& command_list)
 			{
 				const gpu::ComputePipelineStateDesc desc = {
 					.program_id = program_id_

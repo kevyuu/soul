@@ -14,6 +14,11 @@ namespace soul::gpu
 	struct RenderCommandUpdateBuffer;
 	struct RenderCommandCopyBuffer;
 	struct RenderCommandDispatch;
+
+	namespace impl
+	{
+		class SecondaryCommandBuffer;
+	}
 }
 
 namespace soul::gpu::impl
@@ -21,12 +26,13 @@ namespace soul::gpu::impl
 	class RenderCompiler {
 	public:
 		constexpr RenderCompiler(System& gpu_system, VkCommandBuffer commandBuffer) :
-			gpu_system_(gpu_system), command_buffer(commandBuffer),
-			current_pipeline(VK_NULL_HANDLE) {}
+			gpu_system_(gpu_system), command_buffer_(commandBuffer),
+			current_pipeline_(VK_NULL_HANDLE) {}
 
-		System& gpu_system_;
-		VkCommandBuffer command_buffer;
-		VkPipeline current_pipeline;
+		void bind_descriptor_sets(VkPipelineBindPoint pipeline_bind_point);
+		void begin_render_pass(const VkRenderPassBeginInfo& render_pass_begin_info, VkSubpassContents subpass_contents);
+		void end_render_pass();
+		void execute_secondary_command_buffers(uint32 count, const SecondaryCommandBuffer* secondary_command_buffers);
 
 		void compile_command(const RenderCommand& command);
 		void compile_command(const RenderCommandDraw& command);
@@ -41,5 +47,8 @@ namespace soul::gpu::impl
 		void apply_pipeline_state(PipelineStateID pipeline_state_id);
 		void apply_push_constant(void* push_constant_data, uint32 push_constant_size);
 
+		System& gpu_system_;
+		VkCommandBuffer command_buffer_;
+		VkPipeline current_pipeline_;
 	};
 }

@@ -159,14 +159,15 @@ void ImGuiRenderGraphPass::add_pass(soul::gpu::TextureNodeID render_target, soul
 		gpu::BufferNodeID index_buffer;
 		gpu::BufferNodeID transform_buffer;
 	};
-	const auto update_pass_parameter = render_graph.add_transfer_pass<UpdatePassParameter>("Update Texture Pass",
-		[=](gpu::RGTransferPassDependencyBuilder& builder, UpdatePassParameter& parameter)
+	const auto update_pass_parameter = render_graph.add_non_shader_pass<UpdatePassParameter>("Update Texture Pass",
+		gpu::QueueType::TRANSFER,
+		[=](auto& parameter, auto& builder)
 		{
 			parameter.vertex_buffer = builder.add_dst_buffer(vertex_buffer_node_id, gpu::TransferDataSource::CPU);
 			parameter.index_buffer = builder.add_dst_buffer(index_buffer_node_id, gpu::TransferDataSource::CPU);
 			parameter.transform_buffer = builder.add_dst_buffer(transform_buffer_node_id, gpu::TransferDataSource::CPU);
 		},
-		[this, draw_data](const UpdatePassParameter& parameter, const gpu::RenderGraphRegistry& registry, gpu::TransferCommandList& command_list)
+		[this, draw_data](const auto& parameter, auto& registry, auto& command_list)
 		{
 			runtime::ScopeAllocator scope_allocator("Imgui Update Pass execute");
 			using Command = gpu::RenderCommandUpdateBuffer;
@@ -182,7 +183,7 @@ void ImGuiRenderGraphPass::add_pass(soul::gpu::TextureNodeID render_target, soul
 				const gpu::BufferRegionCopy region = {
 					.size = im_draw_verts.size() * sizeof(ImDrawVert)
 				};
-				command_list.push<Command>({
+				command_list.push(Command{
 					.dst_buffer = registry.get_buffer(parameter.vertex_buffer),
 					.data = im_draw_verts.data(),
 					.region_count = 1,
@@ -201,7 +202,7 @@ void ImGuiRenderGraphPass::add_pass(soul::gpu::TextureNodeID render_target, soul
 				const gpu::BufferRegionCopy region = {
 					.size = im_draw_indexes.size() * sizeof(ImDrawIdx)
 				};
-				command_list.push<Command>({
+				command_list.push(Command{
 					.dst_buffer = registry.get_buffer(parameter.index_buffer),
 					.data = im_draw_indexes.data(),
 					.region_count = 1,
@@ -221,7 +222,7 @@ void ImGuiRenderGraphPass::add_pass(soul::gpu::TextureNodeID render_target, soul
 				const gpu::BufferRegionCopy region = {
 					.size = sizeof(Transform)
 				};
-				command_list.push<Command>({
+				command_list.template push<Command>({
 					.dst_buffer = registry.get_buffer(parameter.transform_buffer),
 					.data = &transform,
 					.region_count = 1,
@@ -236,18 +237,18 @@ void ImGuiRenderGraphPass::add_pass(soul::gpu::TextureNodeID render_target, soul
 		gpu::BufferNodeID index_buffer;
 		gpu::BufferNodeID transform_buffer;
 	};
-	render_graph.add_graphic_pass<RenderPassParameter>("ImGui Render Pass",
+	render_graph.add_raster_pass<RenderPassParameter>("ImGui Render Pass",
 		gpu::RGRenderTargetDesc(
 			viewport,
 			color_attachment_desc
 		)
-		, [update_pass_parameter](gpu::RGShaderPassDependencyBuilder& builder, RenderPassParameter& parameter)
+		, [update_pass_parameter](auto& parameter, auto& builder)
 		{
 			parameter.vertex_buffer = builder.add_vertex_buffer(update_pass_parameter.vertex_buffer);
 			parameter.index_buffer = builder.add_index_buffer(update_pass_parameter.index_buffer);
 			parameter.transform_buffer = builder.add_shader_buffer(update_pass_parameter.transform_buffer,
 				{ gpu::ShaderStage::VERTEX }, gpu::ShaderBufferReadUsage::STORAGE);
-		}, [viewport, &draw_data, this](const RenderPassParameter& parameter, gpu::RenderGraphRegistry& registry, gpu::GraphicCommandList& command_list)
+		}, [viewport, &draw_data, this](const auto& parameter, auto& registry, auto& command_list)
 		{
 			runtime::ScopeAllocator scope_allocator("Imgui Render Pass Execute Scope Allocator");
 			gpu::GraphicPipelineStateDesc pipeline_desc = {

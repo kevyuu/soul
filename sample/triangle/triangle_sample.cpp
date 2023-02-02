@@ -19,16 +19,16 @@ class TriangleSampleApp final : public App
 		const vec2ui32 viewport = gpu_system_->get_swapchain_extent();
 
 		struct PassParameter {};
-		render_graph.add_graphic_pass<PassParameter>("Triangle Test",
+		render_graph.add_raster_pass<PassParameter>("Triangle Test",
 			gpu::RGRenderTargetDesc(
 				viewport,
 				color_attachment_desc
 			)
-			, [](gpu::RGShaderPassDependencyBuilder& builder, PassParameter& parameter)
+			, [](auto& parameter, auto& builder) -> void
 			{
 				// We leave this empty, because there is no any shader dependency.
 				// We will hardcode the triangle vertex on the shader in this example.
-			}, [viewport, this](const PassParameter& parameter, gpu::RenderGraphRegistry& registry, gpu::GraphicCommandList& command_list)
+			}, [viewport, this](const auto& parameter, auto& registry, auto& command_list) -> void
 			{
 				const gpu::GraphicPipelineStateDesc pipeline_desc = {
 					.program_id = program_id_,

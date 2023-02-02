@@ -8,6 +8,7 @@
 #include "gpu/type.h"
 #include "gpu/command_list.h"
 
+#include <span>
 
 namespace soul::gpu
 {
@@ -49,38 +50,42 @@ namespace soul::gpu
 		struct RGExternalTexture;
 		struct RGInternalBuffer;
 		struct RGExternalBuffer;
+		class RenderGraphExecution;
 	}
 
 	class RenderGraph;
 	class RenderGraphRegistry;
 	class PassBaseNode;
-	class RGShaderPassDependencyBuilder;
-	class RGTransferPassDependencyBuilder;
+	template <PipelineFlags pipeline_flags>
+	class RGDependencyBuilder;
+
+	template <typename Func, typename Data, PipelineFlags pipeline_flags>
+	concept pass_setup =
+		std::invocable<Func, Data&, RGDependencyBuilder<pipeline_flags>&> &&
+		std::same_as<void, std::invoke_result_t<Func, Data&, RGDependencyBuilder<pipeline_flags>&>>;
 
 	template <typename Func, typename Data>
-	concept graphic_pass_executable =
-		std::invocable<Func, const Data&, gpu::RenderGraphRegistry&, gpu::GraphicCommandList&> &&
-		std::same_as<void, std::invoke_result_t<Func, const Data&, gpu::RenderGraphRegistry&, gpu::GraphicCommandList&>>;
+	concept non_shader_pass_setup = pass_setup<Func, Data, PIPELINE_FLAGS_NON_SHADER>;
 
 	template <typename Func, typename Data>
-	concept compute_pass_executable =
-		std::invocable<Func, const Data&, gpu::RenderGraphRegistry&, gpu::ComputeCommandList&> &&
-		std::same_as<void, std::invoke_result_t<Func, const Data&, gpu::RenderGraphRegistry&, gpu::ComputeCommandList&>>;
+	concept raster_pass_setup = pass_setup<Func, Data, PIPELINE_FLAGS_RASTER>;
 
 	template <typename Func, typename Data>
-	concept copy_pass_executable =
-		std::invocable<Func, const Data&, gpu::RenderGraphRegistry&, gpu::TransferCommandList&> &&
-		std::same_as<void, std::invoke_result_t<Func, const Data&, gpu::RenderGraphRegistry&, gpu::TransferCommandList&>>;
+	concept compute_pass_setup = pass_setup<Func, Data, PIPELINE_FLAGS_COMPUTE>;
+
+	
+	template <typename Func, typename Data, PipelineFlags pipeline_flags>
+	concept pass_executable = std::invocable<Func, const Data&, gpu::RenderGraphRegistry&, CommandList<pipeline_flags>&> &&
+		std::same_as<void, std::invoke_result_t<Func, const Data&, gpu::RenderGraphRegistry&, CommandList<pipeline_flags>&>>;
 
 	template <typename Func, typename Data>
-	concept shader_pass_setup =
-		std::invocable<Func, RGShaderPassDependencyBuilder&, Data&> &&
-		std::same_as<void, std::invoke_result_t<Func, gpu::RGShaderPassDependencyBuilder&, Data&>>;
+	concept non_shader_pass_executable = pass_executable < Func, Data, PIPELINE_FLAGS_NON_SHADER>;
+
+    template <typename Func, typename Data>
+	concept raster_pass_executable = pass_executable <Func, Data, PIPELINE_FLAGS_RASTER>;
 
 	template <typename Func, typename Data>
-	concept copy_pass_setup =
-		std::invocable<Func, RGTransferPassDependencyBuilder&, Data&> &&
-		std::same_as<void, std::invoke_result_t<Func, gpu::RGTransferPassDependencyBuilder&, Data&>>;
+	concept compute_pass_executable = pass_executable <Func, Data, PIPELINE_FLAGS_COMPUTE>;
 
 	//ID
 	using PassNodeID = ID<PassBaseNode, uint16>;
@@ -252,7 +257,7 @@ namespace soul::gpu
 		BufferNodeID node_id;
 	};
 
-	enum class TransferDataSource
+	enum class TransferDataSource : uint8
 	{
 	    GPU,
 		CPU,
@@ -261,7 +266,7 @@ namespace soul::gpu
 
 	struct TransferDstBufferAccess
 	{
-		TransferDataSource data_source;
+		TransferDataSource data_source = TransferDataSource::COUNT;
 		BufferNodeID input_node_id;
 		BufferNodeID output_node_id;
 	};
@@ -274,7 +279,7 @@ namespace soul::gpu
 
 	struct TransferDstTextureAccess
 	{
-		TransferDataSource data_source;
+		TransferDataSource data_source = TransferDataSource::COUNT;
 		TextureNodeID input_node_id;
 		TextureNodeID output_node_id;
 		SubresourceIndexRange view_range;
@@ -284,66 +289,42 @@ namespace soul::gpu
 	{
 		RGRenderTargetDesc() = default;
 
-		RGRenderTargetDesc(vec2ui32 dimension, const ColorAttachmentDesc& color) : dimension(dimension)
-		{
-			color_attachments.push_back(color);
-		}
+		RGRenderTargetDesc(vec2ui32 dimension, const ColorAttachmentDesc& color) : 
+			dimension(dimension), color_attachments(&color, 1) {}
 
 		RGRenderTargetDesc(vec2ui32 dimension, const ColorAttachmentDesc& color, const DepthStencilAttachmentDesc& depth_stencil) :
-			dimension(dimension), depth_stencil_attachment(depth_stencil)
-		{
-			color_attachments.push_back(color);
-		}
+			dimension(dimension), color_attachments(&color, 1), depth_stencil_attachment(depth_stencil) {}
 
 		RGRenderTargetDesc(vec2ui32 dimension, const TextureSampleCount sample_count, const ColorAttachmentDesc& color, 
 			const ResolveAttachmentDesc& resolve, const DepthStencilAttachmentDesc depth_stencil):
-			dimension(dimension), sample_count(sample_count), depth_stencil_attachment(depth_stencil)
-		{
-			color_attachments.push_back(color);
-			resolve_attachments.push_back(resolve);
-		}
+			dimension(dimension), sample_count(sample_count), 
+			color_attachments(&color, 1), resolve_attachments(&resolve, 1), depth_stencil_attachment(depth_stencil) {}
 
 		RGRenderTargetDesc(vec2ui32 dimension, const DepthStencilAttachmentDesc& depth_stencil) :
 			dimension(dimension), depth_stencil_attachment(depth_stencil)  {}
 
-		vec2ui32 dimension;
+		vec2ui32 dimension = {};
 		TextureSampleCount sample_count = TextureSampleCount::COUNT_1;
-		Vector<ColorAttachmentDesc> color_attachments;
-		Vector<ResolveAttachmentDesc> resolve_attachments;
+		std::span<const ColorAttachmentDesc> color_attachments;
+		std::span<const ResolveAttachmentDesc> resolve_attachments;
 		DepthStencilAttachmentDesc depth_stencil_attachment;
 	};
 
 	struct RGRenderTarget
 	{
-		vec2ui32 dimension;
+		vec2ui32 dimension = {};
 		TextureSampleCount sample_count = TextureSampleCount::COUNT_1;
 		Vector<ColorAttachment> color_attachments;
 		Vector<ResolveAttachment> resolve_attachments;
 		DepthStencilAttachment depth_stencil_attachment;
 	};
-
-	enum class RGBuilderFlag : uint8
-	{
-		RENDER_TARGET,
-		SHADER_RESOURCE,
-		TRANSFER,
-		COUNT
-	};
-
-	using RGBuilderFlags = FlagSet<RGBuilderFlag>;
-
-	template <RGBuilderFlags BuilderFlags>
+	
+	template <PipelineFlags pipeline_flags>
 	class RGDependencyBuilder
 	{
-
-	private:
-		RGDependencyBuilder(const PassNodeID pass_id, PassBaseNode& pass_node, RenderGraph& render_graph);
-		const PassNodeID pass_id_;
-		PassBaseNode& pass_node_;
-		RenderGraph& render_graph_;
-
 	public:
-
+		static constexpr auto PIPELINE_FLAGS = pipeline_flags;
+		RGDependencyBuilder(PassNodeID pass_id, PassBaseNode& pass_node, RenderGraph& render_graph);
 		BufferNodeID add_shader_buffer(BufferNodeID node_id, ShaderStageFlags stage_flags,
 			ShaderBufferReadUsage usage_type);
 		BufferNodeID add_shader_buffer(BufferNodeID node_id, ShaderStageFlags stage_flags,
@@ -359,88 +340,58 @@ namespace soul::gpu
 		BufferNodeID add_dst_buffer(BufferNodeID node_id, TransferDataSource data_source = TransferDataSource::GPU);
 		TextureNodeID add_src_texture(TextureNodeID node_id);
 		TextureNodeID add_dst_texture(TextureNodeID node_id, TransferDataSource data_source = TransferDataSource::GPU);
+
+		void set_render_target(const RGRenderTargetDesc& render_target_desc);
+
+	private:
+		const PassNodeID pass_id_;
+		PassBaseNode& pass_node_;
+		RenderGraph& render_graph_;
+
 	};
-
-	template<RGBuilderFlags BuilderFlags>
-	inline BufferNodeID RGDependencyBuilder<BuilderFlags>::add_shader_buffer(BufferNodeID node_id, ShaderStageFlags stage_flags, ShaderBufferReadUsage usage_type)
-	{
-		static_assert(BuilderFlags.test(RGBuilderFlag::SHADER_RESOURCE));
-		render_graph_.read_buffer_node(node_id, pass_id_);
-		pass_node_.shader_buffer_read_accesses_.push_back({ node_id, stage_flags, usage });
-		return node_id;
-	}
-
-	template<RGBuilderFlags BuilderFlags>
-	inline BufferNodeID RGDependencyBuilder<BuilderFlags>::add_shader_buffer(BufferNodeID node_id, ShaderStageFlags stage_flags, ShaderBufferWriteUsage usage_type)
-	{
-		static_assert(BuilderFlags.test(RGBuilderFlag::SHADER_RESOURCE));
-		const auto out_node_id = render_graph_.write_buffer_node(node_id, pass_id_);
-		pass_node_.shader_buffer_write_accesses_.push_back({ node_id, out_node_id, stage_flags, usage });
-		return out_node_id;
-	}
-
-	template<RGBuilderFlags BuilderFlags>
-	inline TextureNodeID RGDependencyBuilder<BuilderFlags>::add_shader_texture(TextureNodeID node_id, ShaderStageFlags stage_flags, ShaderTextureReadUsage usage_type, SubresourceIndexRange view)
-	{
-		static_assert(BuilderFlags.test(RGBuilderFlag::SHADER_RESOURCE));
-		render_graph_.read_texture_node(node_id, pass_id_);
-		pass_node_.shader_texture_read_accesses_.push_back({ node_id, stage_flags, usage, view_range });
-		return node_id;
-	}
-
-	template<RGBuilderFlags BuilderFlags>
-	inline TextureNodeID RGDependencyBuilder<BuilderFlags>::add_shader_texture(TextureNodeID node_id, ShaderStageFlags stage_flags, ShaderTextureWriteUsage usage_type, SubresourceIndexRange view)
-	{
-		static_assert(BuilderFlags.test(RGBuilderFlag::SHADER_RESOURCE));
-		const auto out_node_id = render_graph_.write_texture_node(node_id, pass_id);
-		pass_node_.shader_texture_write_accesses_.push_back({ node_id, out_node_id, stage_flags, usage, view_range });
-		return out_node_id;
-	}
-
-	template<RGBuilderFlags BuilderFlags>
-	inline BufferNodeID RGDependencyBuilder<BuilderFlags>::add_vertex_buffer(BufferNodeID node_id)
-	{
-		render_graph_.read_buffer_node(node_id, pass_id_);
-		pass_node_.vertex_buffers_.push_back(node_id);
-		return node_id;
-	}
-
-	template<RGBuilderFlags BuilderFlags>
-	inline BufferNodeID RGDependencyBuilder<BuilderFlags>::add_index_buffer(BufferNodeID node_id)
-	{
-		render_graph_.read_buffer_node(node_id, pass_id_);
-		pass_node_.index_buffers_.push_back(node_id);
-		return node_id;
-	}
 
 	class PassBaseNode
 	{
 	public:
-		PassBaseNode(const PassType type, const char* name) : name_(name), type_(type) {}
+		PassBaseNode(const char* name, const PipelineFlags pipeline_flags, const QueueType queue_type) :
+	        name_(name), pipeline_flags_(pipeline_flags), queue_type_(queue_type) {}
 		PassBaseNode(const PassBaseNode&) = delete;
 		PassBaseNode& operator=(const PassBaseNode&) = delete;
 		PassBaseNode(PassBaseNode&&) = delete;
 		PassBaseNode& operator=(PassBaseNode&&) = delete;
 		virtual ~PassBaseNode() = default;
-
-		[[nodiscard]] PassType get_type() const { return type_; }
+		
 		[[nodiscard]] const char* get_name() const { return name_; }
+		[[nodiscard]] PipelineFlags get_pipeline_flags() const { return pipeline_flags_; }
+		[[nodiscard]] QueueType get_queue_type() const { return queue_type_; }
 
-		[[nodiscard]] const Vector<BufferNodeID>& get_vertex_buffers() const { return vertex_buffers_; }
-		[[nodiscard]] const Vector<BufferNodeID>& get_index_buffers() const { return index_buffers_; }
-		[[nodiscard]] const Vector<ShaderBufferReadAccess>& get_buffer_read_accesses() const { return shader_buffer_read_accesses_; }
-		[[nodiscard]] const Vector<ShaderBufferWriteAccess>& get_buffer_write_accesses() const { return shader_buffer_write_accesses_; }
-		[[nodiscard]] const Vector<ShaderTextureReadAccess>& get_texture_read_accesses() const { return shader_texture_read_accesses_; }
-		[[nodiscard]] const Vector<ShaderTextureWriteAccess>& get_texture_write_accesses() const { return shader_texture_write_accesses_; }
+		[[nodiscard]] std::span<const BufferNodeID> get_vertex_buffers() const { return vertex_buffers_; }
+		[[nodiscard]] std::span<const BufferNodeID> get_index_buffers() const { return index_buffers_; }
+		[[nodiscard]] std::span<const ShaderBufferReadAccess> get_buffer_read_accesses() const { return shader_buffer_read_accesses_; }
+		[[nodiscard]] std::span<const ShaderBufferWriteAccess> get_buffer_write_accesses() const { return shader_buffer_write_accesses_; }
+		[[nodiscard]] std::span<const ShaderTextureReadAccess> get_texture_read_accesses() const { return shader_texture_read_accesses_; }
+		[[nodiscard]] std::span<const ShaderTextureWriteAccess> get_texture_write_accesses() const { return shader_texture_write_accesses_; }
+		[[nodiscard]] std::span<const TransferSrcBufferAccess> get_source_buffers() const { return source_buffers_; }
+		[[nodiscard]] std::span<const TransferDstBufferAccess> get_destination_buffers() const { return destination_buffers_; }
+		[[nodiscard]] std::span<const TransferSrcTextureAccess> get_source_textures() const { return source_textures_; }
+		[[nodiscard]] std::span<const TransferDstTextureAccess> get_destination_textures() const { return destination_textures_; }
 
-		[[nodiscard]] const RGRenderTarget* get_render_target() const { return &render_target_.value(); }
+		[[nodiscard]] const RGRenderTarget& get_render_target() const { return render_target_; }
+
 
 	protected:
 		const char* name_ = nullptr;
-		const PassType type_ = PassType::NONE;
-		const QueueType queue_type = QueueType::COUNT;
+		const PipelineFlags pipeline_flags_;
+		const QueueType queue_type_;
 
 	private:
+
+		virtual void execute(
+			RenderGraphRegistry& registry,
+			impl::RenderCompiler& render_compiler,
+			const VkRenderPassBeginInfo* render_pass_begin_info,
+			impl::CommandPools& command_pools,
+			System& gpu_system) const = 0;
 
 		Vector<TransferSrcBufferAccess> source_buffers_;
 		Vector<TransferDstBufferAccess> destination_buffers_;
@@ -454,14 +405,19 @@ namespace soul::gpu
 		Vector<BufferNodeID> vertex_buffers_;
 		Vector<BufferNodeID> index_buffers_;
 
-		std::optional<RGRenderTarget> render_target_;
+		RGRenderTarget render_target_;
 
-		template <RGBuilderFlags BuilderFlags>
+		template <PipelineFlags pipeline_flags>
 		friend class RGDependencyBuilder;
+
+		friend class impl::RenderGraphExecution;
 	};
 
-	template <typename Parameter,
-        typename Execute>
+	template <
+		PipelineFlags pipeline_flags,
+		typename Parameter,
+        typename Execute
+    >
 	class PassNode final : public PassBaseNode
 	{
 	public:
@@ -472,17 +428,24 @@ namespace soul::gpu
 		PassNode& operator=(PassNode&&) = delete;
 		~PassNode() override = default;
 
-		PassNode(const char* name, Execute&& execute) : PassBaseNode(PassType::GRAPHIC, name), execute_(std::forward<Execute>(execute)) {}
+		PassNode(const char* name, const QueueType queue_type, Execute&& execute) :
+	        PassBaseNode(name, pipeline_flags, queue_type), execute_(std::forward<Execute>(execute)) {}
 
 		[[nodiscard]] const Parameter& get_parameter() const { return parameter_; }
-		const Execute& get_execute() { return execute_; }
+		void execute(
+			RenderGraphRegistry& render_graph_execution,
+			impl::RenderCompiler& render_compiler,
+			const VkRenderPassBeginInfo* render_pass_begin_info,
+			impl::CommandPools& command_pools,
+			System& gpu_system) const override;
 		
 	private:
+		Parameter& get_parameter() { return parameter_; }
+
 		Parameter parameter_;
 		Execute execute_;
+		friend class RenderGraph;
 	};
-
-
 
 
 	class RenderGraph
@@ -495,77 +458,73 @@ namespace soul::gpu
 		RenderGraph& operator=(RenderGraph&& other) = delete;
 		~RenderGraph();
 
+		template<
+			typename Parameter,
+			PipelineFlags pipeline_flags,
+			typename Setup,
+			typename Executable
+		>
+		const auto& add_pass(const char* name, QueueType queue_type, Setup&& setup, Executable&& execute)
+		{
+			static_assert(pass_setup<Setup, Parameter, pipeline_flags>);
+			static_assert(pass_executable<Executable, Parameter, pipeline_flags>);
+
+			using Node = PassNode<pipeline_flags, Parameter, Executable>;
+			auto node = allocator_->create<Node>(name, queue_type, std::forward<Executable>(execute));
+			pass_nodes_.push_back(node);
+			RGDependencyBuilder<pipeline_flags> builder(PassNodeID(pass_nodes_.size() - 1), *node, *this);
+			setup(node->get_parameter(), builder);
+			return *node;
+		}
+
 		template <
 			typename Parameter,
-			shader_pass_setup<Parameter&> Setup,
-			graphic_pass_executable<Parameter&> Executable,
-			typename Node = PassNode<Parameter, Executable>
+			typename Setup,
+			typename Executable
 		>
-		const Node& add_graphic_pass(const char* name, const RGRenderTargetDesc& render_target, Setup&& setup, Executable&& execute)
+		const auto& add_raster_pass(const char* name, const RGRenderTargetDesc& render_target, Setup&& setup, Executable&& execute)
 		{
-			auto* node = allocator_->create<Node>(name, std::forward<Executable>(execute));
-			
+			static_assert(raster_pass_setup <Setup, Parameter>);
+			static_assert(raster_pass_executable<Executable, Parameter>);
+
+			constexpr auto pipeline_flags = PipelineFlags{ PipelineType::RASTER };
+			using Node = PassNode<pipeline_flags, Parameter, Executable>;
+			auto* node = allocator_->create<Node>(name, QueueType::GRAPHIC, std::forward<Executable>(execute));
 			pass_nodes_.push_back(node);
 			const auto pass_node_id = PassNodeID(pass_nodes_.size() - 1);
-			RGShaderPassDependencyBuilder builder(pass_node_id, *node, *this);
-			setup(builder, node->get_parameter_());
-
-			auto to_output_attachment = [this, pass_node_id]<typename AttachmentDesc>(const AttachmentDesc attachment_desc) -> auto
-			{
-				AttachmentAccess<AttachmentDesc> access = {
-					.out_node_id = write_texture_node(attachment_desc.node_id, pass_node_id),
-					.desc = attachment_desc
-				};
-				return access;
-			};
-			
-			std::ranges::transform(render_target.color_attachments,
-				std::back_inserter(node->render_target_.color_attachments), to_output_attachment);
-			std::ranges::transform(render_target.resolve_attachments,
-				std::back_inserter(node->render_target_.resolve_attachments), to_output_attachment);
-			if (render_target.depth_stencil_attachment.node_id.is_valid())
-			{
-				const auto& depth_desc = render_target.depth_stencil_attachment;
-				const TextureNodeID out_node_id = depth_desc.depth_write_enable ? depth_desc.node_id : write_texture_node(depth_desc.node_id, pass_node_id);
-				node->render_target_.depth_stencil_attachment = {
-					.out_node_id = out_node_id,
-					.desc = depth_desc
-				};
-			}
-			node->render_target_.dimension = render_target.dimension;
-			node->render_target_.sample_count = render_target.sample_count;
+		    RGDependencyBuilder<pipeline_flags> builder(pass_node_id, *node, *this);
+			builder.set_render_target(render_target);
+			setup(node->get_parameter(), builder);
 
 			return *node;
 		}
 
 		template <
 			typename Parameter,
-			shader_pass_setup<Parameter&> Setup,
-			compute_pass_executable<Parameter&> Executable,
-			typename Node = PassNode<Parameter, Executable>
+			typename Setup,
+			typename Executable
 		>
-		const Node& add_compute_pass(const char* name, Setup&& setup, Executable&& execute)
+		const auto& add_compute_pass(const char* name, Setup&& setup, Executable&& execute)
 		{
-			auto node = allocator_->create<Node>(name, std::forward<Executable>(execute));
-			pass_nodes_.push_back(node);
-			RGShaderPassDependencyBuilder builder(PassNodeID(pass_nodes_.size() - 1), *node, *this);
-			setup(builder, node->get_parameter_());
-			return *node;
+			static_assert(compute_pass_setup <Setup, Parameter>);
+			static_assert(compute_pass_executable<Executable, Parameter>);
+
+			return add_pass<Parameter, PIPELINE_FLAGS_COMPUTE>(name, QueueType::COMPUTE, 
+				std::forward<Setup>(setup), std::forward<Executable>(execute));
 		}
 
 		template<
 			typename Parameter,
-			copy_pass_setup<Parameter&> Setup,
-			copy_pass_executable<Parameter&> Executable,
-			typename Node = PassNode<Parameter, Executable>
+			typename Setup,
+			typename Executable
 		>
-		const Node& add_transfer_pass(const char* name, Setup&& setup, Executable&& execute)
+		const auto& add_non_shader_pass(const char* name, QueueType queue_type, Setup&& setup, Executable&& execute)
 		{
-			auto node = allocator_->create<Node>(name, std::forward<Executable>(execute));
-			pass_nodes_.push_back(node);
-			RGTransferPassDependencyBuilder builder(PassNodeID(pass_nodes_.size() - 1), *node, *this);
-			setup(builder, node->get_parameter_());
-			return *node;
+			static_assert(non_shader_pass_setup <Setup, Parameter>);
+			static_assert(non_shader_pass_executable<Executable, Parameter>);
+
+			return add_pass<Parameter, PIPELINE_FLAGS_NON_SHADER>(name, queue_type, 
+				std::forward<Setup>(setup), std::forward<Executable>(execute));
 		}
 		
 		TextureNodeID import_texture(const char* name, TextureID texture_id);
@@ -621,7 +580,7 @@ namespace soul::gpu
 			const char* name = nullptr;
 			TextureType type = TextureType::D2;
 			TextureFormat format = TextureFormat::COUNT;
-			vec3ui32 extent;
+			vec3ui32 extent = {};
 			uint32 mip_levels = 1;
 			uint16 layer_count = 1;
 			TextureSampleCount sample_count = TextureSampleCount::COUNT_1;
@@ -674,4 +633,141 @@ namespace soul::gpu
 			Vector<PassNodeID> readers;
 		};
 	}
+
+    template <PipelineFlags pipeline_flags>
+    RGDependencyBuilder<pipeline_flags>::RGDependencyBuilder(const PassNodeID pass_id, PassBaseNode& pass_node,
+        RenderGraph& render_graph) : pass_id_(pass_id), pass_node_(pass_node), render_graph_(render_graph)
+    {
+    }
+
+	template<PipelineFlags pipeline_flags>
+	inline BufferNodeID RGDependencyBuilder<pipeline_flags>::add_shader_buffer(BufferNodeID node_id, ShaderStageFlags stage_flags, ShaderBufferReadUsage usage_type)
+	{
+		static_assert(pipeline_flags.test_any({PipelineType::RASTER, PipelineType::COMPUTE }));
+		render_graph_.read_buffer_node(node_id, pass_id_);
+		pass_node_.shader_buffer_read_accesses_.push_back({ node_id, stage_flags, usage_type });
+		return node_id;
+	}
+
+	template<PipelineFlags pipeline_flags>
+	inline BufferNodeID RGDependencyBuilder<pipeline_flags>::add_shader_buffer(BufferNodeID node_id, ShaderStageFlags stage_flags, ShaderBufferWriteUsage usage_type)
+	{
+		static_assert(pipeline_flags.test_any({PipelineType::RASTER, PipelineType::COMPUTE}));
+		const auto out_node_id = render_graph_.write_buffer_node(node_id, pass_id_);
+		pass_node_.shader_buffer_write_accesses_.push_back({ node_id, out_node_id, stage_flags, usage_type });
+		return out_node_id;
+	}
+
+	template<PipelineFlags pipeline_flags>
+	inline TextureNodeID RGDependencyBuilder<pipeline_flags>::add_shader_texture(TextureNodeID node_id, ShaderStageFlags stage_flags, ShaderTextureReadUsage usage_type, SubresourceIndexRange view)
+	{
+		static_assert(pipeline_flags.test_any({PipelineType::RASTER, PipelineType::COMPUTE}));
+		render_graph_.read_texture_node(node_id, pass_id_);
+		pass_node_.shader_texture_read_accesses_.push_back({ node_id, stage_flags, usage_type, view });
+		return node_id;
+	}
+
+	template<PipelineFlags pipeline_flags>
+	inline TextureNodeID RGDependencyBuilder<pipeline_flags>::add_shader_texture(TextureNodeID node_id, ShaderStageFlags stage_flags, ShaderTextureWriteUsage usage_type, SubresourceIndexRange view)
+	{
+		static_assert(pipeline_flags.test_any({PipelineType::RASTER,PipelineType::COMPUTE}));
+		const auto out_node_id = render_graph_.write_texture_node(node_id, pass_id_);
+		pass_node_.shader_texture_write_accesses_.push_back({ node_id, out_node_id, stage_flags, usage_type, view });
+		return out_node_id;
+	}
+
+	template<PipelineFlags pipeline_flags>
+	inline BufferNodeID RGDependencyBuilder<pipeline_flags>::add_vertex_buffer(BufferNodeID node_id)
+	{
+		static_assert(pipeline_flags.test(PipelineType::RASTER));
+		render_graph_.read_buffer_node(node_id, pass_id_);
+		pass_node_.vertex_buffers_.push_back(node_id);
+		return node_id;
+	}
+
+	template<PipelineFlags pipeline_flags>
+	inline BufferNodeID RGDependencyBuilder<pipeline_flags>::add_index_buffer(BufferNodeID node_id)
+	{
+		static_assert(pipeline_flags.test(PipelineType::RASTER));
+		render_graph_.read_buffer_node(node_id, pass_id_);
+		pass_node_.index_buffers_.push_back(node_id);
+		return node_id;
+	}
+
+    template <PipelineFlags pipeline_flags>
+    BufferNodeID RGDependencyBuilder<pipeline_flags>::add_src_buffer(BufferNodeID node_id)
+    {
+		static_assert(pipeline_flags.test(PipelineType::NON_SHADER));
+		render_graph_.read_buffer_node(node_id, pass_id_);
+		pass_node_.source_buffers_.add({ node_id });
+		return node_id;
+    }
+
+    template <PipelineFlags pipeline_flags>
+    BufferNodeID RGDependencyBuilder<pipeline_flags>::add_dst_buffer(BufferNodeID node_id, TransferDataSource data_source)
+    {
+		static_assert(pipeline_flags.test(PipelineType::NON_SHADER));
+		BufferNodeID out_node_id = render_graph_.write_buffer_node(node_id, pass_id_);
+		pass_node_.destination_buffers_.add({ .data_source = data_source, .input_node_id = node_id, .output_node_id = out_node_id });
+		return out_node_id;
+    }
+
+    template <PipelineFlags pipeline_flags>
+    TextureNodeID RGDependencyBuilder<pipeline_flags>::add_src_texture(TextureNodeID node_id)
+    {
+		static_assert(pipeline_flags.test(PipelineType::NON_SHADER));
+		render_graph_.read_texture_node(node_id, pass_id_);
+		pass_node_.source_textures_.add({ node_id });
+		return node_id;
+    }
+
+    template <PipelineFlags pipeline_flags>
+    TextureNodeID RGDependencyBuilder<pipeline_flags>::add_dst_texture(TextureNodeID node_id,
+        TransferDataSource data_source)
+    {
+		static_assert(pipeline_flags.test(PipelineType::NON_SHADER));
+		TextureNodeID out_node_id = render_graph_.write_texture_node(node_id, pass_id_);
+		pass_node_.destination_textures_.add({ .data_source = data_source, .input_node_id = node_id, .output_node_id = out_node_id });
+		return out_node_id;
+    }
+
+    template <PipelineFlags pipeline_flags>
+    void RGDependencyBuilder<pipeline_flags>::set_render_target(const RGRenderTargetDesc& render_target_desc)
+    {
+		static_assert(pipeline_flags.test(PipelineType::RASTER));
+		auto to_output_attachment = [this]<typename AttachmentDesc>(const AttachmentDesc attachment_desc) -> auto
+		{
+			AttachmentAccess<AttachmentDesc> access = {
+				.out_node_id = render_graph_.write_texture_node(attachment_desc.node_id, pass_id_),
+				.desc = attachment_desc
+			};
+			return access;
+		};
+
+		std::ranges::transform(render_target_desc.color_attachments,
+			std::back_inserter(pass_node_.render_target_.color_attachments), to_output_attachment);
+		std::ranges::transform(render_target_desc.resolve_attachments,
+			std::back_inserter(pass_node_.render_target_.resolve_attachments), to_output_attachment);
+		if (render_target_desc.depth_stencil_attachment.node_id.is_valid())
+		{
+			const auto& depth_desc = render_target_desc.depth_stencil_attachment;
+			const TextureNodeID out_node_id = depth_desc.depth_write_enable ? 
+				depth_desc.node_id : render_graph_.write_texture_node(depth_desc.node_id, pass_id_);
+			pass_node_.render_target_.depth_stencil_attachment = {
+				.out_node_id = out_node_id,
+				.desc = depth_desc
+			};
+		}
+		pass_node_.render_target_.dimension = render_target_desc.dimension;
+		pass_node_.render_target_.sample_count = render_target_desc.sample_count;
+    }
+
+    template <PipelineFlags pipeline_flags, typename Parameter, typename Execute>
+    void PassNode<pipeline_flags, Parameter, Execute>::execute(RenderGraphRegistry& registry, 
+		impl::RenderCompiler& render_compiler,
+        const VkRenderPassBeginInfo* render_pass_begin_info, impl::CommandPools& command_pools, System& gpu_system) const
+    {
+		CommandList<pipeline_flags> command_list(render_compiler, render_pass_begin_info, command_pools, gpu_system);
+		execute_(parameter_, registry, command_list);
+    }
 }

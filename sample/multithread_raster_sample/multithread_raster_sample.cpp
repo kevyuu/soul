@@ -80,12 +80,12 @@ class MultiThreadRasterSample final : public App
 		const vec2ui32 viewport = gpu_system_->get_swapchain_extent();
 
 		struct RenderPassParameter {};
-		render_graph.add_graphic_pass<RenderPassParameter>("Render Pass",
+		render_graph.add_raster_pass<RenderPassParameter>("Render Pass",
 			gpu::RGRenderTargetDesc(
 				viewport,
 				color_attachment_desc
 			)
-			, [](auto& builder, auto& parameter)
+			, [](auto& parameter, auto& builder)
 			{
 				
 			}, [viewport, this](const auto& parameter, auto& registry, auto& command_list)
@@ -113,20 +113,20 @@ class MultiThreadRasterSample final : public App
 				auto pipeline_state_id = registry.get_pipeline_state(pipeline_desc);
 
 
-				command_list.push<Command>(push_constants_.size(), [=, this](const soul_size index) -> Command
-				{
-					return {
-						.pipeline_state_id = pipeline_state_id,
-						.push_constant_data = &push_constants_[index],
-						.push_constant_size = sizeof(MultithreadRasterPushConstant),
-						.vertex_buffer_ids = {
-							vertex_buffer_id_
-						},
-						.index_buffer_id = index_buffer_id_,
-						.first_index = 0,
-						.index_count = std::size(INDICES)
-					};
-				});
+				command_list.template push<Command>(push_constants_.size(), [=, this](const soul_size index) -> Command
+                {
+                    return {
+                        .pipeline_state_id = pipeline_state_id,
+                        .push_constant_data = &push_constants_[index],
+                        .push_constant_size = sizeof(MultithreadRasterPushConstant),
+                        .vertex_buffer_ids = {
+                            vertex_buffer_id_
+                        },
+                        .index_buffer_id = index_buffer_id_,
+                        .first_index = 0,
+                        .index_count = std::size(INDICES)
+                    };
+                });
 
 			});
 	}

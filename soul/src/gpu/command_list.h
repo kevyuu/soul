@@ -4,30 +4,33 @@
 
 namespace soul::gpu
 {
-	class GraphicCommandList
+	template<PipelineFlags pipeline_flags>
+	class CommandList
 	{
-	private:
-		impl::PrimaryCommandBuffer primary_command_buffer_;
-		const VkRenderPassBeginInfo& render_pass_begin_info_;
-		impl::CommandPools& command_pools_;
-		System& gpu_system_;
-
-		static constexpr uint32 SECONDARY_COMMAND_BUFFER_THRESHOLD = 128;
-
 	public:
-		constexpr GraphicCommandList(impl::PrimaryCommandBuffer primary_command_buffer,
-			const VkRenderPassBeginInfo& render_pass_begin_info, impl::CommandPools& command_pools, System& gpu_system) :
-			primary_command_buffer_(primary_command_buffer), render_pass_begin_info_(render_pass_begin_info), command_pools_(command_pools),
-			gpu_system_(gpu_system) {}
+		constexpr CommandList(
+			impl::RenderCompiler& render_compiler,
+			const VkRenderPassBeginInfo* render_pass_begin_info,
+			impl::CommandPools& command_pools,
+			System& gpu_system) :
+		    render_compiler_(render_compiler),
+		    render_pass_begin_info_(render_pass_begin_info),
+	        command_pools_(command_pools),
+		    gpu_system_(gpu_system)
+	    {}
 
 		template<
-			graphic_render_command RenderCommandType,
-			command_generator<RenderCommandType> CommandGenerator>
-			void push(const soul_size count, CommandGenerator&& generator)
+			typename RenderCommandType,
+			command_generator<RenderCommandType> CommandGenerator
+	    >
+		requires (pipeline_flags.test(PipelineType::RASTER))
+		void push(const soul_size count, CommandGenerator&& generator)
 		{
+			static_assert(pipeline_flags.test(PipelineType::RASTER));
+			static_assert(render_command <RenderCommandType, pipeline_flags>);
 			if (count > SECONDARY_COMMAND_BUFFER_THRESHOLD)
 			{
-				primary_command_buffer_.begin_render_pass(render_pass_begin_info_, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
+				render_compiler_.begin_render_pass(*render_pass_begin_info_, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
 				const auto thread_count = runtime::get_thread_count();
 
 				Vector<impl::SecondaryCommandBuffer> secondary_command_buffers;
@@ -45,8 +48,8 @@ namespace soul::gpu
 				const TaskData task_data = {
 					secondary_command_buffers,
 					count,
-					render_pass_begin_info_.renderPass,
-					render_pass_begin_info_.framebuffer,
+					render_pass_begin_info_->renderPass,
+					render_pass_begin_info_->framebuffer,
 					command_pools_,
 					gpu_system_
 				};
@@ -60,15 +63,12 @@ namespace soul::gpu
 						impl::SecondaryCommandBuffer command_buffer = task_data.command_pools.request_secondary_command_buffer(task_data.render_pass, 0, task_data.framebuffer);
 						const uint32 div = command_count / command_buffers.size();
 						const uint32 mod = command_count % command_buffers.size();
-
-						const auto pipeline_layout = task_data.gpu_system.get_bindless_pipeline_layout();
-						const auto bindless_descriptor_sets = task_data.gpu_system.get_bindless_descriptor_sets();
-						vkCmdBindDescriptorSets(command_buffer.get_vk_handle(), VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout, 0, BINDLESS_SET_COUNT, bindless_descriptor_sets.vk_handles, 0, 0);
-
+						
 						impl::RenderCompiler render_compiler(task_data.gpu_system, command_buffer.get_vk_handle());
+						render_compiler.bind_descriptor_sets(VK_PIPELINE_BIND_POINT_GRAPHICS);
 						if (soul::cast<uint32>(index) < mod)
 						{
-                            const soul_size start = index * (div + 1);
+							const soul_size start = index * (div + 1);
 
 							for (soul_size i = 0; i < div + 1; i++)
 							{
@@ -77,7 +77,7 @@ namespace soul::gpu
 						}
 						else
 						{
-                            const soul_size start = mod * (div + 1) + (index - mod) * div;
+							const soul_size start = mod * (div + 1) + (index - mod) * div;
 							for (soul_size i = 0; i < div; i++)
 							{
 								render_compiler.compile_command(generator(start + i));
@@ -89,78 +89,55 @@ namespace soul::gpu
 					});
 				runtime::run_task(task_id);
 				runtime::wait_task(task_id);
-				primary_command_buffer_.execute_secondary_command_buffers(soul::cast<uint32>(secondary_command_buffers.size()), secondary_command_buffers.data());
-				primary_command_buffer_.end_render_pass();
+				render_compiler_.execute_secondary_command_buffers(soul::cast<uint32>(secondary_command_buffers.size()), secondary_command_buffers.data());
+				render_compiler_.end_render_pass();
 			}
 			else
 			{
-				primary_command_buffer_.begin_render_pass(render_pass_begin_info_, VK_SUBPASS_CONTENTS_INLINE);
-				const auto pipeline_layout = gpu_system_.get_bindless_pipeline_layout();
-				const auto bindless_descriptor_sets = gpu_system_.get_bindless_descriptor_sets();
-				vkCmdBindDescriptorSets(primary_command_buffer_.get_vk_handle(), VK_PIPELINE_BIND_POINT_GRAPHICS, 
-					pipeline_layout, 0, BINDLESS_SET_COUNT, bindless_descriptor_sets.vk_handles, 0, nullptr);
-
-				impl::RenderCompiler render_compiler(gpu_system_, primary_command_buffer_.get_vk_handle());
+				render_compiler_.begin_render_pass(*render_pass_begin_info_, VK_SUBPASS_CONTENTS_INLINE);
 				for (soul_size command_idx = 0; command_idx < count; command_idx++)
 				{
-					render_compiler.compile_command(generator(command_idx));
+					render_compiler_.compile_command(generator(command_idx));
 				}
-				primary_command_buffer_.end_render_pass();
+				render_compiler_.end_render_pass();
 			}
 
 		}
 
-		template <graphic_render_command RenderCommandType>
+		template <typename RenderCommandType >
 		void push(soul_size count, const RenderCommandType* render_commands)
 		{
+			static_assert(pipeline_flags.test(PipelineType::RASTER));
+			static_assert(render_command <RenderCommandType, pipeline_flags> );
 			push<RenderCommandType>(count, [render_commands](soul_size index)
 			{
 				return *(render_commands + index);
 			});
 		}
 
-		template<graphic_render_command RenderCommandType>
-		void push(const RenderCommandType& render_command)
+		
+		template<typename RenderCommandType>
+		void push(const RenderCommandType& command)
 		{
-			push(1, &render_command);
+			static_assert(render_command<RenderCommandType, pipeline_flags>);
+			if constexpr (RenderCommandType::PIPELINE_TYPE == PipelineType::RASTER)
+			{
+				push(1, &command);
+			}
+			else
+			{
+				render_compiler_.compile_command(command);
+			}
 		}
-	};
 
-	class ComputeCommandList
-	{
 	private:
-		impl::PrimaryCommandBuffer command_buffer_;
 		impl::RenderCompiler& render_compiler_;
+		impl::PrimaryCommandBuffer primary_command_buffer_;
+		const VkRenderPassBeginInfo* render_pass_begin_info_;
+		impl::CommandPools& command_pools_;
 		System& gpu_system_;
-	public:
-		explicit ComputeCommandList(
-			impl::PrimaryCommandBuffer command_buffer, 
-			impl::RenderCompiler& render_compiler,
-		    System& gpu_system)
-	    : command_buffer_(command_buffer), render_compiler_(render_compiler), gpu_system_(gpu_system) {}
 
-		template<compute_render_command RenderCommandType>
-		void push(const RenderCommandType& command)
-		{
-			const auto pipeline_layout = gpu_system_.get_bindless_pipeline_layout();
-			const auto bindless_descriptor_sets = gpu_system_.get_bindless_descriptor_sets();
-			vkCmdBindDescriptorSets(command_buffer_.get_vk_handle(), VK_PIPELINE_BIND_POINT_COMPUTE, 
-				pipeline_layout, 0, BINDLESS_SET_COUNT, bindless_descriptor_sets.vk_handles, 0, nullptr);
-
-			render_compiler_.compile_command(command);
-		}
+		static constexpr uint32 SECONDARY_COMMAND_BUFFER_THRESHOLD = 128;
 	};
 
-	class TransferCommandList
-	{
-		impl::RenderCompiler& render_compiler_;
-	public:
-		explicit TransferCommandList(impl::RenderCompiler& render_compiler) : render_compiler_(render_compiler) {}
-
-		template<transfer_render_command RenderCommandType>
-		void push(const RenderCommandType& command)
-		{
-			render_compiler_.compile_command(command);
-		}
-	};
 }

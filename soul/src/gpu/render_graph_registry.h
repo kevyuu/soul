@@ -18,7 +18,7 @@ namespace soul::gpu
 	public:
 
 		RenderGraphRegistry() = delete;
-		RenderGraphRegistry(System* system, const impl::RenderGraphExecution* execution, VkRenderPass render_pass = VK_NULL_HANDLE, const TextureSampleCount sample_count = TextureSampleCount::COUNT_1) :
+		RenderGraphRegistry(System& system, const impl::RenderGraphExecution& execution, const VkRenderPass render_pass = VK_NULL_HANDLE, const TextureSampleCount sample_count = TextureSampleCount::COUNT_1) :
 			system_(system), execution_(execution), render_pass_(render_pass), sample_count_(sample_count) {}
 
 		RenderGraphRegistry(const RenderGraphRegistry& other) = delete;
@@ -35,8 +35,8 @@ namespace soul::gpu
 		PipelineStateID get_pipeline_state(const ComputePipelineStateDesc& desc);
 
 	private:
-		System* const system_;
-		const impl::RenderGraphExecution* execution_;
+		System& system_;
+		const impl::RenderGraphExecution& execution_;
 		VkRenderPass render_pass_;
 		const TextureSampleCount sample_count_;
 	};

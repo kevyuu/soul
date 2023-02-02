@@ -132,9 +132,9 @@ class MSAASample final : public App
 		}();
 
 		struct RenderPassParameter {};
-		const auto& msaa_render_node = render_graph.add_graphic_pass<RenderPassParameter>("Render Pass",
+		const auto& msaa_render_node = render_graph.add_raster_pass<RenderPassParameter>("Render Pass",
 			sample_render_target_desc,
-			[](auto& builder, auto& parameter)
+			[](auto& parameter, auto& builder)
 			{
 			    
 			}, 

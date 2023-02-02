@@ -152,10 +152,10 @@ namespace soul::gpu::impl
 		void sync_external();
 		void execute_pass(uint32 pass_index, PrimaryCommandBuffer command_buffer);
 
-		void init_shader_buffers(const Vector<ShaderBufferReadAccess>& access_list, soul_size index, QueueType queue_type);
-		void init_shader_buffers(const Vector<ShaderBufferWriteAccess>& access_list, soul_size index, QueueType queue_type);
-		void init_shader_textures(const Vector<ShaderTextureReadAccess>& access_list, soul_size index, QueueType queue_type);
-		void init_shader_textures(const Vector<ShaderTextureWriteAccess>& access_list, soul_size index, QueueType queue_type);
+		void init_shader_buffers(std::span<const ShaderBufferReadAccess> access_list, soul_size index, QueueType queue_type);
+		void init_shader_buffers(std::span<const ShaderBufferWriteAccess> access_list, soul_size index, QueueType queue_type);
+		void init_shader_textures(std::span<const ShaderTextureReadAccess> access_list, soul_size index, QueueType queue_type);
+		void init_shader_textures(std::span<const ShaderTextureWriteAccess> access_list, soul_size index, QueueType queue_type);
 
 	};
 }

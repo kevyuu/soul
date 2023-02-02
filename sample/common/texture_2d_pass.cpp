@@ -122,16 +122,16 @@ void Texture2DRGPass::add_pass(const Parameter& parameter, soul::gpu::RenderGrap
 
 	const vec2ui32 viewport = gpu_system_->get_swapchain_extent();
 
-	render_graph.add_graphic_pass<Parameter>("Render Pass Parameter",
+	render_graph.add_raster_pass<Parameter>("Render Pass Parameter",
 		gpu::RGRenderTargetDesc(
 		    viewport,
 			color_attachment_desc
 		)
-		,[this, in_parameter = parameter](gpu::RGShaderPassDependencyBuilder& builder, Parameter& parameter)
+		,[this, in_parameter = parameter](auto& parameter, auto& builder)
 		{
 			parameter.sampled_texture = builder.add_shader_texture(in_parameter.sampled_texture, { gpu::ShaderStage::FRAGMENT }, gpu::ShaderTextureReadUsage::UNIFORM);
 		}
-		,[this, viewport](const Parameter& parameter, gpu::RenderGraphRegistry& registry, gpu::GraphicCommandList& command_list)
+		,[this, viewport](const auto& parameter, auto& registry, auto& command_list)
 		{
 			const gpu::GraphicPipelineStateDesc pipeline_desc = {
 					.program_id = program_id_,
@@ -159,23 +159,21 @@ void Texture2DRGPass::add_pass(const Parameter& parameter, soul::gpu::RenderGrap
 				gpu::DescriptorID sampler_descriptor_id;
 			};
 
-			using Command = gpu::RenderCommandDrawIndex;
-
 			const PushConstant push_constant = {
 				.texture_descriptor_id = gpu_system_->get_srv_descriptor_id(registry.get_texture(parameter.sampled_texture)),
 				.sampler_descriptor_id = gpu_system_->get_sampler_descriptor_id(sampler_id_)
 			};
 
-			command_list.push<Command>({
-	            .pipeline_state_id = pipeline_state_id,
-	            .push_constant_data = soul::cast<void*>(&push_constant),
-	            .push_constant_size = sizeof(PushConstant),
-	            .vertex_buffer_ids = {
-		            vertex_buffer_id_
-	            },
-	            .index_buffer_id = index_buffer_id_,
-	            .first_index = 0,
-	            .index_count = std::size(INDICES)
+			command_list.push(gpu::RenderCommandDrawIndex{
+				.pipeline_state_id = pipeline_state_id,
+				.push_constant_data = soul::cast<void*>(&push_constant),
+				.push_constant_size = sizeof(PushConstant),
+				.vertex_buffer_ids = {
+					vertex_buffer_id_
+				},
+				.index_buffer_id = index_buffer_id_,
+				.first_index = 0,
+				.index_count = std::size(INDICES)
 			});
 		});
 }
