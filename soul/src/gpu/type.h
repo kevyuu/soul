@@ -145,6 +145,56 @@ namespace soul::gpu
 		COUNT
 	};
 
+	enum class PipelineStage : uint32
+	{
+	    TOP_OF_PIPE,
+		DRAW_INDIRECT,
+		VERTEX_INPUT,
+		VERTEX_SHADER,
+		TESSELLATION_CONTROL_SHADER,
+		TESSELLATION_EVALUATION_SHADER,
+		GEOMETRY_SHADER,
+		FRAGMENT_SHADER,
+		EARLY_FRAGMENT_TESTS,
+		LATE_FRAGMENT_TESTS,
+		COLOR_ATTACHMENT_OUTPUT,
+		COMPUTE_SHADER,
+		TRANSFER,
+		BOTTOM_OF_PIPE,
+		HOST,
+		AS_BUILD,
+		RAY_TRACING_SHADER,
+		COUNT
+	};
+	using PipelineStageFlags = FlagSet<PipelineStage>;
+	const auto PIPELINE_STAGE_FLAGS_ALL = ~PipelineStageFlags();
+
+	enum class AccessType : uint32
+	{
+	    INDIRECT_COMMAND_READ,
+		INDEX_READ,
+		VERTEX_ATTRIBUTE_READ,
+		UNIFORM_READ,
+		INPUT_ATTACHMENT_READ,
+		SHADER_READ,
+		SHADER_WRITE,
+		COLOR_ATTACHMENT_READ,
+		COLOR_ATTACHMENT_WRITE,
+		DEPTH_STENCIL_ATTACHMENT_READ,
+		DEPTH_STENCIL_ATTACHMENT_WRITE,
+		TRANSFER_READ,
+		TRANSFER_WRITE,
+		HOST_READ,
+		HOST_WRITE,
+		MEMORY_READ,
+		MEMORY_WRITE,
+		AS_READ,
+		AS_WRITE,
+		COUNT
+	};
+	using AccessFlags = FlagSet<AccessType>;
+	constexpr AccessFlags ACCESS_FLAGS_ALL = ~AccessFlags();
+
 	enum class PipelineType : uint8
 	{
 		NON_SHADER,
@@ -165,7 +215,7 @@ namespace soul::gpu
 	};
 	using QueueFlags = FlagSet<QueueType>;
 	constexpr QueueFlags QUEUE_DEFAULT = { QueueType::GRAPHIC, QueueType::COMPUTE, QueueType::TRANSFER };
-	
+
 	enum class BufferUsage : uint8
 	{
 		INDEX,
@@ -871,6 +921,27 @@ namespace soul::gpu
 			uint32 offset = 0;
 		};
 
+		using VisibleAccessMatrix = FlagMap<PipelineStage, AccessFlags>;
+		constexpr VisibleAccessMatrix VISIBLE_ACCESS_MATRIX_ALL = VisibleAccessMatrix(ACCESS_FLAGS_ALL);
+		constexpr VisibleAccessMatrix VISIBLE_ACCESS_MATRIX_NONE = VisibleAccessMatrix(AccessFlags());
+
+		struct ResourceCacheState
+		{
+			PipelineStageFlags unavailable_pipeline_stages;
+			AccessFlags unavailable_accesses;
+			VisibleAccessMatrix visible_access_matrix = VISIBLE_ACCESS_MATRIX_ALL;
+
+			void join(const ResourceCacheState& other)
+			{
+				unavailable_pipeline_stages |= other.unavailable_pipeline_stages;
+				unavailable_accesses |= other.unavailable_accesses;
+				for (const auto stage_flag : FlagIter<PipelineStage>())
+				{
+					visible_access_matrix[stage_flag] &= other.visible_access_matrix[stage_flag];
+				}
+			}
+		};
+
 		enum class BufferInternalFlag : uint8
 		{
 		    TRANSIENT,
@@ -883,6 +954,7 @@ namespace soul::gpu
 			VkBuffer vk_handle = VK_NULL_HANDLE;
 			VmaAllocation allocation{};
 			ResourceOwner owner = ResourceOwner::NONE;
+			ResourceCacheState cache_state;
 			DescriptorID storage_buffer_gpu_handle = DescriptorID::null();
 			BufferInternalFlags internal_flags = {};
 			VkMemoryPropertyFlags memory_property_flags = 0;
@@ -898,12 +970,13 @@ namespace soul::gpu
 		struct Texture {
 			TextureDesc desc;
 			VkImage vk_handle = VK_NULL_HANDLE;
-			TextureView view;
 			VmaAllocation allocation = VK_NULL_HANDLE;
+			TextureView view;
+			TextureView* views = nullptr;
 			VkImageLayout layout = VK_IMAGE_LAYOUT_UNDEFINED;
 			VkSharingMode sharing_mode = {};
 			ResourceOwner owner = ResourceOwner::NONE;
-			TextureView* views = nullptr;
+			ResourceCacheState cache_state;
 		};
 
 		struct Shader

@@ -764,14 +764,14 @@ namespace soul::gpu
 			std::ranges::transform(db->swapchain.images, db->swapchain.image_views, std::back_inserter(db->swapchain.textures), 
 				[db, this, image_sharing_mode = swapchain_info.imageSharingMode](VkImage image, VkImageView image_view)
 			{
-				const auto texture_id = TextureID(db->texture_pool.create());
-				Texture& texture = *get_texture_ptr(texture_id);
-				texture.desc = TextureDesc::d2("Swapchain Texture", TextureFormat::BGRA8, 1, {}, {}, vec2ui32(db->swapchain.extent.width, db->swapchain.extent.height));
-				texture.vk_handle = image;
-				texture.view.vk_handle = image_view;
-				texture.layout = VK_IMAGE_LAYOUT_UNDEFINED;
-				texture.sharing_mode = image_sharing_mode;
-				texture.owner = ResourceOwner::NONE;
+				const auto texture_id = TextureID(db->texture_pool.create(Texture{
+					.desc = TextureDesc::d2("Swapchain Texture", TextureFormat::BGRA8, 1, {}, {}, vec2ui32(db->swapchain.extent.width, db->swapchain.extent.height)),
+                    .vk_handle = image,
+					.view = {
+						.vk_handle = image_view
+					},
+					.sharing_mode = image_sharing_mode
+				}));
 				return texture_id;
 			});
 			
@@ -883,8 +883,7 @@ namespace soul::gpu
 		SOUL_PROFILE_ZONE();
 
 		SOUL_ASSERT(0, desc.layer_count >= 1, "");
-		const auto texture_id = TextureID(_db.texture_pool.create());
-		Texture& texture = *_db.texture_pool.get(texture_id.id);
+
 		const VkFormat format = vk_cast(desc.format);
 		const QueueData queue_data = get_queue_data_from_queue_flags(desc.queue_flags);
 		const VkImageCreateFlags image_create_flags = desc.type == TextureType::CUBE ? VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT | VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT : VK_IMAGE_CREATE_MUTABLE_FORMAT_BIT;
@@ -909,20 +908,22 @@ namespace soul::gpu
 			.usage = VMA_MEMORY_USAGE_GPU_ONLY
 		};
 
+		VmaAllocation allocation;
+		VkImage vk_handle;
 		SOUL_VK_CHECK(vmaCreateImage(_db.gpu_allocator,
-			              &image_info, &alloc_info, &texture.vk_handle,
-			              &texture.allocation, nullptr), "Fail to create image");
+			&image_info, &alloc_info, &vk_handle,
+			&allocation, nullptr), "Fail to create image");
 
-        auto image_aspect = vk_cast_format_to_aspect_flags(desc.format);
+		auto image_aspect = vk_cast_format_to_aspect_flags(desc.format);
 		if (image_aspect & VK_IMAGE_ASPECT_STENCIL_BIT)
 		{
 			SOUL_LOG_WARN("Texture creation with stencil format detected. Current version will remove the aspect stencil bit so the texture cannot be used for depth stencil. The reason is because Vulkan spec stated that descriptor cannot have more than one aspect.");
 			image_aspect &= ~(VK_IMAGE_ASPECT_STENCIL_BIT);
 		}
-		
+
 		const VkImageViewCreateInfo image_view_info = {
 			.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
-			.image = texture.vk_handle,
+			.image = vk_handle,
 			.viewType = vk_cast_to_image_view_type(desc.type),
 			.format = format,
 			.components = {},
@@ -935,8 +936,21 @@ namespace soul::gpu
 			}
 		};
 
+		VkImageView view_vk_handle;
 		SOUL_VK_CHECK(vkCreateImageView(_db.device,
-			              &image_view_info, nullptr, &texture.view.vk_handle), "Fail to create image view");
+			&image_view_info, nullptr, &view_vk_handle), "Fail to create image view");
+
+		const auto texture_id = TextureID(_db.texture_pool.create(Texture{
+			.desc = desc,
+			.vk_handle = vk_handle,
+			.allocation = allocation,
+		    .view = {
+				.vk_handle = view_vk_handle
+			},
+			.sharing_mode = image_info.sharingMode,
+		}));
+		Texture& texture = *_db.texture_pool.get(texture_id.id);
+
 		if (desc.usage_flags.test(TextureUsage::SAMPLED))
 		{
 			texture.view.sampled_image_gpu_handle = _db.descriptor_allocator.create_sampled_image_descriptor(texture.view.vk_handle);
@@ -945,12 +959,6 @@ namespace soul::gpu
 		{
 			texture.view.storage_image_gpu_handle = _db.descriptor_allocator.create_storage_image_descriptor(texture.view.vk_handle);
 		}
-
-		texture.layout = VK_IMAGE_LAYOUT_UNDEFINED;
-		texture.sharing_mode = image_info.sharingMode;
-		texture.owner = ResourceOwner::NONE;
-		texture.views = nullptr;
-		texture.desc = desc;
 
 		if (desc.name != nullptr) {
 			char tex_name[1024];
@@ -1142,9 +1150,7 @@ namespace soul::gpu
 		SOUL_ASSERT(0, desc.size > 0, "");
 		SOUL_ASSERT(0, desc.usage_flags.any(), "");
 
-		const auto buffer_id = BufferID(_db.buffer_pool.create());
-		Buffer& buffer = get_buffer(buffer_id);
-
+		
 		const auto queue_flags = desc.queue_flags;
 		
 		const QueueData queue_data = get_queue_data_from_queue_flags(queue_flags);
@@ -1178,10 +1184,18 @@ namespace soul::gpu
 			};
 		}
 
-		SOUL_VK_CHECK(vmaCreateBuffer(_db.gpu_allocator, &buffer_info, &alloc_create_info, &buffer.vk_handle, &buffer.allocation, nullptr), "Fail to create buffer");
+		VkBuffer vk_handle;
+		VmaAllocation allocation;
+		SOUL_VK_CHECK(vmaCreateBuffer(_db.gpu_allocator, &buffer_info, &alloc_create_info, &vk_handle, &allocation, nullptr), "Fail to create buffer");
 
-		buffer.desc = desc;
-		buffer.owner = ResourceOwner::NONE;
+		const auto buffer_id = BufferID(_db.buffer_pool.create(Buffer{
+			.desc = desc,
+			.vk_handle = vk_handle,
+			.allocation = allocation
+
+		}));
+		Buffer& buffer = get_buffer(buffer_id);
+
 		if (buffer.desc.usage_flags.test(BufferUsage::STORAGE))
 			buffer.storage_buffer_gpu_handle = _db.descriptor_allocator.create_storage_buffer_descriptor(buffer.vk_handle);
 		vmaGetAllocationMemoryProperties(_db.gpu_allocator, buffer.allocation, &buffer.memory_property_flags);
@@ -1237,6 +1251,9 @@ namespace soul::gpu
 		const TextureID swapchain_texture_id = _db.swapchain.textures[swapchain_index];
 		Texture* swapchain_texture = get_texture_ptr(swapchain_texture_id);
 		swapchain_texture->owner = ResourceOwner::PRESENTATION_ENGINE;
+		swapchain_texture->cache_state = {
+			.visible_access_matrix = VISIBLE_ACCESS_MATRIX_NONE
+		};
 		swapchain_texture->layout = VK_IMAGE_LAYOUT_UNDEFINED;
 
 		return result;
@@ -2393,15 +2410,15 @@ namespace soul::gpu
 		std::ranges::transform(_db.swapchain.images, _db.swapchain.image_views, _db.swapchain.textures.begin(),
 			[this, image_sharing_mode = swapchain_info.imageSharingMode](VkImage image, VkImageView image_view)
 		{
-			const auto texture_id = TextureID(_db.texture_pool.create());
-			Texture& texture = *get_texture_ptr(texture_id);
-			texture.desc = TextureDesc::d2("Swapchain Texture", TextureFormat::BGRA8, 1, {}, {}, vec2ui32(_db.swapchain.extent.width, _db.swapchain.extent.height));
-			texture.vk_handle = image;
-			texture.view.vk_handle = image_view;
-			texture.layout = VK_IMAGE_LAYOUT_UNDEFINED;
-			texture.sharing_mode = image_sharing_mode;
-			texture.owner = ResourceOwner::NONE;
-			return texture_id;
+			return TextureID(_db.texture_pool.create(Texture{
+				.desc = TextureDesc::d2("Swapchain Texture", TextureFormat::BGRA8, 1, {}, {}, 
+				    vec2ui32(_db.swapchain.extent.width, _db.swapchain.extent.height)),
+				.vk_handle = image,
+				.view = {
+					.vk_handle = image_view
+				},
+				.sharing_mode = image_sharing_mode
+			}));
 		});
 
 		SOUL_LOG_INFO("Vulkan swapchain recreation sucessful");
@@ -2671,6 +2688,10 @@ namespace soul::gpu
 			vkCmdEndDebugUtilsLabelEXT(transfer_command_buffer);
 
 			buffer.owner = ResourceOwner::TRANSFER_QUEUE;
+			buffer.cache_state = {
+				.unavailable_pipeline_stages = { PipelineStage::TRANSFER },
+				.unavailable_accesses = { AccessType::TRANSFER_WRITE }
+			};
 		}
 	}
 
@@ -2747,6 +2768,10 @@ namespace soul::gpu
 
 		texture.layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
 		texture.owner = ResourceOwner::TRANSFER_QUEUE;
+		texture.cache_state = {
+			.unavailable_pipeline_stages = { PipelineStage::TRANSFER },
+			.unavailable_accesses = { AccessType::TRANSFER_WRITE }
+		};
 	}
 
 	void GPUResourceInitializer::clear(Texture& texture, ClearValue clear_value)
@@ -2809,19 +2834,26 @@ namespace soul::gpu
 		}
 		texture.layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
 		texture.owner = ResourceOwner::GRAPHIC_QUEUE;
+		texture.cache_state = {
+			.unavailable_pipeline_stages = { PipelineStage::TRANSFER },
+			.unavailable_accesses = { AccessType::TRANSFER_WRITE },
+			.visible_access_matrix = VISIBLE_ACCESS_MATRIX_NONE
+		};
 	}
 
 	void GPUResourceInitializer::generate_mipmap(Texture& texture)
 	{
-		VkImageMemoryBarrier barrier{};
-		barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-		barrier.image = texture.vk_handle;
-		barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-		barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-		barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-		barrier.subresourceRange.baseArrayLayer = 0;
-		barrier.subresourceRange.layerCount = 1;
-		barrier.subresourceRange.levelCount = 1;
+		VkImageMemoryBarrier barrier = {
+			.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+			.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+			.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+			.image = texture.vk_handle,
+			.subresourceRange = {
+				.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+				.levelCount = 1,
+				.layerCount = 1,
+			}
+		};
 
 		auto mip_width = cast<int32>(texture.desc.extent.x);
 		auto mip_height = cast<int32>(texture.desc.extent.y);
@@ -2841,19 +2873,28 @@ namespace soul::gpu
 				0, nullptr,
 				1, &barrier);
 
-			VkImageBlit blit{};
-			blit.srcOffsets[0] = { 0, 0, 0 };
-			blit.srcOffsets[1] = { mip_width, mip_height, 1 };
-			blit.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-			blit.srcSubresource.mipLevel = i - 1;
-			blit.srcSubresource.baseArrayLayer = 0;
-			blit.srcSubresource.layerCount = 1;
-			blit.dstOffsets[0] = { 0, 0, 0 };
-			blit.dstOffsets[1] = { mip_width > 1 ? mip_width / 2 : 1, mip_height > 1 ? mip_height / 2 : 1, 1 };
-			blit.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-			blit.dstSubresource.mipLevel = i;
-			blit.dstSubresource.baseArrayLayer = 0;
-			blit.dstSubresource.layerCount = 1;
+			VkImageBlit blit = {
+				.srcSubresource = {
+					.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+					.mipLevel = i - 1,
+					.baseArrayLayer = 0,
+					.layerCount = 1,
+				},
+				.srcOffsets = {
+					{ 0, 0, 0 },
+					{ mip_width, mip_height, 1 },
+				},
+				.dstSubresource = {
+					.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+					.mipLevel = i,
+					.baseArrayLayer = 0,
+					.layerCount = 1
+				},
+				.dstOffsets = {
+					{ 0, 0, 0 },
+					{ mip_width > 1 ? mip_width / 2 : 1, mip_height > 1 ? mip_height / 2 : 1, 1 }
+				}
+			};
 
 			vkCmdBlitImage(command_buffer,
 				texture.vk_handle, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
@@ -2890,6 +2931,11 @@ namespace soul::gpu
 
 		texture.layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 		texture.owner = ResourceOwner::GRAPHIC_QUEUE;
+		texture.cache_state = {
+			.unavailable_pipeline_stages = { PipelineStage::FRAGMENT_SHADER },
+			.unavailable_accesses = {},
+			.visible_access_matrix = VisibleAccessMatrix({AccessType::SHADER_READ})
+		};
 	}
 
 	void GPUResourceInitializer::flush(CommandQueues& command_queues, System& gpu_system)
@@ -2947,6 +2993,7 @@ namespace soul::gpu
 		if (buffer.owner == ResourceOwner::NONE) return;
 		thread_contexts_[runtime::get_thread_id()].sync_dst_queues_[RESOURCE_OWNER_TO_QUEUE_TYPE[buffer.owner]] |= buffer.desc.queue_flags;
 		buffer.owner = ResourceOwner::NONE;
+		buffer.cache_state = ResourceCacheState();
 	}
 
 	void GPUResourceFinalizer::finalize(Texture& texture, TextureUsageFlags usage_flags)
@@ -3013,6 +3060,7 @@ namespace soul::gpu
 
 		thread_contexts_[runtime::get_thread_id()].sync_dst_queues_[RESOURCE_OWNER_TO_QUEUE_TYPE[texture.owner]] |= texture.desc.queue_flags;
 		texture.owner = ResourceOwner::NONE;
+		texture.cache_state = ResourceCacheState();
 	}
 
 	void GPUResourceFinalizer::flush(CommandPools& command_pools, CommandQueues& command_queues, System& gpu_system)

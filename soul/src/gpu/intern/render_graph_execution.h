@@ -10,14 +10,14 @@ namespace soul::gpu::impl
 {
 
 	struct BufferBarrier {
-		VkPipelineStageFlags stage_flags = 0;
-		VkAccessFlags access_flags = 0;
+		PipelineStageFlags stage_flags;
+		AccessFlags access_flags;
 		uint32 buffer_info_idx = 0;
 	};
 
 	struct TextureBarrier {
-		VkPipelineStageFlags stage_flags = 0;
-		VkAccessFlags access_flags = 0;
+		PipelineStageFlags stage_flags;
+		AccessFlags access_flags;
 
 		VkImageLayout layout = VK_IMAGE_LAYOUT_UNDEFINED;
 		uint32 texture_info_idx = 0;
@@ -33,10 +33,7 @@ namespace soul::gpu::impl
 
 		VkEvent pending_event = VK_NULL_HANDLE;
 		Semaphore pending_semaphore = TimelineSemaphore::null();
-		VkPipelineStageFlags unsync_write_stage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-		VkAccessFlags unsync_write_access = 0;
-
-		VkAccessFlags visible_access_matrix[32] = {};
+		ResourceCacheState cache_state;
 
 		Vector<PassNodeID> passes;
 		uint32 pass_counter = 0;
@@ -45,9 +42,7 @@ namespace soul::gpu::impl
 	struct TextureViewExecInfo {
 		VkEvent pending_event = VK_NULL_HANDLE;
 		Semaphore pending_semaphore = TimelineSemaphore::null();
-		VkPipelineStageFlags unsync_write_stage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-		VkAccessFlags unsync_write_access = 0;
-		VkAccessFlags visible_access_matrix[32] = {};
+		ResourceCacheState cache_state;
 		Vector<PassNodeID> passes;
 		uint32 pass_counter = 0;
 		VkImageLayout layout = VK_IMAGE_LAYOUT_UNDEFINED;
@@ -131,6 +126,7 @@ namespace soul::gpu::impl
 		System* gpu_system_;
 
 		FlagMap<QueueType, VkEvent> external_events_;
+		FlagMap<QueueType, PipelineStageFlags> external_events_stage_flags_;
 		CommandQueues& command_queues_;
 		CommandPools& command_pools_;
 
