@@ -5,6 +5,23 @@
 
 namespace soul
 {
+    template <flag Flag>
+    class FlagSet;
+
+    template<class T>
+    struct is_flag_set : std::false_type {};
+
+    template<flag Flag>
+    struct is_flag_set<FlagSet<Flag>> : std::true_type {};
+
+    template<typename T>
+    concept flag_set = is_flag_set<T>::value;
+
+    namespace impl {
+        template<typename T>
+        concept dst_flag = flag_set<T> || std::integral<T>;
+    }
+    
 	template <flag Flag>
 	class FlagSet
 	{
@@ -54,11 +71,17 @@ namespace soul
             requires (IFlagCount <= 64)
         [[nodiscard]] constexpr uint64 to_uint64() const;
 
-        template <std::integral DstFlags>
-		[[nodiscard]] constexpr DstFlags map(DstFlags const(&mapping)[to_underlying(flag_type::COUNT)]) const;
+        template <impl::dst_flag DstFlags, soul_size N>
+        requires (N == to_underlying(Flag::COUNT))
+        [[nodiscard]] constexpr DstFlags map(DstFlags const(&mapping)[N]) const;
 
         template <typename T>
+        requires is_lambda_v<T, void(Flag)>
 		constexpr void for_each(T func) const;
+
+        template <typename T>
+        requires is_lambda_v<T, bool(Flag)>
+        constexpr std::optional<Flag> find_if(T func) const;
 
         store_type flags_;
 
@@ -129,13 +152,14 @@ namespace soul
     }
 
     template <flag Flag>
-    template <std::integral DstFlags>
-    constexpr DstFlags FlagSet<Flag>::map(DstFlags const(& mapping)[to_underlying(flag_type::COUNT)]) const
+    template <impl::dst_flag DstFlags, soul_size N>
+    requires (N == to_underlying(Flag::COUNT))
+    constexpr DstFlags FlagSet<Flag>::map(DstFlags const(& mapping)[N]) const
     {
-        std::remove_cv_t<DstFlags> dst_flags = 0;
+        std::remove_cv_t<DstFlags> dst_flags{};
         store_type flags = flags_;
         auto pos = flags_.find_first();
-        while(pos) {
+        while (pos) {
             dst_flags |= mapping[*pos];
             pos = flags_.find_next(*pos);
         }
@@ -144,6 +168,7 @@ namespace soul
 
     template <flag Flag>
     template <typename T>
+    requires is_lambda_v<T, void(Flag)>
     constexpr void FlagSet<Flag>::for_each(T func) const
     {
         auto new_func = [func = std::move(func)](soul_size bit)
@@ -151,6 +176,20 @@ namespace soul
             func(flag_type(bit));
         };
         flags_.for_each(new_func);
+    }
+
+    template <flag Flag>
+    template <typename T>
+    requires is_lambda_v<T, bool(Flag)>
+    constexpr std::optional<Flag> FlagSet<Flag>::find_if(T func) const
+    {
+        auto new_func = [func = std::move(func)](soul_size bit) -> bool
+        {
+            return func(flag_type(bit));
+        };
+        const auto find_result = flags_.find_if(new_func);
+        if (find_result) return static_cast<Flag>(find_result.value());
+        return std::nullopt;
     }
 
     template <flag Flag>

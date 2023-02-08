@@ -277,7 +277,6 @@ TEST_F(TestFlagSetManipulation, TestFlagSetFlip)
 {
     auto test_flip = []<soul::scoped_enum T>(soul::FlagSet<T> test_flag_set) {
         auto old_flag_set = test_flag_set;
-        std::cout << old_flag_set.count() << std::endl;
         test_flag_set.flip();
         for (auto e : soul::FlagIter<T>())
         {
@@ -414,14 +413,23 @@ TEST(TestFlagSetOperator, TestFlagSetOperatorNegate)
 
 TEST(TestFlagSetMap, TestFlagSetMap)
 {
-    const Uint8FlagSet test_filled_flag_set = {Uint8TestEnum::ONE, Uint8TestEnum::THREE};
-    const int filled_map_result = test_filled_flag_set.map({1, 2, 3, 4, 5, 6});
+    const Uint8FlagSet test_filled_flag_set = { Uint8TestEnum::ONE, Uint8TestEnum::THREE };
+    const auto filled_map_result = test_filled_flag_set.map({ 1, 2, 3, 4, 5, 6 });
     SOUL_TEST_ASSERT_EQ(filled_map_result, 1 | 3);
 
-    const Uint8FlagSet test_empty_flag_set;
-    const int empty_map_result = test_empty_flag_set.map({1, 2, 3, 4, 5, 6});
-    SOUL_TEST_ASSERT_EQ(empty_map_result, 0);
+    const auto filled_map_result2 = test_filled_flag_set.map<Uint16FlagSet>({
+        { Uint16TestEnum::ONE }, { Uint16TestEnum::TWO }, { Uint16TestEnum::THREE },
+        { Uint16TestEnum::FOUR }, { Uint16TestEnum::FIVE }, { Uint16TestEnum::SIX } });
+    const auto expected_filled_map_result2 = Uint16FlagSet{ Uint16TestEnum::ONE, Uint16TestEnum::THREE };
+    SOUL_TEST_ASSERT_EQ(filled_map_result2, expected_filled_map_result2);
 
+    const Uint8FlagSet test_empty_flag_set;
+    const auto empty_map_result = test_empty_flag_set.map({1, 2, 3, 4, 5, 6});
+    SOUL_TEST_ASSERT_EQ(empty_map_result, 0);
+    const auto empty_map_result2 = test_empty_flag_set.map<Uint16FlagSet>({
+        { Uint16TestEnum::ONE }, { Uint16TestEnum::TWO }, { Uint16TestEnum::THREE },
+        { Uint16TestEnum::FOUR }, { Uint16TestEnum::FIVE }, { Uint16TestEnum::SIX } });
+    SOUL_TEST_ASSERT_EQ(empty_map_result2, Uint16FlagSet{});
 }
 
 TEST(TestFlagSetForEach, TestFlagSetForEach)
@@ -438,6 +446,18 @@ TEST(TestFlagSetForEach, TestFlagSetForEach)
     test_empty_flag_set.for_each([&empty_vector_result](const Uint8TestEnum val)
                                  { empty_vector_result.push_back(val); });
     SOUL_TEST_ASSERT_EQ(empty_vector_result.size(), 0);
+
+}
+
+TEST(TestFlagSetFindIf, TestFlagSetFindIf)
+{
+    std::vector<Uint8TestEnum> filled_vector_result;
+    const Uint8FlagSet test_filled_flag_set = { Uint8TestEnum::ONE, Uint8TestEnum::THREE };
+    SOUL_TEST_ASSERT_EQ(test_filled_flag_set.find_if([val_to_find = Uint8TestEnum::THREE](const Uint8TestEnum val) { return val == val_to_find; }).value(), Uint8TestEnum::THREE);
+    SOUL_TEST_ASSERT_FALSE(test_filled_flag_set.find_if([val_to_find = Uint8TestEnum::TWO](const Uint8TestEnum val) { return val == val_to_find; }));
+
+    const Uint8FlagSet test_empty_flag_set;
+    SOUL_TEST_ASSERT_FALSE(test_empty_flag_set.find_if([val_to_find = Uint8TestEnum::THREE](const Uint8TestEnum val) { return val == val_to_find; }));
 }
 
 TEST(TestFlagSetToUint, TestFlagSetToUint)

@@ -359,6 +359,40 @@ TEST(TestBitsetForEach, TestBitsetForEach)
     SOUL_TEST_RUN(test_for_each(generate_bitset<5>({ 2 })));
 }
 
+TEST(TestBitSetFindIf, TestBitSetFindIf)
+{
+    auto test_find_if = []<soul_size BitCount, soul::bit_block_type BlockType>(soul::Bitset<BitCount, BlockType> bitset, std::vector<soul_size> test_positions) {
+
+        std::vector<soul_size> expected_positions;
+        for (soul_size i = 0; i < BitCount; i++)
+        {
+            if (bitset.test(i)) expected_positions.push_back(i);
+        }
+
+        std::vector<soul_size> positions;
+        bitset.for_each([&positions](soul_size position)
+            {
+                positions.push_back(position);
+            });
+
+        SOUL_TEST_ASSERT_TRUE(std::ranges::equal(positions, expected_positions));
+
+        for (soul_size position : test_positions)
+        {
+            const auto find_result = bitset.find_if([position](soul_size bit) { return bit == position; });
+            if (position < BitCount && bitset.test(position))
+                SOUL_TEST_ASSERT_EQ(find_result.value(), position);
+            else
+                SOUL_TEST_ASSERT_FALSE(find_result.has_value());
+        }
+    };
+
+    SOUL_TEST_RUN(test_find_if(generate_bitset<100>({ 0, 99 }), { 0, 3, 5, 99 }));
+    SOUL_TEST_RUN(test_find_if(generate_bitset<100>({}), { 1, 3, 5, 102 }));
+    SOUL_TEST_RUN(test_find_if(generate_bitset<10000>({ 0, 4, 10, 63, 9999 }), { 4, 7, 63, 9998, 9999 }));
+    SOUL_TEST_RUN(test_find_if(generate_bitset<5>({ 2 }), { 1, 2, 3 }));
+}
+
 TEST(TestBitsetToUint, TestBitsetToUint)
 {
     SOUL_TEST_ASSERT_EQ(generate_bitset<10>({}).to_uint32(), 0);

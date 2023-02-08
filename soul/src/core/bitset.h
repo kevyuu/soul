@@ -25,6 +25,9 @@ namespace soul
             [[nodiscard]] constexpr std::optional<soul_size> find_next(soul_size last_find_index) const;
             [[nodiscard]] constexpr std::optional<soul_size> find_last() const;
             [[nodiscard]] constexpr std::optional<soul_size> find_prev(soul_size last_find_index) const;
+            template <typename Func>
+                requires is_lambda_v<Func, bool(soul_size)>
+            [[nodiscard]] constexpr std::optional<soul_size> find_if(Func func) const;
 
             template <typename Func>
             requires is_lambda_v<Func, void(soul_size)>
@@ -75,7 +78,7 @@ namespace soul
                     return prev_block & mask;
                 };
                 auto pos = util::get_first_one_bit_pos(block);
-                const soul_size block_start_index = block_index * BITS_PER_BLOCK;
+                const auto block_start_index = block_index * BITS_PER_BLOCK;
                 while(pos)
                 {
                     func(block_start_index + static_cast<soul_size>(*pos));
@@ -250,6 +253,31 @@ namespace soul
                 }
             }
 
+            return std::nullopt;
+        }
+
+        template <size_t BlockCount, bit_block_type BlockType>
+        template <typename Func> requires is_lambda_v<Func, bool(soul_size)>
+        constexpr std::optional<soul_size> BitsetImpl<BlockCount, BlockType>::find_if(Func func) const
+        {
+            for (soul_size block_index = 0; block_index < BlockCount; block_index++)
+            {
+                auto block = blocks_[block_index];
+                auto get_next_block = [](const BlockType prev_block, soul_size prev_pos) -> BlockType
+                {
+                    const BlockType mask = ~static_cast<BlockType>(cast<BlockType>(1) << prev_pos);
+                    return prev_block & mask;
+                };
+                auto pos = util::get_first_one_bit_pos(block);
+                const auto block_start_index = block_index * BITS_PER_BLOCK;
+                while (pos)
+                {
+                    if (func(block_start_index + static_cast<soul_size>(*pos)))
+                        return block_start_index + static_cast<soul_size>(*pos);
+                    block = get_next_block(block, *pos);
+                    pos = util::get_first_one_bit_pos(block);
+                }
+            }
             return std::nullopt;
         }
 
