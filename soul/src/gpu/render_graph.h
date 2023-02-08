@@ -306,23 +306,23 @@ namespace soul::gpu
 		RGRenderTargetDesc() = default;
 
 		RGRenderTargetDesc(vec2ui32 dimension, const ColorAttachmentDesc& color) : 
-			dimension(dimension), color_attachments(&color, 1) {}
+			dimension(dimension), color_attachments(std::to_array({color})){}
 
 		RGRenderTargetDesc(vec2ui32 dimension, const ColorAttachmentDesc& color, const DepthStencilAttachmentDesc& depth_stencil) :
-			dimension(dimension), color_attachments(&color, 1), depth_stencil_attachment(depth_stencil) {}
+			dimension(dimension), color_attachments(std::to_array({color})), depth_stencil_attachment(depth_stencil) {}
 
 		RGRenderTargetDesc(vec2ui32 dimension, const TextureSampleCount sample_count, const ColorAttachmentDesc& color, 
 			const ResolveAttachmentDesc& resolve, const DepthStencilAttachmentDesc depth_stencil):
 			dimension(dimension), sample_count(sample_count), 
-			color_attachments(&color, 1), resolve_attachments(&resolve, 1), depth_stencil_attachment(depth_stencil) {}
+			color_attachments(std::to_array({color})), resolve_attachments(std::to_array({resolve})), depth_stencil_attachment(depth_stencil) {}
 
 		RGRenderTargetDesc(vec2ui32 dimension, const DepthStencilAttachmentDesc& depth_stencil) :
 			dimension(dimension), depth_stencil_attachment(depth_stencil)  {}
 
 		vec2ui32 dimension = {};
 		TextureSampleCount sample_count = TextureSampleCount::COUNT_1;
-		std::span<const ColorAttachmentDesc> color_attachments;
-		std::span<const ResolveAttachmentDesc> resolve_attachments;
+		SBOVector<ColorAttachmentDesc, 1> color_attachments;
+		SBOVector<ResolveAttachmentDesc, 1> resolve_attachments;
 		DepthStencilAttachmentDesc depth_stencil_attachment;
 	};
 
