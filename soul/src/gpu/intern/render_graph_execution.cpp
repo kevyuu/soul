@@ -154,7 +154,7 @@ namespace soul::gpu::impl
 					.buffer_info_idx = buffer_info_id
 				});
 
-				pass_info.buffer_invalidates.push_back({
+				pass_info.buffer_flushes.push_back({
 					.stage_flags = {PipelineStage::VERTEX_INPUT},
 					.access_flags = {},
 					.buffer_info_idx = buffer_info_id
