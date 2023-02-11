@@ -600,8 +600,7 @@ namespace soul::gpu::impl
 		{
 			render_pass = create_render_pass(pass_index);
 			VkFramebuffer framebuffer = create_framebuffer(pass_index, render_pass);
-
-			const RGRenderTarget& render_target = pass_node.get_render_target();
+			
 			VkClearValue clear_values[2 * MAX_COLOR_ATTACHMENT_PER_SHADER + 1];
 			uint32 clear_count = 0;
 
