@@ -25,8 +25,8 @@ namespace soul::gpu::impl
 {
 	class RenderCompiler {
 	public:
-		constexpr RenderCompiler(System& gpu_system, VkCommandBuffer commandBuffer) :
-			gpu_system_(gpu_system), command_buffer_(commandBuffer),
+		constexpr RenderCompiler(System& gpu_system, const VkCommandBuffer command_buffer) :
+			gpu_system_(gpu_system), command_buffer_(command_buffer),
 			current_pipeline_(VK_NULL_HANDLE) {}
 
 		void bind_descriptor_sets(VkPipelineBindPoint pipeline_bind_point);

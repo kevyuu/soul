@@ -5,9 +5,11 @@
 #include "core/type_traits.h"
 #include "core/cstring.h"
 #include <optional>
+#include <random>
 
 namespace soul::util
 {
+
 
 	template<std::unsigned_integral T>
 	constexpr std::optional<uint32> get_first_one_bit_pos(T x) noexcept {
@@ -136,5 +138,31 @@ namespace soul::util
 		return hash_fnv1_bytes(reinterpret_cast<const uint8*>(data), sizeof(data), initial);
 	}
 
+	template <arithmetic T>
+	T get_random_number(T min, T max)
+	{
+		thread_local std::random_device rd;
+		thread_local std::mt19937 mt(rd());
+		if constexpr (std::is_floating_point_v<T>)
+		{
+			std::uniform_real_distribution<T> distribution(min, max);
+			return distribution(mt);
+		}
+		else
+		{
+			std::uniform_int_distribution<T> distribution(min, max);
+			return distribution(mt);
+		}
+		
+	}
+
+	[[nodiscard]] SOUL_ALWAYS_INLINE vec3f get_random_color()
+	{
+		return {
+			get_random_number<float>(0.0f, 1.0f),
+			get_random_number<float>(0.0f, 1.0f),
+			get_random_number<float>(0.0f, 1.0f)
+		};
+	}
 };
 

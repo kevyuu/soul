@@ -60,7 +60,7 @@ namespace soul::gpu::impl
 
 		[[nodiscard]] soul_size get_view_count() const
 		{
-			return mip_levels * layers;
+			return soul::cast<soul_size>(mip_levels) * layers;
 		}
 
 		[[nodiscard]] soul_size get_view_index(const SubresourceIndex index) const
@@ -93,11 +93,12 @@ namespace soul::gpu::impl
 
 	class RenderGraphExecution {
 	public:
-		RenderGraphExecution(const RenderGraph* renderGraph, System* system, memory::Allocator* allocator, 
-			CommandQueues& commandQueues, CommandPools& commandPools):
-			render_graph_(renderGraph), gpu_system_(system),
-			buffer_infos_(allocator), texture_infos_(allocator), pass_infos_(allocator), command_queues_(commandQueues), command_pools_(commandPools)
-		{}
+		RenderGraphExecution(const RenderGraph* render_graph, System* system, memory::Allocator* allocator, 
+			CommandQueues& command_queues, CommandPools& command_pools):
+			render_graph_(render_graph), gpu_system_(system),
+            command_queues_(command_queues), command_pools_(command_pools), buffer_infos_(allocator),
+            texture_infos_(allocator), pass_infos_(allocator)
+        {}
 
 		RenderGraphExecution() = delete;
 		RenderGraphExecution(const RenderGraphExecution& other) = delete;

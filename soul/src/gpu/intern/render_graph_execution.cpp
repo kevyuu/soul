@@ -1,5 +1,3 @@
-#include "core/util.h"
-
 #include "runtime/runtime.h"
 #include "runtime/scope_allocator.h"
 
@@ -677,21 +675,21 @@ namespace soul::gpu::impl
 		};
 
 
-		for (soul_size i = 0; i < render_graph_->get_pass_nodes().size(); i++) {
+		for (uint32 pass_index = 0; pass_index < render_graph_->get_pass_nodes().size(); pass_index++) {
 			runtime::ScopeAllocator passNodeScopeAllocator("Pass Node Scope Allocator", runtime::get_temp_allocator());
-			PassBaseNode* pass_node = render_graph_->get_pass_nodes()[i];
+			PassBaseNode* pass_node = render_graph_->get_pass_nodes()[pass_index];
 			auto current_queue_type = pass_node->get_queue_type();
 			auto& command_queue = command_queues_[current_queue_type];
-			auto& pass_info = pass_infos_[i];
+			auto& pass_info = pass_infos_[pass_index];
 
 			const auto cmd_buffer = command_pools_.request_command_buffer(current_queue_type);
 
-				vec4f color = { (rand() % 125) / 255.0f, (rand() % 125) / 255.0f, (rand() % 125) / 255.0f, 1.0f };
+			vec3f color = util::get_random_color();
 			const VkDebugUtilsLabelEXT passLabel = {
 				VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT, // sType
 				nullptr,                                 // pNext
 				pass_node->get_name(),                    // pLabelName
-				{color.x, color.y, color.z, color.w}, // color
+				{ color.x, color.y, color.z, 1.0f }, // color
 			};
 			vkCmdBeginDebugUtilsLabelEXT(cmd_buffer.get_vk_handle(), &passLabel);
 
@@ -876,7 +874,7 @@ namespace soul::gpu::impl
                     soul::cast<uint32>(semaphore_layout_barriers.size()), semaphore_layout_barriers.data());
 			}
 
-			execute_pass(i, cmd_buffer);
+			execute_pass(pass_index, cmd_buffer);
 
 			FlagMap<QueueType, bool> is_queue_type_dependent(false);
 			for (const BufferBarrier& barrier : pass_info.buffer_flushes) {
