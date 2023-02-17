@@ -436,20 +436,6 @@ namespace soul::gpu::impl
 			render_pass_key.depth_attachment = get_render_pass_attachment(attachment);
 		}
 
-		/* for (int i = 0; i < render_target.inputAttachments.size(); i++) {
-			const InputAttachment& attachment = render_target.inputAttachments[i];
-			uint32 textureInfoIdx = get_texture_info_index(attachment.nodeID);
-			const TextureExecInfo& textureInfo = textureInfos[textureInfoIdx];
-			const Texture& texture = *gpuSystem->get_texture_ptr(textureInfo.textureID);
-
-			Attachment& attachmentKey = render_pass_key.inputAttachments[i];
-			attachmentKey.format = texture.format;
-			if (textureInfo.firstPass.id == pass_index) attachmentKey.flags |= ATTACHMENT_FIRST_PASS;
-			if (textureInfo.lastPass.id == pass_index) attachmentKey.flags |= ATTACHMENT_LAST_PASS;
-			if (is_external(textureInfo)) attachmentKey.flags |= ATTACHMENT_EXTERNAL;
-			attachmentKey.flags |= ATTACHMENT_ACTIVE;
-		}*/
-
 		return gpu_system_->request_render_pass(render_pass_key);
 	}
 
@@ -473,11 +459,6 @@ namespace soul::gpu::impl
 			const auto texture_id = get_texture_id(attachment.out_node_id);
 			image_views[image_view_count++] = gpu_system_->get_texture_view(texture_id, attachment.desc.view).vk_handle;
 		}
-
-		/* for (const InputAttachment& attachment : graphic_node->inputAttachments) {
-			const Texture* texture = get_texture_ptr(attachment.nodeID);
-			imageViews[imageViewCount++] = texture->view;
-		} */
 
 		if (render_target.depth_stencil_attachment.out_node_id.id.is_valid()) {
 			const auto info_idx = get_texture_info_index(render_target.depth_stencil_attachment.out_node_id);
