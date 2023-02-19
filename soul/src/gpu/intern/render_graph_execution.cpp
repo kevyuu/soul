@@ -182,9 +182,9 @@ namespace soul::gpu::impl
 			}
 
 			const auto& [dimension, sampleCount, colorAttachments, 
-				resolveAttachments, depthStencilAttachment] = pass_node.get_render_target();
+				resolveAttachments, depthStencilAttachment] = pass_node.get_raster_target();
 
-			for (const ColorAttachment& color_attachment : colorAttachments) {
+			for (const RGColorAttachment& color_attachment : colorAttachments) {
 				SOUL_ASSERT(0, color_attachment.out_node_id.id.is_valid(), "");
 
 				const auto texture_info_id = get_texture_info_index(color_attachment.out_node_id);
@@ -209,7 +209,7 @@ namespace soul::gpu::impl
 
 			}
 
-			for (const ResolveAttachment& resolve_attachment : resolveAttachments)
+			for (const RGResolveAttachment& resolve_attachment : resolveAttachments)
 			{
 				const auto texture_info_id = get_texture_info_index(resolve_attachment.out_node_id);
 				update_texture_info(pass_queue_type, { TextureUsage::COLOR_ATTACHMENT },
@@ -409,7 +409,7 @@ namespace soul::gpu::impl
 
 		const auto pass_node = render_graph_->get_pass_nodes()[pass_index];
 		RenderPassKey render_pass_key = {};
-		const RGRenderTarget& render_target = pass_node->get_render_target();
+		const RGRasterTarget& render_target = pass_node->get_raster_target();
 
 		auto get_render_pass_attachment = [this, pass_index](const auto& attachment) -> Attachment
 		{
@@ -432,7 +432,7 @@ namespace soul::gpu::impl
 		std::ranges::transform(render_target.resolve_attachments, render_pass_key.resolve_attachments, get_render_pass_attachment);
 
 		if (render_target.depth_stencil_attachment.out_node_id.id.is_valid()) {
-			const DepthStencilAttachment& attachment = render_target.depth_stencil_attachment;
+			const RGDepthStencilAttachment& attachment = render_target.depth_stencil_attachment;
 			render_pass_key.depth_attachment = get_render_pass_attachment(attachment);
 		}
 
@@ -447,14 +447,14 @@ namespace soul::gpu::impl
 
 		VkImageView image_views[2 * MAX_COLOR_ATTACHMENT_PER_SHADER + 1];
 		uint32 image_view_count = 0;
-		const RGRenderTarget& render_target = pass_node->get_render_target();
+		const RGRasterTarget& render_target = pass_node->get_raster_target();
 
-		for (const ColorAttachment& attachment : render_target.color_attachments) {
+		for (const RGColorAttachment& attachment : render_target.color_attachments) {
 			const auto texture_id = get_texture_id(attachment.out_node_id);
 			image_views[image_view_count++] = gpu_system_->get_texture_view(texture_id, attachment.desc.view).vk_handle;
 		}
 
-		for (const ResolveAttachment& attachment : render_target.resolve_attachments)
+		for (const RGResolveAttachment& attachment : render_target.resolve_attachments)
 		{
 			const auto texture_id = get_texture_id(attachment.out_node_id);
 			image_views[image_view_count++] = gpu_system_->get_texture_view(texture_id, attachment.desc.view).vk_handle;
@@ -571,52 +571,16 @@ namespace soul::gpu::impl
 		SOUL_PROFILE_ZONE();
 		const auto& pass_node = *render_graph_->get_pass_nodes()[pass_index];
 		const auto pipeline_flags = pass_node.get_pipeline_flags();
-		VkRenderPass render_pass = VK_NULL_HANDLE;
-		const RGRenderTarget& render_target = pass_node.get_render_target();
-		const VkRenderPassBeginInfo* begin_info = nullptr;
-
+		const RGRasterTarget& render_target = pass_node.get_raster_target();
+		const VkRenderingInfo* rendering_info_ptr = nullptr;
+		const VkRenderingInfo rendering_info = {};
 		if (pipeline_flags.test(PipelineType::RASTER))
 		{
-			render_pass = create_render_pass(pass_index);
-			VkFramebuffer framebuffer = create_framebuffer(pass_index, render_pass);
-			
-			VkClearValue clear_values[2 * MAX_COLOR_ATTACHMENT_PER_SHADER + 1];
-			uint32 clear_count = 0;
-
-			for (const ColorAttachment& attachment : render_target.color_attachments) {
-				ClearValue clear_value = attachment.desc.clear_value;
-				memcpy(&clear_values[clear_count++], &clear_value, sizeof(VkClearValue));
-			}
-
-			for (const ResolveAttachment& attachment : render_target.resolve_attachments)
-			{
-				ClearValue clear_value = attachment.desc.clear_value;
-				memcpy(&clear_values[clear_count++], &clear_value, sizeof(VkClearValue));
-			}
-
-			if (render_target.depth_stencil_attachment.out_node_id.id.is_valid()) {
-				const DepthStencilAttachmentDesc& desc = render_target.depth_stencil_attachment.desc;
-				ClearValue clear_value = desc.clear_value;
-				clear_values[clear_count++].depthStencil = { clear_value.depth_stencil.depth, clear_value.depth_stencil.stencil };
-			}
-
-			const VkRenderPassBeginInfo render_pass_begin_info = {
-				.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
-				.renderPass = render_pass,
-				.framebuffer = framebuffer,
-				.renderArea = {
-					.extent = {
-						render_target.dimension.x,
-						render_target.dimension.y
-					}
-				},
-				.clearValueCount = clear_count,
-				.pClearValues = clear_values
+			rendering_info = {
+				.sType = VK_STRUCTURE_TYPE_RENDERING_INFO
 			};
-			begin_info = &render_pass_begin_info;
-			
 		}
-		RenderGraphRegistry registry(*gpu_system_, *this, render_pass, render_target.sample_count);
+		RenderGraphRegistry registry(*gpu_system_, *this, PassNodeID(pass_index));
 		RenderCompiler render_compiler(*gpu_system_, command_buffer.get_vk_handle());
 		pass_node.get_pipeline_flags().for_each(
 			[&render_compiler](PipelineType pipeline_type) {
@@ -1050,15 +1014,21 @@ namespace soul::gpu::impl
 		return node.resource_id.get_index();
 	}
 
-	uint32 RenderGraphExecution::get_texture_info_index(TextureNodeID nodeID) const {
-		const auto& node = render_graph_->get_resource_node(nodeID);
+	uint32 RenderGraphExecution::get_texture_info_index(TextureNodeID node_id) const {
+		const auto& node = render_graph_->get_resource_node(node_id);
 		if (node.resource_id.is_external()) {
 			return soul::cast<uint32>(render_graph_->get_internal_textures().size()) + node.resource_id.get_index();
 		}
 		return node.resource_id.get_index();
 	}
 
-	void RenderGraphExecution::cleanup() {
+    const RGRasterTarget& RenderGraphExecution::get_raster_target(PassNodeID pass_node_id) const
+    {
+		const auto& pass_node = render_graph_->get_pass_node(pass_node_id);
+		return pass_node.get_raster_target();
+    }
+
+    void RenderGraphExecution::cleanup() {
 
 		for (const auto event : external_events_) {
 			if (event != VK_NULL_HANDLE) gpu_system_->destroy_event(event);

@@ -131,7 +131,7 @@ void ImGuiRenderGraphPass::add_pass(soul::gpu::TextureNodeID render_target, soul
 	if (draw_data.TotalVtxCount == 0)
 		return;
 
-	const gpu::ColorAttachmentDesc color_attachment_desc = {
+	const gpu::RGColorAttachmentDesc color_attachment_desc = {
 		.node_id = render_target,
 		.clear = false
 	};
@@ -238,7 +238,7 @@ void ImGuiRenderGraphPass::add_pass(soul::gpu::TextureNodeID render_target, soul
 		gpu::BufferNodeID transform_buffer;
 	};
 	render_graph.add_raster_pass<RenderPassParameter>("ImGui Render Pass",
-		gpu::RGRenderTargetDesc(
+		gpu::RGRasterTargetDesc(
 			viewport,
 			color_attachment_desc
 		)
@@ -251,7 +251,7 @@ void ImGuiRenderGraphPass::add_pass(soul::gpu::TextureNodeID render_target, soul
 		}, [viewport, &draw_data, this](const auto& parameter, auto& registry, auto& command_list)
 		{
 			runtime::ScopeAllocator scope_allocator("Imgui Render Pass Execute Scope Allocator");
-			gpu::GraphicPipelineStateDesc pipeline_desc = {
+			gpu::RasterPipelineStateDesc pipeline_desc = {
 				.program_id = program_id_,
 				.input_bindings = {
 					{.stride = sizeof(ImDrawVert)}

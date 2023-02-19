@@ -686,6 +686,43 @@ namespace soul::gpu
 		}
 	};
 
+	enum class RasterAttachmentLoadOp : uint8
+	{
+	    LOAD,
+		CLEAR,
+		DONT_CARE,
+		COUNT
+	};
+
+	enum class RasterAttachmentStoreOp : uint8
+	{
+	    STORE,
+		DONT_CARE,
+		NONE,
+		COUNT
+	};
+
+	struct RasterAttachment
+	{
+		TextureID texture_id;
+		std::optional<SubresourceIndex> subresource;
+		TextureID resolve_texture_id;
+		std::optional<SubresourceIndex> resoulve_subresource;
+		RasterAttachmentLoadOp load_op;
+		RasterAttachmentStoreOp store_op;
+		ClearValue clear_value;
+	};
+
+	struct RasterTargetDesc
+	{
+		Rect2D render_area;
+		uint32 layer_count;
+		uint32 color_attachment_count;
+		SBOVector<RasterAttachment, 1> color_attchments;
+		std::optional<RasterAttachment> depth_attachment;
+		std::optional<RasterAttachment> stencil_attachment;
+	};
+
 	struct ShaderFile
 	{
 		std::filesystem::path path;
@@ -745,7 +782,7 @@ namespace soul::gpu
 		Topology topology = Topology::TRIANGLE_LIST;
 	};
 
-	struct GraphicPipelineStateDesc {
+	struct RasterPipelineStateDesc {
 
 		ProgramID program_id;
 
@@ -799,12 +836,22 @@ namespace soul::gpu
 		};
 		DepthBiasDesc depth_bias;
 
-		bool operator==(const GraphicPipelineStateDesc& other) const {
-			return (memcmp(this, &other, sizeof(GraphicPipelineStateDesc)) == 0);
+		struct AttachmentFormatDesc
+		{
+			TextureFormat color_attachment_formats[MAX_COLOR_ATTACHMENT_PER_SHADER];
+			TextureFormat depth_attachment_format;
+			TextureFormat stencil_attachment_format;
+		};
+		AttachmentFormatDesc attachment_format;
+
+		TextureSampleCount sample_count;
+
+		bool operator==(const RasterPipelineStateDesc& other) const {
+			return (memcmp(this, &other, sizeof(RasterPipelineStateDesc)) == 0);
 		}
 
-		bool operator!=(const GraphicPipelineStateDesc& other) const {
-			return (memcmp(this, &other, sizeof(GraphicPipelineStateDesc)) != 0);
+		bool operator!=(const RasterPipelineStateDesc& other) const {
+			return (memcmp(this, &other, sizeof(RasterPipelineStateDesc)) != 0);
 		}
 	};
 
@@ -835,11 +882,10 @@ namespace soul::gpu
 	{
         class PrimaryCommandBuffer;
 
-		struct GraphicPipelineStateKey
+		struct RasterPipelineStateKey
 		{
-			GraphicPipelineStateDesc desc;
-			TextureSampleCount sample_count = gpu::TextureSampleCount::COUNT_1;
-			bool operator==(const GraphicPipelineStateKey&) const = default;
+			RasterPipelineStateDesc desc;
+			bool operator==(const RasterPipelineStateKey&) const = default;
 		};
 
 		struct ComputePipelineStateKey
@@ -1292,6 +1338,8 @@ namespace soul::gpu
 
 	// Render Command API
 	enum class RenderCommandType : uint8 {
+		BEGIN_RASTER,
+		END_RASTER,
 		DRAW,
 		DRAW_INDEX,
 		COPY_TEXTURE,
@@ -1312,6 +1360,11 @@ namespace soul::gpu
 		static const RenderCommandType TYPE = RENDER_COMMAND_TYPE;
 
 		RenderCommandTyped() { type = TYPE; }
+	};
+
+	struct RenderCommandBeginRaster : RenderCommandTyped<RenderCommandType::BEGIN_RASTER>
+	{
+		RasterTargetDesc raster_target_desc;
 	};
 
 	struct RenderCommandDraw : RenderCommandTyped<RenderCommandType::DRAW>

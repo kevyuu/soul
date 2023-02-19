@@ -69,7 +69,7 @@ namespace soul::gpu
 		impl::Program* get_program_ptr(ProgramID program_id);
 		const impl::Program& get_program(ProgramID program_id);
 
-		PipelineStateID request_pipeline_state(const GraphicPipelineStateDesc& key, VkRenderPass renderPass, const TextureSampleCount sample_count);
+		PipelineStateID request_pipeline_state(const RasterPipelineStateDesc& key);
 		PipelineStateID request_pipeline_state(const ComputePipelineStateDesc& key);
 		impl::PipelineState* get_pipeline_state_ptr(PipelineStateID pipeline_state_id);
 		const impl::PipelineState& get_pipeline_state(PipelineStateID pipeline_state_id);

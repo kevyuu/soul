@@ -142,4 +142,8 @@ namespace soul::gpu
 		return resource_nodes_[node_id.id];
     }
 
+    const PassBaseNode& RenderGraph::get_pass_node(PassNodeID node_id) const
+    {
+		return *pass_nodes_[node_id.id];
+    }
 }

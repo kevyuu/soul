@@ -1305,23 +1305,23 @@ namespace soul::gpu
 		return _db.frame_contexts[_db.current_frame % _db.frame_contexts.size()];
 	}
 
-	PipelineStateID System::request_pipeline_state(const GraphicPipelineStateDesc& desc, VkRenderPass renderPass, const TextureSampleCount sample_count) {
+	PipelineStateID System::request_pipeline_state(const RasterPipelineStateDesc& desc) {
 		//TODO(kevinyu): Do we need to hash renderPass as well?
-        const impl::PipelineStateKey key(GraphicPipelineStateKey{desc, sample_count});
+        const impl::PipelineStateKey key(RasterPipelineStateKey{desc});
 		if (const auto id = _db.pipeline_state_cache.find(key); id != PipelineStateCache::NULLVAL)
 		{
 			return PipelineStateID(id);
 		}
 
-		auto create_graphic_pipeline_state = [this](const GraphicPipelineStateDesc& desc, VkRenderPass render_pass, const TextureSampleCount sample_count) -> PipelineState
+		auto create_raster_pipeline_state = [this](const RasterPipelineStateDesc& desc) -> PipelineState
 		{
-			runtime::ScopeAllocator<> scope_allocator("create_graphic_pipeline_state");
+			runtime::ScopeAllocator<> scope_allocator("create_raster_pipeline_state");
 
-			Program* program = get_program_ptr(desc.program_id);
+			const auto& program = get_program(desc.program_id);
 
 			Vector<VkPipelineShaderStageCreateInfo> shader_stage_infos(&scope_allocator);
 
-			for (const auto& shader : program->shaders)
+			for (const auto& shader : program.shaders)
 			{
 				if (shader.vk_handle == VK_NULL_HANDLE) continue;
 				const VkPipelineShaderStageCreateInfo shader_stage_info = {
@@ -1374,7 +1374,7 @@ namespace soul::gpu
 				VK_POLYGON_MODE_FILL,
 				VK_POLYGON_MODE_LINE,
 				VK_POLYGON_MODE_POINT
-				});
+			});
 
 			const VkPipelineRasterizationStateCreateInfo rasterizer_state = {
 				.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO,
@@ -1389,7 +1389,7 @@ namespace soul::gpu
 
 			const VkPipelineMultisampleStateCreateInfo multisample_state = {
 				.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO,
-				.rasterizationSamples = vk_cast(sample_count),
+				.rasterizationSamples = vk_cast(desc.sample_count),
 				.sampleShadingEnable = VK_FALSE
 			};
 
@@ -1417,7 +1417,7 @@ namespace soul::gpu
 				input_binding_desc_count++;
 			}
 
-			const VkPipelineVertexInputStateCreateInfo inputStateInfo = {
+			const VkPipelineVertexInputStateCreateInfo input_state_info = {
 				.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
 				.vertexBindingDescriptionCount = attr_desc_count > 0 ? input_binding_desc_count : 0,
 				.pVertexBindingDescriptions = attr_desc_count > 0 ? input_binding_descs : nullptr,
@@ -1463,11 +1463,28 @@ namespace soul::gpu
 				.maxDepthBounds = 1.0f
 			};
 
+			VkFormat color_attachment_formats[MAX_COLOR_ATTACHMENT_PER_SHADER];
+			std::transform(desc.attachment_format.color_attachment_formats, desc.attachment_format.color_attachment_formats + desc.color_attachment_count,
+				color_attachment_formats,
+				[](const TextureFormat texture_format) -> VkFormat
+				{
+					return vk_cast(texture_format);
+				});
+
+			const VkPipelineRenderingCreateInfo rendering_create_info = {
+				.sType = VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO,
+				.colorAttachmentCount = desc.color_attachment_count,
+				.pColorAttachmentFormats = color_attachment_formats,
+				.depthAttachmentFormat = vk_cast(desc.attachment_format.depth_attachment_format),
+				.stencilAttachmentFormat = vk_cast(desc.attachment_format.stencil_attachment_format)
+			};
+
 			const VkGraphicsPipelineCreateInfo pipeline_info = {
 				.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
+				.pNext = &rendering_create_info,
 				.stageCount = soul::cast<uint32>(shader_stage_infos.size()),
 				.pStages = shader_stage_infos.data(),
-				.pVertexInputState = &inputStateInfo,
+				.pVertexInputState = &input_state_info,
 				.pInputAssemblyState = &input_assembly_state,
 				.pViewportState = &viewport_state,
 				.pRasterizationState = &rasterizer_state,
@@ -1476,7 +1493,6 @@ namespace soul::gpu
 				.pColorBlendState = &color_blending,
 				.pDynamicState = nullptr,
 				.layout = get_bindless_pipeline_layout(),
-				.renderPass = render_pass,
 				.subpass = 0,
 				.basePipelineHandle = VK_NULL_HANDLE
 			};
@@ -1490,7 +1506,7 @@ namespace soul::gpu
 			shader_stage_infos.cleanup();
 			return { pipeline, VK_PIPELINE_BIND_POINT_GRAPHICS, desc.program_id };
 		};
-		return PipelineStateID(_db.pipeline_state_cache.create(key, create_graphic_pipeline_state, desc, renderPass, sample_count));
+		return PipelineStateID(_db.pipeline_state_cache.create(key, create_raster_pipeline_state, desc));
 
 	}
 

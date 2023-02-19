@@ -76,32 +76,32 @@ class MSAASample final : public App
 		const auto enable_msaa = msaa_sample_count_ != gpu::TextureSampleCount::COUNT_1;
 		const auto viewport = gpu_system_->get_swapchain_extent();
 
-		const auto sample_render_target_desc = [this, enable_msaa, viewport, &render_graph]() -> gpu::RGRenderTargetDesc
+		const auto sample_render_target_desc = [this, enable_msaa, viewport, &render_graph]() -> gpu::RGRasterTargetDesc
 		{
 
 			const auto sample_render_target_dim = vec2ui32(viewport.x / 4, viewport.y / 4);
 			if (enable_msaa)
 			{
-				const gpu::ColorAttachmentDesc color_attachment_desc = {
+				const gpu::RGColorAttachmentDesc color_attachment_desc = {
 					.node_id = render_graph.create_texture("MSAA Color Target",
 						gpu::RGTextureDesc::create_d2(gpu::TextureFormat::RGBA8, 1,
 						sample_render_target_dim, true, gpu::ClearValue(), msaa_sample_count_)),
 					.clear = true
 				};
 
-				const gpu::ResolveAttachmentDesc resolve_attachment_desc = {
+				const gpu::RGResolveAttachmentDesc resolve_attachment_desc = {
 				   .node_id = render_graph.create_texture("MSAA Resolve Target",
 						gpu::RGTextureDesc::create_d2(gpu::TextureFormat::RGBA8, 1,
 						sample_render_target_dim, true))
 				};
 
-				const gpu::DepthStencilAttachmentDesc depth_attachment_desc = {
+				const gpu::RGDepthStencilAttachmentDesc depth_attachment_desc = {
 					.node_id = render_graph.create_texture("MSAA Depth Target",
 						gpu::RGTextureDesc::create_d2(gpu::TextureFormat::DEPTH32F, 1,
 						sample_render_target_dim, true, gpu::ClearValue(), msaa_sample_count_)),
 					.clear = true
 				};
-				return gpu::RGRenderTargetDesc(
+				return gpu::RGRasterTargetDesc(
 					sample_render_target_dim,
 					msaa_sample_count_,
 					color_attachment_desc,
@@ -110,21 +110,21 @@ class MSAASample final : public App
 				);
 			}
 
-			const gpu::ColorAttachmentDesc color_attachment_desc = {
+			const gpu::RGColorAttachmentDesc color_attachment_desc = {
 				.node_id = render_graph.create_texture("Color Target",
 					gpu::RGTextureDesc::create_d2(gpu::TextureFormat::RGBA8, 1,
 					sample_render_target_dim, true, gpu::ClearValue())),
 				.clear = true
 			};
 
-			const gpu::DepthStencilAttachmentDesc depth_attachment_desc = {
+			const gpu::RGDepthStencilAttachmentDesc depth_attachment_desc = {
 				.node_id = render_graph.create_texture("Depth Target",
 					gpu::RGTextureDesc::create_d2(gpu::TextureFormat::DEPTH32F, 1,
 					sample_render_target_dim, true, gpu::ClearValue())),
 				.clear = true
 			};
 
-			return gpu::RGRenderTargetDesc(
+			return gpu::RGRasterTargetDesc(
 				sample_render_target_dim,
 				color_attachment_desc,
 				depth_attachment_desc
@@ -140,7 +140,7 @@ class MSAASample final : public App
 			}, 
 			[render_dim = sample_render_target_desc.dimension, this](const auto& parameter, auto& registry, auto& command_list)
 			{
-				const gpu::GraphicPipelineStateDesc pipeline_desc = {
+				const gpu::RasterPipelineStateDesc pipeline_desc = {
 					.program_id = program_id_,
 					.input_bindings = {
 						{.stride = sizeof(Vertex)}

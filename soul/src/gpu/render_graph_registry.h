@@ -18,8 +18,8 @@ namespace soul::gpu
 	public:
 
 		RenderGraphRegistry() = delete;
-		RenderGraphRegistry(System& system, const impl::RenderGraphExecution& execution, const VkRenderPass render_pass = VK_NULL_HANDLE, const TextureSampleCount sample_count = TextureSampleCount::COUNT_1) :
-			system_(system), execution_(execution), render_pass_(render_pass), sample_count_(sample_count) {}
+		RenderGraphRegistry(System& system, const impl::RenderGraphExecution& execution, PassNodeID pass_node_id) :
+			system_(system), execution_(execution), pass_node_id_(pass_node_id) {}
 
 		RenderGraphRegistry(const RenderGraphRegistry& other) = delete;
 		RenderGraphRegistry& operator=(const RenderGraphRegistry& other) = delete;
@@ -29,15 +29,14 @@ namespace soul::gpu
 
 		~RenderGraphRegistry() = default;
 
-		[[nodiscard]] BufferID get_buffer(BufferNodeID bufferNodeID) const;
-		[[nodiscard]] TextureID get_texture(TextureNodeID textureNodeId) const;
-		PipelineStateID get_pipeline_state(const GraphicPipelineStateDesc& desc);
+		[[nodiscard]] BufferID get_buffer(BufferNodeID buffer_node_id) const;
+		[[nodiscard]] TextureID get_texture(TextureNodeID texture_node_id) const;
+		PipelineStateID get_pipeline_state(const RasterPipelineStateDesc& desc);
 		PipelineStateID get_pipeline_state(const ComputePipelineStateDesc& desc);
 
 	private:
 		System& system_;
 		const impl::RenderGraphExecution& execution_;
-		VkRenderPass render_pass_;
-		const TextureSampleCount sample_count_;
+		const PassNodeID pass_node_id_;
 	};
 }

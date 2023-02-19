@@ -41,7 +41,7 @@ class StorageBufferSampleApp final : public App
 	
 	void render(gpu::TextureNodeID render_target, gpu::RenderGraph& render_graph) override
 	{
-		const gpu::ColorAttachmentDesc color_attachment_desc = {
+		const gpu::RGColorAttachmentDesc color_attachment_desc = {
 			.node_id = render_target,
 			.clear = true
 		};
@@ -50,7 +50,7 @@ class StorageBufferSampleApp final : public App
 
 		struct PassParameter {};
 		render_graph.add_raster_pass<PassParameter>("Storage Buffer Test",
-			gpu::RGRenderTargetDesc(
+			gpu::RGRasterTargetDesc(
 				viewport,
 				color_attachment_desc
 			)
@@ -60,7 +60,7 @@ class StorageBufferSampleApp final : public App
 			}, [viewport, this](const auto& parameter, auto& registry, auto& command_list)
 			{
 
-				const gpu::GraphicPipelineStateDesc pipeline_desc = {
+				const gpu::RasterPipelineStateDesc pipeline_desc = {
 					.program_id = program_id_,
 					.input_bindings = {
 						{.stride = sizeof(Vertex)}

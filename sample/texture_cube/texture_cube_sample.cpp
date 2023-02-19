@@ -69,7 +69,7 @@ class TextureCubeSampleApp final : public App
 
 	void render(gpu::TextureNodeID render_target, gpu::RenderGraph& render_graph) override
 	{
-		const gpu::ColorAttachmentDesc color_attachment_desc = {
+		const gpu::RGColorAttachmentDesc color_attachment_desc = {
 			.node_id = render_target,
 			.clear = true
 		};
@@ -77,13 +77,13 @@ class TextureCubeSampleApp final : public App
 		const vec2ui32 viewport = gpu_system_->get_swapchain_extent();
 		struct RenderPassParameter {};
 		render_graph.add_raster_pass<RenderPassParameter>("Render texture cube pass",
-			gpu::RGRenderTargetDesc(viewport, color_attachment_desc),
+			gpu::RGRasterTargetDesc(viewport, color_attachment_desc),
 			[this](auto& parameter, auto& builder)
 			{
 
 			}, [viewport, this](const auto& parameter, auto& registry, auto& command_list)
 			{
-				const gpu::GraphicPipelineStateDesc pipeline_desc = {
+				const gpu::RasterPipelineStateDesc pipeline_desc = {
 						.program_id = program_id_,
 						.input_bindings = {
 							{.stride = sizeof(SkyboxVertex)}

@@ -447,4 +447,12 @@ namespace soul::gpu
 		    VK_ACCESS_ACCELERATION_STRUCTURE_WRITE_BIT_KHR,
 		});
 	}
+
+	SOUL_ALWAYS_INLINE VkRect2D vk_cast(const Rect2D area)
+	{
+		return {
+			.offset = {area.offset.x, area.offset.y},
+			.extent = {area.extent.x, area.extent.y}
+		};
+	}
 }

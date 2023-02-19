@@ -11,7 +11,7 @@ class TriangleSampleApp final : public App
 
 	void render(gpu::TextureNodeID render_target, gpu::RenderGraph& render_graph) override
 	{
-		const gpu::ColorAttachmentDesc color_attachment_desc = {
+		const gpu::RGColorAttachmentDesc color_attachment_desc = {
 			.node_id = render_target,
 			.clear = true
 		};
@@ -20,7 +20,7 @@ class TriangleSampleApp final : public App
 
 		struct PassParameter {};
 		render_graph.add_raster_pass<PassParameter>("Triangle Test",
-			gpu::RGRenderTargetDesc(
+			gpu::RGRasterTargetDesc(
 				viewport,
 				color_attachment_desc
 			)
@@ -30,7 +30,7 @@ class TriangleSampleApp final : public App
 				// We will hardcode the triangle vertex on the shader in this example.
 			}, [viewport, this](const auto& parameter, auto& registry, auto& command_list) -> void
 			{
-				const gpu::GraphicPipelineStateDesc pipeline_desc = {
+				const gpu::RasterPipelineStateDesc pipeline_desc = {
 					.program_id = program_id_,
 					.viewport = {
 						.width = static_cast<float>(viewport.x),

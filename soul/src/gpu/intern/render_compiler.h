@@ -14,6 +14,7 @@ namespace soul::gpu
 	struct RenderCommandUpdateBuffer;
 	struct RenderCommandCopyBuffer;
 	struct RenderCommandDispatch;
+	struct RasterTargetDesc;
 
 	namespace impl
 	{
@@ -32,8 +33,10 @@ namespace soul::gpu::impl
 		void bind_descriptor_sets(VkPipelineBindPoint pipeline_bind_point);
 		void begin_render_pass(const VkRenderPassBeginInfo& render_pass_begin_info, VkSubpassContents subpass_contents);
 		void end_render_pass();
-		void execute_secondary_command_buffers(uint32 count, const SecondaryCommandBuffer* secondary_command_buffers);
-
+		void begin_raster(const RasterTargetDesc& raster_target, bool use_secondary_command_buffer);
+		void end_raster();
+	    void execute_secondary_command_buffers(uint32 count, const SecondaryCommandBuffer* secondary_command_buffers);
+		
 		void compile_command(const RenderCommand& command);
 		void compile_command(const RenderCommandDraw& command);
 		void compile_command(const RenderCommandDrawIndex& command);

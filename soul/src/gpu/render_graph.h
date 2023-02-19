@@ -174,7 +174,7 @@ namespace soul::gpu
 		soul_size size = 0;
 	};
 
-	struct ColorAttachmentDesc
+	struct RGColorAttachmentDesc
 	{
 		TextureNodeID node_id;
 		SubresourceIndex view = SubresourceIndex();
@@ -182,7 +182,7 @@ namespace soul::gpu
 		ClearValue clear_value;
 	};
 
-	struct DepthStencilAttachmentDesc
+	struct RGDepthStencilAttachmentDesc
 	{
 		TextureNodeID node_id;
 		SubresourceIndex view;
@@ -191,7 +191,7 @@ namespace soul::gpu
 		ClearValue clear_value;
 	};
 
-	struct ResolveAttachmentDesc
+	struct RGResolveAttachmentDesc
 	{
 		TextureNodeID node_id;
 		SubresourceIndex view;
@@ -264,9 +264,9 @@ namespace soul::gpu
 		TextureNodeID out_node_id;
 		AttachmentDesc desc;
 	};
-	using ColorAttachment = AttachmentAccess<ColorAttachmentDesc>;
-	using DepthStencilAttachment = AttachmentAccess<DepthStencilAttachmentDesc>;
-	using ResolveAttachment = AttachmentAccess<ResolveAttachmentDesc>;
+	using RGColorAttachment = AttachmentAccess<RGColorAttachmentDesc>;
+	using RGDepthStencilAttachment = AttachmentAccess<RGDepthStencilAttachmentDesc>;
+	using RGResolveAttachment = AttachmentAccess<RGResolveAttachmentDesc>;
 
 	struct TransferSrcBufferAccess
 	{
@@ -301,38 +301,38 @@ namespace soul::gpu
 		SubresourceIndexRange view_range;
 	};
 
-	struct RGRenderTargetDesc
+	struct RGRasterTargetDesc
 	{
-		RGRenderTargetDesc() = default;
+		RGRasterTargetDesc() = default;
 
-		RGRenderTargetDesc(vec2ui32 dimension, const ColorAttachmentDesc& color) : 
+		RGRasterTargetDesc(vec2ui32 dimension, const RGColorAttachmentDesc& color) : 
 			dimension(dimension), color_attachments(std::to_array({color})){}
 
-		RGRenderTargetDesc(vec2ui32 dimension, const ColorAttachmentDesc& color, const DepthStencilAttachmentDesc& depth_stencil) :
+		RGRasterTargetDesc(vec2ui32 dimension, const RGColorAttachmentDesc& color, const RGDepthStencilAttachmentDesc& depth_stencil) :
 			dimension(dimension), color_attachments(std::to_array({color})), depth_stencil_attachment(depth_stencil) {}
 
-		RGRenderTargetDesc(vec2ui32 dimension, const TextureSampleCount sample_count, const ColorAttachmentDesc& color, 
-			const ResolveAttachmentDesc& resolve, const DepthStencilAttachmentDesc depth_stencil):
+		RGRasterTargetDesc(vec2ui32 dimension, const TextureSampleCount sample_count, const RGColorAttachmentDesc& color, 
+			const RGResolveAttachmentDesc& resolve, const RGDepthStencilAttachmentDesc depth_stencil):
 			dimension(dimension), sample_count(sample_count), 
 			color_attachments(std::to_array({color})), resolve_attachments(std::to_array({resolve})), depth_stencil_attachment(depth_stencil) {}
 
-		RGRenderTargetDesc(vec2ui32 dimension, const DepthStencilAttachmentDesc& depth_stencil) :
+		RGRasterTargetDesc(vec2ui32 dimension, const RGDepthStencilAttachmentDesc& depth_stencil) :
 			dimension(dimension), depth_stencil_attachment(depth_stencil)  {}
 
 		vec2ui32 dimension = {};
 		TextureSampleCount sample_count = TextureSampleCount::COUNT_1;
-		SBOVector<ColorAttachmentDesc, 1> color_attachments;
-		SBOVector<ResolveAttachmentDesc, 1> resolve_attachments;
-		DepthStencilAttachmentDesc depth_stencil_attachment;
+		SBOVector<RGColorAttachmentDesc, 1> color_attachments;
+		SBOVector<RGResolveAttachmentDesc, 1> resolve_attachments;
+		RGDepthStencilAttachmentDesc depth_stencil_attachment;
 	};
 
-	struct RGRenderTarget
+	struct RGRasterTarget
 	{
 		vec2ui32 dimension = {};
 		TextureSampleCount sample_count = TextureSampleCount::COUNT_1;
-		Vector<ColorAttachment> color_attachments;
-		Vector<ResolveAttachment> resolve_attachments;
-		DepthStencilAttachment depth_stencil_attachment;
+		Vector<RGColorAttachment> color_attachments;
+		Vector<RGResolveAttachment> resolve_attachments;
+		RGDepthStencilAttachment depth_stencil_attachment;
 	};
 	
 	template <PipelineFlags pipeline_flags>
@@ -357,7 +357,7 @@ namespace soul::gpu
 		TextureNodeID add_src_texture(TextureNodeID node_id);
 		TextureNodeID add_dst_texture(TextureNodeID node_id, TransferDataSource data_source = TransferDataSource::GPU);
 
-		void set_render_target(const RGRenderTargetDesc& render_target_desc);
+		void set_render_target(const RGRasterTargetDesc& render_target_desc);
 
 	private:
 		const PassNodeID pass_id_;
@@ -392,7 +392,7 @@ namespace soul::gpu
 		[[nodiscard]] std::span<const TransferSrcTextureAccess> get_source_textures() const { return source_textures_; }
 		[[nodiscard]] std::span<const TransferDstTextureAccess> get_destination_textures() const { return destination_textures_; }
 
-		[[nodiscard]] const RGRenderTarget& get_render_target() const { return render_target_; }
+		[[nodiscard]] const RGRasterTarget& get_raster_target() const { return raster_target_; }
 
 
 	protected:
@@ -421,7 +421,7 @@ namespace soul::gpu
 		Vector<BufferNodeID> vertex_buffers_;
 		Vector<BufferNodeID> index_buffers_;
 
-		RGRenderTarget render_target_;
+		RGRasterTarget raster_target_;
 
 		template <PipelineFlags pipeline_flags>
 		friend class RGDependencyBuilder;
@@ -498,7 +498,7 @@ namespace soul::gpu
 			typename Setup,
 			typename Executable
 		>
-		const auto& add_raster_pass(const char* name, const RGRenderTargetDesc& render_target, Setup&& setup, Executable&& execute)
+		const auto& add_raster_pass(const char* name, const RGRasterTargetDesc& render_target, Setup&& setup, Executable&& execute)
 		{
 			static_assert(raster_pass_setup <Setup, Parameter>);
 			static_assert(raster_pass_executable<Executable, Parameter>);
@@ -580,6 +580,7 @@ namespace soul::gpu
 		ResourceNodeID write_resource_node(ResourceNodeID resource_node_id, PassNodeID pass_node_id);
 		[[nodiscard]] const impl::ResourceNode& get_resource_node(ResourceNodeID node_id) const;
 		impl::ResourceNode& get_resource_node(ResourceNodeID node_id);
+		[[nodiscard]] const PassBaseNode& get_pass_node(PassNodeID node_id) const;
 
 		template<RGResourceType resource_type>
 		TypedResourceNodeID<resource_type> create_resource_node(impl::RGResourceID resource_id)
@@ -763,7 +764,7 @@ namespace soul::gpu
     }
 
     template <PipelineFlags pipeline_flags>
-    void RGDependencyBuilder<pipeline_flags>::set_render_target(const RGRenderTargetDesc& render_target_desc)
+    void RGDependencyBuilder<pipeline_flags>::set_render_target(const RGRasterTargetDesc& render_target_desc)
     {
 		static_assert(pipeline_flags.test(PipelineType::RASTER));
 		auto to_output_attachment = [this]<typename AttachmentDesc>(const AttachmentDesc attachment_desc) -> auto
@@ -776,21 +777,21 @@ namespace soul::gpu
 		};
 
 		std::ranges::transform(render_target_desc.color_attachments,
-			std::back_inserter(pass_node_.render_target_.color_attachments), to_output_attachment);
+			std::back_inserter(pass_node_.raster_target_.color_attachments), to_output_attachment);
 		std::ranges::transform(render_target_desc.resolve_attachments,
-			std::back_inserter(pass_node_.render_target_.resolve_attachments), to_output_attachment);
+			std::back_inserter(pass_node_.raster_target_.resolve_attachments), to_output_attachment);
 		if (render_target_desc.depth_stencil_attachment.node_id.is_valid())
 		{
 			const auto& depth_desc = render_target_desc.depth_stencil_attachment;
 			const TextureNodeID out_node_id = depth_desc.depth_write_enable ? 
 				depth_desc.node_id : render_graph_.write_resource_node(depth_desc.node_id, pass_id_);
-			pass_node_.render_target_.depth_stencil_attachment = {
+			pass_node_.raster_target_.depth_stencil_attachment = {
 				.out_node_id = out_node_id,
 				.desc = depth_desc
 			};
 		}
-		pass_node_.render_target_.dimension = render_target_desc.dimension;
-		pass_node_.render_target_.sample_count = render_target_desc.sample_count;
+		pass_node_.raster_target_.dimension = render_target_desc.dimension;
+		pass_node_.raster_target_.sample_count = render_target_desc.sample_count;
     }
 
     template <PipelineFlags pipeline_flags, typename Parameter, typename Execute>

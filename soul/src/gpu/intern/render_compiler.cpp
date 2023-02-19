@@ -28,7 +28,24 @@ namespace soul::gpu::impl
 		vkCmdEndRenderPass(command_buffer_);
     }
 
-	void RenderCompiler::execute_secondary_command_buffers(uint32_t count, const SecondaryCommandBuffer* secondary_command_buffers)
+    void RenderCompiler::begin_raster(const RasterTargetDesc& raster_target, bool use_secondary_command_buffer)
+    {
+		VkRenderingAttachmentInfo vk_color_attachment_infos[MAX_COLOR_ATTACHMENT_PER_SHADER];\
+
+		const auto 
+
+		const VkRenderingInfo rendering_info = {
+			.sType = VK_STRUCTURE_TYPE_RENDERING_INFO,
+			.flags = use_secondary_command_buffer ? VK_RENDERING_CONTENTS_SECONDARY_COMMAND_BUFFERS_BIT : 0,
+			.renderArea = vk_cast(raster_target.render_area),
+			.layerCount = raster_target.layer_count,
+			.colorAttachmentCount = raster_target.color_attachment_count,
+			.pColorAttachments = vk_color_attachment_infos
+		};
+		vkCmdBeginRendering(command_buffer_, &rendering_info);
+    }
+
+    void RenderCompiler::execute_secondary_command_buffers(uint32_t count, const SecondaryCommandBuffer* secondary_command_buffers)
 	{
 		static_assert(sizeof(SecondaryCommandBuffer) == sizeof(VkCommandBuffer));
 		const auto* command_buffers = reinterpret_cast<const VkCommandBuffer*>(secondary_command_buffers);

@@ -46,7 +46,7 @@ class Texture2DSampleApp final : public App
 
 	void render(gpu::TextureNodeID render_target, gpu::RenderGraph& render_graph) override
 	{
-		const gpu::ColorAttachmentDesc color_attachment_desc = {
+		const gpu::RGColorAttachmentDesc color_attachment_desc = {
 			.node_id = render_target,
 			.clear = true
 		};
@@ -55,7 +55,7 @@ class Texture2DSampleApp final : public App
 
 	    struct RenderPassParameter {};
 	    render_graph.add_raster_pass<RenderPassParameter>("Render Pass",
-		    gpu::RGRenderTargetDesc(
+		    gpu::RGRasterTargetDesc(
 			    viewport,
 			    color_attachment_desc
 		    )
@@ -64,7 +64,7 @@ class Texture2DSampleApp final : public App
 		    }, [viewport, this](const auto& parameter, auto& registry, auto& command_list)
 		    {
 
-			    const gpu::GraphicPipelineStateDesc pipeline_desc = {
+			    const gpu::RasterPipelineStateDesc pipeline_desc = {
 				    .program_id = program_id_,
 				    .input_bindings = {
 					    {.stride = sizeof(Vertex)}
