@@ -82,9 +82,96 @@ namespace soul::gpu::impl
 		SOUL_ASSERT(0, !texture_info->view->passes.empty(), "");
 	};
 
-	void RenderGraphExecution::init() {
+    PassDependencyGraph::PassDependencyGraph(soul_size pass_node_count, 
+		std::span<const impl::ResourceNode> resource_nodes) :
+	    pass_node_count_(pass_node_count),
+        dependencies_(pass_node_count),
+	    dependants_(pass_node_count),
+	    dependency_levels_(pass_node_count)
+    {
+
+		for (auto& dependency_matrix : dependency_matrixes_)
+		{
+			dependency_matrix.resize(pass_node_count * pass_node_count);
+		}
+
+		for (const auto& resource_node : resource_nodes)
+		{
+			if (resource_node.creator.is_null()) continue;
+
+			for (const auto pass_node_id : resource_node.readers)
+				set_dependency(resource_node.creator, pass_node_id, DependencyType::READ_AFTER_WRITE);
+
+			if (resource_node.writer.is_valid())
+			{
+				set_dependency(resource_node.creator, resource_node.writer, DependencyType::WRITE_AFTER_WRITE);
+				
+				for (const auto pass_node_id : resource_node.readers)
+					set_dependency(pass_node_id, resource_node.writer, DependencyType::WRITE_AFTER_READ);
+			}
+		}
+
+		std::ranges::fill(dependency_levels_, UNINITIALIZED_DEPENDENCY_LEVEL);
+		for (soul_size pass_index = 0; pass_index < pass_node_count; pass_index++)
+		{
+			calculate_dependency_level(PassNodeID(pass_index));
+		}
+    }
+
+    PassDependencyGraph::DependencyFlags PassDependencyGraph::get_dependency_flags(const PassNodeID src_node_id, const PassNodeID dst_node_id) const
+    {
+		DependencyFlags dependency_flags;
+		const auto matrix_index = get_dependency_matrix_index(src_node_id, dst_node_id);
+		for (const auto dependency_type  : FlagIter<DependencyType>())
+		{
+			if (dependency_matrixes_[dependency_type][matrix_index]) dependency_flags.set(dependency_type);
+		}
+
+		return dependency_flags;
+    }
+
+    void PassDependencyGraph::set_dependency(const PassNodeID src_node_id, const PassNodeID dst_node_id,
+                                             const DependencyType dependency_type)
+    {
+		if (get_dependency_flags(src_node_id, dst_node_id).none())
+		{
+			dependencies_[dst_node_id.id].push_back(src_node_id);
+			dependants_[src_node_id.id].push_back(dst_node_id);
+		}
+		dependency_matrixes_[dependency_type].set(get_dependency_matrix_index(src_node_id, dst_node_id));
+    }
+
+    soul_size PassDependencyGraph::get_pass_node_count() const
+    {
+		return pass_node_count_;
+    }
+
+    soul_size PassDependencyGraph::get_dependency_matrix_index(const PassNodeID src_node_id, const PassNodeID dst_node_id) const
+    {
+		return src_node_id.id * get_pass_node_count() + dst_node_id.id;
+    }
+
+    soul_size PassDependencyGraph::calculate_dependency_level(PassNodeID pass_node_id)
+    {
+		if (dependency_levels_[pass_node_id.id] == UNINITIALIZED_DEPENDENCY_LEVEL)
+		{
+			soul_size dependency_level = 0u;
+			for (const auto dependency_node_id : dependencies_[pass_node_id.id])
+			{
+				dependency_level = std::max(dependency_level, 1 + calculate_dependency_level(dependency_node_id));
+			}
+			dependency_levels_[pass_node_id.id] = dependency_level;
+		}
+		return dependency_levels_[pass_node_id.id];
+    }
+
+    void RenderGraphExecution::init() {
 		SOUL_ASSERT_MAIN_THREAD();
 		SOUL_PROFILE_ZONE_WITH_NAME("Render Graph Execution Init");
+
+		compute_active_passes();
+		compute_pass_order();
+
 		pass_infos_.resize(render_graph_->get_pass_nodes().size());
 
 		buffer_infos_.resize(render_graph_->get_internal_buffers().size() + render_graph_->get_external_buffers().size());
@@ -130,16 +217,16 @@ namespace soul::gpu::impl
 			view_offset += texture_info.get_view_count();
 		}
 
-		for (soul_size i = 0; i < pass_infos_.size(); i++) {
-			const auto pass_node_id = PassNodeID(soul::cast<uint16>(i));
-			const PassBaseNode& pass_node = *render_graph_->get_pass_nodes()[i];
+		for (const auto pass_node_id : pass_order_) {
+			const auto pass_index = pass_node_id.id;
+			const PassBaseNode& pass_node = *render_graph_->get_pass_nodes()[pass_index];
 			const auto pass_queue_type = pass_node.get_queue_type();
-			PassExecInfo& pass_info = pass_infos_[i];
+			PassExecInfo& pass_info = pass_infos_[pass_index];
 
-			init_shader_buffers(pass_node.get_buffer_read_accesses(), i, pass_queue_type);
-			init_shader_buffers(pass_node.get_buffer_write_accesses(), i, pass_queue_type);
-			init_shader_textures(pass_node.get_texture_read_accesses(), i, pass_queue_type);
-			init_shader_textures(pass_node.get_texture_write_accesses(), i, pass_queue_type);
+			init_shader_buffers(pass_node.get_buffer_read_accesses(), pass_node_id, pass_queue_type);
+			init_shader_buffers(pass_node.get_buffer_write_accesses(), pass_node_id, pass_queue_type);
+			init_shader_textures(pass_node.get_texture_read_accesses(), pass_node_id, pass_queue_type);
+			init_shader_textures(pass_node.get_texture_write_accesses(), pass_node_id, pass_queue_type);
 
 			for (const BufferNodeID node_id : pass_node.get_vertex_buffers()) {
 				SOUL_ASSERT(0, node_id.is_valid(), "");
@@ -403,7 +490,58 @@ namespace soul::gpu::impl
 		}
 	}
 
-	VkRenderPass RenderGraphExecution::create_render_pass(const uint32 pass_index) {
+	void traverse_recursive(BitVector<>& pass_node_bits, const PassNodeID pass_node_id, const PassDependencyGraph& adj_list)
+	{
+		if (pass_node_bits[pass_node_id.id]) return;
+		pass_node_bits.set(pass_node_id.id);
+	    for (const auto dependency_node_id : adj_list.get_dependencies(pass_node_id))
+		{
+			const auto dependency_flags = adj_list.get_dependency_flags(dependency_node_id, pass_node_id);
+			if ((dependency_flags & PassDependencyGraph::OP_AFTER_WRITE_DEPENDENCY).any())
+				traverse_recursive(pass_node_bits, dependency_node_id, adj_list);
+		}
+	}
+
+    void RenderGraphExecution::compute_active_passes()
+    {
+		const auto& pass_nodes = render_graph_->get_pass_nodes();
+
+		active_passes_.resize(pass_nodes.size());
+		for (const auto& resource_node : render_graph_->get_resource_nodes())
+		{
+			if (resource_node.creator.is_valid() && resource_node.resource_id.is_external())
+			{
+				traverse_recursive(active_passes_, resource_node.creator, pass_dependency_graph_);
+			}
+		}
+    }
+
+    void RenderGraphExecution::compute_pass_order()
+    {
+		const auto& pass_nodes = render_graph_->get_pass_nodes();
+
+		pass_order_.reserve(pass_nodes.size());
+		for (auto pass_index = 0u; pass_index < pass_nodes.size(); pass_index++)
+		{
+			if (active_passes_[pass_index]) pass_order_.push_back(PassNodeID(pass_index));
+		}
+
+		const auto pass_compare_func = [this](const PassNodeID node1, const PassNodeID node2) -> bool
+		{
+			const auto node1_dependency_level = pass_dependency_graph_.get_dependency_level(node1);
+			const auto node2_dependency_level = pass_dependency_graph_.get_dependency_level(node2);
+			if (node1_dependency_level == node2_dependency_level)
+			{
+				const auto node1_dependent_count = pass_dependency_graph_.get_dependants(node1).size();
+				const auto node2_dependent_count = pass_dependency_graph_.get_dependants(node2).size();
+				return node1_dependent_count < node2_dependent_count;
+			}
+			return node1_dependency_level < node2_dependency_level;
+		};
+		std::ranges::sort(pass_order_, pass_compare_func);
+    }
+
+    VkRenderPass RenderGraphExecution::create_render_pass(const uint32 pass_index) {
 		SOUL_PROFILE_ZONE();
 		SOUL_ASSERT_MAIN_THREAD();
 
@@ -656,8 +794,9 @@ namespace soul::gpu::impl
 		};
 
 
-		for (uint32 pass_index = 0; pass_index < render_graph_->get_pass_nodes().size(); pass_index++) {
-			runtime::ScopeAllocator passNodeScopeAllocator("Pass Node Scope Allocator", runtime::get_temp_allocator());
+		for (const auto pass_node_id : pass_order_) {
+			const auto pass_index = pass_node_id.id;
+		    runtime::ScopeAllocator passNodeScopeAllocator("Pass Node Scope Allocator", runtime::get_temp_allocator());
 			PassBaseNode* pass_node = render_graph_->get_pass_nodes()[pass_index];
 			auto current_queue_type = pass_node->get_queue_type();
 			auto& command_queue = command_queues_[current_queue_type];
@@ -1070,8 +1209,8 @@ namespace soul::gpu::impl
 
 	}
 
-	void RenderGraphExecution::init_shader_buffers(const std::span<const ShaderBufferReadAccess> access_list, const soul_size index, const QueueType queue_type) {
-		PassExecInfo& pass_info = pass_infos_[index];
+	void RenderGraphExecution::init_shader_buffers(const std::span<const ShaderBufferReadAccess> access_list, PassNodeID pass_node_id, const QueueType queue_type) {
+		PassExecInfo& pass_info = pass_infos_[pass_node_id.id];
 		for (const ShaderBufferReadAccess& shader_access : access_list) {
 			SOUL_ASSERT(0, shader_access.node_id.is_valid(), "");
 
@@ -1091,13 +1230,13 @@ namespace soul::gpu::impl
 				.buffer_info_idx = buffer_info_id
 			});
 
-			update_buffer_info(queue_type, impl::get_buffer_usage_flags(shader_access.usage), PassNodeID(index), &buffer_infos_[buffer_info_id]);
+			update_buffer_info(queue_type, impl::get_buffer_usage_flags(shader_access.usage), pass_node_id, &buffer_infos_[buffer_info_id]);
 		}
 
 	}
 
-	void RenderGraphExecution::init_shader_buffers(std::span<const ShaderBufferWriteAccess> access_list, const soul_size index, const QueueType queue_type) {
-		PassExecInfo& pass_info = pass_infos_[index];
+	void RenderGraphExecution::init_shader_buffers(std::span<const ShaderBufferWriteAccess> access_list, PassNodeID pass_node_id, const QueueType queue_type) {
+		PassExecInfo& pass_info = pass_infos_[pass_node_id.id];
 		for (const auto& shader_access : access_list) {
 			SOUL_ASSERT(0, shader_access.output_node_id.is_valid(), "");
 
@@ -1117,20 +1256,20 @@ namespace soul::gpu::impl
 				.buffer_info_idx = buffer_info_id
 			});
 
-			update_buffer_info(queue_type, get_buffer_usage_flags(shader_access.usage), PassNodeID(index), &buffer_infos_[buffer_info_id]);
+			update_buffer_info(queue_type, get_buffer_usage_flags(shader_access.usage), pass_node_id, &buffer_infos_[buffer_info_id]);
 		}
 
 	}
 
-	void RenderGraphExecution::init_shader_textures(std::span<const ShaderTextureReadAccess> access_list, const soul_size index, const QueueType queue_type) {
-		PassExecInfo& pass_info = pass_infos_[index];
+	void RenderGraphExecution::init_shader_textures(std::span<const ShaderTextureReadAccess> access_list, PassNodeID pass_node_id, const QueueType queue_type) {
+		PassExecInfo& pass_info = pass_infos_[pass_node_id.id];
 		for (const auto& shader_access : access_list) {
 			SOUL_ASSERT(0, shader_access.node_id.is_valid(), "");
 
 			const auto texture_info_id = get_texture_info_index(shader_access.node_id);
 			const auto stage_flags = cast_to_pipeline_stage_flags(shader_access.stage_flags);
 
-			update_texture_info(queue_type, get_texture_usage_flags(shader_access.usage),PassNodeID(index), shader_access.view_range, &texture_infos_[texture_info_id]);
+			update_texture_info(queue_type, get_texture_usage_flags(shader_access.usage),PassNodeID(pass_node_id), shader_access.view_range, &texture_infos_[texture_info_id]);
 
 			auto is_writable = [](const ShaderTextureReadUsage usage) -> bool {
 				auto mapping = FlagMap<ShaderTextureReadUsage, bool>::build_from_list({
@@ -1168,15 +1307,15 @@ namespace soul::gpu::impl
 		}
 	}
 
-	void RenderGraphExecution::init_shader_textures(std::span<const ShaderTextureWriteAccess> access_list, const soul_size index, const QueueType queue_type) {
-		PassExecInfo& pass_info = pass_infos_[index];
+	void RenderGraphExecution::init_shader_textures(std::span<const ShaderTextureWriteAccess> access_list, PassNodeID pass_node_id, const QueueType queue_type) {
+		PassExecInfo& pass_info = pass_infos_[pass_node_id.id];
 		for (const auto& shader_access : access_list) {
 			SOUL_ASSERT(0, shader_access.output_node_id.is_valid(), "");
 
 			const auto texture_info_id = get_texture_info_index(shader_access.output_node_id);
 			const auto stage_flags = cast_to_pipeline_stage_flags(shader_access.stage_flags);
 
-			update_texture_info(queue_type, get_texture_usage_flags(shader_access.usage), PassNodeID(index), shader_access.view_range, &texture_infos_[texture_info_id]);
+			update_texture_info(queue_type, get_texture_usage_flags(shader_access.usage), PassNodeID(pass_node_id), shader_access.view_range, &texture_infos_[texture_info_id]);
 
 			std::ranges::transform(shader_access.view_range, std::back_inserter(pass_info.texture_invalidates),
         [stage_flags, texture_info_id](const SubresourceIndex& view_index) -> TextureBarrier

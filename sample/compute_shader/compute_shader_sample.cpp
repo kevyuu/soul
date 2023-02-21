@@ -31,7 +31,7 @@ class ComputeShaderSampleApp final : public App
 		{
 		    gpu::TextureNodeID target_texture;
 		};
-		render_graph.add_compute_pass<ComputePassParameter>("Compute Pass",
+		const auto& compute_node = render_graph.add_compute_pass<ComputePassParameter>("Compute Pass",
 			[target_texture](auto& parameter, auto& builder)
 			{
 				parameter.target_texture = builder.add_shader_texture(target_texture, { gpu::ShaderStage::COMPUTE }, gpu::ShaderTextureWriteUsage::STORAGE);
@@ -67,7 +67,7 @@ class ComputeShaderSampleApp final : public App
 		};
 
 		const Texture2DRGPass::Parameter texture_2d_parameter = {
-			.sampled_texture = target_texture,
+			.sampled_texture = compute_node.get_parameter().target_texture,
 			.render_target = render_target
 		};
 		return texture_2d_pass.add_pass(texture_2d_parameter, render_graph);

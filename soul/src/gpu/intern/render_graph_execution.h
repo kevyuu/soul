@@ -74,13 +74,45 @@ namespace soul::gpu::impl
 		}
 	};
 
-	class PassAdjacencyList
+	
+
+	class PassDependencyGraph
 	{
+	public:
+		enum class DependencyType : uint8
+		{
+			READ_AFTER_WRITE,
+            WRITE_AFTER_WRITE,
+			WRITE_AFTER_READ,
+			COUNT
+		};
+		using DependencyFlags = FlagSet<DependencyType>;
+		static constexpr DependencyFlags OP_AFTER_WRITE_DEPENDENCY = 
+		    { DependencyType::READ_AFTER_WRITE, DependencyType::WRITE_AFTER_WRITE };
+
+		using NodeList = Vector<PassNodeID>;
+		using NodeDependencyMatrix = FlagMap<DependencyType, BitVector<>>;
+
+		PassDependencyGraph(soul_size pass_node_count, std::span<const impl::ResourceNode> resource_nodes);
+		[[nodiscard]] DependencyFlags get_dependency_flags(PassNodeID src_node_id, PassNodeID dst_node_id) const;
+		[[nodiscard]] std::span<const PassNodeID> get_dependencies( const PassNodeID node_id) const { return dependencies_[node_id.id]; }
+		[[nodiscard]] std::span<const PassNodeID> get_dependants(const PassNodeID node_id) const { return dependants_[node_id.id]; }
+		[[nodiscard]] soul_size get_dependency_level(PassNodeID node_id) const { return dependency_levels_[node_id.id]; }
+		void set_dependency(PassNodeID src_node_id, PassNodeID dst_node_id, DependencyType dependency_type);
 
 	private:
-		Vector<Vector<PassNodeID>> dependencies_;
-		Vector<Vector<PassNodeID>> dependents_;
+		soul_size pass_node_count_;
+		NodeDependencyMatrix dependency_matrixes_;
+		Vector<NodeList> dependencies_;
+		Vector<NodeList> dependants_;
 		Vector<soul_size> dependency_levels_;
+
+
+		static constexpr auto UNINITIALIZED_DEPENDENCY_LEVEL = ~0u;
+		[[nodiscard]] soul_size get_pass_node_count() const;
+		[[nodiscard]] soul_size get_dependency_matrix_index(PassNodeID src_node_id, PassNodeID dst_node_id) const;
+
+		soul_size calculate_dependency_level(PassNodeID pass_node_id);
 	};
 
 	struct PassExecInfo {
@@ -91,13 +123,27 @@ namespace soul::gpu::impl
 		Vector<TextureBarrier> texture_invalidates;
 	};
 
+	struct PhysicalEvent
+	{
+		VkEvent event;
+		VkDependencyInfo dependency_info;
+	};
+
+	struct PassSynchronizations
+	{
+		Vector<PassNodeID> dependency_events;
+		Vector<VkDependencyInfo> pipeline_barriers;
+
+	};
+
 	class RenderGraphExecution {
 	public:
 		RenderGraphExecution(const RenderGraph* render_graph, System* system, memory::Allocator* allocator, 
 			CommandQueues& command_queues, CommandPools& command_pools):
 			render_graph_(render_graph), gpu_system_(system),
             command_queues_(command_queues), command_pools_(command_pools), buffer_infos_(allocator),
-            texture_infos_(allocator), pass_infos_(allocator)
+            texture_infos_(allocator), pass_infos_(allocator),
+		    pass_dependency_graph_(render_graph->get_pass_nodes().size(), render_graph->get_resource_nodes())
         {}
 
 		RenderGraphExecution() = delete;
@@ -142,17 +188,22 @@ namespace soul::gpu::impl
 
 		Vector<PassExecInfo> pass_infos_;
 		
-		
+		PassDependencyGraph pass_dependency_graph_;
+		BitVector<> active_passes_;
+		Vector<PassNodeID> pass_order_;
+
+		void compute_active_passes();
+		void compute_pass_order();
 
 		[[nodiscard]] VkRenderPass create_render_pass(uint32 pass_index);
 		[[nodiscard]] VkFramebuffer create_framebuffer(uint32 pass_index, VkRenderPass render_pass);
 		void sync_external();
 		void execute_pass(uint32 pass_index, PrimaryCommandBuffer command_buffer);
 
-		void init_shader_buffers(std::span<const ShaderBufferReadAccess> access_list, soul_size index, QueueType queue_type);
-		void init_shader_buffers(std::span<const ShaderBufferWriteAccess> access_list, soul_size index, QueueType queue_type);
-		void init_shader_textures(std::span<const ShaderTextureReadAccess> access_list, soul_size index, QueueType queue_type);
-		void init_shader_textures(std::span<const ShaderTextureWriteAccess> access_list, soul_size index, QueueType queue_type);
+		void init_shader_buffers(std::span<const ShaderBufferReadAccess> access_list, PassNodeID pass_node_id, QueueType queue_type);
+		void init_shader_buffers(std::span<const ShaderBufferWriteAccess> access_list, PassNodeID pass_node_id, QueueType queue_type);
+		void init_shader_textures(std::span<const ShaderTextureReadAccess> access_list, PassNodeID pass_node_id, QueueType queue_type);
+		void init_shader_textures(std::span<const ShaderTextureWriteAccess> access_list, PassNodeID pass_node_id, QueueType queue_type);
 
 	};
 }

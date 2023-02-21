@@ -580,6 +580,7 @@ namespace soul::gpu
 		ResourceNodeID write_resource_node(ResourceNodeID resource_node_id, PassNodeID pass_node_id);
 		[[nodiscard]] const impl::ResourceNode& get_resource_node(ResourceNodeID node_id) const;
 		impl::ResourceNode& get_resource_node(ResourceNodeID node_id);
+		[[nodiscard]] std::span<const impl::ResourceNode> get_resource_nodes() const;
 
 		template<RGResourceType resource_type>
 		TypedResourceNodeID<resource_type> create_resource_node(impl::RGResourceID resource_id)
