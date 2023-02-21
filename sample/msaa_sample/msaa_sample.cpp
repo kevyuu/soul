@@ -50,7 +50,7 @@ class MSAASample final : public App
 		"64"
 	});
 
-	void render(gpu::TextureNodeID render_target, gpu::RenderGraph& render_graph) override
+	gpu::TextureNodeID render(gpu::TextureNodeID render_target, gpu::RenderGraph& render_graph) override
 	{
 
 		if (ImGui::Begin("Options"))
@@ -186,7 +186,7 @@ class MSAASample final : public App
 			.sampled_texture = texture_2d_sample_input,
 			.render_target = render_target
 		};
-		texture_2d_pass_.add_pass(texture_2d_parameter, render_graph);
+		return texture_2d_pass_.add_pass(texture_2d_parameter, render_graph);
 	}
 
 public:

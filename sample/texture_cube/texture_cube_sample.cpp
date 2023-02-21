@@ -67,7 +67,7 @@ class TextureCubeSampleApp final : public App
 	gpu::TextureID skybox_texture_ = gpu::TextureID();
 	gpu::SamplerID skybox_sampler_ = gpu::SamplerID();
 
-	void render(gpu::TextureNodeID render_target, gpu::RenderGraph& render_graph) override
+	gpu::TextureNodeID render(gpu::TextureNodeID render_target, gpu::RenderGraph& render_graph) override
 	{
 		const gpu::ColorAttachmentDesc color_attachment_desc = {
 			.node_id = render_target,
@@ -76,7 +76,7 @@ class TextureCubeSampleApp final : public App
 
 		const vec2ui32 viewport = gpu_system_->get_swapchain_extent();
 		struct RenderPassParameter {};
-		render_graph.add_raster_pass<RenderPassParameter>("Render texture cube pass",
+		const auto& raster_node = render_graph.add_raster_pass<RenderPassParameter>("Render texture cube pass",
 			gpu::RGRenderTargetDesc(viewport, color_attachment_desc),
 			[this](auto& parameter, auto& builder)
 			{
@@ -130,6 +130,8 @@ class TextureCubeSampleApp final : public App
 					.index_count = std::size(SKYBOX_INDICES)
 				});
 			});
+
+		return raster_node.get_color_attachment_node_id();
 	}
 
 public:

@@ -393,7 +393,7 @@ namespace soul::gpu
 		[[nodiscard]] std::span<const TransferDstTextureAccess> get_destination_textures() const { return destination_textures_; }
 
 		[[nodiscard]] const RGRenderTarget& get_render_target() const { return render_target_; }
-
+		[[nodiscard]] TextureNodeID get_color_attachment_node_id() const { return render_target_.color_attachments[0].out_node_id; }
 
 	protected:
 		const char* name_ = nullptr;

@@ -69,7 +69,7 @@ class BufferTransferCommandSample final : public App
 	    return math::rotate(mat4f::identity(), math::radians(elapsed_seconds * 10.0f), vec3f(0.0f, 0.0f, 1.0f));
 	}
 
-	void render(gpu::TextureNodeID render_target, gpu::RenderGraph& render_graph) override
+	gpu::TextureNodeID render(gpu::TextureNodeID render_target, gpu::RenderGraph& render_graph) override
 	{
 		const gpu::ColorAttachmentDesc color_attachment_desc = {
 			.node_id = render_target,
@@ -215,7 +215,7 @@ class BufferTransferCommandSample final : public App
 		{
 			gpu::BufferNodeID transform_buffer;
 		};
-		render_graph.add_raster_pass<RenderPassParameter>("Render Pass",
+		const auto& raster_node = render_graph.add_raster_pass<RenderPassParameter>("Render Pass",
 			gpu::RGRenderTargetDesc(
 				viewport,
 				color_attachment_desc
@@ -283,6 +283,8 @@ class BufferTransferCommandSample final : public App
 				});
 
 			});
+
+		return raster_node.get_color_attachment_node_id();
 	}
 
 public:

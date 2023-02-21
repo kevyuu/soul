@@ -55,7 +55,7 @@ class Texture3DSampleApp final : public App
 
 	const std::chrono::steady_clock::time_point start_ = std::chrono::steady_clock::now();
 
-	void render(gpu::TextureNodeID render_target, gpu::RenderGraph& render_graph) override
+	gpu::TextureNodeID render(gpu::TextureNodeID render_target, gpu::RenderGraph& render_graph) override
 	{
 		const gpu::ColorAttachmentDesc color_attachment_desc = {
 			.node_id = render_target,
@@ -127,7 +127,7 @@ class Texture3DSampleApp final : public App
 		{
 			gpu::TextureNodeID persistent_texture;
 		};
-		render_graph.add_raster_pass<RenderPassParameter>("Render Pass",
+		const auto& raster_node = render_graph.add_raster_pass<RenderPassParameter>("Render Pass",
 			gpu::RGRenderTargetDesc(
 				viewport,
 				color_attachment_desc
@@ -184,6 +184,8 @@ class Texture3DSampleApp final : public App
 				});
 
 			});
+
+		return raster_node.get_color_attachment_node_id();
 	}
 
 public:

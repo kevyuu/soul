@@ -39,7 +39,7 @@ class StorageBufferSampleApp final : public App
 	gpu::BufferID index_buffer_id_ = gpu::BufferID();
 	gpu::BufferID transform_buffer_id_ = gpu::BufferID();
 	
-	void render(gpu::TextureNodeID render_target, gpu::RenderGraph& render_graph) override
+	gpu::TextureNodeID render(gpu::TextureNodeID render_target, gpu::RenderGraph& render_graph) override
 	{
 		const gpu::ColorAttachmentDesc color_attachment_desc = {
 			.node_id = render_target,
@@ -49,7 +49,7 @@ class StorageBufferSampleApp final : public App
 		const vec2ui32 viewport = gpu_system_->get_swapchain_extent();
 
 		struct PassParameter {};
-		render_graph.add_raster_pass<PassParameter>("Storage Buffer Test",
+		const auto& raster_node = render_graph.add_raster_pass<PassParameter>("Storage Buffer Test",
 			gpu::RGRenderTargetDesc(
 				viewport,
 				color_attachment_desc
@@ -109,6 +109,8 @@ class StorageBufferSampleApp final : public App
 					};
 				});
 			});
+
+		return raster_node.get_color_attachment_node_id();
 	}
 
 public:

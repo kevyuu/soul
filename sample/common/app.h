@@ -66,7 +66,7 @@ private:
 
 	const std::chrono::steady_clock::time_point start_ = std::chrono::steady_clock::now();
 
-	virtual void render(soul::gpu::TextureNodeID render_target, soul::gpu::RenderGraph& render_graph) = 0;
+	virtual soul::gpu::TextureNodeID render(soul::gpu::TextureNodeID render_target, soul::gpu::RenderGraph& render_graph) = 0;
 	virtual void handle_input() {}
 
 protected:

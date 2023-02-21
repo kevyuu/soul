@@ -36,7 +36,7 @@ class IndexBufferSampleApp final : public App
 	gpu::BufferID vertex_buffer_id_;
 	gpu::BufferID index_buffer_id_;
 
-	void render(gpu::TextureNodeID render_target, gpu::RenderGraph& render_graph) override
+	gpu::TextureNodeID render(gpu::TextureNodeID render_target, gpu::RenderGraph& render_graph) override
 	{
 		const gpu::ColorAttachmentDesc color_attachment_desc = {
 			.node_id = render_target,
@@ -46,7 +46,7 @@ class IndexBufferSampleApp final : public App
 		const vec2ui32 viewport = gpu_system_->get_swapchain_extent();
 
 		struct PassParameter {};
-		render_graph.add_raster_pass<PassParameter>("Triangle Test",
+		const auto& raster_node = render_graph.add_raster_pass<PassParameter>("Triangle Test",
 			gpu::RGRenderTargetDesc(
 				viewport,
 				color_attachment_desc
@@ -89,6 +89,8 @@ class IndexBufferSampleApp final : public App
 				};
 				command_list.push(command);
 			});
+
+		return raster_node.get_color_attachment_node_id();
 	}
 
 public:

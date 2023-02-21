@@ -13,14 +13,14 @@ using namespace soul;
 class ImguiSampleApp final : public App
 {
 	Texture2DRGPass texture_2d_pass_;
-	void render(gpu::TextureNodeID render_target, gpu::RenderGraph& render_graph) override
+	gpu::TextureNodeID render(gpu::TextureNodeID render_target, gpu::RenderGraph& render_graph) override
 	{
 		ImGui::ShowDemoWindow();
 		
 		const vec2ui32 viewport = gpu_system_->get_swapchain_extent();
 	    const gpu::TextureNodeID blank_texture = render_graph.create_texture("Blank Texture",
 			gpu::RGTextureDesc::create_d2(gpu::TextureFormat::RGBA8, 1, viewport, true, {}));
-		texture_2d_pass_.add_pass({ blank_texture, render_target }, render_graph);
+		return texture_2d_pass_.add_pass({ blank_texture, render_target }, render_graph);
 	}
 
 public:

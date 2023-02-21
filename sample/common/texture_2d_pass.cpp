@@ -112,7 +112,7 @@ Texture2DRGPass::~Texture2DRGPass()
     
 }
 
-void Texture2DRGPass::add_pass(const Parameter& parameter, soul::gpu::RenderGraph& render_graph)
+gpu::TextureNodeID Texture2DRGPass::add_pass(const Parameter& parameter, soul::gpu::RenderGraph& render_graph)
 {
 	const gpu::TextureNodeID render_target = parameter.render_target;
 	const gpu::ColorAttachmentDesc color_attachment_desc = {
@@ -122,7 +122,7 @@ void Texture2DRGPass::add_pass(const Parameter& parameter, soul::gpu::RenderGrap
 
 	const vec2ui32 viewport = gpu_system_->get_swapchain_extent();
 
-	render_graph.add_raster_pass<Parameter>("Render Pass Parameter",
+	const auto& raster_node = render_graph.add_raster_pass<Parameter>("Render Pass Parameter",
 		gpu::RGRenderTargetDesc(
 		    viewport,
 			color_attachment_desc
@@ -176,4 +176,6 @@ void Texture2DRGPass::add_pass(const Parameter& parameter, soul::gpu::RenderGrap
 				.index_count = std::size(INDICES)
 			});
 		});
+
+	return raster_node.get_color_attachment_node_id();
 }
