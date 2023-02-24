@@ -54,20 +54,20 @@ namespace soul::gpu
 		TextureID create_texture(const TextureDesc& desc, ClearValue clear_value);
 		void flush_texture(TextureID texture_id, TextureUsageFlags usage_flags);
 		uint32 get_texture_mip_levels(TextureID texture_id) const;
-		const TextureDesc& get_texture_desc(const TextureID texture_id) const;
+		const TextureDesc& get_texture_desc(TextureID texture_id) const;
 		void destroy_texture_descriptor(TextureID texture_id);
-		void destroy_texture(TextureID textureID);
+		void destroy_texture(TextureID texture_id);
 		impl::Texture& get_texture(TextureID texture_id);
 		const impl::Texture& get_texture(TextureID texture_id) const;
 		impl::TextureView get_texture_view(TextureID texture_id, uint32 level, uint32 layer = 0);
 		impl::TextureView get_texture_view(TextureID texture_id, SubresourceIndex subresource_index);
-		impl::TextureView get_texture_view(TextureID texture_id, const std::optional<SubresourceIndex> subresource);
+		impl::TextureView get_texture_view(TextureID texture_id, std::optional<SubresourceIndex> subresource);
 		
 		expected<ProgramID, Error> create_program(const ProgramDesc& program_desc);
 		impl::Program* get_program_ptr(ProgramID program_id);
 		const impl::Program& get_program(ProgramID program_id);
 
-		PipelineStateID request_pipeline_state(const GraphicPipelineStateDesc& key, VkRenderPass renderPass, const TextureSampleCount sample_count);
+		auto request_pipeline_state(const GraphicPipelineStateDesc& key, VkRenderPass render_pass, TextureSampleCount sample_count) -> PipelineStateID;
 		PipelineStateID request_pipeline_state(const ComputePipelineStateDesc& key);
 		const impl::PipelineState& get_pipeline_state(PipelineStateID pipeline_state_id);
 		VkPipelineLayout get_bindless_pipeline_layout() const;
