@@ -386,13 +386,11 @@ namespace soul::gpu
 			vec4f float32;
 			vec4ui32 uint32;
 			vec4i32 int32;
-			Color() {
-				float32 = {};
-			}
 
-			Color(vec4f val) : float32(val) {}
-			Color(vec4ui32 val) : uint32(val) {}
-			Color(vec4i32 val) : int32(val) {}
+		    Color() : float32() {}
+			explicit Color(vec4f val) : float32(val) {}
+			explicit Color(vec4ui32 val) : uint32(val) {}
+			explicit Color(vec4i32 val) : int32(val) {}
 
 		} color;
 
