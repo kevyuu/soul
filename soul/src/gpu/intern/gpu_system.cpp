@@ -1130,7 +1130,7 @@ namespace soul::gpu
 		new_desc.queue_flags |= { QueueType::TRANSFER };
 
 		const BufferID buffer_id = create_buffer(new_desc);
-		impl::Buffer& buffer = *get_buffer_ptr(buffer_id);
+		auto& buffer = get_buffer(buffer_id);
 
 		get_frame_context().gpu_resource_initializer.load(buffer, data);
 
@@ -1277,21 +1277,17 @@ namespace soul::gpu
 
     void System::flush_buffer(const BufferID buffer_id)
 	{
-		get_frame_context().gpu_resource_finalizer.finalize(*get_buffer_ptr(buffer_id));
+		get_frame_context().gpu_resource_finalizer.finalize(get_buffer(buffer_id));
 	}
 
 	void System::destroy_buffer_descriptor(BufferID buffer_id)
 	{
-		_db.descriptor_allocator.destroy_storage_buffer_descriptor(get_buffer_ptr(buffer_id)->storage_buffer_gpu_handle);
+		_db.descriptor_allocator.destroy_storage_buffer_descriptor(get_buffer(buffer_id).storage_buffer_gpu_handle);
 	}
 
 	void System::destroy_buffer(BufferID id) {
 		SOUL_ASSERT_MAIN_THREAD();
 		get_frame_context().garbages.buffers.push_back(id);
-	}
-
-	Buffer *System::get_buffer_ptr(const BufferID buffer_id) {
-		return _db.buffer_pool.get(buffer_id.id);
 	}
 
     impl::Buffer& System::get_buffer(const BufferID buffer_id)
@@ -2214,7 +2210,7 @@ namespace soul::gpu
 			SOUL_PROFILE_ZONE_WITH_NAME("Destroy buffers");
 			for (const BufferID buffer_id : garbages.buffers) {
 				destroy_buffer_descriptor(buffer_id);
-				const Buffer& buffer = *get_buffer_ptr(buffer_id);
+				const auto& buffer = get_buffer(buffer_id);
 				vmaDestroyBuffer(_db.gpu_allocator, buffer.vk_handle, buffer.allocation);
 				_db.buffer_pool.destroy(buffer_id.id);
 			}

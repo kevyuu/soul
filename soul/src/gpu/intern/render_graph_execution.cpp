@@ -831,7 +831,7 @@ namespace soul::gpu::impl
 						.dstAccessMask = vk_cast(barrier.access_flags),
 						.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
 						.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-						.buffer = gpu_system_->get_buffer_ptr(buffer_info.buffer_id)->vk_handle,
+						.buffer = gpu_system_->get_buffer(buffer_info.buffer_id).vk_handle,
 						.offset = 0,
 						.size = VK_WHOLE_SIZE
 					};
@@ -1094,8 +1094,8 @@ namespace soul::gpu::impl
 
 		for (const BufferExecInfo& buffer_info : buffer_infos_) {
 			if (buffer_info.passes.empty()) continue;
-			Buffer* buffer = gpu_system_->get_buffer_ptr(buffer_info.buffer_id);
-			buffer->cache_state = buffer_info.cache_state;
+			auto& buffer = gpu_system_->get_buffer(buffer_info.buffer_id);
+			buffer.cache_state = buffer_info.cache_state;
 		}
 
 		for (VkEvent event : garbage_events) {
@@ -1122,8 +1122,8 @@ namespace soul::gpu::impl
 		return texture_infos_[info_idx].texture_id;
 	}
 
-	Buffer* RenderGraphExecution::get_buffer(const BufferNodeID node_id) const {
-		return gpu_system_->get_buffer_ptr(get_buffer_id(node_id));
+	Buffer& RenderGraphExecution::get_buffer(const BufferNodeID node_id) const {
+		return gpu_system_->get_buffer(get_buffer_id(node_id));
 	}
 
 	Texture* RenderGraphExecution::get_texture(const TextureNodeID node_id) const {

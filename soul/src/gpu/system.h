@@ -46,7 +46,6 @@ namespace soul::gpu
 		void flush_buffer(BufferID buffer_id);
 		void destroy_buffer_descriptor(BufferID buffer_id);
 		void destroy_buffer(BufferID buffer_id);
-		impl::Buffer* get_buffer_ptr(BufferID buffer_id);
 		impl::Buffer& get_buffer(BufferID buffer_id);
 		const impl::Buffer& get_buffer(BufferID buffer_id) const;
 
