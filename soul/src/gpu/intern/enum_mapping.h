@@ -4,13 +4,6 @@
 
 namespace soul::gpu
 {
-	static auto RESOURCE_OWNER_TO_QUEUE_TYPE = FlagMap<ResourceOwner, QueueType>::build_from_list({
-		QueueType::COUNT,
-		QueueType::GRAPHIC,
-		QueueType::COMPUTE,
-		QueueType::TRANSFER,
-		QueueType::GRAPHIC
-	});
 
 	SOUL_ALWAYS_INLINE VkCompareOp vk_cast(const CompareOp compare_op) {
 		auto COMPARE_OP_MAP = FlagMap<CompareOp, VkCompareOp>::build_from_list({

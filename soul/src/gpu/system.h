@@ -117,6 +117,7 @@ namespace soul::gpu
 
 	private:
 
+		bool is_owned_by_presentation_engine(TextureID texture_id);
 		BufferID create_buffer(const BufferDesc& desc, bool use_linear_pool);
 		BufferID create_staging_buffer(soul_size size);
 		VmaAllocator get_gpu_allocator();

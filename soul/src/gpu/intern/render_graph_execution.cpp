@@ -630,10 +630,9 @@ namespace soul::gpu::impl
 			if (buffer_info.passes.empty()) continue;
 			const auto first_queue_type = render_graph_->get_pass_nodes()[buffer_info.passes[0].id]->get_queue_type();
 			const auto& buffer = gpu_system_->get_buffer(buffer_info.buffer_id);
-			const auto owner = buffer.owner;
-			const auto external_queue_type = RESOURCE_OWNER_TO_QUEUE_TYPE[owner];
+			const auto owner = buffer.cache_state.queue_owner;
+			const auto external_queue_type = owner;
 			buffer_info.cache_state = buffer.cache_state;
-			SOUL_ASSERT(0, owner != ResourceOwner::PRESENTATION_ENGINE, "");
 			if (external_queue_type == first_queue_type) {
 				if (buffer.cache_state.unavailable_pipeline_stages.none() && buffer.cache_state.unavailable_accesses.none()) continue;
 				VkEvent& external_event = external_events_[first_queue_type];
@@ -644,7 +643,7 @@ namespace soul::gpu::impl
 				external_events_stage_flags_[first_queue_type] |= buffer.cache_state.unavailable_pipeline_stages;
 				buffer_info.pending_semaphore = TimelineSemaphore::null();
 			}
-			else if (owner != ResourceOwner::NONE) {
+			else if (owner != QueueType::NONE) {
 				buffer_info.pending_event = VK_NULL_HANDLE;
 				buffer_info.pending_semaphore = command_queues_[external_queue_type].get_timeline_semaphore();
 			}
@@ -653,18 +652,18 @@ namespace soul::gpu::impl
 		for (auto& texture_info : texture_infos_)
 		{
 			const auto& texture = gpu_system_->get_texture(texture_info.texture_id);
-			const auto external_queue_type = RESOURCE_OWNER_TO_QUEUE_TYPE[texture.owner];
-
+			
 			std::for_each(texture_info.view, texture_info.view + texture_info.get_view_count(),
-			[this, &texture, external_queue_type](TextureViewExecInfo& view_info)
+			[this, &texture, texture_id = texture_info.texture_id, external_queue_type = texture.cache_state.queue_owner](TextureViewExecInfo& view_info)
 			{
+				view_info.layout = texture.layout;
 				if (!view_info.passes.empty())
 				{
 					const auto first_queue_type = render_graph_->get_pass_nodes()[view_info.passes[0].id]->get_queue_type();
 					view_info.cache_state = texture.cache_state;
-                    if (texture.owner == ResourceOwner::PRESENTATION_ENGINE) {
+                    if (gpu_system_->is_owned_by_presentation_engine(texture_id)) {
 						view_info.pending_event = VK_NULL_HANDLE;
-						view_info.pending_semaphore = gpu_system_->get_frame_context().image_available_semaphore;
+						view_info.pending_semaphore = &gpu_system_->get_frame_context().image_available_semaphore;
 					}
 					else if (external_queue_type == first_queue_type) {
 						if (texture.cache_state.unavailable_pipeline_stages.none() && texture.cache_state.unavailable_accesses.none()) return;
@@ -676,22 +675,13 @@ namespace soul::gpu::impl
 						view_info.pending_semaphore = TimelineSemaphore::null();
 						external_events_stage_flags_[first_queue_type] |= texture.cache_state.unavailable_pipeline_stages;
 					}
-					else if (texture.owner != ResourceOwner::NONE) {
+					else if (external_queue_type != QueueType::NONE) {
 						view_info.pending_event = VK_NULL_HANDLE;
 						view_info.pending_semaphore = command_queues_[external_queue_type].get_timeline_semaphore();
 					}
 				}
 			});
 		}
-
-		std::ranges::for_each(texture_infos_, [this](const TextureExecInfo& texture_info)
-		{
-			const Texture& texture = gpu_system_->get_texture(texture_info.texture_id);
-			std::for_each(texture_info.view, texture_info.view + texture_info.get_view_count(), [layout = texture.layout](TextureViewExecInfo& view_info)
-			{
-				view_info.layout = layout;
-			});
-		});
 
 		// Sync events
 		for (const auto queue_type : FlagIter<QueueType>()) {
@@ -786,14 +776,6 @@ namespace soul::gpu::impl
 		Vector<VkImageMemoryBarrier> semaphore_layout_barriers;
 		Vector<VkEvent> events;
 
-		auto need_invalidate = [](const FlagMap<PipelineStage, AccessFlags>& visible_access_matrix, const AccessFlags access_flags, 
-			const PipelineStageFlags stage_flags) -> bool {
-			return stage_flags.find_if([access_flags, &visible_access_matrix](const PipelineStage pipeline_stage) {
-				return access_flags.test_any(~visible_access_matrix[pipeline_stage]);
-			}).has_value();
-		};
-
-
 		for (const auto pass_node_id : pass_order_) {
 			const auto pass_index = pass_node_id.id;
 		    runtime::ScopeAllocator passNodeScopeAllocator("Pass Node Scope Allocator", runtime::get_temp_allocator());
@@ -829,21 +811,17 @@ namespace soul::gpu::impl
 			for (const BufferBarrier& barrier: pass_info.buffer_invalidates) {
 				BufferExecInfo& buffer_info = buffer_infos_[barrier.buffer_info_idx];
 
-				if (buffer_info.cache_state.unavailable_accesses.any()) {
-					for (auto& access_flags : buffer_info.cache_state.visible_access_matrix) {
-						access_flags = AccessFlags{};
-					}
-				}
-
 				if (is_semaphore_null(buffer_info.pending_semaphore) &&
 					buffer_info.cache_state.unavailable_accesses.none() &&
-					!need_invalidate(buffer_info.cache_state.visible_access_matrix, barrier.access_flags, barrier.stage_flags)) {
+					!buffer_info.cache_state.need_invalidate(barrier.stage_flags, barrier.access_flags)) {
 					continue;
 				}
 
 				if (is_semaphore_valid(buffer_info.pending_semaphore)) {
-				    command_queues_[current_queue_type].wait(buffer_info.pending_semaphore, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT);
+				    command_queues_[current_queue_type].wait(buffer_info.pending_semaphore, vk_cast(barrier.stage_flags));
 					buffer_info.pending_semaphore = TimelineSemaphore::null();
+					buffer_info.cache_state.commit_wait_semaphore(buffer_info.cache_state.queue_owner, 
+						current_queue_type, barrier.stage_flags);
 				} else {
 					if (buffer_info.cache_state.unavailable_pipeline_stages.none() || buffer_info.cache_state.unavailable_pipeline_stages == PipelineStageFlags{ PipelineStage::TOP_OF_PIPE })
 						SOUL_ASSERT(0, buffer_info.cache_state.unavailable_accesses.none(), "");
@@ -857,9 +835,7 @@ namespace soul::gpu::impl
 						.offset = 0,
 						.size = VK_WHOLE_SIZE
 					};
-
-					const auto dst_access_flags = barrier.access_flags;
-
+					
 					if (buffer_info.pending_event != VK_NULL_HANDLE)
 					{
 						event_buffer_barriers.push_back(mem_barrier);
@@ -875,11 +851,11 @@ namespace soul::gpu::impl
 						pipeline_dst_stage_flags |= barrier.stage_flags;
 					}
 
-					barrier.stage_flags.for_each([&buffer_info, dst_access_flags](const PipelineStage stage) {
-						buffer_info.cache_state.visible_access_matrix[stage] |= dst_access_flags;
-					});
-					
+					buffer_info.cache_state.commit_wait_event_or_barrier(current_queue_type,
+						buffer_info.cache_state.unavailable_pipeline_stages, buffer_info.cache_state.unavailable_accesses,
+						barrier.stage_flags, barrier.access_flags);
 				}
+				buffer_info.cache_state.commit_access(current_queue_type, barrier.stage_flags, barrier.access_flags);
 			}
 
 			for (const TextureBarrier& barrier: pass_info.texture_invalidates) {
@@ -889,16 +865,14 @@ namespace soul::gpu::impl
 
 				const auto layout_change = view_info.layout != barrier.layout;
 
-				if (view_info.cache_state.unavailable_accesses.any() || layout_change) {
-					for (auto& access_flags : view_info.cache_state.visible_access_matrix) {
-						access_flags = {};
-					}
-				}
+				const auto queue_owner = view_info.cache_state.queue_owner;
+				const auto unavailable_pipeline_stages = view_info.cache_state.unavailable_pipeline_stages;
+				const auto unavailable_accesses = view_info.cache_state.unavailable_accesses;
 
 				if (is_semaphore_null(view_info.pending_semaphore) &&
 					!layout_change &&
-					!need_invalidate(view_info.cache_state.visible_access_matrix, barrier.access_flags, barrier.stage_flags) &&
-					view_info.cache_state.unavailable_accesses.none()) {
+					!view_info.cache_state.need_invalidate(barrier.stage_flags, barrier.access_flags) &&
+					unavailable_accesses.none()) {
 					continue;
 				}
 
@@ -919,44 +893,53 @@ namespace soul::gpu::impl
 				};
 
 				if (is_semaphore_valid(view_info.pending_semaphore)) {
-					semaphore_dst_stage_flags |= barrier.stage_flags;
-					if (layout_change) {
+					
+					command_queue.wait(view_info.pending_semaphore, vk_cast(barrier.stage_flags));
+					view_info.pending_semaphore = TimelineSemaphore::null();
+					view_info.cache_state.commit_wait_semaphore(queue_owner, current_queue_type, barrier.stage_flags);
 
+					if (layout_change) {
+						semaphore_dst_stage_flags |= barrier.stage_flags;
 						mem_barrier.srcAccessMask = 0;
 						mem_barrier.dstAccessMask = vk_cast(barrier.access_flags);
 						semaphore_layout_barriers.push_back(mem_barrier);
 
+						view_info.cache_state.commit_wait_event_or_barrier(current_queue_type,
+							barrier.stage_flags, {},
+							barrier.stage_flags, barrier.access_flags, layout_change);
 					}
-					command_queue.wait(view_info.pending_semaphore, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT);
-					view_info.pending_semaphore = TimelineSemaphore::null();
+
+
 				} else {
 					const auto dst_access_flags = barrier.access_flags;
 
-					mem_barrier.srcAccessMask = vk_cast(view_info.cache_state.unavailable_accesses);
+					mem_barrier.srcAccessMask = vk_cast(unavailable_accesses);
 					mem_barrier.dstAccessMask = vk_cast(dst_access_flags);
 
 					if (view_info.pending_event != VK_NULL_HANDLE)
 					{
 						event_image_barriers.push_back(mem_barrier);
 						events.push_back(view_info.pending_event);
-						event_src_stage_flags |= view_info.cache_state.unavailable_pipeline_stages;
+						event_src_stage_flags |= unavailable_pipeline_stages;
 						event_dst_stage_flags |= barrier.stage_flags;
 						view_info.pending_event = VK_NULL_HANDLE;
 					}
 					else
 					{
 						pipeline_image_barriers.push_back(mem_barrier);
-						pipeline_src_stage_flags |= view_info.cache_state.unavailable_pipeline_stages;
+						pipeline_src_stage_flags |= unavailable_pipeline_stages;
 						pipeline_dst_stage_flags |= barrier.stage_flags;
 					}
 
-					barrier.stage_flags.for_each([&view_info, dst_access_flags](PipelineStage stage) {
-						view_info.cache_state.visible_access_matrix[stage] |= dst_access_flags;
-					});
+					view_info.cache_state.commit_wait_event_or_barrier(current_queue_type,
+						unavailable_pipeline_stages, unavailable_accesses,
+						barrier.stage_flags, barrier.access_flags,
+						layout_change);
 					
 				}
 
 				view_info.layout = barrier.layout;
+				view_info.cache_state.commit_access(queue_owner, barrier.stage_flags, barrier.access_flags);
 			}
 
 			if (!pipeline_buffer_barriers.empty() || !pipeline_image_barriers.empty())
@@ -1050,7 +1033,7 @@ namespace soul::gpu::impl
 				TextureExecInfo& texture_info = texture_infos_[barrier.texture_info_idx];
 				TextureViewExecInfo& texture_view_info = *texture_info.get_view(barrier.view);
 				if (texture_view_info.pass_counter != texture_view_info.passes.size() - 1) {
-					uint32 next_pass_idx = texture_view_info.passes[texture_view_info.pass_counter + 1].id;
+					const auto next_pass_idx = texture_view_info.passes[texture_view_info.pass_counter + 1].id;
 					const auto next_queue_type = render_graph_->get_pass_nodes()[next_pass_idx]->get_queue_type();
 					if (current_queue_type != next_queue_type) {
 						pending_semaphores.push_back(&texture_view_info.pending_semaphore);
@@ -1073,46 +1056,17 @@ namespace soul::gpu::impl
 			for(Semaphore* pending_semaphore : pending_semaphores)
 				*pending_semaphore = command_queue.get_timeline_semaphore();
 
-			auto update_resource_unsync_status = [this](const QueueType queue_type,
-				AccessFlags barrier_access_flags,
-				PipelineStageFlags event_stage_flags,
-				auto& resource_info) {
-					const auto is_resource_in_last_pass = resource_info.pass_counter == (resource_info.passes.size() - 1);
-					if (!is_resource_in_last_pass) {
-						const uint32 next_pass_idx = resource_info.passes[resource_info.pass_counter + 1].id;
-						const auto next_queue_type = render_graph_->get_pass_nodes()[next_pass_idx]->get_queue_type();
-						if (queue_type != next_queue_type) {
-							resource_info.cache_state.unavailable_pipeline_stages = {};
-							resource_info.cache_state.unavailable_accesses = {};
-						}
-						else {
-							resource_info.cache_state.unavailable_pipeline_stages = event_stage_flags;
-							resource_info.cache_state.unavailable_accesses = barrier_access_flags;
-						}
-					}
-			};
-
-			// Update unsync stage
 			for (const BufferBarrier& barrier : pass_info.buffer_flushes) {
 				BufferExecInfo& buffer_info = buffer_infos_[barrier.buffer_info_idx];
-				update_resource_unsync_status(current_queue_type, barrier.access_flags, unsync_write_stage_flags, buffer_info);
 				buffer_info.pass_counter += 1;
 			}
 
 			for (const TextureBarrier& barrier : pass_info.texture_flushes) {
 				TextureExecInfo& texture_info = texture_infos_[barrier.texture_info_idx];
 				TextureViewExecInfo& texture_view_info = *texture_info.get_view(barrier.view);
-				update_resource_unsync_status(current_queue_type, barrier.access_flags, unsync_write_stage_flags, texture_view_info);
 				texture_view_info.pass_counter += 1;
 			}
 		}
-
-		// Update resource owner for external resource
-		static constexpr auto QUEUE_TYPE_TO_RESOURCE_OWNER = FlagMap<QueueType, ResourceOwner>::build_from_list({
-			ResourceOwner::GRAPHIC_QUEUE,
-			ResourceOwner::COMPUTE_QUEUE,
-			ResourceOwner::TRANSFER_QUEUE
-		});
 
 		for (const TextureExecInfo& texture_info : external_texture_infos_) {
 			Texture* texture = gpu_system_->get_texture_ptr(texture_info.texture_id);
@@ -1130,9 +1084,7 @@ namespace soul::gpu::impl
 				{
 					return view_info.passes.back().id == last_pass_idx;
 				}), "");
-
-			const auto last_queue_type = render_graph_->get_pass_nodes()[last_pass_idx]->get_queue_type();
-			texture->owner = QUEUE_TYPE_TO_RESOURCE_OWNER[last_queue_type];
+			
 			texture->layout = layout;
 			SOUL_ASSERT(0, texture_info.get_view_count() > 0, "");
 			texture->cache_state = texture_info.view[0].cache_state;
@@ -1143,9 +1095,6 @@ namespace soul::gpu::impl
 		for (const BufferExecInfo& buffer_info : buffer_infos_) {
 			if (buffer_info.passes.empty()) continue;
 			Buffer* buffer = gpu_system_->get_buffer_ptr(buffer_info.buffer_id);
-			uint64 last_pass_idx = buffer_info.passes.back().id;
-			const auto last_queue_type = render_graph_->get_pass_nodes()[last_pass_idx]->get_queue_type();
-			buffer->owner = QUEUE_TYPE_TO_RESOURCE_OWNER[last_queue_type];
 			buffer->cache_state = buffer_info.cache_state;
 		}
 

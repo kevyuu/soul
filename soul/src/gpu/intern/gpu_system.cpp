@@ -1145,6 +1145,12 @@ namespace soul::gpu
 		return buffer_id;
     }
 
+    bool System::is_owned_by_presentation_engine(TextureID texture_id)
+    {
+		if (get_swapchain_texture() != texture_id) return false;
+		return get_frame_context().image_available_semaphore.state == BinarySemaphore::State::SIGNALLED;
+    }
+
 	BufferID System::create_buffer(const BufferDesc& desc, const bool use_linear_pool)
 	{
 		SOUL_ASSERT(0, desc.size > 0, "");
@@ -1250,11 +1256,9 @@ namespace soul::gpu
 		frame_context.swapchain_index = swapchain_index;
 		const TextureID swapchain_texture_id = _db.swapchain.textures[swapchain_index];
 		Texture* swapchain_texture = get_texture_ptr(swapchain_texture_id);
-		swapchain_texture->owner = ResourceOwner::PRESENTATION_ENGINE;
-		swapchain_texture->cache_state = {
-			.visible_access_matrix = VISIBLE_ACCESS_MATRIX_NONE
-		};
+		swapchain_texture->cache_state.commit_acquire_swapchain();
 		swapchain_texture->layout = VK_IMAGE_LAYOUT_UNDEFINED;
+		frame_context.image_available_semaphore.state = BinarySemaphore::State::SIGNALLED;
 
 		return result;
     }
@@ -1983,9 +1987,9 @@ namespace soul::gpu
 
     void CommandQueue::wait(Semaphore semaphore, VkPipelineStageFlags wait_stages)
     {
-		if (std::holds_alternative<BinarySemaphore>(semaphore)) 
+		if (std::holds_alternative<BinarySemaphore*>(semaphore)) 
 		{
-			wait(std::get<BinarySemaphore>(semaphore), wait_stages);
+			wait(std::get<BinarySemaphore*>(semaphore), wait_stages);
 		}
 	    else
 		{
@@ -1993,14 +1997,16 @@ namespace soul::gpu
 		}
     }
 
-    void CommandQueue::wait(BinarySemaphore semaphore, const VkPipelineStageFlags wait_stages)
+    void CommandQueue::wait(BinarySemaphore* semaphore, const VkPipelineStageFlags wait_stages)
 	{
 		SOUL_ASSERT_MAIN_THREAD();
 		SOUL_ASSERT(0, wait_stages != 0, "");
 
 		if (!commands_.empty()) flush();
-		
-		wait_semaphores_.push_back(semaphore.vk_handle);
+
+		SOUL_ASSERT(0, semaphore->state == BinarySemaphore::State::SIGNALLED, "");
+		semaphore->state = BinarySemaphore::State::WAITED;
+	    wait_semaphores_.push_back(semaphore->vk_handle);
 		wait_stages_.push_back(wait_stages);
 		wait_timeline_values_.push_back(0);
 	}
@@ -2023,7 +2029,7 @@ namespace soul::gpu
 		return { family_index_, timeline_semaphore_, current_timeline_values_ };
     }
 
-	void CommandQueue::submit(const PrimaryCommandBuffer command_buffer, BinarySemaphore binary_semaphore)
+	void CommandQueue::submit(const PrimaryCommandBuffer command_buffer, BinarySemaphore* binary_semaphore)
 	{
 		SOUL_ASSERT_MAIN_THREAD();
 		SOUL_PROFILE_ZONE();
@@ -2033,12 +2039,13 @@ namespace soul::gpu
 		commands_.push_back(command_buffer.get_vk_handle());
 
 		// TODO : Fix this
-		if (binary_semaphore.vk_handle != VK_NULL_HANDLE) {
+		if (binary_semaphore != nullptr && binary_semaphore->vk_handle != VK_NULL_HANDLE) {
+			binary_semaphore->state = BinarySemaphore::State::SIGNALLED;
 			flush(binary_semaphore);
 		}
 	}
 
-	void CommandQueue::flush(BinarySemaphore binary_semaphore)
+	void CommandQueue::flush(BinarySemaphore* binary_semaphore)
 	{
 		SOUL_ASSERT_MAIN_THREAD();
 		SOUL_PROFILE_ZONE();
@@ -2047,10 +2054,10 @@ namespace soul::gpu
 
 		current_timeline_values_++;
 
-		const uint32 binary_semaphore_count = binary_semaphore.is_null() ? 0 : 1;
+		const uint32 binary_semaphore_count = binary_semaphore == nullptr || binary_semaphore->is_null() ? 0 : 1;
 
 		VkSemaphore signal_semaphores[MAX_SIGNAL_SEMAPHORE + 1];
-		if (!binary_semaphore.is_null()) signal_semaphores[0] = binary_semaphore.vk_handle;
+		if (binary_semaphore != nullptr) signal_semaphores[0] = binary_semaphore->vk_handle;
 		signal_semaphores[binary_semaphore_count] = timeline_semaphore_;
 
 		uint64 signal_semaphore_values[MAX_SIGNAL_SEMAPHORE + 1];
@@ -2084,10 +2091,19 @@ namespace soul::gpu
 		wait_stages_.clear();
 	}
 
-	void CommandQueue::present(const VkPresentInfoKHR& present_info)
-	{
+    void CommandQueue::present(VkSwapchainKHR swapchain, uint32 swapchain_index, BinarySemaphore* semaphore)
+    {
+		semaphore->state = BinarySemaphore::State::WAITED;
+		const VkPresentInfoKHR present_info = {
+			.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
+			.waitSemaphoreCount = 1,
+			.pWaitSemaphores = &(semaphore->vk_handle),
+			.swapchainCount = 1,
+			.pSwapchains = &swapchain,
+			.pImageIndices = &swapchain_index
+		};
 		SOUL_VK_CHECK(vkQueuePresentKHR(vk_handle_, &present_info), "Fail to present queue");
-	}
+    }
 
     bool CommandQueue::is_waiting_binary_semaphore() const
     {
@@ -2247,16 +2263,12 @@ namespace soul::gpu
 		const auto swapchain_index = frame_context.swapchain_index;
 
 		Texture& swapchain_texture = *get_texture_ptr(_db.swapchain.textures[swapchain_index]);
-		const auto render_finished_semaphore = frame_context.render_finished_semaphore;
 		{
 			SOUL_PROFILE_ZONE_WITH_NAME("GPU::System::LastSubmission");
 			frame_context.gpu_resource_initializer.flush(_db.queues, *this);
 			frame_context.gpu_resource_finalizer.flush(get_frame_context().command_pools, _db.queues, *this);
 
-			SOUL_ASSERT(0,
-				swapchain_texture.owner == ResourceOwner::GRAPHIC_QUEUE
-				|| swapchain_texture.owner == ResourceOwner::PRESENTATION_ENGINE,
-				"");
+			SOUL_ASSERT(0, swapchain_texture.cache_state.queue_owner == QueueType::GRAPHIC, "");
 			// TODO: Handle when swapchain texture is untouch (ResourceOwner is PRESENTATION_ENGINE)
 			const auto cmd_buffer = frame_context.command_pools.request_command_buffer(QueueType::GRAPHIC);
 
@@ -2305,27 +2317,19 @@ namespace soul::gpu
 				sync_queue_to_graphic(QueueType::COMPUTE);
 			}
 
-			if (swapchain_texture.owner == ResourceOwner::PRESENTATION_ENGINE) {
-				_db.queues[QueueType::GRAPHIC].wait(frame_context.image_available_semaphore, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT);
+			if (frame_context.image_available_semaphore.state == BinarySemaphore::State::SIGNALLED) {
+				_db.queues[QueueType::GRAPHIC].wait(&frame_context.image_available_semaphore, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT);
 			}
 
-			const auto swapchain_owner = RESOURCE_OWNER_TO_QUEUE_TYPE[swapchain_texture.owner];
-			_db.queues[swapchain_owner].submit(cmd_buffer, render_finished_semaphore);
+			const auto swapchain_owner = swapchain_texture.cache_state.queue_owner;
+			_db.queues[swapchain_owner].submit(cmd_buffer, &frame_context.render_finished_semaphore);
 			swapchain_texture.layout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
 		}
-
-		const VkPresentInfoKHR present_info = {
-			.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
-			.waitSemaphoreCount = 1,
-			.pWaitSemaphores = &(render_finished_semaphore.vk_handle),
-			.swapchainCount = 1,
-			.pSwapchains = &_db.swapchain.vk_handle,
-			.pImageIndices = &frame_context.swapchain_index
-		};
-
+		
 		{
 			SOUL_PROFILE_ZONE_WITH_NAME("GPU::System::QueuePresent");
-			_db.queues[QueueType::GRAPHIC].present(present_info);
+			_db.queues[QueueType::GRAPHIC].present(
+				_db.swapchain.vk_handle, frame_context.swapchain_index, &frame_context.render_finished_semaphore);
 		}
 
 		frame_context.frame_end_semaphore = _db.queues[QueueType::GRAPHIC].get_timeline_semaphore();
@@ -2655,7 +2659,7 @@ namespace soul::gpu
 
 	void GPUResourceInitializer::load(Buffer& buffer, const void* data)
 	{
-		SOUL_ASSERT(0, buffer.owner == ResourceOwner::NONE, "Buffer must be uninitialized!");
+		SOUL_ASSERT(0, buffer.cache_state.queue_owner == QueueType::NONE, "Buffer must be uninitialized!");
 		const auto buffer_size = buffer.desc.size;
 		if (buffer.memory_property_flags & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT)
 		{
@@ -2686,19 +2690,16 @@ namespace soul::gpu
 			vkCmdBeginDebugUtilsLabelEXT(transfer_command_buffer, &pass_label);
 			vkCmdCopyBuffer(transfer_command_buffer, staging_buffer.vk_handle, buffer.vk_handle, 1, &copy_region);
 			vkCmdEndDebugUtilsLabelEXT(transfer_command_buffer);
-
-			buffer.owner = ResourceOwner::TRANSFER_QUEUE;
-			buffer.cache_state = {
-				.unavailable_pipeline_stages = { PipelineStage::TRANSFER },
-				.unavailable_accesses = { AccessType::TRANSFER_WRITE }
-			};
+			
+			buffer.cache_state.commit_access(QueueType::TRANSFER,
+				{ PipelineStage::TRANSFER }, { AccessType::TRANSFER_WRITE });
 		}
 	}
 
 	void GPUResourceInitializer::load(Texture& texture, const TextureLoadDesc& load_desc)
 	{
 		SOUL_ASSERT(0, texture.layout == VK_IMAGE_LAYOUT_UNDEFINED, "Texture must be uninitialized!");
-		SOUL_ASSERT(0, texture.owner == ResourceOwner::NONE, "Texture must be uninitialized!");
+		SOUL_ASSERT(0, texture.cache_state.queue_owner == QueueType::NONE, "Texture must be uninitialized!");
 		
 		const auto staging_buffer = get_staging_buffer(load_desc.data_size);
 		load_staging_buffer(staging_buffer, load_desc.data, load_desc.data_size);
@@ -2767,11 +2768,8 @@ namespace soul::gpu
 		}
 
 		texture.layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-		texture.owner = ResourceOwner::TRANSFER_QUEUE;
-		texture.cache_state = {
-			.unavailable_pipeline_stages = { PipelineStage::TRANSFER },
-			.unavailable_accesses = { AccessType::TRANSFER_WRITE }
-		};
+		texture.cache_state.commit_access(QueueType::TRANSFER, 
+			{ PipelineStage::TRANSFER }, { AccessType::TRANSFER_WRITE });
 	}
 
 	void GPUResourceInitializer::clear(Texture& texture, ClearValue clear_value)
@@ -2833,12 +2831,11 @@ namespace soul::gpu
 				&range);
 		}
 		texture.layout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-		texture.owner = ResourceOwner::GRAPHIC_QUEUE;
-		texture.cache_state = {
-			.unavailable_pipeline_stages = { PipelineStage::TRANSFER },
-			.unavailable_accesses = { AccessType::TRANSFER_WRITE },
-			.visible_access_matrix = VISIBLE_ACCESS_MATRIX_NONE
-		};
+		texture.cache_state.commit_wait_event_or_barrier(QueueType::GRAPHIC,
+			{ PipelineStage::TOP_OF_PIPE }, {},
+			{ PipelineStage::TRANSFER }, { AccessType::TRANSFER_WRITE }, true);
+		texture.cache_state.commit_access(QueueType::GRAPHIC, { PipelineStage::TRANSFER }, 
+			{ AccessType::TRANSFER_WRITE });
 	}
 
 	void GPUResourceInitializer::generate_mipmap(Texture& texture)
@@ -2930,10 +2927,11 @@ namespace soul::gpu
 			1, &barrier);
 
 		texture.layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-		texture.owner = ResourceOwner::GRAPHIC_QUEUE;
 		texture.cache_state = {
+			.queue_owner = QueueType::GRAPHIC,
 			.unavailable_pipeline_stages = { PipelineStage::FRAGMENT_SHADER },
 			.unavailable_accesses = {},
+			.sync_stages = { PipelineStage::FRAGMENT_SHADER },
 			.visible_access_matrix = VisibleAccessMatrix({AccessType::SHADER_READ})
 		};
 	}
@@ -2990,15 +2988,15 @@ namespace soul::gpu
 
 	void GPUResourceFinalizer::finalize(Buffer& buffer)
 	{
-		if (buffer.owner == ResourceOwner::NONE) return;
-		thread_contexts_[runtime::get_thread_id()].sync_dst_queues_[RESOURCE_OWNER_TO_QUEUE_TYPE[buffer.owner]] |= buffer.desc.queue_flags;
-		buffer.owner = ResourceOwner::NONE;
+		if (buffer.cache_state.queue_owner == QueueType::NONE) return;
+		thread_contexts_[runtime::get_thread_id()].sync_dst_queues_[buffer.cache_state.queue_owner] |= buffer.desc.queue_flags;
+		buffer.cache_state.queue_owner = QueueType::NONE;
 		buffer.cache_state = ResourceCacheState();
 	}
 
 	void GPUResourceFinalizer::finalize(Texture& texture, TextureUsageFlags usage_flags)
 	{
-		if (texture.owner == ResourceOwner::NONE) {
+		if (texture.cache_state.queue_owner == QueueType::NONE) {
 			return;
 		}
 
@@ -3053,13 +3051,12 @@ namespace soul::gpu
 
 				}
 			};
-			thread_contexts_[runtime::get_thread_id()].image_barriers_[RESOURCE_OWNER_TO_QUEUE_TYPE[texture.owner]].push_back(barrier);
+			thread_contexts_[runtime::get_thread_id()].image_barriers_[texture.cache_state.queue_owner].push_back(barrier);
 
 			texture.layout = finalize_layout;
 		}
 
-		thread_contexts_[runtime::get_thread_id()].sync_dst_queues_[RESOURCE_OWNER_TO_QUEUE_TYPE[texture.owner]] |= texture.desc.queue_flags;
-		texture.owner = ResourceOwner::NONE;
+		thread_contexts_[runtime::get_thread_id()].sync_dst_queues_[texture.cache_state.queue_owner] |= texture.desc.queue_flags;
 		texture.cache_state = ResourceCacheState();
 	}
 

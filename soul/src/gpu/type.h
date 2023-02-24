@@ -136,15 +136,6 @@ namespace soul::gpu
 	using ShaderStageFlags = FlagSet<ShaderStage>;
 	constexpr ShaderStageFlags SHADER_STAGES_VERTEX_FRAGMENT = ShaderStageFlags( { gpu::ShaderStage::VERTEX, gpu::ShaderStage::FRAGMENT });
 
-	enum class ResourceOwner : uint8 {
-		NONE,
-		GRAPHIC_QUEUE,
-		COMPUTE_QUEUE,
-		TRANSFER_QUEUE,
-		PRESENTATION_ENGINE,
-		COUNT
-	};
-
 	enum class PipelineStage : uint32
 	{
 	    TOP_OF_PIPE,
@@ -194,6 +185,15 @@ namespace soul::gpu
 	};
 	using AccessFlags = FlagSet<AccessType>;
 	constexpr AccessFlags ACCESS_FLAGS_ALL = ~AccessFlags();
+	constexpr AccessFlags ACCESS_FLAGS_WRITE = {
+		AccessType::SHADER_WRITE,
+		AccessType::COLOR_ATTACHMENT_WRITE,
+		AccessType::DEPTH_STENCIL_ATTACHMENT_WRITE,
+		AccessType::TRANSFER_WRITE,
+		AccessType::HOST_WRITE,
+		AccessType::MEMORY_WRITE,
+		AccessType::AS_WRITE
+	};
 
 	enum class PipelineType : uint8
 	{
@@ -211,7 +211,8 @@ namespace soul::gpu
 		GRAPHIC,
 		COMPUTE,
 		TRANSFER,
-		COUNT
+		COUNT,
+		NONE = COUNT
 	};
 	using QueueFlags = FlagSet<QueueType>;
 	constexpr QueueFlags QUEUE_DEFAULT = { QueueType::GRAPHIC, QueueType::COMPUTE, QueueType::TRANSFER };
@@ -927,9 +928,77 @@ namespace soul::gpu
 
 		struct ResourceCacheState
 		{
+			QueueType queue_owner = QueueType::COUNT;
 			PipelineStageFlags unavailable_pipeline_stages;
 			AccessFlags unavailable_accesses;
-			VisibleAccessMatrix visible_access_matrix = VISIBLE_ACCESS_MATRIX_ALL;
+			PipelineStageFlags sync_stages = PIPELINE_STAGE_FLAGS_ALL;
+		    VisibleAccessMatrix visible_access_matrix = VISIBLE_ACCESS_MATRIX_ALL;
+
+			void commit_acquire_swapchain()
+			{
+				queue_owner = QueueType::GRAPHIC;
+				unavailable_pipeline_stages = {};
+				unavailable_accesses = {};
+				sync_stages = {};
+				visible_access_matrix = VISIBLE_ACCESS_MATRIX_NONE;
+			}
+
+			void commit_wait_semaphore(
+				QueueType src_queue_type, QueueType dst_queue_type, PipelineStageFlags dst_stages)
+			{
+				if (queue_owner != QueueType::COUNT && queue_owner != src_queue_type) return;
+				queue_owner = dst_queue_type;
+				sync_stages = dst_stages;
+				unavailable_pipeline_stages = {};
+				unavailable_accesses = {};
+				dst_stages.for_each([this](const PipelineStage dst_stage)
+					{
+						visible_access_matrix[dst_stage] = ACCESS_FLAGS_ALL;
+				    });
+			}
+
+			void commit_wait_event_or_barrier(QueueType queue_type, 
+				PipelineStageFlags src_stages, AccessFlags src_accesses,
+				PipelineStageFlags dst_stages, AccessFlags dst_accesses, bool layout_change = false)
+			{
+				if (queue_owner != QueueType::COUNT && queue_owner != queue_type) return;
+				if ((sync_stages & src_stages).none()) return;
+				if ((unavailable_pipeline_stages & src_stages) != unavailable_pipeline_stages) return;
+				if ((unavailable_accesses & src_accesses) != unavailable_accesses) return;
+				queue_owner = queue_type;
+				sync_stages = dst_stages;
+				unavailable_pipeline_stages = {};
+				unavailable_accesses = {};
+				if (layout_change)
+				{
+					visible_access_matrix = VISIBLE_ACCESS_MATRIX_NONE;
+				}
+				dst_stages.for_each([this, dst_accesses](const PipelineStage dst_stage)
+				    {
+					    visible_access_matrix[dst_stage] |= dst_accesses;
+				    });
+			}
+
+			void commit_access(QueueType queue, PipelineStageFlags stages, AccessFlags accesses)
+			{
+				SOUL_ASSERT(0, (sync_stages & stages) == stages, "");
+				SOUL_ASSERT(0, unavailable_accesses.none(), "");
+			    queue_owner = queue;
+				unavailable_pipeline_stages |= stages;
+				const auto write_accesses = (accesses & ACCESS_FLAGS_WRITE);
+				if (write_accesses.any())
+				{
+					unavailable_accesses |= write_accesses;
+					visible_access_matrix = VISIBLE_ACCESS_MATRIX_NONE;
+				}
+			}
+
+			[[nodiscard]] bool need_invalidate(PipelineStageFlags stages, AccessFlags accesses)
+			{
+				return stages.find_if([this, accesses](const PipelineStage pipeline_stage) {
+					return accesses.test_any(~visible_access_matrix[pipeline_stage]);
+				}).has_value();
+			}
 
 			void join(const ResourceCacheState& other)
 			{
@@ -946,7 +1015,6 @@ namespace soul::gpu
 			BufferDesc desc;
 			VkBuffer vk_handle = VK_NULL_HANDLE;
 			VmaAllocation allocation{};
-			ResourceOwner owner = ResourceOwner::NONE;
 			ResourceCacheState cache_state;
 			DescriptorID storage_buffer_gpu_handle = DescriptorID::null();
 			VkMemoryPropertyFlags memory_property_flags = 0;
@@ -967,7 +1035,6 @@ namespace soul::gpu
 			TextureView* views = nullptr;
 			VkImageLayout layout = VK_IMAGE_LAYOUT_UNDEFINED;
 			VkSharingMode sharing_mode = {};
-			ResourceOwner owner = ResourceOwner::NONE;
 			ResourceCacheState cache_state;
 		};
 
@@ -984,8 +1051,19 @@ namespace soul::gpu
 		};
 
 		struct BinarySemaphore {
+
+			enum class State : uint8
+			{
+			    INIT,
+				SIGNALLED,
+				WAITED,
+				COUNT
+			};
+
 			VkSemaphore vk_handle = VK_NULL_HANDLE;
-			static BinarySemaphore null() { return { VK_NULL_HANDLE }; }
+			State state = State::INIT;
+
+		    static BinarySemaphore null() { return { VK_NULL_HANDLE }; }
 			[[nodiscard]] bool is_null() const { return vk_handle == VK_NULL_HANDLE; }
 			[[nodiscard]] bool is_valid() const { return !is_null(); }
 		};
@@ -1001,17 +1079,17 @@ namespace soul::gpu
 			[[nodiscard]] bool is_valid() const { return !is_null(); }
 		};
 
-		using Semaphore = std::variant<BinarySemaphore, TimelineSemaphore>;
+		using Semaphore = std::variant<BinarySemaphore*, TimelineSemaphore>;
 
 		[[nodiscard]] inline bool is_semaphore_valid(Semaphore semaphore)
 		{
-			if (std::holds_alternative<BinarySemaphore>(semaphore)) return std::get<BinarySemaphore>(semaphore).is_valid();
+			if (std::holds_alternative<BinarySemaphore*>(semaphore)) return std::get<BinarySemaphore*>(semaphore)->is_valid();
 			return std::get<TimelineSemaphore>(semaphore).is_valid();
 		}
 
 		[[nodiscard]] inline bool is_semaphore_null(Semaphore semaphore)
 		{
-			if (std::holds_alternative<BinarySemaphore>(semaphore)) return std::get<BinarySemaphore>(semaphore).is_null();
+			if (std::holds_alternative<BinarySemaphore*>(semaphore)) return std::get<BinarySemaphore*>(semaphore)->is_null();
 			return std::get<TimelineSemaphore>(semaphore).is_null();
 		}
 
@@ -1021,12 +1099,12 @@ namespace soul::gpu
 
 			void init(VkDevice device, uint32 family_index, uint32 queue_index);
 			void wait(Semaphore semaphore, VkPipelineStageFlags wait_stages);
-			void wait(BinarySemaphore semaphore, VkPipelineStageFlags wait_stages);
+			void wait(BinarySemaphore* semaphore, VkPipelineStageFlags wait_stages);
 			void wait(TimelineSemaphore semaphore, VkPipelineStageFlags wait_stages);
 			TimelineSemaphore get_timeline_semaphore();
-			void submit(PrimaryCommandBuffer command_buffer, BinarySemaphore = BinarySemaphore::null());
-			void flush(BinarySemaphore binary_semaphore = BinarySemaphore::null());
-			void present(const VkPresentInfoKHR& present_info);
+			void submit(PrimaryCommandBuffer command_buffer, BinarySemaphore* = nullptr);
+			void flush(BinarySemaphore* binary_semaphore = nullptr);
+			void present(VkSwapchainKHR swapchain, uint32 swapchain_index, BinarySemaphore* semaphore);
 			[[nodiscard]] uint32 get_family_index() const { return family_index_; }
 			[[nodiscard]] bool is_waiting_binary_semaphore() const;
 			[[nodiscard]] bool is_waiting_timeline_semaphore() const;
