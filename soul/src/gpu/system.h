@@ -96,8 +96,6 @@ namespace soul::gpu
 		vec2ui32 get_swapchain_extent();
 		TextureID get_swapchain_texture();
 
-		void create_surface(void* window_handle, VkSurfaceKHR* surface);
-
 		impl::FrameContext& get_frame_context();
 
 		VkRenderPass request_render_pass(const impl::RenderPassKey& key);
