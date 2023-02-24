@@ -1529,11 +1529,6 @@ namespace soul::gpu
 		return PipelineStateID(_db.pipeline_state_cache.create(key, create_compute_pipeline_state, desc));
 	}
 
-
-	PipelineState* System::get_pipeline_state_ptr(const PipelineStateID pipeline_state_id) {
-		return _db.pipeline_state_cache.get(pipeline_state_id.id);
-	}
-
 	const PipelineState& System::get_pipeline_state(PipelineStateID pipeline_state_id) {
 		return *_db.pipeline_state_cache.get(pipeline_state_id.id);
 	}
