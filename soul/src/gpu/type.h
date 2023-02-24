@@ -942,13 +942,6 @@ namespace soul::gpu
 			}
 		};
 
-		enum class BufferInternalFlag : uint8
-		{
-		    TRANSIENT,
-			COUNT
-		};
-		using BufferInternalFlags = FlagSet<BufferInternalFlag>;
-
 		struct Buffer {
 			BufferDesc desc;
 			VkBuffer vk_handle = VK_NULL_HANDLE;
@@ -956,7 +949,6 @@ namespace soul::gpu
 			ResourceOwner owner = ResourceOwner::NONE;
 			ResourceCacheState cache_state;
 			DescriptorID storage_buffer_gpu_handle = DescriptorID::null();
-			BufferInternalFlags internal_flags = {};
 			VkMemoryPropertyFlags memory_property_flags = 0;
 		};
 
