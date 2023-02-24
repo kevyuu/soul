@@ -553,7 +553,7 @@ namespace soul::gpu::impl
 		{
             const uint32 texture_info_idx = get_texture_info_index(attachment.out_node_id);
 			const TextureExecInfo& texture_info = texture_infos_[texture_info_idx];
-			const Texture& texture = *gpu_system_->get_texture_ptr(texture_info.texture_id);
+			const auto& texture = gpu_system_->get_texture(texture_info.texture_id);
 
 			Attachment render_pass_attachment = {};
 			render_pass_attachment.format = texture.desc.format;
@@ -860,7 +860,7 @@ namespace soul::gpu::impl
 
 			for (const TextureBarrier& barrier: pass_info.texture_invalidates) {
 				TextureExecInfo& texture_info = texture_infos_[barrier.texture_info_idx];
-				Texture* texture = gpu_system_->get_texture_ptr(texture_info.texture_id);
+				auto& texture = gpu_system_->get_texture(texture_info.texture_id);
 				TextureViewExecInfo& view_info = *texture_info.get_view(barrier.view);
 
 				const auto layout_change = view_info.layout != barrier.layout;
@@ -882,9 +882,9 @@ namespace soul::gpu::impl
 					.newLayout = barrier.layout,
 					.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
 					.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-					.image = texture->vk_handle,
+					.image = texture.vk_handle,
 					.subresourceRange = {
-						.aspectMask = vk_cast_format_to_aspect_flags(texture->desc.format),
+						.aspectMask = vk_cast_format_to_aspect_flags(texture.desc.format),
 						.baseMipLevel = barrier.view.get_level(),
 						.levelCount = 1,
 						.baseArrayLayer = barrier.view.get_layer(),
@@ -1069,7 +1069,7 @@ namespace soul::gpu::impl
 		}
 
 		for (const TextureExecInfo& texture_info : external_texture_infos_) {
-			Texture* texture = gpu_system_->get_texture_ptr(texture_info.texture_id);
+			auto& texture = gpu_system_->get_texture(texture_info.texture_id);
 
 			VkImageLayout layout = texture_info.view->layout;
 			SOUL_ASSERT(0, std::all_of(texture_info.view, texture_info.view + texture_info.get_view_count(),
@@ -1085,11 +1085,11 @@ namespace soul::gpu::impl
 					return view_info.passes.back().id == last_pass_idx;
 				}), "");
 			
-			texture->layout = layout;
+			texture.layout = layout;
 			SOUL_ASSERT(0, texture_info.get_view_count() > 0, "");
-			texture->cache_state = texture_info.view[0].cache_state;
+			texture.cache_state = texture_info.view[0].cache_state;
 			for (auto view_idx = 1u; view_idx < texture_info.get_view_count(); view_idx++)
-				texture->cache_state.join(texture_info.view[view_idx].cache_state);
+				texture.cache_state.join(texture_info.view[view_idx].cache_state);
 		}
 
 		for (const BufferExecInfo& buffer_info : buffer_infos_) {
@@ -1126,8 +1126,8 @@ namespace soul::gpu::impl
 		return gpu_system_->get_buffer(get_buffer_id(node_id));
 	}
 
-	Texture* RenderGraphExecution::get_texture(const TextureNodeID node_id) const {
-		return gpu_system_->get_texture_ptr(get_texture_id(node_id));
+	Texture& RenderGraphExecution::get_texture(const TextureNodeID node_id) const {
+		return gpu_system_->get_texture(get_texture_id(node_id));
 	}
 
 	uint32 RenderGraphExecution::get_buffer_info_index(const BufferNodeID node_id) const {

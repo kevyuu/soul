@@ -151,11 +151,11 @@ namespace soul::gpu::impl
 	void RenderCompiler::compile_command(const RenderCommandCopyTexture& command)
 	{
 		SOUL_PROFILE_ZONE();
-		const Texture* src_texture = gpu_system_.get_texture_ptr(command.src_texture);
-		const Texture* dst_texture = gpu_system_.get_texture_ptr(command.dst_texture);
+		const auto& src_texture = gpu_system_.get_texture(command.src_texture);
+		const auto& dst_texture = gpu_system_.get_texture(command.dst_texture);
 
-		const auto src_aspect_mask = vk_cast_format_to_aspect_flags(src_texture->desc.format);
-		const auto dst_aspect_mask = vk_cast_format_to_aspect_flags(dst_texture->desc.format);
+		const auto src_aspect_mask = vk_cast_format_to_aspect_flags(src_texture.desc.format);
+		const auto dst_aspect_mask = vk_cast_format_to_aspect_flags(dst_texture.desc.format);
 
 		runtime::ScopeAllocator scope_allocator("compile_command copy texture");
 		Vector<VkImageCopy> image_copies(&scope_allocator);
@@ -174,8 +174,8 @@ namespace soul::gpu::impl
 			});
 
 		vkCmdCopyImage(command_buffer_,
-			src_texture->vk_handle, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-			dst_texture->vk_handle, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+			src_texture.vk_handle, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+			dst_texture.vk_handle, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
 			command.region_count,
 			image_copies.data());
 	}

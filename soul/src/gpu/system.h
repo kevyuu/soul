@@ -57,7 +57,6 @@ namespace soul::gpu
 		const TextureDesc& get_texture_desc(const TextureID texture_id) const;
 		void destroy_texture_descriptor(TextureID texture_id);
 		void destroy_texture(TextureID textureID);
-		impl::Texture* get_texture_ptr(TextureID texture_id);
 		impl::Texture& get_texture(TextureID texture_id);
 		const impl::Texture& get_texture(TextureID texture_id) const;
 		impl::TextureView get_texture_view(TextureID texture_id, uint32 level, uint32 layer = 0);

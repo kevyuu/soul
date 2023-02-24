@@ -164,7 +164,7 @@ namespace soul::gpu::impl
 		[[nodiscard]] BufferID get_buffer_id(BufferNodeID node_id) const;
 		[[nodiscard]] TextureID get_texture_id(TextureNodeID node_id) const;
 		[[nodiscard]] Buffer& get_buffer(BufferNodeID node_id) const;
-		[[nodiscard]] Texture* get_texture(TextureNodeID node_id) const;
+		[[nodiscard]] Texture& get_texture(TextureNodeID node_id) const;
 		[[nodiscard]] uint32 get_buffer_info_index(BufferNodeID node_id) const;
 		[[nodiscard]] uint32 get_texture_info_index(TextureNodeID nodeID) const;
 

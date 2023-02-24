@@ -991,7 +991,7 @@ namespace soul::gpu
 		}
 	
 		const TextureID texture_id = create_texture(new_desc);
-		Texture &texture = *get_texture_ptr(texture_id);
+		auto& texture = get_texture(texture_id);
 
 		get_frame_context().gpu_resource_initializer.load(texture, load_desc);
 
@@ -1008,7 +1008,7 @@ namespace soul::gpu
 		new_desc.queue_flags |= { QueueType::GRAPHIC };
 
 		TextureID texture_id = create_texture(new_desc);
-		Texture &texture = *get_texture_ptr(texture_id);
+		auto& texture = get_texture(texture_id);
 
 		get_frame_context().gpu_resource_initializer.clear(texture, clear_value);
 
@@ -1017,7 +1017,7 @@ namespace soul::gpu
 
 	void System::flush_texture(const TextureID texture_id, const TextureUsageFlags usage_flags)
 	{
-		get_frame_context().gpu_resource_finalizer.finalize(*get_texture_ptr(texture_id), usage_flags);
+		get_frame_context().gpu_resource_finalizer.finalize(get_texture(texture_id), usage_flags);
 	}
 
 	uint32 System::get_texture_mip_levels(const TextureID texture_id) const
@@ -1037,7 +1037,7 @@ namespace soul::gpu
 			_db.descriptor_allocator.destroy_sampled_image_descriptor(texture_view.sampled_image_gpu_handle);
 			_db.descriptor_allocator.destroy_storage_image_descriptor(texture_view.storage_image_gpu_handle);
 		};
-		const Texture& texture = *get_texture_ptr(texture_id);
+		const auto& texture = get_texture(texture_id);
 		destroy_texture_view_descriptor(texture.view);
 		const auto view_count = texture.desc.mip_levels * texture.desc.layer_count;
 		if (texture.views != nullptr) std::for_each_n(texture.views, view_count, destroy_texture_view_descriptor);
@@ -1046,10 +1046,6 @@ namespace soul::gpu
 	void System::destroy_texture(TextureID id) {
 		SOUL_ASSERT_MAIN_THREAD();
 		get_frame_context().garbages.textures.push_back(id);
-	}
-
-	Texture *System:: get_texture_ptr(const TextureID texture_id) {
-		return _db.texture_pool.get(texture_id.id);
 	}
 
 	Texture& System::get_texture(const TextureID texture_id) {
@@ -1063,7 +1059,7 @@ namespace soul::gpu
 
 	TextureView System::get_texture_view(const TextureID texture_id, const uint32 level,
 	                                                        const uint32 layer) {
-		Texture& texture = *get_texture_ptr(texture_id);
+		auto& texture = get_texture(texture_id);
 		SOUL_ASSERT(0, level < texture.desc.mip_levels, "");
 
 		const auto layer_count = texture.desc.type == TextureType::D2_ARRAY ? texture.desc.extent.z : 1;
@@ -1255,9 +1251,9 @@ namespace soul::gpu
 		
 		frame_context.swapchain_index = swapchain_index;
 		const TextureID swapchain_texture_id = _db.swapchain.textures[swapchain_index];
-		Texture* swapchain_texture = get_texture_ptr(swapchain_texture_id);
-		swapchain_texture->cache_state.commit_acquire_swapchain();
-		swapchain_texture->layout = VK_IMAGE_LAYOUT_UNDEFINED;
+		auto& swapchain_texture = get_texture(swapchain_texture_id);
+		swapchain_texture.cache_state.commit_acquire_swapchain();
+		swapchain_texture.layout = VK_IMAGE_LAYOUT_UNDEFINED;
 		frame_context.image_available_semaphore.state = BinarySemaphore::State::SIGNALLED;
 
 		return result;
@@ -2191,7 +2187,7 @@ namespace soul::gpu
 			};
 			for (const auto texture_id : garbages.textures) {
 				destroy_texture_descriptor(texture_id);
-				Texture& texture = *get_texture_ptr(texture_id);
+				auto& texture = get_texture(texture_id);
 				vmaDestroyImage(_db.gpu_allocator, texture.vk_handle, texture.allocation);
 				destroy_texture_view(texture.view);
 				const auto view_count = texture.desc.mip_levels * texture.desc.layer_count;
@@ -2258,7 +2254,7 @@ namespace soul::gpu
 		FrameContext& frame_context = get_frame_context();
 		const auto swapchain_index = frame_context.swapchain_index;
 
-		Texture& swapchain_texture = *get_texture_ptr(_db.swapchain.textures[swapchain_index]);
+		auto& swapchain_texture = get_texture(_db.swapchain.textures[swapchain_index]);
 		{
 			SOUL_PROFILE_ZONE_WITH_NAME("GPU::System::LastSubmission");
 			frame_context.gpu_resource_initializer.flush(_db.queues, *this);
