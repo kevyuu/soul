@@ -650,7 +650,7 @@ namespace soul::gpu
 
 		[[nodiscard]] soul_size get_view_count() const
 		{
-			return mip_levels * layer_count;
+			return soul::cast<soul_size>(mip_levels) * layer_count;
 		}
 
 	};
@@ -882,7 +882,7 @@ namespace soul::gpu
 		};
 
 		struct Swapchain {
-			WSI* wsi;
+			WSI* wsi = nullptr;
 			VkSwapchainKHR vk_handle = VK_NULL_HANDLE;
 			VkSurfaceFormatKHR format = {};
 			VkExtent2D extent = {};
@@ -1258,10 +1258,10 @@ namespace soul::gpu
 
 		struct FrameContext {
 
-			runtime::AllocatorInitializer allocatorInitializer;
+			runtime::AllocatorInitializer allocator_initializer;
 			CommandPools command_pools;
 
-			TimelineSemaphore frame_end_semaphore;
+			TimelineSemaphore frame_end_semaphore = TimelineSemaphore::null();
 			BinarySemaphore image_available_semaphore;
 			BinarySemaphore render_finished_semaphore;
 
@@ -1270,8 +1270,8 @@ namespace soul::gpu
 			struct Garbages {
 				Vector<TextureID> textures;
 				Vector<BufferID> buffers;
-				Vector<VkRenderPass> renderPasses;
-				Vector<VkFramebuffer> frameBuffers;
+				Vector<VkRenderPass> render_passes;
+				Vector<VkFramebuffer> frame_buffers;
 				Vector<VkPipeline> pipelines;
 				Vector<VkEvent> events;
 				Vector<BinarySemaphore> semaphores;
@@ -1286,9 +1286,9 @@ namespace soul::gpu
 			GPUResourceInitializer gpu_resource_initializer;
 			GPUResourceFinalizer gpu_resource_finalizer;
 
-			explicit FrameContext(memory::Allocator* allocator) : allocatorInitializer(allocator)
+			explicit FrameContext(memory::Allocator* allocator) : allocator_initializer(allocator)
 			{
-				allocatorInitializer.end();
+				allocator_initializer.end();
 			}
 		};
 
@@ -1323,7 +1323,7 @@ namespace soul::gpu
 			CommandQueues queues;
 
 			VkSurfaceKHR surface = VK_NULL_HANDLE;
-			VkSurfaceCapabilitiesKHR surfaceCaps = {};
+			VkSurfaceCapabilitiesKHR surface_caps = {};
 
 			Swapchain swapchain;
 
@@ -1347,8 +1347,8 @@ namespace soul::gpu
 			UInt64HashMap<SamplerID> sampler_map;
 			BindlessDescriptorAllocator descriptor_allocator;
 
-			explicit Database(memory::Allocator* backingAllocator) :
-				cpu_allocator("GPU System allocator", backingAllocator, CPUAllocatorProxy::Config{ memory::ProfileProxy::Config(), memory::CounterProxy::Config() }),
+			explicit Database(memory::Allocator* backing_allocator) :
+				cpu_allocator("GPU System allocator", backing_allocator, CPUAllocatorProxy::Config{ memory::ProfileProxy::Config(), memory::CounterProxy::Config() }),
 				vulkan_cpu_allocator("Vulkan allocator", &vulkan_cpu_backing_allocator, VulkanCPUAllocatorProxy::Config{ memory::MutexProxy::Config(), memory::ProfileProxy::Config() }),
 				allocator_initializer(&cpu_allocator) {
 				allocator_initializer.end();

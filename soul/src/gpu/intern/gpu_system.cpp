@@ -458,7 +458,7 @@ namespace soul::gpu
 						continue;
 					}
 
-					vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device, db->surface, &db->surfaceCaps);
+					vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device, db->surface, &db->surface_caps);
 
 					uint32 format_count;
 					vkGetPhysicalDeviceSurfaceFormatsKHR(device, db->surface, &format_count, nullptr);
@@ -697,12 +697,12 @@ namespace soul::gpu
 			_db.swapchain.wsi = wsi;
 			const auto framebuffer_size = wsi->get_framebuffer_size();
 			db->swapchain.format = pick_surface_format(db->physical_device, db->surface);
-			db->swapchain.extent = pick_surface_extent(db->surfaceCaps, framebuffer_size);
+			db->swapchain.extent = pick_surface_extent(db->surface_caps, framebuffer_size);
 			db->swapchain.image_count = [db]()
 			{
-				auto image_count = db->surfaceCaps.minImageCount + 1;
-				if (db->surfaceCaps.maxImageCount > 0 && image_count > db->surfaceCaps.maxImageCount) {
-					image_count = db->surfaceCaps.maxImageCount;
+				auto image_count = db->surface_caps.minImageCount + 1;
+				if (db->surface_caps.maxImageCount > 0 && image_count > db->surface_caps.maxImageCount) {
+					image_count = db->surface_caps.maxImageCount;
 				}
 				return image_count;
 			}();
@@ -1925,7 +1925,7 @@ namespace soul::gpu
 	}
 
 	void System::destroy_framebuffer(VkFramebuffer framebuffer) {
-		get_frame_context().garbages.frameBuffers.push_back(framebuffer);
+		get_frame_context().garbages.frame_buffers.push_back(framebuffer);
 	}
 
 	VkEvent System::create_event() {
@@ -2210,17 +2210,17 @@ namespace soul::gpu
 
 		{
 			SOUL_PROFILE_ZONE_WITH_NAME("Destroy render passes");
-			for (const auto renderPass : garbages.renderPasses) {
+			for (const auto renderPass : garbages.render_passes) {
 				vkDestroyRenderPass(_db.device, renderPass, nullptr);
 			}
-			garbages.renderPasses.resize(0);
+			garbages.render_passes.resize(0);
 		}
 		
 
-		for (const auto framebuffer : garbages.frameBuffers) {
+		for (const auto framebuffer : garbages.frame_buffers) {
 			vkDestroyFramebuffer(_db.device, framebuffer, nullptr);
 		}
-		garbages.frameBuffers.resize(0);
+		garbages.frame_buffers.resize(0);
 
 		for (const auto pipeline: garbages.pipelines) {
 			vkDestroyPipeline(_db.device, pipeline, nullptr);
@@ -2333,11 +2333,11 @@ namespace soul::gpu
 		vkDeviceWaitIdle(_db.device);
 
 		SOUL_LOG_INFO("Recreate swapchain. Framebuffer Size = %zu %zu", framebuffer_size.x, framebuffer_size.y);
-		vkGetPhysicalDeviceSurfaceCapabilitiesKHR(_db.physical_device, _db.surface, &_db.surfaceCaps);
+		vkGetPhysicalDeviceSurfaceCapabilitiesKHR(_db.physical_device, _db.surface, &_db.surface_caps);
 		auto& swapchain_garbage = get_frame_context().garbages.swapchain;
 		swapchain_garbage.vk_handle = _db.swapchain.vk_handle;
 
-	    _db.swapchain.extent = pick_surface_extent(_db.surfaceCaps, framebuffer_size);
+	    _db.swapchain.extent = pick_surface_extent(_db.surface_caps, framebuffer_size);
 
 		const VkSwapchainCreateInfoKHR swapchain_info = {
 			.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
