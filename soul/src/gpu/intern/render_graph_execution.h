@@ -9,13 +9,13 @@
 namespace soul::gpu::impl
 {
 
-	struct BufferBarrier {
+	struct BufferAccess {
 		PipelineStageFlags stage_flags;
 		AccessFlags access_flags;
 		uint32 buffer_info_idx = 0;
 	};
 
-	struct TextureBarrier {
+	struct TextureAccess {
 		PipelineStageFlags stage_flags;
 		AccessFlags access_flags;
 
@@ -117,10 +117,8 @@ namespace soul::gpu::impl
 
 	struct PassExecInfo {
 		PassBaseNode* pass_node = nullptr;
-		Vector<BufferBarrier> buffer_flushes;
-		Vector<BufferBarrier> buffer_invalidates;
-		Vector<TextureBarrier> texture_flushes;
-		Vector<TextureBarrier> texture_invalidates;
+		Vector<BufferAccess> buffer_accesses;
+		Vector<TextureAccess> texture_accesses;
 	};
 
 	struct PhysicalEvent
