@@ -121,19 +121,6 @@ namespace soul::gpu::impl
 		Vector<TextureAccess> texture_accesses;
 	};
 
-	struct PhysicalEvent
-	{
-		VkEvent event;
-		VkDependencyInfo dependency_info;
-	};
-
-	struct PassSynchronizations
-	{
-		Vector<PassNodeID> dependency_events;
-		Vector<VkDependencyInfo> pipeline_barriers;
-
-	};
-
 	class RenderGraphExecution {
 	public:
 		RenderGraphExecution(const RenderGraph* render_graph, System* system, memory::Allocator* allocator, 
