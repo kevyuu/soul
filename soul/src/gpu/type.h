@@ -40,8 +40,8 @@ namespace soul::gpu
 	class WSI
 	{
 	public:
-		virtual [[nodiscard]] VkSurfaceKHR create_vulkan_surface(VkInstance instance) = 0;
-		virtual [[nodiscard]] vec2ui32 get_framebuffer_size() const = 0;
+		[[nodiscard]] virtual VkSurfaceKHR create_vulkan_surface(VkInstance instance) = 0;
+		[[nodiscard]] virtual vec2ui32 get_framebuffer_size() const = 0;
 		virtual ~WSI() = default;
 	};
 

@@ -123,7 +123,7 @@ namespace soul {
 		constexpr explicit matrix(T val) : mat(val) {}
 		constexpr explicit matrix(store_type mat) : mat(mat) {}
 
-		SOUL_ALWAYS_INLINE [[nodiscard]] float m(const uint8 row, const uint8 column) const
+		[[nodiscard]] SOUL_ALWAYS_INLINE float m(const uint8 row, const uint8 column) const
 		{
 			return mat[column][row];
 		}
