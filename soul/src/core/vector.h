@@ -8,6 +8,7 @@
 #include "core/util.h"
 #include "memory/allocator.h"
 
+//test comment2
 namespace soul
 {
 	template <typename T, memory::allocator_type AllocatorType = memory::Allocator, soul_size N = 0>

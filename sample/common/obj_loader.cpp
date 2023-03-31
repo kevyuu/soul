@@ -4,6 +4,7 @@
 
 #include "math/math.h"
 
+//Test comment
 void ObjLoader::load_model(const std::filesystem::path& filepath)
 {
     tinyobj::ObjReader reader;
