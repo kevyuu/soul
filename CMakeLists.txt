@@ -22,7 +22,7 @@ if (NOT SOUL_EXCEPTION_ENABLE)
 	if(MSVC)
 		# Disable C++ exceptions.
 		string(REGEX REPLACE "/EH[a-z]+" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
-		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /EHs-c-")
+		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /EHs-c- /D_HAS_EXCEPTIONS=0")
 	endif()
 endif()
 
