@@ -6,20 +6,19 @@ struct GLFWwindow;
 
 namespace soul::gpu
 {
-	class System;
+  class System;
 }
 
 class ImGuiRenderGraphPass
 {
 public:
-	ImGuiRenderGraphPass(soul::gpu::System* gpu_system);
-	~ImGuiRenderGraphPass();
-	void add_pass(soul::gpu::TextureNodeID render_target, soul::gpu::RenderGraph& render_graph);
+  ImGuiRenderGraphPass(soul::gpu::System* gpu_system);
+  ~ImGuiRenderGraphPass();
+  void add_pass(soul::gpu::TextureNodeID render_target, soul::gpu::RenderGraph& render_graph);
 
 private:
-
-	soul::gpu::ProgramID program_id_ = soul::gpu::ProgramID();
-	soul::gpu::TextureID font_texture_id_ = soul::gpu::TextureID();
-	soul::gpu::SamplerID font_sampler_id_ = soul::gpu::SamplerID();
-	soul::gpu::System* gpu_system_ = nullptr;
+  soul::gpu::ProgramID program_id_ = soul::gpu::ProgramID();
+  soul::gpu::TextureID font_texture_id_ = soul::gpu::TextureID();
+  soul::gpu::SamplerID font_sampler_id_ = soul::gpu::SamplerID();
+  soul::gpu::System* gpu_system_ = nullptr;
 };

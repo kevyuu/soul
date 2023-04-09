@@ -19,44 +19,42 @@
 
 #pragma once
 #include "core/type.h"
-#include "tiny_obj_loader.h"
 #include "core/vector.h"
+#include "tiny_obj_loader.h"
 
 namespace std::filesystem
 {
-    class path;
+  class path;
 }
 
 // Structure holding the material
-struct MaterialObj
-{
-    soul::vec3f ambient = soul::vec3f(0.1f, 0.1f, 0.1f);
-    soul::vec3f diffuse = soul::vec3f(0.7f, 0.7f, 0.7f);
-    soul::vec3f specular = soul::vec3f(1.0f, 1.0f, 1.0f);
-    soul::vec3f transmittance = soul::vec3f(0.0f, 0.0f, 0.0f);
-    soul::vec3f emission = soul::vec3f(0.0f, 0.0f, 0.10);
-    float         shininess = 0.f;
-    float         ior = 1.0f;  // index of refraction
-    float         dissolve = 1.f;   // 1 == opaque; 0 == fully transparent
-                                         // illumination model (see http://www.fileformat.info/format/material/)
-    int illum = 0;
-    int texture_id = -1;
-};
-// OBJ representation of a vertex
-// NOTE: BLAS builder depends on pos being the first member
-struct VertexObj
-{
-    soul::vec3f position;
-    soul::vec3f normal;
-    soul::vec3f color;
-    soul::vec2f tex_coord;
+struct MaterialObj {
+  soul::vec3f ambient = soul::vec3f(0.1f, 0.1f, 0.1f);
+  soul::vec3f diffuse = soul::vec3f(0.7f, 0.7f, 0.7f);
+  soul::vec3f specular = soul::vec3f(1.0f, 1.0f, 1.0f);
+  soul::vec3f transmittance = soul::vec3f(0.0f, 0.0f, 0.0f);
+  soul::vec3f emission = soul::vec3f(0.0f, 0.0f, 0.10);
+  float shininess = 0.f;
+  float ior = 1.0f;     // index of refraction
+  float dissolve = 1.f; // 1 == opaque; 0 == fully transparent
+  // illumination model (see http://www.fileformat.info/format/material/)
+  int illum = 0;
+  int texture_id = -1;
 };
 
-struct ShapeObj
-{
-    uint32_t offset;
-    uint32_t index_count;
-    uint32_t mat_index;
+// OBJ representation of a vertex
+// NOTE: BLAS builder depends on pos being the first member
+struct VertexObj {
+  soul::vec3f position;
+  soul::vec3f normal;
+  soul::vec3f color;
+  soul::vec2f tex_coord;
+};
+
+struct ShapeObj {
+  uint32_t offset;
+  uint32_t index_count;
+  uint32_t mat_index;
 };
 
 using IndexObj = uint32;
@@ -65,12 +63,12 @@ using MaterialIndexObj = int32;
 class ObjLoader
 {
 public:
-    void load_model(const std::filesystem::path& filepath);
+  auto load_model(const std::filesystem::path& filepath) -> void;
 
-    soul::Vector<VertexObj> vertices;
-    soul::Vector<IndexObj> indices;
-    soul::Vector<MaterialObj> materials;
-    soul::Vector<std::string> textures;
-    soul::Vector<MaterialIndexObj> mat_indexes;
-    soul::AABB bounding_box;
+  soul::Vector<VertexObj> vertices;
+  soul::Vector<IndexObj> indices;
+  soul::Vector<MaterialObj> materials;
+  soul::Vector<std::string> textures;
+  soul::Vector<MaterialIndexObj> mat_indexes;
+  soul::AABB bounding_box;
 };

@@ -1,9 +1,7 @@
 #include "core/dev_util.h"
 
 #if defined(SOUL_PROFILE_CPU_BACKEND_NVTX)
-#include <Windows.h>
+#  include <Windows.h>
 
-uint32_t GetOsThreadId() {
-	return GetCurrentThreadId();
-}
+uint32 GetOsThreadId() { return GetCurrentThreadId(); }
 #endif

@@ -17,22 +17,32 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 
 option(SOUL_EXCEPTION_ENABLE "Build this target with exception" OFF)
-if (NOT SOUL_EXCEPTION_ENABLE)
-	message(STATUS "SOUL_EXCEPTION_ENABLE OFF")
-	if(MSVC)
-		# Disable C++ exceptions.
-		string(REGEX REPLACE "/EH[a-z]+" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
-		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /EHs-c- /D_HAS_EXCEPTIONS=0")
-	endif()
+if(NOT SOUL_EXCEPTION_ENABLE)
+  message(STATUS "SOUL_EXCEPTION_ENABLE OFF")
+  if(MSVC)
+    # Disable C++ exceptions.
+    string(
+      REGEX
+      REPLACE "/EH[a-z]+"
+              ""
+              CMAKE_CXX_FLAGS
+              "${CMAKE_CXX_FLAGS}")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /EHs-c- /D_HAS_EXCEPTIONS=0")
+  endif()
 endif()
 
 option(SOUL_RTTI_ENABLE "Build this target with rtti" OFF)
-if (NOT SOUL_RTTI_ENABLE)
-	if (MSVC)
-		# Disable RTTI
-		string(REGEX REPLACE "/GR" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
-		set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /GR-")
-	endif()
+if(NOT SOUL_RTTI_ENABLE)
+  if(MSVC)
+    # Disable RTTI
+    string(
+      REGEX
+      REPLACE "/GR"
+              ""
+              CMAKE_CXX_FLAGS
+              "${CMAKE_CXX_FLAGS}")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /GR-")
+  endif()
 endif()
 
 message(STATUS "Compiler ID : ${CMAKE_CXX_COMPILER_ID}")

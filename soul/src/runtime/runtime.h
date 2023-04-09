@@ -4,113 +4,99 @@
 #include "runtime/data.h"
 #include "runtime/system.h"
 
-namespace soul::runtime {
+namespace soul::runtime
+{
 
-	inline void init(const Config& config) {
-		System::Get().init(config);
-	}
+  inline auto init(const Config& config) -> void { System::get().init(config); }
 
-	inline void shutdown() {
-		System::Get().shutdown();
-	}
+  inline auto shutdown() -> void { System::get().shutdown(); }
 
-	inline void begin_frame() {
-		System::Get().beginFrame();
-	}
+  inline auto begin_frame() -> void { System::get().begin_frame(); }
 
-	inline TaskID create_task(const TaskID parent = TaskID::ROOT()) {
-		return System::Get().taskCreate(parent, [](TaskID){});
-	}
+  inline auto create_task(const TaskID parent = TaskID::ROOT()) -> TaskID
+  {
+    return System::get().create_task(parent, [](TaskID) {});
+  }
 
-	template<execution Execute>
-	inline TaskID create_task(const TaskID parent, Execute&& lambda) {
-		return System::Get().taskCreate(parent, std::forward<Execute>(lambda));
-	}
+  template <execution Execute>
+  auto create_task(const TaskID parent, Execute&& lambda) -> TaskID
+  {
+    return System::get().create_task(parent, std::forward<Execute>(lambda));
+  }
 
-	inline void wait_task(TaskID taskID) {
-		System::Get().taskWait(taskID);
-	}
+  inline auto wait_task(TaskID taskID) -> void { System::get().wait_task(taskID); }
 
-	inline void run_task(TaskID taskID) {
-		System::Get().taskRun(taskID);
-	}
+  inline auto run_task(TaskID taskID) -> void { System::get().task_run(taskID); }
 
-	inline void run_and_wait_task(TaskID task_id)
-	{
-		run_task(task_id);
-		wait_task(task_id);
-	}
+  inline auto run_and_wait_task(TaskID task_id) -> void
+  {
+    run_task(task_id);
+    wait_task(task_id);
+  }
 
-	template<execution Execute>
-	TaskID create_and_run_task(TaskID parent, Execute&& lambda) {
-		const TaskID taskID = create_task(parent, std::forward<Execute>(lambda));
-		run_task(taskID);
-		return taskID;
-	}
+  template <execution Execute>
+  auto create_and_run_task(TaskID parent, Execute&& lambda) -> TaskID
+  {
+    const TaskID taskID = create_task(parent, std::forward<Execute>(lambda));
+    run_task(taskID);
+    return taskID;
+  }
 
-	template<typename Func> requires is_lambda_v<Func, void(int)>
-	inline TaskID parallel_for_task_create(TaskID parent, uint32 count, uint32 blockSize, Func&& func) {
-		return System::Get()._parallelForTaskCreateRecursive(parent, 0, count, blockSize, std::forward<Func>(func));
-	}
+  template <typename Func>
+    requires is_lambda_v<Func, void(int)>
+  auto parallel_for_task_create(TaskID parent, uint32 count, uint32 blockSize, Func&& func)
+    -> TaskID
+  {
+    return System::get().create_parallel_for_task_recursive(
+      parent, 0, count, blockSize, std::forward<Func>(func));
+  }
 
-	inline uint16 get_thread_id() {
-		return System::Get().getThreadID();
-	}
+  inline auto get_thread_id() -> uint16 { return System::get().get_thread_id(); }
 
-	inline uint16 get_thread_count() {
-		return System::Get().getThreadCount();
-	}
+  inline auto get_thread_count() -> uint16 { return System::get().get_thread_count(); }
 
-	inline void push_allocator(memory::Allocator* allocator) {
-		System::Get().pushAllocator(allocator);
-	}
+  inline auto push_allocator(memory::Allocator* allocator) -> void
+  {
+    System::get().push_allocator(allocator);
+  }
 
-	inline void pop_allocator() {
-		System::Get().popAllocator();
-	}
+  inline auto pop_allocator() -> void { System::get().pop_allocator(); }
 
-	inline memory::Allocator* get_context_allocator() {
-		return System::Get().getContextAllocator();
-	}
+  inline auto get_context_allocator() -> memory::Allocator*
+  {
+    return System::get().get_context_allocator();
+  }
 
-	inline TempAllocator* get_temp_allocator() {
-		return System::Get().getTempAllocator();
-	}
+  inline auto get_temp_allocator() -> TempAllocator* { return System::get().get_temp_allocator(); }
 
-	inline void* allocate(uint32 size, uint32 alignment) {
-		return System::Get().allocate(size, alignment);
-	}
+  inline auto allocate(uint32 size, uint32 alignment) -> void*
+  {
+    return System::get().allocate(size, alignment);
+  }
 
-	inline void deallocate(void* addr, uint32 size) {
-		return System::Get().deallocate(addr, size);
-	}
+  inline auto deallocate(void* addr, uint32 size) -> void
+  {
+    return System::get().deallocate(addr, size);
+  }
 
-	struct AllocatorInitializer {
-		AllocatorInitializer() = delete;
-		explicit AllocatorInitializer(memory::Allocator* allocator) {
-			push_allocator(allocator);
-		}
+  struct AllocatorInitializer {
+    AllocatorInitializer() = delete;
 
-		void end() {
-			pop_allocator();
-		}
-	};
+    explicit AllocatorInitializer(memory::Allocator* allocator) { push_allocator(allocator); }
 
-	struct AllocatorZone{
+    auto end() -> void { pop_allocator(); }
+  };
 
-		AllocatorZone() = delete;
+  struct AllocatorZone {
+    AllocatorZone() = delete;
 
-		explicit AllocatorZone(memory::Allocator* allocator) {
-			push_allocator(allocator);
-		}
+    explicit AllocatorZone(memory::Allocator* allocator) { push_allocator(allocator); }
 
-		~AllocatorZone() {
-			pop_allocator();
-		}
-	};
+    ~AllocatorZone() { pop_allocator(); }
+  };
 
 #define STRING_JOIN2(arg1, arg2) DO_STRING_JOIN2(arg1, arg2)
-#define DO_STRING_JOIN2(arg1, arg2) arg1 ## arg2
-#define SOUL_MEMORY_ALLOCATOR_ZONE(allocator) \
-                soul::runtime::AllocatorZone STRING_JOIN2(allocatorZone, __LINE__)(allocator)
-}
+#define DO_STRING_JOIN2(arg1, arg2) arg1##arg2
+#define SOUL_MEMORY_ALLOCATOR_ZONE(allocator)                                                      \
+  soul::runtime::AllocatorZone STRING_JOIN2(allocatorZone, __LINE__)(allocator)
+} // namespace soul::runtime

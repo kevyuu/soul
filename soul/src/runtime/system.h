@@ -4,122 +4,136 @@
 #include "core/type_traits.h"
 #include "runtime/data.h"
 
-#define SOUL_ASSERT_MAIN_THREAD() SOUL_ASSERT(0, soul::runtime::System::Get().getThreadID() == 0, "This method is not thread safe. Please only call it only from main thread!")
+#define SOUL_ASSERT_MAIN_THREAD()                                                                  \
+  SOUL_ASSERT(                                                                                     \
+    0,                                                                                             \
+    soul::runtime::System::get().get_thread_id() == 0,                                             \
+    "This method is not thread safe. Please only call it only from main thread!")
 
 namespace soul::runtime
 {
 
-	class System {
-	public:
+  class System
+  {
+  public:
+    System() = default;
+    System(const System&) = delete;
+    auto operator=(const System&) -> System& = delete;
+    System(System&&) = delete;
+    auto operator=(System&&) -> System& = delete;
+    ~System() = default;
 
-		System() = default;
-		System(const System&) = delete;
-		System& operator=(const System&) = delete;
-		System(System&&) = delete;
-		System& operator=(System&&) = delete;
-		~System() = default;
+    /*
+      Initialize the Runtime System. Only call this from the main thread.
+    */
+    auto init(const Config& config) -> void;
 
-		/*
-			Initialize the Runtime System. Only call this from the main thread.
-		*/
-		void init(const Config& config);
+    /*
+      Cleanup all runtime system resource. Only call this from the main thread.
+    */
+    auto shutdown() -> void;
 
-		/*
-			Cleanup all runtime system resource. Only call this from the main thread.
-		*/
-		void shutdown();
+    auto begin_frame() -> void;
 
-		void beginFrame(); 
+    template <execution Execute>
+    auto create_task(TaskID parent, Execute&& lambda) -> TaskID
+    {
+      static_assert(
+        sizeof lambda <= sizeof(Task::storage),
+        "Lambda size is too big."
+        "Consider increase the storage size of the"
+        "task or dynamically allocate the memory.");
 
-		template<execution EXECUTE>
-		TaskID taskCreate(TaskID parent, EXECUTE&& lambda) {
-			static_assert(sizeof lambda <= sizeof(Task::storage),
-				"Lambda size is too big."
-				"Consider increase the storage size of the"
-				"task or dynamically allocate the memory.");
+      static auto call = [](TaskID taskID, void* data) {
+        Execute& lambda = *static_cast<Execute*>(data);
+        lambda(taskID);
+        lambda.~Execute();
+      };
 
-			static auto call = [](TaskID taskID, void* data) {
-				EXECUTE& lambda = *((EXECUTE*)data);
-				lambda(taskID);
-				lambda.~EXECUTE();
-			};
+      const TaskID task_id = create_task(parent, call);
+      Task* task = get_task_ptr(task_id);
+      new (task->storage) Execute(std::forward<Execute>(lambda));
+      return task_id;
+    }
 
-			TaskID taskID = _taskCreate(parent, call);
-			Task* task = _taskPtr(taskID);
-			new(task->storage) EXECUTE(std::forward<EXECUTE>(lambda));
-			return taskID;
-		}
+    template <typename Func>
+    auto create_parallel_for_task_recursive(
+      TaskID parent, uint32 start, uint32 data_count, uint32 block_size, Func&& func) -> TaskID
+    {
+      using TaskData = ParallelForTaskData<Func>;
 
-		template <typename FUNC>
-		TaskID _parallelForTaskCreateRecursive(TaskID parent, uint32 start, uint32 dataCount, uint32 blockSize, FUNC&& func) {
-			using TaskData = ParallelForTaskData<FUNC>;
+      static_assert(
+        sizeof(TaskData) <= sizeof(Task::storage),
+        "ParallelForTaskData size is too big. TaskData = %d"
+        "Consider to increase the storage size of the task.");
 
-			static_assert(sizeof(TaskData) <= sizeof(Task::storage),
-				"ParallelForTaskData size is too big. TaskData = %d"
-				"Consider to increase the storage size of the task.");
+      static auto parallel_func = [](TaskID taskID, void* data) {
+        TaskData& task_data = (*static_cast<TaskData*>(data));
+        if (task_data.count > task_data.min_count) {
+          const uint32 left_count = task_data.count / 2;
+          const TaskID left_task_id = get().create_parallel_for_task_recursive(
+            taskID, task_data.start, left_count, task_data.min_count, task_data.func);
+          get().task_run(left_task_id);
 
-			static auto parallelFunc = [](TaskID taskID, void* data) {
-				TaskData& taskData = (*(TaskData*)data);
-				if (taskData.count > taskData.minCount) {
-					uint32 leftCount = taskData.count / 2;
-					TaskID leftTaskID = Get()._parallelForTaskCreateRecursive(taskID, taskData.start, leftCount, taskData.minCount, taskData.func);
-					Get().taskRun(leftTaskID);
+          const uint32 right_count = task_data.count - left_count;
+          const TaskID right_task_id = get().create_parallel_for_task_recursive(
+            taskID, task_data.start + left_count, right_count, task_data.min_count, task_data.func);
+          get().task_run(right_task_id);
+        } else {
+          for (soul_size i = 0; i < task_data.count; i++) {
+            task_data.func(task_data.start + i);
+          }
+        }
+      };
 
-					uint32 rightCount = taskData.count - leftCount;
-					TaskID rightTaskID = Get()._parallelForTaskCreateRecursive(taskID, taskData.start + leftCount, rightCount, taskData.minCount, taskData.func);
-					Get().taskRun(rightTaskID);
-				}
-				else {
-					for (soul_size i = 0; i < taskData.count; i++) {
-						taskData.func(taskData.start + i);
-					}
-				}
-			};
+      const TaskID task_id = create_task(parent, std::move(parallel_func));
+      Task* task = get_task_ptr(task_id);
+      new (task->storage) TaskData(start, data_count, block_size, std::forward<Func>(func));
+      return task_id;
+    }
 
-			TaskID taskID = _taskCreate(parent, std::move(parallelFunc));
-			Task* task = _taskPtr(taskID);
-			new(task->storage) TaskData(start, dataCount, blockSize, std::forward<FUNC>(func));
-			return taskID;
-		}
+    template <typename Func>
+      requires is_lambda_v<Func, void(int)>
+    auto create_parallel_for_task(TaskID parent, uint32 count, uint32 block_size, Func&& func)
+      -> TaskID
+    {
+      return create_parallel_for_task_recursive(
+        parent, 0, count, block_size, std::forward<Func>(func));
+    }
 
-		template<typename FUNC> requires is_lambda_v<FUNC, void(int)>
-		TaskID parallelForTaskCreate(TaskID parent, uint32 count, uint32 blockSize, FUNC&& func) {
-			return _parallelForTaskCreateRecursive(parent, 0, count, blockSize, std::forward<FUNC>(func));
-		}
+    auto wait_task(TaskID task_id) -> void;
+    auto task_run(TaskID task_id) -> void;
 
-		void taskWait(TaskID taskID);
-		void taskRun(TaskID taskID);
+    auto get_thread_count() const -> uint16;
+    static auto get_thread_id() -> uint16;
+    auto get_thread_context() -> ThreadContext&;
 
-		uint16 getThreadCount() const;
-		uint16 getThreadID() const;
-		ThreadContext& _threadContext();
+    static auto get() -> System&
+    {
+      [[clang::no_destroy]] static System instance;
+      return instance;
+    }
 
-		static System& Get() {
-			[[clang::no_destroy]] static System instance;
-			return instance;
-		}
+    auto push_allocator(memory::Allocator* allocator) -> void;
+    auto pop_allocator() -> void;
+    auto get_context_allocator() -> memory::Allocator*;
+    auto allocate(uint32 size, uint32 alignment) -> void*;
+    auto deallocate(void* addr, uint32 size) -> void;
+    auto get_temp_allocator() -> TempAllocator*;
 
-		void pushAllocator(memory::Allocator* allocator);
-		void popAllocator();
-		memory::Allocator* getContextAllocator();
-		void* allocate(uint32 size, uint32 alignment);
-		void deallocate(void* addr, uint32 size);
-		TempAllocator* getTempAllocator();
+  private:
+    auto create_task(TaskID parent, TaskFunc func) -> TaskID;
+    auto get_task_ptr(TaskID task_id) -> Task*;
+    auto finish_task(Task* task) -> void;
+    static auto is_task_complete(Task* task) -> bool;
 
-	private:
+    auto loop(ThreadContext* thread_context) -> void;
+    auto execute(TaskID task) -> void;
 
-		TaskID _taskCreate(TaskID parent, TaskFunc func);
-		Task* _taskPtr(TaskID taskID);
-		void _taskFinish(Task* task);
-		static bool _taskIsComplete(Task* task);
+    auto terminate() -> void;
 
-		void _loop(ThreadContext* threadContext);
-		void _execute(TaskID task);
+    auto init_root_task() -> void;
 
-		void _terminate();
-
-		void _initRootTask();
-
-		Database _db;
-	};
-}
+    Database db_;
+  };
+} // namespace soul::runtime

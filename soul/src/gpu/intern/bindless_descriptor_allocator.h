@@ -1,105 +1,111 @@
 #pragma once
 
-#include <volk.h>
-#include "core/type.h"
 #include "core/mutex.h"
+#include "core/type.h"
 #include "gpu/constant.h"
 #include "gpu/id.h"
-#include "runtime/runtime.h"
 #include "memory/allocator.h"
+#include "runtime/runtime.h"
 
 namespace soul::gpu
 {
-	class System;
-	struct Descriptor;
-}
+  class System;
+  struct Descriptor;
+} // namespace soul::gpu
 
 namespace soul::gpu::impl
 {
-	struct BindlessDescriptorSets
-	{
-		VkDescriptorSet vk_handles[BINDLESS_SET_COUNT];
-	};
 
-	class BindlessDescriptorSet
-	{
-	public:
-		explicit BindlessDescriptorSet(uint32 capacity, VkDescriptorType descriptor_type, soul::memory::Allocator* allocator = runtime::get_context_allocator());
-		BindlessDescriptorSet(const BindlessDescriptorSet&) = delete;
-		BindlessDescriptorSet(BindlessDescriptorSet&&) = delete;
-		BindlessDescriptorSet& operator=(const BindlessDescriptorSet&) = delete;
-		BindlessDescriptorSet& operator=(BindlessDescriptorSet&&) = delete;
-	    void init(VkDevice device, VkDescriptorPool descriptor_pool);
-		DescriptorID create_descriptor(VkDevice device, const VkDescriptorBufferInfo& buffer_info);
-		DescriptorID create_descriptor(VkDevice device, const VkDescriptorImageInfo& image_info);
-		DescriptorID create_descriptor(VkDevice device, VkAccelerationStructureKHR as);
-		void destroy_descriptor(VkDevice device, DescriptorID id);
-		VkDescriptorSet get_descriptor_set() const { return descriptor_set_; }
-		VkDescriptorSetLayout get_descriptor_set_layout() const { return descriptor_set_layout_; }
-		~BindlessDescriptorSet();
-	private:
-		
-		soul::memory::Allocator* allocator_;
-		uint32 free_head_;
-		uint32* list_;
-		uint32 capacity_;
-		VkDescriptorType descriptor_type_;
-		VkDescriptorSet descriptor_set_ = VK_NULL_HANDLE;
-		VkDescriptorSetLayout descriptor_set_layout_ = VK_NULL_HANDLE;
-		RWSpinMutex mutex_;
-	};
+  struct BindlessDescriptorSets {
+    VkDescriptorSet vk_handles[BINDLESS_SET_COUNT];
+  };
 
-	class BindlessDescriptorAllocator
-	{
-	public:
-		explicit BindlessDescriptorAllocator(memory::Allocator* allocator = runtime::get_context_allocator());
-		~BindlessDescriptorAllocator();
-		void init(VkDevice device);
+  class BindlessDescriptorSet
+  {
+  public:
+    explicit BindlessDescriptorSet(
+      uint32 capacity,
+      VkDescriptorType descriptor_type,
+      memory::Allocator* allocator = runtime::get_context_allocator());
+    BindlessDescriptorSet(const BindlessDescriptorSet&) = delete;
+    BindlessDescriptorSet(BindlessDescriptorSet&&) = delete;
+    auto operator=(const BindlessDescriptorSet&) -> BindlessDescriptorSet& = delete;
+    auto operator=(BindlessDescriptorSet&&) -> BindlessDescriptorSet& = delete;
+    auto init(VkDevice device, VkDescriptorPool descriptor_pool) -> void;
+    auto create_descriptor(VkDevice device, const VkDescriptorBufferInfo& buffer_info)
+      -> DescriptorID;
+    auto create_descriptor(VkDevice device, const VkDescriptorImageInfo& image_info)
+      -> DescriptorID;
+    auto create_descriptor(VkDevice device, VkAccelerationStructureKHR as) -> DescriptorID;
+    auto destroy_descriptor(VkDevice device, DescriptorID id) -> void;
+    auto get_descriptor_set() const -> VkDescriptorSet { return descriptor_set_; }
+    auto get_descriptor_set_layout() const -> VkDescriptorSetLayout
+    {
+      return descriptor_set_layout_;
+    }
+    ~BindlessDescriptorSet();
 
-		DescriptorID create_storage_buffer_descriptor(VkBuffer buffer);
-		void destroy_storage_buffer_descriptor(DescriptorID id);
+  private:
+    memory::Allocator* allocator_;
+    uint32 free_head_;
+    uint32* list_;
+    uint32 capacity_;
+    VkDescriptorType descriptor_type_;
+    VkDescriptorSet descriptor_set_ = VK_NULL_HANDLE;
+    VkDescriptorSetLayout descriptor_set_layout_ = VK_NULL_HANDLE;
+    RWSpinMutex mutex_;
+  };
 
-		DescriptorID create_sampled_image_descriptor(VkImageView image_view);
-		void destroy_sampled_image_descriptor(DescriptorID id);
+  class BindlessDescriptorAllocator
+  {
+  public:
+    explicit BindlessDescriptorAllocator(
+      memory::Allocator* allocator = runtime::get_context_allocator());
+    ~BindlessDescriptorAllocator();
+    auto init(VkDevice device) -> void;
 
-		DescriptorID create_storage_image_descriptor(VkImageView image_view);
-		void destroy_storage_image_descriptor(DescriptorID id);
+    auto create_storage_buffer_descriptor(VkBuffer buffer) -> DescriptorID;
+    auto destroy_storage_buffer_descriptor(DescriptorID id) -> void;
 
-		DescriptorID create_sampler_descriptor(VkSampler sampler);
-		void destroy_sampler_descriptor(DescriptorID id);
+    auto create_sampled_image_descriptor(VkImageView image_view) -> DescriptorID;
+    auto destroy_sampled_image_descriptor(DescriptorID id) -> void;
 
-		DescriptorID create_as_descriptor(VkAccelerationStructureKHR as);
-		void destroy_as_descriptor(DescriptorID id);
+    auto create_storage_image_descriptor(VkImageView image_view) -> DescriptorID;
+    auto destroy_storage_image_descriptor(DescriptorID id) -> void;
 
-		VkPipelineLayout get_pipeline_layout() const { return pipeline_layout_; }
+    auto create_sampler_descriptor(VkSampler sampler) -> DescriptorID;
+    auto destroy_sampler_descriptor(DescriptorID id) -> void;
 
-		BindlessDescriptorSets get_bindless_descriptor_sets() const
-		{
-			return {
-				{
-				    storage_buffer_descriptor_set_.get_descriptor_set(),
-				    sampler_descriptor_set_.get_descriptor_set(),
-				    sampled_image_descriptor_set_.get_descriptor_set(),
-				    storage_image_descriptor_set_.get_descriptor_set(),
-					as_descriptor_set_.get_descriptor_set()
-				}
-			};
-		}
+    auto create_as_descriptor(VkAccelerationStructureKHR as) -> DescriptorID;
+    auto destroy_as_descriptor(DescriptorID id) -> void;
 
-	private:
-		static constexpr uint32 STORAGE_BUFFER_DESCRIPTOR_COUNT = 512u * 1024;
-		static constexpr uint32 SAMPLER_DESCRIPTOR_COUNT = 4u * 1024;
-		static constexpr uint32 SAMPLED_IMAGE_DESCRIPTOR_COUNT = 512u * 1024;
-		static constexpr uint32 STORAGE_IMAGE_DESCRIPTOR_COUNT = 512u * 1024;
-		static constexpr uint32 AS_DESCRIPTOR_COUNT = 512u;
-		
-		VkDescriptorPool descriptor_pool_ = VK_NULL_HANDLE;
-		BindlessDescriptorSet storage_buffer_descriptor_set_;
-		BindlessDescriptorSet sampler_descriptor_set_;
-		BindlessDescriptorSet sampled_image_descriptor_set_;
-		BindlessDescriptorSet storage_image_descriptor_set_;
-		BindlessDescriptorSet as_descriptor_set_;
-		VkPipelineLayout pipeline_layout_ = VK_NULL_HANDLE;
-		VkDevice device_ = VK_NULL_HANDLE;
-	};
-}
+    auto get_pipeline_layout() const -> VkPipelineLayout { return pipeline_layout_; }
+
+    auto get_bindless_descriptor_sets() const -> BindlessDescriptorSets
+    {
+      return {
+        {storage_buffer_descriptor_set_.get_descriptor_set(),
+         sampler_descriptor_set_.get_descriptor_set(),
+         sampled_image_descriptor_set_.get_descriptor_set(),
+         storage_image_descriptor_set_.get_descriptor_set(),
+         as_descriptor_set_.get_descriptor_set()}};
+    }
+
+  private:
+    static constexpr uint32 STORAGE_BUFFER_DESCRIPTOR_COUNT = 512u * 1024;
+    static constexpr uint32 SAMPLER_DESCRIPTOR_COUNT = 4u * 1024;
+    static constexpr uint32 SAMPLED_IMAGE_DESCRIPTOR_COUNT = 512u * 1024;
+    static constexpr uint32 STORAGE_IMAGE_DESCRIPTOR_COUNT = 512u * 1024;
+    static constexpr uint32 AS_DESCRIPTOR_COUNT = 512u;
+
+    VkDescriptorPool descriptor_pool_ = VK_NULL_HANDLE;
+    BindlessDescriptorSet storage_buffer_descriptor_set_;
+    BindlessDescriptorSet sampler_descriptor_set_;
+    BindlessDescriptorSet sampled_image_descriptor_set_;
+    BindlessDescriptorSet storage_image_descriptor_set_;
+    BindlessDescriptorSet as_descriptor_set_;
+    VkPipelineLayout pipeline_layout_ = VK_NULL_HANDLE;
+    VkDevice device_ = VK_NULL_HANDLE;
+  };
+
+} // namespace soul::gpu::impl

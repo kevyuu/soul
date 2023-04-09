@@ -4,307 +4,333 @@
 #include "core/dev_util.h"
 #include "core/type.h"
 
-namespace soul {
+namespace soul
+{
 
-	template <typename T>
-	class UInt64HashMap {
+  template <typename T>
+  class UInt64HashMap
+  {
+  public:
+    explicit UInt64HashMap(memory::Allocator* allocator = get_default_allocator())
+        : allocator_(allocator)
+    {
+    }
 
-	public:
+    UInt64HashMap(const UInt64HashMap& other);
+    auto operator=(const UInt64HashMap& other) -> UInt64HashMap&;
+    UInt64HashMap(UInt64HashMap&& other) noexcept;
+    auto operator=(UInt64HashMap&& other) noexcept -> UInt64HashMap&;
+    ~UInt64HashMap() { cleanup(); }
 
-		explicit UInt64HashMap(memory::Allocator* allocator = get_default_allocator()) : _allocator(allocator) {}
-		UInt64HashMap(const UInt64HashMap& other);
-		UInt64HashMap& operator=(const UInt64HashMap& other);
-		UInt64HashMap(UInt64HashMap&& other) noexcept;
-		UInt64HashMap& operator=(UInt64HashMap&& other) noexcept;
-		~UInt64HashMap() { cleanup();}
+    auto swap(UInt64HashMap<T>& other) noexcept -> void;
+    friend auto swap(UInt64HashMap<T>& a, UInt64HashMap<T>& b) noexcept -> void { a.swap(b); }
 
-		void swap(UInt64HashMap<T>& other) noexcept;
-		friend void swap(UInt64HashMap<T>& a, UInt64HashMap<T>& b) noexcept { a.swap(b); }
+    auto clear() -> void;
+    auto cleanup() -> void;
 
-		void clear();
-		void cleanup();
+    auto reserve(soul_size capacity) -> void;
+    auto add(uint64 key, const T& value) -> void;
+    auto add(uint64 key, T&& value) -> void;
 
-		void reserve(soul_size capacity);
-		void add(uint64 key, const T& value);
-		void add(uint64 key, T&& value);
+    auto remove(uint64 key) -> void;
 
-		void remove(uint64 key);
+    [[nodiscard]] auto is_exist(uint64 key) const noexcept -> bool
+    {
+      if (size_ == 0) {
+        return false;
+      }
+      uint32 index = find_index(key);
+      return (indexes_[index].key == key && indexes_[index].dib != 0);
+    }
 
-		[[nodiscard]] bool isExist(uint64 key) const noexcept
-		{
-			if (_size == 0) return false;
-			uint32 index = _findIndex(key);
-			return (_indexes[index].key == key && _indexes[index].dib != 0);
-		}
+    [[nodiscard]] auto operator[](uint64 key) -> T&;
+    [[nodiscard]] auto operator[](uint64 key) const -> const T&;
 
-		[[nodiscard]] T& operator[](uint64 key);
-		[[nodiscard]] const T& operator[](uint64 key) const;
+    [[nodiscard]] auto size() const noexcept -> soul_size { return size_; }
+    [[nodiscard]] auto capacity() const -> soul_size { return capacity_; }
+    [[nodiscard]] auto empty() const noexcept -> bool { return size_ == 0; }
 
-		[[nodiscard]] soul_size size() const noexcept { return _size; }
-		[[nodiscard]] soul_size capacity() const { return _capacity; }
-		[[nodiscard]] bool empty() const noexcept { return _size == 0; }
+  private:
+    memory::Allocator* allocator_ = nullptr;
 
-	private:
-		memory::Allocator* _allocator = nullptr;
-		struct Index {
-			uint64 key;
-			soul_size dib;
-		};
-		Index * _indexes = nullptr;
-		T* _values = nullptr;
+    struct Index {
+      uint64 key;
+      soul_size dib;
+    };
 
-		soul_size _size = 0;
-		soul_size _capacity = 0;
-		soul_size _maxDib = 0;
+    Index* indexes_ = nullptr;
+    T* values_ = nullptr;
 
+    soul_size size_ = 0;
+    soul_size capacity_ = 0;
+    soul_size max_dib_ = 0;
 
-		inline void _initAssert() {
-			SOUL_ASSERT(0, _indexes == nullptr, "");
-			SOUL_ASSERT(0, _values == nullptr, "");
-			SOUL_ASSERT(0, _size == 0, "");
-			SOUL_ASSERT(0, _capacity == 0, "");
-			SOUL_ASSERT(0, _maxDib == 0, "");
-		}
+    auto init_assert() -> void
+    {
+      SOUL_ASSERT(0, indexes_ == nullptr, "");
+      SOUL_ASSERT(0, values_ == nullptr, "");
+      SOUL_ASSERT(0, size_ == 0, "");
+      SOUL_ASSERT(0, capacity_ == 0, "");
+      SOUL_ASSERT(0, max_dib_ == 0, "");
+    }
 
-		soul_size _findIndex(uint64 key) const {
-			uint32 baseIndex = key % _capacity;
-			uint32 iterIndex = baseIndex;
-			uint32 dib = 0;
-			while ((_indexes[iterIndex].key != key) && (_indexes[iterIndex].dib != 0) && (dib < _maxDib)) {
-				dib++;
-				iterIndex++;
-				iterIndex %= _capacity;
-			}
-			return iterIndex;
-		}
+    auto find_index(uint64 key) const -> soul_size
+    {
+      const uint32 baseIndex = key % capacity_;
+      auto iter_index = baseIndex;
+      uint32 dib = 0;
+      while ((indexes_[iter_index].key != key) && (indexes_[iter_index].dib != 0) &&
+             (dib < max_dib_)) {
+        dib++;
+        iter_index++;
+        iter_index %= capacity_;
+      }
+      return iter_index;
+    }
 
-		void _removeByIndex(soul_size index) {
-			uint32 nextIndex = index + 1;
-			nextIndex %= _capacity;
-			while(_indexes[nextIndex].dib > 1) {
-				_indexes[index].key = _indexes[nextIndex].key;
-				_indexes[index].dib = _indexes[nextIndex].dib - 1;
-				_values[index] = std::move(_values[nextIndex]);
-				index = (index + 1) % _capacity;
-				nextIndex = (nextIndex + 1) % _capacity;
-			}
-			_indexes[index].dib = 0;
-			_size--;
-		}
+    auto remove_by_index(soul_size index) -> void
+    {
+      uint32 next_index = index + 1;
+      next_index %= capacity_;
+      while (indexes_[next_index].dib > 1) {
+        indexes_[index].key = indexes_[next_index].key;
+        indexes_[index].dib = indexes_[next_index].dib - 1;
+        values_[index] = std::move(values_[next_index]);
+        index = (index + 1) % capacity_;
+        next_index = (next_index + 1) % capacity_;
+      }
+      indexes_[index].dib = 0;
+      size_--;
+    }
 
-		template <
-			typename U = T
-		>
-		requires is_trivially_move_constructible_v<U>
-		void _moveValues(const UInt64HashMap<U>& other) {
-			memcpy(_values, other._values, sizeof(U) * other._capacity);
-		}
+    template <typename U = T>
+      requires is_trivially_move_constructible_v<U>
+    auto move_values(const UInt64HashMap<U>& other) -> void
+    {
+      memcpy(values_, other._values, sizeof(U) * other._capacity);
+    }
 
-		template <
-			typename U = T
-		>
-		requires (!is_trivially_move_constructible_v<U>)
-		void _moveValues(const UInt64HashMap<U>& other) {
-			for (soul_size i = 0; i < other._capacity; ++i) {
-				if (other._indexes[i].dib == 0) continue;
-				new (_values + i) U(std::move(other._values[i]));
-			}
-		}
+    template <typename U = T>
+      requires(!is_trivially_move_constructible_v<U>)
+    auto move_values(const UInt64HashMap<U>& other) -> void
+    {
+      for (soul_size i = 0; i < other._capacity; ++i) {
+        if (other._indexes[i].dib == 0) {
+          continue;
+        }
+        new (values_ + i) U(std::move(other._values[i]));
+      }
+    }
 
-		template <
-			typename U = T
-		>
-		requires is_trivially_copyable_v<U>
-		void _copyValues(const UInt64HashMap<T>& other) {
-			memcpy(_values, other._values, sizeof(T) * other._capacity);
-		}
+    template <typename U = T>
+      requires is_trivially_copyable_v<U>
+    auto copy_values(const UInt64HashMap<T>& other) -> void
+    {
+      memcpy(values_, other.values_, sizeof(T) * other.capacity_);
+    }
 
-		template <
-			typename U = T
-		>
-		requires (!is_trivially_copyable_v<U>)
-		void _copyValues(const UInt64HashMap<T>& other) {
-			for (int i = 0; i < other._capacity; i++) {
-				if (other._indexes[i].dib == 0) continue;
-				new (_values + i) T(other._values[i]);
-			}
-		}
+    template <typename U = T>
+      requires(!is_trivially_copyable_v<U>)
+    auto copy_values(const UInt64HashMap<T>& other) -> void
+    {
+      for (auto i = 0; i < other.capacity_; i++) {
+        if (other.indexes_[i].dib == 0) {
+          continue;
+        }
+        new (values_ + i) T(other.values_[i]);
+      }
+    }
 
-		template <
-			typename U = T>
-		void _destructValues()
-		{
-			if constexpr (!is_trivially_destructible_v<U>) {
-				for (int i = 0; i < _capacity; i++) {
-					if (_indexes[i].dib != 0) {
-						_values[i].~U();
-					}
-				}
-			}
-		}
-		
-	};
+    template <typename U = T>
+    auto destruct_values() -> void
+    {
+      if constexpr (!is_trivially_destructible_v<U>) {
+        for (auto i = 0; i < capacity_; i++) {
+          if (indexes_[i].dib != 0) {
+            values_[i].~U();
+          }
+        }
+      }
+    }
+  };
 
-	template <typename T>
-	UInt64HashMap<T>::UInt64HashMap(const UInt64HashMap& other) :  _allocator(other._allocator) {
-		_capacity = other.capacity();
-		_size = other.size();
-		_maxDib = other._maxDib;
+  template <typename T>
+  UInt64HashMap<T>::UInt64HashMap(const UInt64HashMap& other) : allocator_(other.allocator_)
+  {
+    capacity_ = other.capacity();
+    size_ = other.size();
+    max_dib_ = other.max_dib_;
 
-		_indexes = (Index*) _allocator->allocate(_capacity * sizeof(Index), alignof(Index));
-		memcpy(_indexes, other._indexes, sizeof(Index) * _capacity);
+    indexes_ = static_cast<Index*>(allocator_->allocate(capacity_ * sizeof(Index), alignof(Index)));
+    memcpy(indexes_, other.indexes_, sizeof(Index) * capacity_);
 
-		_values = (T*) _allocator->allocate(_capacity * sizeof(T), alignof(T));
-		_copyValues(other);
-	}
+    values_ = static_cast<T*>(allocator_->allocate(capacity_ * sizeof(T), alignof(T)));
+    copy_values(other);
+  }
 
-	template <typename T>
-	UInt64HashMap<T>& UInt64HashMap<T>::operator=(const UInt64HashMap& other) {  // NOLINT(bugprone-unhandled-self-assignment)
-		UInt64HashMap<T>(other).swap(*this);
-		return *this;
-	}
+  template <typename T>
+  auto UInt64HashMap<T>::operator=(const UInt64HashMap& other) -> UInt64HashMap<T>&
+  {
+    // NOLINT(bugprone-unhandled-self-assignment)
+    UInt64HashMap<T>(other).swap(*this);
+    return *this;
+  }
 
-	template<typename T>
-	UInt64HashMap<T>::UInt64HashMap(UInt64HashMap&& other) noexcept {
-		_indexes = std::move(other._indexes);
-		_values = std::move(other._values);
-		_size = std::move(other._size);
-		_capacity = std::move(other._capacity);
-		_maxDib = std::move(other._maxDib);
-		_allocator = std::move(other._allocator);
+  template <typename T>
+  UInt64HashMap<T>::UInt64HashMap(UInt64HashMap&& other) noexcept
+  {
+    indexes_ = std::move(other.indexes_);
+    values_ = std::move(other.values_);
+    size_ = std::move(other.size_);
+    capacity_ = std::move(other.capacity_);
+    max_dib_ = std::move(other.max_dib_);
+    allocator_ = std::move(other.allocator_);
 
-		other._indexes = nullptr;
-		other._values = nullptr;
-		other._size = 0;
-		other._capacity = 0;
-		other._maxDib = 0;
-	}
+    other.indexes_ = nullptr;
+    other.values_ = nullptr;
+    other.size_ = 0;
+    other.capacity_ = 0;
+    other.max_dib_ = 0;
+  }
 
-	template<typename T>
-	UInt64HashMap<T>& UInt64HashMap<T>::operator=(UInt64HashMap&& other) noexcept {
-		UInt64HashMap<T>(std::move(other)).swap(*this);
-		return *this;
-	}
+  template <typename T>
+  auto UInt64HashMap<T>::operator=(UInt64HashMap&& other) noexcept -> UInt64HashMap<T>&
+  {
+    UInt64HashMap<T>(std::move(other)).swap(*this);
+    return *this;
+  }
 
-	template<typename T>
-	void UInt64HashMap<T>::swap(UInt64HashMap<T>& other) noexcept
-	{
-		using std::swap;
-		swap(_allocator, other._allocator);
-		swap(_indexes, other._indexes);
-		swap(_size, other._size);
-		swap(_capacity, other._capacity);
-		swap(_maxDib, other._maxDib);
-	}
+  template <typename T>
+  auto UInt64HashMap<T>::swap(UInt64HashMap<T>& other) noexcept -> void
+  {
+    using std::swap;
+    swap(allocator_, other.allocator_);
+    swap(indexes_, other.indexes_);
+    swap(size_, other.size_);
+    swap(capacity_, other.capacity_);
+    swap(max_dib_, other.max_dib_);
+  }
 
-	template <typename T>
-	void UInt64HashMap<T>::clear() {
-		_destructValues();
-		memset(_indexes, 0, sizeof(Index) * _capacity);
-		_maxDib = 0;
-		_size = 0;
-	}
+  template <typename T>
+  auto UInt64HashMap<T>::clear() -> void
+  {
+    destruct_values();
+    memset(indexes_, 0, sizeof(Index) * capacity_);
+    max_dib_ = 0;
+    size_ = 0;
+  }
 
-	template <typename T>
-	void UInt64HashMap<T>::cleanup() {
-		_destructValues();
-		_allocator->deallocate(_indexes);
-		_allocator->deallocate(_values);  // NOLINT(bugprone-sizeof-expression)
-		_maxDib = 0;
-		_size = 0;
-		_capacity = 0;
-	}
+  template <typename T>
+  auto UInt64HashMap<T>::cleanup() -> void
+  {
+    destruct_values();
+    allocator_->deallocate(indexes_);
+    allocator_->deallocate(values_); // NOLINT(bugprone-sizeof-expression)
+    max_dib_ = 0;
+    size_ = 0;
+    capacity_ = 0;
+  }
 
-	template <typename T>
-	void UInt64HashMap<T>::reserve(soul_size capacity) {
-		SOUL_ASSERT(0, _size == _capacity, "");
-		Index* oldIndexes = _indexes;
-		_indexes = (Index*) _allocator->allocate(capacity * sizeof(Index), alignof(Index));
-		memset(_indexes, 0, sizeof(Index) * capacity);
-		T* oldValues = _values;
-		_values = (T*) _allocator->allocate(capacity * sizeof(T), alignof(T));
-		const soul_size oldCapacity = _capacity;
-		_capacity = capacity;
-		_maxDib = 0;
-		_size = 0;
+  template <typename T>
+  auto UInt64HashMap<T>::reserve(soul_size capacity) -> void
+  {
+    SOUL_ASSERT(0, size_ == capacity_, "");
+    Index* old_indexes = indexes_;
+    indexes_ = static_cast<Index*>(allocator_->allocate(capacity * sizeof(Index), alignof(Index)));
+    memset(indexes_, 0, sizeof(Index) * capacity);
+    T* old_values = values_;
+    values_ = static_cast<T*>(allocator_->allocate(capacity * sizeof(T), alignof(T)));
+    const auto old_capacity = capacity_;
+    capacity_ = capacity;
+    max_dib_ = 0;
+    size_ = 0;
 
-		if (oldCapacity != 0) {
-			SOUL_ASSERT(0, oldIndexes != nullptr, "");
-			SOUL_ASSERT(0, oldValues != nullptr, "");
-			for (soul_size i = 0; i < oldCapacity; ++i) {
-				if (oldIndexes[i].dib != 0) {
-					add(oldIndexes[i].key, std::move(oldValues[i]));
-				}
-			}
-			_allocator->deallocate(oldIndexes);
-			_allocator->deallocate(oldValues);
-		}
-	}
+    if (old_capacity != 0) {
+      SOUL_ASSERT(0, old_indexes != nullptr, "");
+      SOUL_ASSERT(0, old_values != nullptr, "");
+      for (soul_size i = 0; i < old_capacity; ++i) {
+        if (old_indexes[i].dib != 0) {
+          add(old_indexes[i].key, std::move(old_values[i]));
+        }
+      }
+      allocator_->deallocate(old_indexes);
+      allocator_->deallocate(old_values);
+    }
+  }
 
-	template <typename T>
-	void UInt64HashMap<T>::add(uint64 key, const T& value) {
-		T valueToInsert = value;
-		add(key, std::move(valueToInsert));
-	}
+  template <typename T>
+  auto UInt64HashMap<T>::add(uint64 key, const T& value) -> void
+  {
+    T valueToInsert = value;
+    add(key, std::move(valueToInsert));
+  }
 
-	template <typename T>
-	void UInt64HashMap<T>::add(uint64 key, T&& value) {
-		if (_size == _capacity) {
-			reserve(_capacity * 2 + 8);
-		}
-		const uint32 baseIndex = uint32(key % _capacity);
-		uint32 iterIndex = baseIndex;
-		T valueToInsert = std::move(value);
-		uint64 keyToInsert = key;
-		uint32 dib = 1;
-		while (_indexes[iterIndex].dib != 0) {
-			if (_indexes[iterIndex].dib < dib) {
-				const uint64 tmpKey = _indexes[iterIndex].key;
-				T tmpValue = std::move(_values[iterIndex]);
-				const uint32 tmpDIB = _indexes[iterIndex].dib;
-				_indexes[iterIndex].key = keyToInsert;
-				_indexes[iterIndex].dib = dib;
-				if (_maxDib < dib) {
-					_maxDib = dib;
-				}
-				new (_values + iterIndex) T(std::move(valueToInsert));
-				keyToInsert = tmpKey;
-				valueToInsert = std::move(tmpValue);
-				dib = tmpDIB;
-			}
-			dib++;
-			iterIndex++;
-			iterIndex %= _capacity;
-		}
+  template <typename T>
+  auto UInt64HashMap<T>::add(uint64 key, T&& value) -> void
+  {
+    if (size_ == capacity_) {
+      reserve(capacity_ * 2 + 8);
+    }
+    const auto base_index = static_cast<uint32>(key % capacity_);
+    auto iter_index = base_index;
+    T value_to_insert = std::move(value);
+    auto key_to_insert = key;
+    uint32 dib = 1;
+    while (indexes_[iter_index].dib != 0) {
+      if (indexes_[iter_index].dib < dib) {
+        const uint64 tmpKey = indexes_[iter_index].key;
+        T tmpValue = std::move(values_[iter_index]);
+        const uint32 tmpDIB = indexes_[iter_index].dib;
+        indexes_[iter_index].key = key_to_insert;
+        indexes_[iter_index].dib = dib;
+        if (max_dib_ < dib) {
+          max_dib_ = dib;
+        }
+        new (values_ + iter_index) T(std::move(value_to_insert));
+        key_to_insert = tmpKey;
+        value_to_insert = std::move(tmpValue);
+        dib = tmpDIB;
+      }
+      dib++;
+      iter_index++;
+      iter_index %= capacity_;
+    }
 
-		_indexes[iterIndex].key = keyToInsert;
-		_indexes[iterIndex].dib = dib;
-		if (_maxDib < dib) {
-			_maxDib = dib;
-		}
-		new (_values + iterIndex) T(std::move(valueToInsert));
-		_size++;
-	}
+    indexes_[iter_index].key = key_to_insert;
+    indexes_[iter_index].dib = dib;
+    if (max_dib_ < dib) {
+      max_dib_ = dib;
+    }
+    new (values_ + iter_index) T(std::move(value_to_insert));
+    size_++;
+  }
 
-	template <typename T>
-	void UInt64HashMap<T>::remove(uint64 key) {
-		uint32 index = _findIndex(key);
-		SOUL_ASSERT(0, _indexes[index].key == key && _indexes[index].dib != 0, "Does not found any key : %d in the hash map", key);
-		_removeByIndex(index);
-	}
+  template <typename T>
+  auto UInt64HashMap<T>::remove(uint64 key) -> void
+  {
+    uint32 index = find_index(key);
+    SOUL_ASSERT(
+      0,
+      indexes_[index].key == key && indexes_[index].dib != 0,
+      "Does not found any key : %d in the hash map",
+      key);
+    remove_by_index(index);
+  }
 
-	template <typename T>
-	T& UInt64HashMap<T>::operator[](uint64 key) {
-		uint32 index = _findIndex(key);
-		SOUL_ASSERT(0, _indexes[index].key == key && _indexes[index].dib != 0, "");
-		return _values[index];
-	}
+  template <typename T>
+  auto UInt64HashMap<T>::operator[](uint64 key) -> T&
+  {
+    uint32 index = find_index(key);
+    SOUL_ASSERT(0, indexes_[index].key == key && indexes_[index].dib != 0, "");
+    return values_[index];
+  }
 
-	template <typename T>
-	const T& UInt64HashMap<T>::operator[](uint64 key) const {
-		uint32 index = _findIndex(key);
-		SOUL_ASSERT(0, _indexes[index].key == key && _indexes[index].dib != 0, "");
-		return _values[index];
-	}
+  template <typename T>
+  auto UInt64HashMap<T>::operator[](uint64 key) const -> const T&
+  {
+    uint32 index = find_index(key);
+    SOUL_ASSERT(0, indexes_[index].key == key && indexes_[index].dib != 0, "");
+    return values_[index];
+  }
 
-}
+} // namespace soul

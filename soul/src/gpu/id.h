@@ -1,6 +1,7 @@
 #pragma once
 
-#include "core/type.h"
+#include <variant>
+
 // TODO: Figure out how to do it without single header library
 #define VMA_STATIC_VULKAN_FUNCTIONS 0
 #define VMA_DYNAMIC_VULKAN_FUNCTIONS 0
@@ -9,80 +10,81 @@
 #include <vk_mem_alloc.h>
 #pragma warning(pop)
 
-#include "object_pool.h"
-#include "object_cache.h"
-#include <variant>
+#include "core/type.h"
 
+#include "object_cache.h"
+#include "object_pool.h"
 
 namespace soul::gpu::impl
 {
-	struct Texture;
-	struct Buffer;
-	struct Blas;
-	struct BlasGroup;
-	struct Tlas;
-    struct Sampler {};
-	struct Program;
-	struct BinarySemaphore;
-	struct Database;
-	struct GraphicPipelineStateKey;
-	struct ComputePipelineStateKey;
-	using PipelineStateKey = std::variant<impl::GraphicPipelineStateKey, impl::ComputePipelineStateKey>;
-	struct PipelineState;
-	struct ShaderArgSet;
-	struct Shader;
-	struct Program;
-	struct ShaderTable;
-	struct BinarySemaphore;
-	struct DescriptorSetLayoutKey;
-}
+  struct Texture;
+  struct Buffer;
+  struct Blas;
+  struct BlasGroup;
+  struct Tlas;
+
+  struct Sampler {
+  };
+
+  struct Program;
+  struct BinarySemaphore;
+  struct Database;
+  struct GraphicPipelineStateKey;
+  struct ComputePipelineStateKey;
+  using PipelineStateKey = std::variant<GraphicPipelineStateKey, ComputePipelineStateKey>;
+  struct PipelineState;
+  struct ShaderArgSet;
+  struct Shader;
+  struct Program;
+  struct ShaderTable;
+  struct BinarySemaphore;
+  struct DescriptorSetLayoutKey;
+} // namespace soul::gpu::impl
 
 namespace soul::gpu
 {
 
-	struct GPUAddressStub {};
-	using GPUAddress = ID<GPUAddressStub, VkDeviceAddress, 0>;
-	static_assert(sizeof(GPUAddress) == sizeof(uint64), "GPUAddress size is not the same as uint64");
+  struct GPUAddressStub {
+  };
 
-	using TexturePool = ConcurrentObjectPool<impl::Texture>;
-	using BufferPool = ConcurrentObjectPool<impl::Buffer>;
-	using BlasPool = ConcurrentObjectPool<impl::Blas>;
-	using BlasGroupPool = ConcurrentObjectPool<impl::BlasGroup>;
-	using TlasPool = ConcurrentObjectPool<impl::Tlas>;
-	using ShaderPool = ConcurrentObjectPool<impl::Shader>;
-	using ShaderTablePool = ConcurrentObjectPool<impl::ShaderTable>;
+  using GPUAddress = ID<GPUAddressStub, VkDeviceAddress, 0>;
+  static_assert(sizeof(GPUAddress) == sizeof(uint64), "GPUAddress size is not the same as uint64");
 
-	using PipelineStateCache = ConcurrentObjectCache<impl::PipelineStateKey, impl::PipelineState>;
+  using TexturePool = ConcurrentObjectPool<impl::Texture>;
+  using BufferPool = ConcurrentObjectPool<impl::Buffer>;
+  using BlasPool = ConcurrentObjectPool<impl::Blas>;
+  using BlasGroupPool = ConcurrentObjectPool<impl::BlasGroup>;
+  using TlasPool = ConcurrentObjectPool<impl::Tlas>;
+  using ShaderPool = ConcurrentObjectPool<impl::Shader>;
+  using ShaderTablePool = ConcurrentObjectPool<impl::ShaderTable>;
 
-	using DescriptorSetLayoutCache = ConcurrentObjectCache<impl::DescriptorSetLayoutKey, VkDescriptorSetLayout>;
-	
-	// ID
-	using TextureID = ID<impl::Texture, TexturePool::ID, TexturePool::NULLVAL>;
-	using BufferID = ID<impl::Buffer, BufferPool::ID, BufferPool::NULLVAL>;
-	using BlasID = ID<impl::Blas, BlasPool::ID, BlasPool::NULLVAL>;
-	using BlasGroupID = ID<impl::BlasGroup, BlasGroupPool::ID, BlasGroupPool::NULLVAL>;
-	using TlasID = ID<impl::Tlas, TlasPool::ID, TlasPool::NULLVAL>;
+  using PipelineStateCache = ConcurrentObjectCache<impl::PipelineStateKey, impl::PipelineState>;
 
-	struct Descriptor;
-	using DescriptorID = ID<Descriptor, uint32>;
+  using DescriptorSetLayoutCache =
+    ConcurrentObjectCache<impl::DescriptorSetLayoutKey, VkDescriptorSetLayout>;
 
-	struct SamplerID
-	{
-		VkSampler vkHandle = VK_NULL_HANDLE;
-		DescriptorID descriptorID;
+  // ID
+  using TextureID = ID<impl::Texture, TexturePool::ID, TexturePool::NULLVAL>;
+  using BufferID = ID<impl::Buffer, BufferPool::ID, BufferPool::NULLVAL>;
+  using BlasID = ID<impl::Blas, BlasPool::ID, BlasPool::NULLVAL>;
+  using BlasGroupID = ID<impl::BlasGroup, BlasGroupPool::ID, BlasGroupPool::NULLVAL>;
+  using TlasID = ID<impl::Tlas, TlasPool::ID, TlasPool::NULLVAL>;
 
-		[[nodiscard]] bool is_null() const
-		{
-			return vkHandle == VK_NULL_HANDLE;
-		}
+  struct Descriptor;
+  using DescriptorID = ID<Descriptor, uint32>;
 
-		[[nodiscard]] bool is_valid() const
-		{
-			return !this->is_null();
-		}
-	};
+  struct SamplerID {
+    VkSampler vkHandle = VK_NULL_HANDLE;
+    DescriptorID descriptorID;
 
-	using PipelineStateID = ID<impl::PipelineState, PipelineStateCache::ID, PipelineStateCache::NULLVAL>;
-	using ProgramID = ID<impl::Program, uint16>;
-	using ShaderTableID = ID<impl::ShaderTable, ShaderTablePool::ID, ShaderTablePool::NULLVAL>;
-}
+    [[nodiscard]] auto is_null() const -> bool { return vkHandle == VK_NULL_HANDLE; }
+
+    [[nodiscard]] auto is_valid() const -> bool { return !this->is_null(); }
+  };
+
+  using PipelineStateID =
+    ID<impl::PipelineState, PipelineStateCache::ID, PipelineStateCache::NULLVAL>;
+  using ProgramID = ID<impl::Program, uint16>;
+  using ShaderTableID = ID<impl::ShaderTable, ShaderTablePool::ID, ShaderTablePool::NULLVAL>;
+
+} // namespace soul::gpu

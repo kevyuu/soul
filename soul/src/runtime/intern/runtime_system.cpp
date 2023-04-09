@@ -1,281 +1,308 @@
-#include "core/dev_util.h"
-#include "core/architecture.h"
-#include "runtime/system.h"
-
-#include "memory/allocators/proxy_allocator.h"
-#include "memory/allocators/linear_allocator.h"
-
 #include <thread>
 
-static unsigned long randXorshf96() {
-	static thread_local unsigned long x = 123456789, y = 362436069, z = 521288629;
-	unsigned long t;
-	x ^= x << 16;
-	x ^= x >> 5;
-	x ^= x << 1;
+#include "core/architecture.h"
+#include "core/dev_util.h"
+#include "memory/allocators/linear_allocator.h"
+#include "memory/allocators/proxy_allocator.h"
+#include "runtime/system.h"
 
-	t = x;
-	x = y;
-	y = z;
-	z = t ^ x ^ y;
+static auto rand_xorshf96() -> unsigned long
+{
+  static thread_local unsigned long x = 123456789, y = 362436069, z = 521288629;
+  unsigned long t;
+  x ^= x << 16;
+  x ^= x >> 5;
+  x ^= x << 1;
 
-	return z;
+  t = x;
+  x = y;
+  y = z;
+  z = t ^ x ^ y;
+
+  return z;
 }
 
-namespace soul::runtime {
+namespace soul::runtime
+{
 
-	thread_local ThreadContext* Database::gThreadContext = nullptr;
-	
-	void System::_execute(TaskID taskID) {
-		{
-			std::lock_guard<std::mutex> lock(_db.loopMutex);
-			_db.activeTaskCount -= 1;
-		}
-		Task* task = _taskPtr(taskID);
-		task->func(taskID, task->storage);
-		_taskFinish(task);
-	}
+  thread_local ThreadContext* Database::g_thread_context = nullptr;
 
-	void System::_loop(ThreadContext* threadContext) {
-		Database::gThreadContext = threadContext;
+  auto System::execute(TaskID task_id) -> void
+  {
+    {
+      std::lock_guard<std::mutex> lock(db_.loop_mutex);
+      db_.active_task_count -= 1;
+    }
+    Task* task = get_task_ptr(task_id);
+    task->func(task_id, task->storage);
+    finish_task(task);
+  }
 
-		char threadName[512];
-		sprintf(threadName, "Worker Thread = %d", getThreadID());
-		SOUL_PROFILE_THREAD_SET_NAME(threadName);
+  auto System::loop(ThreadContext* thread_context) -> void
+  {
+    Database::g_thread_context = thread_context;
 
-		char tempAllocatorName[512];
-		memory::LinearAllocator linearAllocator(tempAllocatorName, 20 * ONE_MEGABYTE, getContextAllocator());
-		TempAllocator tempAllocator(&linearAllocator, runtime::TempProxy::Config());
-		threadContext->tempAllocator = &tempAllocator;
+    char threadName[512];
+    sprintf(threadName, "Worker Thread = %d", get_thread_id());
+    SOUL_PROFILE_THREAD_SET_NAME(threadName);
 
-		while (true) {
-			TaskID taskID = threadContext->taskDeque.pop();
-			while (taskID == TaskID::NULLVAL()) {
-				
-				{
-					std::unique_lock<std::mutex> lock(_db.loopMutex);
-					while(_db.activeTaskCount == 0 && !_db.isTerminated.load(std::memory_order_relaxed)) {
-						_db.loopCondVar.wait(lock);
-					}
-				}
+    char temp_allocator_name[512];
+    memory::LinearAllocator linear_allocator(
+      temp_allocator_name, 20 * ONE_MEGABYTE, get_context_allocator());
+    TempAllocator temp_allocator(&linear_allocator, TempProxy::Config());
+    thread_context->temp_allocator = &temp_allocator;
 
-				if (_db.isTerminated.load(std::memory_order_relaxed)) {
-					break;
-				}
+    while (true) {
+      TaskID task_id = thread_context->task_deque.pop();
+      while (task_id == TaskID::NULLVAL()) {
 
-				soul_size threadIndex = (randXorshf96() % _db.threadCount);
-				taskID = _db.threadContexts[threadIndex].taskDeque.steal();
-			}
+        {
+          std::unique_lock<std::mutex> lock(db_.loop_mutex);
+          while (db_.active_task_count == 0 && !db_.is_terminated.load(std::memory_order_relaxed)) {
+            db_.loop_cond_var.wait(lock);
+          }
+        }
 
-			if (_db.isTerminated.load(std::memory_order_relaxed)) {  
-				break;
-			}
-			_execute(taskID);
-		}
-	}
+        if (db_.is_terminated.load(std::memory_order_relaxed)) {
+          break;
+        }
 
-	void System::_terminate() {
-		_db.isTerminated.store(true);
-		{
-			std::lock_guard<std::mutex> lock(_db.loopMutex);
-		}
-		_db.loopCondVar.notify_all();
-	}
+        const soul_size thread_index = (rand_xorshf96() % db_.thread_count);
+        task_id = db_.thread_contexts[thread_index].task_deque.steal();
+      }
 
-	void System::beginFrame() {
-		SOUL_PROFILE_ZONE();
-		SOUL_ASSERT_MAIN_THREAD();
+      if (db_.is_terminated.load(std::memory_order_relaxed)) {
+        break;
+      }
+      execute(task_id);
+    }
+  }
 
-		taskWait(TaskID::NULLVAL());
+  auto System::terminate() -> void
+  {
+    db_.is_terminated.store(true);
+    {
+      std::lock_guard<std::mutex> lock(db_.loop_mutex);
+    }
+    db_.loop_cond_var.notify_all();
+  }
 
-		_initRootTask();
+  auto System::begin_frame() -> void
+  {
+    SOUL_PROFILE_ZONE();
+    SOUL_ASSERT_MAIN_THREAD();
 
-		_db.threadContexts[0].tempAllocator->reset();
+    wait_task(TaskID::NULLVAL());
 
-		for (soul_size i = 1; i < _db.threadCount; i++) {
-			_db.threadContexts[i].taskCount = 0;
-			_db.threadContexts[i].taskDeque.reset();
-			_db.threadContexts[i].tempAllocator->reset();
-		}
-	}
+    init_root_task();
 
-	TaskID System::_taskCreate(TaskID parent, TaskFunc func) {
-		ThreadContext* threadState = Database::gThreadContext;
+    db_.thread_contexts[0].temp_allocator->reset();
 
-		const uint16 threadIndex = threadState->threadIndex;
-		const uint16 taskIndex = threadState->taskCount;
-		const TaskID taskID = TaskID(threadIndex, taskIndex);
+    for (soul_size i = 1; i < db_.thread_count; i++) {
+      db_.thread_contexts[i].task_count = 0;
+      db_.thread_contexts[i].task_deque.reset();
+      db_.thread_contexts[i].temp_allocator->reset();
+    }
+  }
 
-		threadState->taskCount += 1;
-		Task& task = threadState->taskPool[taskIndex];
-		task.parentID = parent;
-		task.unfinishedCount.store(1, std::memory_order_relaxed);
-		task.func = func;
+  auto System::create_task(TaskID parent, TaskFunc func) -> TaskID
+  {
+    ThreadContext* thread_state = Database::g_thread_context;
 
-		Task* parentTask = _taskPtr(parent);
-		parentTask->unfinishedCount.fetch_add(1, std::memory_order_relaxed);
+    const auto thread_index = thread_state->thread_index;
+    const auto task_index = thread_state->task_count;
+    const auto task_id = TaskID(thread_index, task_index);
 
-		return taskID;
-	}
+    thread_state->task_count += 1;
+    Task& task = thread_state->task_pool[task_index];
+    task.parent_id = parent;
+    task.unfinished_count.store(1, std::memory_order_relaxed);
+    task.func = func;
 
-	Task* System::_taskPtr(TaskID taskID) {
-		
-		soul_size threadIndex = taskID.threadIndex();
-		soul_size taskIndex = taskID.taskIndex();
+    Task* parent_task = get_task_ptr(parent);
+    parent_task->unfinished_count.fetch_add(1, std::memory_order_relaxed);
 
-		return &_db.threadContexts[threadIndex].taskPool[taskIndex];
+    return task_id;
+  }
 
-	}
+  auto System::get_task_ptr(TaskID task_id) -> Task*
+  {
+    const soul_size thread_index = task_id.get_thread_index();
+    const soul_size task_index = task_id.get_task_index();
 
-	bool System::_taskIsComplete(Task* task)
-	{
-		// NOTE(kevinyu): Synchronize with fetch_sub in _finishTask() to make sure the task is executed before we return true.
-		return task->unfinishedCount.load(std::memory_order_acquire) == 0;
-	}
+    return &db_.thread_contexts[thread_index].task_pool[task_index];
+  }
 
-	// TODO(kevinyu) : Implement stealing from other deque when waiting for task. 
-	// Currently we only try to pop task from our thread local deque.
-	void System::taskWait(TaskID taskID) {
-		ThreadContext* threadState = Database::gThreadContext;
-		Task* taskToWait = _taskPtr(taskID);
-		while (!_taskIsComplete(taskToWait)) {
+  auto System::is_task_complete(Task* task) -> bool
+  {
+    // NOTE(kevinyu): Synchronize with fetch_sub in _finishTask() to make sure the task is executed
+    // before we return true.
+    return task->unfinished_count.load(std::memory_order_acquire) == 0;
+  }
 
-			TaskID taskToDo = threadState->taskDeque.pop();
+  // TODO(kevinyu) : Implement stealing from other deque when waiting for task.
+  // Currently we only try to pop task from our thread local deque.
+  auto System::wait_task(TaskID task_id) -> void
+  {
+    ThreadContext* thread_state = Database::g_thread_context;
+    Task* task_to_wait = get_task_ptr(task_id);
+    while (!is_task_complete(task_to_wait)) {
 
-			if (!taskToDo.isNull()) {
-				_execute(taskToDo);
-			}
-			else {
-				std::unique_lock<std::mutex> lock(_db.waitMutex);
-				while (!_taskIsComplete(taskToWait)) {
-					_db.waitCondVar.wait(lock);
-				}
-			}
-		}
-	}
+      TaskID task_to_do = thread_state->task_deque.pop();
 
-	void System::_initRootTask() {
-		// NOTE(kevinyu): TaskID 0 is ROOT. TaskID 0 is used as parent for all task
-		_db.threadContexts[0].taskPool[0].unfinishedCount.store(0, std::memory_order_relaxed);
-		_db.threadContexts[0].taskCount = 1;
-		_db.threadContexts[0].taskDeque.reset();
-	}
+      if (!task_to_do.is_null()) {
+        execute(task_to_do);
+      } else {
+        std::unique_lock<std::mutex> lock(db_.wait_mutex);
+        while (!is_task_complete(task_to_wait)) {
+          db_.wait_cond_var.wait(lock);
+        }
+      }
+    }
+  }
 
-	void System::init(const Config& config) {
+  auto System::init_root_task() -> void
+  {
+    // NOTE(kevinyu): TaskID 0 is ROOT. TaskID 0 is used as parent for all task
+    db_.thread_contexts[0].task_pool[0].unfinished_count.store(0, std::memory_order_relaxed);
+    db_.thread_contexts[0].task_count = 1;
+    db_.thread_contexts[0].task_deque.reset();
+  }
 
-		_db.defaultAllocator = config.defaultAllocator;
-		_db.tempAllocatorSize = config.workerTempAllocatorSize;
+  auto System::init(const Config& config) -> void
+  {
+    db_.default_allocator = config.defaultAllocator;
+    db_.temp_allocator_size = config.workerTempAllocatorSize;
 
-		const ThreadCount thread_count = config.threadCount != 0 ? config.threadCount : soul::cast<ThreadCount>(get_hardware_thread_count());
+    const auto thread_count = config.threadCount != 0
+                                ? config.threadCount
+                                : soul::cast<ThreadCount>(get_hardware_thread_count());
 
-		SOUL_ASSERT(0, thread_count <= Constant::MAX_THREAD_COUNT, "Thread count : %d is more than MAX_THREAD_COUNT : %d", thread_count, Constant::MAX_THREAD_COUNT);
-		_db.threadCount = thread_count;
+    SOUL_ASSERT(
+      0,
+      thread_count <= Constant::MAX_THREAD_COUNT,
+      "Thread count : %d is more than MAX_THREAD_COUNT : %d",
+      thread_count,
+      Constant::MAX_THREAD_COUNT);
+    db_.thread_count = thread_count;
 
-		_db.threadContexts.init(*config.defaultAllocator, thread_count);
+    db_.thread_contexts.init(*config.defaultAllocator, thread_count);
 
-		// NOTE(kevinyu): i == 0 is for main thread
-		Database::gThreadContext = &_db.threadContexts[0];
+    // NOTE(kevinyu): i == 0 is for main thread
+    Database::g_thread_context = &db_.thread_contexts[0];
 
-		for (uint16 i = 0; i < thread_count; ++i) {
-			_db.threadContexts[i].taskCount = 0;
-			_db.threadContexts[i].threadIndex = i;
-			_db.threadContexts[i].taskDeque.init();
-			_db.threadContexts[i].allocatorStack.set_allocator(*config.defaultAllocator);
-		}
+    for (uint16 i = 0; i < thread_count; ++i) {
+      db_.thread_contexts[i].task_count = 0;
+      db_.thread_contexts[i].thread_index = i;
+      db_.thread_contexts[i].task_deque.init();
+      db_.thread_contexts[i].allocator_stack.set_allocator(*config.defaultAllocator);
+    }
 
-		_db.isTerminated.store(false, std::memory_order_relaxed);
-		for (uint16 i = 1; i < thread_count; ++i) {
-			_db.threads[i] = std::thread(&System::_loop, this, &_db.threadContexts[i]);
-		}
-		_db.activeTaskCount = 0;
+    db_.is_terminated.store(false, std::memory_order_relaxed);
+    for (uint16 i = 1; i < thread_count; ++i) {
+      db_.threads[i] = std::thread(&System::loop, this, &db_.thread_contexts[i]);
+    }
+    db_.active_task_count = 0;
 
-		_threadContext().tempAllocator = config.mainThreadTempAllocator;
-		
-		_initRootTask();
-	}
+    get_thread_context().temp_allocator = config.mainThreadTempAllocator;
 
-	void System::taskRun(TaskID taskID) {
-		Database::gThreadContext->taskDeque.push(taskID);
-		{
-			std::lock_guard<std::mutex> lock(_db.loopMutex);
-			_db.activeTaskCount += 1;
-		}
-		_db.loopCondVar.notify_all();
+    init_root_task();
+  }
 
-	}
+  auto System::task_run(TaskID task_id) -> void
+  {
+    Database::g_thread_context->task_deque.push(task_id);
+    {
+      std::lock_guard<std::mutex> lock(db_.loop_mutex);
+      db_.active_task_count += 1;
+    }
+    db_.loop_cond_var.notify_all();
+  }
 
-	void System::_taskFinish(Task* task) {
+  auto System::finish_task(Task* task) -> void
+  {
+    // NOTE(kevinyu): make sure _isCompleteTask() return true only after the task truly finish.
+    // Without std::memory_order_release, this operation can be reorder before the task is executed.
+    const auto unfinished_count = task->unfinished_count.fetch_sub(1, std::memory_order_release);
 
-		// NOTE(kevinyu): make sure _isCompleteTask() return true only after the task truly finish.
-		// Without std::memory_order_release, this operation can be reorder before the task is executed. 
-		uint16 unfinishedCount = task->unfinishedCount.fetch_sub(1, std::memory_order_release);
+    if (unfinished_count == 1) {
+      // NOTE(kevinyu): This empty lock prevent bug where waitTask() check _isTaskComplete() and
+      // then get preempted by OS. For example if waitTask() check _isTaskComplete() and it return
+      // false, then before it execute wait() on the condition variable, it get preempted by OS. In
+      // the mean time, another thread can call _finishTask(), without this lock _finishTask() will
+      // be able to notify. When the preempted waitTask() run again, the task is already completed
+      // but we still sleep, and because notify has been called on _finishTask, the thread might
+      // sleep forever.
+      {
+        std::lock_guard<std::mutex> lock(db_.wait_mutex);
+      }
+      db_.wait_cond_var.notify_all();
 
-		if (unfinishedCount == 1) {
-			// NOTE(kevinyu): This empty lock prevent bug where waitTask() check _isTaskComplete() and then get preempted by OS.
-			// For example if waitTask() check _isTaskComplete() and it return false, then before it execute wait() on the condition variable, 
-			// it get preempted by OS. In the mean time, another thread can call _finishTask(), without this lock _finishTask() will be able to notify. 
-			// When the preempted waitTask() run again, the task is already completed but we still sleep, and because notify
-			// has been called on _finishTask, the thread might sleep forever.
-			{
-				std::lock_guard<std::mutex> lock(_db.waitMutex);
-			}
-			_db.waitCondVar.notify_all();
+      if (task != get_task_ptr(TaskID::NULLVAL())) {
+        finish_task(get_task_ptr(task->parent_id));
+      }
+    }
+  }
 
-			if (task != _taskPtr(TaskID::NULLVAL())) {
-				_taskFinish(_taskPtr(task->parentID));
-			}
-		}
-	}
+  auto System::shutdown() -> void
+  {
+    SOUL_ASSERT_MAIN_THREAD();
 
-	void System::shutdown() {
-		SOUL_ASSERT_MAIN_THREAD();
+    SOUL_ASSERT(
+      0,
+      db_.active_task_count == 0,
+      "There is still pending task in work deque! Active Task Count = %d.",
+      db_.active_task_count);
+    terminate();
+    for (uint64 i = 1; i < db_.thread_count; i++) {
+      db_.threads[i].join();
+    }
+    db_.thread_contexts.cleanup();
+  }
 
-		SOUL_ASSERT(0, _db.activeTaskCount == 0, "There is still pending task in work deque! Active Task Count = %d.", _db.activeTaskCount);
-		_terminate();
-		for (uint64 i = 1; i < _db.threadCount; i++) {
-			_db.threads[i].join();
-		}
-		_db.threadContexts.cleanup();
-	}
+  auto System::get_thread_count() const -> uint16 { return db_.thread_count; }
 
-	uint16 System::getThreadCount() const {
-		return _db.threadCount;
-	}
+  auto System::get_thread_id() -> uint16 { return Database::g_thread_context->thread_index; }
 
-	uint16 System::getThreadID() const {
-		return Database::gThreadContext->threadIndex;
-	}
+  auto System::get_thread_context() -> ThreadContext&
+  {
+    return db_.thread_contexts[get_thread_id()];
+  }
 
-	ThreadContext& System::_threadContext() {
-		return _db.threadContexts[getThreadID()];
-	}
+  auto System::push_allocator(memory::Allocator* allocator) -> void
+  {
+    SOUL_ASSERT(0, db_.default_allocator != nullptr, "");
+    get_thread_context().allocator_stack.push_back(allocator);
+  }
 
-	void System::pushAllocator(memory::Allocator *allocator) {
-		SOUL_ASSERT(0, _db.defaultAllocator != nullptr, "");
-		_threadContext().allocatorStack.push_back(allocator);
-	}
+  auto System::pop_allocator() -> void
+  {
+    SOUL_ASSERT(0, !get_thread_context().allocator_stack.empty(), "");
+    get_thread_context().allocator_stack.pop_back();
+  }
 
-	void System::popAllocator() {
-		SOUL_ASSERT(0, !_threadContext().allocatorStack.empty(), "");
-		_threadContext().allocatorStack.pop_back();
-	}
+  auto System::get_context_allocator() -> memory::Allocator*
+  {
+    if (get_thread_context().allocator_stack.empty()) {
+      return db_.default_allocator;
+    }
+    return get_thread_context().allocator_stack.back();
+  }
 
-	memory::Allocator* System::getContextAllocator() {
-		if (_threadContext().allocatorStack.empty()) return _db.defaultAllocator;
-		return _threadContext().allocatorStack.back();
-	}
+  auto System::allocate(uint32 size, uint32 alignment) -> void*
+  {
+    return get_context_allocator()->allocate(size, alignment);
+  }
 
-	void* System::allocate(uint32 size, uint32 alignment) {
-		return getContextAllocator()->allocate(size, alignment);
-	}
+  auto System::deallocate(void* addr, uint32 size) -> void
+  {
+    get_context_allocator()->deallocate(addr);
+  }
 
-	void System::deallocate(void* addr, uint32 size) {
-		getContextAllocator()->deallocate(addr);
-	}
+  auto System::get_temp_allocator() -> TempAllocator*
+  {
+    SOUL_ASSERT(0, get_thread_context().temp_allocator != nullptr, "");
+    return get_thread_context().temp_allocator;
+  }
 
-	TempAllocator* System::getTempAllocator() {
-		SOUL_ASSERT(0, _threadContext().tempAllocator != nullptr, "");
-		return _threadContext().tempAllocator;
-	}
-
-}
+} // namespace soul::runtime

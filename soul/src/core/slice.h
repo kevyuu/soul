@@ -1,58 +1,64 @@
-//
-// Created by Kevin Yudi Utama on 23/12/19.
-//
 #pragma once
 
-#include "core/vector.h"
 #include "core/type.h"
+#include "core/vector.h"
 
-namespace soul {
+namespace soul
+{
 
-	template <typename T>
-	class Slice
-	{
-	public:
+  template <typename T>
+  class Slice
+  {
+  public:
+    Slice() = default;
 
-		Slice() = default;
-		Slice(Vector<T>* array, soul_size begin, soul_size end): vector_(array), begin_idx_(begin), end_idx_(end), size_(end_idx_ - begin_idx_) {}
-		Slice(const Slice& other) = default;
-		Slice& operator=(const Slice& other) = default;
-		Slice(Slice&& other) = default;
-		Slice& operator=(Slice&& other) = default;
-		~Slice() = default;
+    Slice(Vector<T>* array, soul_size begin, soul_size end)
+        : vector_(array), begin_idx_(begin), end_idx_(end), size_(end_idx_ - begin_idx_)
+    {
+    }
 
-		void set(Vector<T>* array, soul_size begin, soul_size end) {
-			vector_ = array;
-			begin_idx_ = begin;
-			end_idx_ = end;
-			size_ = end_idx_ - begin_idx_;
-		}
+    Slice(const Slice& other) = default;
+    auto operator=(const Slice& other) -> Slice& = default;
+    Slice(Slice&& other) = default;
+    auto operator=(Slice&& other) -> Slice& = default;
+    ~Slice() = default;
 
-		[[nodiscard]] T& operator[](soul_size idx) {
-			SOUL_ASSERT(0, idx < size_, "");
-			return (*vector_)[begin_idx_ + idx];
-		}
+    auto set(Vector<T>* array, soul_size begin, soul_size end) -> void
+    {
+      vector_ = array;
+      begin_idx_ = begin;
+      end_idx_ = end;
+      size_ = end_idx_ - begin_idx_;
+    }
 
-		[[nodiscard]] const T& operator[](soul_size idx) const {
-			SOUL_ASSERT(0, idx < size_, "");
-			return this->operator[](idx);
-		}
+    [[nodiscard]] auto operator[](soul_size idx) -> T&
+    {
+      SOUL_ASSERT(0, idx < size_, "");
+      return (*vector_)[begin_idx_ + idx];
+    }
 
-		[[nodiscard]] soul_size size() const { return size_; }
+    [[nodiscard]] auto operator[](soul_size idx) const -> const T&
+    {
+      SOUL_ASSERT(0, idx < size_, "");
+      return this->operator[](idx);
+    }
 
-		[[nodiscard]] const T* begin() const { return vector_->data() + begin_idx_; }
-		[[nodiscard]] const T* end() const { return vector_->data() + end_idx_; }
+    [[nodiscard]] auto size() const -> soul_size { return size_; }
 
-		[[nodiscard]] T* begin() { return vector_->data() + begin_idx_; }
-		[[nodiscard]] T* end() { return vector_->data() + end_idx_; }
+    [[nodiscard]] auto begin() const -> const T* { return vector_->data() + begin_idx_; }
+    [[nodiscard]] auto end() const -> const T* { return vector_->data() + end_idx_; }
 
-		[[nodiscard]] soul_size get_begin_idx() const { return begin_idx_; }
-		[[nodiscard]] soul_size get_end_idx() const { return end_idx_; }
-	private:
-		Vector<T>* vector_ = nullptr;
-		soul_size begin_idx_ = 0;
-		soul_size end_idx_ = 0;
-		soul_size size_ = 0;
-	};
+    [[nodiscard]] auto begin() -> T* { return vector_->data() + begin_idx_; }
+    [[nodiscard]] auto end() -> T* { return vector_->data() + end_idx_; }
 
-}
+    [[nodiscard]] auto get_begin_idx() const -> soul_size { return begin_idx_; }
+    [[nodiscard]] auto get_end_idx() const -> soul_size { return end_idx_; }
+
+  private:
+    Vector<T>* vector_ = nullptr;
+    soul_size begin_idx_ = 0;
+    soul_size end_idx_ = 0;
+    soul_size size_ = 0;
+  };
+
+} // namespace soul
