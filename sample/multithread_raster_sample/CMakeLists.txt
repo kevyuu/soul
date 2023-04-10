@@ -1,12 +1,8 @@
-set(SHADER_SOURCES
-	shaders/multithread_raster_type.hlsl
-	shaders/multithread_raster_sample.hlsl
-)
+set(SHADER_SOURCES shaders/multithread_raster_type.hlsl shaders/multithread_raster_sample.hlsl)
 
 create_shaders_target(multithread_raster_shaders "${SHADER_SOURCES}")
 
 add_executable(multithread_raster_sample "multithread_raster_sample.cpp")
-target_link_libraries(multithread_raster_sample
-	PRIVATE sample_common)
+target_link_libraries(multithread_raster_sample PRIVATE sample_common)
 add_dependencies(multithread_raster_sample multithread_raster_shaders)
 executable_add_dxc_dependencies(multithread_raster_sample)

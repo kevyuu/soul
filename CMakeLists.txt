@@ -1,12 +1,13 @@
 cmake_minimum_required(VERSION 3.22)
 set(VCPKG_FEATURE_FLAGS "versions")
-if (NOT EXISTS "${CMAKE_TOOLCHAIN_FILE}")
-	set(CMAKE_TOOLCHAIN_FILE "${CMAKE_CURRENT_LIST_DIR}/dependencies/vcpkg/scripts/buildsystems/vcpkg.cmake")
+if(NOT EXISTS "${CMAKE_TOOLCHAIN_FILE}")
+  set(CMAKE_TOOLCHAIN_FILE
+      "${CMAKE_CURRENT_LIST_DIR}/dependencies/vcpkg/scripts/buildsystems/vcpkg.cmake")
 endif()
-project(soul
-	VERSION "0.0.1"
-	LANGUAGES CXX
-)
+project(
+  soul
+  VERSION "0.0.1"
+  LANGUAGES CXX)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 # ==================================================================================================
 # General compiler flags
@@ -54,45 +55,43 @@ message(STATUS "CMAKE_CXX_FLAGS_RELWITHDEBINFO : ${CMAKE_CXX_FLAGS_RELWITHDEBINF
 message(STATUS "CMAKE_CXX_FLAGS_RELEASE: ${CMAKE_CXX_FLAGS_RELEASE}")
 
 option(SOUL_ASAN_ENABLE "Build this target with AddressSanitizer" OFF)
-if (SOUL_ASAN_ENABLE)
-	if(MSVC)
-		target_compile_options(<target> PUBLIC /fsanitize=address)
-	else()
-		target_compile_options(<target> PUBLIC -fsanitize=address <additional-options>)
-		target_link_options(<target> PUBLIC -fsanitize=address)
-	endif()
+if(SOUL_ASAN_ENABLE)
+  if(MSVC)
+    target_compile_options(<target> PUBLIC /fsanitize=address)
+  else()
+    target_compile_options(<target> PUBLIC -fsanitize=address <additional-options>)
+    target_link_options(<target> PUBLIC -fsanitize=address)
+  endif()
 endif()
-
-
 
 # ==================================================================================================
 # Try to find vulkan
 # ==================================================================================================
 find_package(Vulkan REQUIRED)
-if (Vulkan_FOUND)
-	message(STATUS "Found Vulkan library : ${Vulkan_LIBRARY}.")
-	message(STATUS "Include Dir : ${Vulkan_INCLUDE_DIR}")
+if(Vulkan_FOUND)
+  message(STATUS "Found Vulkan library : ${Vulkan_LIBRARY}.")
+  message(STATUS "Include Dir : ${Vulkan_INCLUDE_DIR}")
 else()
-	message(FATAL_ERROR "Vulkan library not found!")
+  message(FATAL_ERROR "Vulkan library not found!")
 endif()
 
 # ==================================================================================================
 # Try to find NVTX
 # ==================================================================================================
 message(STATUS $ENV{NVTOOLSEXT_PATH})
-find_library(NVTX 
-	NAMES nvToolsExt64_1
-	PATHS "$ENV{NVTOOLSEXT_PATH}" ENV NVTOOLSEXT_PATH
-	PATH_SUFFIXES "lib/x64")
+find_library(
+  NVTX
+  NAMES nvToolsExt64_1
+  PATHS "$ENV{NVTOOLSEXT_PATH}" ENV NVTOOLSEXT_PATH
+  PATH_SUFFIXES "lib/x64")
 
-if (NVTX)
-	message(STATUS "Found NVTX library : ${NVTX}.")
-	set(NVTX_INCLUDE_DIR "$ENV{NVTOOLSEXT_PATH}/include")
-	message(STATUS "NVTX include dir : ${NVTX_INCLUDE_DIR}")
+if(NVTX)
+  message(STATUS "Found NVTX library : ${NVTX}.")
+  set(NVTX_INCLUDE_DIR "$ENV{NVTOOLSEXT_PATH}/include")
+  message(STATUS "NVTX include dir : ${NVTX_INCLUDE_DIR}")
 else()
-	message(STATUS "NVTX library not found")
+  message(STATUS "NVTX library not found")
 endif()
-
 
 find_package(glfw3 CONFIG REQUIRED)
 find_package(unofficial-vulkan-memory-allocator CONFIG REQUIRED)
@@ -111,7 +110,6 @@ add_subdirectory(soul)
 add_subdirectory(sample)
 add_subdirectory(test)
 
-if (IS_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}/benchmark_sandbox")
-	add_subdirectory(benchmark_sandbox)
+if(IS_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}/benchmark_sandbox")
+  add_subdirectory(benchmark_sandbox)
 endif()
-

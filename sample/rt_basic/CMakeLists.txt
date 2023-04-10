@@ -7,6 +7,6 @@ set(SHADER_SOURCES
 create_shaders_target(rt_basic_shaders "${SHADER_SOURCES}")
 
 add_executable(rt_basic_sample "rt_basic_sample.cpp")
-target_link_libraries(rt_basic_sample 
-	PRIVATE sample_common)
+target_link_libraries(rt_basic_sample PRIVATE sample_common)
 add_dependencies(rt_basic_sample rt_basic_shaders)
+executable_add_dxc_dependencies(rt_basic_sample)

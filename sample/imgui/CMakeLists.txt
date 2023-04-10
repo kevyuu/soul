@@ -1,3 +1,2 @@
 add_executable(imgui_sample imgui_sample.cpp)
-target_link_libraries(imgui_sample
-	PRIVATE sample_common)
+target_link_libraries(imgui_sample PRIVATE sample_common)

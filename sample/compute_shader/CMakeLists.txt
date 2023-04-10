@@ -1,12 +1,8 @@
-set(SHADER_SOURCES
-	shaders/compute_type.hlsl
-	shaders/compute_shader_sample.hlsl
-)
+set(SHADER_SOURCES shaders/compute_type.hlsl shaders/compute_shader_sample.hlsl)
 
 create_shaders_target(compute_shader_sample_shaders "${SHADER_SOURCES}")
 
 add_executable(compute_shader_sample "compute_shader_sample.cpp")
-target_link_libraries(compute_shader_sample 
-	PRIVATE sample_common)
+target_link_libraries(compute_shader_sample PRIVATE sample_common)
 add_dependencies(compute_shader_sample compute_shader_sample_shaders)
 executable_add_dxc_dependencies(compute_shader_sample)

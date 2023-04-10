@@ -1,94 +1,82 @@
-set (PUBLIC_HEADER_DIR src)
+set(PUBLIC_HEADER_DIR src)
 
-set (SOUL_HEADERS
-	
-	src/core/architecture.h
-	src/core/vector.h
-	src/core/config.h
-	src/core/dev_util.h
-	src/core/uint64_hash_map.h
-	src/core/hash_map.h
-	src/core/math.h
-	src/core/packed_pool.h
-	src/core/pool.h
-	src/core/static_array.h
-	src/core/type.h
-	src/core/util.h
-	src/core/slice.h
-	src/core/enum_array.h
-	src/core/bit_vector.h
-	src/core/geometry.h
-	src/core/cstring.h
-	src/core/thread.h
+set(SOUL_HEADERS
+    src/core/architecture.h
+    src/core/vector.h
+    src/core/config.h
+    src/core/dev_util.h
+    src/core/uint64_hash_map.h
+    src/core/hash_map.h
+    src/core/math.h
+    src/core/packed_pool.h
+    src/core/pool.h
+    src/core/static_array.h
+    src/core/type.h
+    src/core/util.h
+    src/core/slice.h
+    src/core/enum_array.h
+    src/core/bit_vector.h
+    src/core/geometry.h
+    src/core/cstring.h
+    src/core/thread.h
+    src/gpu/type.h
+    src/gpu/system.h
+    src/gpu/render_graph.h
+    src/gpu/common.h
+    src/gpu/intern/enum_mapping.h
+    src/gpu/intern/render_graph_execution.h
+    src/gpu/intern/render_compiler.h
+    src/gpu/render_graph_registry.h
+    src/runtime/data.h
+    src/runtime/system.h
+    src/runtime/runtime.h
+    src/runtime/scope_allocator.h
+    src/memory/allocator.h
+    src/memory/allocators/page_allocator.h
+    src/memory/allocators/proxy_allocator.h
+    src/memory/allocators/malloc_allocator.h
+    src/memory/allocators/linear_allocator.h
+    src/memory/allocators/mt_linear_allocator.h)
 
-	src/gpu/type.h
-	src/gpu/system.h
-	src/gpu/render_graph.h
-	src/gpu/common.h
-	src/gpu/intern/enum_mapping.h
-	src/gpu/intern/render_graph_execution.h
-	src/gpu/intern/render_compiler.h
-	src/gpu/render_graph_registry.h
+set(SOUL_SOURCES_OSX src/memory/intern/osx/page_allocator.cpp)
 
-	src/runtime/data.h
-	src/runtime/system.h
-	src/runtime/runtime.h
-	src/runtime/scope_allocator.h
+set(SOUL_SOURCES_WINDOWS src/memory/intern/windows/page_allocator.cpp)
 
-	src/memory/allocator.h
-	src/memory/allocators/page_allocator.h
-	src/memory/allocators/proxy_allocator.h
-	src/memory/allocators/malloc_allocator.h
-	src/memory/allocators/linear_allocator.h
-	src/memory/allocators/mt_linear_allocator.h
-)
-
-set (SOUL_SOURCES_OSX
-	src/memory/intern/osx/page_allocator.cpp)
-
-set (SOUL_SOURCES_WINDOWS
-	src/memory/intern/windows/page_allocator.cpp)
-
-set (SOUL_SOURCES
-
-	src/core/config.cpp
-	src/core/dev_util.cpp
-	
-	
-	src/core/cstring.cpp
-
-	src/gpu/intern/common.cpp
-	src/gpu/intern/glfw_wsi.cpp
-	src/gpu/intern/gpu_system.cpp
-	src/gpu/intern/render_graph.cpp
-	
-	src/gpu/intern/render_graph_registry.cpp
-	src/gpu/intern/render_graph_execution.cpp
-	src/gpu/intern/render_graph_registry.cpp
-	src/gpu/intern/render_compiler.cpp
-	
-	src/gpu/intern/bindless_descriptor_allocator.cpp
-
-	src/memory/intern/malloc_allocator.cpp
-	src/memory/intern/proxy.cpp
-	
-	src/memory/intern/linear_allocator.cpp
-	
-	src/runtime/intern/runtime_system.cpp
-	src/runtime/intern/task_deque.cpp
-	
-
-	"$<$<STREQUAL:${CMAKE_SYSTEM_NAME},Darwin>:${SOUL_SOURCES_OSX}>"
-	"$<$<STREQUAL:${CMAKE_SYSTEM_NAME},Windows>:${SOUL_SOURCES_WINDOWS}>")
+set(SOUL_SOURCES
+    src/core/config.cpp
+    src/core/dev_util.cpp
+    src/core/cstring.cpp
+    src/gpu/intern/common.cpp
+    src/gpu/intern/glfw_wsi.cpp
+    src/gpu/intern/gpu_system.cpp
+    src/gpu/intern/render_graph.cpp
+    src/gpu/intern/render_graph_registry.cpp
+    src/gpu/intern/render_graph_execution.cpp
+    src/gpu/intern/render_graph_registry.cpp
+    src/gpu/intern/render_compiler.cpp
+    src/gpu/intern/bindless_descriptor_allocator.cpp
+    src/memory/intern/malloc_allocator.cpp
+    src/memory/intern/proxy.cpp
+    src/memory/intern/linear_allocator.cpp
+    src/runtime/intern/runtime_system.cpp
+    src/runtime/intern/task_deque.cpp
+    "$<$<STREQUAL:${CMAKE_SYSTEM_NAME},Darwin>:${SOUL_SOURCES_OSX}>"
+    "$<$<STREQUAL:${CMAKE_SYSTEM_NAME},Windows>:${SOUL_SOURCES_WINDOWS}>")
 
 add_library(soul STATIC ${SOUL_SOURCES})
-target_include_directories(soul
-	PUBLIC src ${NVTX_INCLUDE_DIR} ${PROJECT_SOURCE_DIR}/dependencies)
-target_link_system_libraries(soul
-	PUBLIC glfw ${NVTX} Vulkan::Vulkan volk::volk vk_mem_alloc Tracy::TracyClient
-	PRIVATE dxc)
+target_include_directories(soul PUBLIC src ${NVTX_INCLUDE_DIR} ${PROJECT_SOURCE_DIR}/dependencies)
+target_link_system_libraries(
+  soul
+  PUBLIC
+  glfw
+  ${NVTX}
+  Vulkan::Vulkan
+  volk::volk
+  vk_mem_alloc
+  Tracy::TracyClient
+  PRIVATE
+  dxc)
 target_compile_definitions(soul PUBLIC TRACY_ENABLE NOMINMAX)
-
 
 get_target_property(soul_include_directories soul INCLUDE_DIRECTORIES)
 message(STATUS "Soul include directories : ${soul_include_directories}")
