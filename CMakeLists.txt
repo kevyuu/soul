@@ -113,3 +113,15 @@ add_subdirectory(test)
 if(IS_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}/benchmark_sandbox")
   add_subdirectory(benchmark_sandbox)
 endif()
+
+file(
+  GLOB_RECURSE
+  ALL_SOURCE_FILES
+  ${PROJECT_SOURCE_DIR}/soul/*.cpp
+  ${PROJECT_SOURCE_DIR}/soul/*.h
+  ${PROJECT_SOURCE_DIR}/sample/*.cpp
+  ${PROJECT_SOURCE_DIR}/sample/*.h
+  ${PROJECT_SOURCE_DIR}/test/*.cpp
+  ${PROJECT_SOURCE_DIR}/test/*.h)
+
+add_custom_target(clang_format COMMAND clang-format -i ${ALL_SOURCE_FILES})
