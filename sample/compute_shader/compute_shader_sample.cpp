@@ -52,15 +52,17 @@ class ComputeShaderSampleApp final : public App
           .output_uav_gpu_handle =
             gpu_system_->get_uav_descriptor_id(registry.get_texture(parameter.target_texture)),
           .dimension = viewport,
-          .t = elapsed_seconds_float};
+          .t = elapsed_seconds_float,
+        };
 
         const auto pipeline_state_id = registry.get_pipeline_state(desc);
         using Command = gpu::RenderCommandDispatch;
-        command_list.template push<Command>(
-          {.pipeline_state_id = pipeline_state_id,
-           .push_constant_data = &push_constant,
-           .push_constant_size = sizeof(ComputePushConstant),
-           .group_count = {viewport.x / WORK_GROUP_SIZE_X, viewport.y / WORK_GROUP_SIZE_Y, 1}});
+        command_list.template push<Command>({
+          .pipeline_state_id = pipeline_state_id,
+          .push_constant_data = &push_constant,
+          .push_constant_size = sizeof(ComputePushConstant),
+          .group_count = {viewport.x / WORK_GROUP_SIZE_X, viewport.y / WORK_GROUP_SIZE_Y, 1},
+        });
       });
 
     struct RenderPassParameter {
@@ -69,7 +71,8 @@ class ComputeShaderSampleApp final : public App
 
     const Texture2DRGPass::Parameter texture_2d_parameter = {
       .sampled_texture = compute_node.get_parameter().target_texture,
-      .render_target = render_target};
+      .render_target = render_target,
+    };
     return texture_2d_pass.add_pass(texture_2d_parameter, render_graph);
   }
 
@@ -87,7 +90,8 @@ public:
       .source_count = 1,
       .sources = &shader_source,
       .entry_point_count = entry_points.size(),
-      .entry_points = entry_points.data()};
+      .entry_points = entry_points.data(),
+    };
     auto result = gpu_system_->create_program(program_desc);
     if (!result) {
       SOUL_PANIC("Fail to create program");

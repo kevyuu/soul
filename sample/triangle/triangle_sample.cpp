@@ -13,7 +13,9 @@ class TriangleSampleApp final : public App
     -> gpu::TextureNodeID override
   {
     const gpu::ColorAttachmentDesc color_attachment_desc = {
-      .node_id = render_target, .clear = true};
+      .node_id = render_target,
+      .clear = true,
+    };
 
     const vec2ui32 viewport = gpu_system_->get_swapchain_extent();
 
@@ -32,13 +34,15 @@ class TriangleSampleApp final : public App
           .viewport =
             {.width = static_cast<float>(viewport.x), .height = static_cast<float>(viewport.y)},
           .scissor = {.extent = viewport},
-          .color_attachment_count = 1};
+          .color_attachment_count = 1,
+        };
 
         using Command = gpu::RenderCommandDraw;
         const Command command = {
           .pipeline_state_id = registry.get_pipeline_state(pipeline_desc),
           .vertex_count = 3,
-          .instance_count = 1};
+          .instance_count = 1,
+        };
         command_list.push(command);
       });
 
@@ -58,12 +62,13 @@ public:
       .source_count = 1,
       .sources = &shader_source,
       .entry_point_count = entry_points.size(),
-      .entry_points = entry_points.data()};
+      .entry_points = entry_points.data(),
+    };
     program_id_ = gpu_system_->create_program(program_desc).value();
   }
 };
 
-auto main(int argc, char* argv[]) -> int
+auto main(int /* argc */, char* /* argv */[]) -> int
 {
   TriangleSampleApp app({});
   app.run();

@@ -8,32 +8,34 @@ namespace soul::gpu
 
   SOUL_ALWAYS_INLINE auto vk_cast(const CompareOp compare_op) -> VkCompareOp
   {
-    constexpr auto COMPARE_OP_MAP = FlagMap<CompareOp, VkCompareOp>::build_from_list(
-      {VK_COMPARE_OP_NEVER,
-       VK_COMPARE_OP_LESS,
-       VK_COMPARE_OP_EQUAL,
-       VK_COMPARE_OP_LESS_OR_EQUAL,
-       VK_COMPARE_OP_GREATER,
-       VK_COMPARE_OP_NOT_EQUAL,
-       VK_COMPARE_OP_GREATER_OR_EQUAL,
-       VK_COMPARE_OP_ALWAYS});
+    constexpr auto COMPARE_OP_MAP = FlagMap<CompareOp, VkCompareOp>::build_from_list({
+      VK_COMPARE_OP_NEVER,
+      VK_COMPARE_OP_LESS,
+      VK_COMPARE_OP_EQUAL,
+      VK_COMPARE_OP_LESS_OR_EQUAL,
+      VK_COMPARE_OP_GREATER,
+      VK_COMPARE_OP_NOT_EQUAL,
+      VK_COMPARE_OP_GREATER_OR_EQUAL,
+      VK_COMPARE_OP_ALWAYS,
+    });
 
     return COMPARE_OP_MAP[compare_op];
   }
 
   SOUL_ALWAYS_INLINE auto vk_cast(const TextureLayout layout) -> VkImageLayout
   {
-    constexpr auto IMAGE_LAYOUT_MAP = FlagMap<TextureLayout, VkImageLayout>::build_from_list(
-      {VK_IMAGE_LAYOUT_UNDEFINED,
-       VK_IMAGE_LAYOUT_UNDEFINED,
-       VK_IMAGE_LAYOUT_GENERAL,
-       VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-       VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
-       VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL,
-       VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-       VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-       VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-       VK_IMAGE_LAYOUT_PRESENT_SRC_KHR});
+    constexpr auto IMAGE_LAYOUT_MAP = FlagMap<TextureLayout, VkImageLayout>::build_from_list({
+      VK_IMAGE_LAYOUT_UNDEFINED,
+      VK_IMAGE_LAYOUT_UNDEFINED,
+      VK_IMAGE_LAYOUT_GENERAL,
+      VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+      VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+      VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL,
+      VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+      VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+      VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+      VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+    });
     return IMAGE_LAYOUT_MAP[layout];
   }
 
@@ -99,31 +101,32 @@ namespace soul::gpu
     -> VkImageAspectFlags
   {
     static constexpr auto IMAGE_ASPECT_FLAGS_MAP =
-      FlagMap<TextureFormat, VkImageAspectFlags>::build_from_list(
-        {VK_IMAGE_ASPECT_COLOR_BIT,
+      FlagMap<TextureFormat, VkImageAspectFlags>::build_from_list({
+        VK_IMAGE_ASPECT_COLOR_BIT,
 
-         VK_IMAGE_ASPECT_DEPTH_BIT,
+        VK_IMAGE_ASPECT_DEPTH_BIT,
 
-         VK_IMAGE_ASPECT_COLOR_BIT,
-         VK_IMAGE_ASPECT_DEPTH_BIT,
+        VK_IMAGE_ASPECT_COLOR_BIT,
+        VK_IMAGE_ASPECT_DEPTH_BIT,
 
-         VK_IMAGE_ASPECT_COLOR_BIT,
-         VK_IMAGE_ASPECT_COLOR_BIT,
-         VK_IMAGE_ASPECT_COLOR_BIT,
-         VK_IMAGE_ASPECT_COLOR_BIT,
-         VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT,
-         VK_IMAGE_ASPECT_DEPTH_BIT,
-         VK_IMAGE_ASPECT_COLOR_BIT,
-         VK_IMAGE_ASPECT_COLOR_BIT,
-         VK_IMAGE_ASPECT_COLOR_BIT,
+        VK_IMAGE_ASPECT_COLOR_BIT,
+        VK_IMAGE_ASPECT_COLOR_BIT,
+        VK_IMAGE_ASPECT_COLOR_BIT,
+        VK_IMAGE_ASPECT_COLOR_BIT,
+        VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT,
+        VK_IMAGE_ASPECT_DEPTH_BIT,
+        VK_IMAGE_ASPECT_COLOR_BIT,
+        VK_IMAGE_ASPECT_COLOR_BIT,
+        VK_IMAGE_ASPECT_COLOR_BIT,
 
-         VK_IMAGE_ASPECT_COLOR_BIT,
-         VK_IMAGE_ASPECT_COLOR_BIT,
-         VK_IMAGE_ASPECT_COLOR_BIT,
-         VK_IMAGE_ASPECT_COLOR_BIT,
-         VK_IMAGE_ASPECT_COLOR_BIT,
+        VK_IMAGE_ASPECT_COLOR_BIT,
+        VK_IMAGE_ASPECT_COLOR_BIT,
+        VK_IMAGE_ASPECT_COLOR_BIT,
+        VK_IMAGE_ASPECT_COLOR_BIT,
+        VK_IMAGE_ASPECT_COLOR_BIT,
 
-         VK_IMAGE_ASPECT_COLOR_BIT});
+        VK_IMAGE_ASPECT_COLOR_BIT,
+      });
     return IMAGE_ASPECT_FLAGS_MAP[format];
   }
 
@@ -145,76 +148,81 @@ namespace soul::gpu
 
   SOUL_ALWAYS_INLINE auto vk_cast(const TextureWrap wrap) -> VkSamplerAddressMode
   {
-    static constexpr auto MAPPING = FlagMap<TextureWrap, VkSamplerAddressMode>::build_from_list(
-      {VK_SAMPLER_ADDRESS_MODE_REPEAT,
-       VK_SAMPLER_ADDRESS_MODE_MIRRORED_REPEAT,
-       VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
-       VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER,
-       VK_SAMPLER_ADDRESS_MODE_MIRROR_CLAMP_TO_EDGE});
+    static constexpr auto MAPPING = FlagMap<TextureWrap, VkSamplerAddressMode>::build_from_list({
+      VK_SAMPLER_ADDRESS_MODE_REPEAT,
+      VK_SAMPLER_ADDRESS_MODE_MIRRORED_REPEAT,
+      VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
+      VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER,
+      VK_SAMPLER_ADDRESS_MODE_MIRROR_CLAMP_TO_EDGE,
+    });
     return MAPPING[wrap];
   }
 
   SOUL_ALWAYS_INLINE auto vk_cast(const BlendFactor blend_factor) -> VkBlendFactor
   {
-    static constexpr auto MAPPING = FlagMap<BlendFactor, VkBlendFactor>::build_from_list(
-      {VK_BLEND_FACTOR_ZERO,
-       VK_BLEND_FACTOR_ONE,
-       VK_BLEND_FACTOR_SRC_COLOR,
-       VK_BLEND_FACTOR_ONE_MINUS_SRC_COLOR,
-       VK_BLEND_FACTOR_DST_COLOR,
-       VK_BLEND_FACTOR_ONE_MINUS_DST_COLOR,
-       VK_BLEND_FACTOR_SRC_ALPHA,
-       VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA,
-       VK_BLEND_FACTOR_DST_ALPHA,
-       VK_BLEND_FACTOR_ONE_MINUS_DST_ALPHA,
-       VK_BLEND_FACTOR_CONSTANT_COLOR,
-       VK_BLEND_FACTOR_ONE_MINUS_CONSTANT_COLOR,
-       VK_BLEND_FACTOR_CONSTANT_ALPHA,
-       VK_BLEND_FACTOR_ONE_MINUS_CONSTANT_ALPHA,
-       VK_BLEND_FACTOR_SRC_ALPHA_SATURATE,
-       VK_BLEND_FACTOR_SRC1_COLOR,
-       VK_BLEND_FACTOR_ONE_MINUS_SRC1_COLOR,
-       VK_BLEND_FACTOR_SRC1_ALPHA,
-       VK_BLEND_FACTOR_ONE_MINUS_SRC1_ALPHA});
+    static constexpr auto MAPPING = FlagMap<BlendFactor, VkBlendFactor>::build_from_list({
+      VK_BLEND_FACTOR_ZERO,
+      VK_BLEND_FACTOR_ONE,
+      VK_BLEND_FACTOR_SRC_COLOR,
+      VK_BLEND_FACTOR_ONE_MINUS_SRC_COLOR,
+      VK_BLEND_FACTOR_DST_COLOR,
+      VK_BLEND_FACTOR_ONE_MINUS_DST_COLOR,
+      VK_BLEND_FACTOR_SRC_ALPHA,
+      VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA,
+      VK_BLEND_FACTOR_DST_ALPHA,
+      VK_BLEND_FACTOR_ONE_MINUS_DST_ALPHA,
+      VK_BLEND_FACTOR_CONSTANT_COLOR,
+      VK_BLEND_FACTOR_ONE_MINUS_CONSTANT_COLOR,
+      VK_BLEND_FACTOR_CONSTANT_ALPHA,
+      VK_BLEND_FACTOR_ONE_MINUS_CONSTANT_ALPHA,
+      VK_BLEND_FACTOR_SRC_ALPHA_SATURATE,
+      VK_BLEND_FACTOR_SRC1_COLOR,
+      VK_BLEND_FACTOR_ONE_MINUS_SRC1_COLOR,
+      VK_BLEND_FACTOR_SRC1_ALPHA,
+      VK_BLEND_FACTOR_ONE_MINUS_SRC1_ALPHA,
+    });
     return MAPPING[blend_factor];
   }
 
   SOUL_ALWAYS_INLINE auto vk_cast(const BlendOp blend_op) -> VkBlendOp
   {
-    static constexpr auto MAPPING = FlagMap<BlendOp, VkBlendOp>::build_from_list(
-      {VK_BLEND_OP_ADD,
-       VK_BLEND_OP_SUBTRACT,
-       VK_BLEND_OP_REVERSE_SUBTRACT,
-       VK_BLEND_OP_MIN,
-       VK_BLEND_OP_MAX});
+    static constexpr auto MAPPING = FlagMap<BlendOp, VkBlendOp>::build_from_list({
+      VK_BLEND_OP_ADD,
+      VK_BLEND_OP_SUBTRACT,
+      VK_BLEND_OP_REVERSE_SUBTRACT,
+      VK_BLEND_OP_MIN,
+      VK_BLEND_OP_MAX,
+    });
     return MAPPING[blend_op];
   }
 
   constexpr auto vk_cast(const TextureUsageFlags usage_flags) -> VkImageUsageFlags
   {
-    return usage_flags.map<VkImageUsageFlags>(
-      {VK_IMAGE_USAGE_SAMPLED_BIT,
-       VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
-       VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
-       VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT,
-       VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
-       VK_IMAGE_USAGE_TRANSFER_DST_BIT,
-       VK_IMAGE_USAGE_STORAGE_BIT});
+    return usage_flags.map<VkImageUsageFlags>({
+      VK_IMAGE_USAGE_SAMPLED_BIT,
+      VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+      VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
+      VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT,
+      VK_IMAGE_USAGE_TRANSFER_SRC_BIT,
+      VK_IMAGE_USAGE_TRANSFER_DST_BIT,
+      VK_IMAGE_USAGE_STORAGE_BIT,
+    });
   }
 
   constexpr auto vk_cast(const BufferUsageFlags usage_flags) -> VkBufferUsageFlags
   {
-    auto result = usage_flags.map<VkBufferUsageFlags>(
-      {VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
-       VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
-       VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-       VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
-       VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-       VK_BUFFER_USAGE_TRANSFER_DST_BIT,
-       VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_STORAGE_BIT_KHR,
-       VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR,
-       VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
-       VK_BUFFER_USAGE_SHADER_BINDING_TABLE_BIT_KHR});
+    auto result = usage_flags.map<VkBufferUsageFlags>({
+      VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
+      VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+      VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+      VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+      VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+      VK_BUFFER_USAGE_TRANSFER_DST_BIT,
+      VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_STORAGE_BIT_KHR,
+      VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR,
+      VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+      VK_BUFFER_USAGE_SHADER_BINDING_TABLE_BIT_KHR,
+    });
     constexpr VkBufferUsageFlags need_buffer_device_address_bit =
       VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_STORAGE_BIT_KHR |
       VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR |
@@ -228,51 +236,55 @@ namespace soul::gpu
   constexpr auto cast_to_pipeline_stage_flags(const ShaderStageFlags stage_flags)
     -> PipelineStageFlags
   {
-    return stage_flags.map<PipelineStageFlags>(
-      {{PipelineStage::VERTEX_SHADER},
-       {PipelineStage::GEOMETRY_SHADER},
-       {PipelineStage::FRAGMENT_SHADER},
-       {PipelineStage::COMPUTE_SHADER},
-       {PipelineStage::RAY_TRACING_SHADER},
-       {PipelineStage::RAY_TRACING_SHADER},
-       {PipelineStage::RAY_TRACING_SHADER}});
+    return stage_flags.map<PipelineStageFlags>({
+      {PipelineStage::VERTEX_SHADER},
+      {PipelineStage::GEOMETRY_SHADER},
+      {PipelineStage::FRAGMENT_SHADER},
+      {PipelineStage::COMPUTE_SHADER},
+      {PipelineStage::RAY_TRACING_SHADER},
+      {PipelineStage::RAY_TRACING_SHADER},
+      {PipelineStage::RAY_TRACING_SHADER},
+    });
   }
 
   constexpr auto vk_cast_shader_stage_to_pipeline_stage_flags(const ShaderStageFlags stage_flags)
     -> VkPipelineStageFlags
   {
-    return stage_flags.map<VkPipelineStageFlags>(
-      {VK_PIPELINE_STAGE_VERTEX_SHADER_BIT,
-       VK_PIPELINE_STAGE_GEOMETRY_SHADER_BIT,
-       VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
-       VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-       VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR,
-       VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR,
-       VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR});
+    return stage_flags.map<VkPipelineStageFlags>({
+      VK_PIPELINE_STAGE_VERTEX_SHADER_BIT,
+      VK_PIPELINE_STAGE_GEOMETRY_SHADER_BIT,
+      VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+      VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+      VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR,
+      VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR,
+      VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR,
+    });
   }
 
   constexpr auto vk_cast(const ShaderStageFlags stage_flags) noexcept -> VkShaderStageFlags
   {
-    return stage_flags.map<VkShaderStageFlags>(
-      {VK_SHADER_STAGE_VERTEX_BIT,
-       VK_SHADER_STAGE_GEOMETRY_BIT,
-       VK_SHADER_STAGE_FRAGMENT_BIT,
-       VK_SHADER_STAGE_COMPUTE_BIT,
-       VK_SHADER_STAGE_RAYGEN_BIT_KHR,
-       VK_SHADER_STAGE_MISS_BIT_KHR,
-       VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR});
+    return stage_flags.map<VkShaderStageFlags>({
+      VK_SHADER_STAGE_VERTEX_BIT,
+      VK_SHADER_STAGE_GEOMETRY_BIT,
+      VK_SHADER_STAGE_FRAGMENT_BIT,
+      VK_SHADER_STAGE_COMPUTE_BIT,
+      VK_SHADER_STAGE_RAYGEN_BIT_KHR,
+      VK_SHADER_STAGE_MISS_BIT_KHR,
+      VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR,
+    });
   }
 
   SOUL_ALWAYS_INLINE auto vk_cast(const ShaderStage shader_stage) noexcept -> VkShaderStageFlagBits
   {
-    static constexpr auto MAPPING = FlagMap<ShaderStage, VkShaderStageFlagBits>::build_from_list(
-      {VK_SHADER_STAGE_VERTEX_BIT,
-       VK_SHADER_STAGE_GEOMETRY_BIT,
-       VK_SHADER_STAGE_FRAGMENT_BIT,
-       VK_SHADER_STAGE_COMPUTE_BIT,
-       VK_SHADER_STAGE_RAYGEN_BIT_KHR,
-       VK_SHADER_STAGE_MISS_BIT_KHR,
-       VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR});
+    static constexpr auto MAPPING = FlagMap<ShaderStage, VkShaderStageFlagBits>::build_from_list({
+      VK_SHADER_STAGE_VERTEX_BIT,
+      VK_SHADER_STAGE_GEOMETRY_BIT,
+      VK_SHADER_STAGE_FRAGMENT_BIT,
+      VK_SHADER_STAGE_COMPUTE_BIT,
+      VK_SHADER_STAGE_RAYGEN_BIT_KHR,
+      VK_SHADER_STAGE_MISS_BIT_KHR,
+      VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR,
+    });
     return MAPPING[shader_stage];
   }
 
@@ -408,7 +420,8 @@ namespace soul::gpu
       TextureSampleCount::COUNT_8,
       TextureSampleCount::COUNT_16,
       TextureSampleCount::COUNT_32,
-      TextureSampleCount::COUNT_64};
+      TextureSampleCount::COUNT_64,
+    };
     TextureSampleCountFlags result;
     util::for_each_one_bit_pos(
       flags, [&result](soul_size bit_position) { result.set(MAP[bit_position]); });
@@ -417,14 +430,16 @@ namespace soul::gpu
 
   SOUL_ALWAYS_INLINE auto vk_cast(const TextureSampleCount sample_count) -> VkSampleCountFlagBits
   {
-    static constexpr auto MAP = FlagMap<TextureSampleCount, VkSampleCountFlagBits>::build_from_list(
-      {VK_SAMPLE_COUNT_1_BIT,
-       VK_SAMPLE_COUNT_2_BIT,
-       VK_SAMPLE_COUNT_4_BIT,
-       VK_SAMPLE_COUNT_8_BIT,
-       VK_SAMPLE_COUNT_16_BIT,
-       VK_SAMPLE_COUNT_32_BIT,
-       VK_SAMPLE_COUNT_64_BIT});
+    static constexpr auto MAP =
+      FlagMap<TextureSampleCount, VkSampleCountFlagBits>::build_from_list({
+        VK_SAMPLE_COUNT_1_BIT,
+        VK_SAMPLE_COUNT_2_BIT,
+        VK_SAMPLE_COUNT_4_BIT,
+        VK_SAMPLE_COUNT_8_BIT,
+        VK_SAMPLE_COUNT_16_BIT,
+        VK_SAMPLE_COUNT_32_BIT,
+        VK_SAMPLE_COUNT_64_BIT,
+      });
     return MAP[sample_count];
   }
 
@@ -455,11 +470,12 @@ namespace soul::gpu
 
   SOUL_ALWAYS_INLINE auto vk_cast(const MemoryPropertyFlags flags) -> VkMemoryPropertyFlags
   {
-    return flags.map<VkMemoryPropertyFlags>(
-      {VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-       VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
-       VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-       VK_MEMORY_PROPERTY_HOST_CACHED_BIT});
+    return flags.map<VkMemoryPropertyFlags>({
+      VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+      VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
+      VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+      VK_MEMORY_PROPERTY_HOST_CACHED_BIT,
+    });
   }
 
   SOUL_ALWAYS_INLINE auto vk_cast(const RTGeometryType type) -> VkGeometryTypeKHR
@@ -527,19 +543,21 @@ namespace soul::gpu
     -> VkBuildAccelerationStructureModeKHR
   {
     static constexpr auto MAP =
-      FlagMap<RTBuildMode, VkBuildAccelerationStructureModeKHR>::build_from_list(
-        {VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR,
-         VK_BUILD_ACCELERATION_STRUCTURE_MODE_UPDATE_KHR});
+      FlagMap<RTBuildMode, VkBuildAccelerationStructureModeKHR>::build_from_list({
+        VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR,
+        VK_BUILD_ACCELERATION_STRUCTURE_MODE_UPDATE_KHR,
+      });
     return MAP[build_mode];
   }
 
   SOUL_ALWAYS_INLINE auto vk_cast(const RTBuildFlags flags) -> VkBuildAccelerationStructureFlagsKHR
   {
-    return flags.map<VkBuildAccelerationStructureFlagsKHR>(
-      {VK_BUILD_ACCELERATION_STRUCTURE_ALLOW_UPDATE_BIT_KHR,
-       VK_BUILD_ACCELERATION_STRUCTURE_ALLOW_COMPACTION_BIT_KHR,
-       VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR,
-       VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_BUILD_BIT_KHR,
-       VK_BUILD_ACCELERATION_STRUCTURE_LOW_MEMORY_BIT_KHR});
+    return flags.map<VkBuildAccelerationStructureFlagsKHR>({
+      VK_BUILD_ACCELERATION_STRUCTURE_ALLOW_UPDATE_BIT_KHR,
+      VK_BUILD_ACCELERATION_STRUCTURE_ALLOW_COMPACTION_BIT_KHR,
+      VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR,
+      VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_BUILD_BIT_KHR,
+      VK_BUILD_ACCELERATION_STRUCTURE_LOW_MEMORY_BIT_KHR,
+    });
   }
 } // namespace soul::gpu

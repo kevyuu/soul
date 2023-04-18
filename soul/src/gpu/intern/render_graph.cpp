@@ -16,15 +16,16 @@ namespace soul::gpu
 
   TextureNodeID RenderGraph::create_texture(const char* name, const RGTextureDesc& desc)
   {
-    const auto resource_index = soul::cast<uint32>(internal_textures_.add(
-      {.name = name,
-       .type = desc.type,
-       .format = desc.format,
-       .extent = desc.extent,
-       .mip_levels = desc.mip_levels,
-       .sample_count = desc.sample_count,
-       .clear = desc.clear,
-       .clear_value = desc.clear_value}));
+    const auto resource_index = soul::cast<uint32>(internal_textures_.add({
+      .name = name,
+      .type = desc.type,
+      .format = desc.format,
+      .extent = desc.extent,
+      .mip_levels = desc.mip_levels,
+      .sample_count = desc.sample_count,
+      .clear = desc.clear,
+      .clear_value = desc.clear_value,
+    }));
     return create_resource_node<RGResourceType::TEXTURE>(RGResourceID::internal_id(resource_index));
   }
 
@@ -77,7 +78,8 @@ namespace soul::gpu
         .layer_count = desc.layer_count,
         .sample_count = desc.sample_count,
         .clear = external_texture.clear,
-        .clear_value = external_texture.clear_value};
+        .clear_value = external_texture.clear_value,
+      };
     }
     const RGInternalTexture& internal_texture = internal_textures_[node.resource_id.get_index()];
     return {
@@ -88,7 +90,8 @@ namespace soul::gpu
       .layer_count = internal_texture.layer_count,
       .sample_count = internal_texture.sample_count,
       .clear = internal_texture.clear,
-      .clear_value = internal_texture.clear_value};
+      .clear_value = internal_texture.clear_value,
+    };
   }
 
   RGBufferDesc RenderGraph::get_buffer_desc(BufferNodeID node_id, const gpu::System& system) const

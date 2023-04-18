@@ -130,14 +130,19 @@ auto Texture2DRGPass::add_pass(const Parameter& parameter, gpu::RenderGraph& ren
         .program_id = program_id_,
         .input_bindings = {{.stride = sizeof(Vertex)}},
         .input_attributes =
-          {{.binding = 0,
-            .offset = offsetof(Vertex, position),
-            .type = gpu::VertexElementType::FLOAT2},
-           {.binding = 0,
-            .offset = offsetof(Vertex, texture_coords),
-            .type = gpu::VertexElementType::FLOAT3}},
+          {
+            {.binding = 0,
+             .offset = offsetof(Vertex, position),
+             .type = gpu::VertexElementType::FLOAT2},
+            {.binding = 0,
+             .offset = offsetof(Vertex, texture_coords),
+             .type = gpu::VertexElementType::FLOAT3},
+          },
         .viewport =
-          {.width = static_cast<float>(viewport.x), .height = static_cast<float>(viewport.y)},
+          {
+            .width = static_cast<float>(viewport.x),
+            .height = static_cast<float>(viewport.y),
+          },
         .scissor = {.extent = viewport},
         .color_attachment_count = 1,
       };
@@ -151,7 +156,8 @@ auto Texture2DRGPass::add_pass(const Parameter& parameter, gpu::RenderGraph& ren
       const PushConstant push_constant = {
         .texture_descriptor_id =
           gpu_system_->get_srv_descriptor_id(registry.get_texture(parameter.sampled_texture)),
-        .sampler_descriptor_id = gpu_system_->get_sampler_descriptor_id(sampler_id_)};
+        .sampler_descriptor_id = gpu_system_->get_sampler_descriptor_id(sampler_id_),
+      };
 
       command_list.push(gpu::RenderCommandDrawIndex{
         .pipeline_state_id = pipeline_state_id,
@@ -160,7 +166,8 @@ auto Texture2DRGPass::add_pass(const Parameter& parameter, gpu::RenderGraph& ren
         .vertex_buffer_ids = {vertex_buffer_id_},
         .index_buffer_id = index_buffer_id_,
         .first_index = 0,
-        .index_count = std::size(INDICES)});
+        .index_count = std::size(INDICES),
+      });
     });
 
   return raster_node.get_color_attachment_node_id();

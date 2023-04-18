@@ -58,7 +58,8 @@ class BufferTransferCommandSample final : public App
           .scale = math::scale(mat4f::identity(), vec3f(0.25f, 0.25, 1.0f)),
           .translation = math::translate(mat4f::identity(), vec3f(x_offset, y_offset, 0.0f)),
           .rotation =
-            math::rotate(mat4f::identity(), math::radians(45.0f), vec3f(0.0f, 0.0f, 1.0f))};
+            math::rotate(mat4f::identity(), math::radians(45.0f), vec3f(0.0f, 0.0f, 1.0f)),
+        };
         transforms_vector.push_back(transform);
       }
     }
@@ -86,7 +87,10 @@ class BufferTransferCommandSample final : public App
       render_graph.import_buffer("Transform Buffer Q2", transform_q2_buffer_id_);
 
     const auto transient_transform_buffer = render_graph.create_buffer(
-      "Transient Transform Buffer", {.size = transient_transforms_.size() * sizeof(Transform)});
+      "Transient Transform Buffer",
+      {
+        .size = transient_transforms_.size() * sizeof(Transform),
+      });
 
     struct UpdatePassParameter {
       gpu::BufferNodeID transform_buffer_q1;
@@ -112,13 +116,15 @@ class BufferTransferCommandSample final : public App
               transform.rotation = get_rotation(elapsed_seconds_float);
               const gpu::BufferRegionCopy region_copy = {
                 .dst_offset = (transforms_q1_.size() - 1) * sizeof(Transform),
-                .size = sizeof(Transform)};
+                .size = sizeof(Transform),
+              };
 
               const gpu::RenderCommandUpdateBuffer command = {
                 .dst_buffer = registry.get_buffer(parameter.transform_buffer_q1),
                 .data = &transform,
                 .region_count = 1,
-                .regions = &region_copy};
+                .regions = &region_copy,
+              };
               command_list.push(command);
             }
 
@@ -127,13 +133,15 @@ class BufferTransferCommandSample final : public App
               transform.rotation = get_rotation(elapsed_seconds_float);
               const gpu::BufferRegionCopy region_copy = {
                 .dst_offset = (transforms_q2_.size() - 1) * sizeof(Transform),
-                .size = sizeof(Transform)};
+                .size = sizeof(Transform),
+              };
 
               const gpu::RenderCommandUpdateBuffer command = {
                 .dst_buffer = registry.get_buffer(parameter.transform_buffer_q2),
                 .data = &transform,
                 .region_count = 1,
-                .regions = &region_copy};
+                .regions = &region_copy,
+              };
               command_list.push(command);
             }
 
@@ -147,7 +155,8 @@ class BufferTransferCommandSample final : public App
                 .dst_buffer = registry.get_buffer(parameter.transient_transform_buffer),
                 .data = transient_transforms_.data(),
                 .region_count = 1,
-                .regions = &region_copy};
+                .regions = &region_copy,
+              };
               command_list.push(command);
             }
           })
@@ -161,8 +170,10 @@ class BufferTransferCommandSample final : public App
     };
     const auto copy_transform_buffer = render_graph.create_buffer(
       "Copy Transform Buffer",
-      {.size = (transforms_q1_.size() + transforms_q2_.size() + transient_transforms_.size()) *
-               sizeof(Transform)});
+      {
+        .size = (transforms_q1_.size() + transforms_q2_.size() + transient_transforms_.size()) *
+                sizeof(Transform),
+      });
     CopyPassParameter copy_pass_parameter =
       render_graph
         .add_non_shader_pass<CopyPassParameter>(
@@ -181,28 +192,34 @@ class BufferTransferCommandSample final : public App
           [this](const auto& parameter, auto& registry, auto& command_list) {
             using Command = gpu::RenderCommandCopyBuffer;
             const gpu::BufferRegionCopy region_copy_q1 = {
-              .size = transforms_q1_.size() * sizeof(Transform)};
-            command_list.template push<Command>(
-              {.src_buffer = registry.get_buffer(parameter.transform_buffer_q1),
-               .dst_buffer = registry.get_buffer(parameter.copy_dst_transform_buffer),
-               .region_count = 1,
-               .regions = &region_copy_q1});
+              .size = transforms_q1_.size() * sizeof(Transform),
+            };
+            command_list.template push<Command>({
+              .src_buffer = registry.get_buffer(parameter.transform_buffer_q1),
+              .dst_buffer = registry.get_buffer(parameter.copy_dst_transform_buffer),
+              .region_count = 1,
+              .regions = &region_copy_q1,
+            });
             const gpu::BufferRegionCopy region_copy_q2 = {
               .dst_offset = transforms_q1_.size() * sizeof(Transform),
-              .size = transforms_q2_.size() * sizeof(Transform)};
-            command_list.template push<Command>(
-              {.src_buffer = registry.get_buffer(parameter.transform_buffer_q2),
-               .dst_buffer = registry.get_buffer(parameter.copy_dst_transform_buffer),
-               .region_count = 1,
-               .regions = &region_copy_q2});
+              .size = transforms_q2_.size() * sizeof(Transform),
+            };
+            command_list.template push<Command>({
+              .src_buffer = registry.get_buffer(parameter.transform_buffer_q2),
+              .dst_buffer = registry.get_buffer(parameter.copy_dst_transform_buffer),
+              .region_count = 1,
+              .regions = &region_copy_q2,
+            });
             const gpu::BufferRegionCopy region_copy_transient = {
               .dst_offset = (transforms_q1_.size() + transforms_q2_.size()) * sizeof(Transform),
-              .size = transient_transforms_.size() * sizeof(Transform)};
-            command_list.template push<Command>(
-              {.src_buffer = registry.get_buffer(parameter.transient_transform_buffer),
-               .dst_buffer = registry.get_buffer(parameter.copy_dst_transform_buffer),
-               .region_count = 1,
-               .regions = &region_copy_transient});
+              .size = transient_transforms_.size() * sizeof(Transform),
+            };
+            command_list.template push<Command>({
+              .src_buffer = registry.get_buffer(parameter.transient_transform_buffer),
+              .dst_buffer = registry.get_buffer(parameter.copy_dst_transform_buffer),
+              .region_count = 1,
+              .regions = &region_copy_transient,
+            });
           })
         .get_parameter();
 
@@ -223,16 +240,26 @@ class BufferTransferCommandSample final : public App
           .program_id = program_id_,
           .input_bindings = {{.stride = sizeof(Vertex)}},
           .input_attributes =
-            {{.binding = 0,
-              .offset = offsetof(Vertex, position),
-              .type = gpu::VertexElementType::FLOAT2},
-             {.binding = 0,
-              .offset = offsetof(Vertex, color),
-              .type = gpu::VertexElementType::FLOAT3}},
+            {
+              {
+                .binding = 0,
+                .offset = offsetof(Vertex, position),
+                .type = gpu::VertexElementType::FLOAT2,
+              },
+              {
+                .binding = 0,
+                .offset = offsetof(Vertex, color),
+                .type = gpu::VertexElementType::FLOAT3,
+              },
+            },
           .viewport =
-            {.width = static_cast<float>(viewport.x), .height = static_cast<float>(viewport.y)},
+            {
+              .width = static_cast<float>(viewport.x),
+              .height = static_cast<float>(viewport.y),
+            },
           .scissor = {.extent = viewport},
-          .color_attachment_count = 1};
+          .color_attachment_count = 1,
+        };
 
         struct PushConstant {
           gpu::DescriptorID transform_descriptor_id = gpu::DescriptorID::null();
@@ -252,7 +279,8 @@ class BufferTransferCommandSample final : public App
              push_constant_idx++) {
           push_constants[push_constant_idx] = {
             .transform_descriptor_id = transform_buffer_descriptor_id,
-            .offset = soul::cast<uint32>(push_constant_idx * sizeof(Transform))};
+            .offset = soul::cast<uint32>(push_constant_idx * sizeof(Transform)),
+          };
         }
 
         command_list.template push<Command>(
@@ -264,7 +292,8 @@ class BufferTransferCommandSample final : public App
               .vertex_buffer_ids = {vertex_buffer_id_},
               .index_buffer_id = index_buffer_id_,
               .first_index = 0,
-              .index_count = std::size(INDICES)};
+              .index_count = std::size(INDICES),
+            };
           });
       });
 
@@ -284,7 +313,8 @@ public:
       .source_count = 1,
       .sources = &shader_source,
       .entry_point_count = entry_points.size(),
-      .entry_points = entry_points.data()};
+      .entry_points = entry_points.data(),
+    };
     auto result = gpu_system_->create_program(program_desc);
     if (!result) {
       SOUL_PANIC("Fail to create program");
@@ -292,46 +322,54 @@ public:
     program_id_ = result.value();
 
     vertex_buffer_id_ = gpu_system_->create_buffer(
-      {.size = sizeof(Vertex) * std::size(VERTICES),
-       .usage_flags = {gpu::BufferUsage::VERTEX},
-       .queue_flags = {gpu::QueueType::GRAPHIC},
-       .name = "Vertex buffer"},
+      {
+        .size = sizeof(Vertex) * std::size(VERTICES),
+        .usage_flags = {gpu::BufferUsage::VERTEX},
+        .queue_flags = {gpu::QueueType::GRAPHIC},
+        .name = "Vertex buffer",
+      },
       VERTICES);
     gpu_system_->flush_buffer(vertex_buffer_id_);
 
     index_buffer_id_ = gpu_system_->create_buffer(
-      {.size = sizeof(Index) * std::size(INDICES),
-       .usage_flags = {gpu::BufferUsage::INDEX},
-       .queue_flags = {gpu::QueueType::GRAPHIC},
-       .name = "Index buffer"},
+      {
+        .size = sizeof(Index) * std::size(INDICES),
+        .usage_flags = {gpu::BufferUsage::INDEX},
+        .queue_flags = {gpu::QueueType::GRAPHIC},
+        .name = "Index buffer",
+      },
       INDICES);
     gpu_system_->flush_buffer(index_buffer_id_);
 
     fill_transform_vector(transforms_q1_, -1.0f, -1.0f, 0.0f, 0.0f, ROW_COUNT, COL_COUNT);
     transform_q1_buffer_id_ = gpu_system_->create_buffer(
-      {.size = TRANSFORM_COUNT * sizeof(Transform),
-       .usage_flags = {gpu::BufferUsage::STORAGE, gpu::BufferUsage::TRANSFER_SRC},
-       .queue_flags = {gpu::QueueType::GRAPHIC, gpu::QueueType::TRANSFER},
-       .name = "Transform q1 buffer"},
+      {
+        .size = TRANSFORM_COUNT * sizeof(Transform),
+        .usage_flags = {gpu::BufferUsage::STORAGE, gpu::BufferUsage::TRANSFER_SRC},
+        .queue_flags = {gpu::QueueType::GRAPHIC, gpu::QueueType::TRANSFER},
+        .name = "Transform q1 buffer",
+      },
       transforms_q1_.data());
 
     fill_transform_vector(transforms_q2_, 0.0f, -1.0f, 1.0f, 0.0f, ROW_COUNT, COL_COUNT);
     transform_q2_buffer_id_ = gpu_system_->create_buffer(
-      {.size = TRANSFORM_COUNT * sizeof(Transform),
-       .usage_flags = {gpu::BufferUsage::STORAGE, gpu::BufferUsage::TRANSFER_SRC},
-       .queue_flags = {gpu::QueueType::GRAPHIC, gpu::QueueType::TRANSFER},
-       .memory_option =
-         gpu::MemoryOption{
-           .required = {gpu::MemoryProperty::HOST_COHERENT},
-           .preferred = {gpu::MemoryProperty::DEVICE_LOCAL}},
-       .name = "Transform q2 buffer"},
+      {
+        .size = TRANSFORM_COUNT * sizeof(Transform),
+        .usage_flags = {gpu::BufferUsage::STORAGE, gpu::BufferUsage::TRANSFER_SRC},
+        .queue_flags = {gpu::QueueType::GRAPHIC, gpu::QueueType::TRANSFER},
+        .memory_option =
+          gpu::MemoryOption{
+            .required = {gpu::MemoryProperty::HOST_COHERENT},
+            .preferred = {gpu::MemoryProperty::DEVICE_LOCAL}},
+        .name = "Transform q2 buffer",
+      },
       transforms_q2_.data());
 
     fill_transform_vector(transient_transforms_, -1.0f, 0.0f, 1.0f, 1.0f, ROW_COUNT, COL_COUNT * 2);
   }
 };
 
-auto main(int argc, char* argv[]) -> int
+auto main(int /* argc */, char* /* argv */[]) -> int
 {
   const ScreenDimension screen_dimension = {.width = 800, .height = 600};
   BufferTransferCommandSample app({.screen_dimension = screen_dimension});

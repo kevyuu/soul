@@ -139,9 +139,17 @@ namespace soul::gpu::impl
            .mipLevel = region.subresource.mip_level,
            .baseArrayLayer = region.subresource.base_array_layer,
            .layerCount = region.subresource.layer_count},
-        .imageOffset = {.x = region.offset.x, .y = region.offset.y, .z = region.offset.z},
+        .imageOffset =
+          {
+            .x = region.offset.x,
+            .y = region.offset.y,
+            .z = region.offset.z,
+          },
         .imageExtent = {
-          .width = region.extent.x, .height = region.extent.y, .depth = region.extent.z}};
+          .width = region.extent.x,
+          .height = region.extent.y,
+          .depth = region.extent.z,
+        }};
     };
 
     Vector<VkBufferImageCopy> buffer_image_copies(command.region_count, scope_allocator);
@@ -293,19 +301,25 @@ namespace soul::gpu::impl
       .size = size_info.buildScratchSize,
       .usage_flags = {BufferUsage::AS_SCRATCH_BUFFER},
       .queue_flags = {QueueType::COMPUTE},
-      .memory_option = MemoryOption{.required = {MemoryProperty::DEVICE_LOCAL}}};
+      .memory_option =
+        MemoryOption{
+          .required = {MemoryProperty::DEVICE_LOCAL},
+        },
+    };
     const auto scratch_buffer_id = gpu_system_.create_transient_buffer(scratch_buffer_desc);
     const auto scratch_buffer_address = gpu_system_.get_gpu_address(scratch_buffer_id);
 
     const VkAccelerationStructureGeometryInstancesDataKHR as_instance = {
       .sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_INSTANCES_DATA_KHR,
-      .data = {.deviceAddress = build_desc.instance_data.id}};
+      .data = {.deviceAddress = build_desc.instance_data.id},
+    };
 
     const VkAccelerationStructureGeometryKHR as_geometry = {
       .sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR,
       .geometryType = VK_GEOMETRY_TYPE_INSTANCES_KHR,
       .geometry = {.instances = as_instance},
-      .flags = vk_cast(build_desc.geometry_flags)};
+      .flags = vk_cast(build_desc.geometry_flags),
+    };
 
     const VkAccelerationStructureBuildGeometryInfoKHR build_info = {
       .sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR,
@@ -315,7 +329,8 @@ namespace soul::gpu::impl
       .dstAccelerationStructure = tlas.vk_handle,
       .geometryCount = 1,
       .pGeometries = &as_geometry,
-      .scratchData = {.deviceAddress = scratch_buffer_address.id}};
+      .scratchData = {.deviceAddress = scratch_buffer_address.id},
+    };
     const VkAccelerationStructureBuildRangeInfoKHR build_offset_info{
       build_desc.instance_count, build_desc.instance_offset, 0, 0};
     const VkAccelerationStructureBuildRangeInfoKHR* p_build_offset_info = &build_offset_info;
@@ -351,7 +366,8 @@ namespace soul::gpu::impl
       .usage_flags = {BufferUsage::AS_SCRATCH_BUFFER},
       .queue_flags = {QueueType::COMPUTE},
       .memory_option = MemoryOption{.required = {MemoryProperty::DEVICE_LOCAL}},
-      .name = as_scratch_buffer_name};
+      .name = as_scratch_buffer_name,
+    };
     const auto scratch_buffer_id = gpu_system_.create_transient_buffer(scratch_buffer_desc);
     const auto scratch_buffer_address = gpu_system_.get_gpu_address(scratch_buffer_id);
 
@@ -434,7 +450,8 @@ namespace soul::gpu::impl
       .usage_flags = {BufferUsage::AS_SCRATCH_BUFFER},
       .queue_flags = {QueueType::COMPUTE},
       .memory_option = MemoryOption{.required = {MemoryProperty::DEVICE_LOCAL}},
-      .name = "Batch blas scratch buffer"};
+      .name = "Batch blas scratch buffer",
+    };
     const auto scratch_buffer = gpu_system_.create_transient_buffer(scratch_buffer_desc);
     const auto scratch_buffer_addr = gpu_system_.get_gpu_address(scratch_buffer).id;
 

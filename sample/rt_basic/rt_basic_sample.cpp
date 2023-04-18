@@ -178,7 +178,8 @@ class RTBasicSampleApp final : public App
                 .dst_buffer = registry.get_buffer(parameter.instance_buffer),
                 .data = instance_descs.data(),
                 .region_count = 1,
-                .regions = &region});
+                .regions = &region,
+              });
             })
           .get_parameter()
           .instance_buffer;
@@ -201,10 +202,13 @@ class RTBasicSampleApp final : public App
             [this](const auto& parameter, const auto& registry, auto& command_list) {
               command_list.push(gpu::RenderCommandBuildTlas{
                 .tlas_id = registry.get_tlas(parameter.tlas_node_id),
-                .build_desc = {
-                  .instance_data =
-                    gpu_system_->get_gpu_address(registry.get_buffer(parameter.instance_buffer)),
-                  .instance_count = soul::cast<uint32>(instances_.size())}});
+                .build_desc =
+                  {
+                    .instance_data =
+                      gpu_system_->get_gpu_address(registry.get_buffer(parameter.instance_buffer)),
+                    .instance_count = soul::cast<uint32>(instances_.size()),
+                  },
+              });
             })
           .get_parameter()
           .tlas_node_id;
@@ -230,7 +234,8 @@ class RTBasicSampleApp final : public App
       .clear_color = clear_color_,
       .light_position = light_.position,
       .light_intensity = light_.intensity,
-      .light_type = light_.type};
+      .light_type = light_.type,
+    };
 
     const auto scene_upload_parameter =
       render_graph
@@ -248,7 +253,8 @@ class RTBasicSampleApp final : public App
               .dst_buffer = registry.get_buffer(parameter.buffer),
               .data = soul::cast<void*>(&gpu_scene_),
               .region_count = 1,
-              .regions = &region_copy};
+              .regions = &region_copy,
+            };
             command_list.push(command);
           })
         .get_parameter();
@@ -292,18 +298,22 @@ class RTBasicSampleApp final : public App
                 gpu_system_->get_as_descriptor_id(registry.get_tlas(parameter.tlas)),
               .image_descriptor_id =
                 gpu_system_->get_uav_descriptor_id(registry.get_texture(parameter.target_texture)),
-              .sampler_descriptor_id = gpu_system_->get_sampler_descriptor_id(sampler_id_)};
+              .sampler_descriptor_id = gpu_system_->get_sampler_descriptor_id(sampler_id_),
+            };
             using Command = gpu::RenderCommandRayTrace;
-            command_list.template push<Command>(
-              {.shader_table_id = shader_table_id_,
-               .push_constant_data = &push_constant,
-               .push_constant_size = sizeof(RayTracingPushConstant),
-               .dimension = vec3ui32(viewport.x, viewport.y, 1.0)});
+            command_list.template push<Command>({
+              .shader_table_id = shader_table_id_,
+              .push_constant_data = &push_constant,
+              .push_constant_size = sizeof(RayTracingPushConstant),
+              .dimension = vec3ui32(viewport.x, viewport.y, 1.0),
+            });
           })
         .get_parameter();
 
     const Texture2DRGPass::Parameter texture_2d_parameter = {
-      .sampled_texture = rt_pass_param.target_texture, .render_target = render_target};
+      .sampled_texture = rt_pass_param.target_texture,
+      .render_target = render_target,
+    };
     return texture_2d_pass.add_pass(texture_2d_parameter, render_graph);
   }
 
@@ -320,7 +330,8 @@ class RTBasicSampleApp final : public App
       .usage_flags =
         {gpu::BufferUsage::VERTEX, gpu::BufferUsage::STORAGE, gpu::BufferUsage::AS_BUILD_INPUT},
       .queue_flags = {gpu::QueueType::GRAPHIC},
-      .name = "Vertex buffer"};
+      .name = "Vertex buffer",
+    };
     const auto vertex_buffer =
       gpu_system_->create_buffer(vertex_buffer_desc, obj_loader.vertices.data());
 
@@ -329,7 +340,8 @@ class RTBasicSampleApp final : public App
       .usage_flags =
         {gpu::BufferUsage::INDEX, gpu::BufferUsage::STORAGE, gpu::BufferUsage::AS_BUILD_INPUT},
       .queue_flags = {gpu::QueueType::GRAPHIC},
-      .name = "Index buffer"};
+      .name = "Index buffer",
+    };
     const auto index_buffer =
       gpu_system_->create_buffer(index_buffer_desc, obj_loader.indices.data());
 
@@ -356,14 +368,16 @@ class RTBasicSampleApp final : public App
 
       const gpu::TextureRegionUpdate region_load = {
         .subresource = {.layer_count = 1},
-        .extent = {static_cast<uint32>(texture_width), static_cast<uint32>(texture_height), 1}};
+        .extent = {static_cast<uint32>(texture_width), static_cast<uint32>(texture_height), 1},
+      };
 
       const gpu::TextureLoadDesc load_desc = {
         .data = texture_pixels,
         .data_size = soul::cast<soul_size>(texture_width * texture_height * 4),
         .region_count = 1,
         .regions = &region_load,
-        .generate_mipmap = true};
+        .generate_mipmap = true,
+      };
 
       texture.texture_id = gpu_system_->create_texture(texture_desc, load_desc);
 
@@ -372,27 +386,29 @@ class RTBasicSampleApp final : public App
 
     SBOVector<GPUObjMaterial> gpu_materials;
     for (const auto& material : obj_loader.materials) {
-      gpu_materials.push_back(
-        {.ambient = material.ambient,
-         .diffuse = material.diffuse,
-         .specular = material.specular,
-         .transmittance = material.transmittance,
-         .emission = material.emission,
-         .shininess = material.shininess,
-         .ior = material.ior,
-         .dissolve = material.dissolve,
-         .illum = material.illum,
-         .diffuse_texture_id =
-           material.texture_id == -1
-             ? gpu::DescriptorID::null()
-             : gpu_system_->get_srv_descriptor_id(textures_[material.texture_id].texture_id)});
+      gpu_materials.push_back({
+        .ambient = material.ambient,
+        .diffuse = material.diffuse,
+        .specular = material.specular,
+        .transmittance = material.transmittance,
+        .emission = material.emission,
+        .shininess = material.shininess,
+        .ior = material.ior,
+        .dissolve = material.dissolve,
+        .illum = material.illum,
+        .diffuse_texture_id =
+          material.texture_id == -1
+            ? gpu::DescriptorID::null()
+            : gpu_system_->get_srv_descriptor_id(textures_[material.texture_id].texture_id),
+      });
     }
 
     const gpu::BufferDesc material_buffer_desc = {
       .size = gpu_materials.size() * sizeof(GPUObjMaterial),
       .usage_flags = {gpu::BufferUsage::STORAGE},
       .queue_flags = {gpu::QueueType::GRAPHIC},
-      .name = "Material buffer"};
+      .name = "Material buffer",
+    };
     const auto material_buffer =
       gpu_system_->create_buffer(material_buffer_desc, gpu_materials.data());
 
@@ -400,7 +416,8 @@ class RTBasicSampleApp final : public App
       .size = obj_loader.mat_indexes.size() * sizeof(MaterialIndexObj),
       .usage_flags = {gpu::BufferUsage::STORAGE},
       .queue_flags = {gpu::QueueType::GRAPHIC},
-      .name = "Material indices buffer"};
+      .name = "Material indices buffer",
+    };
     const auto material_indices_buffer =
       gpu_system_->create_buffer(material_indices_buffer_desc, obj_loader.mat_indexes.data());
 
@@ -409,16 +426,18 @@ class RTBasicSampleApp final : public App
       .index_descriptor_id = gpu_system_->get_ssbo_descriptor_id(index_buffer),
       .material_descriptor_id = gpu_system_->get_ssbo_descriptor_id(material_buffer),
       .material_indices_descriptor_id =
-        gpu_system_->get_ssbo_descriptor_id(material_indices_buffer)};
+        gpu_system_->get_ssbo_descriptor_id(material_indices_buffer),
+    };
     gpu_obj_descs_.push_back(gpu_obj_desc);
 
-    models_.push_back(
-      {.indices_count = soul::cast<uint32>(obj_loader.indices.size()),
-       .vertices_count = soul::cast<uint32>(obj_loader.vertices.size()),
-       .vertex_buffer = vertex_buffer,
-       .index_buffer = index_buffer,
-       .mat_color_buffer = material_buffer,
-       .mat_index_buffer = material_indices_buffer});
+    models_.push_back({
+      .indices_count = soul::cast<uint32>(obj_loader.indices.size()),
+      .vertices_count = soul::cast<uint32>(obj_loader.vertices.size()),
+      .vertex_buffer = vertex_buffer,
+      .index_buffer = index_buffer,
+      .mat_color_buffer = material_buffer,
+      .mat_index_buffer = material_indices_buffer,
+    });
 
     bounding_box_ = math::combine(obj_loader.bounding_box, bounding_box_);
   }
@@ -426,10 +445,12 @@ class RTBasicSampleApp final : public App
   auto create_gpu_obj_desc_buffer() -> void
   {
     gpu_obj_buffer_ = gpu_system_->create_buffer(
-      {.size = sizeof(GPUObjDesc) * gpu_obj_descs_.size(),
-       .usage_flags = {gpu::BufferUsage::STORAGE},
-       .queue_flags = {gpu::QueueType::GRAPHIC},
-       .name = "GPUObj buffer"},
+      {
+        .size = sizeof(GPUObjDesc) * gpu_obj_descs_.size(),
+        .usage_flags = {gpu::BufferUsage::STORAGE},
+        .queue_flags = {gpu::QueueType::GRAPHIC},
+        .name = "GPUObj buffer",
+      },
       gpu_obj_descs_.data());
   }
 
@@ -456,9 +477,10 @@ class RTBasicSampleApp final : public App
 
   auto create_tlas() -> void
   {
-    const auto tlas_size = gpu_system_->get_tlas_size_requirement(
-      {.build_flags = {gpu::RTBuildFlag::PREFER_FAST_BUILD},
-       .instance_count = soul::cast<uint32>(instances_.size())});
+    const auto tlas_size = gpu_system_->get_tlas_size_requirement({
+      .build_flags = {gpu::RTBuildFlag::PREFER_FAST_BUILD},
+      .instance_count = soul::cast<uint32>(instances_.size()),
+    });
     tlas_id_ = gpu_system_->create_tlas({.name = "Tlas", .size = tlas_size});
   }
 
@@ -480,7 +502,8 @@ public:
       .source_count = 1,
       .sources = &shader_source,
       .entry_point_count = entry_points.size(),
-      .entry_points = entry_points.data()};
+      .entry_points = entry_points.data(),
+    };
     auto result = gpu_system_->create_program(program_desc);
     if (!result) {
       SOUL_PANIC("Fail to create program");
@@ -498,7 +521,8 @@ public:
       .hit_group_count = 1,
       .hit_groups = &hit_group,
       .max_recursion_depth = 2,
-      .name = "Shader Table"};
+      .name = "Shader Table",
+    };
     shader_table_id_ = gpu_system_->create_shader_table(shader_table_desc);
 
     sampler_id_ = gpu_system_->request_sampler(
@@ -521,7 +545,7 @@ public:
   }
 };
 
-auto main(int argc, char* argv[]) -> int
+auto main(int /* argc */, char* /* argv */[]) -> int
 {
   RTBasicSampleApp app({.enable_imgui = true});
   app.run();

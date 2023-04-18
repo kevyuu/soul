@@ -76,7 +76,8 @@ ImGuiRenderGraphPass::ImGuiRenderGraphPass(soul::gpu::System* gpu_system) : gpu_
     .source_count = 1,
     .sources = &shader_source,
     .entry_point_count = entry_points.size(),
-    .entry_points = entry_points.data()};
+    .entry_points = entry_points.data(),
+  };
   auto result = gpu_system_->create_program(program_desc);
   if (!result) {
     SOUL_PANIC("Fail to create program");
@@ -91,13 +92,15 @@ ImGuiRenderGraphPass::ImGuiRenderGraphPass(soul::gpu::System* gpu_system) : gpu_
 
   const gpu::TextureRegionUpdate region = {
     .subresource = {.layer_count = 1},
-    .extent = {soul::cast<uint32>(width), soul::cast<uint32>(height), 1}};
+    .extent = {soul::cast<uint32>(width), soul::cast<uint32>(height), 1},
+  };
 
   const gpu::TextureLoadDesc load_desc = {
     .data = font_pixels,
     .data_size = soul::cast<soul_size>(width) * height * 4 * sizeof(char),
     .region_count = 1,
-    .regions = &region};
+    .regions = &region,
+  };
 
   const auto font_tex_desc = gpu::TextureDesc::d2(
     "Font Texture",
@@ -130,7 +133,10 @@ void ImGuiRenderGraphPass::add_pass(
     return;
   }
 
-  const gpu::ColorAttachmentDesc color_attachment_desc = {.node_id = render_target, .clear = false};
+  const gpu::ColorAttachmentDesc color_attachment_desc = {
+    .node_id = render_target,
+    .clear = false,
+  };
 
   SOUL_ASSERT(0, draw_data.TotalVtxCount > 0 && draw_data.TotalIdxCount > 0, "");
   const gpu::BufferNodeID vertex_buffer_node_id = render_graph.create_buffer(
@@ -175,12 +181,14 @@ void ImGuiRenderGraphPass::add_pass(
               std::ranges::copy(cmd_list->VtxBuffer, std::back_inserter(im_draw_verts));
             }
             const gpu::BufferRegionCopy region = {
-              .size = im_draw_verts.size() * sizeof(ImDrawVert)};
+              .size = im_draw_verts.size() * sizeof(ImDrawVert),
+            };
             command_list.push(Command{
               .dst_buffer = registry.get_buffer(parameter.vertex_buffer),
               .data = im_draw_verts.data(),
               .region_count = 1,
-              .regions = &region});
+              .regions = &region,
+            });
           }
           {
             // update index_buffer
@@ -191,27 +199,33 @@ void ImGuiRenderGraphPass::add_pass(
               std::ranges::copy(cmd_list->IdxBuffer, std::back_inserter(im_draw_indexes));
             }
             const gpu::BufferRegionCopy region = {
-              .size = im_draw_indexes.size() * sizeof(ImDrawIdx)};
+              .size = im_draw_indexes.size() * sizeof(ImDrawIdx),
+            };
             command_list.push(Command{
               .dst_buffer = registry.get_buffer(parameter.index_buffer),
               .data = im_draw_indexes.data(),
               .region_count = 1,
-              .regions = &region});
+              .regions = &region,
+            });
           }
 
           {
             // update transform buffer
             Transform transform = {
               .scale = {2.0f / draw_data.DisplaySize.x, 2.0f / draw_data.DisplaySize.y},
-              .translate = {
-                -1.0f - draw_data.DisplayPos.x * (2.0f / draw_data.DisplaySize.x),
-                -1.0f - draw_data.DisplayPos.y * (2.0f / draw_data.DisplaySize.y)}};
+              .translate =
+                {
+                  -1.0f - draw_data.DisplayPos.x * (2.0f / draw_data.DisplaySize.x),
+                  -1.0f - draw_data.DisplayPos.y * (2.0f / draw_data.DisplaySize.y),
+                },
+            };
             const gpu::BufferRegionCopy region = {.size = sizeof(Transform)};
-            command_list.template push<Command>(
-              {.dst_buffer = registry.get_buffer(parameter.transform_buffer),
-               .data = &transform,
-               .region_count = 1,
-               .regions = &region});
+            command_list.template push<Command>({
+              .dst_buffer = registry.get_buffer(parameter.transform_buffer),
+              .data = &transform,
+              .region_count = 1,
+              .regions = &region,
+            });
           }
         })
       .get_parameter();
@@ -238,26 +252,38 @@ void ImGuiRenderGraphPass::add_pass(
         .program_id = program_id_,
         .input_bindings = {{.stride = sizeof(ImDrawVert)}},
         .input_attributes =
-          {{.binding = 0,
-            .offset = offsetof(ImDrawVert, pos),
-            .type = gpu::VertexElementType::FLOAT2},
-           {.binding = 0,
-            .offset = offsetof(ImDrawVert, uv),
-            .type = gpu::VertexElementType::FLOAT2},
-           {.binding = 0,
-            .offset = offsetof(ImDrawVert, col),
-            .type = gpu::VertexElementType::UINT}},
+          {
+            {.binding = 0,
+             .offset = offsetof(ImDrawVert, pos),
+             .type = gpu::VertexElementType::FLOAT2},
+            {.binding = 0,
+             .offset = offsetof(ImDrawVert, uv),
+             .type = gpu::VertexElementType::FLOAT2},
+            {
+              .binding = 0,
+              .offset = offsetof(ImDrawVert, col),
+              .type = gpu::VertexElementType::UINT,
+            },
+          },
         .viewport =
-          {.width = static_cast<float>(viewport.x), .height = static_cast<float>(viewport.y)},
+          {
+            .width = static_cast<float>(viewport.x),
+            .height = static_cast<float>(viewport.y),
+          },
         .color_attachment_count = 1,
-        .color_attachments = {
-          {.blend_enable = true,
-           .src_color_blend_factor = gpu::BlendFactor::SRC_ALPHA,
-           .dst_color_blend_factor = gpu::BlendFactor::ONE_MINUS_SRC_ALPHA,
-           .color_blend_op = gpu::BlendOp::ADD,
-           .src_alpha_blend_factor = gpu::BlendFactor::ONE,
-           .dst_alpha_blend_factor = gpu::BlendFactor::ZERO,
-           .alpha_blend_op = gpu::BlendOp::ADD}}};
+        .color_attachments =
+          {
+            {
+              .blend_enable = true,
+              .src_color_blend_factor = gpu::BlendFactor::SRC_ALPHA,
+              .dst_color_blend_factor = gpu::BlendFactor::ONE_MINUS_SRC_ALPHA,
+              .color_blend_op = gpu::BlendOp::ADD,
+              .src_alpha_blend_factor = gpu::BlendFactor::ONE,
+              .dst_alpha_blend_factor = gpu::BlendFactor::ZERO,
+              .alpha_blend_op = gpu::BlendOp::ADD,
+            },
+          },
+      };
 
       const ImVec2 clip_offset = draw_data.DisplayPos;
       const ImVec2 clip_scale = draw_data.FramebufferScale;
@@ -311,7 +337,8 @@ void ImGuiRenderGraphPass::add_pass(
                 .transform_descriptor_id = gpu_system_->get_ssbo_descriptor_id(
                   registry.get_buffer(parameter.transform_buffer)),
                 .texture_descriptor_id = gpu_system_->get_srv_descriptor_id(texture_id),
-                .sampler_descriptor_id = gpu_system_->get_sampler_descriptor_id(font_sampler_id_)};
+                .sampler_descriptor_id = gpu_system_->get_sampler_descriptor_id(font_sampler_id_),
+              };
               push_constants.push_back(push_constant);
 
               const auto first_index = soul::cast<uint16>(cmd.IdxOffset + global_idx_offset);
@@ -329,7 +356,8 @@ void ImGuiRenderGraphPass::add_pass(
                 .index_buffer_id = registry.get_buffer(parameter.index_buffer),
                 .index_type = INDEX_TYPE,
                 .first_index = first_index,
-                .index_count = soul::cast<uint16>(cmd.ElemCount)};
+                .index_count = soul::cast<uint16>(cmd.ElemCount),
+              };
               commands.push_back(command);
             }
           }

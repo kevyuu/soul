@@ -76,13 +76,15 @@ class MSAASample final : public App
               true,
               gpu::ClearValue(),
               msaa_sample_count_)),
-          .clear = true};
+          .clear = true,
+        };
 
         const gpu::ResolveAttachmentDesc resolve_attachment_desc = {
           .node_id = render_graph.create_texture(
             "MSAA Resolve Target",
             gpu::RGTextureDesc::create_d2(
-              gpu::TextureFormat::RGBA8, 1, sample_render_target_dim, true))};
+              gpu::TextureFormat::RGBA8, 1, sample_render_target_dim, true)),
+        };
 
         const gpu::DepthStencilAttachmentDesc depth_attachment_desc = {
           .node_id = render_graph.create_texture(
@@ -94,7 +96,8 @@ class MSAASample final : public App
               true,
               gpu::ClearValue(),
               msaa_sample_count_)),
-          .clear = true};
+          .clear = true,
+        };
         return gpu::RGRenderTargetDesc(
           sample_render_target_dim,
           msaa_sample_count_,
@@ -108,14 +111,16 @@ class MSAASample final : public App
           "Color Target",
           gpu::RGTextureDesc::create_d2(
             gpu::TextureFormat::RGBA8, 1, sample_render_target_dim, true, gpu::ClearValue())),
-        .clear = true};
+        .clear = true,
+      };
 
       const gpu::DepthStencilAttachmentDesc depth_attachment_desc = {
         .node_id = render_graph.create_texture(
           "Depth Target",
           gpu::RGTextureDesc::create_d2(
             gpu::TextureFormat::DEPTH32F, 1, sample_render_target_dim, true, gpu::ClearValue())),
-        .clear = true};
+        .clear = true,
+      };
 
       return gpu::RGRenderTargetDesc(
         sample_render_target_dim, color_attachment_desc, depth_attachment_desc);
@@ -130,21 +135,30 @@ class MSAASample final : public App
 
       },
       [render_dim = sample_render_target_desc.dimension,
-       this](const auto& parameter, auto& registry, auto& command_list) {
+       this](const auto& /* parameter */, auto& registry, auto& command_list) {
         const gpu::GraphicPipelineStateDesc pipeline_desc = {
           .program_id = program_id_,
           .input_bindings = {{.stride = sizeof(Vertex)}},
           .input_attributes =
             {
-              {.binding = 0,
-               .offset = offsetof(Vertex, position),
-               .type = gpu::VertexElementType::FLOAT2},
+              {
+                .binding = 0,
+                .offset = offsetof(Vertex, position),
+                .type = gpu::VertexElementType::FLOAT2,
+              },
             },
           .viewport =
-            {.width = static_cast<float>(render_dim.x), .height = static_cast<float>(render_dim.y)},
+            {
+              .width = static_cast<float>(render_dim.x),
+              .height = static_cast<float>(render_dim.y),
+            },
           .scissor = {.extent = render_dim},
           .color_attachment_count = 1,
-          .depth_stencil_attachment = {true, true, gpu::CompareOp::GREATER_OR_EQUAL}};
+          .depth_stencil_attachment = {
+            true,
+            true,
+            gpu::CompareOp::GREATER_OR_EQUAL,
+          }};
         auto pipeline_state_id = registry.get_pipeline_state(pipeline_desc);
 
         using Command = gpu::RenderCommandDrawIndex;
@@ -157,7 +171,8 @@ class MSAASample final : public App
               .vertex_buffer_ids = {vertex_buffer_id_},
               .index_buffer_id = index_buffer_id_,
               .first_index = 0,
-              .index_count = std::size(INDICES)};
+              .index_count = std::size(INDICES),
+            };
           });
       });
 
@@ -167,7 +182,9 @@ class MSAASample final : public App
                                            : sample_render_target.color_attachments[0].out_node_id;
 
     const Texture2DRGPass::Parameter texture_2d_parameter = {
-      .sampled_texture = texture_2d_sample_input, .render_target = render_target};
+      .sampled_texture = texture_2d_sample_input,
+      .render_target = render_target,
+    };
     return texture_2d_pass_.add_pass(texture_2d_parameter, render_graph);
   }
 
@@ -176,15 +193,24 @@ public:
   {
     gpu::ShaderSource shader_source = gpu::ShaderFile("msaa_sample.hlsl");
     std::filesystem::path search_path = "shaders/";
-    constexpr auto entry_points = std::to_array<gpu::ShaderEntryPoint>(
-      {{gpu::ShaderStage::VERTEX, "vs_main"}, {gpu::ShaderStage::FRAGMENT, "ps_main"}});
+    constexpr auto entry_points = std::to_array<gpu::ShaderEntryPoint>({
+      {
+        gpu::ShaderStage::VERTEX,
+        "vs_main",
+      },
+      {
+        gpu::ShaderStage::FRAGMENT,
+        "ps_main",
+      },
+    });
     const gpu::ProgramDesc program_desc = {
       .search_path_count = 1,
       .search_paths = &search_path,
       .source_count = 1,
       .sources = &shader_source,
       .entry_point_count = entry_points.size(),
-      .entry_points = entry_points.data()};
+      .entry_points = entry_points.data(),
+    };
     auto result = gpu_system_->create_program(program_desc);
     if (!result) {
       SOUL_PANIC("Fail to create program");
@@ -192,42 +218,46 @@ public:
     program_id_ = result.value();
 
     vertex_buffer_id_ = gpu_system_->create_buffer(
-      {.size = sizeof(Vertex) * std::size(VERTICES),
-       .usage_flags = {gpu::BufferUsage::VERTEX},
-       .queue_flags = {gpu::QueueType::GRAPHIC},
-       .name = "Vertex buffer"},
+      {
+        .size = sizeof(Vertex) * std::size(VERTICES),
+        .usage_flags = {gpu::BufferUsage::VERTEX},
+        .queue_flags = {gpu::QueueType::GRAPHIC},
+        .name = "Vertex buffer",
+      },
       VERTICES);
     gpu_system_->flush_buffer(vertex_buffer_id_);
 
     index_buffer_id_ = gpu_system_->create_buffer(
-      {.size = sizeof(Index) * std::size(INDICES),
-       .usage_flags = {gpu::BufferUsage::INDEX},
-       .queue_flags = {gpu::QueueType::GRAPHIC},
-       .name = "Index buffer"},
+      {
+        .size = sizeof(Index) * std::size(INDICES),
+        .usage_flags = {gpu::BufferUsage::INDEX},
+        .queue_flags = {gpu::QueueType::GRAPHIC},
+        .name = "Index buffer",
+      },
       INDICES);
     gpu_system_->flush_buffer(index_buffer_id_);
 
     const auto scale_vec = vec3f(0.5f, 0.5, 1.0f);
     const auto rotate_angle = math::radians(45.0f);
     const auto rotate_axis = vec3f(0.0f, 0.0f, 1.0f);
-    push_constants_.push_back(
-      {.transform = math::scale(
-         math::rotate(
-           math::translate(mat4f::identity(), vec3f(-0.25f, 0.0f, 0.1f)),
-           rotate_angle,
-           rotate_axis),
-         scale_vec),
-       .color = vec3f(1.0f, 0.0f, 0.0f)});
-    push_constants_.push_back(
-      {.transform = math::scale(
-         math::rotate(
-           math::translate(mat4f::identity(), vec3f(0.25f, 0.0f, 0.0f)), rotate_angle, rotate_axis),
-         scale_vec),
-       .color = vec3f(0.0f, 1.0f, 0.0f)});
+    push_constants_.push_back({
+      .transform = math::scale(
+        math::rotate(
+          math::translate(mat4f::identity(), vec3f(-0.25f, 0.0f, 0.1f)), rotate_angle, rotate_axis),
+        scale_vec),
+      .color = vec3f(1.0f, 0.0f, 0.0f),
+    });
+    push_constants_.push_back({
+      .transform = math::scale(
+        math::rotate(
+          math::translate(mat4f::identity(), vec3f(0.25f, 0.0f, 0.0f)), rotate_angle, rotate_axis),
+        scale_vec),
+      .color = vec3f(0.0f, 1.0f, 0.0f),
+    });
   }
 };
 
-auto main(int argc, char* argv[]) -> int
+auto main(int /* argc */, char* /* argv */[]) -> int
 {
   MSAASample app({.enable_imgui = true});
   app.run();

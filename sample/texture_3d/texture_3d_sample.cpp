@@ -210,7 +210,9 @@ class Texture3DSampleApp final : public App
     }
 
     const gpu::ColorAttachmentDesc color_attachment_desc = {
-      .node_id = render_target, .clear = true};
+      .node_id = render_target,
+      .clear = true,
+    };
 
     const vec2ui32 viewport = gpu_system_->get_swapchain_extent();
 
@@ -233,7 +235,9 @@ class Texture3DSampleApp final : public App
               runtime::ScopeAllocator scope_allocator("Update Noise Execution");
               const auto* data = create_noise_data(DIMENSION, scope_allocator);
               const gpu::TextureRegionUpdate region_load = {
-                .subresource = {.layer_count = 1}, .extent = DIMENSION};
+                .subresource = {.layer_count = 1},
+                .extent = DIMENSION,
+              };
 
               using Command = gpu::RenderCommandUpdateTexture;
               const Command command = {
@@ -241,7 +245,8 @@ class Texture3DSampleApp final : public App
                 .data = data,
                 .data_size = soul::cast<soul_size>(DIMENSION.x) * DIMENSION.y * DIMENSION.z,
                 .region_count = 1,
-                .regions = &region_load};
+                .regions = &region_load,
+              };
               command_list.template push<Command>(command);
             })
           .get_parameter();
@@ -271,13 +276,15 @@ class Texture3DSampleApp final : public App
               .src_offset = {},
               .dst_subresource = {0, 0, 1},
               .dst_offset = {},
-              .extent = DIMENSION};
+              .extent = DIMENSION,
+            };
 
             command_list.push(gpu::RenderCommandCopyTexture{
               .src_texture = registry.get_texture(parameter.src_noise_texture),
               .dst_texture = registry.get_texture(parameter.dst_noise_texture),
               .region_count = 1,
-              .regions = &region_copy});
+              .regions = &region_copy,
+            });
           })
         .get_parameter();
     noise_texture_node = copy_pass_parameter.dst_noise_texture;
@@ -299,16 +306,23 @@ class Texture3DSampleApp final : public App
           .program_id = program_id_,
           .input_bindings = {{.stride = sizeof(Vertex)}},
           .input_attributes =
-            {{.binding = 0,
-              .offset = offsetof(Vertex, position),
-              .type = gpu::VertexElementType::FLOAT2},
-             {.binding = 0,
-              .offset = offsetof(Vertex, texture_coords),
-              .type = gpu::VertexElementType::FLOAT3}},
+            {
+              {
+                .binding = 0,
+                .offset = offsetof(Vertex, position),
+                .type = gpu::VertexElementType::FLOAT2,
+              },
+              {
+                .binding = 0,
+                .offset = offsetof(Vertex, texture_coords),
+                .type = gpu::VertexElementType::FLOAT3,
+              },
+            },
           .viewport =
             {.width = static_cast<float>(viewport.x), .height = static_cast<float>(viewport.y)},
           .scissor = {.extent = viewport},
-          .color_attachment_count = 1};
+          .color_attachment_count = 1,
+        };
         const auto pipeline_state_id = registry.get_pipeline_state(pipeline_desc);
 
         struct PushConstant {
@@ -323,7 +337,8 @@ class Texture3DSampleApp final : public App
           .texture_descriptor_id =
             gpu_system_->get_srv_descriptor_id(registry.get_texture(parameter.noise_texture)),
           .sampler_descriptor_id = gpu_system_->get_sampler_descriptor_id(test_sampler_id_),
-          .depth = depth_};
+          .depth = depth_,
+        };
 
         command_list.push(gpu::RenderCommandDrawIndex{
           .pipeline_state_id = pipeline_state_id,
@@ -332,7 +347,8 @@ class Texture3DSampleApp final : public App
           .vertex_buffer_ids = {vertex_buffer_id_},
           .index_buffer_id = index_buffer_id_,
           .first_index = 0,
-          .index_count = std::size(INDICES)});
+          .index_count = std::size(INDICES),
+        });
       });
 
     return raster_node.get_color_attachment_node_id();
@@ -352,7 +368,8 @@ public:
       .source_count = 1,
       .sources = &shader_source,
       .entry_point_count = entry_points.size(),
-      .entry_points = entry_points.data()};
+      .entry_points = entry_points.data(),
+    };
     auto result = gpu_system_->create_program(program_desc);
     if (!result) {
       SOUL_PANIC("Fail to create program");
@@ -360,18 +377,22 @@ public:
     program_id_ = result.value();
 
     vertex_buffer_id_ = gpu_system_->create_buffer(
-      {.size = sizeof(Vertex) * std::size(VERTICES),
-       .usage_flags = {gpu::BufferUsage::VERTEX},
-       .queue_flags = {gpu::QueueType::GRAPHIC},
-       .name = "Vertex buffer"},
+      {
+        .size = sizeof(Vertex) * std::size(VERTICES),
+        .usage_flags = {gpu::BufferUsage::VERTEX},
+        .queue_flags = {gpu::QueueType::GRAPHIC},
+        .name = "Vertex buffer",
+      },
       VERTICES);
     gpu_system_->flush_buffer(vertex_buffer_id_);
 
     index_buffer_id_ = gpu_system_->create_buffer(
-      {.size = sizeof(Index) * std::size(INDICES),
-       .usage_flags = {gpu::BufferUsage::INDEX},
-       .queue_flags = {gpu::QueueType::GRAPHIC},
-       .name = "Index buffer"},
+      {
+        .size = sizeof(Index) * std::size(INDICES),
+        .usage_flags = {gpu::BufferUsage::INDEX},
+        .queue_flags = {gpu::QueueType::GRAPHIC},
+        .name = "Index buffer",
+      },
       INDICES);
     gpu_system_->flush_buffer(index_buffer_id_);
 
@@ -385,7 +406,8 @@ public:
         .data = data,
         .data_size = soul::cast<soul_size>(DIMENSION.x) * DIMENSION.y * DIMENSION.z * CHANNEL_COUNT,
         .region_count = 1,
-        .regions = &region_load};
+        .regions = &region_load,
+      };
       test_texture_id_ = gpu_system_->create_texture(
         gpu::TextureDesc::d3(
           "Test texture",
@@ -401,7 +423,7 @@ public:
   }
 };
 
-auto main(int argc, char* argv[]) -> int
+auto main(int /* argc */, char* /* argv */[]) -> int
 {
   stbi_set_flip_vertically_on_load(true);
   Texture3DSampleApp app({.enable_imgui = true});

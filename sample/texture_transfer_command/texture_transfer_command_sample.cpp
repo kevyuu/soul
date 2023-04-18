@@ -54,7 +54,9 @@ class Texture3DSampleApp final : public App
     -> gpu::TextureNodeID override
   {
     const gpu::ColorAttachmentDesc color_attachment_desc = {
-      .node_id = render_target, .clear = true};
+      .node_id = render_target,
+      .clear = true,
+    };
 
     const vec2ui32 viewport = gpu_system_->get_swapchain_extent();
 
@@ -82,7 +84,8 @@ class Texture3DSampleApp final : public App
               .data = test_texture_data_,
               .data_size = soul::cast<soul_size>(width_ * height_ * 4),
               .region_count = 1,
-              .regions = &region});
+              .regions = &region,
+            });
           })
         .get_parameter();
 
@@ -108,12 +111,14 @@ class Texture3DSampleApp final : public App
             const gpu::TextureRegionCopy region = {
               .src_subresource = {.layer_count = 1},
               .dst_subresource = {.layer_count = 1},
-              .extent = {width_, height_, 1}};
+              .extent = {width_, height_, 1},
+            };
             command_list.push(gpu::RenderCommandCopyTexture{
               .src_texture = registry.get_texture(parameter.src_texture),
               .dst_texture = registry.get_texture(parameter.dst_texture),
               .region_count = 1,
-              .regions = &region});
+              .regions = &region,
+            });
           })
         .get_parameter();
 
@@ -134,19 +139,31 @@ class Texture3DSampleApp final : public App
           .program_id = program_id_,
           .input_bindings = {{.stride = sizeof(Vertex)}},
           .input_attributes =
-            {{.binding = 0,
-              .offset = offsetof(Vertex, position),
-              .type = gpu::VertexElementType::FLOAT2},
-             {.binding = 0,
-              .offset = offsetof(Vertex, color),
-              .type = gpu::VertexElementType::FLOAT3},
-             {.binding = 0,
-              .offset = offsetof(Vertex, texture_coords),
-              .type = gpu::VertexElementType::FLOAT3}},
+            {
+              {
+                .binding = 0,
+                .offset = offsetof(Vertex, position),
+                .type = gpu::VertexElementType::FLOAT2,
+              },
+              {
+                .binding = 0,
+                .offset = offsetof(Vertex, color),
+                .type = gpu::VertexElementType::FLOAT3,
+              },
+              {
+                .binding = 0,
+                .offset = offsetof(Vertex, texture_coords),
+                .type = gpu::VertexElementType::FLOAT3,
+              },
+            },
           .viewport =
-            {.width = static_cast<float>(viewport.x), .height = static_cast<float>(viewport.y)},
+            {
+              .width = static_cast<float>(viewport.x),
+              .height = static_cast<float>(viewport.y),
+            },
           .scissor = {.extent = viewport},
-          .color_attachment_count = 1};
+          .color_attachment_count = 1,
+        };
         const auto pipeline_state_id = registry.get_pipeline_state(pipeline_desc);
 
         struct PushConstant {
@@ -158,7 +175,8 @@ class Texture3DSampleApp final : public App
           registry.get_texture(parameter.persistent_texture);
         const PushConstant push_constant = {
           .texture_descriptor_id = gpu_system_->get_srv_descriptor_id(persistent_texture),
-          .sampler_descriptor_id = gpu_system_->get_sampler_descriptor_id(test_sampler_id_)};
+          .sampler_descriptor_id = gpu_system_->get_sampler_descriptor_id(test_sampler_id_),
+        };
 
         command_list.push(gpu::RenderCommandDrawIndex{
           .pipeline_state_id = pipeline_state_id,
@@ -167,7 +185,8 @@ class Texture3DSampleApp final : public App
           .vertex_buffer_ids = {vertex_buffer_id_},
           .index_buffer_id = index_buffer_id_,
           .first_index = 0,
-          .index_count = std::size(INDICES)});
+          .index_count = std::size(INDICES),
+        });
       });
 
     return raster_node.get_color_attachment_node_id();
@@ -187,7 +206,8 @@ public:
       .source_count = 1,
       .sources = &shader_source,
       .entry_point_count = entry_points.size(),
-      .entry_points = entry_points.data()};
+      .entry_points = entry_points.data(),
+    };
     auto result = gpu_system_->create_program(program_desc);
     if (!result) {
       SOUL_PANIC("Fail to create program");
@@ -195,18 +215,22 @@ public:
     program_id_ = result.value();
 
     vertex_buffer_id_ = gpu_system_->create_buffer(
-      {.size = sizeof(Vertex) * std::size(VERTICES),
-       .usage_flags = {gpu::BufferUsage::VERTEX},
-       .queue_flags = {gpu::QueueType::GRAPHIC},
-       .name = "Vertex buffer"},
+      {
+        .size = sizeof(Vertex) * std::size(VERTICES),
+        .usage_flags = {gpu::BufferUsage::VERTEX},
+        .queue_flags = {gpu::QueueType::GRAPHIC},
+        .name = "Vertex buffer",
+      },
       VERTICES);
     gpu_system_->flush_buffer(vertex_buffer_id_);
 
     index_buffer_id_ = gpu_system_->create_buffer(
-      {.size = sizeof(Index) * std::size(INDICES),
-       .usage_flags = {gpu::BufferUsage::INDEX},
-       .queue_flags = {gpu::QueueType::GRAPHIC},
-       .name = "Index buffer"},
+      {
+        .size = sizeof(Index) * std::size(INDICES),
+        .usage_flags = {gpu::BufferUsage::INDEX},
+        .queue_flags = {gpu::QueueType::GRAPHIC},
+        .name = "Index buffer",
+      },
       INDICES);
     gpu_system_->flush_buffer(index_buffer_id_);
 
@@ -232,8 +256,7 @@ public:
   }
 };
 
-int main(int argc, char* argv[]) auto main(int argc, char* argv[]) -> int
-auto main(int argc, char* argv[]) -> int
+auto main(int /* argc */, char* /* argv */[]) -> int
 {
   stbi_set_flip_vertically_on_load(true);
   const ScreenDimension screen_dimension = {.width = 800, .height = 600};

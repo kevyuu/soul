@@ -34,19 +34,34 @@ namespace soul::gpu::impl
   {
     device_ = device;
     const VkDescriptorPoolSize pool_sizes[] = {
-      {.type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-       .descriptorCount = STORAGE_BUFFER_DESCRIPTOR_COUNT},
-      {.type = VK_DESCRIPTOR_TYPE_SAMPLER, .descriptorCount = SAMPLER_DESCRIPTOR_COUNT},
-      {.type = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, .descriptorCount = SAMPLED_IMAGE_DESCRIPTOR_COUNT},
-      {.type = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, .descriptorCount = STORAGE_IMAGE_DESCRIPTOR_COUNT},
-      {.type = VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR,
-       .descriptorCount = AS_DESCRIPTOR_COUNT}};
+      {
+        .type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
+        .descriptorCount = STORAGE_BUFFER_DESCRIPTOR_COUNT,
+      },
+      {
+        .type = VK_DESCRIPTOR_TYPE_SAMPLER,
+        .descriptorCount = SAMPLER_DESCRIPTOR_COUNT,
+      },
+      {
+        .type = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
+        .descriptorCount = SAMPLED_IMAGE_DESCRIPTOR_COUNT,
+      },
+      {
+        .type = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
+        .descriptorCount = STORAGE_IMAGE_DESCRIPTOR_COUNT,
+      },
+      {
+        .type = VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR,
+        .descriptorCount = AS_DESCRIPTOR_COUNT,
+      },
+    };
     const VkDescriptorPoolCreateInfo pool_info = {
       .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
       .flags = VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT,
       .maxSets = BINDLESS_SET_COUNT,
       .poolSizeCount = std::size(pool_sizes),
-      .pPoolSizes = pool_sizes};
+      .pPoolSizes = pool_sizes,
+    };
     SOUL_VK_CHECK(
       vkCreateDescriptorPool(device, &pool_info, nullptr, &descriptor_pool_),
       "Fail to create descriptor pool");
@@ -77,7 +92,8 @@ namespace soul::gpu::impl
       .setLayoutCount = BINDLESS_SET_COUNT,
       .pSetLayouts = descriptor_set_layouts,
       .pushConstantRangeCount = 1,
-      .pPushConstantRanges = &push_constant_range};
+      .pPushConstantRanges = &push_constant_range,
+    };
 
     SOUL_VK_CHECK(
       vkCreatePipelineLayout(device, &pipeline_layout_info, nullptr, &pipeline_layout_),
@@ -103,7 +119,8 @@ namespace soul::gpu::impl
     const VkDescriptorImageInfo image_info = {
       .sampler = VK_NULL_HANDLE,
       .imageView = image_view,
-      .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL};
+      .imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+    };
     return sampled_image_descriptor_set_.create_descriptor(device_, image_info);
   }
 
@@ -116,7 +133,10 @@ namespace soul::gpu::impl
     -> DescriptorID
   {
     const VkDescriptorImageInfo image_info = {
-      .sampler = VK_NULL_HANDLE, .imageView = image_view, .imageLayout = VK_IMAGE_LAYOUT_GENERAL};
+      .sampler = VK_NULL_HANDLE,
+      .imageView = image_view,
+      .imageLayout = VK_IMAGE_LAYOUT_GENERAL,
+    };
     return storage_image_descriptor_set_.create_descriptor(device_, image_info);
   }
 
@@ -166,7 +186,8 @@ namespace soul::gpu::impl
       .binding = 0,
       .descriptorType = descriptor_type_,
       .descriptorCount = capacity_,
-      .stageFlags = VK_SHADER_STAGE_ALL};
+      .stageFlags = VK_SHADER_STAGE_ALL,
+    };
 
     constexpr VkDescriptorBindingFlags flags =
       VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT | VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT |
@@ -192,7 +213,8 @@ namespace soul::gpu::impl
       .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
       .descriptorPool = descriptor_pool,
       .descriptorSetCount = 1,
-      .pSetLayouts = &descriptor_set_layout_};
+      .pSetLayouts = &descriptor_set_layout_,
+    };
     SOUL_VK_CHECK(
       vkAllocateDescriptorSets(device, &set_info, &descriptor_set_),
       "Fail to allocate descriptor sets");
@@ -211,7 +233,8 @@ namespace soul::gpu::impl
       .dstArrayElement = index,
       .descriptorCount = 1,
       .descriptorType = descriptor_type_,
-      .pBufferInfo = &buffer_info};
+      .pBufferInfo = &buffer_info,
+    };
     vkUpdateDescriptorSets(device, 1, &descriptor_write, 0, nullptr);
     return DescriptorID(index);
   }
@@ -229,7 +252,8 @@ namespace soul::gpu::impl
       .dstArrayElement = index,
       .descriptorCount = 1,
       .descriptorType = descriptor_type_,
-      .pImageInfo = &image_info};
+      .pImageInfo = &image_info,
+    };
     vkUpdateDescriptorSets(device, 1, &descriptor_write, 0, nullptr);
     return DescriptorID(index);
   }
@@ -243,7 +267,8 @@ namespace soul::gpu::impl
     const VkWriteDescriptorSetAccelerationStructureKHR as_descriptor_write = {
       .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET_ACCELERATION_STRUCTURE_KHR,
       .accelerationStructureCount = 1,
-      .pAccelerationStructures = &as};
+      .pAccelerationStructures = &as,
+    };
     const VkWriteDescriptorSet descriptor_write = {
       .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
       .pNext = &as_descriptor_write,
@@ -271,7 +296,8 @@ namespace soul::gpu::impl
       .dstSet = descriptor_set_,
       .dstBinding = 0,
       .dstArrayElement = id.id,
-      .descriptorCount = 1};
+      .descriptorCount = 1,
+    };
     vkUpdateDescriptorSets(device, 0, nullptr, 1, &copy_descriptor_set);
     list_[id.id] = free_head_;
     free_head_ = id.id;

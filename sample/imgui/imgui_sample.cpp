@@ -33,7 +33,7 @@ public:
   }
 };
 
-auto main(int argc, char* argv[]) -> int
+auto main(int /* argc */, char* /* argv */[]) -> int
 {
   stbi_set_flip_vertically_on_load(true);
   ImguiSampleApp app({.enable_imgui = true});

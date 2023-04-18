@@ -37,7 +37,9 @@ class IndexBufferSampleApp final : public App
     -> gpu::TextureNodeID override
   {
     const gpu::ColorAttachmentDesc color_attachment_desc = {
-      .node_id = render_target, .clear = true};
+      .node_id = render_target,
+      .clear = true,
+    };
 
     const vec2ui32 viewport = gpu_system_->get_swapchain_extent();
 
@@ -49,21 +51,28 @@ class IndexBufferSampleApp final : public App
       [](auto& parameter, auto& builder) {
 
       },
-      [viewport, this](const auto& parameter, auto& registry, auto& command_list) {
+      [viewport, this](const auto& /* parameter */, auto& registry, auto& command_list) {
         const gpu::GraphicPipelineStateDesc pipeline_desc = {
           .program_id = program_id_,
           .input_bindings = {{.stride = sizeof(Vertex)}},
           .input_attributes =
-            {{.binding = 0,
-              .offset = offsetof(Vertex, position),
-              .type = gpu::VertexElementType::FLOAT2},
-             {.binding = 0,
-              .offset = offsetof(Vertex, color),
-              .type = gpu::VertexElementType::FLOAT3}},
+            {
+              {
+                .binding = 0,
+                .offset = offsetof(Vertex, position),
+                .type = gpu::VertexElementType::FLOAT2,
+              },
+              {
+                .binding = 0,
+                .offset = offsetof(Vertex, color),
+                .type = gpu::VertexElementType::FLOAT3,
+              },
+            },
           .viewport =
             {.width = static_cast<float>(viewport.x), .height = static_cast<float>(viewport.y)},
           .scissor = {.extent = viewport},
-          .color_attachment_count = 1};
+          .color_attachment_count = 1,
+        };
 
         using Command = gpu::RenderCommandDrawIndex;
         const Command command = {
@@ -72,7 +81,8 @@ class IndexBufferSampleApp final : public App
           .index_buffer_id = index_buffer_id_,
           .index_type = INDEX_TYPE,
           .first_index = 0,
-          .index_count = std::size(INDICES)};
+          .index_count = std::size(INDICES),
+        };
         command_list.push(command);
       });
 
@@ -116,7 +126,7 @@ public:
   }
 };
 
-auto main(int argc, char* argv[]) -> int
+auto main(int /* argc */, char* /* argv */[]) -> int
 {
   const ScreenDimension screen_dimension = {.width = 800, .height = 600};
   IndexBufferSampleApp app({.screen_dimension = screen_dimension});

@@ -24,59 +24,63 @@ class TextureCubeSampleApp final : public App
   static constexpr vec3ui32 DIMENSION{128, 128, 128};
 
   using SkyboxVertex = vec3f;
-  static constexpr SkyboxVertex SKYBOX_VERTICES[] = {                       //   Coordinates
-                                                     {-5.0f, -5.0f, 5.0f},  //        7--------6
-                                                     {5.0f, -5.0f, 5.0f},   //        /|       /|
-                                                     {5.0f, -5.0f, -5.0f},  //       4--------5 |
-                                                     {-5.0f, -5.0f, -5.0f}, //      | |      | |
-                                                     {-5.0f, 5.0f, 5.0f},   //     | 3------|-2
-                                                     {5.0f, 5.0f, 5.0f},    //      |/       |/
-                                                     {5.0f, 5.0f, -5.0f},   //     0--------1
-                                                     {-5.0f, 5.0f, -5.0f}};
+  static constexpr SkyboxVertex SKYBOX_VERTICES[] = {
+    //   Coordinates
+    {-5.0f, -5.0f, 5.0f},  //        7--------6
+    {5.0f, -5.0f, 5.0f},   //        /|       /|
+    {5.0f, -5.0f, -5.0f},  //       4--------5 |
+    {-5.0f, -5.0f, -5.0f}, //      | |      | |
+    {-5.0f, 5.0f, 5.0f},   //     | 3------|-2
+    {5.0f, 5.0f, 5.0f},    //      |/       |/
+    {5.0f, 5.0f, -5.0f},   //     0--------1
+    {-5.0f, 5.0f, -5.0f},
+  };
 
   using SkyboxIndex = uint16;
-  static constexpr SkyboxIndex SKYBOX_INDICES[] = {// Right
-                                                   1,
-                                                   2,
-                                                   6,
-                                                   6,
-                                                   5,
-                                                   1,
-                                                   // Left
-                                                   0,
-                                                   4,
-                                                   7,
-                                                   7,
-                                                   3,
-                                                   0,
-                                                   // Top
-                                                   4,
-                                                   5,
-                                                   6,
-                                                   6,
-                                                   7,
-                                                   4,
-                                                   // Bottom
-                                                   0,
-                                                   3,
-                                                   2,
-                                                   2,
-                                                   1,
-                                                   0,
-                                                   // Back
-                                                   0,
-                                                   1,
-                                                   5,
-                                                   5,
-                                                   4,
-                                                   0,
-                                                   // Front
-                                                   3,
-                                                   7,
-                                                   6,
-                                                   6,
-                                                   2,
-                                                   3};
+  static constexpr SkyboxIndex SKYBOX_INDICES[] = {
+    // Right
+    1,
+    2,
+    6,
+    6,
+    5,
+    1,
+    // Left
+    0,
+    4,
+    7,
+    7,
+    3,
+    0,
+    // Top
+    4,
+    5,
+    6,
+    6,
+    7,
+    4,
+    // Bottom
+    0,
+    3,
+    2,
+    2,
+    1,
+    0,
+    // Back
+    0,
+    1,
+    5,
+    5,
+    4,
+    0,
+    // Front
+    3,
+    7,
+    6,
+    6,
+    2,
+    3,
+  };
 
   gpu::ProgramID program_id_ = gpu::ProgramID();
   gpu::BufferID skybox_vertex_buffer_id_ = gpu::BufferID();
@@ -111,7 +115,8 @@ class TextureCubeSampleApp final : public App
           .viewport =
             {.width = static_cast<float>(viewport.x), .height = static_cast<float>(viewport.y)},
           .scissor = {.extent = viewport},
-          .color_attachment_count = 1};
+          .color_attachment_count = 1,
+        };
         const auto pipeline_state_id = registry.get_pipeline_state(pipeline_desc);
 
         using Command = gpu::RenderCommandDrawIndex;
@@ -131,14 +136,15 @@ class TextureCubeSampleApp final : public App
           .sampler_descriptor_id = gpu_system_->get_sampler_descriptor_id(skybox_sampler_),
         };
 
-        command_list.template push<Command>(
-          {.pipeline_state_id = pipeline_state_id,
-           .push_constant_data = soul::cast<void*>(&push_constant),
-           .push_constant_size = sizeof(PushConstant),
-           .vertex_buffer_ids = {skybox_vertex_buffer_id_},
-           .index_buffer_id = skybox_index_buffer_id_,
-           .first_index = 0,
-           .index_count = std::size(SKYBOX_INDICES)});
+        command_list.template push<Command>({
+          .pipeline_state_id = pipeline_state_id,
+          .push_constant_data = soul::cast<void*>(&push_constant),
+          .push_constant_size = sizeof(PushConstant),
+          .vertex_buffer_ids = {skybox_vertex_buffer_id_},
+          .index_buffer_id = skybox_index_buffer_id_,
+          .first_index = 0,
+          .index_count = std::size(SKYBOX_INDICES),
+        });
       });
 
     return raster_node.get_color_attachment_node_id();
@@ -158,7 +164,8 @@ public:
       .source_count = 1,
       .sources = &shader_source,
       .entry_point_count = entry_points.size(),
-      .entry_points = entry_points.data()};
+      .entry_points = entry_points.data(),
+    };
     auto result = gpu_system_->create_program(program_desc);
     if (!result) {
       SOUL_PANIC("Fail to create program");
@@ -166,18 +173,22 @@ public:
     program_id_ = result.value();
 
     skybox_vertex_buffer_id_ = gpu_system_->create_buffer(
-      {.size = sizeof(SkyboxVertex) * std::size(SKYBOX_VERTICES),
-       .usage_flags = {gpu::BufferUsage::VERTEX},
-       .queue_flags = {gpu::QueueType::GRAPHIC},
-       .name = "Skybox vertex buffer"},
+      {
+        .size = sizeof(SkyboxVertex) * std::size(SKYBOX_VERTICES),
+        .usage_flags = {gpu::BufferUsage::VERTEX},
+        .queue_flags = {gpu::QueueType::GRAPHIC},
+        .name = "Skybox vertex buffer",
+      },
       SKYBOX_VERTICES);
     gpu_system_->flush_buffer(skybox_vertex_buffer_id_);
 
     skybox_index_buffer_id_ = gpu_system_->create_buffer(
-      {.size = sizeof(SkyboxIndex) * std::size(SKYBOX_INDICES),
-       .usage_flags = {gpu::BufferUsage::INDEX},
-       .queue_flags = {gpu::QueueType::GRAPHIC},
-       .name = "Skybox index buffer"},
+      {
+        .size = sizeof(SkyboxIndex) * std::size(SKYBOX_INDICES),
+        .usage_flags = {gpu::BufferUsage::INDEX},
+        .queue_flags = {gpu::QueueType::GRAPHIC},
+        .name = "Skybox index buffer",
+      },
       SKYBOX_INDICES);
     gpu_system_->flush_buffer(skybox_index_buffer_id_);
 
@@ -219,7 +230,8 @@ public:
         const gpu::TextureRegionUpdate region_update = {
           .buffer_offset = soul::cast<uint64>(level_data - skybox_data),
           .subresource = {.mip_level = level, .base_array_layer = 0, .layer_count = 6},
-          .extent = {level_width, level_height, 1}};
+          .extent = {level_width, level_height, 1},
+        };
 
         region_loads.add(region_update);
       }
@@ -227,7 +239,8 @@ public:
         .data = skybox_data,
         .data_size = skybox_data_size,
         .region_count = soul::cast<uint32>(region_loads.size()),
-        .regions = region_loads.data()};
+        .regions = region_loads.data(),
+      };
 
       const auto texture_id = gpu_system_->create_texture(tex_desc, load_desc);
       gpu_system_->flush_texture(texture_id, {gpu::TextureUsage::SAMPLED});
@@ -241,7 +254,7 @@ public:
   }
 };
 
-auto main(int argc, char* argv[]) -> int
+auto main(int /* argc */, char* /* argv */[]) -> int
 {
   stbi_set_flip_vertically_on_load(true);
   TextureCubeSampleApp app({.enable_imgui = false});

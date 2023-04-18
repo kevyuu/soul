@@ -20,30 +20,37 @@ namespace soul::gpu
           if (desc.type == RTGeometryType::TRIANGLE) {
             const auto& triangle_desc = desc.content.triangles;
             return {
-              .triangles = {
-                .sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_TRIANGLES_DATA_KHR,
-                .vertexFormat = vk_cast(triangle_desc.vertex_format),
-                .vertexData = {.deviceAddress = triangle_desc.vertex_data.id},
-                .vertexStride = triangle_desc.vertex_stride,
-                .maxVertex = triangle_desc.vertex_count,
-                .indexType = vk_cast(triangle_desc.index_type),
-                .indexData = {.deviceAddress = triangle_desc.index_data.id},
-                .transformData = {.deviceAddress = triangle_desc.transform_data.id}}};
+              .triangles =
+                {
+                  .sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_TRIANGLES_DATA_KHR,
+                  .vertexFormat = vk_cast(triangle_desc.vertex_format),
+                  .vertexData = {.deviceAddress = triangle_desc.vertex_data.id},
+                  .vertexStride = triangle_desc.vertex_stride,
+                  .maxVertex = triangle_desc.vertex_count,
+                  .indexType = vk_cast(triangle_desc.index_type),
+                  .indexData = {.deviceAddress = triangle_desc.index_data.id},
+                  .transformData = {.deviceAddress = triangle_desc.transform_data.id},
+                },
+            };
           }
           SOUL_ASSERT(0, desc.type == RTGeometryType::AABB, "");
           const auto& aabb_desc = desc.content.aabbs;
           return {
-            .aabbs = {
-              .sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_AABBS_DATA_KHR,
-              .data = {.deviceAddress = aabb_desc.data.id},
-              .stride = aabb_desc.stride}};
+            .aabbs =
+              {
+                .sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_AABBS_DATA_KHR,
+                .data = {.deviceAddress = aabb_desc.data.id},
+                .stride = aabb_desc.stride,
+              },
+          };
         }(geometry_desc);
 
         return {
           .sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR,
           .geometryType = vk_cast(geometry_desc.type),
           .geometry = geometry_data,
-          .flags = vk_cast(geometry_desc.flags)};
+          .flags = vk_cast(geometry_desc.flags),
+        };
       });
 
     const VkAccelerationStructureBuildGeometryInfoKHR build_info = {
@@ -52,7 +59,8 @@ namespace soul::gpu
       .flags = vk_cast(build_desc.flags),
       .mode = vk_cast(build_mode),
       .geometryCount = build_desc.geometry_count,
-      .pGeometries = as_geometries};
+      .pGeometries = as_geometries,
+    };
 
     return build_info;
   }
