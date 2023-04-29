@@ -98,6 +98,19 @@ namespace soul
     capacity_ = new_capacity;
   }
 
+  auto CString::push_back(char c) -> void
+  {
+    const auto needed = size_ + 1;
+    if (needed + 1 > capacity_) {
+      const auto new_capacity =
+        capacity_ == 0 ? needed + 1 : (((needed / capacity_) + 1) * capacity_);
+      reserve(new_capacity);
+    }
+    data_[size_] = c;
+    size_ += 1;
+    data_[size_] = '\0';
+  }
+
   auto CString::append(const CString& x) -> CString&
   {
     const auto needed = size_ + x.size_;
@@ -114,28 +127,20 @@ namespace soul
     return *this;
   }
 
-  auto CString::appendf(SOUL_FORMAT_STRING const char* format, ...) -> CString&
+  auto CString::append(const char* x) -> CString&
   {
-    va_list args;
-
-    va_start(args, format);
-    const auto needed = vsnprintf(nullptr, 0, format, args);
-    va_end(args);
-
-    if (needed + 1 > capacity_ - size_) {
+    const auto extra_size = strlen(x);
+    const auto needed = size_ + extra_size;
+    if (needed + 1 > capacity_) {
       const auto new_capacity =
-        capacity_ >= (needed + 1) ? 2 * capacity_ : capacity_ + (needed + 1);
+        capacity_ == 0 ? needed + 1 : (((needed / capacity_) + 1) * capacity_);
       reserve(new_capacity);
     }
 
-    va_start(args, format);
-    vsnprintf(data_ + size_, (needed + 1), format, args);
-    va_end(args);
-
-    size_ += needed;
+    memcpy(data_ + size_, x, extra_size);
+    size_ += extra_size;
     data_[size_] = '\0';
 
     return *this;
   }
-
 } // namespace soul

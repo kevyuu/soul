@@ -5,7 +5,9 @@
 #include <string>
 #include <variant>
 
+#include "core/cstring.h"
 #include "core/dev_util.h"
+#include "core/string_util.h"
 #include "core/util.h"
 #include "core/vector.h"
 #include "gpu/intern/bindless_descriptor_allocator.h"
@@ -1258,18 +1260,15 @@ namespace soul::gpu
   auto System::create_blas(const BlasDesc& desc, const BlasGroupID blas_group_id) -> BlasID
   {
     runtime::ScopeAllocator<> scope_allocator("create_blas(const BlasDesc&, BlasGroupID)");
-    const char* as_storage_name = nullptr;
+    CString as_storage_name(&scope_allocator);
     if (desc.name != nullptr) {
-      CString as_storage_name_string(&scope_allocator);
-      as_storage_name_string.appendf("%s_storage_buffer", desc.name);
-      as_storage_name = as_storage_name_string.data();
+      appendf(as_storage_name, "{}_storage_buffer", desc.name);
     }
 
     const BufferDesc as_buffer_desc = {
       .size = desc.size,
       .usage_flags = {BufferUsage::AS_STORAGE},
       .queue_flags = {QueueType::GRAPHIC, QueueType::COMPUTE},
-      .name = as_storage_name,
       .name = as_storage_name.data(),
     };
     const auto storage_buffer_id = create_buffer(as_buffer_desc);
@@ -1283,14 +1282,14 @@ namespace soul::gpu
     vkCreateAccelerationStructureKHR(_db.device, &create_info, nullptr, &vk_handle);
 
     if (desc.name != nullptr) {
-      CString as_name_string(&scope_allocator);
-      as_name_string.appendf("%s(%d)", desc.name, _db.frame_counter);
+      CString as_name(&scope_allocator);
+      appendf(as_name, "{}({})", desc.name, _db.frame_counter);
       const VkDebugUtilsObjectNameInfoEXT as_name_info = {
         VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
         nullptr,
         VK_OBJECT_TYPE_ACCELERATION_STRUCTURE_KHR,
         reinterpret_cast<uint64>(vk_handle),
-        as_name_string.data(),
+        as_name.data(),
       };
       vkSetDebugUtilsObjectNameEXT(_db.device, &as_name_info);
     }
@@ -1370,17 +1369,15 @@ namespace soul::gpu
   auto System::create_tlas(const TlasDesc& desc) -> TlasID
   {
     runtime::ScopeAllocator<> scope_allocator("gpu::System::create_tlas(const TlasDesc& desc)");
-    const char* as_storage_name = nullptr;
+    CString as_storage_name(&scope_allocator);
     if (desc.name != nullptr) {
-      CString as_storage_name_string(&scope_allocator);
-      as_storage_name_string.appendf("%s_storage_buffer", desc.name);
-      as_storage_name = as_storage_name_string.data();
+      appendf(as_storage_name, "{}_storage_buffer", desc.name);
     }
     const BufferDesc as_buffer_desc = {
       .size = desc.size,
       .usage_flags = {BufferUsage::AS_STORAGE},
       .queue_flags = {QueueType::GRAPHIC, QueueType::COMPUTE},
-      .name = as_storage_name};
+      .name = as_storage_name.data()};
     const auto as_storage_buffer_id = create_buffer(as_buffer_desc);
 
     const VkAccelerationStructureCreateInfoKHR create_info = {
@@ -1537,7 +1534,7 @@ namespace soul::gpu
     if (desc.name != nullptr) {
       runtime::ScopeAllocator<> scope_allocator("Buffer name");
       CString buffer_name(&scope_allocator);
-      buffer_name.appendf("%s(f%d)", desc.name, _db.frame_counter);
+      appendf(buffer_name, "{}(f{})", desc.name, _db.frame_counter);
 
       const VkDebugUtilsObjectNameInfoEXT image_name_info = {
         VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
@@ -1958,8 +1955,8 @@ namespace soul::gpu
     total_source_size += RESOURCE_HLSL_SIZE;
     total_source_size += RESOURCE_RT_EXT_HLSL_SIZE;
     full_source_string.reserve(total_source_size);
-    full_source_string.appendf("%s", RESOURCE_HLSL);
-    full_source_string.appendf("%s", RESOURCE_RT_EXT_HLSL);
+    full_source_string.append(RESOURCE_HLSL);
+    full_source_string.append(RESOURCE_RT_EXT_HLSL);
     for (const auto* shader_source : shader_sources) {
       full_source_string.append(*shader_source);
     }
@@ -2168,14 +2165,14 @@ namespace soul::gpu
       _db.device, {}, {}, 1, &rt_pipeline_create_info, nullptr, &shader_table.pipeline);
 
     if (shader_table_desc.name != nullptr) {
-      CString pipeline_name_string(&scope_allocator);
-      pipeline_name_string.appendf("%s_pipeline(%d)", shader_table_desc.name, _db.frame_counter);
+      CString pipeline_name(&scope_allocator);
+      appendf(pipeline_name, "{}_pipeline({})", shader_table_desc.name, _db.frame_counter);
       const VkDebugUtilsObjectNameInfoEXT pipeline_name_info = {
         VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
         nullptr,
         VK_OBJECT_TYPE_PIPELINE,
         reinterpret_cast<uint64>(shader_table.pipeline),
-        pipeline_name_string.data(),
+        pipeline_name.data(),
       };
       vkSetDebugUtilsObjectNameEXT(_db.device, &pipeline_name_info);
     }
@@ -2228,7 +2225,7 @@ namespace soul::gpu
 
       CString buffer_name(&scope_allocator);
       if (shader_table_desc.name != nullptr) {
-        buffer_name.appendf("%s_%s", shader_table_desc.name, group_names[shader_group]);
+        appendf(buffer_name, "{}_{}", shader_table_desc.name, group_names[shader_group]);
       }
 
       const BufferDesc buffer_desc = {

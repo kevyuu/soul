@@ -1,5 +1,6 @@
 #include <volk.h>
 
+#include "core/string_util.h"
 #include "gpu/intern/common.h"
 #include "gpu/intern/enum_mapping.h"
 #include "gpu/intern/render_compiler.h"
@@ -354,11 +355,9 @@ namespace soul::gpu::impl
 
     const auto size_info =
       gpu_system_.get_as_build_size_info(build_info, max_primitives_counts.data());
-    const char* as_scratch_buffer_name = nullptr;
+    CString as_scratch_buffer_name(&scope_allocator);
     if (dst_blas.desc.name != nullptr) {
-      CString as_scratch_buffer_name_string(&scope_allocator);
-      as_scratch_buffer_name_string.appendf("%s_scratch_buffer", dst_blas.desc.name);
-      as_scratch_buffer_name = as_scratch_buffer_name_string.data();
+      appendf(as_scratch_buffer_name, "{}_scratch_buffer", dst_blas.desc.name);
     }
 
     const BufferDesc scratch_buffer_desc = {
@@ -366,7 +365,7 @@ namespace soul::gpu::impl
       .usage_flags = {BufferUsage::AS_SCRATCH_BUFFER},
       .queue_flags = {QueueType::COMPUTE},
       .memory_option = MemoryOption{.required = {MemoryProperty::DEVICE_LOCAL}},
-      .name = as_scratch_buffer_name,
+      .name = as_scratch_buffer_name.data(),
     };
     const auto scratch_buffer_id = gpu_system_.create_transient_buffer(scratch_buffer_desc);
     const auto scratch_buffer_address = gpu_system_.get_gpu_address(scratch_buffer_id);

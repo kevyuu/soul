@@ -36,8 +36,9 @@ namespace soul
 
     auto reserve(soul_size new_capacity) -> void;
 
+    auto push_back(char c) -> void;
     auto append(const CString& x) -> CString&;
-    auto appendf(SOUL_FORMAT_STRING const char* format, ...) -> CString&;
+    auto append(const char* x) -> CString&;
 
     [[nodiscard]] auto capacity() const -> soul_size { return capacity_; }
     [[nodiscard]] auto size() const -> soul_size { return size_; }
