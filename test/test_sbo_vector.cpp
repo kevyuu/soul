@@ -5,7 +5,6 @@
 
 #include <gtest/gtest.h>
 
-#define USE_CUSTOM_DEFAULT_ALLOCATOR
 #include "core/config.h"
 #include "core/sbo_vector.h"
 #include "memory/allocator.h"

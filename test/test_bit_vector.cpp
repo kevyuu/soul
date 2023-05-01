@@ -1,7 +1,6 @@
 #include <random>
 #include <vector>
 
-#define USE_CUSTOM_DEFAULT_ALLOCATOR
 #include "core/bit_vector.h"
 #include "core/config.h"
 #include "core/util.h"

@@ -1,7 +1,6 @@
 #include <algorithm>
 #include <ranges>
 
-#define USE_CUSTOM_DEFAULT_ALLOCATOR
 #include "core/config.h"
 #include "core/intrusive_list.h"
 #include "core/util.h"

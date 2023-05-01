@@ -1,5 +1,6 @@
 set(SAMPLE_COMMON_SOURCES
     app.cpp
+    soul_config.cpp
     camera_manipulator.cpp
     imgui_pass.cpp
     imgui_impl_glfw.cpp

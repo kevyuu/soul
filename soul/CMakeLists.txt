@@ -43,7 +43,6 @@ set(SOUL_SOURCES_OSX src/memory/intern/osx/page_allocator.cpp)
 set(SOUL_SOURCES_WINDOWS src/memory/intern/windows/page_allocator.cpp)
 
 set(SOUL_SOURCES
-    src/core/config.cpp
     src/core/dev_util.cpp
     src/core/cstring.cpp
     src/gpu/intern/common.cpp
