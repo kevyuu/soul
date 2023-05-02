@@ -18,9 +18,11 @@ namespace soul
     data_[size_] = '\0';
   }
 
-  CString::CString(const char* str, memory::Allocator& allocator) : CString(strlen(str), allocator)
+  CString::CString(const char* str, memory::Allocator& allocator) : allocator_(&allocator)
   {
     SOUL_ASSERT(0, str != nullptr, "Constructing CString with nullptr is undefined behaviour");
+    size_ = strlen(str);
+    reserve(size_ + 1);
     memcpy(data_, str, capacity_ * sizeof(char));
   }
 
