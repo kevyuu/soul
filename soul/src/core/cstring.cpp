@@ -2,7 +2,6 @@
 #include <cstdarg>
 #include <cstdio>
 
-#include "core/config.h"
 #include "core/cstring.h"
 #include "core/dev_util.h"
 
@@ -29,11 +28,14 @@ namespace soul
   CString::CString(const char* str) : CString(str, *get_default_allocator()) {}
 
   CString::CString(const CString& rhs)
+      : allocator_(rhs.allocator_),
+        capacity_(rhs.capacity_),
+        size_(rhs.size_),
+        data_(
+          rhs.data_ == nullptr
+            ? nullptr
+            : static_cast<char*>(allocator_->allocate(rhs.capacity_, alignof(char))))
   {
-    allocator_ = rhs.allocator_;
-    data_ = static_cast<char*>(allocator_->allocate(rhs.capacity_, alignof(char)));
-    size_ = rhs.size_;
-    capacity_ = rhs.capacity_;
     std::copy(rhs.data_, rhs.data_ + rhs.capacity_, data_);
   }
 
