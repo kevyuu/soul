@@ -4,6 +4,7 @@
 
 #include "core/config.h"
 #include "core/cstring.h"
+#include "core/dev_util.h"
 
 namespace soul
 {
@@ -19,6 +20,7 @@ namespace soul
 
   CString::CString(const char* str, memory::Allocator& allocator) : CString(strlen(str), allocator)
   {
+    SOUL_ASSERT(0, str != nullptr, "Constructing CString with nullptr is undefined behaviour");
     memcpy(data_, str, capacity_ * sizeof(char));
   }
 
@@ -55,6 +57,7 @@ namespace soul
 
   auto CString::operator=(const char* buf) -> CString&
   {
+    SOUL_ASSERT(0, buf != nullptr, "Assigning nullptr to CString is undefined behaviour");
     size_ = strlen(buf);
     if (capacity_ < size_ + 1) {
       reserve(size_ + 1);
