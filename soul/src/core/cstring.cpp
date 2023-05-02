@@ -17,17 +17,10 @@ namespace soul
     data_[size_] = '\0';
   }
 
-  CString::CString(char* str, memory::Allocator& allocator) : CString(strlen(str), allocator)
-  {
-    memcpy(data_, str, capacity_ * sizeof(char));
-  }
-
   CString::CString(const char* str, memory::Allocator& allocator) : CString(strlen(str), allocator)
   {
     memcpy(data_, str, capacity_ * sizeof(char));
   }
-
-  CString::CString(char* str) : CString(str, *get_default_allocator()) {}
 
   CString::CString(const char* str) : CString(str, *get_default_allocator()) {}
 
@@ -60,7 +53,7 @@ namespace soul
     return *this;
   }
 
-  auto CString::operator=(char* buf) -> CString&
+  auto CString::operator=(const char* buf) -> CString&
   {
     size_ = strlen(buf);
     if (capacity_ < size_ + 1) {

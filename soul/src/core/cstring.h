@@ -18,18 +18,16 @@ namespace soul
     using const_reference = const char&;
 
     explicit CString(soul_size size, memory::Allocator& allocator = *get_default_allocator());
-    CString(char*, memory::Allocator& allocator);
     CString(const char*, memory::Allocator& allocator);
 
     explicit CString(memory::Allocator* allocator = get_default_allocator());
-    CString(char*);
     CString(const char*);
 
     CString(const CString&);
     auto operator=(const CString&) -> CString&;
     CString(CString&&) noexcept;
     auto operator=(CString&&) noexcept -> CString&;
-    auto operator=(char*) -> CString&;
+    auto operator=(const char*) -> CString&;
     ~CString();
     auto swap(CString&) noexcept -> void;
     friend auto swap(CString& a, CString& b) noexcept -> void { a.swap(b); }
