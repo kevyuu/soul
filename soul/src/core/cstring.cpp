@@ -8,7 +8,11 @@
 namespace soul
 {
 
-  CString::CString(memory::Allocator* allocator) : allocator_(allocator) {}
+  CString::CString(memory::Allocator* allocator) : allocator_(allocator)
+  {
+    reserve(1);
+    data_[size_] = '\0';
+  }
 
   CString::CString(soul_size size, memory::Allocator& allocator)
       : allocator_(&allocator), size_(size)
