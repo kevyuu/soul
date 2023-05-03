@@ -228,6 +228,8 @@ struct SoulTestMessageScope {
   } while (0)
 #define SOUL_TEST_ASSERT_EQ(expr1, expr2)                                                          \
   ASSERT_EQ(expr1, expr2) << "Case : " << get_soul_test_message()
+#define SOUL_TEST_ASSERT_STREQ(expr1, expr2)                                                       \
+  ASSERT_STREQ(expr1, expr2) << "Case : " << get_soul_test_message()
 #define SOUL_TEST_ASSERT_NE(expr1, expr2)                                                          \
   ASSERT_NE(expr1, expr2) << "Case : " << get_soul_test_message()
 #define SOUL_TEST_ASSERT_GE(expr1, expr2)                                                          \
