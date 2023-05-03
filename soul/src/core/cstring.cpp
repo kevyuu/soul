@@ -89,6 +89,9 @@ namespace soul
 
   auto CString::reserve(soul_size new_capacity) -> void
   {
+    if (capacity_ >= new_capacity) {
+      return;
+    }
     const auto new_data = static_cast<char*>(allocator_->allocate(new_capacity, alignof(char)));
     if (data_ != nullptr) {
       memcpy(new_data, data_, capacity_ * sizeof(char));
