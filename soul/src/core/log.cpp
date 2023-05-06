@@ -4,6 +4,8 @@
 #include "core/log.h"
 #include "core/mutex.h"
 #include "core/string_util.h"
+#include "memory/allocator.h"
+#include "memory/allocators/malloc_allocator.h"
 
 namespace soul::impl
 {
@@ -14,24 +16,31 @@ namespace soul::impl
       Mutex lock;
       CString buffer;
 
-      LogBuffer() { buffer.reserve(8192); }
+      explicit LogBuffer(memory::Allocator* allocator) : buffer(allocator) { buffer.reserve(8192); }
     };
 
     using LogBuffers = FlagMap<LogLevel, LogBuffer>;
+
     auto get_log_buffers() -> LogBuffers&
     {
-      static LogBuffers log_buffers;
+      static memory::MallocAllocator malloc_allocator("malloc allocator");
+      static auto log_buffers = LogBuffers::with_value_arguments(&malloc_allocator);
       return log_buffers;
+    }
+
+    auto get_output_stream(LogLevel log_level) -> std::ostream&
+    {
+      if (log_level == LogLevel::FATAL && log_level == LogLevel::ERROR) {
+        return std::cerr;
+      } else {
+        return std::cout;
+      }
     }
 
     auto log_flush_no_lock(LogLevel log_level) -> void
     {
       auto& log_buffers = get_log_buffers();
-      if (log_level == LogLevel::FATAL && log_level == LogLevel::ERROR) {
-        std::cerr << log_buffers[log_level].buffer.data();
-      } else {
-        std::cout << log_buffers[log_level].buffer.data();
-      }
+      get_output_stream(log_level) << log_buffers[log_level].buffer.data();
     }
   } // namespace
 
@@ -42,6 +51,10 @@ namespace soul::impl
     auto& log_buffer = log_buffers[log_level];
     if (log_buffer.buffer.size() + message.size() + 1 > LogBuffer::CAPACITY) {
       log_flush_no_lock(log_level);
+    }
+    if (message.size() >= log_buffer.buffer.capacity()) {
+      get_output_stream(log_level) << message.data() << std::endl;
+      return;
     }
     log_buffer.buffer.append(message);
     log_buffer.buffer.push_back('\n');

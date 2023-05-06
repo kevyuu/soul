@@ -13,8 +13,8 @@
     do {                                                                                           \
       VkResult _result = expr;                                                                     \
       if (_result != VK_SUCCESS) {                                                                 \
-        SOUL_LOG_ERROR("Vulkan error| expr = %s, result = %s ", #expr, _result);                   \
-        SOUL_LOG_ERROR("Message = %s", ##__VA_ARGS__);                                             \
+        log_error("Vulkan error| expr = {}, result = {} ", #expr, _result);                        \
+        log_error("Message = {}", ##__VA_ARGS__);                                                  \
       }                                                                                            \
     } while (0)
 #endif

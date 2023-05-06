@@ -61,7 +61,7 @@
       "name": "Debug",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
-        "SOUL_LOG_ENABLE": true,
+        "SOUL_LOG_LEVEL": "DEBUG",
         "SOUL_ASSERT_ENABLE": true,
         "SOUL_VULKAN_VALIDATION_ENABLE": true,
         "SOUL_PROFILE_CPU_BACKEND": "DISABLED",
@@ -75,6 +75,7 @@
       "name": "Release",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release",
+        "SOUL_LOG_LEVEL": "INFO",
         "SOUL_LOG_ENABLE": true,
         "SOUL_VULKAN_VALIDATION_ENABLE": false
       },

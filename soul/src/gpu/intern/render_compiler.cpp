@@ -1,5 +1,6 @@
 #include <volk.h>
 
+#include "core/log.h"
 #include "core/string_util.h"
 #include "gpu/intern/common.h"
 #include "gpu/intern/enum_mapping.h"
@@ -439,7 +440,7 @@ namespace soul::gpu::impl
                                   ? size_info.buildScratchSize
                                   : size_info.updateScratchSize;
       build_scratch_sizes.push_back(scratch_size);
-      SOUL_LOG_INFO("Scratch size = %d", scratch_size);
+      SOUL_LOG_INFO("Scratch size = {}", scratch_size);
       total_size += scratch_size;
     }
 

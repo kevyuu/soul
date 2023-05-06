@@ -7,6 +7,7 @@ set(SOUL_HEADERS
     src/core/dev_util.h
     src/core/uint64_hash_map.h
     src/core/hash_map.h
+    src/core/log.h
     src/core/math.h
     src/core/packed_pool.h
     src/core/pool.h
@@ -43,6 +44,7 @@ set(SOUL_SOURCES_OSX src/memory/intern/osx/page_allocator.cpp)
 set(SOUL_SOURCES_WINDOWS src/memory/intern/windows/page_allocator.cpp)
 
 set(SOUL_SOURCES
+    src/core/log.cpp
     src/core/dev_util.cpp
     src/core/cstring.cpp
     src/gpu/intern/common.cpp
@@ -80,9 +82,20 @@ target_compile_definitions(soul PUBLIC TRACY_ENABLE NOMINMAX)
 get_target_property(soul_include_directories soul INCLUDE_DIRECTORIES)
 message(STATUS "Soul include directories : ${soul_include_directories}")
 
-option(SOUL_LOG_ENABLE "Option for enabling SOUL_LOGGING_*" OFF)
 option(SOUL_ASSERT_ENABLE "Option for enabling SOUL_ASSERT" OFF)
 option(SOUL_VULKAN_VALIDATION_ENABLE "Option for enabling Vulkan validation layer" OFF)
+
+set(SOUL_LOG_LEVEL
+    "DISABLED"
+    CACHE STRING "log level")
+set_property(
+  CACHE SOUL_LOG_LEVEL
+  PROPERTY STRINGS
+           FATA
+           ERROR
+           WARN
+           INFO
+           DEBUG)
 
 set(SOUL_PROFILE_CPU_BACKEND
     "DISABLED"
@@ -114,12 +127,13 @@ set(SOUL_TRACY_STACKTRACE_DEPTH
 
 target_compile_definitions(
   soul
-  PUBLIC "$<$<BOOL:${SOUL_LOG_ENABLE}>:SOUL_LOG_ENABLE>"
-         "$<$<BOOL:${SOUL_ASSERT_ENABLE}>:SOUL_ASSERT_ENABLE>"
+  PUBLIC "$<$<BOOL:${SOUL_ASSERT_ENABLE}>:SOUL_ASSERT_ENABLE>"
          "$<$<BOOL:${SOUL_VULKAN_VALIDATION_ENABLE}>:SOUL_VULKAN_VALIDATION_ENABLE>"
          SOUL_ASSERT_PARANOIA_LEVEL=${SOUL_ASSERT_PARANOIA_LEVEL}
+         SOUL_LOG_LEVEL=${SOUL_LOG_LEVEL}
          SOUL_PROFILE_CPU_BACKEND_${SOUL_PROFILE_CPU_BACKEND}
          SOUL_MEMPROFILE_CPU_BACKEND_${SOUL_MEMPROFILE_CPU_BACKEND}
          SOUL_TRACY_STACKTRACE_DEPTH=${SOUL_TRACY_STACKTRACE_DEPTH}
+         SOUL_PROJECT_SOURCE_DIR="${PROJECT_SOURCE_DIR}/"
   PRIVATE "$<$<STREQUAL:${CMAKE_SYSTEM_NAME},Windows>:SOUL_OS_WINDOWS>"
           "$<$<STREQUAL:${CMAKE_SYSTEM_NAME},Darwin>:SOUL_OS_APPLE>")

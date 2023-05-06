@@ -7,6 +7,7 @@
 
 #include "core/cstring.h"
 #include "core/dev_util.h"
+#include "core/log.h"
 #include "core/string_util.h"
 #include "core/util.h"
 #include "core/vector.h"
@@ -155,7 +156,7 @@ namespace soul::gpu
     SOUL_LOG_INFO("Picking vulkan swap extent");
     if (capabilities.currentExtent.width != std::numeric_limits<uint32_t>::max()) {
       SOUL_LOG_INFO(
-        "vulkanPickSwapExtent | Extent = %d %d",
+        "vulkanPickSwapExtent | Extent = {} {}",
         capabilities.currentExtent.width,
         capabilities.currentExtent.height);
       return capabilities.currentExtent;
@@ -271,15 +272,15 @@ namespace soul::gpu
       break;
     }
     case VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT: {
-      SOUL_LOG_INFO("VkDebugUtils: %s", callback_data->pMessage);
+      SOUL_LOG_INFO("VkDebugUtils: {}", callback_data->pMessage);
       break;
     }
     case VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT: {
-      SOUL_LOG_WARN("VkDebugUtils: %s", callback_data->pMessage);
+      SOUL_LOG_WARN("VkDebugUtils: {}", callback_data->pMessage);
       break;
     }
     case VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT: {
-      SOUL_LOG_ERROR("VkDebugUtils: %s", callback_data->pMessage);
+      SOUL_LOG_ERROR("VkDebugUtils: {}", callback_data->pMessage);
       SOUL_PANIC("Vulkan Error!");
       break;
     }
@@ -309,12 +310,12 @@ namespace soul::gpu
     SOUL_ASSERT(
       0,
       config.thread_count > 0,
-      "Invalid configuration value | threadCount = %d",
+      "Invalid configuration value | threadCount = {}",
       config.thread_count);
     SOUL_ASSERT(
       0,
       config.max_frame_in_flight > 0,
-      "Invalid configuration value | maxFrameInFlight = %d",
+      "Invalid configuration value | maxFrameInFlight = {}",
       config.max_frame_in_flight);
 
     SOUL_VK_CHECK(volkInitialize(), "Volk initialization fail!");
@@ -363,7 +364,7 @@ namespace soul::gpu
             }
           }
           if (!layer_found) {
-            SOUL_LOG_INFO("Validation layer %s not found!", required_layer);
+            SOUL_LOG_INFO("Validation layer {} not found!", required_layer);
             return false;
           }
         }
@@ -396,7 +397,7 @@ namespace soul::gpu
       SOUL_LOG_INFO("Vulkan instance creation succesful");
       volkLoadInstanceOnly(instance);
       SOUL_LOG_INFO(
-        "Instance version = %d, %d",
+        "Instance version = {}, {}",
         VK_VERSION_MAJOR(volkGetInstanceVersion()),
         VK_VERSION_MINOR(volkGetInstanceVersion()));
       return instance;
@@ -490,11 +491,11 @@ namespace soul::gpu
 
         SOUL_LOG_INFO(
           "Devices\n"
-          " -- Name = %s\n"
-          " -- Vendor = 0x%.8X\n"
-          " -- Device ID = 0x%.8X\n"
-          " -- Api Version = %d.%d.%d\n"
-          " -- Driver Version = %d.%d.%d\n",
+          " -- Name = {}\n"
+          " -- Vendor = {:#x}\n"
+          " -- Device ID = {:#x}\n"
+          " -- Api Version = {}.{}.{}\n"
+          " -- Driver Version = {}.{}.{}\n",
           physical_device_properties.deviceName,
           vendor_id,
           device_id,
@@ -532,7 +533,7 @@ namespace soul::gpu
 
         uint32 format_count;
         vkGetPhysicalDeviceSurfaceFormatsKHR(device, db->surface, &format_count, nullptr);
-        SOUL_LOG_INFO(" -- Format count = %d", format_count);
+        SOUL_LOG_INFO(" -- Format count = {}", format_count);
         if (format_count == 0) {
           continue;
         }
@@ -542,7 +543,7 @@ namespace soul::gpu
         uint32 present_mode_count;
         vkGetPhysicalDeviceSurfacePresentModesKHR(
           device, db->surface, &present_mode_count, nullptr);
-        SOUL_LOG_INFO(" -- Present mode count = %d", present_mode_count);
+        SOUL_LOG_INFO(" -- Present mode count = {}", present_mode_count);
         if (present_mode_count == 0) {
           continue;
         }
@@ -618,7 +619,7 @@ namespace soul::gpu
           score += 100;
         }
 
-        SOUL_LOG_INFO("-- Score = %d", score);
+        SOUL_LOG_INFO("-- Score = {}", score);
         if (score > best_score) {
           db->physical_device = device;
           queue_family_indices[QueueType::GRAPHIC] = graphics_queue_family_index;
@@ -648,14 +649,14 @@ namespace soul::gpu
 
       SOUL_LOG_INFO(
         "Selected device\n"
-        " -- Name = %s\n"
-        " -- Vendor = 0x%.8X\n"
-        " -- Device ID = 0x%.8X\n"
-        " -- Api Version = 0x%.8X\n"
-        " -- Driver Version = 0x%.8X\n"
-        " -- Graphics queue family index = %d\n"
-        " -- Transfer queue family index = %d\n"
-        " -- Compute queue family index = %d\n",
+        " -- Name = {}\n"
+        " -- Vendor = {:#x}\n"
+        " -- Device ID = {:#x}\n"
+        " -- Api Version = {:#x}\n"
+        " -- Driver Version = {:#x}\n"
+        " -- Graphics queue family index = {}\n"
+        " -- Transfer queue family index = {}\n"
+        " -- Compute queue family index = {}\n",
         db->physical_device_properties.deviceName,
         vendor_id,
         device_id,
@@ -819,7 +820,7 @@ namespace soul::gpu
         return image_count;
       }();
 
-      SOUL_LOG_INFO("Swapchain image count = %d", db->swapchain.image_count);
+      SOUL_LOG_INFO("Swapchain image count = {}", db->swapchain.image_count);
 
       const VkSwapchainCreateInfoKHR swapchain_info = {
         .sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
@@ -973,6 +974,7 @@ namespace soul::gpu
     init_frame_context(config);
     calculate_gpu_properties();
     begin_frame();
+    SOUL_FLUSH_LOGS();
   }
 
   auto System::init_frame_context(const Config& config) -> void
@@ -1960,7 +1962,7 @@ namespace soul::gpu
     for (const auto* shader_source : shader_sources) {
       full_source_string.append(*shader_source);
     }
-    SOUL_LOG_INFO("Full source : %s", full_source_string.data());
+    SOUL_LOG_DEBUG("Full source : {}", full_source_string.data());
 
     auto code_page = soul::cast<uint32>(CP_ACP);
     wrl::ComPtr<IDxcBlobEncoding> source_blob;
@@ -3082,7 +3084,7 @@ namespace soul::gpu
     vkDeviceWaitIdle(_db.device);
 
     SOUL_LOG_INFO(
-      "Recreate swapchain. Framebuffer Size = %zu %zu", framebuffer_size.x, framebuffer_size.y);
+      "Recreate swapchain. Framebuffer Size = {} {}", framebuffer_size.x, framebuffer_size.y);
     vkGetPhysicalDeviceSurfaceCapabilitiesKHR(_db.physical_device, _db.surface, &_db.surface_caps);
     auto& swapchain_garbage = get_frame_context().garbages.swapchain;
     swapchain_garbage.vk_handle = _db.swapchain.vk_handle;

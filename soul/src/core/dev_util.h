@@ -7,64 +7,18 @@
 
 #include "compiler.h"
 
+namespace soul
+{
+  constexpr auto relative_from_project_path(const char* filepath) -> const char*
+  {
+    return filepath + sizeof(SOUL_PROJECT_SOURCE_DIR) - 1;
+  }
+} // namespace soul
+
 static auto project_path(const char* filepath) -> const char*
 {
   return filepath + strlen(__FILE__) - strlen("core/debug.cpp");
 }
-
-// Logging
-#define SOUL_LOG_VERBOSE_COUNT 5
-#define SOUL_LOG_VERBOSE_DEBUG 4
-#define SOUL_LOG_VERBOSE_INFO 3
-#define SOUL_LOG_VERBOSE_WARN 2
-#define SOUL_LOG_VERBOSE_ERROR 1
-#define SOUL_LOG_VERBOSE_FATAL 0
-
-static constexpr int SOUL_LOG_VERBOSE_LEVEL = SOUL_LOG_VERBOSE_INFO;
-
-inline constexpr const char* LOG_PREFIX[] = {
-  "FATAL",
-  "ERROR",
-  "WARN",
-  "INFO",
-  "DEBUG",
-};
-
-constexpr auto soul_intern_log(
-  const int verbosity,
-  const int line,
-  const char* file,
-  _In_z_ _Printf_format_string_ const char* format,
-  ...) -> void
-{
-  if (verbosity <= SOUL_LOG_VERBOSE_LEVEL) {
-    printf("[%s] ", LOG_PREFIX[verbosity]);
-    printf(":");
-    printf("%s", project_path(file));
-    printf(":");
-    printf("%d", line);
-    printf("::");
-    va_list argsList;
-    va_start(argsList, format);
-    vprintf(format, argsList); // NOLINT(clang-diagnostic-format-nonliteral)
-    printf("\n");
-  }
-}
-
-#if defined(SOUL_LOG_ENABLE)
-#  define SOUL_LOG(verbosity, format, ...)                                                         \
-    do {                                                                                           \
-      soul_intern_log(verbosity, __LINE__, __FILE__, format, ##__VA_ARGS__);                       \
-    } while (0)
-#else
-#  define SOUL_LOG(verbosity, format, ...) ((void)0)
-#endif
-
-#define SOUL_LOG_DEBUG(format, ...) SOUL_LOG(SOUL_LOG_VERBOSE_DEBUG, format, ##__VA_ARGS__)
-#define SOUL_LOG_INFO(format, ...) SOUL_LOG(SOUL_LOG_VERBOSE_INFO, format, ##__VA_ARGS__)
-#define SOUL_LOG_WARN(format, ...) SOUL_LOG(SOUL_LOG_VERBOSE_WARN, format, ##__VA_ARGS__)
-#define SOUL_LOG_ERROR(format, ...) SOUL_LOG(SOUL_LOG_VERBOSE_ERROR, format, ##__VA_ARGS__)
-#define SOUL_LOG_FATAL(format, ...) SOUL_LOG(SOUL_LOG_VERBOSE_FATAL, format, ##__VA_ARGS__)
 
 // Assertion
 constexpr auto soul_intern_assert(
@@ -98,8 +52,7 @@ constexpr auto soul_intern_assert(
     } while (0)
 #  define SOUL_PANIC(msg, ...)                                                                     \
     do {                                                                                           \
-      soul_intern_log(                                                                             \
-        SOUL_LOG_VERBOSE_FATAL, __LINE__, __FILE__, "Panic! \n\n" msg, ##__VA_ARGS__);             \
+      soul_intern_assert(0, __LINE__, __FILE__, "Panic! \n\n" msg, ##__VA_ARGS__);                 \
       SOUL_DEBUG_BREAK();                                                                          \
     } while (0)
 #  define SOUL_NOT_IMPLEMENTED()                                                                   \

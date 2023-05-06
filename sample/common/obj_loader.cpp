@@ -2,6 +2,7 @@
 
 #include <filesystem>
 
+#include "core/log.h"
 #include "math/math.h"
 
 auto ObjLoader::load_model(const std::filesystem::path& filepath) -> void
@@ -9,8 +10,8 @@ auto ObjLoader::load_model(const std::filesystem::path& filepath) -> void
   tinyobj::ObjReader reader;
   reader.ParseFromFile(filepath.string());
   if (!reader.Valid()) {
-    SOUL_LOG_INFO(reader.Error().c_str());
-    SOUL_LOG_ERROR("Cannot load: %s", filepath.string().c_str());
+    SOUL_LOG_INFO("{}", reader.Error().c_str());
+    SOUL_LOG_ERROR("Cannot load: {}", filepath.string().c_str());
     assert(reader.Valid());
   }
 

@@ -11,12 +11,17 @@ namespace soul
   enum class LogLevel : uint8 { FATAL, WARN, ERROR, INFO, DEBUG, COUNT };
 } // namespace soul
 
+namespace soul::memory
+{
+  class Allocator;
+}
+
 namespace soul::impl
 {
   // TODO(kevinyu) : Use cstring_view(pointer to char and length) after it is implemented
   auto log(LogLevel log_level, const CString& message) -> void;
   constexpr auto LOG_PREFIX =
-    FlagMap<LogLevel, const char*>::build_from_list({"FATAL", "WARN", "ERROR", "INFO", "DEBUG"});
+    FlagMap<LogLevel, const char*>::from_val_list({"FATAL", "WARN", "ERROR", "INFO", "DEBUG"});
 
 #if defined(SOUL_LOG_LEVEL_FATAL)
   constexpr auto LOG_LEVEL = LogLevel::FATAL;
@@ -41,7 +46,12 @@ namespace soul::impl
   {
     if (log_level <= impl::LOG_LEVEL) {
       CString message;
-      appendf(message, "[{}]:{}:{}::", impl::LOG_PREFIX[log_level], file_name, line);
+      appendf(
+        message,
+        "[{}]:{}:{}::",
+        impl::LOG_PREFIX[log_level],
+        relative_from_project_path(file_name),
+        line);
       appendf(message, std::move(fmt), std::forward<Args>(args)...);
       impl::log(log_level, message.data());
     }

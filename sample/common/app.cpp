@@ -2,6 +2,7 @@
 #include "imgui_impl_glfw.h"
 
 #include "core/dev_util.h"
+#include "core/log.h"
 #include "core/type.h"
 
 #include "gpu/glfw_wsi.h"
@@ -21,12 +22,12 @@ using namespace soul;
 
 auto glfw_print_error_callback(const int code, const char* message) -> void
 {
-  SOUL_LOG_INFO("GLFW Error. Error code : %d. Message = %s", code, message);
+  SOUL_LOG_INFO("GLFW Error. Error code : {}. Message = {}", code, message);
 }
 
 auto glfw_framebuffer_size_callback(GLFWwindow* window, int width, int height) -> void
 {
-  SOUL_LOG_INFO("GLFW Framebuffer size callback. Size = (%d, %d).", width, height);
+  SOUL_LOG_INFO("GLFW Framebuffer size callback. Size = ({}, {}).", width, height);
   auto window_data = static_cast<WindowData*>(glfwGetWindowUserPointer(window));
   window_data->resized = true;
 }
