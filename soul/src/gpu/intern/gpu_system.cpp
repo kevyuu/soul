@@ -677,7 +677,7 @@ namespace soul::gpu
       SOUL_LOG_INFO("Creating vulkan logical device");
 
       auto graphicsQueueCount = 1;
-      FlagMap<QueueType, uint32> queueIndex(0);
+      auto queueIndex = FlagMap<QueueType, uint32>::with_default_value(0);
 
       if (queue_family_indices[QueueType::COMPUTE] == queue_family_indices[QueueType::GRAPHIC]) {
         graphicsQueueCount++;
@@ -1681,7 +1681,7 @@ namespace soul::gpu
         shader_stage_infos.push_back(shader_stage_info);
       }
 
-      static auto PRIMITIVE_TOPOLOGY_MAP = FlagMap<Topology, VkPrimitiveTopology>::build_from_list(
+      static auto PRIMITIVE_TOPOLOGY_MAP = FlagMap<Topology, VkPrimitiveTopology>::from_val_list(
         {VK_PRIMITIVE_TOPOLOGY_POINT_LIST,
          VK_PRIMITIVE_TOPOLOGY_LINE_LIST,
          VK_PRIMITIVE_TOPOLOGY_LINE_STRIP,
@@ -1717,7 +1717,7 @@ namespace soul::gpu
         .pScissors = &scissor,
       };
 
-      static auto POLYGON_MODE_MAP = FlagMap<PolygonMode, VkPolygonMode>::build_from_list(
+      static auto POLYGON_MODE_MAP = FlagMap<PolygonMode, VkPolygonMode>::from_val_list(
         {VK_POLYGON_MODE_FILL, VK_POLYGON_MODE_LINE, VK_POLYGON_MODE_POINT});
 
       const VkPipelineRasterizationStateCreateInfo rasterizer_state = {
@@ -2009,7 +2009,7 @@ namespace soul::gpu
       arguments.push_back(L"-E");
       arguments.push_back(entry_point_wide_chars);
 
-      static constexpr FlagMap<ShaderStage, LPCWSTR> target_profile_map = {
+      static constexpr auto target_profile_map = FlagMap<ShaderStage, LPCWSTR>::from_key_val_list({
         {ShaderStage::VERTEX, L"vs_6_5"},
         {ShaderStage::FRAGMENT, L"ps_6_5"},
         {ShaderStage::COMPUTE, L"cs_6_5"},
@@ -2017,7 +2017,7 @@ namespace soul::gpu
         {ShaderStage::RAYGEN, L"lib_6_5"},
         {ShaderStage::CLOSEST_HIT, L"lib_6_5"},
         {ShaderStage::MISS, L"lib_6_5"},
-      };
+      });
       arguments.push_back(L"-T");
       arguments.push_back(target_profile_map[stage]);
 
@@ -2204,11 +2204,12 @@ namespace soul::gpu
     std::ranges::fill(strides, handle_size_aligned);
     strides[ShaderGroup::RAYGEN] = util::align_up(handle_size_aligned, handle_base_alignment);
 
-    FlagMap<ShaderGroup, const char*> group_names = {
+    const auto group_names = FlagMap<ShaderGroup, const char*>::from_key_val_list({
       {ShaderGroup::RAYGEN, "raygen"},
       {ShaderGroup::MISS, "miss"},
       {ShaderGroup::HIT, "hit"},
-      {ShaderGroup::CALLABLE, "callable"}};
+      {ShaderGroup::CALLABLE, "callable"},
+    });
 
     soul_size current_storage_offset = 0;
     for (auto shader_group : FlagIter<ShaderGroup>()) {
@@ -3733,7 +3734,8 @@ namespace soul::gpu
       .unavailable_pipeline_stages = {PipelineStage::FRAGMENT_SHADER},
       .unavailable_accesses = {},
       .sync_stages = {PipelineStage::FRAGMENT_SHADER},
-      .visible_access_matrix = VisibleAccessMatrix({AccessType::SHADER_READ}),
+      .visible_access_matrix =
+        VisibleAccessMatrix::with_default_value(AccessFlags{AccessType::SHADER_READ}),
     };
   }
 
@@ -3804,16 +3806,15 @@ namespace soul::gpu
 
     static auto get_finalize_layout = [](TextureUsageFlags usage) -> VkImageLayout {
       VkImageLayout result = VK_IMAGE_LAYOUT_UNDEFINED;
-      static constexpr auto USAGE_LAYOUT_MAP =
-        FlagMap<TextureUsage, VkImageLayout>::build_from_list({
-          VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-          VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-          VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
-          VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-          VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-          VK_IMAGE_LAYOUT_UNDEFINED,
-          VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-        });
+      static constexpr auto USAGE_LAYOUT_MAP = FlagMap<TextureUsage, VkImageLayout>::from_val_list({
+        VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+        VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+        VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+        VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+        VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+        VK_IMAGE_LAYOUT_UNDEFINED,
+        VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+      });
       static_assert(std::size(USAGE_LAYOUT_MAP) == to_underlying(TextureUsage::COUNT));
 
       usage.for_each([&result](TextureUsage texture_usage) {
@@ -3931,7 +3932,7 @@ namespace soul::gpu
       for (auto& image_barrier_list : context.image_barriers_) {
         image_barrier_list.resize(0);
       }
-      context.sync_dst_queues_ = FlagMap<QueueType, QueueFlags>(QueueFlags());
+      context.sync_dst_queues_ = FlagMap<QueueType, QueueFlags>::with_default_value(QueueFlags());
     }
   }
 

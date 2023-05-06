@@ -34,7 +34,7 @@ class MSAASample final : public App
   gpu::TextureSampleCount msaa_sample_count_ = gpu::TextureSampleCount::COUNT_4;
 
   static constexpr auto TEXTURE_SAMPLE_COUNT_NAME =
-    FlagMap<gpu::TextureSampleCount, const char*>::build_from_list(
+    FlagMap<gpu::TextureSampleCount, const char*>::from_val_list(
       {"1", "2", "4", "8", "16", "32", "64"});
 
   auto render(gpu::TextureNodeID render_target, gpu::RenderGraph& render_graph)

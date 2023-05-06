@@ -14,7 +14,7 @@ namespace soul::gpu::impl
 {
 
   auto SHADER_BUFFER_READ_USAGE_MAP =
-    FlagMap<ShaderBufferReadUsage, BufferUsageFlags>::build_from_list(
+    FlagMap<ShaderBufferReadUsage, BufferUsageFlags>::from_val_list(
       {BufferUsageFlags({BufferUsage::UNIFORM}), {BufferUsage::STORAGE}});
 
   constexpr auto get_buffer_usage_flags(ShaderBufferReadUsage usage) -> BufferUsageFlags
@@ -24,7 +24,7 @@ namespace soul::gpu::impl
 
   using ShaderBufferWriteMap = FlagMap<ShaderBufferWriteUsage, BufferUsageFlags>;
   auto SHADER_BUFFER_WRITE_USAGE_MAP =
-    ShaderBufferWriteMap::build_from_list({{BufferUsage::UNIFORM}, {BufferUsage::STORAGE}});
+    ShaderBufferWriteMap::from_val_list({{BufferUsage::UNIFORM}, {BufferUsage::STORAGE}});
 
   constexpr auto get_buffer_usage_flags(ShaderBufferWriteUsage usage) -> BufferUsageFlags
   {
@@ -32,7 +32,7 @@ namespace soul::gpu::impl
   }
 
   auto SHADER_TEXTURE_READ_USAGE_MAP =
-    FlagMap<ShaderTextureReadUsage, TextureUsageFlags>::build_from_list(
+    FlagMap<ShaderTextureReadUsage, TextureUsageFlags>::from_val_list(
       {{TextureUsage::SAMPLED}, {TextureUsage::STORAGE}});
 
   constexpr auto get_texture_usage_flags(ShaderTextureReadUsage usage) -> TextureUsageFlags
@@ -42,7 +42,7 @@ namespace soul::gpu::impl
 
   using ShaderTextureWriteMap = FlagMap<ShaderTextureWriteUsage, TextureUsageFlags>;
   auto SHADER_TEXTURE_WRITE_USAGE_MAP =
-    ShaderTextureWriteMap::build_from_list({{TextureUsage::STORAGE}});
+    ShaderTextureWriteMap::from_val_list({{TextureUsage::STORAGE}});
 
   constexpr auto get_texture_usage_flags(ShaderTextureWriteUsage usage) -> TextureUsageFlags
   {
@@ -856,7 +856,7 @@ namespace soul::gpu::impl
     RenderGraphRegistry registry(*gpu_system_, *this, render_pass, render_target.sample_count);
     RenderCompiler render_compiler(*gpu_system_, command_buffer.get_vk_handle());
     pass_node.get_pipeline_flags().for_each([&render_compiler](PipelineType pipeline_type) {
-      constexpr auto MAPPING = FlagMap<PipelineType, VkPipelineBindPoint>::build_from_list({
+      constexpr auto MAPPING = FlagMap<PipelineType, VkPipelineBindPoint>::from_val_list({
         VK_PIPELINE_BIND_POINT_MAX_ENUM,
         VK_PIPELINE_BIND_POINT_GRAPHICS,
         VK_PIPELINE_BIND_POINT_COMPUTE,
@@ -1171,7 +1171,7 @@ namespace soul::gpu::impl
 
       execute_pass(pass_index, cmd_buffer);
 
-      FlagMap<QueueType, bool> is_queue_type_dependent(false);
+      auto is_queue_type_dependent = FlagMap<QueueType, bool>::with_default_value(false);
       for (const BufferAccess& access : pass_info.buffer_accesses) {
         const BufferExecInfo& buffer_info = buffer_infos_[access.buffer_info_idx];
         if (buffer_info.pass_counter != buffer_info.passes.size() - 1) {
@@ -1518,7 +1518,7 @@ namespace soul::gpu::impl
         &texture_infos_[texture_info_id]);
 
       auto is_writable = [](const ShaderTextureReadUsage usage) -> bool {
-        auto mapping = FlagMap<ShaderTextureReadUsage, bool>::build_from_list({false, true});
+        auto mapping = FlagMap<ShaderTextureReadUsage, bool>::from_val_list({false, true});
         return mapping[usage];
       };
 
