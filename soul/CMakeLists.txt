@@ -77,7 +77,7 @@ target_link_system_libraries(
   Tracy::TracyClient
   PRIVATE
   dxc)
-target_compile_definitions(soul PUBLIC TRACY_ENABLE NOMINMAX)
+target_compile_definitions(soul PUBLIC TRACY_ENABLE NOMINMAX GLM_FORCE_SIZE_T_LENGTH)
 
 get_target_property(soul_include_directories soul INCLUDE_DIRECTORIES)
 message(STATUS "Soul include directories : ${soul_include_directories}")
