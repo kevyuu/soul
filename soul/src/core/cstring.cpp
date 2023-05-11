@@ -4,6 +4,7 @@
 
 #include "core/cstring.h"
 #include "core/dev_util.h"
+#include "memory/allocator.h"
 
 namespace soul
 {

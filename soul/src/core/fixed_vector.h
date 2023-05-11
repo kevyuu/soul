@@ -3,6 +3,7 @@
 #include "core/compiler.h"
 #include "core/config.h"
 #include "core/type.h"
+#include "memory/allocator.h"
 
 namespace soul
 {

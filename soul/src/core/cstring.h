@@ -2,7 +2,11 @@
 
 #include "core/config.h"
 #include "core/type.h"
-#include "memory/allocator.h"
+
+namespace soul::memory
+{
+  class Allocator;
+}
 
 namespace soul
 {

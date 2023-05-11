@@ -1,6 +1,9 @@
 #pragma once
 
-#include "memory/allocator.h"
+namespace soul::memory
+{
+  class Allocator;
+}
 
 namespace soul
 {
