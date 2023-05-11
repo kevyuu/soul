@@ -1,12 +1,12 @@
 #pragma once
 
 #include "core/cstring.h"
+#include "core/dev_util.h"
 #include "gpu/intern/bindless_descriptor_allocator.h"
 #include "gpu/type.h"
 
 #if defined(SOUL_ASSERT_ENABLE)
-#  define SOUL_VK_CHECK(result, message, ...)                                                      \
-    SOUL_ASSERT(0, result == VK_SUCCESS, "result = %d | " message, result, ##__VA_ARGS__)
+#  define SOUL_VK_CHECK(result, ...) SOUL_ASSERT(0, result == VK_SUCCESS, ##__VA_ARGS__)
 #else
 #  include <cstdlib>
 #  define SOUL_VK_CHECK(expr, message, ...)                                                        \
