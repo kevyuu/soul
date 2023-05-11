@@ -61,7 +61,7 @@ struct TestObject {
     ++sTOCopyCtorCount;
     id = sTOCtorCount;
     if (throwOnCopy) {
-      throw "Disallowed TestObject copy";
+      SOUL_PANIC("Disallowed TestObject copy");
     }
   }
 
@@ -80,7 +80,7 @@ struct TestObject {
       0; // We are swapping our contents with the TestObject, so give it our "previous" value.
     if (throwOnCopy) {
       std::cout << "Disallowd TestObject copy" << std::endl;
-      throw "Disallowed TestObject copy";
+      SOUL_PANIC("Disallowed TestObject copy");
     }
   }
 
@@ -94,7 +94,7 @@ struct TestObject {
       magicValue = testObject.magicValue;
       throwOnCopy = testObject.throwOnCopy;
       if (throwOnCopy) {
-        throw "Disallowed TestObject copy";
+        SOUL_PANIC("Disallowed TestObject copy");
       }
     }
     return *this;
@@ -112,7 +112,7 @@ struct TestObject {
       std::swap(throwOnCopy, testObject.throwOnCopy);
 
       if (throwOnCopy) {
-        throw "Disallowed TestObject copy";
+        SOUL_PANIC("Disallowed TestObject copy");
       }
     }
     return *this;
