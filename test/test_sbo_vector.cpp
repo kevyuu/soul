@@ -518,7 +518,7 @@ auto test_resize(const soul_size vec_size, const soul_size resize_size) -> void
       const auto destructed_objects_count = std::accumulate(
         original_sequence.begin() + resize_size,
         original_sequence.end(),
-        0,
+        soul_size(0),
         [](const soul_size prev, const ListTestObject& curr) { return prev + curr.size(); });
       SOUL_TEST_ASSERT_EQ(
         TestObject::sTODtorCount - TestObject::sTOCtorCount, destructed_objects_count);

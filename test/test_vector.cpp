@@ -456,7 +456,7 @@ TEST_F(TestVectorManipulation, TestVectorResize)
         const auto destructed_objects_count = std::accumulate(
           test_copy.begin() + size,
           test_copy.end(),
-          0,
+          soul_size(0),
           [](const soul_size prev, const ListTestObject& curr) { return prev + curr.size(); });
         SOUL_TEST_ASSERT_EQ(
           TestObject::sTODtorCount - TestObject::sTOCtorCount, destructed_objects_count);

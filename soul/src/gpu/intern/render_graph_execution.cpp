@@ -224,9 +224,15 @@ namespace soul::gpu::impl
       };
 
     const soul_size internal_view_count = std::accumulate(
-      internal_textures.begin(), internal_textures.end(), 0u, fold_internal_texture_view_count);
+      internal_textures.begin(),
+      internal_textures.end(),
+      soul_size(0),
+      fold_internal_texture_view_count);
     const soul_size external_view_count = std::accumulate(
-      external_textures.begin(), external_textures.end(), 0u, fold_external_texture_view_count);
+      external_textures.begin(),
+      external_textures.end(),
+      soul_size(0),
+      fold_external_texture_view_count);
     texture_view_infos_.resize(internal_view_count + external_view_count);
 
     for (soul_size texture_info_idx = 0, view_offset = 0;

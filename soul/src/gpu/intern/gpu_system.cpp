@@ -1948,7 +1948,7 @@ namespace soul::gpu
     auto total_source_size = std::accumulate(
       shader_sources.begin(),
       shader_sources.end(),
-      0,
+      soul_size(0),
       [](const soul_size prev_size, const CString* source) -> soul_size {
         return prev_size + source->size();
       });
@@ -3885,7 +3885,7 @@ namespace soul::gpu
       const auto image_barrier_capacity = std::accumulate(
         thread_contexts_.begin(),
         thread_contexts_.end(),
-        0u,
+        soul_size(0),
         [queue_type](const soul_size capacity, const ThreadContext& thread_context) -> soul_size {
           return capacity + thread_context.image_barriers_[queue_type].size();
         });
