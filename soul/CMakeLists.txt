@@ -10,6 +10,7 @@ set(SOUL_HEADERS
     src/core/log.h
     src/core/math.h
     src/core/packed_pool.h
+    src/core/profile.h
     src/core/pool.h
     src/core/static_array.h
     src/core/type.h

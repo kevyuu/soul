@@ -2,6 +2,7 @@
 
 #include "core/architecture.h"
 #include "core/dev_util.h"
+#include "core/profile.h"
 #include "memory/allocators/linear_allocator.h"
 #include "memory/allocators/proxy_allocator.h"
 #include "runtime/system.h"
