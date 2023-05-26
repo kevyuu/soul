@@ -111,18 +111,13 @@ namespace soul
 
   template <typename T>
   PackedPool<T>::PackedPool(PackedPool&& other) noexcept
+      : allocator_(std::move(other.allocator_)),
+        pool_ids_(std::exchange(other.pool_ids_, nullptr)),
+        buffer_(std::exchange(other.buffer_, nullptr)),
+        capacity_(std::exchange(other.capacity_, 0)),
+        size_(std::exchange(other.size_, 0))
   {
-    allocator_ = std::move(other.allocator_);
     new (&internal_indexes_) IndexPool(std::move(other.internal_indexes_));
-    pool_ids_ = std::move(other.pool_ids_);
-    buffer_ = std::move(other.buffer_);
-    size_ = std::move(other.size_);
-    capacity_ = std::move(other.capacity_);
-
-    other.pool_ids_ = nullptr;
-    other.buffer_ = nullptr;
-    other.size_ = 0;
-    other.capacity_ = 0;
   }
 
   template <typename T>

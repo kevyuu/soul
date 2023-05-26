@@ -48,7 +48,7 @@ namespace soul::util
         x >>= 2;
       }
 
-      return (n - (static_cast<uint32>(x) & 1));
+      return (n - (static_cast<uint32>(x) & 1u));
     }
     return std::nullopt;
   }
@@ -152,6 +152,7 @@ namespace soul::util
 #define SCOPE_EXIT(code)                                                                           \
   auto STRING_JOIN2(scope_exit_, __LINE__) = soul::util::make_scope_exit([=]() { code; })
 
+  // NOLINTBEGIN(cert-err33-c)
   inline auto load_file(const char* filepath, memory::Allocator& allocator) -> CString
   {
     FILE* file = nullptr;
@@ -170,6 +171,7 @@ namespace soul::util
 
     return string;
   }
+  // NOLINTEND(cert-err33-c)
 
   constexpr auto hash_fnv1_bytes(
     const uint8* data, const soul_size size, const uint64 initial = 0xcbf29ce484222325ull) -> uint64
@@ -201,7 +203,7 @@ namespace soul::util
     }
   }
 
-  [[nodiscard]] SOUL_ALWAYS_INLINE auto get_random_color() -> vec3f
+  [[nodiscard]] inline auto get_random_color() -> vec3f
   {
     return {
       get_random_number<float>(0.0f, 1.0f),

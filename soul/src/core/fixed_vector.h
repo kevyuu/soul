@@ -96,10 +96,10 @@ namespace soul
 
   template <typename T, memory::allocator_type AllocatorType>
   FixedVector<T, AllocatorType>::FixedVector(FixedVector&& other) noexcept
+      : allocator_(std::move(other.allocator_)),
+        buffer_(std::move(other.buffer_)),
+        size_(std::move(other.size_))
   {
-    allocator_ = std::move(other.allocator_);
-    buffer_ = std::move(other.buffer_);
-    size_ = std::move(other.size_);
     other.buffer_ = nullptr;
   }
 

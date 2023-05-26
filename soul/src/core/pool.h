@@ -84,7 +84,7 @@ namespace soul
     auto copy_units(const Pool<T, AllocatorType>& other) -> void;
     auto destruct_units() -> void;
 
-    auto init_reserve(size_type capacity) -> void;
+    auto allocate_storage(size_type capacity) -> void;
   };
 
   template <typename T, memory::allocator_type AllocatorType>
@@ -95,22 +95,26 @@ namespace soul
 
   template <typename T, memory::allocator_type AllocatorType>
   Pool<T, AllocatorType>::Pool(const Pool& other)
-      : allocator_(other.allocator_), bit_vector_(other.bit_vector_), buffer_(nullptr)
+      : allocator_(other.allocator_),
+        bit_vector_(other.bit_vector_),
+        buffer_(nullptr),
+        size_(other.size_),
+        free_list_(other.free_list_)
   {
-    init_reserve(other.capacity_);
+    allocate_storage(other.capacity_);
     copy_units(other);
-    free_list_ = other.free_list_;
-    size_ = other.size_;
   }
 
   template <typename T, memory::allocator_type AllocatorType>
   Pool<T, AllocatorType>::Pool(const Pool& other, AllocatorType& allocator)
-      : allocator_(allocator), bit_vector_(other.bit_vector_), buffer_(nullptr)
+      : allocator_(allocator),
+        bit_vector_(other.bit_vector_),
+        buffer_(nullptr),
+        size_(other.size_),
+        free_list_(other.free_list_)
   {
-    init_reserve(other.capacity_);
+    allocate_storage(other.capacity_);
     copy_units(other);
-    free_list_ = other.free_list_;
-    size_ = other.size_;
   }
 
   template <typename T, memory::allocator_type AllocatorType>
@@ -122,18 +126,14 @@ namespace soul
   }
 
   template <typename T, memory::allocator_type AllocatorType>
-  Pool<T, AllocatorType>::Pool(Pool&& other) noexcept : bit_vector_(std::move(other.bit_vector_))
+  Pool<T, AllocatorType>::Pool(Pool&& other) noexcept
+      : allocator_(std::move(other.allocator_)),
+        bit_vector_(std::move(other.bit_vector_)),
+        buffer_(std::exchange(other.buffer_, nullptr)),
+        capacity_(std::exchange(other.capacity_, 0)),
+        size_(std::exchange(other.size_, 0)),
+        free_list_(std::exchange(other.free_list_, 0))
   {
-    allocator_ = std::move(other.allocator_);
-    buffer_ = std::move(other.buffer_);
-    capacity_ = std::move(other.capacity_);
-    size_ = std::move(other.size_);
-    free_list_ = std::move(other.free_list_);
-
-    other.buffer_ = nullptr;
-    other.capacity_ = 0;
-    other.size_ = 0;
-    other.free_list_ = 0;
   }
 
   template <typename T, memory::allocator_type AllocatorType>
@@ -245,15 +245,10 @@ namespace soul
   }
 
   template <typename T, memory::allocator_type AllocatorType>
-  auto Pool<T, AllocatorType>::init_reserve(size_type capacity) -> void
+  auto Pool<T, AllocatorType>::allocate_storage(size_type capacity) -> void
   {
     buffer_ = allocator_->template allocate_array<Unit>(capacity);
-    for (size_type i = 0; i < capacity; i++) {
-      buffer_[i].next = i + 1;
-    }
-    free_list_ = size_;
     capacity_ = capacity;
-
     bit_vector_.resize(capacity_);
   }
 

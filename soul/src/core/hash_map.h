@@ -39,11 +39,8 @@ namespace soul
     }
 
     HashMap(const HashMap& other)
+        : size_(other.size()), capacity_(other.capacity()), max_dib_(other.max_dib_)
     {
-      capacity_ = other.capacity();
-      size_ = other.size();
-      max_dib_ = other.max_dib_;
-
       indexes_ = allocator_->allocate_array<Index>(capacity_);
       memcpy(indexes_, other.indexes_, sizeof(Index) * capacity_);
 
@@ -61,19 +58,13 @@ namespace soul
     }
 
     HashMap(HashMap&& other) noexcept
+        : allocator_(std::move(other.allocator_)),
+          indexes_(std::exchange(other.indexes_, nullptr)),
+          values_(std::exchange(other.values_, nullptr)),
+          size_(std::exchange(other.size_, 0)),
+          capacity_(std::exchange(other.capacity_, 0)),
+          max_dib_(std::exchange(other.max_dib_, 0))
     {
-      indexes_ = std::move(other.indexes_);
-      values_ = std::move(other.values_);
-      size_ = std::move(other.size_);
-      capacity_ = std::move(other.capacity_);
-      max_dib_ = std::move(other.max_dib_);
-      allocator_ = std::move(other.allocator_);
-
-      other.indexes_ = nullptr;
-      other.values_ = nullptr;
-      other.size_ = 0;
-      other.capacity_ = 0;
-      other.max_dib_ = 0;
     }
 
     auto operator=(HashMap&& other) noexcept -> HashMap&

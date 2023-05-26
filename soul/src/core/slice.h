@@ -19,8 +19,8 @@ namespace soul
 
     Slice(const Slice& other) = default;
     auto operator=(const Slice& other) -> Slice& = default;
-    Slice(Slice&& other) = default;
-    auto operator=(Slice&& other) -> Slice& = default;
+    Slice(Slice&& other) noexcept = default;
+    auto operator=(Slice&& other) noexcept -> Slice& = default;
     ~Slice() = default;
 
     auto set(Vector<T>* array, soul_size begin, soul_size end) -> void

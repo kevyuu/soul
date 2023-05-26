@@ -25,7 +25,7 @@ namespace soul
     CString(const char*, memory::Allocator& allocator);
 
     explicit CString(memory::Allocator* allocator = get_default_allocator());
-    CString(const char*);
+    CString(const char*); // NOLINT(hicpp-explicit-conversions)
 
     CString(const CString&);
     auto operator=(const CString&) -> CString&;

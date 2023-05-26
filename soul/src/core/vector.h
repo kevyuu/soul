@@ -39,8 +39,10 @@ namespace soul
     template <std::input_iterator Iterator>
     Vector(Iterator first, Iterator last, AllocatorType& allocator = *get_default_allocator());
 
+    // NOLINTBEGIN(hicpp-explicit-conversions)
     template <soul_size ArraySize>
     Vector(std::array<T, ArraySize>&& arr, AllocatorType& allocator = *get_default_allocator());
+    // NOLINTEND(hicpp-explicit-conversions)
 
     auto operator=(const Vector& rhs) -> Vector&;
     auto operator=(Vector&& other) noexcept -> Vector&;
@@ -183,21 +185,19 @@ namespace soul
 
   template <typename T, memory::allocator_type AllocatorType, soul_size N>
   Vector<T, AllocatorType, N>::Vector(soul_size size, AllocatorType& allocator)
-      : allocator_(&allocator)
+      : allocator_(&allocator), size_(size)
   {
     init_reserve(size);
     std::uninitialized_value_construct_n(buffer_, size);
-    size_ = size;
   }
 
   template <typename T, memory::allocator_type AllocatorType, soul_size N>
   Vector<T, AllocatorType, N>::Vector(
     soul_size size, const value_type& val, AllocatorType& allocator)
-      : allocator_(&allocator)
+      : allocator_(&allocator), size_(size)
   {
     init_reserve(size);
     std::uninitialized_fill_n(buffer_, size, val);
-    size_ = size;
   }
 
   template <typename T, memory::allocator_type AllocatorType, soul_size N>
@@ -249,12 +249,11 @@ namespace soul
   template <typename T, memory::allocator_type AllocatorType, soul_size N>
   template <soul_size ArraySize>
   Vector<T, AllocatorType, N>::Vector(std::array<T, ArraySize>&& arr, AllocatorType& allocator)
-      : allocator_(&allocator)
+      : allocator_(&allocator), size_(ArraySize)
   {
     init_reserve(ArraySize);
     std::uninitialized_copy(
       std::make_move_iterator(std::begin(arr)), std::make_move_iterator(std::end(arr)), buffer_);
-    size_ = ArraySize;
   }
 
   template <typename T, memory::allocator_type AllocatorType, soul_size N>

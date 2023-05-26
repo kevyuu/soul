@@ -30,7 +30,7 @@ namespace soul
 
     IntrusiveListIterator();
     explicit IntrusiveListIterator(pointer node);
-    IntrusiveListIterator(const iterator& x);
+    IntrusiveListIterator(const iterator& x); // NOLINT(hicpp-explicit-conversions)
     auto operator=(const iterator& x) -> IntrusiveListIterator&;
 
     auto operator*() const -> reference;
@@ -410,6 +410,7 @@ namespace soul
     return const_iterator(static_cast<const T*>(&anchor_));
   }
 
+  // NOLINTBEGIN(cppcoreguidelines-pro-type-const-cast)
   template <intrusive_node_type T>
   auto IntrusiveList<T>::insert(const_iterator pos, value_type& x) -> iterator
   {
@@ -506,7 +507,7 @@ namespace soul
   template <intrusive_node_type T>
   // ReSharper disable once CppMemberFunctionMayBeStatic
   auto IntrusiveList<T>::splice(
-    const_iterator pos, this_type& list, const_iterator first, const_iterator last) -> void
+    const_iterator pos, this_type& /*list*/, const_iterator first, const_iterator last) -> void
   {
     if (first != last) {
       IntrusiveListNode& first_node = *const_cast<node_type*>(first.node);
@@ -524,5 +525,6 @@ namespace soul
       new_prev.next = &first_node;
     }
   }
+  // NOLINTEND(cppcoreguidelines-pro-type-const-cast)
 
 } // namespace soul

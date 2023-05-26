@@ -9,6 +9,7 @@ namespace soul
   class BitRef
   {
   public:
+    using this_type = BitRef<BlockType>;
     BitRef(BlockType* ptr, soul_size bit_index);
 
     ~BitRef() = default;
@@ -22,14 +23,14 @@ namespace soul
     auto operator^=(bool val) -> BitRef&;
 
     auto operator~() const -> bool;
-    operator bool() const;
+    operator bool() const; // NOLINT(hicpp-explicit-conversions)
     auto flip() -> BitRef&;
 
     auto operator&() -> void = delete; // NOLINT(google-runtime-operator)
 
   private:
     BitRef(const BitRef&) = default;
-    BitRef(BitRef&&) = default;
+    BitRef(BitRef&&) noexcept = default;
 
     BlockType* bit_block_ = nullptr;
     soul_size bit_index_ = 0;
@@ -59,14 +60,14 @@ namespace soul
     return *this;
   }
 
+  // NOLINTBEGIN(cert-oop54-cpp, bugprone-unhandled-self-assignment)
   template <bit_block_type ElementType>
   auto BitRef<ElementType>::operator=(const BitRef& rhs) -> BitRef<ElementType>&
-  // NOLINT(bugprone-unhandled-self-assignment)
-
   {
     *this = static_cast<bool>(rhs);
     return *this;
   }
+  // NOLINTEND(cert-oop54-cpp, bugprone-unhandled-self-assignment)
 
   template <bit_block_type BlockType>
   auto BitRef<BlockType>::operator=(BitRef&& rhs) noexcept -> BitRef<BlockType>&

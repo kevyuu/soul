@@ -37,11 +37,12 @@ namespace soul
     using store_type = Bitset<FLAG_COUNT>;
 
     // Default constructor (all 0s)
-    constexpr FlagSet() = default;
-    constexpr FlagSet(const FlagSet& other) = default;
-    constexpr auto operator=(const FlagSet& other) -> FlagSet& = default;
-    constexpr FlagSet(FlagSet&& other) = default;
-    constexpr ~FlagSet() = default;
+    constexpr FlagSet() noexcept = default;
+    constexpr FlagSet(const FlagSet& other) noexcept = default;
+    constexpr auto operator=(const FlagSet& other) noexcept -> FlagSet& = default;
+    constexpr FlagSet(FlagSet&& other) noexcept = default;
+    constexpr auto operator=(FlagSet&& other) noexcept -> FlagSet& = default;
+    constexpr ~FlagSet() noexcept = default;
 
     // Initializer list constructor
     constexpr FlagSet(std::initializer_list<flag_type> init_list);
@@ -63,8 +64,8 @@ namespace soul
     [[nodiscard]] constexpr auto count() const -> size_t;
     [[nodiscard]] constexpr auto size() const -> size_t;
     [[nodiscard]] constexpr auto test(flag_type bit) const -> bool;
-    [[nodiscard]] constexpr auto test_any(FlagSet) const -> bool;
-    [[nodiscard]] constexpr auto test_any(std::initializer_list<flag_type>) const -> bool;
+    [[nodiscard]] constexpr auto test_any(FlagSet other) const -> bool;
+    [[nodiscard]] constexpr auto test_any(std::initializer_list<flag_type> other) const -> bool;
     [[nodiscard]] constexpr auto any() const -> bool;
     [[nodiscard]] constexpr auto none() const -> bool;
 
