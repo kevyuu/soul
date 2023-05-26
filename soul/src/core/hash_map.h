@@ -3,7 +3,7 @@
 #include <functional>
 
 #include "core/config.h"
-#include "core/dev_util.h"
+#include "core/panic.h"
 #include "core/type.h"
 #include "core/util.h"
 #include "runtime/runtime.h"

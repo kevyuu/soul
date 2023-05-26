@@ -1,7 +1,7 @@
 #pragma once
 
 #include "core/cstring.h"
-#include "core/dev_util.h"
+#include "core/panic.h"
 #include "gpu/intern/bindless_descriptor_allocator.h"
 #include "gpu/type.h"
 

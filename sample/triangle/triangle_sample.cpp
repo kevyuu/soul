@@ -1,3 +1,4 @@
+#include "core/panic.h"
 #include "core/type.h"
 #include "gpu/gpu.h"
 

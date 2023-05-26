@@ -3,12 +3,11 @@
 #include <cstdio>
 
 #include "core/cstring.h"
-#include "core/dev_util.h"
+#include "core/panic.h"
 #include "memory/allocator.h"
 
 namespace soul
 {
-
   CString::CString(memory::Allocator* allocator) : allocator_(allocator)
   {
     reserve(1);

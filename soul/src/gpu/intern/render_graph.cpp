@@ -1,5 +1,5 @@
 #include "gpu/render_graph.h"
-#include "core/dev_util.h"
+#include "core/panic.h"
 #include "gpu/system.h"
 
 namespace soul::gpu

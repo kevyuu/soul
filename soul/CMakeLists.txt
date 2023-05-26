@@ -4,12 +4,13 @@ set(SOUL_HEADERS
     src/core/architecture.h
     src/core/vector.h
     src/core/config.h
-    src/core/dev_util.h
+    src/core/panic.h
     src/core/uint64_hash_map.h
     src/core/hash_map.h
     src/core/log.h
     src/core/math.h
     src/core/packed_pool.h
+    src/core/panic.h
     src/core/profile.h
     src/core/pool.h
     src/core/static_array.h
@@ -46,7 +47,7 @@ set(SOUL_SOURCES_WINDOWS src/memory/intern/windows/page_allocator.cpp)
 
 set(SOUL_SOURCES
     src/core/log.cpp
-    src/core/dev_util.cpp
+    src/core/panic.cpp
     src/core/cstring.cpp
     src/gpu/intern/common.cpp
     src/gpu/intern/glfw_wsi.cpp

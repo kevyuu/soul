@@ -1,6 +1,6 @@
 #include <iostream>
 
-#include "core/dev_util.h"
+#include "panic.h"
 
 #if defined(SOUL_PROFILE_CPU_BACKEND_NVTX)
 #  include <Windows.h>

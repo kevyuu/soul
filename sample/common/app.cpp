@@ -1,7 +1,7 @@
 #include "app.h"
 #include "imgui_impl_glfw.h"
 
-#include "core/dev_util.h"
+#include "core/panic.h"
 #include "core/log.h"
 #include "core/type.h"
 

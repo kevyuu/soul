@@ -3,7 +3,7 @@
 #include "core/bit_vector.h"
 #include "core/compiler.h"
 #include "core/config.h"
-#include "core/dev_util.h"
+#include "core/panic.h"
 #include "core/type.h"
 #include "memory/allocator.h"
 

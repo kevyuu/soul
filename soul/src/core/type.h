@@ -9,7 +9,7 @@
 #include "glm/vec3.hpp"
 #include "glm/vec4.hpp"
 
-#include "core/dev_util.h"
+#include "core/panic.h"
 #include "core/type_traits.h"
 
 using int8 = int8_t;

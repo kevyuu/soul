@@ -6,7 +6,7 @@
 #include <variant>
 
 #include "core/cstring.h"
-#include "core/dev_util.h"
+#include "core/panic.h"
 #include "core/log.h"
 #include "core/profile.h"
 #include "core/string_util.h"
