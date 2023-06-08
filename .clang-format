@@ -8,6 +8,7 @@ AlwaysBreakAfterReturnType: None
 AlwaysBreakTemplateDeclarations: Yes
 BinPackArguments: false
 BinPackParameters: false
+BreakAfterAttributes: Always
 BreakBeforeBraces: Linux
 BreakBeforeConceptDeclarations: Always
 ColumnLimit: 100
