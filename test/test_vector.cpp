@@ -8,6 +8,7 @@
 
 #include "core/config.h"
 #include "core/vector.h"
+#include "core/views.h"
 #include "memory/allocator.h"
 
 #include "util.h"
@@ -21,7 +22,6 @@ namespace soul
   }
 } // namespace soul
 
-using ListTestObject = std::list<TestObject>;
 using VectorInt = soul::Vector<int>;
 using VectorObj = soul::Vector<TestObject>;
 using VectorListObj = soul::Vector<ListTestObject>;
@@ -36,14 +36,18 @@ static auto generate_random_array(T* arr, soul_size size) -> void
   std::mt19937 random_engine(random_device());
   std::uniform_int_distribution<int> dist(1, 100);
   for (soul_size i = 0; i < size; i++) {
-    arr[i] = T(dist(random_engine));
+    if constexpr (std::same_as<T, ListTestObject>) {
+      arr[i] = T::with_size(dist(random_engine));
+    } else {
+      arr[i] = T(dist(random_engine));
+    }
   }
 }
 
 template <typename T>
-auto all_equal(soul::Vector<T>& vec, const T& val) -> bool
+auto all_equal(const soul::Vector<T>& vec, const T& val) -> bool
 {
-  return std::ranges::all_of(vec, [val](const T& x) { return x == val; });
+  return std::ranges::all_of(vec, [&val](const T& x) { return x == val; });
 }
 
 template <typename T, soul_size N>
@@ -53,20 +57,20 @@ auto verify_vector(const soul::Vector<T>& vec, const std::array<T, N>& arr) -> b
 }
 
 template <typename T>
-auto test_constructor() -> void
+auto test_default_constructor() -> void
 {
   soul::Vector<T> vector;
   SOUL_TEST_ASSERT_TRUE(vector.empty());
 }
 
-TEST(TestVectorConstructor, TestDefaultConstructor)
+TEST(TestVectorConstruction, TestDefaultConstructor)
 {
-  SOUL_TEST_RUN(test_constructor<int>());
-  SOUL_TEST_RUN(test_constructor<TestObject>());
-  SOUL_TEST_RUN(test_constructor<ListTestObject>());
+  SOUL_TEST_RUN(test_default_constructor<int>());
+  SOUL_TEST_RUN(test_default_constructor<TestObject>());
+  SOUL_TEST_RUN(test_default_constructor<ListTestObject>());
 }
 
-TEST(TestVectorConstructor, TestCustomAllocatorConstructor)
+TEST(TestVectorConstruction, TestCustomAllocatorConstructor)
 {
   TestObject::reset();
   TestAllocator::reset_all();
@@ -88,85 +92,135 @@ TEST(TestVectorConstructor, TestCustomAllocatorConstructor)
 }
 
 template <typename T>
-auto test_constructor_with_size(const soul_size size) -> void
+auto test_construction_with_size(const soul_size size) -> void
 {
-  soul::Vector<T> vector(size);
+  auto vector = soul::Vector<T>::with_size(size);
   SOUL_TEST_ASSERT_EQ(vector.size(), size);
   SOUL_TEST_ASSERT_TRUE(all_equal(vector, T()));
 }
 
-TEST(TestVectorConstructor, TestConstructorWithSize)
+TEST(TestVectorConstruction, TestConstructionWithSize)
 {
-  SOUL_TEST_RUN(test_constructor_with_size<int>(CONSTRUCTOR_VECTOR_SIZE));
-  SOUL_TEST_RUN(test_constructor_with_size<TestObject>(CONSTRUCTOR_VECTOR_SIZE));
-  SOUL_TEST_RUN(test_constructor_with_size<ListTestObject>(CONSTRUCTOR_VECTOR_SIZE));
+  SOUL_TEST_RUN(test_construction_with_size<int>(CONSTRUCTOR_VECTOR_SIZE));
+  SOUL_TEST_RUN(test_construction_with_size<TestObject>(CONSTRUCTOR_VECTOR_SIZE));
+  SOUL_TEST_RUN(test_construction_with_size<ListTestObject>(CONSTRUCTOR_VECTOR_SIZE));
 
-  SOUL_TEST_RUN(test_constructor_with_size<int>(0));
-  SOUL_TEST_RUN(test_constructor_with_size<TestObject>(0));
-  SOUL_TEST_RUN(test_constructor_with_size<ListTestObject>(0));
+  SOUL_TEST_RUN(test_construction_with_size<int>(0));
+  SOUL_TEST_RUN(test_construction_with_size<TestObject>(0));
+  SOUL_TEST_RUN(test_construction_with_size<ListTestObject>(0));
 }
 
 template <typename T>
-auto test_constructor_with_size_and_value(const soul_size size, const T& val) -> void
+auto test_construction_fill_n(const soul_size size, const T& val) -> void
 {
-  soul::Vector<T> vector(size, val);
+  auto vector = soul::Vector<T>::fill_n(size, val);
   SOUL_TEST_ASSERT_EQ(vector.size(), size);
   SOUL_TEST_ASSERT_TRUE(all_equal(vector, val));
 }
 
-TEST(TestVectorConstructor, TestConstrucorWithSizeAndValue)
+TEST(TestVectorConstruction, TestConstructorFillN)
 {
-  SOUL_TEST_RUN(test_constructor_with_size_and_value(
-    CONSTRUCTOR_VECTOR_SIZE, CONSTRUCTOR_VECTOR_DEFAULT_VALUE));
-  SOUL_TEST_RUN(test_constructor_with_size_and_value(
-    CONSTRUCTOR_VECTOR_SIZE, TestObject(CONSTRUCTOR_VECTOR_DEFAULT_VALUE)));
-  SOUL_TEST_RUN(test_constructor_with_size_and_value(
-    CONSTRUCTOR_VECTOR_SIZE, ListTestObject(CONSTRUCTOR_VECTOR_SIZE)));
+  SOUL_TEST_RUN(
+    test_construction_fill_n(CONSTRUCTOR_VECTOR_SIZE, CONSTRUCTOR_VECTOR_DEFAULT_VALUE));
 }
 
-class TestVectorConstructorWithSourceData : public testing::Test
+template <typename T, soul::ts_generate_fn<T> Fn>
+void test_construction_generate_n(Fn fn, const soul_size size)
+{
+  T val = std::invoke(fn);
+  const auto vector = soul::Vector<T>::generate_n(fn, size);
+  SOUL_TEST_ASSERT_EQ(vector.size(), size);
+  SOUL_TEST_ASSERT_TRUE(all_equal(vector, val));
+}
+
+TEST(TestVectorConstruction, TestConstructionGenerateN)
+{
+  SOUL_TEST_RUN(test_construction_generate_n<int>(
+    [] { return CONSTRUCTOR_VECTOR_DEFAULT_VALUE; }, CONSTRUCTOR_VECTOR_SIZE));
+
+  static auto test_object_factory = [] { return TestObject(CONSTRUCTOR_VECTOR_DEFAULT_VALUE); };
+
+  SOUL_TEST_RUN(
+    test_construction_generate_n<TestObject>(test_object_factory, CONSTRUCTOR_VECTOR_SIZE));
+  SOUL_TEST_RUN(test_construction_generate_n<ListTestObject>(
+    [] { return ListTestObject::generate_n(test_object_factory, CONSTRUCTOR_VECTOR_SIZE); },
+    CONSTRUCTOR_VECTOR_SIZE));
+}
+
+template <typename T>
+void test_construction_with_capacity(const soul_size capacity)
+{
+  const auto vector = soul::Vector<T>::with_capacity(capacity);
+  SOUL_TEST_ASSERT_EQ(vector.size(), 0);
+  SOUL_TEST_ASSERT_EQ(vector.capacity(), capacity);
+}
+
+TEST(TestVectorConstruction, TestConstructionWithCapacity)
+{
+  SOUL_TEST_RUN(test_construction_with_capacity<int>(5));
+
+  SOUL_TEST_RUN(test_construction_with_capacity<TestObject>(0));
+  SOUL_TEST_RUN(test_construction_with_capacity<TestObject>(10));
+
+  SOUL_TEST_RUN(test_construction_with_capacity<ListTestObject>(0));
+  SOUL_TEST_RUN(test_construction_with_capacity<ListTestObject>(20));
+}
+
+TEST(TestVectorConstruction, TestVectorConstructionFromTransform)
+{
+  const auto vector = soul::Vector<TestObject>::transform(
+    std::views::iota(0, 10), [](int val) { return TestObject(val); });
+
+  SOUL_TEST_ASSERT_EQ(vector.size(), 10);
+  for (auto i : std::views::iota(0, 10)) {
+    SOUL_TEST_ASSERT_EQ(vector[i], TestObject(i));
+  }
+}
+
+class TestVectorConstructionWithSourceData : public testing::Test
 {
 public:
-  VectorInt vectorIntSrc{CONSTRUCTOR_VECTOR_SIZE, CONSTRUCTOR_VECTOR_DEFAULT_VALUE};
-  soul::Vector<TestObject> vectorToSrc{
-    CONSTRUCTOR_VECTOR_SIZE, TestObject(CONSTRUCTOR_VECTOR_DEFAULT_VALUE)};
-  soul::Vector<ListTestObject> vectorListToSrc{
-    CONSTRUCTOR_VECTOR_SIZE, ListTestObject(CONSTRUCTOR_VECTOR_DEFAULT_VALUE)};
+  VectorInt vectorIntSrc =
+    VectorInt::fill_n(CONSTRUCTOR_VECTOR_SIZE, CONSTRUCTOR_VECTOR_DEFAULT_VALUE);
+  VectorObj vectorToSrc = VectorObj::generate_n(
+    [] { return TestObject(CONSTRUCTOR_VECTOR_DEFAULT_VALUE); }, CONSTRUCTOR_VECTOR_SIZE);
+  soul::Vector<ListTestObject> vectorListToSrc = soul::Vector<ListTestObject>::generate_n(
+    [] { return ListTestObject::with_size(CONSTRUCTOR_VECTOR_SIZE); }, CONSTRUCTOR_VECTOR_SIZE);
 };
 
-TEST_F(TestVectorConstructorWithSourceData, TestCopyConstructor)
+TEST_F(TestVectorConstructionWithSourceData, TestClone)
 {
-  auto test_copy_constructor = []<typename T>(const soul::Vector<T>& vector_src) {
-    soul::Vector<T> vector_dst(vector_src);
+  auto test_clone = []<typename T>(const soul::Vector<T>& vector_src) {
+    soul::Vector<T> vector_dst = vector_src.clone();
     SOUL_TEST_ASSERT_TRUE(std::ranges::equal(vector_dst, vector_src));
   };
 
-  SOUL_TEST_RUN(test_copy_constructor(vectorIntSrc));
-  SOUL_TEST_RUN(test_copy_constructor(vectorToSrc));
-  SOUL_TEST_RUN(test_copy_constructor(vectorListToSrc));
+  SOUL_TEST_RUN(test_clone(vectorIntSrc));
+  SOUL_TEST_RUN(test_clone(vectorToSrc));
+  SOUL_TEST_RUN(test_clone(vectorListToSrc));
 }
 
-TEST_F(TestVectorConstructorWithSourceData, TestCopyConstructorWithCustomAllocator)
+TEST_F(TestVectorConstructionWithSourceData, TestCloneWithCustomAllocator)
 {
-  auto test_constructor_with_custom_allocator = []<typename T>(const soul::Vector<T>& vector_src) {
+  auto test_clone_with_custom_allocator = []<typename T>(const soul::Vector<T>& vector_src) {
     TestAllocator::reset_all();
     TestAllocator test_allocator;
 
     SOUL_TEST_ASSERT_EQ(test_allocator.allocCount, 0);
-    soul::Vector<T> vector_dst(vector_src, test_allocator);
+    soul::Vector<T> vector_dst = vector_src.clone(test_allocator);
     SOUL_TEST_ASSERT_TRUE(std::ranges::equal(vector_src, vector_dst));
     SOUL_TEST_ASSERT_EQ(test_allocator.allocCount, 1);
   };
 
-  SOUL_TEST_RUN(test_constructor_with_custom_allocator(vectorIntSrc));
-  SOUL_TEST_RUN(test_constructor_with_custom_allocator(vectorToSrc));
-  SOUL_TEST_RUN(test_constructor_with_custom_allocator(vectorListToSrc));
+  SOUL_TEST_RUN(test_clone_with_custom_allocator(vectorIntSrc));
+  SOUL_TEST_RUN(test_clone_with_custom_allocator(vectorToSrc));
+  SOUL_TEST_RUN(test_clone_with_custom_allocator(vectorListToSrc));
 }
 
-TEST_F(TestVectorConstructorWithSourceData, TestMoveConstructor)
+TEST_F(TestVectorConstructionWithSourceData, TestMoveConstructor)
 {
   auto test_move_constructor = []<typename T>(const soul::Vector<T>& vector_src) {
-    soul::Vector<T> vector_src_copy(vector_src);
+    soul::Vector<T> vector_src_copy = vector_src.clone();
     soul::Vector<T> vector_dst(std::move(vector_src_copy));
     SOUL_TEST_ASSERT_TRUE(std::ranges::equal(vector_dst, vector_src));
   };
@@ -176,33 +230,34 @@ TEST_F(TestVectorConstructorWithSourceData, TestMoveConstructor)
   SOUL_TEST_RUN(test_move_constructor(vectorListToSrc));
 }
 
-TEST_F(TestVectorConstructorWithSourceData, TestIteratorConstructor)
+TEST_F(TestVectorConstructionWithSourceData, TestRangeConstruction)
 {
-  auto test_iterator_constructor = []<typename T>(const soul::Vector<T>& vector_src) {
-    soul::Vector<T> vector_dst(vector_src.begin(), vector_src.end());
+  auto test_range_construction = []<typename T>(const soul::Vector<T>& vector_src) {
+    auto vector_dst = soul::Vector<T>::from(vector_src | soul::views::duplicate<T>());
     SOUL_TEST_ASSERT_TRUE(std::ranges::equal(vector_dst, vector_src));
   };
 
-  SOUL_TEST_RUN(test_iterator_constructor(vectorIntSrc));
-  SOUL_TEST_RUN(test_iterator_constructor(vectorToSrc));
-  SOUL_TEST_RUN(test_iterator_constructor(vectorListToSrc));
+  SOUL_TEST_RUN(test_range_construction(vectorIntSrc));
+  SOUL_TEST_RUN(test_range_construction(vectorToSrc));
+  SOUL_TEST_RUN(test_range_construction(vectorListToSrc));
 }
 
-TEST_F(TestVectorConstructorWithSourceData, TestIteratorConstructorWithCustomAllocator)
+TEST_F(TestVectorConstructionWithSourceData, TestRangeConstructionWithAllocator)
 {
-  auto test_iterator_constructor_with_custom_allocator =
+  auto test_range_construction_with_custom_allocator =
     []<typename T>(const soul::Vector<T>& vector_src) {
       TestAllocator test_allocator;
 
-      soul::Vector<T> vector_dst(vector_src.begin(), vector_src.end(), test_allocator);
+      auto vector_dst =
+        soul::Vector<T>::from(vector_src | soul::views::duplicate<T>(), test_allocator);
       SOUL_TEST_ASSERT_TRUE(std::ranges::equal(vector_src, vector_dst));
 
       SOUL_TEST_ASSERT_EQ(test_allocator.allocCount, 1);
     };
 
-  SOUL_TEST_RUN(test_iterator_constructor_with_custom_allocator(vectorIntSrc));
-  SOUL_TEST_RUN(test_iterator_constructor_with_custom_allocator(vectorToSrc));
-  SOUL_TEST_RUN(test_iterator_constructor_with_custom_allocator(vectorListToSrc));
+  SOUL_TEST_RUN(test_range_construction_with_custom_allocator(vectorIntSrc));
+  SOUL_TEST_RUN(test_range_construction_with_custom_allocator(vectorToSrc));
+  SOUL_TEST_RUN(test_range_construction_with_custom_allocator(vectorListToSrc));
 }
 
 template <typename T>
@@ -215,7 +270,7 @@ auto test_vector_getter(const soul_size size) -> void
 
   const auto middle = size / 2;
 
-  soul::Vector<T> vector(arr, arr + size);
+  auto vector = soul::Vector<T>::from(soul::views::duplicate_span(arr, size));
   SOUL_TEST_ASSERT_EQ(vector.front(), arr[0]);
   SOUL_TEST_ASSERT_EQ(vector.back(), arr[size - 1]);
   SOUL_TEST_ASSERT_EQ(vector[middle], arr[middle]);
@@ -235,61 +290,71 @@ public:
   TestObject testObjectArr[5] = {
     TestObject(1), TestObject(2), TestObject(3), TestObject(4), TestObject(5)};
   ListTestObject listTestObjectArr[5] = {
-    ListTestObject(1), ListTestObject(2), ListTestObject(3), ListTestObject(4), ListTestObject(5)};
+    ListTestObject::with_size(1),
+    ListTestObject::with_size(2),
+    ListTestObject::with_size(3),
+    ListTestObject::with_size(4),
+    ListTestObject::with_size(5),
+  };
 
-  VectorInt vectorIntEmpty;
-  VectorObj vectorTOEmpty;
-  VectorListObj vectorListTOEmpty;
+  VectorInt vector_int_empty;
+  VectorObj vector_testobj_empty;
+  VectorListObj vector_list_testobj_empty;
 
-  VectorInt vectorIntArr{std::begin(intArr), std::end(intArr)};
-  VectorObj vectorTOArr{std::begin(testObjectArr), std::end(testObjectArr)};
-  VectorListObj vectorListTOArr{std::begin(listTestObjectArr), std::end(listTestObjectArr)};
+  VectorInt vector_int_arr = VectorInt::from(intArr);
+  VectorObj vector_testobj_arr = VectorObj::from(testObjectArr | soul::views::clone<TestObject>());
+  VectorListObj vector_list_testobj_arr =
+    VectorListObj::from(listTestObjectArr | soul::views::clone<ListTestObject>());
 };
 
 TEST_F(TestVectorManipulation, TestVectorSetAllocator)
 {
-  auto test_vector_set_allocator = []<typename T>(soul::Vector<T> test_vector) {
-    soul::Vector<T> test_vector_copy(test_vector);
+  auto test_vector_set_allocator = []<typename T>(const soul::Vector<T>& sample_vector) {
+    auto test_vector = sample_vector.clone();
+    const auto test_vector_copy = test_vector.clone();
     TestAllocator test_allocator;
     test_vector.set_allocator(test_allocator);
     SOUL_TEST_ASSERT_EQ(test_vector.get_allocator(), &test_allocator);
     SOUL_TEST_ASSERT_TRUE(std::ranges::equal(test_vector, test_vector_copy));
   };
 
-  SOUL_TEST_RUN(test_vector_set_allocator(vectorIntEmpty));
-  SOUL_TEST_RUN(test_vector_set_allocator(vectorTOEmpty));
-  SOUL_TEST_RUN(test_vector_set_allocator(vectorListTOEmpty));
+  SOUL_TEST_RUN(test_vector_set_allocator(vector_int_empty));
+  SOUL_TEST_RUN(test_vector_set_allocator(vector_testobj_empty));
+  SOUL_TEST_RUN(test_vector_set_allocator(vector_list_testobj_empty));
 
-  SOUL_TEST_RUN(test_vector_set_allocator(vectorIntArr));
-  SOUL_TEST_RUN(test_vector_set_allocator(vectorTOArr));
-  SOUL_TEST_RUN(test_vector_set_allocator(vectorListTOArr));
+  SOUL_TEST_RUN(test_vector_set_allocator(vector_int_arr));
+  SOUL_TEST_RUN(test_vector_set_allocator(vector_testobj_arr));
+  SOUL_TEST_RUN(test_vector_set_allocator(vector_list_testobj_arr));
 }
 
-TEST_F(TestVectorManipulation, TestVectorCopyAssignmentOperator)
+TEST_F(TestVectorManipulation, TestVectorCloneFrom)
 {
   auto test_assignment_operator =
-    []<typename T>(soul::Vector<T> test_vector, const soul_size size) {
+    []<typename T>(const soul::Vector<T>& sample_vector, const soul_size size) {
+      auto test_vector = sample_vector.clone();
       soul::memory::Allocator* allocator = test_vector.get_allocator();
       auto src_arr = new T[size];
       SCOPE_EXIT(delete[] src_arr);
-      soul::Vector<T> test_src(src_arr, src_arr + size);
-      test_vector = test_src;
+      auto test_src = soul::Vector<T>::from(soul::views::duplicate_span(src_arr, size));
+      test_vector.clone_from(test_src);
       SOUL_TEST_ASSERT_EQ(test_vector.size(), test_src.size());
       SOUL_TEST_ASSERT_TRUE(std::ranges::equal(test_vector, test_src));
       SOUL_TEST_ASSERT_EQ(test_vector.get_allocator(), allocator);
     };
 
-  SOUL_TEST_RUN(test_assignment_operator(vectorIntEmpty, 5));
-  SOUL_TEST_RUN(test_assignment_operator(vectorTOEmpty, 5));
-  SOUL_TEST_RUN(test_assignment_operator(vectorListTOEmpty, 5));
+  SOUL_TEST_RUN(test_assignment_operator(vector_int_empty, 5));
+  SOUL_TEST_RUN(test_assignment_operator(vector_testobj_empty, 5));
+  SOUL_TEST_RUN(test_assignment_operator(vector_list_testobj_empty, 5));
 
-  SOUL_TEST_RUN(test_assignment_operator(vectorIntArr, vectorIntArr.size() + 2));
-  SOUL_TEST_RUN(test_assignment_operator(vectorTOArr, vectorTOArr.size() + 2));
-  SOUL_TEST_RUN(test_assignment_operator(vectorListTOArr, vectorListTOArr.size() + 2));
+  SOUL_TEST_RUN(test_assignment_operator(vector_int_arr, vector_int_arr.size() + 2));
+  SOUL_TEST_RUN(test_assignment_operator(vector_testobj_arr, vector_testobj_arr.size() + 2));
+  SOUL_TEST_RUN(
+    test_assignment_operator(vector_list_testobj_arr, vector_list_testobj_arr.size() + 2));
 
-  SOUL_TEST_RUN(test_assignment_operator(vectorIntArr, vectorIntArr.size() - 3));
-  SOUL_TEST_RUN(test_assignment_operator(vectorTOArr, vectorTOArr.size() - 3));
-  SOUL_TEST_RUN(test_assignment_operator(vectorListTOArr, vectorListTOArr.size() - 3));
+  SOUL_TEST_RUN(test_assignment_operator(vector_int_arr, vector_int_arr.size() - 3));
+  SOUL_TEST_RUN(test_assignment_operator(vector_testobj_arr, vector_testobj_arr.size() - 3));
+  SOUL_TEST_RUN(
+    test_assignment_operator(vector_list_testobj_arr, vector_list_testobj_arr.size() - 3));
 
   TestAllocator test_allocator("Test Allocator For Copy Assignment Operator");
   VectorObj test_different_allocator(&test_allocator);
@@ -300,11 +365,12 @@ TEST_F(TestVectorManipulation, TestVectorCopyAssignmentOperator)
 TEST_F(TestVectorManipulation, TestVectorMoveAssignmentOperator)
 {
   auto test_move_assignment_operator =
-    []<typename T>(soul::Vector<T> test_vector, const soul_size size) {
+    []<typename T>(const soul::Vector<T>& sample_vector, const soul_size size) {
+      auto test_vector = sample_vector.clone();
       soul::memory::Allocator* allocator = test_vector.get_allocator();
       auto src_arr = new T[size];
       SCOPE_EXIT(delete[] src_arr);
-      soul::Vector<T> test_src(src_arr, src_arr + size);
+      auto test_src = soul::Vector<T>::from(soul::views::duplicate_span(src_arr, size));
       test_vector = std::move(test_src);
       SOUL_TEST_ASSERT_EQ(test_vector.size(), size);
       SOUL_TEST_ASSERT_TRUE(
@@ -312,17 +378,19 @@ TEST_F(TestVectorManipulation, TestVectorMoveAssignmentOperator)
       SOUL_TEST_ASSERT_EQ(test_vector.get_allocator(), allocator);
     };
 
-  SOUL_TEST_RUN(test_move_assignment_operator(vectorIntEmpty, 5));
-  SOUL_TEST_RUN(test_move_assignment_operator(vectorTOEmpty, 5));
-  SOUL_TEST_RUN(test_move_assignment_operator(vectorListTOEmpty, 5));
+  SOUL_TEST_RUN(test_move_assignment_operator(vector_int_empty, 5));
+  SOUL_TEST_RUN(test_move_assignment_operator(vector_testobj_empty, 5));
+  SOUL_TEST_RUN(test_move_assignment_operator(vector_list_testobj_empty, 5));
 
-  SOUL_TEST_RUN(test_move_assignment_operator(vectorIntArr, vectorIntArr.size() + 2));
-  SOUL_TEST_RUN(test_move_assignment_operator(vectorTOArr, vectorTOArr.size() + 2));
-  SOUL_TEST_RUN(test_move_assignment_operator(vectorListTOArr, vectorListTOArr.size() + 2));
+  SOUL_TEST_RUN(test_move_assignment_operator(vector_int_arr, vector_int_arr.size() + 2));
+  SOUL_TEST_RUN(test_move_assignment_operator(vector_testobj_arr, vector_testobj_arr.size() + 2));
+  SOUL_TEST_RUN(
+    test_move_assignment_operator(vector_list_testobj_arr, vector_list_testobj_arr.size() + 2));
 
-  SOUL_TEST_RUN(test_move_assignment_operator(vectorIntArr, vectorIntArr.size() - 3));
-  SOUL_TEST_RUN(test_move_assignment_operator(vectorTOArr, vectorTOArr.size() - 3));
-  SOUL_TEST_RUN(test_move_assignment_operator(vectorListTOArr, vectorListTOArr.size() - 3));
+  SOUL_TEST_RUN(test_move_assignment_operator(vector_int_arr, vector_int_arr.size() - 3));
+  SOUL_TEST_RUN(test_move_assignment_operator(vector_testobj_arr, vector_testobj_arr.size() - 3));
+  SOUL_TEST_RUN(
+    test_move_assignment_operator(vector_list_testobj_arr, vector_list_testobj_arr.size() - 3));
 
   TestAllocator test_allocator("Test Allocator For Move Assignment Operator");
   VectorObj test_different_allocator(&test_allocator);
@@ -336,66 +404,49 @@ TEST_F(TestVectorManipulation, TestVectorAssignWithSizeAndValue)
   static constexpr auto ASSIGN_VECTOR_DEFAULT_VALUE = 8;
 
   auto test_assign_with_size_and_value =
-    []<typename T>(soul::Vector<T> test_vector, const soul_size size, const T& val) {
+    []<typename T>(const soul::Vector<T>& sample_vector, const soul_size size, const T& val) {
+      auto test_vector = sample_vector.clone();
       test_vector.assign(size, val);
       SOUL_TEST_ASSERT_EQ(test_vector.size(), size);
       SOUL_TEST_ASSERT_TRUE(all_equal(test_vector, val));
     };
 
   SOUL_TEST_RUN(test_assign_with_size_and_value(
-    vectorIntEmpty, ASSIGN_VECTOR_SIZE, ASSIGN_VECTOR_DEFAULT_VALUE));
-  SOUL_TEST_RUN(test_assign_with_size_and_value(
-    vectorTOEmpty, ASSIGN_VECTOR_SIZE, TestObject(ASSIGN_VECTOR_DEFAULT_VALUE)));
-  SOUL_TEST_RUN(test_assign_with_size_and_value(
-    vectorListTOArr, ASSIGN_VECTOR_SIZE, ListTestObject(ASSIGN_VECTOR_DEFAULT_VALUE)));
+    vector_int_empty, ASSIGN_VECTOR_SIZE, ASSIGN_VECTOR_DEFAULT_VALUE));
 
   static constexpr soul_size ASSIGN_VECTOR_OFFSET_SIZE = 2;
   SOUL_TEST_RUN(test_assign_with_size_and_value(
-    vectorIntArr, vectorIntArr.size() + ASSIGN_VECTOR_OFFSET_SIZE, ASSIGN_VECTOR_DEFAULT_VALUE));
+    vector_int_arr,
+    vector_int_arr.size() + ASSIGN_VECTOR_OFFSET_SIZE,
+    ASSIGN_VECTOR_DEFAULT_VALUE));
   SOUL_TEST_RUN(test_assign_with_size_and_value(
-    vectorIntArr, vectorIntArr.size() - ASSIGN_VECTOR_OFFSET_SIZE, ASSIGN_VECTOR_DEFAULT_VALUE));
-
-  SOUL_TEST_RUN(test_assign_with_size_and_value(
-    vectorTOArr,
-    vectorTOArr.size() + ASSIGN_VECTOR_OFFSET_SIZE,
-    TestObject(ASSIGN_VECTOR_DEFAULT_VALUE)));
-  SOUL_TEST_RUN(test_assign_with_size_and_value(
-    vectorTOArr,
-    vectorTOArr.size() - ASSIGN_VECTOR_OFFSET_SIZE,
-    TestObject(ASSIGN_VECTOR_DEFAULT_VALUE)));
-
-  SOUL_TEST_RUN(test_assign_with_size_and_value(
-    vectorListTOArr,
-    vectorListTOArr.size() + ASSIGN_VECTOR_OFFSET_SIZE,
-    ListTestObject(ASSIGN_VECTOR_DEFAULT_VALUE)));
-  SOUL_TEST_RUN(test_assign_with_size_and_value(
-    vectorListTOArr,
-    vectorListTOArr.size() - ASSIGN_VECTOR_OFFSET_SIZE,
-    ListTestObject(ASSIGN_VECTOR_DEFAULT_VALUE)));
+    vector_int_arr,
+    vector_int_arr.size() - ASSIGN_VECTOR_OFFSET_SIZE,
+    ASSIGN_VECTOR_DEFAULT_VALUE));
 }
 
-TEST_F(TestVectorManipulation, TestVectorAssignWithIterator)
+TEST_F(TestVectorManipulation, TestVectorAssignRange)
 {
   auto test_assignment = []<typename T>(soul::Vector<T>& vector, soul_size size) {
     T* arr = new T[size];
     SCOPE_EXIT(delete[] arr);
     generate_random_array(arr, size);
-    vector.assign(arr, arr + size);
+    vector.assign(soul::views::duplicate_span(arr, size));
     SOUL_TEST_ASSERT_EQ(vector.size(), size);
     SOUL_TEST_ASSERT_TRUE(std::equal(vector.begin(), vector.end(), arr, arr + size));
   };
 
-  SOUL_TEST_RUN(test_assignment(vectorIntEmpty, 4));
-  SOUL_TEST_RUN(test_assignment(vectorTOEmpty, 4));
-  SOUL_TEST_RUN(test_assignment(vectorListTOEmpty, 4));
+  SOUL_TEST_RUN(test_assignment(vector_int_empty, 4));
+  SOUL_TEST_RUN(test_assignment(vector_testobj_empty, 4));
+  SOUL_TEST_RUN(test_assignment(vector_list_testobj_empty, 4));
 
-  SOUL_TEST_RUN(test_assignment(vectorIntArr, vectorIntArr.size() + 5));
-  SOUL_TEST_RUN(test_assignment(vectorTOArr, vectorTOArr.size() + 5));
-  SOUL_TEST_RUN(test_assignment(vectorListTOEmpty, vectorListTOArr.size() + 5));
+  SOUL_TEST_RUN(test_assignment(vector_int_arr, vector_int_arr.size() + 5));
+  SOUL_TEST_RUN(test_assignment(vector_testobj_arr, vector_testobj_arr.size() + 5));
+  SOUL_TEST_RUN(test_assignment(vector_list_testobj_empty, vector_list_testobj_arr.size() + 5));
 
-  SOUL_TEST_RUN(test_assignment(vectorIntArr, vectorIntArr.size() - 2));
-  SOUL_TEST_RUN(test_assignment(vectorTOArr, vectorTOArr.size() - 2));
-  SOUL_TEST_RUN(test_assignment(vectorListTOArr, vectorListTOArr.size() - 2));
+  SOUL_TEST_RUN(test_assignment(vector_int_arr, vector_int_arr.size() - 2));
+  SOUL_TEST_RUN(test_assignment(vector_testobj_arr, vector_testobj_arr.size() - 2));
+  SOUL_TEST_RUN(test_assignment(vector_list_testobj_arr, vector_list_testobj_arr.size() - 2));
 }
 
 TEST_F(TestVectorManipulation, TestVectorSwap)
@@ -404,8 +455,8 @@ TEST_F(TestVectorManipulation, TestVectorSwap)
     T* arr = new T[size];
     SCOPE_EXIT(delete[] arr);
     generate_random_array(arr, size);
-    soul::Vector<T> swapped_vector(arr, arr + size);
-    soul::Vector<T> test_copy(test_vector);
+    auto swapped_vector = soul::Vector<T>::from(soul::views::duplicate_span(arr, size));
+    soul::Vector<T> test_copy = test_vector.clone();
 
     test_vector.swap(swapped_vector);
     SOUL_TEST_ASSERT_EQ(test_vector.size(), size);
@@ -421,19 +472,20 @@ TEST_F(TestVectorManipulation, TestVectorSwap)
     SOUL_TEST_ASSERT_TRUE(std::ranges::equal(test_vector, test_copy));
   };
 
-  SOUL_TEST_RUN(test_swap(vectorIntEmpty, 5));
-  SOUL_TEST_RUN(test_swap(vectorTOEmpty, 5));
-  SOUL_TEST_RUN(test_swap(vectorListTOEmpty, 5));
+  SOUL_TEST_RUN(test_swap(vector_int_empty, 5));
+  SOUL_TEST_RUN(test_swap(vector_testobj_empty, 5));
+  SOUL_TEST_RUN(test_swap(vector_list_testobj_empty, 5));
 
-  SOUL_TEST_RUN(test_swap(vectorIntArr, 5));
-  SOUL_TEST_RUN(test_swap(vectorTOArr, 5));
-  SOUL_TEST_RUN(test_swap(vectorListTOArr, 5));
+  SOUL_TEST_RUN(test_swap(vector_int_arr, 5));
+  SOUL_TEST_RUN(test_swap(vector_testobj_arr, 5));
+  SOUL_TEST_RUN(test_swap(vector_list_testobj_arr, 5));
 }
 
 TEST_F(TestVectorManipulation, TestVectorResize)
 {
-  auto test_resize = []<typename T>(soul::Vector<T> test_vector, const soul_size size) {
-    soul::Vector<T> test_copy(test_vector);
+  auto test_resize = []<typename T>(const soul::Vector<T>& sample_vector, const soul_size size) {
+    auto test_vector = sample_vector.clone();
+    soul::Vector<T> test_copy = test_vector.clone();
     if constexpr (std::same_as<T, TestObject> || std::same_as<T, ListTestObject>) {
       TestObject::reset();
     }
@@ -464,27 +516,27 @@ TEST_F(TestVectorManipulation, TestVectorResize)
     }
   };
 
-  SOUL_TEST_RUN(test_resize(vectorIntEmpty, 5));
-  SOUL_TEST_RUN(test_resize(vectorIntArr, vectorIntArr.size() + 2));
-  SOUL_TEST_RUN(test_resize(vectorIntArr, vectorIntArr.size() - 3));
-  SOUL_TEST_RUN(test_resize(vectorIntArr, 0));
+  SOUL_TEST_RUN(test_resize(vector_int_empty, 5));
+  SOUL_TEST_RUN(test_resize(vector_int_arr, vector_int_arr.size() + 2));
+  SOUL_TEST_RUN(test_resize(vector_int_arr, vector_int_arr.size() - 3));
+  SOUL_TEST_RUN(test_resize(vector_int_arr, 0));
 
-  SOUL_TEST_RUN(test_resize(vectorTOEmpty, 5));
-  SOUL_TEST_RUN(test_resize(vectorTOArr, vectorTOArr.size() + 2));
-  SOUL_TEST_RUN(test_resize(vectorTOArr, vectorTOArr.size() - 3));
-  SOUL_TEST_RUN(test_resize(vectorTOArr, 0));
+  SOUL_TEST_RUN(test_resize(vector_testobj_empty, 5));
+  SOUL_TEST_RUN(test_resize(vector_testobj_arr, vector_testobj_arr.size() + 2));
+  SOUL_TEST_RUN(test_resize(vector_testobj_arr, vector_testobj_arr.size() - 3));
+  SOUL_TEST_RUN(test_resize(vector_testobj_arr, 0));
 
-  SOUL_TEST_RUN(test_resize(vectorListTOEmpty, 5));
-  SOUL_TEST_RUN(test_resize(vectorTOArr, vectorTOArr.size() + 2));
-  SOUL_TEST_RUN(test_resize(vectorListTOArr, vectorListTOArr.size() - 3));
-  SOUL_TEST_RUN(test_resize(vectorListTOArr, 0));
+  SOUL_TEST_RUN(test_resize(vector_list_testobj_empty, 5));
+  SOUL_TEST_RUN(test_resize(vector_testobj_arr, vector_testobj_arr.size() + 2));
+  SOUL_TEST_RUN(test_resize(vector_list_testobj_arr, vector_list_testobj_arr.size() - 3));
+  SOUL_TEST_RUN(test_resize(vector_list_testobj_arr, 0));
 }
 
 TEST_F(TestVectorManipulation, TestVectorReserve)
 {
   auto test_reserve = []<typename T>(soul::Vector<T>& test_vector, const soul_size new_capacity) {
     const auto old_capacity = test_vector.capacity();
-    soul::Vector<T> test_copy(test_vector);
+    soul::Vector<T> test_copy = test_vector.clone();
     test_vector.reserve(new_capacity);
     SOUL_TEST_ASSERT_TRUE(std::ranges::equal(test_vector, test_copy));
     if (old_capacity >= new_capacity) {
@@ -494,58 +546,85 @@ TEST_F(TestVectorManipulation, TestVectorReserve)
     }
   };
 
-  SOUL_TEST_RUN(test_reserve(vectorIntEmpty, 5));
-  SOUL_TEST_RUN(test_reserve(vectorTOEmpty, 5));
-  SOUL_TEST_RUN(test_reserve(vectorListTOEmpty, 5));
+  SOUL_TEST_RUN(test_reserve(vector_int_empty, 5));
+  SOUL_TEST_RUN(test_reserve(vector_testobj_empty, 5));
+  SOUL_TEST_RUN(test_reserve(vector_list_testobj_empty, 5));
 
-  SOUL_TEST_RUN(test_reserve(vectorIntArr, vectorIntArr.capacity() + 3));
-  SOUL_TEST_RUN(test_reserve(vectorTOArr, vectorTOArr.capacity() + 5));
-  SOUL_TEST_RUN(test_reserve(vectorListTOArr, vectorListTOArr.capacity() + 5));
+  SOUL_TEST_RUN(test_reserve(vector_int_arr, vector_int_arr.capacity() + 3));
+  SOUL_TEST_RUN(test_reserve(vector_testobj_arr, vector_testobj_arr.capacity() + 5));
+  SOUL_TEST_RUN(test_reserve(vector_list_testobj_arr, vector_list_testobj_arr.capacity() + 5));
 
-  SOUL_TEST_RUN(test_reserve(vectorIntArr, vectorIntArr.capacity() - 2));
-  SOUL_TEST_RUN(test_reserve(vectorTOArr, vectorTOArr.capacity() - 2));
-  SOUL_TEST_RUN(test_reserve(vectorListTOArr, vectorListTOArr.capacity() - 2));
+  SOUL_TEST_RUN(test_reserve(vector_int_arr, vector_int_arr.capacity() - 2));
+  SOUL_TEST_RUN(test_reserve(vector_testobj_arr, vector_testobj_arr.capacity() - 2));
+  SOUL_TEST_RUN(test_reserve(vector_list_testobj_arr, vector_list_testobj_arr.capacity() - 2));
 }
 
 TEST_F(TestVectorManipulation, TestVectorPushBack)
 {
-  auto test_push_back = []<typename T>(soul::Vector<T> test_vector, const T& val) {
+  auto test_push_back = []<typename T>(const soul::Vector<T>& sample_vector, const T& val) {
     using Vector = soul::Vector<T>;
 
-    Vector test_copy1(test_vector);
-    Vector test_copy2(test_vector);
-    Vector test_copy3(test_vector);
+    auto test_vector = sample_vector.clone();
+    Vector test_copy1 = test_vector.clone();
+    Vector test_copy2 = test_vector.clone();
 
-    test_copy1.push_back(val);
-    SOUL_TEST_ASSERT_EQ(test_copy1.size(), test_vector.size() + 1);
-    SOUL_TEST_ASSERT_TRUE(std::equal(test_vector.begin(), test_vector.end(), test_copy1.begin()));
-    SOUL_TEST_ASSERT_EQ(test_copy1.back(), val);
+    if constexpr (!soul::ts_clone<T>) {
+      test_copy1.push_back(val);
+      SOUL_TEST_ASSERT_EQ(test_copy1.size(), test_vector.size() + 1);
+      SOUL_TEST_ASSERT_TRUE(std::equal(test_vector.begin(), test_vector.end(), test_copy1.begin()));
+      SOUL_TEST_ASSERT_EQ(test_copy1.back(), val);
+    }
 
-    T val_copy = val;
+    T val_copy = soul::duplicate(val);
     test_copy2.push_back(std::move(val_copy));
     SOUL_TEST_ASSERT_EQ(test_copy2.size(), test_vector.size() + 1);
     SOUL_TEST_ASSERT_TRUE(std::equal(test_vector.begin(), test_vector.end(), test_copy2.begin()));
     SOUL_TEST_ASSERT_EQ(test_copy2.back(), val);
-
-    test_copy3.push_back();
-    SOUL_TEST_ASSERT_EQ(test_copy3.size(), test_vector.size() + 1);
-    SOUL_TEST_ASSERT_TRUE(std::equal(test_vector.begin(), test_vector.end(), test_copy3.begin()));
-    SOUL_TEST_ASSERT_EQ(test_copy3.back(), T());
   };
 
-  SOUL_TEST_RUN(test_push_back(vectorIntEmpty, 5));
-  SOUL_TEST_RUN(test_push_back(vectorTOEmpty, TestObject(5)));
-  SOUL_TEST_RUN(test_push_back(vectorListTOEmpty, ListTestObject(5)));
+  SOUL_TEST_RUN(test_push_back(vector_int_empty, 5));
+  SOUL_TEST_RUN(test_push_back(vector_testobj_empty, TestObject(5)));
+  SOUL_TEST_RUN(test_push_back(vector_list_testobj_empty, ListTestObject::with_size(5)));
 
-  SOUL_TEST_RUN(test_push_back(vectorIntArr, 5));
-  SOUL_TEST_RUN(test_push_back(vectorTOEmpty, TestObject(5)));
-  SOUL_TEST_RUN(test_push_back(vectorListTOEmpty, ListTestObject(5)));
+  SOUL_TEST_RUN(test_push_back(vector_int_arr, 5));
+  SOUL_TEST_RUN(test_push_back(vector_testobj_arr, TestObject(5)));
+  SOUL_TEST_RUN(test_push_back(vector_list_testobj_arr, ListTestObject::with_size(5)));
+}
+
+TEST_F(TestVectorManipulation, TestVectorGenerateBack)
+{
+  auto test_generate_back =
+    []<typename T, typename Fn>(const soul::Vector<T>& sample_vector, Fn fn) {
+      T val = std::invoke(fn);
+      auto test_vector = sample_vector.clone();
+      test_vector.generate_back(std::move(fn));
+      SOUL_TEST_ASSERT_EQ(test_vector.size(), sample_vector.size() + 1);
+      SOUL_TEST_ASSERT_TRUE(
+        std::equal(sample_vector.begin(), sample_vector.end(), test_vector.begin()));
+      SOUL_TEST_ASSERT_EQ(test_vector.back(), val);
+    };
+
+  SOUL_TEST_RUN(test_generate_back(vector_int_empty, [] { return 5; }));
+  SOUL_TEST_RUN(test_generate_back(vector_testobj_empty, [] { return TestObject(5); }));
+  SOUL_TEST_RUN(
+    test_generate_back(vector_list_testobj_empty, [] { return ListTestObject::with_size(5); }));
+
+  SOUL_TEST_RUN(test_generate_back(vector_int_arr, [] { return 5; }));
+  SOUL_TEST_RUN(test_generate_back(vector_testobj_arr, [] { return TestObject(5); }));
+  SOUL_TEST_RUN(
+    test_generate_back(vector_list_testobj_arr, [] { return ListTestObject::with_size(5); }));
+
+  const auto test_object = TestObject(5);
+  const auto test_list_object = ListTestObject::with_size(5);
+  SOUL_TEST_RUN(test_generate_back(vector_testobj_arr, soul::clone_fn(test_object)));
+  SOUL_TEST_RUN(test_generate_back(vector_list_testobj_arr, soul::clone_fn(test_list_object)));
 }
 
 TEST_F(TestVectorManipulation, TestVectorPopBack)
 {
-  auto test_pop_back = []<typename T>(soul::Vector<T> test_vector) {
-    soul::Vector<T> test_copy(test_vector);
+  auto test_pop_back = []<typename T>(const soul::Vector<T>& sample_vector) {
+    auto test_vector = sample_vector.clone();
+    soul::Vector<T> test_copy = test_vector.clone();
     if constexpr (std::same_as<T, TestObject>) {
       TestObject::reset();
     }
@@ -557,13 +636,14 @@ TEST_F(TestVectorManipulation, TestVectorPopBack)
     }
   };
 
-  SOUL_TEST_RUN(test_pop_back(vectorIntArr));
-  SOUL_TEST_RUN(test_pop_back(vectorTOArr));
-  SOUL_TEST_RUN(test_pop_back(vectorListTOArr));
+  SOUL_TEST_RUN(test_pop_back(vector_int_arr));
+  SOUL_TEST_RUN(test_pop_back(vector_testobj_arr));
+  SOUL_TEST_RUN(test_pop_back(vector_list_testobj_arr));
 
   auto test_pop_back_with_size =
-    []<typename T>(soul::Vector<T> test_vector, const soul_size pop_back_size) {
-      soul::Vector<T> test_copy(test_vector);
+    []<typename T>(const soul::Vector<T>& sample_vector, const soul_size pop_back_size) {
+      auto test_vector = sample_vector.clone();
+      soul::Vector<T> test_copy = test_vector.clone();
       if constexpr (std::same_as<T, TestObject>) {
         TestObject::reset();
       }
@@ -575,22 +655,23 @@ TEST_F(TestVectorManipulation, TestVectorPopBack)
       }
     };
 
-  SOUL_TEST_RUN(test_pop_back_with_size(vectorIntArr, 3));
-  SOUL_TEST_RUN(test_pop_back_with_size(vectorTOArr, 3));
-  SOUL_TEST_RUN(test_pop_back_with_size(vectorListTOArr, 3));
+  SOUL_TEST_RUN(test_pop_back_with_size(vector_int_arr, 3));
+  SOUL_TEST_RUN(test_pop_back_with_size(vector_testobj_arr, 3));
+  SOUL_TEST_RUN(test_pop_back_with_size(vector_list_testobj_arr, 3));
 }
 
 TEST_F(TestVectorManipulation, TestVectorEmplaceBack)
 {
-  auto test_emplace_back = [](const VectorObj test_vector) {
-    VectorObj test_copy1(test_vector);
+  auto test_emplace_back = [](const VectorObj& sample_vector) {
+    auto test_vector = sample_vector.clone();
+    VectorObj test_copy1 = test_vector.clone();
     test_copy1.emplace_back(3);
     SOUL_TEST_ASSERT_EQ(test_copy1.size(), test_vector.size() + 1);
     SOUL_TEST_ASSERT_EQ(test_copy1.back(), TestObject(3));
     SOUL_TEST_ASSERT_TRUE(
       std::equal(test_vector.cbegin(), test_vector.cend(), test_copy1.cbegin()));
 
-    VectorObj test_copy2(test_vector);
+    VectorObj test_copy2 = test_vector.clone();
     test_copy2.emplace_back(4, 5, 6);
     SOUL_TEST_ASSERT_EQ(test_copy2.size(), test_vector.size() + 1);
     SOUL_TEST_ASSERT_EQ(test_copy2.back(), TestObject(4 + 5 + 6));
@@ -598,21 +679,22 @@ TEST_F(TestVectorManipulation, TestVectorEmplaceBack)
       std::equal(test_vector.cbegin(), test_vector.cend(), test_copy2.cbegin()));
   };
 
-  SOUL_TEST_RUN(test_emplace_back(vectorTOEmpty));
-  SOUL_TEST_RUN(test_emplace_back(vectorTOArr));
+  SOUL_TEST_RUN(test_emplace_back(vector_testobj_empty));
+  SOUL_TEST_RUN(test_emplace_back(vector_testobj_arr));
 }
 
 TEST_F(TestVectorManipulation, TestVectorAppend)
 {
-  auto test_append = []<typename T>(soul::Vector<T> test_vector, const soul_size append_size) {
+  auto test_append = []<typename T>(
+                       const soul::Vector<T>& test_vector, const soul_size append_size) {
     auto src_append_arr = new T[append_size];
     SCOPE_EXIT(delete[] src_append_arr);
     generate_random_array(src_append_arr, append_size);
 
     using Vector = soul::Vector<T>;
 
-    Vector test_copy1(test_vector);
-    test_copy1.append(src_append_arr, src_append_arr + append_size);
+    Vector test_copy1 = test_vector.clone();
+    test_copy1.append(soul::views::duplicate_span(src_append_arr, append_size));
     SOUL_TEST_ASSERT_EQ(test_copy1.size(), test_vector.size() + append_size);
     SOUL_TEST_ASSERT_TRUE(std::equal(test_vector.begin(), test_vector.end(), test_copy1.begin()));
     SOUL_TEST_ASSERT_TRUE(std::equal(
@@ -621,29 +703,30 @@ TEST_F(TestVectorManipulation, TestVectorAppend)
       src_append_arr,
       src_append_arr + append_size));
 
-    Vector append_src_vec(src_append_arr, src_append_arr + append_size);
-    Vector test_copy2(test_vector);
-    test_copy2.append(append_src_vec);
+    Vector append_src_vec = Vector::from(soul::views::duplicate_span(src_append_arr, append_size));
+    Vector test_copy2 = test_vector.clone();
+    test_copy2.append(append_src_vec | soul::views::duplicate<T>());
     SOUL_TEST_ASSERT_EQ(test_copy2.size(), test_copy1.size());
     SOUL_TEST_ASSERT_TRUE(std::ranges::equal(test_copy1, test_copy2));
   };
 
-  SOUL_TEST_RUN(test_append(vectorIntEmpty, 5));
-  SOUL_TEST_RUN(test_append(vectorTOEmpty, 5));
-  SOUL_TEST_RUN(test_append(vectorListTOEmpty, 5));
+  SOUL_TEST_RUN(test_append(vector_int_empty, 5));
+  SOUL_TEST_RUN(test_append(vector_testobj_empty, 5));
+  SOUL_TEST_RUN(test_append(vector_list_testobj_empty, 5));
 
-  SOUL_TEST_RUN(test_append(vectorIntArr, 5));
-  SOUL_TEST_RUN(test_append(vectorTOArr, 5));
-  SOUL_TEST_RUN(test_append(vectorListTOArr, 5));
+  SOUL_TEST_RUN(test_append(vector_int_arr, 5));
+  SOUL_TEST_RUN(test_append(vector_testobj_arr, 5));
+  SOUL_TEST_RUN(test_append(vector_list_testobj_arr, 5));
 
-  SOUL_TEST_RUN(test_append(vectorIntArr, 0));
-  SOUL_TEST_RUN(test_append(vectorTOArr, 0));
-  SOUL_TEST_RUN(test_append(vectorListTOArr, 0));
+  SOUL_TEST_RUN(test_append(vector_int_arr, 0));
+  SOUL_TEST_RUN(test_append(vector_testobj_arr, 0));
+  SOUL_TEST_RUN(test_append(vector_list_testobj_arr, 0));
 }
 
 TEST_F(TestVectorManipulation, TestVectorClear)
 {
-  auto test_clear = []<typename T>(soul::Vector<T> test_vector) {
+  auto test_clear = []<typename T>(const soul::Vector<T>& sample_vector) {
+    auto test_vector = sample_vector.clone();
     const soul_size old_capacity = test_vector.capacity();
     const soul_size old_size = test_vector.size();
     if constexpr (std::same_as<T, TestObject>) {
@@ -656,18 +739,19 @@ TEST_F(TestVectorManipulation, TestVectorClear)
       SOUL_TEST_ASSERT_EQ(TestObject::sTODtorCount - TestObject::sTOCtorCount, old_size);
     }
   };
-  SOUL_TEST_RUN(test_clear(vectorIntEmpty));
-  SOUL_TEST_RUN(test_clear(vectorTOEmpty));
-  SOUL_TEST_RUN(test_clear(vectorListTOEmpty));
+  SOUL_TEST_RUN(test_clear(vector_int_empty));
+  SOUL_TEST_RUN(test_clear(vector_testobj_empty));
+  SOUL_TEST_RUN(test_clear(vector_list_testobj_empty));
 
-  SOUL_TEST_RUN(test_clear(vectorIntArr));
-  SOUL_TEST_RUN(test_clear(vectorTOArr));
-  SOUL_TEST_RUN(test_clear(vectorListTOArr));
+  SOUL_TEST_RUN(test_clear(vector_int_arr));
+  SOUL_TEST_RUN(test_clear(vector_testobj_arr));
+  SOUL_TEST_RUN(test_clear(vector_list_testobj_arr));
 }
 
 TEST_F(TestVectorManipulation, TestVectorCleanup)
 {
-  auto test_cleanup = []<typename T>(soul::Vector<T> test_vector) {
+  auto test_cleanup = []<typename T>(const soul::Vector<T>& sample_vector) {
+    auto test_vector = sample_vector.clone();
     const soul_size old_size = test_vector.size();
     if constexpr (std::same_as<T, TestObject>) {
       TestObject::reset();
@@ -680,28 +764,11 @@ TEST_F(TestVectorManipulation, TestVectorCleanup)
     }
   };
 
-  SOUL_TEST_RUN(test_cleanup(vectorIntEmpty));
-  SOUL_TEST_RUN(test_cleanup(vectorTOEmpty));
-  SOUL_TEST_RUN(test_cleanup(vectorListTOEmpty));
+  SOUL_TEST_RUN(test_cleanup(vector_int_empty));
+  SOUL_TEST_RUN(test_cleanup(vector_testobj_empty));
+  SOUL_TEST_RUN(test_cleanup(vector_list_testobj_empty));
 
-  SOUL_TEST_RUN(test_cleanup(vectorIntArr));
-  SOUL_TEST_RUN(test_cleanup(vectorTOArr));
-  SOUL_TEST_RUN(test_cleanup(vectorListTOArr));
-}
-
-TEST(TestVectorConstructurWithArray, TestVectorConstructorWithArray)
-{
-  const soul::Vector<int> vec1 = std::array<int, 0>{};
-  SOUL_TEST_ASSERT_EQ(vec1.size(), 0);
-
-  const soul::Vector<int> vec2 = std::array{5, 7, 1};
-  SOUL_TEST_ASSERT_EQ(vec2.size(), 3);
-  SOUL_TEST_ASSERT_TRUE(verify_vector(vec2, std::array{5, 7, 1}));
-
-  TestObject::reset();
-  const soul::Vector<TestObject> vec3 = std::array{TestObject(3), TestObject(7), TestObject(9)};
-  SOUL_TEST_ASSERT_EQ(vec3.size(), 3);
-  SOUL_TEST_ASSERT_EQ(TestObject::sTOMoveCtorCount, 3);
-  SOUL_TEST_ASSERT_TRUE(
-    verify_vector(vec3, std::array{TestObject(3), TestObject(7), TestObject(9)}));
+  SOUL_TEST_RUN(test_cleanup(vector_int_arr));
+  SOUL_TEST_RUN(test_cleanup(vector_testobj_arr));
+  SOUL_TEST_RUN(test_cleanup(vector_list_testobj_arr));
 }

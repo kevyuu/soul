@@ -7,8 +7,12 @@
 #include <string>
 #include <vector>
 
+#include <xutility>
 #include <gtest/gtest.h>
 
+#include "core/type_traits.h"
+#include "core/vector.h"
+#include "core/views.h"
 #include "memory/allocator.h"
 
 constexpr uint32_t K_MAGIC_VALUE = 0x01f1cbe8;
@@ -53,18 +57,6 @@ struct TestObject {
     id = sTOCtorCount;
   }
 
-  TestObject(const TestObject& test_object)
-      : x(test_object.x), throwOnCopy(test_object.throwOnCopy), magicValue(test_object.magicValue)
-  {
-    ++sTOCount;
-    ++sTOCtorCount;
-    ++sTOCopyCtorCount;
-    id = sTOCtorCount;
-    if (throwOnCopy) {
-      SOUL_PANIC("Disallowed TestObject copy");
-    }
-  }
-
   // Due to the nature of TestObject, there isn't much special for us to
   // do in our move constructor. A move constructor swaps its contents with
   // the other object, whhich is often a default-constructed object.
@@ -82,22 +74,6 @@ struct TestObject {
       std::cout << "Disallowd TestObject copy" << std::endl;
       SOUL_PANIC("Disallowed TestObject copy");
     }
-  }
-
-  auto operator=(const TestObject& testObject) -> TestObject&
-  {
-    ++sTOCopyAssignCount;
-
-    if (&testObject != this) {
-      x = testObject.x;
-      // Leave mId alone.
-      magicValue = testObject.magicValue;
-      throwOnCopy = testObject.throwOnCopy;
-      if (throwOnCopy) {
-        SOUL_PANIC("Disallowed TestObject copy");
-      }
-    }
-    return *this;
   }
 
   // ReSharper disable once CppSpecialFunctionWithoutNoexceptSpecification
@@ -149,11 +125,55 @@ struct TestObject {
   {
     return (sTOCount == 0) && (sTODtorCount == sTOCtorCount) && (sMagicErrorCount == 0);
   }
+
+protected:
+  TestObject(const TestObject& test_object)
+      : x(test_object.x), throwOnCopy(test_object.throwOnCopy), magicValue(test_object.magicValue)
+  {
+    ++sTOCount;
+    ++sTOCtorCount;
+    ++sTOCopyCtorCount;
+    id = sTOCtorCount;
+    if (throwOnCopy) {
+      SOUL_PANIC("Disallowed TestObject copy");
+    }
+  }
+
+  auto operator=(const TestObject& testObject) -> TestObject&
+  {
+    ++sTOCopyAssignCount;
+
+    if (&testObject != this) {
+      x = testObject.x;
+      // Leave mId alone.
+      magicValue = testObject.magicValue;
+      throwOnCopy = testObject.throwOnCopy;
+      if (throwOnCopy) {
+        SOUL_PANIC("Disallowed TestObject copy");
+      }
+    }
+    return *this;
+  }
+
+public:
+  [[nodiscard]]
+  auto clone() const -> TestObject
+  {
+    return TestObject(*this);
+  }
+
+  void clone_from(const TestObject& test_obj) { *this = test_obj; }
+
+  friend class std::vector<TestObject>;
 };
+static_assert(soul::ts_clone<TestObject>);
 
 inline auto operator==(const TestObject& t1, const TestObject& t2) -> bool { return t1.x == t2.x; }
 
 inline auto operator<(const TestObject& t1, const TestObject& t2) -> bool { return t1.x < t2.x; }
+
+using ListTestObject = soul::Vector<TestObject>;
+static_assert(soul::ts_clone<ListTestObject>);
 
 class TestAllocator : public soul::memory::Allocator
 {
@@ -254,21 +274,29 @@ static auto generate_random_sequence(const soul_size size) -> Sequence<T>
   std::uniform_int_distribution<int> dist(1, 100);
 
   Sequence<T> result(size);
-  std::generate(result.begin(), result.end(), [&]() { return T(dist(random_engine)); });
+  if constexpr (std::same_as<T, ListTestObject>) {
+    std::generate(result.begin(), result.end(), [&]() {
+      return ListTestObject::generate_n(soul::clone_fn(TestObject(dist(random_engine))), 10);
+    });
+  } else {
+    std::generate(result.begin(), result.end(), [&]() { return T(dist(random_engine)); });
+  }
   return result;
 }
 
 template <typename T>
-static auto generate_sequence(const soul_size size, T val) -> Sequence<T>
+static auto generate_sequence(const soul_size size, const T& val) -> Sequence<T>
 {
-  Sequence<T> sequence(size, val);
+  Sequence<T> sequence(size);
+  std::generate(sequence.begin(), sequence.end(), soul::duplicate_fn(val));
   return sequence;
 }
 
 template <typename T, std::input_iterator Iterator>
 static auto generate_sequence(Iterator first, Iterator last) -> Sequence<T>
 {
-  Sequence<T> sequence(first, last);
+  auto range = std::ranges::subrange(first, last) | soul::views::duplicate<T>();
+  Sequence<T> sequence(range.begin(), range.end());
   return sequence;
 }
 
@@ -276,7 +304,9 @@ template <typename T>
 static auto generate_sequence(const Sequence<T>& sequence1, const Sequence<T>& sequence2)
   -> Sequence<T>
 {
-  Sequence<T> sequence(sequence1);
-  sequence.insert(sequence.end(), sequence2.begin(), sequence2.end());
+  auto range1 = sequence1 | soul::views::duplicate<T>();
+  Sequence<T> sequence(range1.begin(), range1.end());
+  auto range2 = sequence2 | soul::views::duplicate<T>();
+  sequence.insert(sequence.end(), range2.begin(), range2.end());
   return sequence;
 }

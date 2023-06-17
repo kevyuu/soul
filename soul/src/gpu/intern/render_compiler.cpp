@@ -1,4 +1,5 @@
 #include <volk.h>
+#include <vulkan/vulkan_core.h>
 
 #include "core/log.h"
 #include "core/string_util.h"
@@ -154,12 +155,8 @@ namespace soul::gpu::impl
         }};
     };
 
-    Vector<VkBufferImageCopy> buffer_image_copies(command.region_count, scope_allocator);
-    std::transform(
-      command.regions,
-      command.regions + command.region_count,
-      buffer_image_copies.begin(),
-      get_buffer_image_copy);
+    const auto buffer_image_copies = Vector<VkBufferImageCopy>::transform(
+      std::span(command.regions, command.region_count), get_buffer_image_copy, scope_allocator);
 
     vkCmdCopyBufferToImage(
       command_buffer_,
@@ -180,21 +177,18 @@ namespace soul::gpu::impl
     const auto dst_aspect_mask = vk_cast_format_to_aspect_flags(dst_texture.desc.format);
 
     runtime::ScopeAllocator scope_allocator("compile_command copy texture");
-    Vector<VkImageCopy> image_copies(&scope_allocator);
-    image_copies.resize(command.region_count);
 
-    std::transform(
-      command.regions,
-      command.regions + command.region_count,
-      image_copies.begin(),
-      [src_aspect_mask, dst_aspect_mask](const TextureRegionCopy& copy_region) -> VkImageCopy {
-        return {
-          .srcSubresource = get_vk_subresource_layers(copy_region.src_subresource, src_aspect_mask),
-          .srcOffset = get_vk_offset_3d(copy_region.src_offset),
-          .dstSubresource = get_vk_subresource_layers(copy_region.dst_subresource, dst_aspect_mask),
-          .dstOffset = get_vk_offset_3d(copy_region.dst_offset),
-          .extent = get_vk_extent_3d(copy_region.extent)};
-      });
+    auto to_vk_image_copy = [src_aspect_mask,
+                             dst_aspect_mask](const TextureRegionCopy& copy_region) -> VkImageCopy {
+      return {
+        .srcSubresource = get_vk_subresource_layers(copy_region.src_subresource, src_aspect_mask),
+        .srcOffset = get_vk_offset_3d(copy_region.src_offset),
+        .dstSubresource = get_vk_subresource_layers(copy_region.dst_subresource, dst_aspect_mask),
+        .dstOffset = get_vk_offset_3d(copy_region.dst_offset),
+        .extent = get_vk_extent_3d(copy_region.extent)};
+    };
+    const auto image_copies = Vector<VkImageCopy>::transform(
+      std::span(command.regions, command.region_count), to_vk_image_copy, scope_allocator);
 
     vkCmdCopyImage(
       command_buffer_,
@@ -247,17 +241,17 @@ namespace soul::gpu::impl
     runtime::ScopeAllocator<> scope_allocator("compile_command::RenderCommandCopyBuffer");
     const auto src_buffer = gpu_system_.get_buffer(command.src_buffer);
     const auto dst_buffer = gpu_system_.get_buffer(command.dst_buffer);
-    Vector<VkBufferCopy> region_copies(command.region_count, scope_allocator);
-    std::transform(
-      command.regions,
-      command.regions + command.region_count,
-      region_copies.begin(),
+
+    const auto region_copies = Vector<VkBufferCopy>::transform(
+      std::span(command.regions, command.region_count),
       [](BufferRegionCopy region_copy) -> VkBufferCopy {
         return {
           .srcOffset = region_copy.src_offset,
           .dstOffset = region_copy.dst_offset,
           .size = region_copy.size};
-      });
+      },
+      scope_allocator);
+
     vkCmdCopyBuffer(
       command_buffer_,
       src_buffer.vk_handle,
@@ -346,13 +340,12 @@ namespace soul::gpu::impl
     const auto& dst_blas = gpu_system_.get_blas(command.dst_blas_id);
     const auto& build_desc = command.build_desc;
 
-    Vector<VkAccelerationStructureGeometryKHR> as_geometries(
+    auto as_geometries = Vector<VkAccelerationStructureGeometryKHR>::with_size(
       build_desc.geometry_count, scope_allocator);
     auto build_info =
       compute_as_geometry_info(build_desc, command.build_mode, as_geometries.data());
 
-    Vector<uint32> max_primitives_counts(build_desc.geometry_count, scope_allocator);
-    compute_max_primitives_counts(build_desc, max_primitives_counts.data());
+    const auto max_primitives_counts = compute_max_primitives_counts(build_desc, scope_allocator);
 
     const auto size_info =
       gpu_system_.get_as_build_size_info(build_info, max_primitives_counts.data());
@@ -377,14 +370,13 @@ namespace soul::gpu::impl
     }
     build_info.dstAccelerationStructure = dst_blas.vk_handle;
     build_info.scratchData.deviceAddress = scratch_buffer_address.id;
-    Vector<VkAccelerationStructureBuildRangeInfoKHR> build_ranges(
-      build_desc.geometry_count, scope_allocator);
-    std::ranges::transform(
+
+    const auto build_ranges = Vector<VkAccelerationStructureBuildRangeInfoKHR>::transform(
       max_primitives_counts,
-      build_ranges.begin(),
       [](uint32 count) -> VkAccelerationStructureBuildRangeInfoKHR {
         return {.primitiveCount = count};
-      });
+      },
+      scope_allocator);
     const VkAccelerationStructureBuildRangeInfoKHR* build_range_info = build_ranges.data();
     vkCmdBuildAccelerationStructuresKHR(command_buffer_, 1, &build_info, &build_range_info);
   }
@@ -409,12 +401,12 @@ namespace soul::gpu::impl
     auto total_size = 0u;
     for (const auto& blas_build : std::span(command.builds, command.build_count)) {
       const auto& build_desc = blas_build.build_desc;
-      as_geometry_list_vec.push_back(ASGeometryList(build_desc.geometry_count, scope_allocator));
+      as_geometry_list_vec.generate_back(
+        [&] { return ASGeometryList::with_size(build_desc.geometry_count, scope_allocator); });
       auto build_info = compute_as_geometry_info(
         build_desc, blas_build.build_mode, as_geometry_list_vec.back().data());
 
-      Vector<uint32> max_primitives_counts(build_desc.geometry_count, scope_allocator);
-      compute_max_primitives_counts(build_desc, max_primitives_counts.data());
+      const auto max_primitives_counts = compute_max_primitives_counts(build_desc, scope_allocator);
 
       const auto& dst_blas = gpu_system_.get_blas(blas_build.dst_blas_id);
       if (blas_build.src_blas_id.is_valid()) {
@@ -503,8 +495,8 @@ namespace soul::gpu::impl
     }
   }
 
-  auto RenderCompiler::apply_push_constant(void* push_constant_data, uint32 push_constant_size)
-    -> void
+  auto RenderCompiler::apply_push_constant(
+    const void* push_constant_data, uint32 push_constant_size) -> void
   {
     if (push_constant_data == nullptr) {
       return;

@@ -121,7 +121,7 @@ class RTBasicSampleApp final : public App
                       },
                   });
 
-                render_commands.push_back({
+                render_commands.push_back(gpu::RenderCommandBuildBlas{
                   .dst_blas_id = blas_ids_[model_idx],
                   .build_mode = gpu::RTBuildMode::REBUILD,
                   .build_desc =
@@ -320,7 +320,8 @@ class RTBasicSampleApp final : public App
   auto load_model(
     const std::filesystem::path& model_path, const mat4f transform = mat4f::identity()) -> void
   {
-    instances_.push_back({.transform = transform, .obj_index = soul::cast<uint32>(models_.size())});
+    instances_.push_back(
+      ObjInstance{.transform = transform, .obj_index = soul::cast<uint32>(models_.size())});
 
     ObjLoader obj_loader;
     obj_loader.load_model(model_path);
@@ -386,7 +387,7 @@ class RTBasicSampleApp final : public App
 
     SBOVector<GPUObjMaterial> gpu_materials;
     for (const auto& material : obj_loader.materials) {
-      gpu_materials.push_back({
+      gpu_materials.push_back(GPUObjMaterial{
         .ambient = material.ambient,
         .diffuse = material.diffuse,
         .specular = material.specular,
@@ -430,7 +431,7 @@ class RTBasicSampleApp final : public App
     };
     gpu_obj_descs_.push_back(gpu_obj_desc);
 
-    models_.push_back({
+    models_.push_back(ObjModel{
       .indices_count = soul::cast<uint32>(obj_loader.indices.size()),
       .vertices_count = soul::cast<uint32>(obj_loader.vertices.size()),
       .vertex_buffer = vertex_buffer,

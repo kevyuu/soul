@@ -1,4 +1,6 @@
+#include "core/config.h"
 #include "gpu/type.h"
+#include "memory/allocator.h"
 
 namespace soul::gpu
 {
@@ -9,7 +11,8 @@ namespace soul::gpu
     VkAccelerationStructureGeometryKHR* as_geometries)
     -> VkAccelerationStructureBuildGeometryInfoKHR;
 
-  auto compute_max_primitives_counts(const BlasBuildDesc& build_desc, uint32* max_primitives_counts)
-    -> void;
+  auto compute_max_primitives_counts(
+    const BlasBuildDesc& build_desc, memory::Allocator& allocator = *get_default_allocator())
+    -> Vector<uint32>;
 
 } // namespace soul::gpu

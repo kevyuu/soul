@@ -98,9 +98,9 @@ namespace soul::gpu::impl
   PassDependencyGraph::PassDependencyGraph(
     soul_size pass_node_count, std::span<const ResourceNode> resource_nodes)
       : pass_node_count_(pass_node_count),
-        dependencies_(pass_node_count),
-        dependants_(pass_node_count),
-        dependency_levels_(pass_node_count)
+        dependencies_(Vector<NodeList>::with_size(pass_node_count)),
+        dependants_(Vector<NodeList>::with_size(pass_node_count)),
+        dependency_levels_(Vector<soul_size>::with_size(pass_node_count))
   {
     for (auto& dependency_matrix : dependency_matrixes_) {
       dependency_matrix.resize(pass_node_count * pass_node_count);
@@ -278,10 +278,11 @@ namespace soul::gpu::impl
 
         auto buffer_info_id = get_buffer_info_index(node_id);
 
-        pass_info.buffer_accesses.push_back(
-          {.stage_flags = {PipelineStage::VERTEX_INPUT},
-           .access_flags = {AccessType::VERTEX_ATTRIBUTE_READ},
-           .buffer_info_idx = buffer_info_id});
+        pass_info.buffer_accesses.push_back(BufferAccess{
+          .stage_flags = {PipelineStage::VERTEX_INPUT},
+          .access_flags = {AccessType::VERTEX_ATTRIBUTE_READ},
+          .buffer_info_idx = buffer_info_id,
+        });
 
         update_buffer_info(
           pass_queue_type, {BufferUsage::VERTEX}, pass_node_id, &buffer_infos_[buffer_info_id]);
@@ -292,7 +293,7 @@ namespace soul::gpu::impl
 
         const auto buffer_info_id = get_buffer_info_index(node_id);
 
-        pass_info.buffer_accesses.add({
+        pass_info.buffer_accesses.push_back(BufferAccess{
           .stage_flags = {PipelineStage::VERTEX_INPUT},
           .access_flags = {AccessType::INDEX_READ},
           .buffer_info_idx = buffer_info_id,
@@ -316,7 +317,7 @@ namespace soul::gpu::impl
           {color_attachment.desc.view, 1, 1},
           &texture_infos_[texture_info_id]);
 
-        pass_info.texture_accesses.push_back({
+        pass_info.texture_accesses.push_back(TextureAccess{
           .stage_flags = {PipelineStage::COLOR_ATTACHMENT_OUTPUT},
           .access_flags = {AccessType::COLOR_ATTACHMENT_READ, AccessType::COLOR_ATTACHMENT_WRITE},
           .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
@@ -334,7 +335,7 @@ namespace soul::gpu::impl
           {resolve_attachment.desc.view, 1, 1},
           &texture_infos_[texture_info_id]);
 
-        pass_info.texture_accesses.push_back({
+        pass_info.texture_accesses.push_back(TextureAccess{
           .stage_flags = {PipelineStage::COLOR_ATTACHMENT_OUTPUT},
           .access_flags = {AccessType::COLOR_ATTACHMENT_READ, AccessType::COLOR_ATTACHMENT_WRITE},
           .layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
@@ -354,7 +355,7 @@ namespace soul::gpu::impl
           {depthStencilAttachment.desc.view, 1, 1},
           &texture_infos_[texture_info_id]);
 
-        pass_info.texture_accesses.push_back({
+        pass_info.texture_accesses.push_back(TextureAccess{
           .stage_flags = {PipelineStage::EARLY_FRAGMENT_TESTS, PipelineStage::LATE_FRAGMENT_TESTS},
           .access_flags =
             {AccessType::DEPTH_STENCIL_ATTACHMENT_READ, AccessType::DEPTH_STENCIL_ATTACHMENT_WRITE},
@@ -372,7 +373,7 @@ namespace soul::gpu::impl
           pass_node_id,
           &buffer_infos_[resource_info_index]);
 
-        pass_info.buffer_accesses.push_back({
+        pass_info.buffer_accesses.push_back(BufferAccess{
           .stage_flags = {PipelineStage::TRANSFER},
           .access_flags = {AccessType::TRANSFER_READ},
           .buffer_info_idx = resource_info_index,
@@ -387,7 +388,7 @@ namespace soul::gpu::impl
           pass_node_id,
           &buffer_infos_[resource_info_index]);
 
-        pass_info.buffer_accesses.push_back({
+        pass_info.buffer_accesses.push_back(BufferAccess{
           .stage_flags = {PipelineStage::TRANSFER},
           .access_flags = {AccessType::TRANSFER_WRITE},
           .buffer_info_idx = resource_info_index,
@@ -451,7 +452,7 @@ namespace soul::gpu::impl
           pass_node_id,
           &buffer_infos_[resource_info_index]);
 
-        pass_info.buffer_accesses.push_back({
+        pass_info.buffer_accesses.push_back(BufferAccess{
           .stage_flags = {PipelineStage::AS_BUILD},
           .access_flags = {AccessType::SHADER_READ},
           .buffer_info_idx = resource_info_index,
@@ -463,7 +464,7 @@ namespace soul::gpu::impl
         update_resource_info(
           pass_node.get_queue_type(), pass_node_id, &resource_infos_[resource_info_index]);
 
-        pass_info.resource_accesses.push_back({
+        pass_info.resource_accesses.push_back(ResourceAccess{
           .stage_flags = {PipelineStage::AS_BUILD},
           .access_flags = {AccessType::AS_READ},
           .resource_info_idx = resource_info_index,
@@ -475,7 +476,7 @@ namespace soul::gpu::impl
         update_resource_info(
           pass_node.get_queue_type(), pass_node_id, &resource_infos_[resource_info_index]);
 
-        pass_info.resource_accesses.push_back({
+        pass_info.resource_accesses.push_back(ResourceAccess{
           .stage_flags = {PipelineStage::AS_BUILD},
           .access_flags = {AccessType::AS_READ, AccessType::AS_WRITE},
           .resource_info_idx = resource_info_index,
@@ -488,7 +489,7 @@ namespace soul::gpu::impl
         update_resource_info(
           pass_node.get_queue_type(), pass_node_id, &resource_infos_[resource_info_index]);
 
-        pass_info.resource_accesses.push_back({
+        pass_info.resource_accesses.push_back(ResourceAccess{
           .stage_flags = {PipelineStage::AS_BUILD},
           .access_flags = {AccessType::AS_READ, AccessType::AS_WRITE},
           .resource_info_idx = resource_info_index,
@@ -1464,10 +1465,11 @@ namespace soul::gpu::impl
 
       const auto stage_flags = cast_to_pipeline_stage_flags(shader_access.stage_flags);
 
-      pass_info.buffer_accesses.push_back(
-        {.stage_flags = stage_flags,
-         .access_flags = {AccessType::SHADER_READ},
-         .buffer_info_idx = buffer_info_id});
+      pass_info.buffer_accesses.push_back(BufferAccess{
+        .stage_flags = stage_flags,
+        .access_flags = {AccessType::SHADER_READ},
+        .buffer_info_idx = buffer_info_id,
+      });
 
       update_buffer_info(
         queue_type,
@@ -1490,7 +1492,7 @@ namespace soul::gpu::impl
 
       const auto stage_flags = cast_to_pipeline_stage_flags(shader_access.stage_flags);
 
-      pass_info.buffer_accesses.push_back({
+      pass_info.buffer_accesses.push_back(BufferAccess{
         .stage_flags = stage_flags,
         .access_flags = {AccessType::SHADER_READ, AccessType::SHADER_WRITE},
         .buffer_info_idx = buffer_info_id,
@@ -1593,7 +1595,7 @@ namespace soul::gpu::impl
 
       const auto stage_flags = cast_to_pipeline_stage_flags(shader_access.stage_flags);
 
-      pass_info.resource_accesses.push_back({
+      pass_info.resource_accesses.push_back(ResourceAccess{
         .stage_flags = stage_flags,
         .access_flags = {AccessType::AS_READ},
         .resource_info_idx = resource_info_id,
@@ -1617,7 +1619,7 @@ namespace soul::gpu::impl
 
       const auto stage_flags = cast_to_pipeline_stage_flags(shader_access.stage_flags);
 
-      pass_info.resource_accesses.push_back({
+      pass_info.resource_accesses.push_back(ResourceAccess{
         .stage_flags = stage_flags,
         .access_flags = {AccessType::AS_READ},
         .resource_info_idx = resource_info_id,

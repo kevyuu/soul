@@ -64,7 +64,7 @@ namespace soul::gpu::impl
   private:
     auto apply_pipeline_state(PipelineStateID pipeline_state_id) -> void;
     auto apply_pipeline_state(VkPipeline pipeline, VkPipelineBindPoint pipeline_bind_point) -> void;
-    auto apply_push_constant(void* push_constant_data, uint32 push_constant_size) -> void;
+    auto apply_push_constant(const void* push_constant_data, uint32 push_constant_size) -> void;
 
     System& gpu_system_;
     VkCommandBuffer command_buffer_;

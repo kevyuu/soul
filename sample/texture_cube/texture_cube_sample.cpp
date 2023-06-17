@@ -233,7 +233,7 @@ public:
           .extent = {level_width, level_height, 1},
         };
 
-        region_loads.add(region_update);
+        region_loads.push_back(region_update);
       }
       const gpu::TextureLoadDesc load_desc = {
         .data = skybox_data,

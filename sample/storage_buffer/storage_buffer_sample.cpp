@@ -77,7 +77,7 @@ class StorageBufferSampleApp final : public App
 
         auto transform_descriptor_id = gpu_system_->get_ssbo_descriptor_id(transform_buffer_id_);
         auto pipeline_state_id = registry.get_pipeline_state(pipeline_desc);
-        Vector<PushConstant> push_constants(TRANSFORM_COUNT);
+        auto push_constants = Vector<PushConstant>::with_size(TRANSFORM_COUNT);
         command_list.template push<Command>(
           TRANSFORM_COUNT, [=, this, &push_constants](const soul_size index) -> Command {
             push_constants[index] = {
@@ -140,7 +140,7 @@ public:
       INDICES);
     gpu_system_->flush_buffer(index_buffer_id_);
 
-    Vector<Transform> transforms(TRANSFORM_COUNT);
+    auto transforms = Vector<Transform>::with_size(TRANSFORM_COUNT);
     for (soul_size transform_idx = 0; transform_idx < transforms.size(); transform_idx++) {
       const auto col_idx = transform_idx % COL_COUNT;
       const auto row_idx = transform_idx / COL_COUNT;

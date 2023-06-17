@@ -6,8 +6,8 @@
 #include <variant>
 
 #include "core/cstring.h"
-#include "core/panic.h"
 #include "core/log.h"
+#include "core/panic.h"
 #include "core/profile.h"
 #include "core/string_util.h"
 #include "core/util.h"
@@ -25,6 +25,7 @@
 // TODO(kevyuu): find out why we cannot put these includes after system include
 #include <Windows.h>
 #include <dxc/dxcapi.h>
+#include <vulkan/vulkan_core.h>
 #include <wrl/client.h>
 
 #include <volk.h>
@@ -983,10 +984,9 @@ namespace soul::gpu
     SOUL_ASSERT_MAIN_THREAD();
     SOUL_LOG_INFO("Frame Context Init");
     _db.frame_contexts.reserve(config.max_frame_in_flight);
-    std::fill_n(
-      std::back_inserter(_db.frame_contexts),
-      _db.frame_contexts.capacity(),
-      FrameContext(&_db.cpu_allocator));
+    for (auto i = 0; i < _db.frame_contexts.capacity(); i++) {
+      _db.frame_contexts.emplace_back(&_db.cpu_allocator);
+    }
     std::ranges::for_each(_db.frame_contexts, [this, config](FrameContext& frame_context) {
       frame_context.command_pools.init(_db.device, _db.queues, config.thread_count);
       frame_context.gpu_resource_initializer.init(_db.gpu_allocator, &frame_context.command_pools);
@@ -1003,7 +1003,7 @@ namespace soul::gpu
   {
     QueueData queue_data;
     const auto& queues = _db.queues;
-    flags.for_each([&queue_data, queues](QueueType type) {
+    flags.for_each([&](QueueType type) {
       queue_data.indices[queue_data.count++] = queues[type].get_family_index();
     });
     return queue_data;
@@ -1336,8 +1336,9 @@ namespace soul::gpu
 
   auto System::create_blas_group(const char* name) -> BlasGroupID
   {
-    const BlasGroup blas_group = {.name = name};
-    return BlasGroupID(_db.blas_group_pool.create(blas_group));
+    auto id = _db.blas_group_pool.create();
+    _db.blas_group_pool.get(id)->name = name;
+    return BlasGroupID(id);
   }
 
   auto System::destroy_blas_group(BlasGroupID blas_group_id) -> void
@@ -1445,7 +1446,7 @@ namespace soul::gpu
   auto System::create_transient_buffer(const BufferDesc& desc) -> BufferID
   {
     const auto buffer_id = create_buffer(desc, true);
-    get_frame_context().garbages.buffers.add(buffer_id);
+    get_frame_context().garbages.buffers.push_back(buffer_id);
 
     return buffer_id;
   }
@@ -2073,7 +2074,7 @@ namespace soul::gpu
         .pCode = soul::cast<uint32*>(code->GetBufferPointer())};
       VkShaderModule shader_module;
       vkCreateShaderModule(_db.device, &shader_module_ci, nullptr, &shader_module);
-      program.shaders.push_back({
+      program.shaders.push_back(Shader{
         .stage = stage,
         .vk_handle = shader_module,
         .entry_point = entry_point.name,
@@ -2562,7 +2563,8 @@ namespace soul::gpu
   auto System::get_as_build_size_info(const BlasBuildDesc& build_desc)
     -> VkAccelerationStructureBuildSizesInfoKHR
   {
-    Vector<VkAccelerationStructureGeometryKHR> as_geometries(build_desc.geometry_count);
+    auto as_geometries =
+      Vector<VkAccelerationStructureGeometryKHR>::with_size(build_desc.geometry_count);
     std::ranges::transform(
       build_desc.geometry_descs,
       build_desc.geometry_descs + build_desc.geometry_count,
@@ -2606,7 +2608,7 @@ namespace soul::gpu
       .pGeometries = as_geometries.data(),
     };
 
-    Vector<uint32> max_primitives_counts(build_desc.geometry_count);
+    auto max_primitives_counts = Vector<uint32>::with_size(build_desc.geometry_count);
     std::transform(
       build_desc.geometry_descs,
       build_desc.geometry_descs + build_desc.geometry_count,
@@ -2883,7 +2885,8 @@ namespace soul::gpu
           .pSemaphores = &frame_context.frame_end_semaphore.vk_handle,
           .pValues = &frame_context.frame_end_semaphore.counter,
         };
-        SOUL_VK_CHECK(vkWaitSemaphores(_db.device, &wait_info, UINT64_MAX));
+        SOUL_VK_CHECK(
+          vkWaitSemaphores(_db.device, &wait_info, UINT64_MAX), "Fail to wait semaphore");
       }
     }
 
@@ -3871,7 +3874,8 @@ namespace soul::gpu
     SOUL_ASSERT_MAIN_THREAD();
     runtime::ScopeAllocator scope_allocator("Resource Finalizer Flush");
 
-    FlagMap<QueueType, PrimaryCommandBuffer> command_buffers(PrimaryCommandBuffer(VK_NULL_HANDLE));
+    auto command_buffers = FlagMap<QueueType, PrimaryCommandBuffer>::with_default_value(
+      PrimaryCommandBuffer(VK_NULL_HANDLE));
 
     // create command buffer and create semaphore
     for (auto queue_type : FlagIter<QueueType>()) {

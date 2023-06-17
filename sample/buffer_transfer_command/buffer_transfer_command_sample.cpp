@@ -6,6 +6,8 @@
 
 #include <app.h>
 
+#include <ranges>
+
 using namespace soul;
 
 class BufferTransferCommandSample final : public App
@@ -266,23 +268,23 @@ class BufferTransferCommandSample final : public App
           uint32 offset = 0;
         };
 
-        using Command = gpu::RenderCommandDrawIndex;
-
         auto pipeline_state_id = registry.get_pipeline_state(pipeline_desc);
-        Vector<PushConstant> push_constants(
-          transforms_q1_.size() + transforms_q2_.size() + transient_transforms_.size());
         const auto transform_buffer = registry.get_buffer(parameter.transform_buffer);
         const auto transform_buffer_descriptor_id =
           gpu_system_->get_ssbo_descriptor_id(transform_buffer);
 
-        for (soul_size push_constant_idx = 0; push_constant_idx < push_constants.size();
-             push_constant_idx++) {
-          push_constants[push_constant_idx] = {
-            .transform_descriptor_id = transform_buffer_descriptor_id,
-            .offset = soul::cast<uint32>(push_constant_idx * sizeof(Transform)),
-          };
-        }
+        const auto push_constants_count =
+          transforms_q1_.size() + transforms_q2_.size() + transient_transforms_.size();
+        const auto push_constant_indexes = std::views::iota(soul_size(0), push_constants_count);
+        auto push_constants = Vector<PushConstant>::transform(
+          push_constant_indexes, [=](soul_size push_constant_idx) -> PushConstant {
+            return {
+              .transform_descriptor_id = transform_buffer_descriptor_id,
+              .offset = soul::cast<uint32>(push_constant_idx * sizeof(Transform)),
+            };
+          });
 
+        using Command = gpu::RenderCommandDrawIndex;
         command_list.template push<Command>(
           push_constants.size(), [=, this, &push_constants](const soul_size index) -> Command {
             return {

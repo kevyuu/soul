@@ -38,7 +38,7 @@ auto ObjLoader::load_model(const std::filesystem::path& filepath) -> void
         const auto texture_id = soul::cast<int>(textures.size());
         texture_name_index_map[material.diffuse_texname] = texture_id;
         m.texture_id = texture_id;
-        textures.push_back(material.diffuse_texname);
+        textures.emplace_back(material.diffuse_texname);
       }
     }
 
@@ -55,7 +55,7 @@ auto ObjLoader::load_model(const std::filesystem::path& filepath) -> void
   for (const auto& shape : reader.GetShapes()) {
     vertices.reserve(shape.mesh.indices.size() + vertices.size());
     indices.reserve(shape.mesh.indices.size() + indices.size());
-    mat_indexes.append(shape.mesh.material_ids.begin(), shape.mesh.material_ids.end());
+    mat_indexes.append(shape.mesh.material_ids);
 
     for (const auto& index : shape.mesh.indices) {
       VertexObj vertex = {};

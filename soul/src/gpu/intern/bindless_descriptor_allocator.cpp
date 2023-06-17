@@ -1,5 +1,6 @@
 #include <volk.h>
 
+#include "core/log.h"
 #include "gpu/system.h"
 
 #include "bindless_descriptor_allocator.h"

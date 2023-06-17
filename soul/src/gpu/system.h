@@ -8,13 +8,13 @@
 #if defined(SOUL_ASSERT_ENABLE)
 #  define SOUL_VK_CHECK(result, ...) SOUL_ASSERT(0, result == VK_SUCCESS, ##__VA_ARGS__)
 #else
-#  include <cstdlib>
-#  define SOUL_VK_CHECK(expr, message, ...)                                                        \
+#  include "core/log.h"
+#  define SOUL_VK_CHECK(expr, message)                                                             \
     do {                                                                                           \
       VkResult _result = expr;                                                                     \
       if (_result != VK_SUCCESS) {                                                                 \
-        log_error("Vulkan error| expr = {}, result = {} ", #expr, _result);                        \
-        log_error("Message = {}", ##__VA_ARGS__);                                                  \
+        SOUL_LOG_ERROR("Vulkan error| expr = {}, result = {} ", #expr, soul_size(_result));        \
+        SOUL_LOG_ERROR("Message = {}", message);                                                   \
       }                                                                                            \
     } while (0)
 #endif

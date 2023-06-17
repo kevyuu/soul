@@ -65,20 +65,19 @@ namespace soul::gpu
     return build_info;
   }
 
-  auto compute_max_primitives_counts(const BlasBuildDesc& build_desc, uint32* max_primitives_counts)
-    -> void
+  auto compute_max_primitives_counts(const BlasBuildDesc& build_desc, memory::Allocator& allocator)
+    -> Vector<uint32>
   {
-    std::transform(
-      build_desc.geometry_descs,
-      build_desc.geometry_descs + build_desc.geometry_count,
-      max_primitives_counts,
+    return Vector<uint32>::transform(
+      std::span(build_desc.geometry_descs, build_desc.geometry_count),
       [](const RTGeometryDesc& desc) -> uint32 {
         if (desc.type == RTGeometryType::TRIANGLE) {
           return desc.content.triangles.index_count / 3;
         }
         SOUL_ASSERT(0, desc.type == RTGeometryType::AABB, "");
         return desc.content.aabbs.count;
-      });
+      },
+      allocator);
   }
 
 } // namespace soul::gpu

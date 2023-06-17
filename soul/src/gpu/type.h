@@ -28,8 +28,10 @@ namespace soul::gpu
   class WSI
   {
   public:
-    [[nodiscard]] virtual auto create_vulkan_surface(VkInstance instance) -> VkSurfaceKHR = 0;
-    [[nodiscard]] virtual auto get_framebuffer_size() const -> vec2ui32 = 0;
+    [[nodiscard]]
+    virtual auto create_vulkan_surface(VkInstance instance) -> VkSurfaceKHR = 0;
+    [[nodiscard]]
+    virtual auto get_framebuffer_size() const -> vec2ui32 = 0;
     virtual ~WSI() = default;
   };
 
@@ -396,12 +398,14 @@ namespace soul::gpu
     {
     }
 
-    [[nodiscard]] constexpr auto get_level() const -> uint16
+    [[nodiscard]]
+    constexpr auto get_level() const -> uint16
     {
       return soul::cast<uint16>((index_ & LEVEL_MASK) >> LEVEL_BIT_SHIFT);
     }
 
-    [[nodiscard]] constexpr auto get_layer() const -> uint16
+    [[nodiscard]]
+    constexpr auto get_layer() const -> uint16
     {
       return soul::cast<uint16>((index_ & LAYER_MASK) >> LAYER_BIT_SHIFT);
     }
@@ -434,7 +438,12 @@ namespace soul::gpu
       {
       }
 
-      [[nodiscard]] auto operator*() const -> value_type { return SubresourceIndex(mip_, layer_); }
+      [[nodiscard]]
+      auto
+      operator*() const -> value_type
+      {
+        return SubresourceIndex(mip_, layer_);
+      }
 
       auto operator++() -> ConstIterator&
       {
@@ -446,7 +455,9 @@ namespace soul::gpu
         return *this;
       }
 
-      [[nodiscard]] auto operator++(int) -> ConstIterator
+      [[nodiscard]]
+      auto
+      operator++(int) -> ConstIterator
       {
         const ConstIterator t{mip_, layer_, mip_end_};
         this->operator++();
@@ -480,13 +491,15 @@ namespace soul::gpu
         soul::cast<uint16>(base.get_level() + level_count)};
     }
 
-    [[nodiscard]] auto begin() const noexcept -> const_iterator
+    [[nodiscard]]
+    auto begin() const noexcept -> const_iterator
     {
       return const_iterator{
         base.get_level(), base.get_layer(), soul::cast<uint16>(base.get_level() + level_count)};
     }
 
-    [[nodiscard]] auto end() const noexcept -> const_iterator
+    [[nodiscard]]
+    auto end() const noexcept -> const_iterator
     {
       return const_iterator{
         base.get_level(),
@@ -658,7 +671,8 @@ namespace soul::gpu
         .name = name};
     }
 
-    [[nodiscard]] auto get_view_count() const -> soul_size
+    [[nodiscard]]
+    auto get_view_count() const -> soul_size
     {
       return soul::cast<soul_size>(mip_levels) * layer_count;
     }
@@ -814,7 +828,11 @@ namespace soul::gpu
 
     explicit ShaderString(CString str) : source(std::move(str)) {}
 
-    [[nodiscard]] auto c_str() const -> const char* { return source.data(); }
+    [[nodiscard]]
+    auto c_str() const -> const char*
+    {
+      return source.data();
+    }
   };
 
   using ShaderSource = std::variant<ShaderFile, ShaderString>;
@@ -1153,7 +1171,8 @@ namespace soul::gpu
         }
       }
 
-      [[nodiscard]] auto need_invalidate(PipelineStageFlags stages, AccessFlags accesses) -> bool
+      [[nodiscard]]
+      auto need_invalidate(PipelineStageFlags stages, AccessFlags accesses) -> bool
       {
         return stages
           .find_if([this, accesses](const PipelineStage pipeline_stage) {
@@ -1252,8 +1271,16 @@ namespace soul::gpu
       State state = State::INIT;
 
       static auto null() -> BinarySemaphore { return {VK_NULL_HANDLE}; }
-      [[nodiscard]] auto is_null() const -> bool { return vk_handle == VK_NULL_HANDLE; }
-      [[nodiscard]] auto is_valid() const -> bool { return !is_null(); }
+      [[nodiscard]]
+      auto is_null() const -> bool
+      {
+        return vk_handle == VK_NULL_HANDLE;
+      }
+      [[nodiscard]]
+      auto is_valid() const -> bool
+      {
+        return !is_null();
+      }
     };
 
     struct TimelineSemaphore {
@@ -1262,13 +1289,22 @@ namespace soul::gpu
       uint64 counter;
 
       static auto null() -> TimelineSemaphore { return {}; }
-      [[nodiscard]] auto is_null() const -> bool { return counter == 0; }
-      [[nodiscard]] auto is_valid() const -> bool { return !is_null(); }
+      [[nodiscard]]
+      auto is_null() const -> bool
+      {
+        return counter == 0;
+      }
+      [[nodiscard]]
+      auto is_valid() const -> bool
+      {
+        return !is_null();
+      }
     };
 
     using Semaphore = std::variant<BinarySemaphore*, TimelineSemaphore>;
 
-    [[nodiscard]] inline auto is_semaphore_valid(Semaphore semaphore) -> bool
+    [[nodiscard]]
+    inline auto is_semaphore_valid(Semaphore semaphore) -> bool
     {
       if (std::holds_alternative<BinarySemaphore*>(semaphore)) {
         return std::get<BinarySemaphore*>(semaphore)->is_valid();
@@ -1276,7 +1312,8 @@ namespace soul::gpu
       return std::get<TimelineSemaphore>(semaphore).is_valid();
     }
 
-    [[nodiscard]] inline auto is_semaphore_null(Semaphore semaphore) -> bool
+    [[nodiscard]]
+    inline auto is_semaphore_null(Semaphore semaphore) -> bool
     {
       if (std::holds_alternative<BinarySemaphore*>(semaphore)) {
         return std::get<BinarySemaphore*>(semaphore)->is_null();
@@ -1297,9 +1334,15 @@ namespace soul::gpu
       auto flush(BinarySemaphore* binary_semaphore = nullptr) -> void;
       auto present(VkSwapchainKHR swapchain, uint32 swapchain_index, BinarySemaphore* semaphore)
         -> void;
-      [[nodiscard]] auto get_family_index() const -> uint32 { return family_index_; }
-      [[nodiscard]] auto is_waiting_binary_semaphore() const -> bool;
-      [[nodiscard]] auto is_waiting_timeline_semaphore() const -> bool;
+      [[nodiscard]]
+      auto get_family_index() const -> uint32
+      {
+        return family_index_;
+      }
+      [[nodiscard]]
+      auto is_waiting_binary_semaphore() const -> bool;
+      [[nodiscard]]
+      auto is_waiting_timeline_semaphore() const -> bool;
 
     private:
       auto init_timeline_semaphore() -> void;
@@ -1328,7 +1371,8 @@ namespace soul::gpu
       {
       }
 
-      [[nodiscard]] constexpr auto get_vk_handle() const noexcept -> VkCommandBuffer
+      [[nodiscard]]
+      constexpr auto get_vk_handle() const noexcept -> VkCommandBuffer
       {
         return vk_handle_;
       }
@@ -1345,11 +1389,16 @@ namespace soul::gpu
 
       explicit constexpr PrimaryCommandBuffer(VkCommandBuffer vk_handle) : vk_handle_(vk_handle) {}
 
-      [[nodiscard]] constexpr auto get_vk_handle() const noexcept -> VkCommandBuffer
+      [[nodiscard]]
+      constexpr auto get_vk_handle() const noexcept -> VkCommandBuffer
       {
         return vk_handle_;
       }
-      [[nodiscard]] auto is_null() const noexcept -> bool { return vk_handle_ == VK_NULL_HANDLE; }
+      [[nodiscard]]
+      auto is_null() const noexcept -> bool
+      {
+        return vk_handle_ == VK_NULL_HANDLE;
+      }
     };
 
     using CommandQueues = FlagMap<QueueType, CommandQueue>;
@@ -1634,7 +1683,7 @@ namespace soul::gpu
   struct RenderCommandDrawIndex : RenderCommandTyped<RenderCommandType::DRAW_INDEX> {
     static constexpr PipelineType PIPELINE_TYPE = PipelineType::RASTER;
     PipelineStateID pipeline_state_id;
-    void* push_constant_data = nullptr;
+    const void* push_constant_data = nullptr;
     uint32 push_constant_size = 0;
     BufferID vertex_buffer_ids[MAX_VERTEX_BINDING];
     uint16 vertex_offsets[MAX_VERTEX_BINDING] = {};

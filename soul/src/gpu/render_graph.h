@@ -28,12 +28,14 @@ namespace soul::gpu
         return {index | 1u << EXTERNAL_BIT_POSITION};
       }
 
-      [[nodiscard]] auto is_external() const -> bool
+      [[nodiscard]]
+      auto is_external() const -> bool
       {
         return index & (1u << EXTERNAL_BIT_POSITION);
       }
 
-      [[nodiscard]] auto get_index() const -> uint32
+      [[nodiscard]]
+      auto get_index() const -> uint32
       {
         return index & ~(1u << EXTERNAL_BIT_POSITION);
       }
@@ -113,8 +115,16 @@ namespace soul::gpu
     ResourceNodeID id;
 
     friend auto operator<=>(const this_type&, const this_type&) = default;
-    [[nodiscard]] auto is_null() const -> bool { return id.is_null(); }
-    [[nodiscard]] auto is_valid() const -> bool { return id.is_valid(); }
+    [[nodiscard]]
+    auto is_null() const -> bool
+    {
+      return id.is_null();
+    }
+    [[nodiscard]]
+    auto is_valid() const -> bool
+    {
+      return id.is_valid();
+    }
   };
 
   using BufferNodeID = TypedResourceNodeID<RGResourceType::BUFFER>;
@@ -319,7 +329,8 @@ namespace soul::gpu
       bool clear = false;
       ClearValue clear_value = {};
 
-      [[nodiscard]] auto get_view_count() const -> soul_size
+      [[nodiscard]]
+      auto get_view_count() const -> soul_size
       {
         return soul::cast<uint64>(mip_levels) * layer_count;
       }
@@ -376,10 +387,14 @@ namespace soul::gpu
   } // namespace impl
 
   struct RGRenderTargetDesc {
+
+    using ColorAttachments = SBOVector<ColorAttachmentDesc, 1>;
+    using ResolveAttachments = SBOVector<ResolveAttachmentDesc, 1>;
+
     RGRenderTargetDesc() = default;
 
     RGRenderTargetDesc(vec2ui32 dimension, const ColorAttachmentDesc& color)
-        : dimension(dimension), color_attachments(std::to_array({color}))
+        : dimension(dimension), color_attachments(ColorAttachments::fill_n(1, color))
     {
     }
 
@@ -388,7 +403,7 @@ namespace soul::gpu
       const ColorAttachmentDesc& color,
       const DepthStencilAttachmentDesc& depth_stencil)
         : dimension(dimension),
-          color_attachments(std::to_array({color})),
+          color_attachments(ColorAttachments::fill_n(1, color)),
           depth_stencil_attachment(depth_stencil)
     {
     }
@@ -401,8 +416,8 @@ namespace soul::gpu
       const DepthStencilAttachmentDesc depth_stencil)
         : dimension(dimension),
           sample_count(sample_count),
-          color_attachments(std::to_array({color})),
-          resolve_attachments(std::to_array({resolve})),
+          color_attachments(ColorAttachments::fill_n(1, color)),
+          resolve_attachments(ResolveAttachments::fill_n(1, resolve)),
           depth_stencil_attachment(depth_stencil)
     {
     }
@@ -491,97 +506,126 @@ namespace soul::gpu
     auto operator=(PassBaseNode&&) -> PassBaseNode& = delete;
     virtual ~PassBaseNode() = default;
 
-    [[nodiscard]] auto get_name() const -> const char* { return name_; }
-    [[nodiscard]] auto get_pipeline_flags() const -> PipelineFlags { return pipeline_flags_; }
-    [[nodiscard]] auto get_queue_type() const -> QueueType { return queue_type_; }
+    [[nodiscard]]
+    auto get_name() const -> const char*
+    {
+      return name_;
+    }
+    [[nodiscard]]
+    auto get_pipeline_flags() const -> PipelineFlags
+    {
+      return pipeline_flags_;
+    }
+    [[nodiscard]]
+    auto get_queue_type() const -> QueueType
+    {
+      return queue_type_;
+    }
 
-    [[nodiscard]] auto get_vertex_buffers() const -> std::span<const BufferNodeID>
+    [[nodiscard]]
+    auto get_vertex_buffers() const -> std::span<const BufferNodeID>
     {
       return vertex_buffers_;
     }
-    [[nodiscard]] auto get_index_buffers() const -> std::span<const BufferNodeID>
+    [[nodiscard]]
+    auto get_index_buffers() const -> std::span<const BufferNodeID>
     {
       return index_buffers_;
     }
 
-    [[nodiscard]] auto get_buffer_read_accesses() const -> std::span<const ShaderBufferReadAccess>
+    [[nodiscard]]
+    auto get_buffer_read_accesses() const -> std::span<const ShaderBufferReadAccess>
     {
       return shader_buffer_read_accesses_;
     }
 
-    [[nodiscard]] auto get_buffer_write_accesses() const -> std::span<const ShaderBufferWriteAccess>
+    [[nodiscard]]
+    auto get_buffer_write_accesses() const -> std::span<const ShaderBufferWriteAccess>
     {
       return shader_buffer_write_accesses_;
     }
 
-    [[nodiscard]] auto get_texture_read_accesses() const -> std::span<const ShaderTextureReadAccess>
+    [[nodiscard]]
+    auto get_texture_read_accesses() const -> std::span<const ShaderTextureReadAccess>
     {
       return shader_texture_read_accesses_;
     }
 
-    [[nodiscard]] auto get_texture_write_accesses() const
-      -> std::span<const ShaderTextureWriteAccess>
+    [[nodiscard]]
+    auto get_texture_write_accesses() const -> std::span<const ShaderTextureWriteAccess>
     {
       return shader_texture_write_accesses_;
     }
 
-    [[nodiscard]] auto get_shader_tlas_read_accesses() const
-      -> std::span<const ShaderTlasReadAccess>
+    [[nodiscard]]
+    auto get_shader_tlas_read_accesses() const -> std::span<const ShaderTlasReadAccess>
     {
       return shader_tlas_read_accesses_;
     }
 
-    [[nodiscard]] auto get_shader_blas_group_read_accesses() const
-      -> std::span<const ShaderBlasGroupReadAccess>
+    [[nodiscard]]
+    auto get_shader_blas_group_read_accesses() const -> std::span<const ShaderBlasGroupReadAccess>
     {
       return shader_blas_group_read_accesses_;
     }
 
-    [[nodiscard]] auto get_source_buffers() const -> std::span<const TransferSrcBufferAccess>
+    [[nodiscard]]
+    auto get_source_buffers() const -> std::span<const TransferSrcBufferAccess>
     {
       return source_buffers_;
     }
 
-    [[nodiscard]] auto get_destination_buffers() const -> std::span<const TransferDstBufferAccess>
+    [[nodiscard]]
+    auto get_destination_buffers() const -> std::span<const TransferDstBufferAccess>
     {
       return destination_buffers_;
     }
 
-    [[nodiscard]] auto get_source_textures() const -> std::span<const TransferSrcTextureAccess>
+    [[nodiscard]]
+    auto get_source_textures() const -> std::span<const TransferSrcTextureAccess>
     {
       return source_textures_;
     }
 
-    [[nodiscard]] auto get_destination_textures() const -> std::span<const TransferDstTextureAccess>
+    [[nodiscard]]
+    auto get_destination_textures() const -> std::span<const TransferDstTextureAccess>
     {
       return destination_textures_;
     }
 
-    [[nodiscard]] auto get_as_build_input_buffers() const -> std::span<const BufferNodeID>
+    [[nodiscard]]
+    auto get_as_build_input_buffers() const -> std::span<const BufferNodeID>
     {
       return as_build_input_buffers_;
     }
 
-    [[nodiscard]] auto get_as_build_input_blas_groups() const -> std::span<const BlasGroupNodeID>
+    [[nodiscard]]
+    auto get_as_build_input_blas_groups() const -> std::span<const BlasGroupNodeID>
     {
       return as_build_input_blas_groups_;
     }
 
-    [[nodiscard]] auto get_as_build_destination_tlas_list() const
-      -> std::span<const AsBuildDstTlasAccess>
+    [[nodiscard]]
+    auto get_as_build_destination_tlas_list() const -> std::span<const AsBuildDstTlasAccess>
     {
       return as_build_dst_tlas_list_;
     }
 
-    [[nodiscard]] auto get_as_build_destination_blas_group_list() const
+    [[nodiscard]]
+    auto get_as_build_destination_blas_group_list() const
       -> std::span<const AsBuildDstBlasGroupAccess>
     {
       return as_build_dst_blas_group_list_;
     }
 
-    [[nodiscard]] auto get_render_target() const -> const RGRenderTarget& { return render_target_; }
+    [[nodiscard]]
+    auto get_render_target() const -> const RGRenderTarget&
+    {
+      return render_target_;
+    }
 
-    [[nodiscard]] auto get_color_attachment_node_id() const -> TextureNodeID
+    [[nodiscard]]
+    auto get_color_attachment_node_id() const -> TextureNodeID
     {
       return render_target_.color_attachments[0].out_node_id;
     }
@@ -642,7 +686,11 @@ namespace soul::gpu
     {
     }
 
-    [[nodiscard]] auto get_parameter() const -> const Parameter& { return parameter_; }
+    [[nodiscard]]
+    auto get_parameter() const -> const Parameter&
+    {
+      return parameter_;
+    }
     auto execute(
       RenderGraphRegistry& render_graph_execution,
       impl::RenderCompiler& render_compiler,
@@ -750,46 +798,52 @@ namespace soul::gpu
     auto import_tlas(const char* name, TlasID tlas_id) -> TlasNodeID;
     auto import_blas_group(const char* name, BlasGroupID blas_group_id) -> BlasGroupNodeID;
 
-    [[nodiscard]] auto get_pass_nodes() const -> const Vector<PassBaseNode*>&
+    [[nodiscard]]
+    auto get_pass_nodes() const -> const Vector<PassBaseNode*>&
     {
       return pass_nodes_;
     }
 
-    [[nodiscard]] auto get_internal_buffers() const -> const Vector<impl::RGInternalBuffer>&
+    [[nodiscard]]
+    auto get_internal_buffers() const -> const Vector<impl::RGInternalBuffer>&
     {
       return internal_buffers_;
     }
 
-    [[nodiscard]] auto get_internal_textures() const -> const Vector<impl::RGInternalTexture>&
+    [[nodiscard]]
+    auto get_internal_textures() const -> const Vector<impl::RGInternalTexture>&
     {
       return internal_textures_;
     }
 
-    [[nodiscard]] auto get_external_buffers() const -> const Vector<impl::RGExternalBuffer>&
+    [[nodiscard]]
+    auto get_external_buffers() const -> const Vector<impl::RGExternalBuffer>&
     {
       return external_buffers_;
     }
 
-    [[nodiscard]] auto get_external_textures() const -> const Vector<impl::RGExternalTexture>&
+    [[nodiscard]]
+    auto get_external_textures() const -> const Vector<impl::RGExternalTexture>&
     {
       return external_textures_;
     }
 
-    [[nodiscard]] auto get_external_tlas_list() const -> std::span<const impl::RGExternalTlas>
+    [[nodiscard]]
+    auto get_external_tlas_list() const -> std::span<const impl::RGExternalTlas>
     {
       return external_tlas_list_;
     }
 
-    [[nodiscard]] auto get_external_blas_group_list() const
-      -> std::span<const impl::RGExternalBlasGroup>
+    [[nodiscard]]
+    auto get_external_blas_group_list() const -> std::span<const impl::RGExternalBlasGroup>
     {
       return external_blas_group_list_;
     }
 
-    [[nodiscard]] auto get_texture_desc(TextureNodeID node_id, const System& gpu_system) const
-      -> RGTextureDesc;
-    [[nodiscard]] auto get_buffer_desc(BufferNodeID node_id, const System& gpu_system) const
-      -> RGBufferDesc;
+    [[nodiscard]]
+    auto get_texture_desc(TextureNodeID node_id, const System& gpu_system) const -> RGTextureDesc;
+    [[nodiscard]]
+    auto get_buffer_desc(BufferNodeID node_id, const System& gpu_system) const -> RGBufferDesc;
 
   private:
     Vector<PassBaseNode*> pass_nodes_;
@@ -816,9 +870,11 @@ namespace soul::gpu
     auto read_resource_node(ResourceNodeID resource_node_id, PassNodeID pass_node_id) -> void;
     auto write_resource_node(ResourceNodeID resource_node_id, PassNodeID pass_node_id)
       -> ResourceNodeID;
-    [[nodiscard]] auto get_resource_node(ResourceNodeID node_id) const -> const impl::ResourceNode&;
+    [[nodiscard]]
+    auto get_resource_node(ResourceNodeID node_id) const -> const impl::ResourceNode&;
     auto get_resource_node(ResourceNodeID node_id) -> impl::ResourceNode&;
-    [[nodiscard]] auto get_resource_nodes() const -> std::span<const impl::ResourceNode>;
+    [[nodiscard]]
+    auto get_resource_nodes() const -> std::span<const impl::ResourceNode>;
 
     template <RGResourceType resource_type>
     auto create_resource_node(impl::RGResourceID resource_id) -> TypedResourceNodeID<resource_type>
@@ -864,7 +920,8 @@ namespace soul::gpu
     static_assert(pipeline_flags.test_any(
       {PipelineType::RASTER, PipelineType::COMPUTE, PipelineType::RAY_TRACING}));
     render_graph_.read_resource_node(node_id, pass_id_);
-    pass_node_.shader_buffer_read_accesses_.push_back({node_id, stage_flags, usage_type});
+    pass_node_.shader_buffer_read_accesses_.push_back(
+      ShaderBufferReadAccess{node_id, stage_flags, usage_type});
     return node_id;
   }
 
@@ -877,7 +934,7 @@ namespace soul::gpu
       {PipelineType::RASTER, PipelineType::COMPUTE, PipelineType::RAY_TRACING}));
     const auto out_node_id = render_graph_.write_resource_node(node_id, pass_id_);
     pass_node_.shader_buffer_write_accesses_.push_back(
-      {node_id, out_node_id, stage_flags, usage_type});
+      ShaderBufferWriteAccess{node_id, out_node_id, stage_flags, usage_type});
     return out_node_id;
   }
 
@@ -891,7 +948,8 @@ namespace soul::gpu
     static_assert(pipeline_flags.test_any(
       {PipelineType::RASTER, PipelineType::COMPUTE, PipelineType::RAY_TRACING}));
     render_graph_.read_resource_node(node_id, pass_id_);
-    pass_node_.shader_texture_read_accesses_.push_back({node_id, stage_flags, usage_type, view});
+    pass_node_.shader_texture_read_accesses_.push_back(
+      ShaderTextureReadAccess{node_id, stage_flags, usage_type, view});
     return node_id;
   }
 
@@ -906,7 +964,7 @@ namespace soul::gpu
       {PipelineType::RASTER, PipelineType::COMPUTE, PipelineType::RAY_TRACING}));
     const auto out_node_id = render_graph_.write_resource_node(node_id, pass_id_);
     pass_node_.shader_texture_write_accesses_.push_back(
-      {node_id, out_node_id, stage_flags, usage_type, view});
+      ShaderTextureWriteAccess{node_id, out_node_id, stage_flags, usage_type, view});
     return out_node_id;
   }
 
@@ -916,7 +974,7 @@ namespace soul::gpu
   {
     static_assert(pipeline_flags.test_any({PipelineType::RAY_TRACING}));
     render_graph_.read_resource_node(node_id, pass_id_);
-    pass_node_.shader_tlas_read_accesses_.push_back({node_id, stage_flags});
+    pass_node_.shader_tlas_read_accesses_.push_back(ShaderTlasReadAccess{node_id, stage_flags});
     return node_id;
   }
 
@@ -925,7 +983,8 @@ namespace soul::gpu
     BlasGroupNodeID node_id, ShaderStageFlags stage_flags) -> BlasGroupNodeID
   {
     render_graph_.read_resource_node(node_id, pass_id_);
-    pass_node_.shader_blas_group_read_accesses_.push_back({node_id, stage_flags});
+    pass_node_.shader_blas_group_read_accesses_.push_back(
+      ShaderBlasGroupReadAccess{node_id, stage_flags});
     return node_id;
   }
 
@@ -952,7 +1011,7 @@ namespace soul::gpu
   {
     static_assert(pipeline_flags.test(PipelineType::NON_SHADER));
     render_graph_.read_resource_node(node_id, pass_id_);
-    pass_node_.source_buffers_.add({node_id});
+    pass_node_.source_buffers_.push_back(TransferSrcBufferAccess{node_id});
     return node_id;
   }
 
@@ -962,8 +1021,8 @@ namespace soul::gpu
   {
     static_assert(pipeline_flags.test(PipelineType::NON_SHADER));
     BufferNodeID out_node_id = render_graph_.write_resource_node(node_id, pass_id_);
-    pass_node_.destination_buffers_.add(
-      {.data_source = data_source, .input_node_id = node_id, .output_node_id = out_node_id});
+    pass_node_.destination_buffers_.push_back(TransferDstBufferAccess{
+      .data_source = data_source, .input_node_id = node_id, .output_node_id = out_node_id});
     return out_node_id;
   }
 
@@ -972,7 +1031,7 @@ namespace soul::gpu
   {
     static_assert(pipeline_flags.test(PipelineType::NON_SHADER));
     render_graph_.read_resource_node(node_id, pass_id_);
-    pass_node_.source_textures_.add({node_id});
+    pass_node_.source_textures_.push_back(TransferSrcTextureAccess{node_id});
     return node_id;
   }
 
@@ -982,8 +1041,8 @@ namespace soul::gpu
   {
     static_assert(pipeline_flags.test(PipelineType::NON_SHADER));
     TextureNodeID out_node_id = render_graph_.write_resource_node(node_id, pass_id_);
-    pass_node_.destination_textures_.add(
-      {.data_source = data_source, .input_node_id = node_id, .output_node_id = out_node_id});
+    pass_node_.destination_textures_.push_back(TransferDstTextureAccess{
+      .data_source = data_source, .input_node_id = node_id, .output_node_id = out_node_id});
     return out_node_id;
   }
 
@@ -992,7 +1051,7 @@ namespace soul::gpu
   {
     static_assert(pipeline_flags.test(PipelineType::NON_SHADER));
     render_graph_.read_resource_node(node_id, pass_id_);
-    pass_node_.as_build_input_buffers_.add({node_id});
+    pass_node_.as_build_input_buffers_.push_back({node_id});
     return node_id;
   }
 
@@ -1002,7 +1061,7 @@ namespace soul::gpu
   {
     static_assert(pipeline_flags.test(PipelineType::NON_SHADER));
     render_graph_.read_resource_node(node_id, pass_id_);
-    pass_node_.as_build_input_blas_groups_.add({node_id});
+    pass_node_.as_build_input_blas_groups_.push_back({node_id});
     return node_id;
   }
 
@@ -1011,8 +1070,8 @@ namespace soul::gpu
   {
     static_assert(pipeline_flags.test(PipelineType::NON_SHADER));
     const auto out_node_id = render_graph_.write_resource_node(node_id, pass_id_);
-    pass_node_.as_build_dst_tlas_list_.add(
-      {.input_node_id = node_id, .output_node_id = out_node_id});
+    pass_node_.as_build_dst_tlas_list_.push_back(
+      AsBuildDstTlasAccess{.input_node_id = node_id, .output_node_id = out_node_id});
     return out_node_id;
   }
 
@@ -1022,8 +1081,8 @@ namespace soul::gpu
   {
     static_assert(pipeline_flags.test(PipelineType::NON_SHADER));
     const auto out_node_id = render_graph_.write_resource_node(node_id, pass_id_);
-    pass_node_.as_build_dst_blas_group_list_.add(
-      {.input_node_id = node_id, .output_node_id = out_node_id});
+    pass_node_.as_build_dst_blas_group_list_.push_back(
+      AsBuildDstBlasGroupAccess{.input_node_id = node_id, .output_node_id = out_node_id});
     return out_node_id;
   }
 

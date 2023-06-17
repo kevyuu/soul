@@ -203,7 +203,8 @@ namespace soul::util
     }
   }
 
-  [[nodiscard]] inline auto get_random_color() -> vec3f
+  [[nodiscard]]
+  inline auto get_random_color() -> vec3f
   {
     return {
       get_random_number<float>(0.0f, 1.0f),
@@ -216,4 +217,5 @@ namespace soul::util
   {
     return Integral((x + (Integral(a) - 1)) & ~Integral(a - 1));
   }
+
 }; // namespace soul::util

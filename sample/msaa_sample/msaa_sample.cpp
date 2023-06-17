@@ -240,14 +240,14 @@ public:
     const auto scale_vec = vec3f(0.5f, 0.5, 1.0f);
     const auto rotate_angle = math::radians(45.0f);
     const auto rotate_axis = vec3f(0.0f, 0.0f, 1.0f);
-    push_constants_.push_back({
+    push_constants_.push_back(MSAAPushConstant{
       .transform = math::scale(
         math::rotate(
           math::translate(mat4f::identity(), vec3f(-0.25f, 0.0f, 0.1f)), rotate_angle, rotate_axis),
         scale_vec),
       .color = vec3f(1.0f, 0.0f, 0.0f),
     });
-    push_constants_.push_back({
+    push_constants_.push_back(MSAAPushConstant{
       .transform = math::scale(
         math::rotate(
           math::translate(mat4f::identity(), vec3f(0.25f, 0.0f, 0.0f)), rotate_angle, rotate_axis),

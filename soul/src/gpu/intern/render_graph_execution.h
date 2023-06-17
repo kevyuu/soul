@@ -62,17 +62,20 @@ namespace soul::gpu::impl
     uint32 mip_levels = 0;
     uint32 layers = 0;
 
-    [[nodiscard]] auto get_view_count() const -> soul_size
+    [[nodiscard]]
+    auto get_view_count() const -> soul_size
     {
       return soul::cast<soul_size>(mip_levels) * layers;
     }
 
-    [[nodiscard]] auto get_view_index(const SubresourceIndex index) const -> soul_size
+    [[nodiscard]]
+    auto get_view_index(const SubresourceIndex index) const -> soul_size
     {
       return index.get_layer() * mip_levels + index.get_level();
     }
 
-    [[nodiscard]] auto get_view(const SubresourceIndex index) const -> TextureViewExecInfo*
+    [[nodiscard]]
+    auto get_view(const SubresourceIndex index) const -> TextureViewExecInfo*
     {
       return view + get_view_index(index);
     }
@@ -109,21 +112,24 @@ namespace soul::gpu::impl
     using NodeDependencyMatrix = FlagMap<DependencyType, BitVector<>>;
 
     PassDependencyGraph(soul_size pass_node_count, std::span<const ResourceNode> resource_nodes);
-    [[nodiscard]] auto get_dependency_flags(PassNodeID src_node_id, PassNodeID dst_node_id) const
+    [[nodiscard]]
+    auto get_dependency_flags(PassNodeID src_node_id, PassNodeID dst_node_id) const
       -> DependencyFlags;
 
-    [[nodiscard]] auto get_dependencies(const PassNodeID node_id) const
-      -> std::span<const PassNodeID>
+    [[nodiscard]]
+    auto get_dependencies(const PassNodeID node_id) const -> std::span<const PassNodeID>
     {
       return dependencies_[node_id.id];
     }
 
-    [[nodiscard]] auto get_dependants(const PassNodeID node_id) const -> std::span<const PassNodeID>
+    [[nodiscard]]
+    auto get_dependants(const PassNodeID node_id) const -> std::span<const PassNodeID>
     {
       return dependants_[node_id.id];
     }
 
-    [[nodiscard]] auto get_dependency_level(PassNodeID node_id) const -> soul_size
+    [[nodiscard]]
+    auto get_dependency_level(PassNodeID node_id) const -> soul_size
     {
       return dependency_levels_[node_id.id];
     }
@@ -139,9 +145,11 @@ namespace soul::gpu::impl
     Vector<soul_size> dependency_levels_;
 
     static constexpr auto UNINITIALIZED_DEPENDENCY_LEVEL = ~0u;
-    [[nodiscard]] auto get_pass_node_count() const -> soul_size;
-    [[nodiscard]] auto get_dependency_matrix_index(
-      PassNodeID src_node_id, PassNodeID dst_node_id) const -> soul_size;
+    [[nodiscard]]
+    auto get_pass_node_count() const -> soul_size;
+    [[nodiscard]]
+    auto get_dependency_matrix_index(PassNodeID src_node_id, PassNodeID dst_node_id) const
+      -> soul_size;
 
     auto calculate_dependency_level(PassNodeID pass_node_id) -> soul_size;
   };
@@ -184,20 +192,43 @@ namespace soul::gpu::impl
     ~RenderGraphExecution() = default;
 
     auto init() -> void;
+
     auto run() -> void;
+
     auto cleanup() -> void;
 
-    [[nodiscard]] auto is_external(const BufferExecInfo& info) const -> bool;
-    [[nodiscard]] auto is_external(const TextureExecInfo& info) const -> bool;
-    [[nodiscard]] auto get_buffer_id(BufferNodeID node_id) const -> BufferID;
-    [[nodiscard]] auto get_texture_id(TextureNodeID node_id) const -> TextureID;
-    [[nodiscard]] auto get_tlas_id(TlasNodeID node_id) const -> TlasID;
-    [[nodiscard]] auto get_buffer(BufferNodeID node_id) const -> Buffer&;
-    [[nodiscard]] auto get_texture(TextureNodeID node_id) const -> Texture&;
-    [[nodiscard]] auto get_buffer_info_index(BufferNodeID node_id) const -> uint32;
-    [[nodiscard]] auto get_texture_info_index(TextureNodeID nodeID) const -> uint32;
-    [[nodiscard]] auto get_tlas_resource_info_index(TlasNodeID node_id) const -> uint32;
-    [[nodiscard]] auto get_blas_group_resource_info_index(BlasGroupNodeID node_id) const -> uint32;
+    [[nodiscard]]
+    auto is_external(const BufferExecInfo& info) const -> bool;
+
+    [[nodiscard]]
+    auto is_external(const TextureExecInfo& info) const -> bool;
+
+    [[nodiscard]]
+    auto get_buffer_id(BufferNodeID node_id) const -> BufferID;
+
+    [[nodiscard]]
+    auto get_texture_id(TextureNodeID node_id) const -> TextureID;
+
+    [[nodiscard]]
+    auto get_tlas_id(TlasNodeID node_id) const -> TlasID;
+
+    [[nodiscard]]
+    auto get_buffer(BufferNodeID node_id) const -> Buffer&;
+
+    [[nodiscard]]
+    auto get_texture(TextureNodeID node_id) const -> Texture&;
+
+    [[nodiscard]]
+    auto get_buffer_info_index(BufferNodeID node_id) const -> uint32;
+
+    [[nodiscard]]
+    auto get_texture_info_index(TextureNodeID nodeID) const -> uint32;
+
+    [[nodiscard]]
+    auto get_tlas_resource_info_index(TlasNodeID node_id) const -> uint32;
+
+    [[nodiscard]]
+    auto get_blas_group_resource_info_index(BlasGroupNodeID node_id) const -> uint32;
 
   private:
     const RenderGraph* render_graph_;
@@ -228,34 +259,44 @@ namespace soul::gpu::impl
     Vector<PassNodeID> pass_order_;
 
     auto compute_active_passes() -> void;
+
     auto compute_pass_order() -> void;
 
-    [[nodiscard]] auto create_render_pass(uint32 pass_index) -> VkRenderPass;
-    [[nodiscard]] auto create_framebuffer(uint32 pass_index, VkRenderPass render_pass)
-      -> VkFramebuffer;
+    [[nodiscard]]
+    auto create_render_pass(uint32 pass_index) -> VkRenderPass;
+
+    [[nodiscard]]
+    auto create_framebuffer(uint32 pass_index, VkRenderPass render_pass) -> VkFramebuffer;
+
     auto sync_external() -> void;
+
     auto execute_pass(uint32 pass_index, PrimaryCommandBuffer command_buffer) -> void;
 
     auto init_shader_buffers(
       std::span<const ShaderBufferReadAccess> access_list,
       PassNodeID pass_node_id,
       QueueType queue_type) -> void;
+
     auto init_shader_buffers(
       std::span<const ShaderBufferWriteAccess> access_list,
       PassNodeID pass_node_id,
       QueueType queue_type) -> void;
+
     auto init_shader_textures(
       std::span<const ShaderTextureReadAccess> access_list,
       PassNodeID pass_node_id,
       QueueType queue_type) -> void;
+
     auto init_shader_textures(
       std::span<const ShaderTextureWriteAccess> access_list,
       PassNodeID pass_node_id,
       QueueType queue_type) -> void;
+
     auto init_shader_tlas_accesses(
       std::span<const ShaderTlasReadAccess> access_list,
       PassNodeID pass_node_id,
       QueueType queue_type) -> void;
+
     auto init_shader_blas_group_accesses(
       std::span<const ShaderBlasGroupReadAccess> access_list,
       PassNodeID pass_node_id,
