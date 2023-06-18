@@ -5,12 +5,12 @@
 namespace soul
 {
 
-  template <bit_block_type BlockType>
+  template <ts_bit_block BlockT>
   class BitRef
   {
   public:
-    using this_type = BitRef<BlockType>;
-    BitRef(BlockType* ptr, soul_size bit_index);
+    using this_type = BitRef<BlockT>;
+    BitRef(BlockT* ptr, soul_size bit_index);
 
     ~BitRef() = default;
 
@@ -32,24 +32,25 @@ namespace soul
     BitRef(const BitRef&) = default;
     BitRef(BitRef&&) noexcept = default;
 
-    BlockType* bit_block_ = nullptr;
+    BlockT* bit_block_ = nullptr;
     soul_size bit_index_ = 0;
     BitRef() = default;
 
     auto set_true() -> void;
     auto set_false() -> void;
 
-    [[nodiscard]] auto get_mask() const -> BlockType;
+    [[nodiscard]]
+    auto get_mask() const -> BlockT;
     auto copy_from(const BitRef& rhs) -> void;
   };
 
-  template <bit_block_type ElementType>
+  template <ts_bit_block ElementType>
   BitRef<ElementType>::BitRef(ElementType* ptr, const soul_size bit_index)
       : bit_block_(ptr), bit_index_(bit_index)
   {
   }
 
-  template <bit_block_type ElementType>
+  template <ts_bit_block ElementType>
   auto BitRef<ElementType>::operator=(const bool val) -> BitRef<ElementType>&
   {
     if (val) {
@@ -61,7 +62,7 @@ namespace soul
   }
 
   // NOLINTBEGIN(cert-oop54-cpp, bugprone-unhandled-self-assignment)
-  template <bit_block_type ElementType>
+  template <ts_bit_block ElementType>
   auto BitRef<ElementType>::operator=(const BitRef& rhs) -> BitRef<ElementType>&
   {
     *this = static_cast<bool>(rhs);
@@ -69,15 +70,15 @@ namespace soul
   }
   // NOLINTEND(cert-oop54-cpp, bugprone-unhandled-self-assignment)
 
-  template <bit_block_type BlockType>
-  auto BitRef<BlockType>::operator=(BitRef&& rhs) noexcept -> BitRef<BlockType>&
+  template <ts_bit_block BlockT>
+  auto BitRef<BlockT>::operator=(BitRef&& rhs) noexcept -> BitRef<BlockT>&
   {
     *this = static_cast<bool>(rhs);
     return *this;
   }
 
-  template <bit_block_type BlockType>
-  auto BitRef<BlockType>::operator|=(const bool val) -> BitRef<BlockType>&
+  template <ts_bit_block BlockT>
+  auto BitRef<BlockT>::operator|=(const bool val) -> BitRef<BlockT>&
   {
     if (val) {
       set_true();
@@ -85,8 +86,8 @@ namespace soul
     return *this;
   }
 
-  template <bit_block_type BlockType>
-  auto BitRef<BlockType>::operator&=(const bool val) -> BitRef<BlockType>&
+  template <ts_bit_block BlockT>
+  auto BitRef<BlockT>::operator&=(const bool val) -> BitRef<BlockT>&
   {
     if (!val) {
       set_false();
@@ -94,8 +95,8 @@ namespace soul
     return *this;
   }
 
-  template <bit_block_type BlockType>
-  auto BitRef<BlockType>::operator^=(const bool val) -> BitRef<BlockType>&
+  template <ts_bit_block BlockT>
+  auto BitRef<BlockT>::operator^=(const bool val) -> BitRef<BlockT>&
   {
     if (*this != val) {
       set_true();
@@ -105,22 +106,22 @@ namespace soul
     return *this;
   }
 
-  template <bit_block_type BlockType>
-  auto BitRef<BlockType>::operator~() const -> bool
+  template <ts_bit_block BlockT>
+  auto BitRef<BlockT>::operator~() const -> bool
   {
     return !(*this);
   }
 
-  template <bit_block_type ElementType>
+  template <ts_bit_block ElementType>
   BitRef<ElementType>::operator bool() const
   {
     return static_cast<bool>(*bit_block_ & (static_cast<ElementType>(1) << bit_index_));
   }
 
-  template <bit_block_type BlockType>
-  auto BitRef<BlockType>::flip() -> BitRef<BlockType>&
+  template <ts_bit_block BlockT>
+  auto BitRef<BlockT>::flip() -> BitRef<BlockT>&
   {
-    const BlockType mask = get_mask();
+    const BlockT mask = get_mask();
     if (*this) {
       set_false();
     } else {
@@ -129,25 +130,25 @@ namespace soul
     return *this;
   }
 
-  template <bit_block_type BlockType>
-  auto BitRef<BlockType>::set_true() -> void
+  template <ts_bit_block BlockT>
+  auto BitRef<BlockT>::set_true() -> void
   {
     *bit_block_ |= get_mask();
   }
 
-  template <bit_block_type BlockType>
-  auto BitRef<BlockType>::set_false() -> void
+  template <ts_bit_block BlockT>
+  auto BitRef<BlockT>::set_false() -> void
   {
     *bit_block_ &= ~get_mask();
   }
 
-  template <bit_block_type BlockType>
-  auto BitRef<BlockType>::get_mask() const -> BlockType
+  template <ts_bit_block BlockT>
+  auto BitRef<BlockT>::get_mask() const -> BlockT
   {
-    return static_cast<BlockType>(BlockType(1) << bit_index_);
+    return static_cast<BlockT>(BlockT(1) << bit_index_);
   }
 
-  template <bit_block_type ElementType>
+  template <ts_bit_block ElementType>
   auto BitRef<ElementType>::copy_from(const BitRef& rhs) -> void
   {
     bit_block_ = rhs.bit_block_;

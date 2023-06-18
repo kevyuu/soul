@@ -48,7 +48,7 @@ namespace soul
   }
 
   template <typename T>
-  concept bit_block_type = std::unsigned_integral<T>;
+  concept ts_bit_block = std::unsigned_integral<T>;
 
   template <typename T, soul_size N>
   struct RawBuffer {
@@ -110,7 +110,8 @@ namespace soul
 
     constexpr explicit matrix(store_type mat) : mat(mat) {}
 
-    [[nodiscard]] SOUL_ALWAYS_INLINE auto m(const uint8 row, const uint8 column) const -> float
+    [[nodiscard]]
+    SOUL_ALWAYS_INLINE auto m(const uint8 row, const uint8 column) const -> float
     {
       return mat[column][row];
     }
@@ -176,12 +177,14 @@ namespace soul
 
     AABB(const vec3f& min, const vec3f& max) noexcept : min{min}, max{max} {}
 
-    [[nodiscard]] auto is_empty() const -> bool
+    [[nodiscard]]
+    auto is_empty() const -> bool
     {
       return (min.x >= max.x || min.y >= max.y || min.z >= max.z);
     }
 
-    [[nodiscard]] auto is_inside(const vec3f& point) const -> bool
+    [[nodiscard]]
+    auto is_inside(const vec3f& point) const -> bool
     {
       return (point.x >= min.x && point.x <= max.x) && (point.y >= min.y && point.y <= max.y) &&
              (point.z >= min.z && point.z <= max.z);
@@ -192,7 +195,8 @@ namespace soul
       vec3f vertices[COUNT];
     };
 
-    [[nodiscard]] auto get_corners() const -> Corners
+    [[nodiscard]]
+    auto get_corners() const -> Corners
     {
       return {
         vec3f(min.x, min.y, min.z),
@@ -205,7 +209,11 @@ namespace soul
         vec3f(max.x, max.y, max.z)};
     }
 
-    [[nodiscard]] auto center() const -> vec3f { return (min + max) / 2.0f; }
+    [[nodiscard]]
+    auto center() const -> vec3f
+    {
+      return (min + max) / 2.0f;
+    }
   };
 
   template <typename PointerDst, typename PointerSrc>
@@ -277,8 +285,16 @@ namespace soul
     auto operator!=(const ID& other) const -> bool { return other.id != id; }
     auto operator<(const ID& other) const -> bool { return id < other.id; }
     auto operator<=(const ID& other) const -> bool { return id <= other.id; }
-    [[nodiscard]] auto is_null() const -> bool { return id == NullValue; }
-    [[nodiscard]] auto is_valid() const -> bool { return id != NullValue; }
+    [[nodiscard]]
+    auto is_null() const -> bool
+    {
+      return id == NullValue;
+    }
+    [[nodiscard]]
+    auto is_valid() const -> bool
+    {
+      return id != NullValue;
+    }
 
     static constexpr auto null() -> ID { return ID(NullValue); }
   };
@@ -310,8 +326,16 @@ namespace soul
       store_type index_;
     };
 
-    [[nodiscard]] auto begin() const -> Iterator { return Iterator(0); }
-    [[nodiscard]] auto end() const -> Iterator { return Iterator(to_underlying(Flag::COUNT)); }
+    [[nodiscard]]
+    auto begin() const -> Iterator
+    {
+      return Iterator(0);
+    }
+    [[nodiscard]]
+    auto end() const -> Iterator
+    {
+      return Iterator(to_underlying(Flag::COUNT));
+    }
 
     constexpr FlagIter() = default;
 
