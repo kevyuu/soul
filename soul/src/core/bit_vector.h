@@ -38,26 +38,32 @@ namespace soul
     explicit BitVector(soul_size size, AllocatorType& allocator = *get_default_allocator());
     BitVector(
       soul_size size, const value_type& value, AllocatorType& allocator = *get_default_allocator());
-    BitVector(const BitVector& other);
-    BitVector(const BitVector& other, AllocatorType& allocator);
     BitVector(BitVector&& other) noexcept;
 
     template <bool_input_iterator Iterator>
     BitVector(Iterator first, Iterator last, AllocatorType& allocator = *get_default_allocator());
 
-    auto operator=(const BitVector& other) -> BitVector&;
     auto operator=(BitVector&& other) noexcept -> BitVector&;
     ~BitVector();
+
+    [[nodiscard]]
+    auto clone() const -> this_type;
+
+    void clone_from(const this_type& other);
 
     auto swap(this_type& other) noexcept -> void;
     friend auto swap(this_type& a, this_type& b) noexcept -> void { a.swap(b); }
 
-    [[nodiscard]] auto capacity() const noexcept -> soul_size;
-    [[nodiscard]] auto size() const noexcept -> soul_size;
-    [[nodiscard]] auto empty() const noexcept -> bool;
+    [[nodiscard]]
+    auto capacity() const noexcept -> soul_size;
+    [[nodiscard]]
+    auto size() const noexcept -> soul_size;
+    [[nodiscard]]
+    auto empty() const noexcept -> bool;
 
     auto set_allocator(AllocatorType& allocator) -> void;
-    [[nodiscard]] auto get_allocator() const noexcept -> AllocatorType*;
+    [[nodiscard]]
+    auto get_allocator() const noexcept -> AllocatorType*;
 
     auto resize(soul_size size) -> void;
     auto reserve(soul_size capacity) -> void;
@@ -70,16 +76,25 @@ namespace soul
     auto pop_back() -> void;
     auto pop_back(soul_size count) -> void;
 
-    [[nodiscard]] auto front() noexcept -> reference;
-    [[nodiscard]] auto front() const noexcept -> const_reference;
+    [[nodiscard]]
+    auto front() noexcept -> reference;
+    [[nodiscard]]
+    auto front() const noexcept -> const_reference;
 
-    [[nodiscard]] auto back() noexcept -> reference;
-    [[nodiscard]] auto back() const noexcept -> const_reference;
+    [[nodiscard]]
+    auto back() noexcept -> reference;
+    [[nodiscard]]
+    auto back() const noexcept -> const_reference;
 
-    [[nodiscard]] auto operator[](soul_size index) -> reference;
-    [[nodiscard]] auto operator[](soul_size index) const -> const_reference;
+    [[nodiscard]]
+    auto
+    operator[](soul_size index) -> reference;
+    [[nodiscard]]
+    auto
+    operator[](soul_size index) const -> const_reference;
 
-    [[nodiscard]] auto test(soul_size index, bool default_value) const -> bool;
+    [[nodiscard]]
+    auto test(soul_size index, bool default_value) const -> bool;
 
     auto set(soul_size index, bool value = true) -> void;
     auto set() -> void;
@@ -94,14 +109,22 @@ namespace soul
     static constexpr soul_size BLOCK_BIT_COUNT = sizeof(BlockType) * 8;
     static constexpr soul_size GROWTH_FACTOR = 2;
 
+    BitVector(const BitVector& other);
+    BitVector(const BitVector& other, AllocatorType& allocator);
+    auto operator=(const BitVector& other) -> BitVector&;
+
     auto get_bit_ref(soul_size index) -> reference;
-    [[nodiscard]] auto get_bool(soul_size index) const -> bool;
+    [[nodiscard]]
+    auto get_bool(soul_size index) const -> bool;
     static auto get_new_capacity(soul_size old_capacity) -> soul_size;
     auto init_reserve(soul_size capacity) -> void;
     auto init_resize(soul_size size, bool val) -> void;
-    [[nodiscard]] static auto get_block_count(soul_size size) -> soul_size;
-    [[nodiscard]] static auto get_block_index(soul_size index) -> soul_size;
-    [[nodiscard]] static auto get_block_offset(soul_size index) -> soul_size;
+    [[nodiscard]]
+    static auto get_block_count(soul_size size) -> soul_size;
+    [[nodiscard]]
+    static auto get_block_index(soul_size index) -> soul_size;
+    [[nodiscard]]
+    static auto get_block_offset(soul_size index) -> soul_size;
   };
 
   template <bit_block_type BlockType, memory::allocator_type AllocatorType>
@@ -207,6 +230,19 @@ namespace soul
       return;
     }
     cleanup();
+  }
+
+  template <bit_block_type BlockType, memory::allocator_type AllocatorType>
+  [[nodiscard]]
+  auto BitVector<BlockType, AllocatorType>::clone() const -> this_type
+  {
+    return this_type(*this);
+  }
+
+  template <bit_block_type BlockType, memory::allocator_type AllocatorType>
+  void BitVector<BlockType, AllocatorType>::clone_from(const this_type& other)
+  {
+    return *this = other;
   }
 
   template <bit_block_type BlockType, memory::allocator_type AllocatorType>
