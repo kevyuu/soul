@@ -29,13 +29,14 @@ namespace soul
     using size_type = PoolID;
 
     explicit Pool(AllocatorType* allocator = get_default_allocator()) noexcept;
-    Pool(const Pool& other);
-    Pool(const Pool& other, AllocatorType& allocator);
     Pool(Pool&& other) noexcept;
-
-    auto operator=(const Pool& other) -> Pool&;
     auto operator=(Pool&& other) noexcept -> Pool&;
     ~Pool();
+
+    [[nodiscard]]
+    auto clone() -> this_type;
+
+    void clone_from(const this_type& other);
 
     auto swap(Pool& other) noexcept -> void;
     friend auto swap(Pool& a, Pool& b) noexcept -> void { a.swap(b); }
@@ -47,19 +48,37 @@ namespace soul
 
     auto remove(PoolID id) -> void;
 
-    [[nodiscard]] auto operator[](PoolID id) -> reference;
-    [[nodiscard]] auto operator[](PoolID id) const -> const_reference;
+    [[nodiscard]]
+    auto
+    operator[](PoolID id) -> reference;
+    [[nodiscard]]
+    auto
+    operator[](PoolID id) const -> const_reference;
 
-    [[nodiscard]] auto ptr(PoolID id) -> pointer;
-    [[nodiscard]] auto ptr(PoolID id) const -> const_pointer;
+    [[nodiscard]]
+    auto ptr(PoolID id) -> pointer;
+    [[nodiscard]]
+    auto ptr(PoolID id) const -> const_pointer;
 
-    [[nodiscard]] auto size() const -> size_type { return size_; }
-    [[nodiscard]] auto empty() const -> bool { return size_ == 0; }
+    [[nodiscard]]
+    auto size() const -> size_type
+    {
+      return size_;
+    }
+    [[nodiscard]]
+    auto empty() const -> bool
+    {
+      return size_ == 0;
+    }
 
     auto clear() -> void;
     auto cleanup() -> void;
 
   private:
+    Pool(const Pool& other);
+    Pool(const Pool& other, AllocatorType& allocator);
+    auto operator=(const Pool& other) -> Pool&;
+
     auto allocate() -> PoolID;
 
     union Unit {
@@ -143,6 +162,18 @@ namespace soul
       return;
     }
     cleanup();
+  }
+
+  template <typename T, memory::allocator_type AllocatorType>
+  auto Pool<T, AllocatorType>::clone() -> this_type
+  {
+    return Pool(*this);
+  }
+
+  template <typename T, memory::allocator_type AllocatorType>
+  void Pool<T, AllocatorType>::clone_from(const this_type& other)
+  {
+    *this = other;
   }
 
   template <typename T, memory::allocator_type AllocatorType>
