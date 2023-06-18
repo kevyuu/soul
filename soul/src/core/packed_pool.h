@@ -15,12 +15,17 @@ namespace soul
   class PackedPool
   {
   public:
+    using this_type = PackedPool<T>;
+
     explicit PackedPool(memory::Allocator* allocator = get_default_allocator());
-    PackedPool(const PackedPool& other);
-    auto operator=(const PackedPool& other) -> PackedPool&;
     PackedPool(PackedPool&& other) noexcept;
     auto operator=(PackedPool&& other) noexcept -> PackedPool&;
     ~PackedPool();
+
+    [[nodiscard]]
+    auto clone() -> this_type;
+
+    void clone_from(const this_type& other);
 
     auto swap(PackedPool& other) noexcept -> void;
     static auto swap(PackedPool& a, PackedPool& b) noexcept -> void { a.swap(b); }
@@ -32,28 +37,44 @@ namespace soul
 
     auto remove(PackedID id) -> void;
 
-    [[nodiscard]] auto operator[](PackedID id) -> T&
+    [[nodiscard]]
+    auto
+    operator[](PackedID id) -> T&
     {
       auto internal_index = internal_indexes_[id];
       return buffer_[internal_index];
     }
 
-    [[nodiscard]] auto get(PackedID id) const -> const T&
+    [[nodiscard]]
+    auto get(PackedID id) const -> const T&
     {
       auto internal_index = internal_indexes_[id];
       return buffer_[internal_index];
     }
 
-    [[nodiscard]] auto get_internal(soul_size idx) const -> const T& { return buffer_[idx]; }
+    [[nodiscard]]
+    auto get_internal(soul_size idx) const -> const T&
+    {
+      return buffer_[idx];
+    }
 
-    [[nodiscard]] auto ptr(PackedID id) -> T*
+    [[nodiscard]]
+    auto ptr(PackedID id) -> T*
     {
       auto internal_index = internal_indexes_[id];
       return &buffer_[internal_index];
     }
 
-    [[nodiscard]] auto size() const noexcept -> soul_size { return size_; }
-    [[nodiscard]] auto capacity() const noexcept -> soul_size { return capacity_; }
+    [[nodiscard]]
+    auto size() const noexcept -> soul_size
+    {
+      return size_;
+    }
+    [[nodiscard]]
+    auto capacity() const noexcept -> soul_size
+    {
+      return capacity_;
+    }
 
     auto clear() -> void
     {
@@ -63,14 +84,33 @@ namespace soul
 
     auto cleanup() -> void;
 
-    [[nodiscard]] auto begin() noexcept -> T* { return buffer_; }
-    [[nodiscard]] auto end() noexcept -> T* { return buffer_ + size_; }
+    [[nodiscard]]
+    auto begin() noexcept -> T*
+    {
+      return buffer_;
+    }
+    [[nodiscard]]
+    auto end() noexcept -> T*
+    {
+      return buffer_ + size_;
+    }
 
-    [[nodiscard]] auto begin() const -> const T* { return buffer_; }
-    [[nodiscard]] auto end() const -> const T* { return buffer_ + size_; }
+    [[nodiscard]]
+    auto begin() const -> const T*
+    {
+      return buffer_;
+    }
+    [[nodiscard]]
+    auto end() const -> const T*
+    {
+      return buffer_ + size_;
+    }
 
   private:
     using IndexPool = Pool<soul_size>;
+
+    PackedPool(const PackedPool& other);
+    auto operator=(const PackedPool& other) -> PackedPool&;
 
     memory::Allocator* allocator_ = nullptr;
     IndexPool internal_indexes_;
@@ -131,6 +171,19 @@ namespace soul
   PackedPool<T>::~PackedPool()
   {
     cleanup();
+  }
+
+  template <typename T>
+  [[nodiscard]]
+  auto PackedPool<T>::clone() -> this_type
+  {
+    return PackedPool(*this);
+  }
+
+  template <typename T>
+  void PackedPool<T>::clone_from(const this_type& other)
+  {
+    *this = other;
   }
 
   template <typename T>
