@@ -680,7 +680,7 @@ namespace soul::gpu
       SOUL_LOG_INFO("Creating vulkan logical device");
 
       auto graphicsQueueCount = 1;
-      auto queueIndex = FlagMap<QueueType, uint32>::with_default_value(0);
+      auto queueIndex = FlagMap<QueueType, uint32>::init_fill(0);
 
       if (queue_family_indices[QueueType::COMPUTE] == queue_family_indices[QueueType::GRAPHIC]) {
         graphicsQueueCount++;
@@ -3740,8 +3740,7 @@ namespace soul::gpu
       .unavailable_pipeline_stages = {PipelineStage::FRAGMENT_SHADER},
       .unavailable_accesses = {},
       .sync_stages = {PipelineStage::FRAGMENT_SHADER},
-      .visible_access_matrix =
-        VisibleAccessMatrix::with_default_value(AccessFlags{AccessType::SHADER_READ}),
+      .visible_access_matrix = VisibleAccessMatrix::init_fill(AccessFlags{AccessType::SHADER_READ}),
     };
   }
 
@@ -3874,8 +3873,8 @@ namespace soul::gpu
     SOUL_ASSERT_MAIN_THREAD();
     runtime::ScopeAllocator scope_allocator("Resource Finalizer Flush");
 
-    auto command_buffers = FlagMap<QueueType, PrimaryCommandBuffer>::with_default_value(
-      PrimaryCommandBuffer(VK_NULL_HANDLE));
+    auto command_buffers =
+      FlagMap<QueueType, PrimaryCommandBuffer>::init_fill(PrimaryCommandBuffer(VK_NULL_HANDLE));
 
     // create command buffer and create semaphore
     for (auto queue_type : FlagIter<QueueType>()) {
@@ -3939,7 +3938,7 @@ namespace soul::gpu
       for (auto& image_barrier_list : context.image_barriers_) {
         image_barrier_list.resize(0);
       }
-      context.sync_dst_queues_ = FlagMap<QueueType, QueueFlags>::with_default_value(QueueFlags());
+      context.sync_dst_queues_ = FlagMap<QueueType, QueueFlags>::init_fill(QueueFlags());
     }
   }
 

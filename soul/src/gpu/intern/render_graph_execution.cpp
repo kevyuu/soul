@@ -1178,7 +1178,7 @@ namespace soul::gpu::impl
 
       execute_pass(pass_index, cmd_buffer);
 
-      auto is_queue_type_dependent = FlagMap<QueueType, bool>::with_default_value(false);
+      auto is_queue_type_dependent = FlagMap<QueueType, bool>::init_fill(false);
       for (const BufferAccess& access : pass_info.buffer_accesses) {
         const BufferExecInfo& buffer_info = buffer_infos_[access.buffer_info_idx];
         if (buffer_info.pass_counter != buffer_info.passes.size() - 1) {

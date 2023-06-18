@@ -1090,10 +1090,8 @@ namespace soul::gpu
     };
 
     using VisibleAccessMatrix = FlagMap<PipelineStage, AccessFlags>;
-    constexpr auto VISIBLE_ACCESS_MATRIX_ALL =
-      VisibleAccessMatrix::with_default_value(ACCESS_FLAGS_ALL);
-    constexpr auto VISIBLE_ACCESS_MATRIX_NONE =
-      VisibleAccessMatrix::with_default_value(AccessFlags());
+    constexpr auto VISIBLE_ACCESS_MATRIX_ALL = VisibleAccessMatrix::init_fill(ACCESS_FLAGS_ALL);
+    constexpr auto VISIBLE_ACCESS_MATRIX_NONE = VisibleAccessMatrix::init_fill(AccessFlags());
 
     struct ResourceCacheState {
       QueueType queue_owner = QueueType::COUNT;
@@ -1255,7 +1253,7 @@ namespace soul::gpu
       using Regions = FlagMap<ShaderGroup, VkStridedDeviceAddressRegionKHR>;
 
       VkPipeline pipeline = VK_NULL_HANDLE;
-      Buffers buffers = Buffers::with_default_value(BufferID::null());
+      Buffers buffers = Buffers::init_fill(BufferID::null());
       Regions vk_regions = Regions();
     };
 
