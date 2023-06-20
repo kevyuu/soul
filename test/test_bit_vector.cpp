@@ -75,63 +75,9 @@ TEST(TestBitVectorConstruction, TestDefaultConstructor)
 }
 
 template <soul::ts_bit_block BlockType>
-auto test_constructor_with_init_desc(const soul::BitVectorInitDesc init_desc) -> void
+auto test_construction_init_fill_n(const soul_size size, const bool val) -> void
 {
-  const soul::BitVector<BlockType> bit_vector(init_desc);
-  verify_sequence(bit_vector, std::vector<bool>(init_desc.size, init_desc.val));
-  SOUL_TEST_ASSERT_GE(bit_vector.capacity(), bit_vector.size());
-  SOUL_TEST_ASSERT_GE(bit_vector.capacity(), init_desc.capacity);
-}
-
-TEST(TestBitVectorConstruction, TestConstructorWithInitDesc)
-{
-  const soul::BitVector<> bit_vector(
-    {.size = 10, .val = false, .capacity = 12}, *soul::get_default_allocator());
-  SOUL_TEST_RUN(test_constructor_with_init_desc<uint8>({.size = 0}));
-  SOUL_TEST_RUN(test_constructor_with_init_desc<uint8>({.size = 8}));
-  SOUL_TEST_RUN(test_constructor_with_init_desc<uint8>({.size = 1, .val = true, .capacity = 10}));
-  SOUL_TEST_RUN(test_constructor_with_init_desc<uint8>({.size = 8, .val = true, .capacity = 4}));
-
-  SOUL_TEST_RUN(test_constructor_with_init_desc<uint64>({.size = 0}));
-  SOUL_TEST_RUN(test_constructor_with_init_desc<uint64>({.size = 64}));
-  SOUL_TEST_RUN(test_constructor_with_init_desc<uint64>({.size = 1, .capacity = 10}));
-  SOUL_TEST_RUN(test_constructor_with_init_desc<uint64>({.size = 130, .capacity = 160}));
-}
-
-template <soul::ts_bit_block BlockType>
-auto test_constructor_with_size(soul_size size) -> void
-{
-  const soul::BitVector<BlockType> bit_vector(size);
-  SOUL_TEST_ASSERT_EQ(bit_vector.size(), size);
-  SOUL_TEST_ASSERT_EQ(bit_vector.empty(), size == 0);
-  for (soul_size i = 0; i < size; i++) {
-    SOUL_TEST_ASSERT_EQ(bit_vector[i], false);
-    SOUL_TEST_ASSERT_EQ(bit_vector.test(i, false), false);
-    SOUL_TEST_ASSERT_EQ(bit_vector.test(i, true), false);
-  }
-  if (size != 0) {
-    SOUL_TEST_ASSERT_FALSE(bit_vector.front());
-    SOUL_TEST_ASSERT_FALSE(bit_vector.back());
-  }
-}
-
-TEST(TestBitVectorConstruction, TestConstructorWithSize)
-{
-  SOUL_TEST_RUN(test_constructor_with_size<uint8>(0));
-  SOUL_TEST_RUN(test_constructor_with_size<uint8>(8));
-  SOUL_TEST_RUN(test_constructor_with_size<uint8>(1));
-  SOUL_TEST_RUN(test_constructor_with_size<uint8>(20));
-
-  SOUL_TEST_RUN(test_constructor_with_size<uint64>(0));
-  SOUL_TEST_RUN(test_constructor_with_size<uint64>(64));
-  SOUL_TEST_RUN(test_constructor_with_size<uint64>(1));
-  SOUL_TEST_RUN(test_constructor_with_size<uint64>(130));
-}
-
-template <soul::ts_bit_block BlockType>
-auto test_constructor_with_size_and_value(const soul_size size, const bool val) -> void
-{
-  const soul::BitVector<BlockType> bit_vector(size, val);
+  const auto bit_vector = soul::BitVector<BlockType>::init_fill_n(size, val);
   SOUL_TEST_ASSERT_EQ(bit_vector.size(), size);
   SOUL_TEST_ASSERT_EQ(bit_vector.empty(), size == 0);
   for (soul_size i = 0; i < size; i++) {
@@ -145,45 +91,66 @@ auto test_constructor_with_size_and_value(const soul_size size, const bool val) 
   }
 }
 
-TEST(TestBitVectorConstruction, TestConstructorWithSizeAndValue)
+TEST(TestBitVectorConstruction, TestConstructionInitFullN)
 {
-  SOUL_TEST_RUN(test_constructor_with_size_and_value<uint8>(0, false));
-  SOUL_TEST_RUN(test_constructor_with_size_and_value<uint8>(8, true));
-  SOUL_TEST_RUN(test_constructor_with_size_and_value<uint8>(1, false));
-  SOUL_TEST_RUN(test_constructor_with_size_and_value<uint8>(20, true));
+  SOUL_TEST_RUN(test_construction_init_fill_n<uint8>(0, false));
+  SOUL_TEST_RUN(test_construction_init_fill_n<uint8>(8, true));
+  SOUL_TEST_RUN(test_construction_init_fill_n<uint8>(1, false));
+  SOUL_TEST_RUN(test_construction_init_fill_n<uint8>(20, true));
 
-  SOUL_TEST_RUN(test_constructor_with_size_and_value<uint64>(0, true));
-  SOUL_TEST_RUN(test_constructor_with_size_and_value<uint64>(64, false));
-  SOUL_TEST_RUN(test_constructor_with_size_and_value<uint64>(1, true));
-  SOUL_TEST_RUN(test_constructor_with_size_and_value<uint64>(130, false));
+  SOUL_TEST_RUN(test_construction_init_fill_n<uint64>(0, true));
+  SOUL_TEST_RUN(test_construction_init_fill_n<uint64>(64, false));
+  SOUL_TEST_RUN(test_construction_init_fill_n<uint64>(1, true));
+  SOUL_TEST_RUN(test_construction_init_fill_n<uint64>(130, false));
 }
 
 template <soul::ts_bit_block BlockType>
-auto test_constructor_with_bool_iterator(const soul_size size) -> void
+auto test_construction_with_capacity(const soul_size capacity) -> void
+{
+  const auto bit_vector = soul::BitVector<BlockType>::with_capacity(capacity);
+  SOUL_TEST_ASSERT_EQ(bit_vector.size(), 0);
+  SOUL_TEST_ASSERT_TRUE(bit_vector.empty());
+}
+
+TEST(TestBitVectorConstruction, TestConstructionWithCapacity)
+{
+  SOUL_TEST_RUN(test_construction_with_capacity<uint8>(0));
+  SOUL_TEST_RUN(test_construction_with_capacity<uint8>(4));
+  SOUL_TEST_RUN(test_construction_with_capacity<uint8>(8));
+  SOUL_TEST_RUN(test_construction_with_capacity<uint8>(100));
+
+  SOUL_TEST_RUN(test_construction_with_capacity<uint64>(0));
+  SOUL_TEST_RUN(test_construction_with_capacity<uint64>(64));
+  SOUL_TEST_RUN(test_construction_with_capacity<uint64>(1));
+  SOUL_TEST_RUN(test_construction_with_capacity<uint64>(130));
+}
+
+template <soul::ts_bit_block BlockType>
+auto test_construction_from_range(const soul_size size) -> void
 {
   SOUL_TEST_ASSERT_NE(size, 0);
   const std::vector<bool> random_bool_vec = generate_random_bool_vector(size);
 
-  soul::BitVector<BlockType> bit_vector(random_bool_vec.begin(), random_bool_vec.end());
+  const auto bit_vector = soul::BitVector<BlockType>::from(random_bool_vec);
   verify_sequence(bit_vector, random_bool_vec);
 }
 
-TEST(TestBitVectorConstruction, TestConstructorWithBoolIterator)
+TEST(TestBitVectorConstruction, TestConstructionFromRange)
 {
-  SOUL_TEST_RUN(test_constructor_with_bool_iterator<uint8>(8));
-  SOUL_TEST_RUN(test_constructor_with_bool_iterator<uint8>(1));
-  SOUL_TEST_RUN(test_constructor_with_bool_iterator<uint8>(20));
+  SOUL_TEST_RUN(test_construction_from_range<uint8>(8));
+  SOUL_TEST_RUN(test_construction_from_range<uint8>(1));
+  SOUL_TEST_RUN(test_construction_from_range<uint8>(20));
 
-  SOUL_TEST_RUN(test_constructor_with_bool_iterator<uint64>(64));
-  SOUL_TEST_RUN(test_constructor_with_bool_iterator<uint64>(1));
-  SOUL_TEST_RUN(test_constructor_with_bool_iterator<uint64>(130));
+  SOUL_TEST_RUN(test_construction_from_range<uint64>(64));
+  SOUL_TEST_RUN(test_construction_from_range<uint64>(1));
+  SOUL_TEST_RUN(test_construction_from_range<uint64>(130));
 }
 
 template <soul::ts_bit_block BlockType>
 auto test_clone(const soul_size size) -> void
 {
   const std::vector<bool> random_bool_vec = generate_random_bool_vector(size);
-  const soul::BitVector<BlockType> src_bit_vector(random_bool_vec.begin(), random_bool_vec.end());
+  const auto src_bit_vector = soul::BitVector<BlockType>::from(random_bool_vec);
   const soul::BitVector<BlockType> test_bit_vector = src_bit_vector.clone();
   verify_sequence(test_bit_vector, random_bool_vec);
 }
@@ -205,7 +172,7 @@ template <soul::ts_bit_block BlockType>
 auto test_move_constructor(const soul_size size) -> void
 {
   const std::vector<bool> random_bool_vec = generate_random_bool_vector(size);
-  soul::BitVector<BlockType> src_bit_vector(random_bool_vec.begin(), random_bool_vec.end());
+  auto src_bit_vector = soul::BitVector<BlockType>::from(random_bool_vec);
   const soul::BitVector<BlockType> test_bit_vector = std::move(src_bit_vector);
   verify_sequence(test_bit_vector, random_bool_vec);
 }
@@ -227,14 +194,12 @@ class TestBitVectorManipulation : public testing::Test
 {
 public:
   static constexpr soul_size RANDOM_BOOL_VECTOR_SIZE = 130;
-  static constexpr soul_size TEST_CAPACITY = 250;
 
   TestBitVectorManipulation()
       : sources_vec(generate_random_bool_vector(RANDOM_BOOL_VECTOR_SIZE)),
-        u8_filled_bit_vector(sources_vec.begin(), sources_vec.end()),
-        u32_filled_bit_vector(sources_vec.begin(), sources_vec.end()),
-        u64_filled_bit_vector(
-          {.size = RANDOM_BOOL_VECTOR_SIZE, .val = true, .capacity = TEST_CAPACITY})
+        u8_filled_bit_vector(soul::BitVector<uint8>::from(sources_vec)),
+        u32_filled_bit_vector(soul::BitVector<uint32>::from(sources_vec)),
+        u64_filled_bit_vector(soul::BitVector<uint64>::init_fill_n(RANDOM_BOOL_VECTOR_SIZE, true))
   {
   }
 

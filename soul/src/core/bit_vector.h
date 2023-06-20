@@ -2,6 +2,7 @@
 
 #include <iostream>
 #include <optional>
+#include <ranges>
 
 #include "core/bit_ref.h"
 #include "core/config.h"
@@ -11,14 +12,16 @@
 namespace soul
 {
 
-  template <typename IteratorT>
-  concept ts_bool_input_iterator =
-    std::input_iterator<IteratorT> && std::same_as<std::iter_value_t<IteratorT>, bool>;
-
-  struct BitVectorInitDesc {
-    soul_size size = 0;
-    bool val = false;
-    soul_size capacity = 0;
+  struct bit_vector_construct {
+    struct with_capacity_t {
+    };
+    struct from_t {
+    };
+    struct init_fill_n_t {
+    };
+    static constexpr auto with_capacity = with_capacity_t{};
+    static constexpr auto from = from_t{};
+    static constexpr auto init_fill_n = init_fill_n_t{};
   };
 
   template <
@@ -33,18 +36,24 @@ namespace soul
     using const_reference = bool;
 
     explicit BitVector(memory::Allocator* allocator = get_default_allocator());
-    explicit BitVector(
-      BitVectorInitDesc init_desc, AllocatorT& allocator = *get_default_allocator());
-    explicit BitVector(soul_size size, AllocatorT& allocator = *get_default_allocator());
-    BitVector(
-      soul_size size, const value_type& value, AllocatorT& allocator = *get_default_allocator());
+
     BitVector(BitVector&& other) noexcept;
 
-    template <ts_bool_input_iterator Iterator>
-    BitVector(Iterator first, Iterator last, AllocatorT& allocator = *get_default_allocator());
-
     auto operator=(BitVector&& other) noexcept -> BitVector&;
+
     ~BitVector();
+
+    [[nodiscard]]
+    static auto with_capacity(soul_size capacity, AllocatorT& allocator = *get_default_allocator())
+      -> this_type;
+
+    template <std::ranges::input_range RangeT>
+    [[nodiscard]]
+    static auto from(RangeT&& range, AllocatorT& allocator = *get_default_allocator()) -> this_type;
+
+    [[nodiscard]]
+    static auto init_fill_n(
+      soul_size size, bool val, AllocatorT& allocator = *get_default_allocator()) -> this_type;
 
     [[nodiscard]]
     auto clone() const -> this_type;
@@ -110,7 +119,17 @@ namespace soul
     static constexpr soul_size GROWTH_FACTOR = 2;
 
     BitVector(const BitVector& other);
+
     BitVector(const BitVector& other, AllocatorT& allocator);
+
+    BitVector(bit_vector_construct::with_capacity_t tag, soul_size capacity, AllocatorT& allocator);
+
+    template <std::ranges::input_range RangeT>
+    BitVector(bit_vector_construct::from_t tag, RangeT&& range, AllocatorT& allocator);
+
+    BitVector(
+      bit_vector_construct::init_fill_n_t tag, soul_size size, bool val, AllocatorT& allocator);
+
     auto operator=(const BitVector& other) -> BitVector&;
 
     auto get_bit_ref(soul_size index) -> reference;
@@ -130,33 +149,6 @@ namespace soul
   template <ts_bit_block BlockT, memory::allocator_type AllocatorT>
   BitVector<BlockT, AllocatorT>::BitVector(memory::Allocator* allocator) : allocator_(allocator)
   {
-  }
-
-  template <ts_bit_block BlockT, memory::allocator_type AllocatorT>
-  BitVector<BlockT, AllocatorT>::BitVector(BitVectorInitDesc init_desc, AllocatorT& allocator)
-      : allocator_(&allocator), size_(init_desc.size)
-  {
-    const auto capacity = init_desc.size > init_desc.capacity ? init_desc.size : init_desc.capacity;
-    const auto block_count = get_block_count(capacity);
-    blocks_ = allocator_->template allocate_array<BlockT>(block_count);
-    capacity_ = block_count * BLOCK_BIT_COUNT;
-    std::uninitialized_fill_n(
-      blocks_, get_block_count(init_desc.size), init_desc.val ? ~BlockT(0) : BlockT(0));
-  }
-
-  template <ts_bit_block BlockT, memory::allocator_type AllocatorT>
-  BitVector<BlockT, AllocatorT>::BitVector(const soul_size size, AllocatorT& allocator)
-      : allocator_(&allocator)
-  {
-    init_resize(size, false);
-  }
-
-  template <ts_bit_block BlockT, memory::allocator_type AllocatorT>
-  BitVector<BlockT, AllocatorT>::BitVector(
-    const soul_size size, const value_type& value, AllocatorT& allocator)
-      : allocator_(&allocator)
-  {
-    init_resize(size, value);
   }
 
   template <ts_bit_block BlockT, memory::allocator_type AllocatorT>
@@ -185,23 +177,38 @@ namespace soul
   }
 
   template <ts_bit_block BlockT, memory::allocator_type AllocatorT>
-  template <ts_bool_input_iterator Iterator>
-  BitVector<BlockT, AllocatorT>::BitVector(Iterator first, Iterator last, AllocatorT& allocator)
+  BitVector<BlockT, AllocatorT>::BitVector(
+    bit_vector_construct::with_capacity_t /* tag */, soul_size capacity, AllocatorT& allocator)
       : allocator_(&allocator)
   {
-    if constexpr (std::forward_iterator<Iterator>) {
-      init_reserve(std::distance(first, last));
+    init_reserve(capacity);
+  }
+
+  template <ts_bit_block BlockT, memory::allocator_type AllocatorT>
+  template <std::ranges::input_range RangeT>
+  BitVector<BlockT, AllocatorT>::BitVector(
+    bit_vector_construct::from_t /* tag */, RangeT&& range, AllocatorT& allocator)
+      : allocator_(&allocator)
+  {
+    if constexpr (std::ranges::sized_range<RangeT>) {
+      init_reserve(std::ranges::distance(range));
     }
-    for (; first != last; ++first) {
-      push_back(*first);
+    for (bool val : range) {
+      push_back(val);
     }
+  }
+
+  template <ts_bit_block BlockT, memory::allocator_type AllocatorT>
+  BitVector<BlockT, AllocatorT>::BitVector(
+    bit_vector_construct::init_fill_n_t /* tag */, soul_size size, bool val, AllocatorT& allocator)
+      : allocator_(&allocator)
+  {
+    init_resize(size, val);
   }
 
   template <ts_bit_block BlockT, memory::allocator_type AllocatorT>
   auto BitVector<BlockT, AllocatorT>::operator=(const BitVector& other)
     -> BitVector<BlockT, AllocatorT>&
-  // NOLINT(bugprone-unhandled-self-assignment)
-
   {
     this_type(other, *allocator_).swap(*this);
     return *this;
@@ -227,6 +234,30 @@ namespace soul
       return;
     }
     cleanup();
+  }
+
+  template <ts_bit_block BlockT, memory::allocator_type AllocatorT>
+  [[nodiscard]]
+  auto BitVector<BlockT, AllocatorT>::with_capacity(soul_size capacity, AllocatorT& allocator)
+    -> this_type
+  {
+    return BitVector(bit_vector_construct::with_capacity, capacity, allocator);
+  }
+
+  template <ts_bit_block BlockT, memory::allocator_type AllocatorT>
+  template <std::ranges::input_range RangeT>
+  [[nodiscard]]
+  auto BitVector<BlockT, AllocatorT>::from(RangeT&& range, AllocatorT& allocator) -> this_type
+  {
+    return BitVector(bit_vector_construct::from, std::forward<RangeT>(range), allocator);
+  }
+
+  template <ts_bit_block BlockT, memory::allocator_type AllocatorT>
+  [[nodiscard]]
+  auto BitVector<BlockT, AllocatorT>::init_fill_n(soul_size size, bool val, AllocatorT& allocator)
+    -> this_type
+  {
+    return BitVector(bit_vector_construct::init_fill_n, size, val, allocator);
   }
 
   template <ts_bit_block BlockT, memory::allocator_type AllocatorT>
