@@ -33,14 +33,12 @@ namespace soul
       constexpr auto find_last() const -> std::optional<soul_size>;
       [[nodiscard]]
       constexpr auto find_prev(soul_size last_find_index) const -> std::optional<soul_size>;
-      template <typename Func>
-        requires is_lambda_v<Func, bool(soul_size)>
+      template <ts_fn<bool, soul_size> Fn>
       [[nodiscard]]
-      constexpr auto find_if(Func func) const -> std::optional<soul_size>;
+      constexpr auto find_if(Fn fn) const -> std::optional<soul_size>;
 
-      template <typename Func>
-        requires is_lambda_v<Func, void(soul_size)>
-      constexpr auto for_each(Func func) const -> void;
+      template <ts_fn<void, soul_size> Fn>
+      constexpr auto for_each(Fn fn) const -> void;
 
       template <soul_size IBlockCount = BlockCount, ts_bit_block IBlockType = BlockType>
         requires(IBlockCount == 1 && sizeof(BlockType) <= 4)
@@ -75,9 +73,8 @@ namespace soul
     };
 
     template <size_t BlockCount, ts_bit_block BlockType>
-    template <typename Func>
-      requires is_lambda_v<Func, void(soul_size)>
-    constexpr auto BitsetImpl<BlockCount, BlockType>::for_each(Func func) const -> void
+    template <ts_fn<void, soul_size> Fn>
+    constexpr auto BitsetImpl<BlockCount, BlockType>::for_each(Fn fn) const -> void
     {
       for (soul_size block_index = 0; block_index < BlockCount; block_index++) {
         auto block = blocks_[block_index];
@@ -88,7 +85,7 @@ namespace soul
         auto pos = util::get_first_one_bit_pos(block);
         const auto block_start_index = block_index * BITS_PER_BLOCK;
         while (pos) {
-          func(block_start_index + static_cast<soul_size>(*pos));
+          fn(block_start_index + static_cast<soul_size>(*pos));
           block = get_next_block(block, *pos);
           pos = util::get_first_one_bit_pos(block);
         }
@@ -285,9 +282,8 @@ namespace soul
     }
 
     template <size_t BlockCount, ts_bit_block BlockType>
-    template <typename Func>
-      requires is_lambda_v<Func, bool(soul_size)>
-    constexpr auto BitsetImpl<BlockCount, BlockType>::find_if(Func func) const
+    template <ts_fn<bool, soul_size> Fn>
+    constexpr auto BitsetImpl<BlockCount, BlockType>::find_if(Fn fn) const
       -> std::optional<soul_size>
     {
       for (soul_size block_index = 0; block_index < BlockCount; block_index++) {
@@ -299,7 +295,7 @@ namespace soul
         auto pos = util::get_first_one_bit_pos(block);
         const auto block_start_index = block_index * BITS_PER_BLOCK;
         while (pos) {
-          if (func(block_start_index + static_cast<soul_size>(*pos))) {
+          if (fn(block_start_index + static_cast<soul_size>(*pos))) {
             return block_start_index + static_cast<soul_size>(*pos);
           }
           block = get_next_block(block, *pos);

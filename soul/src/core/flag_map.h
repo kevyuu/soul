@@ -7,7 +7,7 @@
 namespace soul
 {
 
-  template <flag EnumT, typename ValT>
+  template <ts_flag EnumT, typename ValT>
   class FlagMap
   {
   public:
@@ -43,7 +43,7 @@ namespace soul
       return {Array<ValT, COUNT>::init_generate(fn)};
     }
 
-    template <callable<ValT, soul_size> Fn>
+    template <ts_fn<ValT, soul_size> Fn>
     [[nodiscard]]
     static constexpr auto init_index_transform(Fn fn) -> this_type
     {
@@ -162,7 +162,7 @@ namespace soul
     soul::Array<ValT, COUNT> buffer_;
   };
 
-  template <flag EnumT, typename ValT>
+  template <ts_flag EnumT, typename ValT>
   constexpr auto FlagMap<EnumT, ValT>::from_key_val_list(
     std::initializer_list<std::pair<EnumT, ValT>> init_list) noexcept -> this_type
   {
@@ -173,7 +173,7 @@ namespace soul
     return ret;
   }
 
-  template <flag EnumT, typename ValT>
+  template <ts_flag EnumT, typename ValT>
   template <std::size_t N>
   consteval auto FlagMap<EnumT, ValT>::from_val_list(const ValT (&list)[N]) noexcept -> this_type
   {

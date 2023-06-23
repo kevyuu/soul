@@ -120,7 +120,7 @@ namespace soul
     }
   }
 
-  template <typename T, std::input_iterator IteratorT, callable<T, std::iter_value_t<IteratorT>> Fn>
+  template <typename T, std::input_iterator IteratorT, ts_fn<T, std::iter_value_t<IteratorT>> Fn>
   inline constexpr void transform_construct_at(T* const location, IteratorT it, Fn fn) noexcept
   {
     if (std::is_constant_evaluated()) {
@@ -131,7 +131,7 @@ namespace soul
     }
   }
 
-  template <class T, std::input_iterator IteratorT, callable<T, std::iter_value_t<IteratorT>> Fn>
+  template <class T, std::input_iterator IteratorT, ts_fn<T, std::iter_value_t<IteratorT>> Fn>
   inline constexpr void uninitialized_transform_construct_n(
     IteratorT src_it, Fn fn, size_t size, T* dst) noexcept
   {

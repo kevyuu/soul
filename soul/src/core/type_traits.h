@@ -1,116 +1,118 @@
 #pragma once
 
 #include <concepts>
-#include <cstdint>
 #include <functional>
-#include <limits>
 #include <type_traits>
 
 namespace soul
 {
 
   template <typename T>
-  concept arithmetic = std::is_arithmetic_v<T>;
+  inline constexpr bool can_default_construct_v = std::is_default_constructible_v<T>;
 
   template <typename T>
-  concept trivially_copy_constructible = std::is_trivially_copy_constructible_v<T>;
-  template <typename T>
-  concept untrivially_copy_constructible =
-    std::is_copy_constructible_v<T> && !std::is_trivially_copy_constructible_v<T>;
-  template <typename T>
-  concept trivially_copy_assignable = std::is_trivially_copy_assignable_v<T>;
-  template <typename T>
-  concept untrivially_copy_assinable =
-    std::is_copy_assignable_v<T> && !std::is_trivially_copy_assignable_v<T>;
-  template <typename T>
-  concept copyable = std::is_copy_constructible_v<T> && std::is_copy_assignable_v<T>;
+  inline constexpr bool can_trivial_default_construct_v =
+    std::is_trivially_default_constructible_v<T>;
 
   template <typename T>
-  concept trivially_move_constructible = std::is_trivially_move_constructible_v<T>;
-  template <typename T>
-  concept untrivially_move_constructible =
-    std::is_move_constructible_v<T> && !std::is_trivially_move_constructible_v<T>;
-  template <typename T>
-  concept trivially_move_assignable = std::is_trivially_move_assignable_v<T>;
-  template <typename T>
-  concept untrivially_move_assignable =
-    std::is_move_assignable_v<T> && !std::is_trivially_move_assignable_v<T>;
-  template <typename T>
-  concept untrivially_movable = untrivially_move_constructible<T> && untrivially_move_assignable<T>;
+  inline constexpr bool can_nontrivial_default_construct_v =
+    can_default_construct_v<T> && can_trivial_default_construct_v<T>;
 
   template <typename T>
-  concept trivially_destructible = std::is_trivially_destructible_v<T>;
-  template <typename T>
-  concept untrivially_destructible =
-    std::is_destructible_v<T> && !std::is_trivially_destructible_v<T>;
+  inline constexpr bool can_copy_v =
+    std::is_copy_constructible_v<T> && std::is_copy_assignable_v<T>;
 
   template <typename T>
-  concept ts_copy = std::is_trivially_copyable_v<T>;
+  inline constexpr bool can_trivial_copy_v =
+    std::is_trivially_copy_constructible_v<T> && std::is_trivially_copy_assignable_v<T>;
 
   template <typename T>
-  concept ts_clone = requires(T t1, const T& t2) {
+  inline constexpr bool can_nontrivial_copy_v =
+    can_copy_v<T> && !std::is_trivially_copy_constructible_v<T> &&
+    !std::is_trivially_copy_assignable_v<T>;
+
+  template <typename T>
+  inline constexpr bool can_clone_v = requires(T t1, const T& t2) {
     {
       t1.clone()
     } -> std::same_as<std::remove_cv_t<T>>;
     {
       t1.clone_from(t2)
     } -> std::same_as<void>;
-  } && std::movable<T> && std::is_destructible_v<T>;
+  };
+
+  template <typename T>
+  inline constexpr bool can_move_v =
+    std::is_move_constructible_v<T> && std::is_move_assignable_v<T>;
+
+  template <typename T>
+  inline constexpr bool can_trivial_move_v =
+    std::is_trivially_move_constructible_v<T> && std::is_trivially_copy_assignable_v<T>;
+
+  template <typename T>
+  inline constexpr bool can_nontrivial_move_v =
+    can_move_v<T> && !std::is_trivially_move_constructible_v<T> &&
+    !std::is_trivially_move_assignable_v<T>;
+
+  template <typename T>
+  inline constexpr bool can_swap_v = std::is_swappable_v<T>;
+
+  template <typename T>
+  inline constexpr bool can_trivial_destruct_v = std::is_trivially_destructible_v<T>;
+
+  template <typename T>
+  inline constexpr bool can_nontrivial_destruct_v =
+    std::is_destructible_v<T> && !std::is_trivially_destructible_v<T>;
+
+  template <typename T>
+  concept ts_copy = std::is_trivially_copyable_v<T>;
+
+  template <typename T>
+  concept ts_clone = can_clone_v<T> && can_nontrivial_move_v<T> && can_nontrivial_destruct_v<T>;
+
+  template <typename T>
+  concept ts_nontrivial_copy =
+    can_nontrivial_copy_v<T> && can_nontrivial_move_v<T> && can_nontrivial_destruct_v<T>;
 
   template <typename T>
   concept ts_move_only =
-    !ts_clone<T> && !std::is_copy_constructible_v<T> && !std::is_copy_assignable_v<T> &&
-    untrivially_movable<T> && untrivially_destructible<T>;
+    !can_copy_v<T> && !can_clone_v<T> && can_nontrivial_move_v<T> && can_nontrivial_destruct_v<T>;
 
   template <typename T>
-  concept ts_immovable = !ts_clone<T> && !std::is_copy_constructible_v<T> &&
-                         !std::is_copy_assignable_v<T> && !std::is_move_constructible_v<T> &&
-                         !std::is_move_assignable_v<T> && untrivially_destructible<T>;
+  concept ts_immovable =
+    !can_clone_v<T> && !can_copy_v<T> && !can_move_v<T> && can_nontrivial_destruct_v<T>;
 
   template <typename T>
   concept typeset = ts_clone<T> || ts_copy<T> || ts_move_only<T> || ts_immovable<T>;
 
   template <typename T, typename RetType, typename... Args>
-  concept callable =
-    std::regular_invocable<T, Args...> && std::same_as<RetType, std::invoke_result_t<T, Args...>>;
+  concept ts_fn = typeset<T> && std::regular_invocable<T, Args...> &&
+                  std::same_as<RetType, std::invoke_result_t<T, Args...>>;
 
   template <typename T, typename RetType>
-  concept ts_generate_fn = callable<T, RetType>;
+  concept ts_generate_fn = ts_fn<T, RetType>;
 
-  template <typename T, typename F>
-  inline bool constexpr is_lambda_v = std::is_convertible_v<T, std::function<F>>;
+  template <typename T1, typename T2>
+  inline constexpr bool can_convert_v = std::is_convertible_v<T1, T2>;
 
-  template <typename T>
-  inline bool constexpr is_trivially_copyable_v = std::is_trivially_copyable_v<T>;
-
-  template <typename T>
-  inline bool constexpr is_trivially_move_constructible_v =
-    std::is_trivially_move_constructible_v<T>;
-
-  template <typename T>
-  inline bool constexpr is_trivially_destructible_v = std::is_trivially_destructible_v<T>;
+  template <typename T1, typename T2>
+  concept ts_convertible_to = typeset<T1> && can_convert_v<T1, T2>;
 
   // simplified from https://en.cppreference.com/w/cpp/types/is_scoped_enum
   template <typename T>
-  concept scoped_enum =
+  concept ts_scoped_enum =
     std::is_enum_v<T> && (!std::convertible_to<T, int>)&&requires { sizeof(T); };
 
   template <typename T>
-  concept flag = scoped_enum<T> && requires { T::COUNT; };
-
-  template <uint64_t N>
-  using min_uint = std::conditional<
-    (N > std::numeric_limits<uint16_t>::max()),
-    std::conditional_t<(N > std::numeric_limits<uint32_t>::max()), uint64_t, uint32_t>,
-    std::conditional_t<(N > std::numeric_limits<uint8_t>::max()), uint16_t, uint8_t>>;
-
-  template <uint64_t N>
-  using min_uint_t = typename min_uint<N>::type;
+  concept ts_flag = ts_scoped_enum<T> && requires { T::COUNT; };
 
   template <typename T>
+  concept ts_arithmetic = std::is_arithmetic_v<T>;
+
+  template <typeset T>
   class Option;
 
-  template <typename T>
+  template <typeset T>
   struct is_option : std::false_type {
   };
 
@@ -122,6 +124,6 @@ namespace soul
   inline bool constexpr is_option_v = is_option<T>::value;
 
   template <typename T>
-  concept c_option = is_option_v<T>;
+  concept ts_option = is_option_v<T>;
 
 } // namespace soul

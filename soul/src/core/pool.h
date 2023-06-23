@@ -5,6 +5,7 @@
 #include "core/config.h"
 #include "core/panic.h"
 #include "core/type.h"
+#include "core/type_traits.h"
 #include "memory/allocator.h"
 
 namespace soul
@@ -25,6 +26,7 @@ namespace soul
     using iterator = T*;
     using const_iterator = const T*;
     using reverse_iterator = std::reverse_iterator<iterator>;
+
     using const_reverse_iterator = std::reverse_iterator<const_iterator>;
     using size_type = PoolID;
 
@@ -100,7 +102,7 @@ namespace soul
     size_type free_list_ = 0;
 
     auto move_units(Unit* dst) -> void;
-    auto copy_units(const Pool<T, AllocatorType>& other) -> void;
+    auto duplicate_units(const Pool<T, AllocatorType>& other) -> void;
     auto destruct_units() -> void;
 
     auto allocate_storage(size_type capacity) -> void;
@@ -121,7 +123,7 @@ namespace soul
         free_list_(other.free_list_)
   {
     allocate_storage(other.capacity_);
-    copy_units(other);
+    duplicate_units(other);
   }
 
   template <typename T, memory::allocator_type AllocatorType>
@@ -133,7 +135,7 @@ namespace soul
         free_list_(other.free_list_)
   {
     allocate_storage(other.capacity_);
-    copy_units(other);
+    duplicate_units(other);
   }
 
   template <typename T, memory::allocator_type AllocatorType>
@@ -233,7 +235,7 @@ namespace soul
   template <typename T, memory::allocator_type AllocatorType>
   auto Pool<T, AllocatorType>::move_units(Unit* dst) -> void
   {
-    if constexpr (std::is_trivially_move_constructible_v<T>) {
+    if constexpr (ts_copy<T>) {
       memcpy(dst, buffer_, capacity_ * sizeof(Unit));
     } else {
       for (size_type i = 0; i < capacity_; i++) {
@@ -247,10 +249,18 @@ namespace soul
   }
 
   template <typename T, memory::allocator_type AllocatorType>
-  auto Pool<T, AllocatorType>::copy_units(const Pool<T, AllocatorType>& other) -> void
+  auto Pool<T, AllocatorType>::duplicate_units(const Pool<T, AllocatorType>& other) -> void
   {
-    if constexpr (std::is_trivially_copyable_v<T>) {
+    if constexpr (ts_copy<T>) {
       memcpy(buffer_, other.buffer_, other.size_ * sizeof(Unit));
+    } else if constexpr (ts_clone<T>) {
+      for (size_type i = 0; i < capacity_; i++) {
+        if (bit_vector_[i]) {
+          clone_at(&buffer_[i].datum, other.buffer_[i].datum);
+        } else {
+          buffer_[i].next = other.buffer_[i].next;
+        }
+      }
     } else {
       for (size_type i = 0; i < capacity_; i++) {
         if (bit_vector_[i]) {
@@ -265,7 +275,7 @@ namespace soul
   template <typename T, memory::allocator_type AllocatorType>
   auto Pool<T, AllocatorType>::destruct_units() -> void
   {
-    if constexpr (!std::is_trivially_destructible_v<T>) {
+    if constexpr (can_nontrivial_destruct_v<T>) {
       for (size_type i = 0; i < capacity_; i++) {
         if (!bit_vector_[i]) {
           continue;

@@ -84,7 +84,7 @@ TEST(TestArrayConstruction, TestInitGenerateConstruction)
 TEST(TestArrayConstruction, TestInitIndexTransformConstruction)
 {
   auto test_init_index_transform_construction =
-    []<typename T, soul_size element_count>(soul::callable<T, soul_size> auto fn) {
+    []<typename T, soul_size element_count>(soul::ts_fn<T, soul_size> auto fn) {
       const auto arr = soul::Array<T, element_count>::init_index_transform(fn);
       const auto range = std::views::iota(soul_size(0), element_count) | std::views::transform(fn);
       verify_array<T, element_count>(arr, range);

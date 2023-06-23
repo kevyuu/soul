@@ -169,6 +169,6 @@ namespace soul::runtime
   };
 
   template <typename T>
-  concept execution = is_lambda_v<T, void(TaskID)>;
+  concept execution = ts_fn<T, void, TaskID>;
 
 } // namespace soul::runtime

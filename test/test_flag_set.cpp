@@ -22,7 +22,7 @@ using Uint16FlagSet = soul::FlagSet<Uint16TestEnum>;
 using Uint32FlagSet = soul::FlagSet<Uint32TestEnum>;
 using Uint64FlagSet = soul::FlagSet<Uint64TestEnum>;
 
-template <soul::scoped_enum T>
+template <soul::ts_scoped_enum T>
 auto test_default_constructor() -> void
 {
   constexpr soul::FlagSet<T> flag_set;
@@ -43,7 +43,7 @@ TEST(TestFlagSetConstructor, TestFlagSetDefaultConstructor)
   SOUL_TEST_RUN(test_default_constructor<Uint64TestEnum>());
 }
 
-template <soul::scoped_enum T>
+template <soul::ts_scoped_enum T>
 auto test_init_list_constructor(std::initializer_list<T> init_list) -> void
 {
   const soul::FlagSet<T> flag_set = init_list;
@@ -135,7 +135,7 @@ public:
 
 TEST_F(TestFlagSetManipulation, TestFlagSetSet)
 {
-  auto test_set = []<soul::scoped_enum T>(soul::FlagSet<T> test_flag_set) {
+  auto test_set = []<soul::ts_scoped_enum T>(soul::FlagSet<T> test_flag_set) {
     test_flag_set.set();
     SOUL_TEST_ASSERT_EQ(test_flag_set.count(), soul::to_underlying(T::COUNT));
     SOUL_TEST_ASSERT_FALSE(test_flag_set.none());
@@ -150,7 +150,7 @@ TEST_F(TestFlagSetManipulation, TestFlagSetSet)
   SOUL_TEST_RUN(test_set(test_empty_flag_set));
 
   auto test_set_pos =
-    []<soul::scoped_enum T>(soul::FlagSet<T> test_flag_set, T position, bool value) {
+    []<soul::ts_scoped_enum T>(soul::FlagSet<T> test_flag_set, T position, bool value) {
       auto old_flag_set = test_flag_set;
       test_flag_set.set(position, value);
       SOUL_TEST_ASSERT_EQ(test_flag_set.test(position), value);
@@ -191,7 +191,7 @@ TEST_F(TestFlagSetManipulation, TestFlagSetSet)
 
 TEST_F(TestFlagSetManipulation, TestFlagSetReset)
 {
-  auto test_reset = []<soul::scoped_enum T>(soul::FlagSet<T> test_flag_set) {
+  auto test_reset = []<soul::ts_scoped_enum T>(soul::FlagSet<T> test_flag_set) {
     test_flag_set.reset();
     SOUL_TEST_ASSERT_EQ(test_flag_set.count(), 0);
     SOUL_TEST_ASSERT_FALSE(test_flag_set.any());
@@ -205,7 +205,7 @@ TEST_F(TestFlagSetManipulation, TestFlagSetReset)
   SOUL_TEST_RUN(test_reset(test_filled_flag_set));
   SOUL_TEST_RUN(test_reset(test_empty_flag_set));
 
-  auto test_reset_position = []<soul::scoped_enum T>(soul::FlagSet<T> test_flag_set, T position) {
+  auto test_reset_position = []<soul::ts_scoped_enum T>(soul::FlagSet<T> test_flag_set, T position) {
     auto old_flag_set = test_flag_set;
     test_flag_set.reset(position);
     SOUL_TEST_ASSERT_FALSE(test_flag_set.test(position));
@@ -232,7 +232,7 @@ TEST_F(TestFlagSetManipulation, TestFlagSetReset)
 
 TEST_F(TestFlagSetManipulation, TestFlagSetFlip)
 {
-  auto test_flip = []<soul::scoped_enum T>(soul::FlagSet<T> test_flag_set) {
+  auto test_flip = []<soul::ts_scoped_enum T>(soul::FlagSet<T> test_flag_set) {
     auto old_flag_set = test_flag_set;
     test_flag_set.flip();
     for (auto e : soul::FlagIter<T>()) {
@@ -245,7 +245,7 @@ TEST_F(TestFlagSetManipulation, TestFlagSetFlip)
   SOUL_TEST_RUN(test_flip(test_filled_flag_set));
   SOUL_TEST_RUN(test_flip(test_empty_flag_set));
 
-  auto test_flip_position = []<soul::scoped_enum T>(soul::FlagSet<T> test_flag_set, T position) {
+  auto test_flip_position = []<soul::ts_scoped_enum T>(soul::FlagSet<T> test_flag_set, T position) {
     auto old_flag_set = test_flag_set;
     test_flag_set.flip(position);
     for (auto e : soul::FlagIter<T>()) {

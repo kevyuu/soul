@@ -130,7 +130,7 @@ namespace soul
   using mat3f = matrix<3, 3, float>;
   using mat4f = matrix<4, 4, float>;
 
-  template <arithmetic T>
+  template <ts_arithmetic T>
   struct Quaternion {
     union {
       struct {
@@ -252,7 +252,7 @@ namespace soul
     return static_cast<PointerDst>(srcPtr);
   }
 
-  template <scoped_enum E>
+  template <ts_scoped_enum E>
   constexpr auto to_underlying(E e) noexcept
   {
     return static_cast<std::underlying_type_t<E>>(e);
@@ -299,7 +299,7 @@ namespace soul
     static constexpr auto null() -> ID { return ID(NullValue); }
   };
 
-  template <flag Flag>
+  template <ts_flag Flag>
   class FlagIter
   {
     using store_type = std::underlying_type_t<Flag>;

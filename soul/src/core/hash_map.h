@@ -14,7 +14,7 @@ namespace soul
 {
 
   template <typename T>
-  concept is_std_hash_implemented_v = std::is_default_constructible_v<std::hash<T>>;
+  concept is_std_hash_implemented_v = can_default_construct_v<std::hash<T>>;
 
   template <typename T>
   struct DefaultHashOperator {
@@ -210,7 +210,7 @@ namespace soul
 
     void destruct_values()
     {
-      if constexpr (untrivially_destructible<ValT>) {
+      if constexpr (can_nontrivial_destruct_v<ValT>) {
         for (soul_size i = 0; i < capacity_; ++i) {
           if (indexes_[i].dib != 0) {
             values_[i].~U();

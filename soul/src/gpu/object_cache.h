@@ -47,9 +47,8 @@ namespace soul::gpu
       return NULLVAL;
     }
 
-    template <typename T, typename... Args>
-      requires is_lambda_v<T, ValType(Args...)>
-    auto create(const KeyType& key, T func, Args&&... args) -> ID
+    template <typename... Args, ts_fn<ValType, Args&&...> Fn>
+    auto create(const KeyType& key, Fn func, Args&&... args) -> ID
     {
       std::unique_lock lock(mutex_);
       if (fallback_map_.contains(key)) {
@@ -113,9 +112,8 @@ namespace soul::gpu
       }
     }
 
-    template <typename T, typename... Args>
-      requires is_lambda_v<T, ValType(Args...)>
-    auto get_or_create(const KeyType& key, T func, Args&&... args) -> ID
+    template <typename... Args, ts_fn<ValType, Args&&...> Fn>
+    auto get_or_create(const KeyType& key, Fn func, Args&&... args) -> ID
     {
       ItemKey item_search_key = get_search_key(key);
       if (map_.contains(item_search_key)) {

@@ -8,14 +8,14 @@
 namespace soul
 {
 
-  template <flag Flag>
+  template <ts_flag Flag>
   class FlagSet;
 
   template <class T>
   struct is_flag_set : std::false_type {
   };
 
-  template <flag Flag>
+  template <ts_flag Flag>
   struct is_flag_set<FlagSet<Flag>> : std::true_type {
   };
 
@@ -28,7 +28,7 @@ namespace soul
     concept dst_flag = flag_set<T> || std::integral<T>;
   }
 
-  template <flag Flag>
+  template <ts_flag Flag>
   class FlagSet
   {
   public:
@@ -54,39 +54,51 @@ namespace soul
     constexpr auto flip() -> FlagSet&;
     constexpr auto flip(flag_type bit) -> FlagSet&;
 
-    [[nodiscard]] constexpr auto operator[](flag_type bit) const -> bool;
+    [[nodiscard]]
+    constexpr auto
+    operator[](flag_type bit) const -> bool;
     constexpr auto operator|=(FlagSet flag) -> FlagSet&;
     constexpr auto operator&=(FlagSet flag) -> FlagSet&;
     constexpr auto operator^=(FlagSet flag) -> FlagSet&;
-    [[nodiscard]] constexpr auto operator~() const -> FlagSet;
+    [[nodiscard]]
+    constexpr auto
+    operator~() const -> FlagSet;
     constexpr auto operator==(const FlagSet&) const -> bool = default;
 
-    [[nodiscard]] constexpr auto count() const -> size_t;
-    [[nodiscard]] constexpr auto size() const -> size_t;
-    [[nodiscard]] constexpr auto test(flag_type bit) const -> bool;
-    [[nodiscard]] constexpr auto test_any(FlagSet other) const -> bool;
-    [[nodiscard]] constexpr auto test_any(std::initializer_list<flag_type> other) const -> bool;
-    [[nodiscard]] constexpr auto any() const -> bool;
-    [[nodiscard]] constexpr auto none() const -> bool;
+    [[nodiscard]]
+    constexpr auto count() const -> size_t;
+    [[nodiscard]]
+    constexpr auto size() const -> size_t;
+    [[nodiscard]]
+    constexpr auto test(flag_type bit) const -> bool;
+    [[nodiscard]]
+    constexpr auto test_any(FlagSet other) const -> bool;
+    [[nodiscard]]
+    constexpr auto test_any(std::initializer_list<flag_type> other) const -> bool;
+    [[nodiscard]]
+    constexpr auto any() const -> bool;
+    [[nodiscard]]
+    constexpr auto none() const -> bool;
 
     template <soul_size IFlagCount = FLAG_COUNT>
       requires(IFlagCount <= 32)
-    [[nodiscard]] constexpr auto to_uint32() const -> uint32;
+    [[nodiscard]]
+    constexpr auto to_uint32() const -> uint32;
 
     template <soul_size IFlagCount = FLAG_COUNT>
       requires(IFlagCount <= 64)
-    [[nodiscard]] constexpr auto to_uint64() const -> uint64;
+    [[nodiscard]]
+    constexpr auto to_uint64() const -> uint64;
 
     template <impl::dst_flag DstFlags, soul_size N>
       requires(N == to_underlying(Flag::COUNT))
-    [[nodiscard]] constexpr auto map(const DstFlags (&mapping)[N]) const -> DstFlags;
+    [[nodiscard]]
+    constexpr auto map(const DstFlags (&mapping)[N]) const -> DstFlags;
 
-    template <typename T>
-      requires is_lambda_v<T, void(Flag)>
+    template <ts_fn<void, Flag> T>
     constexpr auto for_each(T func) const -> void;
 
-    template <typename T>
-      requires is_lambda_v<T, bool(Flag)>
+    template <ts_fn<bool, Flag> T>
     constexpr auto find_if(T func) const -> std::optional<Flag>;
 
     store_type flags_;
@@ -98,7 +110,7 @@ namespace soul
     static constexpr soul_size MASK = (1u << FLAG_COUNT) - 1;
   };
 
-  template <flag Flag>
+  template <ts_flag Flag>
   constexpr FlagSet<Flag>::FlagSet(const std::initializer_list<flag_type> init_list)
   {
     for (const auto val : init_list) {
@@ -106,43 +118,43 @@ namespace soul
     }
   }
 
-  template <flag Flag>
+  template <ts_flag Flag>
   constexpr auto FlagSet<Flag>::size() const -> size_t
   {
     return to_underlying(Flag::COUNT);
   }
 
-  template <flag Flag>
+  template <ts_flag Flag>
   constexpr auto FlagSet<Flag>::test(flag_type bit) const -> bool
   {
     return flags_.test(to_underlying(bit));
   }
 
-  template <flag Flag>
+  template <ts_flag Flag>
   constexpr auto FlagSet<Flag>::test_any(FlagSet other) const -> bool
   {
     return (*this & other).any();
   }
 
-  template <flag Flag>
+  template <ts_flag Flag>
   constexpr auto FlagSet<Flag>::test_any(std::initializer_list<flag_type> other) const -> bool
   {
     return (*this & FlagSet(other)).any();
   }
 
-  template <flag Flag>
+  template <ts_flag Flag>
   constexpr auto FlagSet<Flag>::any() const -> bool
   {
     return flags_.any();
   }
 
-  template <flag Flag>
+  template <ts_flag Flag>
   constexpr auto FlagSet<Flag>::none() const -> bool
   {
     return flags_.none();
   }
 
-  template <flag Flag>
+  template <ts_flag Flag>
   template <soul_size IFlagCount>
     requires(IFlagCount <= 32)
   constexpr auto FlagSet<Flag>::to_uint32() const -> uint32
@@ -150,7 +162,7 @@ namespace soul
     return flags_.to_uint32();
   }
 
-  template <flag Flag>
+  template <ts_flag Flag>
   template <soul_size IFlagCount>
     requires(IFlagCount <= 64)
   constexpr auto FlagSet<Flag>::to_uint64() const -> uint64
@@ -158,7 +170,7 @@ namespace soul
     return flags_.to_uint64();
   }
 
-  template <flag Flag>
+  template <ts_flag Flag>
   template <impl::dst_flag DstFlags, soul_size N>
     requires(N == to_underlying(Flag::COUNT))
   constexpr auto FlagSet<Flag>::map(const DstFlags (&mapping)[N]) const -> DstFlags
@@ -173,18 +185,16 @@ namespace soul
     return dst_flags;
   }
 
-  template <flag Flag>
-  template <typename T>
-    requires is_lambda_v<T, void(Flag)>
+  template <ts_flag Flag>
+  template <ts_fn<void, Flag> T>
   constexpr auto FlagSet<Flag>::for_each(T func) const -> void
   {
     auto new_func = [func = std::move(func)](soul_size bit) { func(flag_type(bit)); };
     flags_.for_each(new_func);
   }
 
-  template <flag Flag>
-  template <typename T>
-    requires is_lambda_v<T, bool(Flag)>
+  template <ts_flag Flag>
+  template <ts_fn<bool, Flag> T>
   constexpr auto FlagSet<Flag>::find_if(T func) const -> std::optional<Flag>
   {
     auto new_func = [func = std::move(func)](soul_size bit) -> bool {
@@ -197,7 +207,7 @@ namespace soul
     return std::nullopt;
   }
 
-  template <flag Flag>
+  template <ts_flag Flag>
   constexpr auto FlagSet<Flag>::flags_from_init_list(
     const std::initializer_list<flag_type> init_list) -> store_type
   {
@@ -208,100 +218,100 @@ namespace soul
     return result;
   }
 
-  template <flag Flag>
+  template <ts_flag Flag>
   constexpr auto FlagSet<Flag>::operator[](flag_type bit) const -> bool
   {
     return test(bit);
   }
 
-  template <flag Flag>
+  template <ts_flag Flag>
   constexpr auto FlagSet<Flag>::set() -> FlagSet<Flag>&
   {
     flags_.set();
     return *this;
   }
 
-  template <flag Flag>
+  template <ts_flag Flag>
   constexpr auto FlagSet<Flag>::set(flag_type bit, bool value) -> FlagSet<Flag>&
   {
     flags_.set(to_underlying(bit), value);
     return *this;
   }
 
-  template <flag Flag>
+  template <ts_flag Flag>
   constexpr auto FlagSet<Flag>::reset() -> FlagSet<Flag>&
   {
     flags_.reset();
     return *this;
   }
 
-  template <flag Flag>
+  template <ts_flag Flag>
   constexpr auto FlagSet<Flag>::reset(flag_type bit) -> FlagSet<Flag>&
   {
     flags_.set(to_underlying(bit), false);
     return *this;
   }
 
-  template <flag Flag>
+  template <ts_flag Flag>
   constexpr auto FlagSet<Flag>::flip() -> FlagSet<Flag>&
   {
     flags_.flip();
     return *this;
   }
 
-  template <flag Flag>
+  template <ts_flag Flag>
   constexpr auto FlagSet<Flag>::flip(flag_type bit) -> FlagSet<Flag>&
   {
     flags_.flip(to_underlying(bit));
     return *this;
   }
 
-  template <flag Flag>
+  template <ts_flag Flag>
   constexpr auto FlagSet<Flag>::operator|=(FlagSet flag) -> FlagSet<Flag>&
   {
     flags_ |= flag.flags_;
     return *this;
   }
 
-  template <flag Flag>
+  template <ts_flag Flag>
   constexpr auto FlagSet<Flag>::operator&=(FlagSet flag) -> FlagSet<Flag>&
   {
     flags_ &= flag.flags_;
     return *this;
   }
 
-  template <flag Flag>
+  template <ts_flag Flag>
   constexpr auto FlagSet<Flag>::operator^=(FlagSet flag) -> FlagSet<Flag>&
   {
     flags_ ^= flag.flags_;
     return *this;
   }
 
-  template <flag Flag>
+  template <ts_flag Flag>
   constexpr auto FlagSet<Flag>::operator~() const -> FlagSet<Flag>
   {
     return FlagSet(~this->flags_);
   }
 
-  template <flag Flag>
+  template <ts_flag Flag>
   constexpr auto FlagSet<Flag>::count() const -> size_t
   {
     return flags_.count();
   }
 
-  template <flag FlagT>
+  template <ts_flag FlagT>
   constexpr auto operator&(const FlagSet<FlagT> lhs, const FlagSet<FlagT> rhs) -> FlagSet<FlagT>
   {
     return FlagSet<FlagT>(lhs).operator&=(rhs);
   }
 
-  template <flag FlagT>
+  template <ts_flag FlagT>
   constexpr auto operator|(const FlagSet<FlagT> lhs, const FlagSet<FlagT> rhs) -> FlagSet<FlagT>
   {
     return FlagSet<FlagT>(lhs).operator|=(rhs);
   }
 
-  template <flag FlagT>
+  template <ts_flag FlagT>
   constexpr auto operator^(const FlagSet<FlagT> lhs, const FlagSet<FlagT> rhs) -> FlagSet<FlagT>
   {
     return FlagSet<FlagT>(lhs).operator^=(rhs);

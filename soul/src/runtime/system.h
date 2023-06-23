@@ -92,13 +92,12 @@ namespace soul::runtime
       return task_id;
     }
 
-    template <typename Func>
-      requires is_lambda_v<Func, void(int)>
-    auto create_parallel_for_task(TaskID parent, uint32 count, uint32 block_size, Func&& func)
+    template <ts_fn<void,int> Fn>
+    auto create_parallel_for_task(TaskID parent, uint32 count, uint32 block_size, Fn&& func)
       -> TaskID
     {
       return create_parallel_for_task_recursive(
-        parent, 0, count, block_size, std::forward<Func>(func));
+        parent, 0, count, block_size, std::forward<Fn>(func));
     }
 
     auto wait_task(TaskID task_id) -> void;

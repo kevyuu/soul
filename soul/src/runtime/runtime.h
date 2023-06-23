@@ -42,13 +42,12 @@ namespace soul::runtime
     return taskID;
   }
 
-  template <typename Func>
-    requires is_lambda_v<Func, void(int)>
-  auto parallel_for_task_create(TaskID parent, uint32 count, uint32 blockSize, Func&& func)
+  template <ts_fn<void,int> Fn>
+  auto parallel_for_task_create(TaskID parent, uint32 count, uint32 blockSize, Fn&& func)
     -> TaskID
   {
     return System::get().create_parallel_for_task_recursive(
-      parent, 0, count, blockSize, std::forward<Func>(func));
+      parent, 0, count, blockSize, std::forward<Fn>(func));
   }
 
   inline auto get_thread_id() -> uint16 { return System::get().get_thread_id(); }

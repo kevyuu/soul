@@ -27,7 +27,7 @@ namespace soul
     [[nodiscard]]
     static constexpr auto init_generate(Fn fn) -> this_type;
 
-    template <callable<T, soul_size> Fn>
+    template <ts_fn<T, soul_size> Fn>
     [[nodiscard]]
     static constexpr auto init_index_transform(Fn fn) -> this_type;
 
@@ -141,7 +141,7 @@ namespace soul
   }
 
   template <typename T, soul_size element_count>
-  template <callable<T, soul_size> Fn>
+  template <ts_fn<T, soul_size> Fn>
   [[nodiscard]]
   constexpr auto Array<T, element_count>::init_index_transform(Fn fn) -> this_type
   {
@@ -356,7 +356,7 @@ namespace soul
       return this_type();
     }
 
-    template <callable<T, soul_size> Fn>
+    template <ts_fn<T, soul_size> Fn>
     [[nodiscard]]
     static constexpr auto init_index_transform(Fn /* fn */) -> this_type
     {

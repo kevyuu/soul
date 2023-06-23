@@ -34,7 +34,8 @@ namespace soul
 
     auto remove(uint64 key) -> void;
 
-    [[nodiscard]] auto is_exist(uint64 key) const noexcept -> bool
+    [[nodiscard]]
+    auto is_exist(uint64 key) const noexcept -> bool
     {
       if (size_ == 0) {
         return false;
@@ -43,12 +44,28 @@ namespace soul
       return (indexes_[index].key == key && indexes_[index].dib != 0);
     }
 
-    [[nodiscard]] auto operator[](uint64 key) -> T&;
-    [[nodiscard]] auto operator[](uint64 key) const -> const T&;
+    [[nodiscard]]
+    auto
+    operator[](uint64 key) -> T&;
+    [[nodiscard]]
+    auto
+    operator[](uint64 key) const -> const T&;
 
-    [[nodiscard]] auto size() const noexcept -> soul_size { return size_; }
-    [[nodiscard]] auto capacity() const -> soul_size { return capacity_; }
-    [[nodiscard]] auto empty() const noexcept -> bool { return size_ == 0; }
+    [[nodiscard]]
+    auto size() const noexcept -> soul_size
+    {
+      return size_;
+    }
+    [[nodiscard]]
+    auto capacity() const -> soul_size
+    {
+      return capacity_;
+    }
+    [[nodiscard]]
+    auto empty() const noexcept -> bool
+    {
+      return size_ == 0;
+    }
 
   private:
     memory::Allocator* allocator_ = nullptr;
@@ -104,14 +121,14 @@ namespace soul
     }
 
     template <typename U = T>
-      requires is_trivially_move_constructible_v<U>
+      requires can_trivial_move_v<U>
     auto move_values(const UInt64HashMap<U>& other) -> void
     {
       memcpy(values_, other._values, sizeof(U) * other._capacity);
     }
 
     template <typename U = T>
-      requires(!is_trivially_move_constructible_v<U>)
+      requires can_nontrivial_move_v<U>
     auto move_values(const UInt64HashMap<U>& other) -> void
     {
       for (soul_size i = 0; i < other._capacity; ++i) {
@@ -123,14 +140,14 @@ namespace soul
     }
 
     template <typename U = T>
-      requires is_trivially_copyable_v<U>
+      requires can_trivial_copy_v<U>
     auto copy_values(const UInt64HashMap<T>& other) -> void
     {
       memcpy(values_, other.values_, sizeof(T) * other.capacity_);
     }
 
     template <typename U = T>
-      requires(!is_trivially_copyable_v<U>)
+      requires can_nontrivial_copy_v<U>
     auto copy_values(const UInt64HashMap<T>& other) -> void
     {
       for (auto i = 0; i < other.capacity_; i++) {
@@ -144,7 +161,7 @@ namespace soul
     template <typename U = T>
     auto destruct_values() -> void
     {
-      if constexpr (!is_trivially_destructible_v<U>) {
+      if constexpr (can_nontrivial_destruct_v<U>) {
         for (auto i = 0; i < capacity_; i++) {
           if (indexes_[i].dib != 0) {
             values_[i].~U();

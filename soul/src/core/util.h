@@ -117,9 +117,8 @@ namespace soul::util
     return pop_count_64(x);
   }
 
-  template <std::unsigned_integral Integral, typename Func>
-    requires is_lambda_v<Func, void(uint32)>
-  auto for_each_one_bit_pos(Integral value, const Func& func) -> void
+  template <std::unsigned_integral Integral, ts_fn<void, uint32> Fn>
+  auto for_each_one_bit_pos(Integral value, const Fn& func) -> void
   {
     while (value) {
       auto bit_pos = *get_first_one_bit_pos(value);
@@ -128,17 +127,16 @@ namespace soul::util
     }
   }
 
-  template <typename F>
-    requires is_lambda_v<F, void()>
+  template <ts_fn<void> Fn>
   struct ScopeExit {
-    explicit ScopeExit(F f) : f(f) {}
+    explicit ScopeExit(Fn f) : f(f) {}
 
     ScopeExit(const ScopeExit&) = delete;
     auto operator=(const ScopeExit&) -> ScopeExit& = delete;
     ScopeExit(ScopeExit&&) = delete;
     auto operator=(ScopeExit&&) -> ScopeExit& = delete;
     ~ScopeExit() { f(); }
-    F f;
+    Fn f;
   };
 
   template <typename F>
@@ -189,7 +187,7 @@ namespace soul::util
     return hash_fnv1_bytes(reinterpret_cast<const uint8*>(data), sizeof(data), initial);
   }
 
-  template <arithmetic T>
+  template <ts_arithmetic T>
   auto get_random_number(T min, T max) -> T
   {
     thread_local std::random_device rd;
