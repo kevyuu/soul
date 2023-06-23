@@ -3,7 +3,6 @@
 #include "core/cstring.h"
 #include "core/log.h"
 #include "core/mutex.h"
-#include "core/string_util.h"
 #include "memory/allocator.h"
 #include "memory/allocators/malloc_allocator.h"
 

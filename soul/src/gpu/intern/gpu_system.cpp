@@ -9,7 +9,6 @@
 #include "core/log.h"
 #include "core/panic.h"
 #include "core/profile.h"
-#include "core/string_util.h"
 #include "core/util.h"
 #include "core/vector.h"
 #include "gpu/intern/bindless_descriptor_allocator.h"
@@ -1265,7 +1264,7 @@ namespace soul::gpu
     runtime::ScopeAllocator<> scope_allocator("create_blas(const BlasDesc&, BlasGroupID)");
     CString as_storage_name(&scope_allocator);
     if (desc.name != nullptr) {
-      appendf(as_storage_name, "{}_storage_buffer", desc.name);
+      as_storage_name.appendf("{}_storage_buffer", desc.name);
     }
 
     const BufferDesc as_buffer_desc = {
@@ -1286,7 +1285,7 @@ namespace soul::gpu
 
     if (desc.name != nullptr) {
       CString as_name(&scope_allocator);
-      appendf(as_name, "{}({})", desc.name, _db.frame_counter);
+      as_name.appendf("{}({})", desc.name, _db.frame_counter);
       const VkDebugUtilsObjectNameInfoEXT as_name_info = {
         VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
         nullptr,
@@ -1375,7 +1374,7 @@ namespace soul::gpu
     runtime::ScopeAllocator<> scope_allocator("gpu::System::create_tlas(const TlasDesc& desc)");
     CString as_storage_name(&scope_allocator);
     if (desc.name != nullptr) {
-      appendf(as_storage_name, "{}_storage_buffer", desc.name);
+      as_storage_name.appendf("{}_storage_buffer", desc.name);
     }
     const BufferDesc as_buffer_desc = {
       .size = desc.size,
@@ -1538,7 +1537,7 @@ namespace soul::gpu
     if (desc.name != nullptr) {
       runtime::ScopeAllocator<> scope_allocator("Buffer name");
       CString buffer_name(&scope_allocator);
-      appendf(buffer_name, "{}(f{})", desc.name, _db.frame_counter);
+      buffer_name.appendf("{}(f{})", desc.name, _db.frame_counter);
 
       const VkDebugUtilsObjectNameInfoEXT image_name_info = {
         VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
@@ -2170,7 +2169,7 @@ namespace soul::gpu
 
     if (shader_table_desc.name != nullptr) {
       CString pipeline_name(&scope_allocator);
-      appendf(pipeline_name, "{}_pipeline({})", shader_table_desc.name, _db.frame_counter);
+      pipeline_name.appendf("{}_pipeline({})", shader_table_desc.name, _db.frame_counter);
       const VkDebugUtilsObjectNameInfoEXT pipeline_name_info = {
         VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
         nullptr,
@@ -2230,7 +2229,7 @@ namespace soul::gpu
 
       CString buffer_name(&scope_allocator);
       if (shader_table_desc.name != nullptr) {
-        appendf(buffer_name, "{}_{}", shader_table_desc.name, group_names[shader_group]);
+        buffer_name.appendf("{}_{}", shader_table_desc.name, group_names[shader_group]);
       }
 
       const BufferDesc buffer_desc = {

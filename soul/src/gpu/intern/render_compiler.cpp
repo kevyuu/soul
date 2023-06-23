@@ -2,7 +2,6 @@
 #include <vulkan/vulkan_core.h>
 
 #include "core/log.h"
-#include "core/string_util.h"
 #include "gpu/intern/common.h"
 #include "gpu/intern/enum_mapping.h"
 #include "gpu/intern/render_compiler.h"
@@ -351,7 +350,7 @@ namespace soul::gpu::impl
       gpu_system_.get_as_build_size_info(build_info, max_primitives_counts.data());
     CString as_scratch_buffer_name(&scope_allocator);
     if (dst_blas.desc.name != nullptr) {
-      appendf(as_scratch_buffer_name, "{}_scratch_buffer", dst_blas.desc.name);
+      as_scratch_buffer_name.appendf("{}_scratch_buffer", dst_blas.desc.name);
     }
 
     const BufferDesc scratch_buffer_desc = {

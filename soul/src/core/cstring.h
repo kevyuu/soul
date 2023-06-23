@@ -1,5 +1,7 @@
 #pragma once
 
+#include <format>
+
 #include "core/config.h"
 #include "core/type.h"
 
@@ -14,7 +16,6 @@ namespace soul
   class CString
   {
   public:
-    using this_type = CString;
     using value_type = char;
     using pointer = char*;
     using const_pointer = const char*;
@@ -22,36 +23,109 @@ namespace soul
     using const_reference = const char&;
 
     explicit CString(soul_size size, memory::Allocator& allocator = *get_default_allocator());
+
     CString(const char*, memory::Allocator& allocator);
 
     explicit CString(memory::Allocator* allocator = get_default_allocator());
+
     CString(const char*); // NOLINT(hicpp-explicit-conversions)
 
-    CString(const CString&);
-    auto operator=(const CString&) -> CString&;
     CString(CString&&) noexcept;
+
     auto operator=(CString&&) noexcept -> CString&;
+
     auto operator=(const char*) -> CString&;
+
     ~CString();
+
+    [[nodiscard]]
+    auto clone() const -> CString;
+
+    auto clone_from(const CString& other);
+
     auto swap(CString&) noexcept -> void;
+
     friend auto swap(CString& a, CString& b) noexcept -> void { a.swap(b); }
 
     auto reserve(soul_size new_capacity) -> void;
 
     auto push_back(char c) -> void;
+
     auto append(const CString& x) -> CString&;
+
     auto append(const char* x) -> CString&;
 
-    [[nodiscard]] auto capacity() const -> soul_size { return capacity_; }
-    [[nodiscard]] auto size() const -> soul_size { return size_; }
+    template <typename... Args>
+    void appendf(std::format_string<Args...> fmt, Args&&... args);
 
-    [[nodiscard]] auto data() -> pointer { return data_; }
-    [[nodiscard]] auto data() const -> const_pointer { return data_; }
+    [[nodiscard]]
+    auto capacity() const -> soul_size;
+
+    [[nodiscard]]
+    auto size() const -> soul_size;
+
+    [[nodiscard]]
+    auto data() -> pointer;
+
+    [[nodiscard]]
+    auto data() const -> const_pointer;
 
   private:
+    struct HeapLayout {
+      value_type* data;
+      soul_size capacity;
+      soul_size size;
+    };
+
+    struct SSOLayout {
+      value_type data[sizeof(HeapLayout) - sizeof(char)];
+      char sso_flag;
+    };
+
     memory::Allocator* allocator_;
     soul_size capacity_ = 0;
     soul_size size_ = 0; // string size, not counting NULL
     char* data_ = nullptr;
+
+    CString(const CString&);
+    auto operator=(const CString&) -> CString&;
   };
+
+  [[nodiscard]]
+  inline auto CString::clone() const -> CString
+  {
+    return CString(*this);
+  }
+
+  inline auto CString::clone_from(const CString& other) { *this = other; }
+
+  template <typename... Args>
+  void CString::appendf(std::format_string<Args...> fmt, Args&&... args)
+  {
+    std::format_to(std::back_inserter(*this), std::move(fmt), std::forward<Args>(args)...);
+  }
+
+  [[nodiscard]]
+  inline auto CString::capacity() const -> soul_size
+  {
+    return capacity_;
+  }
+
+  [[nodiscard]]
+  inline auto CString::size() const -> soul_size
+  {
+    return size_;
+  }
+
+  [[nodiscard]]
+  inline auto CString::data() -> pointer
+  {
+    return data_;
+  }
+
+  [[nodiscard]]
+  inline auto CString::data() const -> const_pointer
+  {
+    return data_;
+  }
 } // namespace soul

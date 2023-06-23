@@ -4,7 +4,6 @@
 
 #include "core/cstring.h"
 #include "core/flag_map.h"
-#include "core/string_util.h"
 
 namespace soul
 {
@@ -46,13 +45,9 @@ namespace soul::impl
   {
     if (log_level <= impl::LOG_LEVEL) {
       CString message;
-      appendf(
-        message,
-        "[{}]:{}:{}::",
-        impl::LOG_PREFIX[log_level],
-        relative_from_project_path(file_name),
-        line);
-      appendf(message, std::move(fmt), std::forward<Args>(args)...);
+      message.appendf(
+        "[{}]:{}:{}::", impl::LOG_PREFIX[log_level], relative_from_project_path(file_name), line);
+      message.appendf(std::move(fmt), std::forward<Args>(args)...);
       impl::log(log_level, message.data());
     }
   }

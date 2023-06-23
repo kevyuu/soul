@@ -62,7 +62,7 @@ TEST(TestCStringConstructor, TestCustomAllocatorDefaultConstructor)
 TEST(TestCStringConstructor, TestCopyConstructor)
 {
   const auto test_copy_constructor = [](soul::CString src_string) {
-    const soul::CString dst_string(src_string); // NOLINT
+    const auto dst_string = src_string.clone();
     SOUL_TEST_RUN(verify_cstring(dst_string, src_string.data()));
     SOUL_TEST_RUN(verify_cstring(dst_string, src_string));
   };
@@ -89,7 +89,7 @@ TEST(TestCStringAssingmentOperator, TestCopyAssignmentOperator)
   const auto test_assignment_operator = [](const char* src_literal, const char* dst_literal) {
     const soul::CString src_string = src_literal;
     soul::CString dst_string = dst_literal;
-    dst_string = src_string;
+    dst_string = src_string.clone();
     SOUL_TEST_RUN(verify_cstring(dst_string, src_literal));
     SOUL_TEST_RUN(verify_cstring(dst_string, src_string));
   };
@@ -102,7 +102,7 @@ TEST(TestCStringAssingmentOperator, TestCopyAssignmentOperator)
 TEST(TestCStringAssignmentOperator, TestMoveAssignmentOperator)
 {
   const auto test_move = [](soul::CString src_string, soul::CString dst_string) {
-    const soul::CString copy_src_string = src_string;
+    const soul::CString copy_src_string = src_string.clone();
     dst_string = std::move(src_string);
     verify_cstring(dst_string, copy_src_string.data());
   };
@@ -115,8 +115,8 @@ TEST(TestCStringAssignmentOperator, TestMoveAssignmentOperator)
 TEST(TestCStringSwap, TestCStringSwap)
 {
   const auto test_swap = [](soul::CString str1, soul::CString str2) {
-    auto str1copy = str1;
-    auto str2copy = str2;
+    auto str1copy = str1.clone();
+    auto str2copy = str2.clone();
 
     str1copy.swap(str2copy);
     verify_cstring(str1copy, str2.data());
@@ -141,7 +141,7 @@ TEST(TestCStringSwap, TestCStringSwap)
 TEST(TestCStringReserve, TestCStringReserve)
 {
   const auto test_reserve = [](soul::CString str, soul_size new_capacity) {
-    const auto str_copy = str;
+    const auto str_copy = str.clone();
     str.reserve(new_capacity);
     SOUL_TEST_ASSERT_GE(str.capacity(), new_capacity);
   };
