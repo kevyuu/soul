@@ -58,6 +58,9 @@ namespace soul
   inline constexpr bool can_swap_v = std::is_swappable_v<T>;
 
   template <typename T>
+  inline constexpr bool can_destruct_v = std::is_destructible_v<T>;
+
+  template <typename T>
   inline constexpr bool can_trivial_destruct_v = std::is_trivially_destructible_v<T>;
 
   template <typename T>
@@ -68,25 +71,33 @@ namespace soul
   concept ts_copy = std::is_trivially_copyable_v<T>;
 
   template <typename T>
-  concept ts_clone = can_clone_v<T> && can_nontrivial_move_v<T> && can_nontrivial_destruct_v<T>;
+  concept ts_clone = !std::is_reference_v<T> && can_clone_v<T> && can_nontrivial_move_v<T> &&
+                     can_nontrivial_destruct_v<T>;
 
   template <typename T>
-  concept ts_nontrivial_copy =
-    can_nontrivial_copy_v<T> && can_nontrivial_move_v<T> && can_nontrivial_destruct_v<T>;
+  concept ts_nontrivial_copy = !std::is_reference_v<T> && can_nontrivial_copy_v<T> &&
+                               can_nontrivial_move_v<T> && can_nontrivial_destruct_v<T>;
 
   template <typename T>
-  concept ts_move_only =
-    !can_copy_v<T> && !can_clone_v<T> && can_nontrivial_move_v<T> && can_nontrivial_destruct_v<T>;
+  concept ts_move_only = !std::is_reference_v<T> && !can_copy_v<T> && !can_clone_v<T> &&
+                         can_nontrivial_move_v<T> && can_nontrivial_destruct_v<T>;
 
   template <typename T>
-  concept ts_immovable =
-    !can_clone_v<T> && !can_copy_v<T> && !can_move_v<T> && can_nontrivial_destruct_v<T>;
+  concept ts_immovable = !std::is_reference_v<T> && !can_clone_v<T> && !can_copy_v<T> &&
+                         !can_move_v<T> && can_nontrivial_destruct_v<T>;
 
   template <typename T>
   concept typeset = ts_clone<T> || ts_copy<T> || ts_move_only<T> || ts_immovable<T>;
 
+  template <typename T, typename... Args>
+  constexpr bool can_invoke_v =
+    requires(const T& fn, Args&&... args) { std::invoke(fn, std::forward<Args>(args)...); };
+
+  template <typename T, typename... Args>
+  concept ts_invocable = typeset<T> && can_invoke_v<T, Args...>;
+
   template <typename T, typename RetType, typename... Args>
-  concept ts_fn = typeset<T> && std::regular_invocable<T, Args...> &&
+  concept ts_fn = typeset<T> && can_invoke_v<T, Args...> &&
                   std::same_as<RetType, std::invoke_result_t<T, Args...>>;
 
   template <typename T, typename RetType>

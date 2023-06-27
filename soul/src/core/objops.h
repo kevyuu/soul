@@ -36,6 +36,16 @@ namespace soul
     }
   }
 
+  template <typeset T>
+  void duplicate_from(T& dst, const T& src)
+  {
+    if constexpr (can_clone_v<T>) {
+      dst.clone_from(src);
+    } else {
+      dst = src;
+    }
+  }
+
   template <typename T>
   auto duplicate_fn(const T& val)
   {
@@ -79,6 +89,16 @@ namespace soul
       std::construct_at(location, Generator([&] { return item.clone(); }));
     } else {
       new (location) T(item.clone());
+    }
+  }
+
+  template <typename T>
+  inline constexpr void duplicate_at(T* const location, const T& item) noexcept
+  {
+    if constexpr (can_clone_v<T>) {
+      clone_at(location, item);
+    } else {
+      construct_at(location, item);
     }
   }
 
