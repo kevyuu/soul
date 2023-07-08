@@ -9,6 +9,7 @@ set(SOUL_HEADERS
     src/core/hash_map.h
     src/core/log.h
     src/core/math.h
+    src/core/not_null.h
     src/core/option.h
     src/core/packed_pool.h
     src/core/panic.h
