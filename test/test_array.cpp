@@ -1,5 +1,3 @@
-#pragma once
-
 #include "core/array.h"
 #include "core/bit_vector.h"
 #include "core/config.h"
