@@ -46,6 +46,7 @@ if(NOT SOUL_RTTI_ENABLE)
   endif()
 endif()
 
+
 message(STATUS "Compiler ID : ${CMAKE_CXX_COMPILER_ID}")
 message(STATUS "Compiler Path : ${CMAKE_CXX_COMPILER}")
 message(STATUS "System Name : ${CMAKE_SYSTEM_NAME}")
@@ -53,6 +54,13 @@ message(STATUS "CMAKE_CXX_FLAGS : ${CMAKE_CXX_FLAGS}")
 message(STATUS "CMAKE_CXX_FLAGS_DEBUG: ${CMAKE_CXX_FLAGS_DEBUG}")
 message(STATUS "CMAKE_CXX_FLAGS_RELWITHDEBINFO : ${CMAKE_CXX_FLAGS_RELWITHDEBINFO}")
 message(STATUS "CMAKE_CXX_FLAGS_RELEASE: ${CMAKE_CXX_FLAGS_RELEASE}")
+
+option (FORCE_COLORED_OUTPUT "Always produce ANSI-colored output (GNU/Clang only)." ON)
+if (${FORCE_COLORED_OUTPUT})
+  if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
+    add_compile_options(-fcolor-diagnostics -fansi-escape-codes)
+  endif ()
+endif ()
 
 option(SOUL_ASAN_ENABLE "Build this target with AddressSanitizer" OFF)
 if(SOUL_ASAN_ENABLE)
