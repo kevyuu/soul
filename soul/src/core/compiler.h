@@ -80,7 +80,7 @@ namespace soul
 #endif
 
 #if __has_attribute(always_inline)
-#  define SOUL_ALWAYS_INLINE __attribute__((always_inline))
+#  define SOUL_ALWAYS_INLINE __attribute__((always_inline)) inline
 #elif defined(_MSC_VER)
 #  define SOUL_ALWAYS_INLINE __forceinline
 #endif
