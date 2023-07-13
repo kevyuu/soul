@@ -19,10 +19,15 @@ void* TestAllocator::lastAllocation = nullptr;
 auto TestAllocator::try_allocate(soul_size size, soul_size alignment, const char* tag)
   -> soul::memory::Allocation
 {
+  if (size == 0) {
+    return {nullptr, 0};
+  }
   ++allocCount;
   ++allocCountAll;
-  ++allocVolumeAll;
   lastAllocation = malloc(size);
+  const auto allocation_size = get_allocation_size(lastAllocation);
+  allocVolume += allocation_size;
+  allocVolumeAll += allocation_size;
   return {lastAllocation, size};
 }
 
@@ -36,13 +41,13 @@ auto TestAllocator::get_allocation_size(void* addr) const -> soul_size
 
 auto TestAllocator::deallocate(void* addr) -> void
 {
-  if (addr) {
+  if (addr == nullptr) {
     return;
   }
   const auto allocation_size = get_allocation_size(addr);
   ++freeCount;
-  allocVolume -= allocation_size;
   ++freeCountAll;
+  allocVolume -= allocation_size;
   allocVolumeAll -= allocation_size;
   free(addr);
 }

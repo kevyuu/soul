@@ -1,19 +1,72 @@
 #pragma once
 
 #include <algorithm>
-#include <cinttypes>
 #include <numeric>
 #include <random>
 #include <string>
 #include <vector>
 
-#include <xutility>
 #include <gtest/gtest.h>
 
+#include "core/panic.h"
 #include "core/type_traits.h"
 #include "core/vector.h"
 #include "core/views.h"
 #include "memory/allocator.h"
+
+static const char* const DEFAULT_SOUL_TEST_MESSAGE = "---";
+static std::vector<std::string> soul_test_messages;
+
+inline static auto get_soul_test_message() -> std::string
+{
+  if (soul_test_messages.empty()) {
+    return "-----";
+  }
+  std::string str = std::accumulate(
+    soul_test_messages.begin() + 1,
+    soul_test_messages.end(),
+    soul_test_messages[0],
+    [](std::string x, std::string y) { return x + "::" + y; });
+  if (str.empty()) {
+    return DEFAULT_SOUL_TEST_MESSAGE;
+  }
+  return str;
+}
+
+struct SoulTestMessageScope {
+  explicit SoulTestMessageScope(const char* message) { soul_test_messages.push_back(message); }
+
+  SoulTestMessageScope(const SoulTestMessageScope&) = delete;
+  SoulTestMessageScope(SoulTestMessageScope&&) = delete;
+  auto operator=(const SoulTestMessageScope&) -> SoulTestMessageScope& = delete;
+  auto operator=(SoulTestMessageScope&&) -> SoulTestMessageScope& = delete;
+
+  ~SoulTestMessageScope() { soul_test_messages.pop_back(); }
+};
+
+#define SOUL_SINGLE_ARG(...) __VA_ARGS__
+#define SOUL_TEST_MESSAGE(message) SoulTestMessageScope test_message_scope(message)
+#define SOUL_TEST_RUN(expr)                                                                        \
+  do {                                                                                             \
+    SOUL_TEST_MESSAGE(#expr);                                                                      \
+    expr;                                                                                          \
+  } while (0)
+#define SOUL_TEST_ASSERT_EQ(expr1, expr2)                                                          \
+  ASSERT_EQ(expr1, expr2) << "Case : " << get_soul_test_message()
+#define SOUL_TEST_ASSERT_STREQ(expr1, expr2)                                                       \
+  ASSERT_STREQ(expr1, expr2) << "Case : " << get_soul_test_message()
+#define SOUL_TEST_ASSERT_NE(expr1, expr2)                                                          \
+  ASSERT_NE(expr1, expr2) << "Case : " << get_soul_test_message()
+#define SOUL_TEST_ASSERT_GE(expr1, expr2)                                                          \
+  ASSERT_GE(expr1, expr2) << "Case : " << get_soul_test_message()
+#define SOUL_TEST_ASSERT_GT(expr1, expr2)                                                          \
+  ASSERT_GT(expr1, expr2) << "Case : " << get_soul_test_message()
+#define SOUL_TEST_ASSERT_LE(expr1, expr2)                                                          \
+  ASSERT_LE(expr1, expr2) << "Case : " << get_soul_test_message()
+#define SOUL_TEST_ASSERT_LT(expr1, expr2)                                                          \
+  ASSERT_LT(expr1, expr2) << "Case : " << get_soul_test_message()
+#define SOUL_TEST_ASSERT_TRUE(expr) ASSERT_TRUE(expr) << "Case : " << get_soul_test_message()
+#define SOUL_TEST_ASSERT_FALSE(expr) ASSERT_FALSE(expr) << "Case : " << get_soul_test_message()
 
 constexpr uint32_t K_MAGIC_VALUE = 0x01f1cbe8;
 
@@ -178,10 +231,7 @@ static_assert(soul::ts_clone<ListTestObject>);
 class TestAllocator : public soul::memory::Allocator
 {
 public:
-  explicit TestAllocator(const char* name = "Test Malloc Allocator")
-      : Allocator(name), allocCount(0), freeCount(0), allocVolume(0)
-  {
-  }
+  explicit TestAllocator(const char* name = "Test Malloc Allocator") : Allocator(name) {}
 
   auto try_allocate(soul_size size, soul_size alignment, const char* tag)
     -> soul::memory::Allocation override;
@@ -198,70 +248,26 @@ public:
     lastAllocation = nullptr;
   }
 
-public:
-  int allocCount;
-  int freeCount;
-  size_t allocVolume;
+  TestAllocator(const TestAllocator&) = delete;
+  TestAllocator(TestAllocator&&) noexcept = delete;
+  auto operator=(const TestAllocator&) = delete;
+  auto operator=(TestAllocator&&) noexcept = delete;
+  ~TestAllocator() override
+  {
+    SOUL_ASSERT(0, allocVolume == 0, "Alloc Volume : {}", allocVolume);
+    SOUL_ASSERT(
+      0, allocCount == freeCount, "Alloc Count : {}, Free Count : {}", allocCount, freeCount);
+  }
+
+  int allocCount{};
+  int freeCount{};
+  size_t allocVolume{};
 
   static int allocCountAll;
   static int freeCountAll;
   static size_t allocVolumeAll;
   static void* lastAllocation;
 };
-
-static const char* const DEFAULT_SOUL_TEST_MESSAGE = "---";
-static std::vector<std::string> soul_test_messages;
-
-inline static auto get_soul_test_message() -> std::string
-{
-  if (soul_test_messages.empty()) {
-    return "-----";
-  }
-  std::string str = std::accumulate(
-    soul_test_messages.begin() + 1,
-    soul_test_messages.end(),
-    soul_test_messages[0],
-    [](std::string x, std::string y) { return x + "::" + y; });
-  if (str.empty()) {
-    return DEFAULT_SOUL_TEST_MESSAGE;
-  }
-  return str;
-}
-
-struct SoulTestMessageScope {
-  explicit SoulTestMessageScope(const char* message) { soul_test_messages.push_back(message); }
-
-  SoulTestMessageScope(const SoulTestMessageScope&) = delete;
-  SoulTestMessageScope(SoulTestMessageScope&&) = delete;
-  auto operator=(const SoulTestMessageScope&) -> SoulTestMessageScope& = delete;
-  auto operator=(SoulTestMessageScope&&) -> SoulTestMessageScope& = delete;
-
-  ~SoulTestMessageScope() { soul_test_messages.pop_back(); }
-};
-
-#define SOUL_SINGLE_ARG(...) __VA_ARGS__
-#define SOUL_TEST_MESSAGE(message) SoulTestMessageScope test_message_scope(message)
-#define SOUL_TEST_RUN(expr)                                                                        \
-  do {                                                                                             \
-    SOUL_TEST_MESSAGE(#expr);                                                                      \
-    expr;                                                                                          \
-  } while (0)
-#define SOUL_TEST_ASSERT_EQ(expr1, expr2)                                                          \
-  ASSERT_EQ(expr1, expr2) << "Case : " << get_soul_test_message()
-#define SOUL_TEST_ASSERT_STREQ(expr1, expr2)                                                       \
-  ASSERT_STREQ(expr1, expr2) << "Case : " << get_soul_test_message()
-#define SOUL_TEST_ASSERT_NE(expr1, expr2)                                                          \
-  ASSERT_NE(expr1, expr2) << "Case : " << get_soul_test_message()
-#define SOUL_TEST_ASSERT_GE(expr1, expr2)                                                          \
-  ASSERT_GE(expr1, expr2) << "Case : " << get_soul_test_message()
-#define SOUL_TEST_ASSERT_GT(expr1, expr2)                                                          \
-  ASSERT_GT(expr1, expr2) << "Case : " << get_soul_test_message()
-#define SOUL_TEST_ASSERT_LE(expr1, expr2)                                                          \
-  ASSERT_LE(expr1, expr2) << "Case : " << get_soul_test_message()
-#define SOUL_TEST_ASSERT_LT(expr1, expr2)                                                          \
-  ASSERT_LT(expr1, expr2) << "Case : " << get_soul_test_message()
-#define SOUL_TEST_ASSERT_TRUE(expr) ASSERT_TRUE(expr) << "Case : " << get_soul_test_message()
-#define SOUL_TEST_ASSERT_FALSE(expr) ASSERT_FALSE(expr) << "Case : " << get_soul_test_message()
 
 template <typename T>
 using Sequence = std::vector<T>;
