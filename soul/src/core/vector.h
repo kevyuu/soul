@@ -507,7 +507,9 @@ namespace soul
         T* new_buffer = allocator_->template allocate_array<T>(new_size);
         uninitialized_copy_n(std::begin(range), new_size, new_buffer);
         std::destroy_n(buffer_, size_);
-        allocator_->deallocate_array(buffer_, capacity_);
+        if (!is_using_stack_storage()) {
+          allocator_->deallocate_array(buffer_, capacity_);
+        }
         buffer_ = new_buffer;
         size_ = new_size;
         capacity_ = new_size;

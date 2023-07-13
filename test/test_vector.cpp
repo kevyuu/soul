@@ -310,9 +310,9 @@ public:
 TEST_F(TestVectorManipulation, TestVectorSetAllocator)
 {
   auto test_vector_set_allocator = []<typename T>(const soul::Vector<T>& sample_vector) {
+    TestAllocator test_allocator;
     auto test_vector = sample_vector.clone();
     const auto test_vector_copy = test_vector.clone();
-    TestAllocator test_allocator;
     test_vector.set_allocator(test_allocator);
     SOUL_TEST_ASSERT_EQ(test_vector.get_allocator(), &test_allocator);
     SOUL_TEST_ASSERT_TRUE(std::ranges::equal(test_vector, test_vector_copy));
