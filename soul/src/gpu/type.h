@@ -1511,8 +1511,8 @@ namespace soul::gpu
         // - only happen on release mode
         ThreadContext() {}
 
-        ThreadContext(const ThreadContext&) = default;
-        auto operator=(const ThreadContext&) -> ThreadContext& = default;
+        ThreadContext(const ThreadContext&) = delete;
+        auto operator=(const ThreadContext&) -> ThreadContext& = delete;
         ThreadContext(ThreadContext&&) = default;
         auto operator=(ThreadContext&&) -> ThreadContext& = default;
 
