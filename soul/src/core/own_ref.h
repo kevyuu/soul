@@ -21,6 +21,8 @@ namespace soul
     constexpr auto const_ref() -> const T& { return ref_; }
     constexpr auto forward() -> OwnRef<T, swappable>&& { return std::move(*this); }
 
+    constexpr operator T() { return std::move(ref_); }
+
   private:
     T&& ref_; // NOLINT(cppcoreguidelines-avoid-const-or-ref-data-members)
   };
@@ -40,6 +42,7 @@ namespace soul
     }
     constexpr auto const_ref() -> const T& { return ref_; }
     constexpr auto forward() -> OwnRef<T, swappable> { return *this; }
+    constexpr operator T() { return ref_; }
 
   private:
     using ref_type = std::conditional_t<swappable, T, const T&>;

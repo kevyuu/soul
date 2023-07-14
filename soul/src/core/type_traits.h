@@ -6,6 +6,62 @@
 
 namespace soul
 {
+  using false_type = std::false_type;
+  using true_type = std::true_type;
+
+  template <typename T>
+  inline bool constexpr is_pointer_v = std::is_pointer_v<T>;
+
+  template <typename T>
+  concept ts_pointer = is_pointer_v<T>;
+
+  template <typename T>
+  inline bool constexpr is_const_v = std::is_const_v<T>;
+
+  template <typename T1, typename T2>
+  inline bool constexpr is_same_v = std::is_same_v<T1, T2>;
+
+  template <typename T1, typename T2>
+  concept same_as = std::is_same_v<T1, T2>;
+
+  template <typename T>
+  inline bool constexpr is_lvalue_reference_v = std::is_lvalue_reference_v<T>;
+
+  template <typename T, typename... Args>
+  using invoke_result_t = std::invoke_result_t<T, Args...>;
+
+  template <typename T>
+  using remove_cv_t = std::remove_cv_t<T>;
+
+  template <bool... boolean_values>
+  constexpr auto conjunction() -> bool
+  {
+    bool values[] = {boolean_values...};
+    for (int i = 0; i < sizeof...(boolean_values); i++) {
+      if (!values[i]) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  template <bool... boolean_values>
+  inline bool constexpr conjunction_v = conjunction<boolean_values...>();
+
+  template <bool... boolean_values>
+  constexpr auto disjunction() -> bool
+  {
+    bool values[] = {boolean_values...};
+    for (int i = 0; i < sizeof...(boolean_values); i++) {
+      if (values[i]) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  template <bool... boolean_values>
+  inline bool constexpr disjunction_v = disjunction<boolean_values...>();
 
   template <typename T>
   inline constexpr bool can_default_construct_v = std::is_default_constructible_v<T>;
@@ -35,11 +91,14 @@ namespace soul
   inline constexpr bool can_clone_v = requires(T t1, const T& t2) {
     {
       t1.clone()
-    } -> std::same_as<std::remove_cv_t<T>>;
+    } -> same_as<remove_cv_t<T>>;
     {
       t1.clone_from(t2)
-    } -> std::same_as<void>;
+    } -> same_as<void>;
   };
+
+  template <typename T>
+  inline constexpr bool can_copy_or_clone_v = can_copy_v<T> || can_clone_v<T>;
 
   template <typename T>
   inline constexpr bool can_move_v =
@@ -97,11 +156,26 @@ namespace soul
   concept ts_invocable = typeset<T> && can_invoke_v<T, Args...>;
 
   template <typename T, typename RetType, typename... Args>
-  concept ts_fn = typeset<T> && can_invoke_v<T, Args...> &&
-                  std::same_as<RetType, std::invoke_result_t<T, Args...>>;
+  concept ts_fn =
+    typeset<T> && can_invoke_v<T, Args...> && same_as<RetType, std::invoke_result_t<T, Args...>>;
 
   template <typename T, typename RetType>
   concept ts_generate_fn = ts_fn<T, RetType>;
+
+  template <typename T, typename... Args>
+  constexpr bool can_multiple_invoke_v = (can_invoke_v<T, Args> && ...);
+
+  template <typename T, typename Arg, typename... Args>
+  constexpr bool has_same_invoke_result_v =
+    (is_same_v<invoke_result_t<T, Arg>, invoke_result_t<T, Args>> && ...);
+
+  template <typename T, typename Arg, typename... Args>
+  constexpr bool can_visit_v =
+    can_multiple_invoke_v<T, Arg, Args...> && has_same_invoke_result_v<T, Arg, Args...>;
+
+  template <typename T, typename... Args>
+  concept ts_visitor =
+    typeset<T> && can_multiple_invoke_v<T, Args...> && has_same_invoke_result_v<T, Args...>;
 
   template <typename T1, typename T2>
   inline constexpr bool can_convert_v = std::is_convertible_v<T1, T2>;
@@ -118,17 +192,20 @@ namespace soul
   concept ts_flag = ts_scoped_enum<T> && requires { T::COUNT; };
 
   template <typename T>
+  inline size_t constexpr flag_count_v = T::COUNT;
+
+  template <typename T>
   concept ts_arithmetic = std::is_arithmetic_v<T>;
 
   template <typeset T>
   class Option;
 
   template <typeset T>
-  struct is_option : std::false_type {
+  struct is_option : false_type {
   };
 
   template <typename T>
-  struct is_option<Option<T>> : std::true_type {
+  struct is_option<Option<T>> : true_type {
   };
 
   template <typename T>
@@ -137,4 +214,11 @@ namespace soul
   template <typename T>
   concept ts_option = is_option_v<T>;
 
+  template <typename T>
+  inline bool constexpr can_compare_equality_v = std::equality_comparable<T>;
+
+  template <typename T = void>
+  struct static_assert_error {
+    static bool constexpr value = false;
+  };
 } // namespace soul

@@ -1,5 +1,6 @@
 add_executable(test_meta test_meta.cpp util.cpp)
 target_link_libraries(test_meta PRIVATE GTest::gtest GTest::gtest_main soul)
+
 add_executable(test_core_util test_util.cpp util.cpp)
 target_link_libraries(test_core_util PRIVATE GTest::gtest GTest::gtest_main soul)
 
@@ -33,6 +34,9 @@ target_link_libraries(test_sbo_vector PRIVATE GTest::gtest GTest::gtest_main sou
 add_executable(test_cstring test_cstring.cpp util.cpp)
 target_link_libraries(test_cstring PRIVATE GTest::gtest GTest::gtest_main soul)
 
+add_executable(test_variant test_variant.cpp util.cpp)
+target_link_libraries(test_variant PRIVATE GTest::gtest GTest::gtest_main soul)
+
 add_test(gtest_meta test_meta)
 add_test(gtest_core_util test_core_util)
 add_test(gtest_array test_array)
@@ -45,3 +49,4 @@ add_test(gtest_bit_vector test_bit_vector)
 add_test(gtest_bitset test_bitset)
 add_test(gtest_sbo_vector test_sbo_vector)
 add_test(gtest_cstring test_cstring)
+add_test(gtest_variant test_variant)
