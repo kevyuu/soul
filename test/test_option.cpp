@@ -26,15 +26,15 @@ template <typename T>
 auto test_default_constructor() -> void
 {
   soul::Option<T> option;
-  SOUL_TEST_ASSERT_FALSE(option.has_value());
+  SOUL_TEST_ASSERT_FALSE(option.is_some());
 }
 
 template <typename T>
 auto verify_option_equal(const soul::Option<T>& opt1, const soul::Option<T>& opt2)
 {
-  SOUL_TEST_ASSERT_EQ(opt1.has_value(), opt2.has_value());
-  if (opt1.has_value() && opt2.has_value()) {
-    SOUL_TEST_ASSERT_EQ(*opt1, *opt2);
+  SOUL_TEST_ASSERT_EQ(opt1.is_some(), opt2.is_some());
+  if (opt1.is_some() && opt2.is_some()) {
+    SOUL_TEST_ASSERT_EQ(opt1.some_ref(), opt2.some_ref());
   }
   SOUL_TEST_ASSERT_EQ(opt1, opt2);
 }
@@ -50,8 +50,8 @@ template <soul::typeset T>
 auto test_construction_some(const T& val)
 {
   auto option = soul::Option<T>::some(soul::duplicate(val));
-  SOUL_TEST_ASSERT_TRUE(option.has_value());
-  SOUL_TEST_ASSERT_EQ(*option, val);
+  SOUL_TEST_ASSERT_TRUE(option.is_some());
+  SOUL_TEST_ASSERT_EQ(option.some_ref(), val);
   SOUL_TEST_ASSERT_EQ(std::move(option).unwrap(), val);
 }
 

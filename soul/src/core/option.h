@@ -5,65 +5,229 @@
 #include "core/panic.h"
 #include "core/type.h"
 #include "core/type_traits.h"
+#include "core/uninitialized.h"
 #include "core/util.h"
 
 #include <optional>
 
 namespace soul
 {
-
-  struct option_construct {
-    struct some_t {
-    };
-    struct init_generate_t {
-    };
-    static constexpr auto some = some_t{};
-    static constexpr auto init_generate = init_generate_t{};
+  class None
+  {
   };
+  constexpr auto none = None{};
+
+  template <typeset T>
+  class Option;
 
   template <typename T, typename Arg>
   concept ts_option_and_then_fn = ts_invocable<T, Arg> && is_option_v<std::invoke_result_t<T, Arg>>;
 
+  namespace impl
+  {
+    struct OptionConstruct {
+      struct Some {
+      };
+      struct InitGenerate {
+      };
+      static constexpr auto some = Some{};
+      static constexpr auto init_generate = InitGenerate{};
+    };
+
+    template <typename T>
+    class OptionBase
+    {
+    public:
+      using val_ret_type = std::remove_cv_t<T>;
+
+      template <ts_fn<bool, const T&> Fn>
+      [[nodiscard]]
+      constexpr auto is_some_and(Fn fn) const -> bool
+      {
+        const auto& opt = get_option();
+        if (opt.is_some()) {
+          return true;
+        }
+        return std::invoke(fn, opt.some_ref());
+      }
+
+      [[nodiscard]]
+      constexpr auto unwrap() && -> val_ret_type
+      {
+        return std::move(get_option().some_ref());
+      }
+
+      [[nodiscard]]
+      constexpr auto unwrap_or(OwnRef<T> default_val) && -> val_ret_type
+      {
+        auto& opt = get_option();
+        if (opt.is_some()) {
+          return std::move(opt.some_ref());
+        }
+        return default_val;
+      }
+
+      template <ts_fn<std::remove_cv_t<T>> Fn>
+      [[nodiscard]]
+      constexpr auto unwrap_or_else(Fn fn) && -> val_ret_type
+      {
+        auto& opt = get_option();
+        return opt.is_some() ? std::move(opt.some_ref()) : std::invoke(fn);
+      }
+
+      template <ts_option_and_then_fn<T&> Fn, typename FnReturnT = std::invoke_result_t<Fn, T&>>
+      [[nodiscard]]
+      constexpr auto and_then(Fn fn) & -> FnReturnT
+      {
+        auto& opt = get_option();
+        if (opt.is_some()) {
+          return std::invoke(fn, opt.some_ref());
+        }
+        return FnReturnT{};
+      }
+
+      template <
+        ts_option_and_then_fn<const T&> Fn,
+        typename FnReturnT = std::invoke_result_t<Fn, const T&>>
+      [[nodiscard]]
+      constexpr auto and_then(Fn fn) const& -> FnReturnT
+      {
+        const auto& opt = get_option();
+        if (opt.is_some()) {
+          return std::invoke(fn, opt.some_ref());
+        }
+        return FnReturnT{};
+      }
+
+      template <ts_option_and_then_fn<T&&> Fn, typename FnReturnT = std::invoke_result_t<Fn, T&&>>
+      [[nodiscard]]
+      constexpr auto and_then(Fn fn) && -> FnReturnT
+      {
+        auto& opt = get_option();
+        if (opt.is_some()) {
+          return std::invoke(fn, std::move(opt.some_ref()));
+        }
+        return FnReturnT{};
+      }
+
+      template <
+        ts_option_and_then_fn<const T&&> Fn,
+        typename FnReturnT = std::invoke_result_t<Fn, const T&&>>
+      [[nodiscard]]
+      constexpr auto and_then(Fn fn) const&& -> FnReturnT
+      {
+        const auto& opt = get_option();
+        if (opt.is_some()) {
+          return std::invoke(fn, std::move(opt.some_ref()));
+        }
+        return FnReturnT{};
+      }
+
+      template <ts_invocable<T&> Fn, typename FnReturnT = std::invoke_result_t<Fn, T&>>
+      [[nodiscard]]
+      constexpr auto transform(Fn fn) & -> Option<FnReturnT>
+      {
+        auto& opt = get_option();
+        if (opt.is_some()) {
+          return Option<FnReturnT>::init_generate(
+            [&, this] { return std::invoke(fn, opt.some_ref()); });
+        }
+        return Option<FnReturnT>();
+      }
+
+      template <ts_invocable<const T&> Fn, typename FnReturnT = std::invoke_result_t<Fn, const T&>>
+      [[nodiscard]]
+      constexpr auto transform(Fn fn) const& -> Option<FnReturnT>
+      {
+        const auto& opt = get_option();
+        if (opt.is_some()) {
+          return Option<FnReturnT>::init_generate(
+            [&, this] { return std::invoke(fn, opt.some_ref()); });
+        }
+        return Option<FnReturnT>();
+      }
+
+      template <ts_invocable<T&&> Fn, typename FnReturnT = std::invoke_result_t<Fn, T&&>>
+      [[nodiscard]]
+      constexpr auto transform(Fn fn) && -> Option<FnReturnT>
+      {
+        auto& opt = get_option();
+        if (opt.is_some()) {
+          return Option<FnReturnT>::init_generate(
+            [&, this] { return std::invoke(fn, std::move(opt.some_ref())); });
+        }
+        return Option<FnReturnT>();
+      }
+
+      template <
+        ts_invocable<const T&&> Fn,
+        typename FnReturnT = std::invoke_result_t<Fn, const T&&>>
+      [[nodiscard]]
+      constexpr auto transform(Fn fn) const&& -> Option<FnReturnT>
+      {
+        const auto& opt = get_option();
+        if (opt.is_some()) {
+          return Option<FnReturnT>::init_generate(
+            [&, this] { return std::invoke(fn, std::move(opt.some_ref())); });
+        }
+        return Option<FnReturnT>();
+      }
+
+    private:
+      [[nodiscard]]
+      auto get_option() -> Option<T>&
+      {
+        return static_cast<Option<T>&>(*this);
+      }
+
+      [[nodiscard]]
+      auto get_option() const -> const Option<T>&
+      {
+        return static_cast<const Option<T>&>(*this);
+      }
+
+      friend Option<T>;
+    };
+  } // namespace impl
+
   template <typeset T>
-  class Option
+  class Option : public impl::OptionBase<T>
   {
 
   private:
-    struct Dummy_ {
-      // NOLINTBEGIN(hicpp-use-equals-default, modernize-use-equals-default)
-      constexpr Dummy_() noexcept {}
-      // NOLINTEND(hicpp-use-equals-default, modernize-use-equals-default)
-    };
     union {
-      Dummy_ dummy_;
+      UninitializedDummy dummy_;
       std::remove_const_t<T> value_;
     };
-    bool has_value_ = false;
+    bool is_some_ = false;
 
     using val_ret_type = std::remove_cv_t<T>;
 
   public:
-    using this_type = Option<T>;
-
     constexpr Option() noexcept : dummy_() {}
-    constexpr Option(const this_type& other) noexcept
+
+    constexpr Option(None none_val) : dummy_() {} // NOLINT
+
+    constexpr Option(const Option& other) noexcept
       requires(can_trivial_copy_v<T>)
     = default;
 
-    constexpr Option(this_type&& other) noexcept
+    constexpr Option(Option&& other) noexcept
       requires(can_trivial_move_v<T>)
     = default;
-    constexpr Option(this_type&& other) noexcept
+
+    constexpr Option(Option&& other) noexcept
       requires(can_nontrivial_move_v<T>);
 
-    constexpr auto operator=(const this_type& other) noexcept -> this_type&
+    constexpr auto operator=(const Option& other) noexcept -> Option&
       requires(can_trivial_copy_v<T>)
     = default;
 
-    constexpr auto operator=(this_type&& other) noexcept -> this_type&
+    constexpr auto operator=(Option&& other) noexcept -> Option&
       requires(can_trivial_move_v<T>)
     = default;
-    constexpr auto operator=(this_type&& other) noexcept -> this_type&
+
+    constexpr auto operator=(Option&& other) noexcept -> Option&
       requires(can_nontrivial_move_v<T>);
 
     constexpr ~Option() noexcept
@@ -73,116 +237,45 @@ namespace soul
       requires(can_nontrivial_destruct_v<T>);
 
     [[nodiscard]]
-    static constexpr auto some(OwnRef<T> val) noexcept -> this_type;
+    static constexpr auto some(OwnRef<T> val) noexcept -> Option;
 
     template <ts_generate_fn<T> Fn>
     [[nodiscard]]
-    static constexpr auto init_generate(Fn fn) noexcept -> this_type;
+    static constexpr auto init_generate(Fn fn) noexcept -> Option;
 
-    constexpr void swap(this_type& other) noexcept
+    constexpr void swap(Option& other) noexcept
       requires(can_move_v<T> && can_swap_v<T>);
 
     [[nodiscard]]
-    constexpr auto clone() const noexcept -> this_type
+    constexpr auto clone() const noexcept -> Option
       requires(can_clone_v<T>);
 
     constexpr void clone_from(const Option& other) noexcept
       requires(can_clone_v<T>);
 
     [[nodiscard]]
-    constexpr auto has_value() const -> bool;
-
-    template <ts_fn<bool, const T&> Fn>
-    [[nodiscard]]
-    constexpr auto has_value_and(Fn fn) const -> bool;
-
-    [[nodiscard]]
-    constexpr auto
-    operator->() & noexcept -> T*;
+    constexpr auto some_ref() -> T&
+    {
+      return value_;
+    }
 
     [[nodiscard]]
-    constexpr auto
-    operator->() const& noexcept -> const T*;
+    constexpr auto some_ref() const -> const T&
+    {
+      return value_;
+    }
 
     [[nodiscard]]
-    constexpr auto
-    operator->() && -> T* = delete;
-
-    [[nodiscard]]
-    constexpr auto
-    operator->() const&& -> const T* = delete;
-
-    [[nodiscard]]
-    constexpr auto
-    operator*() & noexcept -> T&;
-
-    [[nodiscard]]
-    constexpr auto
-    operator*() const& noexcept -> const T&;
-
-    [[nodiscard]]
-    constexpr auto
-    operator*() && = delete;
-
-    [[nodiscard]]
-    constexpr auto
-    operator*() const&& = delete;
-
-    [[nodiscard]]
-    constexpr auto unwrap() && -> val_ret_type;
-
-    template <ts_convertible_to<T> U>
-    [[nodiscard]]
-    constexpr auto unwrap_or(U&& default_val) && -> val_ret_type;
-
-    template <ts_fn<std::remove_cv_t<T>> Fn>
-    [[nodiscard]]
-    constexpr auto unwrap_or_else(Fn fn) && -> val_ret_type;
-
-    template <ts_option_and_then_fn<T&> Fn, typeset FnReturnT = std::invoke_result_t<Fn, T&>>
-    [[nodiscard]]
-    constexpr auto and_then(Fn fn) & -> FnReturnT;
-
-    template <
-      ts_option_and_then_fn<const T&> Fn,
-      typeset FnReturnT = std::invoke_result_t<Fn, const T&>>
-    [[nodiscard]]
-    constexpr auto and_then(Fn fn) const& -> FnReturnT;
-
-    template <ts_option_and_then_fn<T&&> Fn, typeset FnReturnT = std::invoke_result_t<Fn, T&&>>
-    [[nodiscard]]
-    constexpr auto and_then(Fn fn) && -> FnReturnT;
-
-    template <
-      ts_option_and_then_fn<const T&&> Fn,
-      typeset FnReturnT = std::invoke_result_t<Fn, const T&&>>
-    [[nodiscard]]
-    constexpr auto and_then(Fn fn) const&& -> FnReturnT;
-
-    template <ts_invocable<T&> Fn, typeset FnReturnT = std::invoke_result_t<Fn, T&>>
-    [[nodiscard]]
-    constexpr auto transform(Fn fn) & -> Option<FnReturnT>;
-
-    template <ts_invocable<const T&> Fn, typeset FnReturnT = std::invoke_result_t<Fn, const T&>>
-    [[nodiscard]]
-    constexpr auto transform(Fn fn) const& -> Option<FnReturnT>;
-
-    template <ts_invocable<T&&> Fn, typeset FnReturnT = std::invoke_result_t<Fn, T&&>>
-    [[nodiscard]]
-    constexpr auto transform(Fn fn) && -> Option<FnReturnT>;
-
-    template <ts_invocable<const T&&> Fn, typeset FnReturnT = std::invoke_result_t<Fn, const T&&>>
-    [[nodiscard]]
-    constexpr auto transform(Fn fn) const&& -> Option<FnReturnT>;
+    constexpr auto is_some() const -> bool;
 
     constexpr void reset();
 
   private:
     constexpr Option(const Option& other)
       requires(can_clone_v<T> || can_nontrivial_copy_v<T>)
-        : has_value_(other.has_value_)
+        : is_some_(other.is_some_)
     {
-      if (has_value_) {
+      if (is_some_) {
         duplicate_at(&value_, other.value_);
       }
     }
@@ -194,35 +287,35 @@ namespace soul
       return *this;
     }
 
-    constexpr explicit Option(option_construct::some_t /* tag */, OwnRef<T> val) : has_value_(true)
+    constexpr explicit Option(impl::OptionConstruct::Some /* tag */, OwnRef<T> val) : is_some_(true)
     {
       val.store_at(&value_);
     }
 
     template <ts_generate_fn<T> Fn>
-    constexpr explicit Option(option_construct::init_generate_t /* tag */, Fn fn) : has_value_(true)
+    constexpr explicit Option(impl::OptionConstruct::InitGenerate /* tag */, Fn fn) : is_some_(true)
     {
       generate_at(&value_, fn);
     }
   };
 
   template <typeset T>
-  constexpr Option<T>::Option(this_type&& other) noexcept
+  constexpr Option<T>::Option(Option&& other) noexcept
     requires(can_nontrivial_move_v<T>)
-      : has_value_(other.has_value_)
+      : is_some_(other.is_some_)
   {
-    if (other.has_value_) {
+    if (other.is_some_) {
       construct_at(&value_, std::move(other.value_));
-      has_value_ = true;
+      is_some_ = true;
     }
   }
 
   template <typeset T>
-  constexpr auto Option<T>::operator=(this_type&& other) noexcept -> this_type&
+  constexpr auto Option<T>::operator=(Option&& other) noexcept -> Option&
     requires(can_nontrivial_move_v<T>)
   {
-    if (other.has_value_) {
-      if (has_value_) {
+    if (other.is_some_) {
+      if (is_some_) {
         value_ = std::move(other.value_);
       }
     } else {
@@ -235,46 +328,46 @@ namespace soul
   constexpr Option<T>::~Option() noexcept
     requires(can_nontrivial_destruct_v<T>)
   {
-    if (has_value_) {
+    if (is_some_) {
       destroy_at(&value_);
     }
   }
 
   template <typeset T>
   [[nodiscard]]
-  constexpr auto Option<T>::some(OwnRef<T> val) noexcept -> this_type
+  constexpr auto Option<T>::some(OwnRef<T> val) noexcept -> Option
   {
-    return this_type(option_construct::some, val.forward());
+    return Option(impl::OptionConstruct::some, val.forward());
   }
 
   template <typeset T>
   template <ts_generate_fn<T> Fn>
   [[nodiscard]]
-  constexpr auto Option<T>::init_generate(Fn fn) noexcept -> this_type
+  constexpr auto Option<T>::init_generate(Fn fn) noexcept -> Option
   {
-    return this_type(option_construct::init_generate, fn);
+    return Option(impl::OptionConstruct::init_generate, fn);
   }
 
   template <typeset T>
-  constexpr void Option<T>::swap(this_type& other) noexcept
+  constexpr void Option<T>::swap(Option& other) noexcept
     requires(can_move_v<T> && can_swap_v<T>)
   {
-    if (has_value_ == other.has_value_) {
-      if (has_value_) {
+    if (is_some_ == other.is_some_) {
+      if (is_some_) {
         using std::swap;
         swap(value_, other.value_);
       }
     } else {
-      auto& src = has_value_ ? *this : other;
-      auto& dst = has_value_ ? other : *this;
+      auto& src = is_some_ ? *this : other;
+      auto& dst = is_some_ ? other : *this;
       construct_at(&dst.value_, std::move(src.value_));
-      dst.has_value_ = true;
+      dst.is_some_ = true;
       src.reset();
     }
   }
 
   template <typeset T>
-  constexpr auto Option<T>::clone() const noexcept -> this_type
+  constexpr auto Option<T>::clone() const noexcept -> Option
     requires(can_clone_v<T>)
   {
     return Option(*this);
@@ -288,160 +381,17 @@ namespace soul
   }
 
   template <typeset T>
-  constexpr auto Option<T>::has_value() const -> bool
+  constexpr auto Option<T>::is_some() const -> bool
   {
-    return has_value_;
-  }
-
-  template <typeset T>
-  template <ts_fn<bool, const T&> Fn>
-  constexpr auto Option<T>::has_value_and(Fn fn) const -> bool
-  {
-    if (has_value_) {
-      return true;
-    }
-    return std::forward<Fn>(fn)(value_);
-  }
-
-  template <typeset T>
-  constexpr auto Option<T>::operator->() & noexcept -> T*
-  {
-    SOUL_ASSERT(0, has_value_);
-    return &value_;
-  }
-
-  template <typeset T>
-  constexpr auto Option<T>::operator->() const& noexcept -> const T*
-  {
-    SOUL_ASSERT(0, has_value_);
-    return &value_;
-  }
-
-  template <typeset T>
-  constexpr auto Option<T>::operator*() & noexcept -> T&
-  {
-    SOUL_ASSERT(0, has_value_);
-    return value_;
-  }
-
-  template <typeset T>
-  constexpr auto Option<T>::operator*() const& noexcept -> const T&
-  {
-    SOUL_ASSERT(0, has_value_);
-    return value_;
-  }
-
-  template <typeset T>
-  constexpr auto Option<T>::unwrap() && -> val_ret_type
-  {
-    return std::move(value_);
-  }
-
-  template <typeset T>
-  template <ts_convertible_to<T> U>
-  constexpr auto Option<T>::unwrap_or(U&& default_val) && -> val_ret_type
-  {
-    if (has_value_) {
-      return std::move(value_);
-    }
-    return static_cast<val_ret_type>(std::forward<U>(default_val));
-  }
-
-  template <typeset T>
-  template <ts_fn<std::remove_cv_t<T>> Fn>
-  constexpr auto Option<T>::unwrap_or_else(Fn fn) && -> val_ret_type
-  {
-    return has_value_ ? std::move(value_) : std::invoke(std::forward<Fn>(fn));
-  }
-
-  template <typeset T>
-  template <ts_option_and_then_fn<T&> Fn, typeset FnReturnT>
-  constexpr auto Option<T>::and_then(Fn fn) & -> FnReturnT
-  {
-    if (has_value_) {
-      return std::invoke(std::forward<Fn>(fn), value_);
-    }
-    return FnReturnT{};
-  }
-
-  template <typeset T>
-  template <ts_option_and_then_fn<const T&> Fn, typeset FnReturnT>
-  constexpr auto Option<T>::and_then(Fn fn) const& -> FnReturnT
-  {
-    if (has_value_) {
-      return std::invoke(fn, value_);
-    }
-    return FnReturnT{};
-  }
-
-  template <typeset T>
-  template <ts_option_and_then_fn<T&&> Fn, typeset FnReturnT>
-  constexpr auto Option<T>::and_then(Fn fn) && -> FnReturnT
-  {
-    if (has_value_) {
-      return std::invoke(fn, std::move(value_));
-    }
-    return FnReturnT{};
-  }
-
-  template <typeset T>
-  template <ts_option_and_then_fn<const T&&> Fn, typeset FnReturnT>
-  constexpr auto Option<T>::and_then(Fn fn) const&& -> FnReturnT
-  {
-    if (has_value_) {
-      return std::invoke(fn, std::move(value_));
-    }
-    return FnReturnT{};
-  }
-
-  template <typeset T>
-  template <ts_invocable<T&> Fn, typeset FnReturnT>
-  constexpr auto Option<T>::transform(Fn fn) & -> Option<FnReturnT>
-  {
-    if (has_value_) {
-      return Option<FnReturnT>::init_generate([&, this] { return std::invoke(fn, value_); });
-    }
-    return Option<FnReturnT>();
-  }
-
-  template <typeset T>
-  template <ts_invocable<const T&> Fn, typeset FnReturnT>
-  constexpr auto Option<T>::transform(Fn fn) const& -> Option<FnReturnT>
-  {
-    if (has_value_) {
-      return Option<FnReturnT>::init_generate([&, this] { return std::invoke(fn, value_); });
-    }
-    return Option<FnReturnT>();
-  }
-
-  template <typeset T>
-  template <ts_invocable<T&&> Fn, typeset FnReturnT>
-  constexpr auto Option<T>::transform(Fn fn) && -> Option<FnReturnT>
-  {
-    if (has_value_) {
-      return Option<FnReturnT>::init_generate(
-        [&, this] { return std::invoke(fn, std::move(value_)); });
-    }
-    return Option<FnReturnT>();
-  }
-
-  template <typeset T>
-  template <ts_invocable<const T&&> Fn, typeset FnReturnT>
-  constexpr auto Option<T>::transform(Fn fn) const&& -> Option<FnReturnT>
-  {
-    if (has_value_) {
-      return Option<FnReturnT>::init_generate(
-        [&, this] { return std::invoke(fn, std::move(value_)); });
-    }
-    return Option<FnReturnT>();
+    return is_some_;
   }
 
   template <typeset T>
   constexpr void Option<T>::reset()
   {
-    if (has_value_) {
+    if (is_some_) {
       destroy_at(&value_);
-      has_value_ = false;
+      is_some_ = false;
     }
   }
 
@@ -455,10 +405,10 @@ namespace soul
   template <typeset T>
   constexpr auto operator==(const Option<T>& left, const Option<T>& right) noexcept -> bool
   {
-    if (left.has_value() && right.has_value()) {
-      return *left == *right;
+    if (left.is_some() && right.is_some()) {
+      return left.some_ref() == right.some_ref();
     }
-    return left.has_value() == right.has_value();
+    return left.is_some() == right.is_some();
   }
 
 } // namespace soul
