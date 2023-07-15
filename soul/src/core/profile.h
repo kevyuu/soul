@@ -47,8 +47,8 @@ uint32_t GetOsThreadId();
 
 #else
 
-#  define SOUL_PROFILE_FRAME SOUL_NOOP
-#  define SOUL_PROFILE_ZONE SOUL_NOOP
+#  define SOUL_PROFILE_FRAME() SOUL_NOOP
+#  define SOUL_PROFILE_ZONE() SOUL_NOOP
 #  define SOUL_PROFILE_ZONE_WITH_NAME(x) SOUL_NOOP
 #  define SOUL_PROFILE_THREAD_SET_NAME(x) SOUL_NOOP
 #  define SOUL_LOCKABLE(type, var_name) type var_name

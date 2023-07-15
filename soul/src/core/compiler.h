@@ -27,11 +27,7 @@ namespace soul
     } while (0)
 #endif //_MSC_VER
 
-#if defined(_MSC_VER)
-#  define SOUL_NOOP __noop
-#else
-#  define SOUL_NOOP ((void)0)
-#endif
+#define SOUL_NOOP ((void)0)
 
 // compatibility with non-clang compilers...
 #ifndef __has_attribute
