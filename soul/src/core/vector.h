@@ -148,7 +148,7 @@ namespace soul
     auto size() const noexcept -> usize;
 
     [[nodiscard]]
-    auto empty() const noexcept -> bool;
+    auto empty() const noexcept -> b8;
 
     void set_allocator(AllocatorT& allocator) noexcept;
 
@@ -211,7 +211,7 @@ namespace soul
   private:
     SOUL_NO_UNIQUE_ADDRESS RawBuffer<T, inline_element_count> stack_storage_;
     static constexpr usize GROWTH_FACTOR = 2;
-    static constexpr bool IS_SBO = inline_element_count > 0;
+    static constexpr b8 IS_SBO = inline_element_count > 0;
     AllocatorT* allocator_ = nullptr;
     T* buffer_ = stack_storage_.data();
     usize size_ = 0;
@@ -265,7 +265,7 @@ namespace soul
     void init_reserve(usize capacity);
 
     [[nodiscard]]
-    auto is_using_stack_storage() const -> bool;
+    auto is_using_stack_storage() const -> b8;
   };
 
   template <typename T, memory::allocator_type AllocatorT, usize N>
@@ -667,7 +667,7 @@ namespace soul
   }
 
   template <typename T, memory::allocator_type AllocatorT, usize inline_element_count>
-  auto Vector<T, AllocatorT, inline_element_count>::empty() const noexcept -> bool
+  auto Vector<T, AllocatorT, inline_element_count>::empty() const noexcept -> b8
   {
     return size_ == 0;
   }
@@ -892,7 +892,7 @@ namespace soul
   }
 
   template <typename T, memory::allocator_type AllocatorT, usize N>
-  auto Vector<T, AllocatorT, N>::is_using_stack_storage() const -> bool
+  auto Vector<T, AllocatorT, N>::is_using_stack_storage() const -> b8
   {
     if constexpr (!IS_SBO) {
       return false;
@@ -901,7 +901,7 @@ namespace soul
   }
 
   template <typename T, memory::allocator_type AllocatorT, usize N>
-  auto operator==(const Vector<T, AllocatorT, N>& lhs, const Vector<T, AllocatorT, N>& rhs) -> bool
+  auto operator==(const Vector<T, AllocatorT, N>& lhs, const Vector<T, AllocatorT, N>& rhs) -> b8
   {
     if (lhs.size() != rhs.size()) {
       return false;

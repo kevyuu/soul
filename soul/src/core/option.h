@@ -40,9 +40,9 @@ namespace soul
     public:
       using val_ret_type = std::remove_cv_t<T>;
 
-      template <ts_fn<bool, const T&> Fn>
+      template <ts_fn<b8, const T&> Fn>
       [[nodiscard]]
-      constexpr auto is_some_and(Fn fn) const -> bool
+      constexpr auto is_some_and(Fn fn) const -> b8
       {
         const auto& opt = get_option();
         if (opt.is_some()) {
@@ -199,7 +199,7 @@ namespace soul
       UninitializedDummy dummy_;
       std::remove_const_t<T> value_;
     };
-    bool is_some_ = false;
+    b8 is_some_ = false;
 
     using val_ret_type = std::remove_cv_t<T>;
 
@@ -266,7 +266,7 @@ namespace soul
     }
 
     [[nodiscard]]
-    constexpr auto is_some() const -> bool;
+    constexpr auto is_some() const -> b8;
 
     constexpr void reset();
 
@@ -381,7 +381,7 @@ namespace soul
   }
 
   template <typeset T>
-  constexpr auto Option<T>::is_some() const -> bool
+  constexpr auto Option<T>::is_some() const -> b8
   {
     return is_some_;
   }
@@ -403,7 +403,7 @@ namespace soul
   }
 
   template <typeset T>
-  constexpr auto operator==(const Option<T>& left, const Option<T>& right) noexcept -> bool
+  constexpr auto operator==(const Option<T>& left, const Option<T>& right) noexcept -> b8
   {
     if (left.is_some() && right.is_some()) {
       return left.some_ref() == right.some_ref();

@@ -23,7 +23,7 @@ struct IntNode : public soul::IntrusiveListNode {
 
   operator int() const { return x; }
 
-  auto operator==(const IntNode& rhs) const -> bool { return x == rhs.x; }
+  auto operator==(const IntNode& rhs) const -> b8 { return x == rhs.x; }
 };
 
 template <typename T>

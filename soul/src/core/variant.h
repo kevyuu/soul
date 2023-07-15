@@ -21,14 +21,14 @@ namespace soul
   namespace impl
   {
 
-    template <bool can_all_trivial_destruct, std::size_t index, typeset... Ts>
+    template <b8 can_all_trivial_destruct, std::size_t index, typeset... Ts>
     union RecursiveUnion;
 
-    template <bool can_all_trivial_destruct, std::size_t index>
+    template <b8 can_all_trivial_destruct, std::size_t index>
     union RecursiveUnion<can_all_trivial_destruct, index> {
     };
 
-    template <bool can_all_trivial_destruct, std::size_t index, typename T_first, typename... Ts>
+    template <b8 can_all_trivial_destruct, std::size_t index, typename T_first, typename... Ts>
     union RecursiveUnion<can_all_trivial_destruct, index, T_first, Ts...> {
 
       UninitializedDummy dummy_;
@@ -95,8 +95,8 @@ namespace soul
     };
 
     template <typename... Ts>
-    static inline bool constexpr assert_can_variant_clone_v = [] {
-      constexpr bool can_variant_trivial_copy = conjunction_v<can_trivial_copy_v<Ts>...>;
+    static inline b8 constexpr assert_can_variant_clone_v = [] {
+      constexpr b8 can_variant_trivial_copy = conjunction_v<can_trivial_copy_v<Ts>...>;
       static_assert(
         !can_variant_trivial_copy,
         "Variant is a trivial copy type since all variant alternative types is a trivial copy "
@@ -126,20 +126,20 @@ namespace soul
 
     static_assert(type_count < none_index);
 
-    static constexpr bool can_variant_trivial_copy = (can_trivial_copy_v<Ts> && ...);
-    static constexpr bool can_variant_trivial_move = (can_trivial_move_v<Ts> && ...);
-    static constexpr bool can_variant_clone =
+    static constexpr b8 can_variant_trivial_copy = (can_trivial_copy_v<Ts> && ...);
+    static constexpr b8 can_variant_trivial_move = (can_trivial_move_v<Ts> && ...);
+    static constexpr b8 can_variant_clone =
       !can_variant_trivial_copy && (can_copy_or_clone_v<Ts> && ...);
-    static constexpr bool can_variant_nontrivial_move =
+    static constexpr b8 can_variant_nontrivial_move =
       !can_variant_trivial_move && (can_move_v<Ts> && ...);
-    static constexpr bool can_variant_trivial_destruct = (can_trivial_destruct_v<Ts> && ...);
-    static constexpr bool can_variant_nontrivial_destruct = (can_nontrivial_destruct_v<Ts> || ...);
+    static constexpr b8 can_variant_trivial_destruct = (can_trivial_destruct_v<Ts> && ...);
+    static constexpr b8 can_variant_nontrivial_destruct = (can_nontrivial_destruct_v<Ts> || ...);
 
     template <typeset T>
-    static inline bool constexpr is_variant_alt_v = get_type_count_v<T, Ts...> == 1;
+    static inline b8 constexpr is_variant_alt_v = get_type_count_v<T, Ts...> == 1;
 
     template <typeset T>
-    static inline bool constexpr assert_is_variant_alt_v = [] {
+    static inline b8 constexpr assert_is_variant_alt_v = [] {
       static_assert(is_variant_alt_v<T>, "T is not part of variant");
       return true;
     }();
@@ -262,7 +262,7 @@ namespace soul
 
     template <typeset T>
     [[nodiscard]]
-    constexpr auto has_value() const -> bool
+    constexpr auto has_value() const -> b8
       requires(assert_is_variant_alt_v<T>)
     {
       return get_type_index_v<T, Ts...> == active_index_;
@@ -442,7 +442,7 @@ namespace soul
 
     [[nodiscard]]
     friend constexpr auto
-    operator==(const Variant& lhs, const Variant& rhs) -> bool
+    operator==(const Variant& lhs, const Variant& rhs) -> b8
       requires(conjunction_v<can_compare_equality_v<Ts>...>)
     {
       return (lhs.active_index_ == rhs.active_index_) &&

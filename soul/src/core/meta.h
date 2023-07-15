@@ -19,8 +19,8 @@ namespace soul
     template <typename T_to_find, typename T_first, typename... T_remaining>
     inline constexpr auto get_type_index(size_t I) -> size_t
     {
-      constexpr bool found = is_same_v<T_to_find, T_first>;
-      constexpr bool last_element = sizeof...(T_remaining) == 0;
+      constexpr b8 found = is_same_v<T_to_find, T_first>;
+      constexpr b8 last_element = sizeof...(T_remaining) == 0;
       static_assert(found || !last_element);
       if constexpr (found) {
         return I;
@@ -49,7 +49,7 @@ namespace soul
     }
 
     template <typename T_first, typename... T_remaining>
-    inline constexpr auto has_duplicate_type() -> bool
+    inline constexpr auto has_duplicate_type() -> b8
     {
       if constexpr (sizeof...(T_remaining) == 0) {
         return false;
@@ -72,6 +72,6 @@ namespace soul
   inline constexpr int get_type_count_v = impl::get_type_count<T_to_count, T_list...>();
 
   template <typename... T_list>
-  inline constexpr bool has_duplicate_type_v = impl::has_duplicate_type<T_list...>();
+  inline constexpr b8 has_duplicate_type_v = impl::has_duplicate_type<T_list...>();
 
 } // namespace soul

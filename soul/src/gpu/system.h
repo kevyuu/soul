@@ -159,8 +159,8 @@ namespace soul::gpu
     friend class impl::RenderGraphExecution;
 
   private:
-    auto is_owned_by_presentation_engine(TextureID texture_id) -> bool;
-    auto create_buffer(const BufferDesc& desc, bool use_linear_pool) -> BufferID;
+    auto is_owned_by_presentation_engine(TextureID texture_id) -> b8;
+    auto create_buffer(const BufferDesc& desc, b8 use_linear_pool) -> BufferID;
     auto create_staging_buffer(usize size) -> BufferID;
     auto get_gpu_allocator() -> VmaAllocator;
 

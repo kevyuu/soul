@@ -587,7 +587,7 @@ namespace soul::gpu::impl
       }
     }
 
-    const auto pass_compare_func = [this](const PassNodeID node1, const PassNodeID node2) -> bool {
+    const auto pass_compare_func = [this](const PassNodeID node1, const PassNodeID node2) -> b8 {
       const auto node1_dependency_level = pass_dependency_graph_.get_dependency_level(node1);
       const auto node2_dependency_level = pass_dependency_graph_.get_dependency_level(node2);
       if (node1_dependency_level == node2_dependency_level) {
@@ -1178,7 +1178,7 @@ namespace soul::gpu::impl
 
       execute_pass(pass_index, cmd_buffer);
 
-      auto is_queue_type_dependent = FlagMap<QueueType, bool>::init_fill(false);
+      auto is_queue_type_dependent = FlagMap<QueueType, b8>::init_fill(false);
       for (const BufferAccess& access : pass_info.buffer_accesses) {
         const BufferExecInfo& buffer_info = buffer_infos_[access.buffer_info_idx];
         if (buffer_info.pass_counter != buffer_info.passes.size() - 1) {
@@ -1361,13 +1361,13 @@ namespace soul::gpu::impl
     }
   }
 
-  auto RenderGraphExecution::is_external(const BufferExecInfo& info) const -> bool
+  auto RenderGraphExecution::is_external(const BufferExecInfo& info) const -> b8
   {
     return soul::cast<u32>(&info - buffer_infos_.data()) >=
            render_graph_->get_internal_buffers().size();
   }
 
-  auto RenderGraphExecution::is_external(const TextureExecInfo& info) const -> bool
+  auto RenderGraphExecution::is_external(const TextureExecInfo& info) const -> b8
   {
     return soul::cast<u32>(&info - texture_infos_.data()) >=
            render_graph_->get_internal_textures().size();
@@ -1525,8 +1525,8 @@ namespace soul::gpu::impl
         shader_access.view_range,
         &texture_infos_[texture_info_id]);
 
-      auto is_writable = [](const ShaderTextureReadUsage usage) -> bool {
-        auto mapping = FlagMap<ShaderTextureReadUsage, bool>::from_val_list({false, true});
+      auto is_writable = [](const ShaderTextureReadUsage usage) -> b8 {
+        auto mapping = FlagMap<ShaderTextureReadUsage, b8>::from_val_list({false, true});
         return mapping[usage];
       };
 

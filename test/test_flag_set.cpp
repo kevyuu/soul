@@ -150,7 +150,7 @@ TEST_F(TestFlagSetManipulation, TestFlagSetSet)
   SOUL_TEST_RUN(test_set(test_empty_flag_set));
 
   auto test_set_pos =
-    []<soul::ts_scoped_enum T>(soul::FlagSet<T> test_flag_set, T position, bool value) {
+    []<soul::ts_scoped_enum T>(soul::FlagSet<T> test_flag_set, T position, b8 value) {
       auto old_flag_set = test_flag_set;
       test_flag_set.set(position, value);
       SOUL_TEST_ASSERT_EQ(test_flag_set.test(position), value);

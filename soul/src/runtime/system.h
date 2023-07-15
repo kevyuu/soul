@@ -124,7 +124,7 @@ namespace soul::runtime
     auto create_task(TaskID parent, TaskFunc func) -> TaskID;
     auto get_task_ptr(TaskID task_id) -> Task*;
     auto finish_task(Task* task) -> void;
-    static auto is_task_complete(Task* task) -> bool;
+    static auto is_task_complete(Task* task) -> b8;
 
     auto loop(ThreadContext* thread_context) -> void;
     auto execute(TaskID task) -> void;

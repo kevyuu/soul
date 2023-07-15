@@ -75,10 +75,10 @@ namespace soul::runtime
       return (id & Constant::TASK_ID_TASK_INDEX_MASK) >> Constant::TASK_ID_TASK_INDEX_SHIFT;
     }
 
-    [[nodiscard]] auto operator==(const TaskID& other) const -> bool { return other.id == id; }
-    [[nodiscard]] auto operator!=(const TaskID& other) const -> bool { return other.id != id; }
-    [[nodiscard]] auto is_root() const -> bool { return id == ROOT().id; }
-    [[nodiscard]] auto is_null() const -> bool { return id == NULLVAL().id; }
+    [[nodiscard]] auto operator==(const TaskID& other) const -> b8 { return other.id == id; }
+    [[nodiscard]] auto operator!=(const TaskID& other) const -> b8 { return other.id != id; }
+    [[nodiscard]] auto is_root() const -> b8 { return id == ROOT().id; }
+    [[nodiscard]] auto is_null() const -> b8 { return id == NULLVAL().id; }
   };
 
   using TaskFunc = void (*)(TaskID taskID, void* data);
@@ -138,7 +138,7 @@ namespace soul::runtime
     std::condition_variable loop_cond_var;
     std::mutex loop_mutex;
 
-    std::atomic<bool> is_terminated;
+    std::atomic<b8> is_terminated;
 
     usize active_task_count = 0;
     ThreadCount thread_count = 0;

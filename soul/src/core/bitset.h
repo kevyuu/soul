@@ -19,9 +19,9 @@ namespace soul
       constexpr auto reset() -> void;
 
       [[nodiscard]]
-      constexpr auto any() const -> bool;
+      constexpr auto any() const -> b8;
       [[nodiscard]]
-      constexpr auto none() const -> bool;
+      constexpr auto none() const -> b8;
       [[nodiscard]]
       constexpr auto count() const -> usize;
 
@@ -33,7 +33,7 @@ namespace soul
       constexpr auto find_last() const -> std::optional<usize>;
       [[nodiscard]]
       constexpr auto find_prev(usize last_find_index) const -> std::optional<usize>;
-      template <ts_fn<bool, usize> Fn>
+      template <ts_fn<b8, usize> Fn>
       [[nodiscard]]
       constexpr auto find_if(Fn fn) const -> std::optional<usize>;
 
@@ -59,9 +59,9 @@ namespace soul
 
       constexpr auto flip() -> void;
       constexpr auto set() -> void;
-      constexpr auto set(usize index, bool val) -> void;
+      constexpr auto set(usize index, b8 val) -> void;
 
-      constexpr auto operator==(const this_type& x) const -> bool;
+      constexpr auto operator==(const this_type& x) const -> b8;
 
       static constexpr usize BITS_PER_BLOCK = sizeof(BlockType) * 8;
       static constexpr usize BITS_PER_BLOCK_MASK = BITS_PER_BLOCK - 1;
@@ -149,7 +149,7 @@ namespace soul
     }
 
     template <size_t BlockCount, ts_bit_block BlockType>
-    constexpr auto BitsetImpl<BlockCount, BlockType>::set(const usize index, const bool val)
+    constexpr auto BitsetImpl<BlockCount, BlockType>::set(const usize index, const b8 val)
       -> void
     {
       if (val) {
@@ -168,7 +168,7 @@ namespace soul
     }
 
     template <size_t BlockCount, ts_bit_block BlockType>
-    constexpr auto BitsetImpl<BlockCount, BlockType>::operator==(const this_type& x) const -> bool
+    constexpr auto BitsetImpl<BlockCount, BlockType>::operator==(const this_type& x) const -> b8
     {
       for (usize i = 0; i < BlockCount; i++) {
         if (blocks_[i] != x.blocks_[i]) {
@@ -179,7 +179,7 @@ namespace soul
     }
 
     template <size_t BlockCount, ts_bit_block BlockType>
-    constexpr auto BitsetImpl<BlockCount, BlockType>::any() const -> bool
+    constexpr auto BitsetImpl<BlockCount, BlockType>::any() const -> b8
     {
       for (usize i = 0; i < BlockCount; i++) {
         if (blocks_[i]) {
@@ -190,7 +190,7 @@ namespace soul
     }
 
     template <size_t BlockCount, ts_bit_block BlockType>
-    constexpr auto BitsetImpl<BlockCount, BlockType>::none() const -> bool
+    constexpr auto BitsetImpl<BlockCount, BlockType>::none() const -> b8
     {
       return !any();
     }
@@ -282,7 +282,7 @@ namespace soul
     }
 
     template <size_t BlockCount, ts_bit_block BlockType>
-    template <ts_fn<bool, usize> Fn>
+    template <ts_fn<b8, usize> Fn>
     constexpr auto BitsetImpl<BlockCount, BlockType>::find_if(Fn fn) const
       -> std::optional<usize>
     {
@@ -347,7 +347,7 @@ namespace soul
     using base_type =
       impl::BitsetImpl<impl::get_block_count(BitCount, sizeof(BlockType)), BlockType>;
     using this_type = Bitset<BitCount, BlockType>;
-    using value_type = bool;
+    using value_type = b8;
     using reference_type = BitRef<BlockType>;
 
     constexpr auto operator[](usize index) const -> value_type;
@@ -358,19 +358,19 @@ namespace soul
     constexpr auto operator^=(const this_type& rhs) -> this_type&;
 
     constexpr auto set() -> this_type&;
-    constexpr auto set(usize index, bool val = true) -> this_type&;
+    constexpr auto set(usize index, b8 val = true) -> this_type&;
 
     constexpr auto flip() -> this_type&;
     constexpr auto flip(usize index) -> this_type&;
 
     constexpr auto operator~() const -> this_type;
 
-    constexpr auto operator==(const this_type& rhs) const -> bool;
+    constexpr auto operator==(const this_type& rhs) const -> b8;
 
     [[nodiscard]]
-    constexpr auto test(usize index) const -> bool;
+    constexpr auto test(usize index) const -> b8;
     [[nodiscard]]
-    constexpr auto all() const -> bool;
+    constexpr auto all() const -> b8;
     [[nodiscard]]
     constexpr auto size() const -> usize;
 
@@ -424,7 +424,7 @@ namespace soul
   }
 
   template <usize BitCount, ts_bit_block BlockType>
-  constexpr auto Bitset<BitCount, BlockType>::set(const usize index, const bool val)
+  constexpr auto Bitset<BitCount, BlockType>::set(const usize index, const b8 val)
     -> this_type&
   {
     base_type::set(index, val);
@@ -454,13 +454,13 @@ namespace soul
   }
 
   template <usize BitCount, ts_bit_block BlockType>
-  constexpr auto Bitset<BitCount, BlockType>::operator==(const this_type& rhs) const -> bool
+  constexpr auto Bitset<BitCount, BlockType>::operator==(const this_type& rhs) const -> b8
   {
     return base_type::operator==(rhs);
   }
 
   template <usize BitCount, ts_bit_block BlockType>
-  constexpr auto Bitset<BitCount, BlockType>::test(usize index) const -> bool
+  constexpr auto Bitset<BitCount, BlockType>::test(usize index) const -> b8
   {
     SOUL_ASSERT(0, index < BitCount, "");
     BlockType block = get_block(index);
@@ -468,7 +468,7 @@ namespace soul
   }
 
   template <usize BitCount, ts_bit_block BlockType>
-  constexpr auto Bitset<BitCount, BlockType>::all() const -> bool
+  constexpr auto Bitset<BitCount, BlockType>::all() const -> b8
   {
     return base_type::count() == BitCount;
   }

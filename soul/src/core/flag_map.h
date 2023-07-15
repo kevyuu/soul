@@ -82,7 +82,7 @@ namespace soul
     }
 
     [[nodiscard]]
-    constexpr auto empty() const -> bool
+    constexpr auto empty() const -> b8
     {
       return buffer_.empty();
     }

@@ -14,16 +14,16 @@ namespace soul
 
     ~BitRef() = default;
 
-    auto operator=(bool val) -> BitRef&;
+    auto operator=(b8 val) -> BitRef&;
     auto operator=(const BitRef& rhs) -> BitRef&;
     auto operator=(BitRef&& rhs) noexcept -> BitRef&;
 
-    auto operator|=(bool val) -> BitRef&;
-    auto operator&=(bool val) -> BitRef&;
-    auto operator^=(bool val) -> BitRef&;
+    auto operator|=(b8 val) -> BitRef&;
+    auto operator&=(b8 val) -> BitRef&;
+    auto operator^=(b8 val) -> BitRef&;
 
-    auto operator~() const -> bool;
-    operator bool() const; // NOLINT(hicpp-explicit-conversions)
+    auto operator~() const -> b8;
+    operator b8() const; // NOLINT(hicpp-explicit-conversions)
     auto flip() -> BitRef&;
 
     auto operator&() -> void = delete; // NOLINT(google-runtime-operator)
@@ -51,7 +51,7 @@ namespace soul
   }
 
   template <ts_bit_block ElementType>
-  auto BitRef<ElementType>::operator=(const bool val) -> BitRef<ElementType>&
+  auto BitRef<ElementType>::operator=(const b8 val) -> BitRef<ElementType>&
   {
     if (val) {
       set_true();
@@ -65,7 +65,7 @@ namespace soul
   template <ts_bit_block ElementType>
   auto BitRef<ElementType>::operator=(const BitRef& rhs) -> BitRef<ElementType>&
   {
-    *this = static_cast<bool>(rhs);
+    *this = static_cast<b8>(rhs);
     return *this;
   }
   // NOLINTEND(cert-oop54-cpp, bugprone-unhandled-self-assignment)
@@ -73,12 +73,12 @@ namespace soul
   template <ts_bit_block BlockT>
   auto BitRef<BlockT>::operator=(BitRef&& rhs) noexcept -> BitRef<BlockT>&
   {
-    *this = static_cast<bool>(rhs);
+    *this = static_cast<b8>(rhs);
     return *this;
   }
 
   template <ts_bit_block BlockT>
-  auto BitRef<BlockT>::operator|=(const bool val) -> BitRef<BlockT>&
+  auto BitRef<BlockT>::operator|=(const b8 val) -> BitRef<BlockT>&
   {
     if (val) {
       set_true();
@@ -87,7 +87,7 @@ namespace soul
   }
 
   template <ts_bit_block BlockT>
-  auto BitRef<BlockT>::operator&=(const bool val) -> BitRef<BlockT>&
+  auto BitRef<BlockT>::operator&=(const b8 val) -> BitRef<BlockT>&
   {
     if (!val) {
       set_false();
@@ -96,7 +96,7 @@ namespace soul
   }
 
   template <ts_bit_block BlockT>
-  auto BitRef<BlockT>::operator^=(const bool val) -> BitRef<BlockT>&
+  auto BitRef<BlockT>::operator^=(const b8 val) -> BitRef<BlockT>&
   {
     if (*this != val) {
       set_true();
@@ -107,15 +107,15 @@ namespace soul
   }
 
   template <ts_bit_block BlockT>
-  auto BitRef<BlockT>::operator~() const -> bool
+  auto BitRef<BlockT>::operator~() const -> b8
   {
     return !(*this);
   }
 
   template <ts_bit_block ElementType>
-  BitRef<ElementType>::operator bool() const
+  BitRef<ElementType>::operator b8() const
   {
-    return static_cast<bool>(*bit_block_ & (static_cast<ElementType>(1) << bit_index_));
+    return static_cast<b8>(*bit_block_ & (static_cast<ElementType>(1) << bit_index_));
   }
 
   template <ts_bit_block BlockT>

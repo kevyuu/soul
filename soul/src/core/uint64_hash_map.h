@@ -35,7 +35,7 @@ namespace soul
     auto remove(u64 key) -> void;
 
     [[nodiscard]]
-    auto is_exist(u64 key) const noexcept -> bool
+    auto is_exist(u64 key) const noexcept -> b8
     {
       if (size_ == 0) {
         return false;
@@ -62,7 +62,7 @@ namespace soul
       return capacity_;
     }
     [[nodiscard]]
-    auto empty() const noexcept -> bool
+    auto empty() const noexcept -> b8
     {
       return size_ == 0;
     }

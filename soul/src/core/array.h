@@ -72,7 +72,7 @@ namespace soul
     constexpr auto size() const -> usize;
 
     [[nodiscard]]
-    constexpr auto empty() const -> bool;
+    constexpr auto empty() const -> b8;
 
     [[nodiscard]]
     constexpr auto begin() -> iterator;
@@ -252,7 +252,7 @@ namespace soul
 
   template <typename T, usize element_count>
   [[nodiscard]]
-  constexpr auto Array<T, element_count>::empty() const -> bool
+  constexpr auto Array<T, element_count>::empty() const -> b8
   {
     return element_count == 0;
   }
@@ -394,7 +394,7 @@ namespace soul
     }
 
     [[nodiscard]]
-    constexpr auto empty() const -> bool
+    constexpr auto empty() const -> b8
     {
       return true;
     }

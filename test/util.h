@@ -74,7 +74,7 @@ constexpr uint32_t K_MAGIC_VALUE = 0x01f1cbe8;
 
 struct TestObject {
   int x;            // Value for the TestObject.
-  bool throwOnCopy; // Throw an exception of this object is copied, moved, or assigned to another.
+  b8 throwOnCopy; // Throw an exception of this object is copied, moved, or assigned to another.
   int64_t id;
   // Unique id for each object, equal to its creation number. This value is not coped from other
   // TestObjects during any operations, including moves.
@@ -92,7 +92,7 @@ struct TestObject {
   static int64_t sTOMoveAssignCount;  // Count of times move assignment was called.
   static int sMagicErrorCount;        // Number of magic number mismatch errors.
 
-  explicit TestObject(int x = 0, bool bThrowOnCopy = false)
+  explicit TestObject(int x = 0, b8 bThrowOnCopy = false)
       : x(x), throwOnCopy(bThrowOnCopy), magicValue(K_MAGIC_VALUE)
   {
     ++sTOCount;
@@ -103,7 +103,7 @@ struct TestObject {
 
   // This constructor exists for the purpose of testing variadiac template arguments, such as with
   // the emplace container functions.
-  TestObject(int x0, int x1, int x2, const bool throw_on_copy = false)
+  TestObject(int x0, int x1, int x2, const b8 throw_on_copy = false)
       : x(x0 + x1 + x2), throwOnCopy(throw_on_copy), magicValue(K_MAGIC_VALUE)
   {
     ++sTOCount;
@@ -173,7 +173,7 @@ struct TestObject {
     sMagicErrorCount = 0;
   }
 
-  static auto is_clear() -> bool
+  static auto is_clear() -> b8
   // Returns true if there are no existing TestObjects and the sanity checks related to that test
   // OK.
 
@@ -223,9 +223,9 @@ public:
 };
 static_assert(soul::ts_clone<TestObject>);
 
-inline auto operator==(const TestObject& t1, const TestObject& t2) -> bool { return t1.x == t2.x; }
+inline auto operator==(const TestObject& t1, const TestObject& t2) -> b8 { return t1.x == t2.x; }
 
-inline auto operator<(const TestObject& t1, const TestObject& t2) -> bool { return t1.x < t2.x; }
+inline auto operator<(const TestObject& t1, const TestObject& t2) -> b8 { return t1.x < t2.x; }
 
 using ListTestObject = soul::Vector<TestObject>;
 static_assert(soul::ts_clone<ListTestObject>);

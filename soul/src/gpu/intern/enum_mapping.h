@@ -291,8 +291,8 @@ namespace soul::gpu
   SOUL_ALWAYS_INLINE auto vk_cast(const VertexElementType type, const VertexElementFlags flags)
     -> VkFormat
   {
-    const bool integer = flags & VERTEX_ELEMENT_INTEGER_TARGET;
-    const bool normalized = flags & VERTEX_ELEMENT_NORMALIZED;
+    const b8 integer = flags & VERTEX_ELEMENT_INTEGER_TARGET;
+    const b8 normalized = flags & VERTEX_ELEMENT_NORMALIZED;
     using ElementType = VertexElementType;
     if (normalized) {
       switch (type) {

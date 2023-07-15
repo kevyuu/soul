@@ -181,7 +181,7 @@ namespace soul::gpu
     struct ItemKeyHashCompareOperator {
       KeyEqual key_equal_op_;
 
-      auto operator()(const ItemKey& item_key1, const ItemKey& item_key2) const noexcept -> bool
+      auto operator()(const ItemKey& item_key1, const ItemKey& item_key2) const noexcept -> b8
       {
         if (item_key1.key == nullptr || item_key2.key == nullptr) {
           return false;

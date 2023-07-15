@@ -15,7 +15,7 @@ namespace soul
     lock.unlock();
     {
       lock.try_lock()
-    } -> std::same_as<bool>;
+    } -> std::same_as<b8>;
   };
 
   template <typename T>
@@ -30,7 +30,7 @@ namespace soul
   {
   public:
     auto lock() -> void { mutex_.lock(); }
-    auto try_lock() -> bool { return mutex_.try_lock(); }
+    auto try_lock() -> b8 { return mutex_.try_lock(); }
 
 #pragma warning(push)
 #pragma warning(disable : 26110)
@@ -47,7 +47,7 @@ namespace soul
   public:
     auto lock() -> void {}
 
-    static auto try_lock() -> bool { return true; }
+    static auto try_lock() -> b8 { return true; }
 
     auto unlock() -> void {}
   };

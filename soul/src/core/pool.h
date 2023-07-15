@@ -68,7 +68,7 @@ namespace soul
       return size_;
     }
     [[nodiscard]]
-    auto empty() const -> bool
+    auto empty() const -> b8
     {
       return size_ == 0;
     }

@@ -13,7 +13,7 @@ namespace soul
   template <typename T>
   concept intrusive_node_type = std::derived_from<T, IntrusiveListNode>;
 
-  template <intrusive_node_type T, bool IsConst>
+  template <intrusive_node_type T, b8 IsConst>
   class IntrusiveListIterator
   {
   public:
@@ -43,22 +43,22 @@ namespace soul
     auto operator--(int) -> IntrusiveListIterator;
   };
 
-  template <intrusive_node_type T, bool IsConst>
+  template <intrusive_node_type T, b8 IsConst>
   IntrusiveListIterator<T, IsConst>::IntrusiveListIterator() : node(nullptr)
   {
   }
 
-  template <intrusive_node_type T, bool IsConst>
+  template <intrusive_node_type T, b8 IsConst>
   IntrusiveListIterator<T, IsConst>::IntrusiveListIterator(pointer node) : node(node)
   {
   }
 
-  template <intrusive_node_type T, bool IsConst>
+  template <intrusive_node_type T, b8 IsConst>
   IntrusiveListIterator<T, IsConst>::IntrusiveListIterator(const iterator& x) : node(x.node)
   {
   }
 
-  template <intrusive_node_type T, bool IsConst>
+  template <intrusive_node_type T, b8 IsConst>
   auto IntrusiveListIterator<T, IsConst>::operator=(const iterator& x)
     -> IntrusiveListIterator<T, IsConst>&
   {
@@ -66,33 +66,33 @@ namespace soul
     return *this;
   }
 
-  template <intrusive_node_type T, bool IsConst>
+  template <intrusive_node_type T, b8 IsConst>
   auto IntrusiveListIterator<T, IsConst>::operator*() const -> reference
   {
     return *node;
   }
 
-  template <intrusive_node_type T, bool IsConst>
+  template <intrusive_node_type T, b8 IsConst>
   auto IntrusiveListIterator<T, IsConst>::operator->() const -> pointer
   {
     return node;
   }
 
-  template <intrusive_node_type T, bool IsConst>
+  template <intrusive_node_type T, b8 IsConst>
   auto IntrusiveListIterator<T, IsConst>::operator++() -> IntrusiveListIterator<T, IsConst>&
   {
     node = static_cast<pointer>(node->next);
     return *this;
   }
 
-  template <intrusive_node_type T, bool IsConst>
+  template <intrusive_node_type T, b8 IsConst>
   auto IntrusiveListIterator<T, IsConst>::operator--() -> IntrusiveListIterator<T, IsConst>&
   {
     node = static_cast<pointer>(node->prev);
     return *this;
   }
 
-  template <intrusive_node_type T, bool IsConst>
+  template <intrusive_node_type T, b8 IsConst>
   auto IntrusiveListIterator<T, IsConst>::operator++(int) -> IntrusiveListIterator<T, IsConst>
   {
     IntrusiveListIterator it(*this);
@@ -100,7 +100,7 @@ namespace soul
     return it;
   }
 
-  template <intrusive_node_type T, bool IsConst>
+  template <intrusive_node_type T, b8 IsConst>
   auto IntrusiveListIterator<T, IsConst>::operator--(int) -> IntrusiveListIterator<T, IsConst>
   {
     IntrusiveListIterator it(*this);
@@ -108,16 +108,16 @@ namespace soul
     return it;
   }
 
-  template <intrusive_node_type T, bool IsConst>
+  template <intrusive_node_type T, b8 IsConst>
   auto operator==(
-    const IntrusiveListIterator<T, IsConst>& a, const IntrusiveListIterator<T, IsConst>& b) -> bool
+    const IntrusiveListIterator<T, IsConst>& a, const IntrusiveListIterator<T, IsConst>& b) -> b8
   {
     return a.node == b.node;
   }
 
-  template <intrusive_node_type T, bool IsConst, bool IsConst2>
+  template <intrusive_node_type T, b8 IsConst, b8 IsConst2>
   auto operator==(
-    const IntrusiveListIterator<T, IsConst>& a, const IntrusiveListIterator<T, IsConst2>& b) -> bool
+    const IntrusiveListIterator<T, IsConst>& a, const IntrusiveListIterator<T, IsConst2>& b) -> b8
   {
     return a.node == b.node;
   }
@@ -167,7 +167,7 @@ namespace soul
     [[nodiscard]] auto crend() const noexcept -> const_reverse_iterator;
 
     [[nodiscard]] auto size() const noexcept -> usize;
-    [[nodiscard]] auto empty() const noexcept -> bool;
+    [[nodiscard]] auto empty() const noexcept -> b8;
 
     [[nodiscard]] auto front() -> reference;
     [[nodiscard]] auto front() const -> const_reference;
@@ -179,7 +179,7 @@ namespace soul
     auto pop_front() -> void;
     auto pop_back() -> void;
 
-    auto contains(const value_type& x) const -> bool;
+    auto contains(const value_type& x) const -> b8;
 
     [[nodiscard]] auto locate(value_type& x) -> iterator;
     [[nodiscard]] auto locate(const value_type& x) const -> const_iterator;
@@ -314,7 +314,7 @@ namespace soul
   }
 
   template <intrusive_node_type T>
-  auto IntrusiveList<T>::empty() const noexcept -> bool
+  auto IntrusiveList<T>::empty() const noexcept -> b8
   {
     return anchor_.next == &anchor_;
   }
@@ -378,7 +378,7 @@ namespace soul
   }
 
   template <intrusive_node_type T>
-  auto IntrusiveList<T>::contains(const value_type& x) const -> bool
+  auto IntrusiveList<T>::contains(const value_type& x) const -> b8
   {
     for (const IntrusiveListNode* node = anchor_.next; node != &anchor_; node = node->next) {
       if (node == &x) {

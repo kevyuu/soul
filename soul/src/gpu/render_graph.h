@@ -29,7 +29,7 @@ namespace soul::gpu
       }
 
       [[nodiscard]]
-      auto is_external() const -> bool
+      auto is_external() const -> b8
       {
         return index & (1u << EXTERNAL_BIT_POSITION);
       }
@@ -116,12 +116,12 @@ namespace soul::gpu
 
     friend auto operator<=>(const this_type&, const this_type&) = default;
     [[nodiscard]]
-    auto is_null() const -> bool
+    auto is_null() const -> b8
     {
       return id.is_null();
     }
     [[nodiscard]]
-    auto is_valid() const -> bool
+    auto is_valid() const -> b8
     {
       return id.is_valid();
     }
@@ -140,14 +140,14 @@ namespace soul::gpu
     u32 mip_levels = 1;
     u16 layer_count = 1;
     TextureSampleCount sample_count = TextureSampleCount::COUNT_1;
-    bool clear = false;
+    b8 clear = false;
     ClearValue clear_value;
 
     static auto create_d2(
       const TextureFormat format,
       const u32 mip_levels,
       const vec2ui32 dimension,
-      bool clear = false,
+      b8 clear = false,
       ClearValue clear_value = {},
       const TextureSampleCount sample_count = TextureSampleCount::COUNT_1) -> RGTextureDesc
     {
@@ -166,7 +166,7 @@ namespace soul::gpu
       const TextureFormat format,
       const u32 mip_levels,
       const vec3ui32 dimension,
-      bool clear = false,
+      b8 clear = false,
       ClearValue clear_value = {},
       const TextureSampleCount sample_count = TextureSampleCount::COUNT_1) -> RGTextureDesc
     {
@@ -186,7 +186,7 @@ namespace soul::gpu
       const u32 mip_levels,
       const vec2ui32 dimension,
       const u16 layer_count,
-      bool clear = false,
+      b8 clear = false,
       ClearValue clear_value = {}) -> RGTextureDesc
     {
       return {
@@ -207,22 +207,22 @@ namespace soul::gpu
   struct ColorAttachmentDesc {
     TextureNodeID node_id;
     SubresourceIndex view = SubresourceIndex();
-    bool clear = false;
+    b8 clear = false;
     ClearValue clear_value;
   };
 
   struct DepthStencilAttachmentDesc {
     TextureNodeID node_id;
     SubresourceIndex view;
-    bool depth_write_enable = true;
-    bool clear = false;
+    b8 depth_write_enable = true;
+    b8 clear = false;
     ClearValue clear_value;
   };
 
   struct ResolveAttachmentDesc {
     TextureNodeID node_id;
     SubresourceIndex view;
-    bool clear = false;
+    b8 clear = false;
     ClearValue clear_value;
   };
 
@@ -326,7 +326,7 @@ namespace soul::gpu
       u32 mip_levels = 1;
       u16 layer_count = 1;
       TextureSampleCount sample_count = TextureSampleCount::COUNT_1;
-      bool clear = false;
+      b8 clear = false;
       ClearValue clear_value = {};
 
       [[nodiscard]]
@@ -339,20 +339,20 @@ namespace soul::gpu
     struct RGExternalTexture {
       const char* name = nullptr;
       TextureID texture_id;
-      bool clear = false;
+      b8 clear = false;
       ClearValue clear_value = {};
     };
 
     struct RGInternalBuffer {
       const char* name = nullptr;
       usize size = 0;
-      bool clear = false;
+      b8 clear = false;
     };
 
     struct RGExternalBuffer {
       const char* name = nullptr;
       BufferID buffer_id;
-      bool clear = false;
+      b8 clear = false;
     };
 
     struct RGExternalTlas {

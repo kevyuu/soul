@@ -31,7 +31,7 @@ constexpr usize CONSTRUCTOR_VECTOR_SIZE = 10;
 constexpr int CONSTRUCTOR_VECTOR_DEFAULT_VALUE = 7;
 
 template <typename T, usize N>
-auto all_equal(const soul::SBOVector<T, N>& vec, const T& val) -> bool
+auto all_equal(const soul::SBOVector<T, N>& vec, const T& val) -> b8
 {
   return std::ranges::all_of(vec, [&val](const T& x) { return x == val; });
 }
@@ -69,7 +69,7 @@ auto verify_sbo_vector(const soul::SBOVector<T, N>& vec, RangeT&& sequence)
 
 template <typename T, usize VecSize, usize ArrSize>
 auto verify_sbo_vector(const soul::SBOVector<T, VecSize>& vec, const std::array<T, ArrSize>& arr)
-  -> bool
+  -> b8
 {
   return std::equal(vec.begin(), vec.end(), std::begin(arr));
 }

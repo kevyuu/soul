@@ -16,24 +16,24 @@ namespace soul
   }
 } // namespace soul
 
-auto generate_random_bool_vector(const usize size) -> std::vector<bool>
+auto generate_random_bool_vector(const usize size) -> std::vector<b8>
 {
   std::random_device random_device;
   std::mt19937 random_engine(random_device());
   std::uniform_int_distribution<int> dist(0, 1);
 
-  std::vector<bool> result;
+  std::vector<b8> result;
   result.reserve(size);
   for (usize i = 0; i < size; i++) {
-    result.push_back(static_cast<bool>(dist(random_engine)));
+    result.push_back(static_cast<b8>(dist(random_engine)));
   }
   return result;
 }
 
 template <soul::ts_bit_block T>
-auto get_vector_from_bit_vector(const soul::BitVector<T>& bit_vector) -> std::vector<bool>
+auto get_vector_from_bit_vector(const soul::BitVector<T>& bit_vector) -> std::vector<b8>
 {
-  std::vector<bool> result;
+  std::vector<b8> result;
   for (usize i = 0; i < bit_vector.size(); i++) {
     result.push_back(bit_vector[i]);
   }
@@ -42,7 +42,7 @@ auto get_vector_from_bit_vector(const soul::BitVector<T>& bit_vector) -> std::ve
 
 template <soul::ts_bit_block BlockType>
 auto verify_sequence(
-  const soul::BitVector<BlockType>& bit_vector, const std::vector<bool>& src_vector) -> void
+  const soul::BitVector<BlockType>& bit_vector, const std::vector<b8>& src_vector) -> void
 {
   SOUL_TEST_ASSERT_EQ(bit_vector.size(), src_vector.size());
   SOUL_TEST_ASSERT_EQ(bit_vector.empty(), src_vector.empty());
@@ -75,7 +75,7 @@ TEST(TestBitVectorConstruction, TestDefaultConstructor)
 }
 
 template <soul::ts_bit_block BlockType>
-auto test_construction_init_fill_n(const usize size, const bool val) -> void
+auto test_construction_init_fill_n(const usize size, const b8 val) -> void
 {
   const auto bit_vector = soul::BitVector<BlockType>::init_fill_n(size, val);
   SOUL_TEST_ASSERT_EQ(bit_vector.size(), size);
@@ -129,7 +129,7 @@ template <soul::ts_bit_block BlockType>
 auto test_construction_from_range(const usize size) -> void
 {
   SOUL_TEST_ASSERT_NE(size, 0);
-  const std::vector<bool> random_bool_vec = generate_random_bool_vector(size);
+  const std::vector<b8> random_bool_vec = generate_random_bool_vector(size);
 
   const auto bit_vector = soul::BitVector<BlockType>::from(random_bool_vec);
   verify_sequence(bit_vector, random_bool_vec);
@@ -149,7 +149,7 @@ TEST(TestBitVectorConstruction, TestConstructionFromRange)
 template <soul::ts_bit_block BlockType>
 auto test_clone(const usize size) -> void
 {
-  const std::vector<bool> random_bool_vec = generate_random_bool_vector(size);
+  const std::vector<b8> random_bool_vec = generate_random_bool_vector(size);
   const auto src_bit_vector = soul::BitVector<BlockType>::from(random_bool_vec);
   const soul::BitVector<BlockType> test_bit_vector = src_bit_vector.clone();
   verify_sequence(test_bit_vector, random_bool_vec);
@@ -171,7 +171,7 @@ TEST(TestBitVectorConstruction, TestClone)
 template <soul::ts_bit_block BlockType>
 auto test_move_constructor(const usize size) -> void
 {
-  const std::vector<bool> random_bool_vec = generate_random_bool_vector(size);
+  const std::vector<b8> random_bool_vec = generate_random_bool_vector(size);
   auto src_bit_vector = soul::BitVector<BlockType>::from(random_bool_vec);
   const soul::BitVector<BlockType> test_bit_vector = std::move(src_bit_vector);
   verify_sequence(test_bit_vector, random_bool_vec);
@@ -203,7 +203,7 @@ public:
   {
   }
 
-  std::vector<bool> sources_vec;
+  std::vector<b8> sources_vec;
   soul::BitVector<> empty_bit_vector;
 
   soul::BitVector<u8> u8_filled_bit_vector;
@@ -290,7 +290,7 @@ TEST_F(TestBitVectorManipulation, TestBitVectorClear)
     []<soul::ts_bit_block BlockType>(const soul::BitVector<BlockType>& sample_vector) {
       auto bit_vector = sample_vector.clone();
       bit_vector.clear();
-      verify_sequence(bit_vector, std::vector<bool>());
+      verify_sequence(bit_vector, std::vector<b8>());
     };
 
   SOUL_TEST_RUN(test_clear(empty_bit_vector));
@@ -305,7 +305,7 @@ TEST_F(TestBitVectorManipulation, TestBitVectorCleanup)
     []<soul::ts_bit_block BlockType>(const soul::BitVector<BlockType>& sample_vector) {
       auto test_vector = sample_vector.clone();
       test_vector.cleanup();
-      verify_sequence(test_vector, std::vector<bool>());
+      verify_sequence(test_vector, std::vector<b8>());
       SOUL_TEST_ASSERT_EQ(test_vector.capacity(), 0);
     };
 
@@ -318,7 +318,7 @@ TEST_F(TestBitVectorManipulation, TestBitVectorCleanup)
 TEST_F(TestBitVectorManipulation, TestBitVectorPushBack)
 {
   auto test_push_back = []<soul::ts_bit_block BlockType>(
-                          const soul::BitVector<BlockType>& sample_vector, const bool val) {
+                          const soul::BitVector<BlockType>& sample_vector, const b8 val) {
     auto test_vector = sample_vector.clone();
     auto expected_vector = get_vector_from_bit_vector(test_vector);
     expected_vector.push_back(false);
@@ -345,7 +345,7 @@ TEST_F(TestBitVectorManipulation, TestBitVectorPushBack)
 
   auto test_push_back_with_val = []<soul::ts_bit_block BlockType>(
                                    const soul::BitVector<BlockType>& sample_vector,
-                                   const bool val) {
+                                   const b8 val) {
     auto test_vector = sample_vector.clone();
     auto expected_vector = get_vector_from_bit_vector(test_vector);
     expected_vector.push_back(val);
@@ -404,7 +404,7 @@ TEST_F(TestBitVectorManipulation, TestBitVectorSet)
 {
   auto test_set_with_index =
     []<soul::ts_bit_block BlockType>(
-      const soul::BitVector<BlockType>& sample_vector, const usize index, const bool val) {
+      const soul::BitVector<BlockType>& sample_vector, const usize index, const b8 val) {
       auto test_vector = sample_vector.clone();
       auto expected_vector = get_vector_from_bit_vector(test_vector);
       if (expected_vector.size() <= index) {
@@ -441,7 +441,7 @@ TEST_F(TestBitVectorManipulation, TestBitVectorSet)
     []<soul::ts_bit_block BlockType>(const soul::BitVector<BlockType>& sample_vector) {
       auto test_vector = sample_vector.clone();
       test_vector.set();
-      verify_sequence(test_vector, std::vector<bool>(test_vector.size(), true));
+      verify_sequence(test_vector, std::vector<b8>(test_vector.size(), true));
     };
 
   SOUL_TEST_RUN(test_set(empty_bit_vector));
@@ -456,7 +456,7 @@ TEST_F(TestBitVectorManipulation, TestBitVectorReset)
     []<soul::ts_bit_block BlockType>(const soul::BitVector<BlockType>& sample_vector) {
       auto test_vector = sample_vector.clone();
       test_vector.reset();
-      verify_sequence(test_vector, std::vector<bool>(test_vector.size(), false));
+      verify_sequence(test_vector, std::vector<b8>(test_vector.size(), false));
     };
 
   SOUL_TEST_RUN(test_reset(empty_bit_vector));
@@ -469,7 +469,7 @@ TEST_F(TestBitVectorManipulation, TestBitRef)
 {
   auto test_bit_ref_and =
     []<soul::ts_bit_block BlockType>(
-      const soul::BitVector<BlockType>& sample_vector, const usize idx, const bool val) {
+      const soul::BitVector<BlockType>& sample_vector, const usize idx, const b8 val) {
       auto test_vector = sample_vector.clone();
       auto expected_vector = get_vector_from_bit_vector(test_vector);
       expected_vector[idx] = expected_vector[idx] && val;
@@ -486,7 +486,7 @@ TEST_F(TestBitVectorManipulation, TestBitRef)
 
   auto test_bit_ref_or =
     []<soul::ts_bit_block BlockType>(
-      const soul::BitVector<BlockType>& sample_vector, const usize idx, const bool val) {
+      const soul::BitVector<BlockType>& sample_vector, const usize idx, const b8 val) {
       auto test_vector = sample_vector.clone();
       auto expected_vector = get_vector_from_bit_vector(test_vector);
       expected_vector[idx] = expected_vector[idx] || val;
@@ -503,7 +503,7 @@ TEST_F(TestBitVectorManipulation, TestBitRef)
 
   auto test_bit_ref_xor =
     []<soul::ts_bit_block BlockType>(
-      const soul::BitVector<BlockType>& sample_vector, const usize idx, const bool val) {
+      const soul::BitVector<BlockType>& sample_vector, const usize idx, const b8 val) {
       auto test_vector = sample_vector.clone();
       auto expected_vector = get_vector_from_bit_vector(test_vector);
       expected_vector[idx] = (expected_vector[idx] != val);
@@ -523,7 +523,7 @@ TEST_F(TestBitVectorManipulation, TestBitRef)
     auto test_vector = sample_vector.clone();
     auto expected_vector = get_vector_from_bit_vector(test_vector);
     expected_vector[idx] = !expected_vector[idx];
-    const bool negate_val = ~test_vector[idx];
+    const b8 negate_val = ~test_vector[idx];
     test_vector[idx].flip();
     verify_sequence(test_vector, expected_vector);
     SOUL_TEST_ASSERT_EQ(negate_val, expected_vector[idx]);

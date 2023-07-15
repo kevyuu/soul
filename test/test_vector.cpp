@@ -45,13 +45,13 @@ static auto generate_random_array(T* arr, usize size) -> void
 }
 
 template <typename T>
-auto all_equal(const soul::Vector<T>& vec, const T& val) -> bool
+auto all_equal(const soul::Vector<T>& vec, const T& val) -> b8
 {
   return std::ranges::all_of(vec, [&val](const T& x) { return x == val; });
 }
 
 template <typename T, usize N>
-auto verify_vector(const soul::Vector<T>& vec, const std::array<T, N>& arr) -> bool
+auto verify_vector(const soul::Vector<T>& vec, const std::array<T, N>& arr) -> b8
 {
   return std::equal(vec.begin(), vec.end(), std::begin(arr));
 }

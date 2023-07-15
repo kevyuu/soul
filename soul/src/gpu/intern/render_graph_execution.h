@@ -198,10 +198,10 @@ namespace soul::gpu::impl
     auto cleanup() -> void;
 
     [[nodiscard]]
-    auto is_external(const BufferExecInfo& info) const -> bool;
+    auto is_external(const BufferExecInfo& info) const -> b8;
 
     [[nodiscard]]
-    auto is_external(const TextureExecInfo& info) const -> bool;
+    auto is_external(const TextureExecInfo& info) const -> b8;
 
     [[nodiscard]]
     auto get_buffer_id(BufferNodeID node_id) const -> BufferID;

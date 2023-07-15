@@ -134,7 +134,7 @@ namespace soul::runtime
     return &db_.thread_contexts[thread_index].task_pool[task_index];
   }
 
-  auto System::is_task_complete(Task* task) -> bool
+  auto System::is_task_complete(Task* task) -> b8
   {
     // NOTE(kevinyu): Synchronize with fetch_sub in _finishTask() to make sure the task is executed
     // before we return true.

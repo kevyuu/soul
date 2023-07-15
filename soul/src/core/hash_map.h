@@ -65,7 +65,7 @@ namespace soul
     void remove(const KeyT& key);
 
     [[nodiscard]]
-    auto contains(const KeyT& key) const -> bool;
+    auto contains(const KeyT& key) const -> b8;
 
     [[nodiscard]]
     auto
@@ -82,7 +82,7 @@ namespace soul
     auto capacity() const -> usize;
 
     [[nodiscard]]
-    auto empty() const -> bool;
+    auto empty() const -> b8;
 
   private:
     struct Index {
@@ -429,7 +429,7 @@ namespace soul
     typename Hash,
     typename KeyEqual,
     memory::allocator_type AllocatorT>
-  auto HashMap<KeyT, ValT, Hash, KeyEqual, AllocatorT>::contains(const KeyT& key) const -> bool
+  auto HashMap<KeyT, ValT, Hash, KeyEqual, AllocatorT>::contains(const KeyT& key) const -> b8
   {
     if (capacity_ == 0) {
       return false;
@@ -495,7 +495,7 @@ namespace soul
     typename Hash,
     typename KeyEqual,
     memory::allocator_type AllocatorT>
-  auto HashMap<KeyT, ValT, Hash, KeyEqual, AllocatorT>::empty() const -> bool
+  auto HashMap<KeyT, ValT, Hash, KeyEqual, AllocatorT>::empty() const -> b8
   {
     return size_ == 0;
   }

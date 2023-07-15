@@ -464,12 +464,12 @@ namespace soul::gpu
         return t;
       }
 
-      auto operator==(const ConstIterator& rhs) const -> bool
+      auto operator==(const ConstIterator& rhs) const -> b8
       {
         return (mip_ == rhs.mip_ && layer_ == rhs.layer_ && mip_end_ == rhs.mip_end_);
       }
 
-      auto operator!=(const ConstIterator& rhs) const -> bool
+      auto operator!=(const ConstIterator& rhs) const -> b8
       {
         return (mip_ != rhs.mip_ || layer_ != rhs.layer_ || mip_end_ != rhs.mip_end_);
       }
@@ -567,7 +567,7 @@ namespace soul::gpu
     u32 region_count = 0;
     const TextureRegionUpdate* regions = nullptr;
 
-    bool generate_mipmap = false;
+    b8 generate_mipmap = false;
   };
 
   enum class TextureSampleCount : u8 {
@@ -685,17 +685,17 @@ namespace soul::gpu
     TextureWrap wrap_u = TextureWrap::CLAMP_TO_EDGE;
     TextureWrap wrap_v = TextureWrap::CLAMP_TO_EDGE;
     TextureWrap wrap_w = TextureWrap::CLAMP_TO_EDGE;
-    bool anisotropy_enable = false;
+    b8 anisotropy_enable = false;
     float max_anisotropy = 0.0f;
-    bool compare_enable = false;
+    b8 compare_enable = false;
     CompareOp compare_op = CompareOp::COUNT;
 
     static constexpr auto same_filter_wrap(
       const TextureFilter filter,
       const TextureWrap wrap,
-      const bool anisotropy_enable = false,
+      const b8 anisotropy_enable = false,
       const float max_anisotropy = 0.0f,
-      const bool compare_enable = false,
+      const b8 compare_enable = false,
       const CompareOp compare_op = CompareOp::ALWAYS) -> SamplerDesc
     {
       return {
@@ -935,8 +935,8 @@ namespace soul::gpu
     u8 color_attachment_count = 0;
 
     struct ColorAttachmentDesc {
-      bool blend_enable = false;
-      bool color_write = true;
+      b8 blend_enable = false;
+      b8 color_write = true;
       BlendFactor src_color_blend_factor = BlendFactor::ZERO;
       BlendFactor dst_color_blend_factor = BlendFactor::ZERO;
       BlendOp color_blend_op = BlendOp::ADD;
@@ -948,8 +948,8 @@ namespace soul::gpu
     ColorAttachmentDesc color_attachments[MAX_COLOR_ATTACHMENT_PER_SHADER];
 
     struct DepthStencilAttachmentDesc {
-      bool depth_test_enable = false;
-      bool depth_write_enable = false;
+      b8 depth_test_enable = false;
+      b8 depth_write_enable = false;
       CompareOp depth_compare_op = CompareOp::NEVER;
     };
 
@@ -962,12 +962,12 @@ namespace soul::gpu
 
     DepthBiasDesc depth_bias;
 
-    auto operator==(const GraphicPipelineStateDesc& other) const -> bool
+    auto operator==(const GraphicPipelineStateDesc& other) const -> b8
     {
       return (memcmp(this, &other, sizeof(GraphicPipelineStateDesc)) == 0);
     }
 
-    auto operator!=(const GraphicPipelineStateDesc& other) const -> bool
+    auto operator!=(const GraphicPipelineStateDesc& other) const -> b8
     {
       return (memcmp(this, &other, sizeof(GraphicPipelineStateDesc)) != 0);
     }
@@ -976,12 +976,12 @@ namespace soul::gpu
   struct ComputePipelineStateDesc {
     ProgramID program_id;
 
-    auto operator==(const ComputePipelineStateDesc& other) const -> bool
+    auto operator==(const ComputePipelineStateDesc& other) const -> b8
     {
       return (memcmp(this, &other, sizeof(ComputePipelineStateDesc)) == 0);
     }
 
-    auto operator!=(const ComputePipelineStateDesc& other) const -> bool
+    auto operator!=(const ComputePipelineStateDesc& other) const -> b8
     {
       return (memcmp(this, &other, sizeof(ComputePipelineStateDesc)) != 0);
     }
@@ -1005,12 +1005,12 @@ namespace soul::gpu
     struct GraphicPipelineStateKey {
       GraphicPipelineStateDesc desc;
       TextureSampleCount sample_count = TextureSampleCount::COUNT_1;
-      auto operator==(const GraphicPipelineStateKey&) const -> bool = default;
+      auto operator==(const GraphicPipelineStateKey&) const -> b8 = default;
     };
 
     struct ComputePipelineStateKey {
       ComputePipelineStateDesc desc;
-      auto operator==(const ComputePipelineStateKey&) const -> bool = default;
+      auto operator==(const ComputePipelineStateKey&) const -> b8 = default;
     };
 
     struct PipelineState {
@@ -1032,12 +1032,12 @@ namespace soul::gpu
       Attachment input_attachments[MAX_INPUT_ATTACHMENT_PER_SHADER];
       Attachment depth_attachment;
 
-      auto operator==(const RenderPassKey& other) const -> bool
+      auto operator==(const RenderPassKey& other) const -> b8
       {
         return (memcmp(this, &other, sizeof(RenderPassKey)) == 0);
       }
 
-      auto operator!=(const RenderPassKey& other) const -> bool
+      auto operator!=(const RenderPassKey& other) const -> b8
       {
         return (memcmp(this, &other, sizeof(RenderPassKey)) != 0);
       }
@@ -1068,12 +1068,12 @@ namespace soul::gpu
     struct DescriptorSetLayoutKey {
       DescriptorSetLayoutBinding bindings[MAX_BINDING_PER_SET];
 
-      auto operator==(const DescriptorSetLayoutKey& other) const -> bool
+      auto operator==(const DescriptorSetLayoutKey& other) const -> b8
       {
         return (memcmp(this, &other, sizeof(DescriptorSetLayoutKey)) == 0);
       }
 
-      auto operator!=(const DescriptorSetLayoutKey& other) const -> bool
+      auto operator!=(const DescriptorSetLayoutKey& other) const -> b8
       {
         return (memcmp(this, &other, sizeof(DescriptorSetLayoutKey)) != 0);
       }
@@ -1130,7 +1130,7 @@ namespace soul::gpu
         AccessFlags src_accesses,
         PipelineStageFlags dst_stages,
         AccessFlags dst_accesses,
-        bool layout_change = false) -> void
+        b8 layout_change = false) -> void
       {
         if (queue_owner != QueueType::COUNT && queue_owner != queue_type) {
           return;
@@ -1170,7 +1170,7 @@ namespace soul::gpu
       }
 
       [[nodiscard]]
-      auto need_invalidate(PipelineStageFlags stages, AccessFlags accesses) -> bool
+      auto need_invalidate(PipelineStageFlags stages, AccessFlags accesses) -> b8
       {
         return stages
           .find_if([this, accesses](const PipelineStage pipeline_stage) {
@@ -1270,12 +1270,12 @@ namespace soul::gpu
 
       static auto null() -> BinarySemaphore { return {VK_NULL_HANDLE}; }
       [[nodiscard]]
-      auto is_null() const -> bool
+      auto is_null() const -> b8
       {
         return vk_handle == VK_NULL_HANDLE;
       }
       [[nodiscard]]
-      auto is_valid() const -> bool
+      auto is_valid() const -> b8
       {
         return !is_null();
       }
@@ -1288,12 +1288,12 @@ namespace soul::gpu
 
       static auto null() -> TimelineSemaphore { return {}; }
       [[nodiscard]]
-      auto is_null() const -> bool
+      auto is_null() const -> b8
       {
         return counter == 0;
       }
       [[nodiscard]]
-      auto is_valid() const -> bool
+      auto is_valid() const -> b8
       {
         return !is_null();
       }
@@ -1302,7 +1302,7 @@ namespace soul::gpu
     using Semaphore = std::variant<BinarySemaphore*, TimelineSemaphore>;
 
     [[nodiscard]]
-    inline auto is_semaphore_valid(Semaphore semaphore) -> bool
+    inline auto is_semaphore_valid(Semaphore semaphore) -> b8
     {
       if (std::holds_alternative<BinarySemaphore*>(semaphore)) {
         return std::get<BinarySemaphore*>(semaphore)->is_valid();
@@ -1311,7 +1311,7 @@ namespace soul::gpu
     }
 
     [[nodiscard]]
-    inline auto is_semaphore_null(Semaphore semaphore) -> bool
+    inline auto is_semaphore_null(Semaphore semaphore) -> b8
     {
       if (std::holds_alternative<BinarySemaphore*>(semaphore)) {
         return std::get<BinarySemaphore*>(semaphore)->is_null();
@@ -1338,9 +1338,9 @@ namespace soul::gpu
         return family_index_;
       }
       [[nodiscard]]
-      auto is_waiting_binary_semaphore() const -> bool;
+      auto is_waiting_binary_semaphore() const -> b8;
       [[nodiscard]]
-      auto is_waiting_timeline_semaphore() const -> bool;
+      auto is_waiting_timeline_semaphore() const -> b8;
 
     private:
       auto init_timeline_semaphore() -> void;
@@ -1393,7 +1393,7 @@ namespace soul::gpu
         return vk_handle_;
       }
       [[nodiscard]]
-      auto is_null() const noexcept -> bool
+      auto is_null() const noexcept -> b8
       {
         return vk_handle_ == VK_NULL_HANDLE;
       }

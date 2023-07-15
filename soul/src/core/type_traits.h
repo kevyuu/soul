@@ -4,22 +4,24 @@
 #include <functional>
 #include <type_traits>
 
+#include "core/builtins.h"
+
 namespace soul
 {
   using false_type = std::false_type;
   using true_type = std::true_type;
 
   template <typename T>
-  inline bool constexpr is_const_v = std::is_const_v<T>;
+  inline b8 constexpr is_const_v = std::is_const_v<T>;
 
   template <typename T1, typename T2>
-  inline bool constexpr is_same_v = std::is_same_v<T1, T2>;
+  inline b8 constexpr is_same_v = std::is_same_v<T1, T2>;
 
   template <typename T1, typename T2>
   concept same_as = std::is_same_v<T1, T2>;
 
   template <typename T>
-  inline bool constexpr is_lvalue_reference_v = std::is_lvalue_reference_v<T>;
+  inline b8 constexpr is_lvalue_reference_v = std::is_lvalue_reference_v<T>;
 
   template <typename T, typename... Args>
   using invoke_result_t = std::invoke_result_t<T, Args...>;
@@ -27,10 +29,10 @@ namespace soul
   template <typename T>
   using remove_cv_t = std::remove_cv_t<T>;
 
-  template <bool... boolean_values>
-  constexpr auto conjunction() -> bool
+  template <b8... boolean_values>
+  constexpr auto conjunction() -> b8
   {
-    bool values[] = {boolean_values...};
+    b8 values[] = {boolean_values...};
     for (int i = 0; i < sizeof...(boolean_values); i++) {
       if (!values[i]) {
         return false;
@@ -39,13 +41,13 @@ namespace soul
     return true;
   }
 
-  template <bool... boolean_values>
-  inline bool constexpr conjunction_v = conjunction<boolean_values...>();
+  template <b8... boolean_values>
+  inline b8 constexpr conjunction_v = conjunction<boolean_values...>();
 
-  template <bool... boolean_values>
-  constexpr auto disjunction() -> bool
+  template <b8... boolean_values>
+  constexpr auto disjunction() -> b8
   {
-    bool values[] = {boolean_values...};
+    b8 values[] = {boolean_values...};
     for (int i = 0; i < sizeof...(boolean_values); i++) {
       if (values[i]) {
         return true;
@@ -54,35 +56,34 @@ namespace soul
     return false;
   }
 
-  template <bool... boolean_values>
-  inline bool constexpr disjunction_v = disjunction<boolean_values...>();
+  template <b8... boolean_values>
+  inline b8 constexpr disjunction_v = disjunction<boolean_values...>();
 
   template <typename T>
-  inline constexpr bool can_default_construct_v = std::is_default_constructible_v<T>;
+  inline constexpr b8 can_default_construct_v = std::is_default_constructible_v<T>;
 
   template <typename T>
-  inline constexpr bool can_trivial_default_construct_v =
+  inline constexpr b8 can_trivial_default_construct_v =
     std::is_trivially_default_constructible_v<T>;
 
   template <typename T>
-  inline constexpr bool can_nontrivial_default_construct_v =
+  inline constexpr b8 can_nontrivial_default_construct_v =
     can_default_construct_v<T> && can_trivial_default_construct_v<T>;
 
   template <typename T>
-  inline constexpr bool can_copy_v =
-    std::is_copy_constructible_v<T> && std::is_copy_assignable_v<T>;
+  inline constexpr b8 can_copy_v = std::is_copy_constructible_v<T> && std::is_copy_assignable_v<T>;
 
   template <typename T>
-  inline constexpr bool can_trivial_copy_v =
+  inline constexpr b8 can_trivial_copy_v =
     std::is_trivially_copy_constructible_v<T> && std::is_trivially_copy_assignable_v<T>;
 
   template <typename T>
-  inline constexpr bool can_nontrivial_copy_v =
+  inline constexpr b8 can_nontrivial_copy_v =
     can_copy_v<T> && !std::is_trivially_copy_constructible_v<T> &&
     !std::is_trivially_copy_assignable_v<T>;
 
   template <typename T>
-  inline constexpr bool can_clone_v = requires(T t1, const T& t2) {
+  inline constexpr b8 can_clone_v = requires(T t1, const T& t2) {
     {
       t1.clone()
     } -> same_as<remove_cv_t<T>>;
@@ -92,38 +93,37 @@ namespace soul
   };
 
   template <typename T1, typename T2>
-  inline constexpr bool assert_same_as_v = [] {
+  inline constexpr b8 assert_same_as_v = [] {
     static_assert(std::same_as<T1, T2>, "Type is not the same");
     return true;
   }();
 
   template <typename T>
-  inline constexpr bool can_copy_or_clone_v = can_copy_v<T> || can_clone_v<T>;
+  inline constexpr b8 can_copy_or_clone_v = can_copy_v<T> || can_clone_v<T>;
 
   template <typename T>
-  inline constexpr bool can_move_v =
-    std::is_move_constructible_v<T> && std::is_move_assignable_v<T>;
+  inline constexpr b8 can_move_v = std::is_move_constructible_v<T> && std::is_move_assignable_v<T>;
 
   template <typename T>
-  inline constexpr bool can_trivial_move_v =
+  inline constexpr b8 can_trivial_move_v =
     std::is_trivially_move_constructible_v<T> && std::is_trivially_copy_assignable_v<T>;
 
   template <typename T>
-  inline constexpr bool can_nontrivial_move_v =
+  inline constexpr b8 can_nontrivial_move_v =
     can_move_v<T> && !std::is_trivially_move_constructible_v<T> &&
     !std::is_trivially_move_assignable_v<T>;
 
   template <typename T>
-  inline constexpr bool can_swap_v = std::is_swappable_v<T>;
+  inline constexpr b8 can_swap_v = std::is_swappable_v<T>;
 
   template <typename T>
-  inline constexpr bool can_destruct_v = std::is_destructible_v<T>;
+  inline constexpr b8 can_destruct_v = std::is_destructible_v<T>;
 
   template <typename T>
-  inline constexpr bool can_trivial_destruct_v = std::is_trivially_destructible_v<T>;
+  inline constexpr b8 can_trivial_destruct_v = std::is_trivially_destructible_v<T>;
 
   template <typename T>
-  inline constexpr bool can_nontrivial_destruct_v =
+  inline constexpr b8 can_nontrivial_destruct_v =
     std::is_destructible_v<T> && !std::is_trivially_destructible_v<T>;
 
   template <typename T>
@@ -152,13 +152,13 @@ namespace soul
   concept ts_integral = std::integral<T>;
 
   template <typename T>
-  inline bool constexpr is_pointer_v = std::is_pointer_v<T>;
+  inline b8 constexpr is_pointer_v = std::is_pointer_v<T>;
 
   template <typename T>
   concept ts_pointer = typeset<T> && is_pointer_v<T>;
 
   template <typename T, typename... Args>
-  constexpr bool can_invoke_v =
+  constexpr b8 can_invoke_v =
     requires(const T& fn, Args&&... args) { std::invoke(fn, std::forward<Args>(args)...); };
 
   template <typename T, typename... Args>
@@ -172,14 +172,14 @@ namespace soul
   concept ts_generate_fn = ts_fn<T, RetType>;
 
   template <typename T, typename... Args>
-  constexpr bool can_multiple_invoke_v = (can_invoke_v<T, Args> && ...);
+  constexpr b8 can_multiple_invoke_v = (can_invoke_v<T, Args> && ...);
 
   template <typename T, typename Arg, typename... Args>
-  constexpr bool has_same_invoke_result_v =
+  constexpr b8 has_same_invoke_result_v =
     (is_same_v<invoke_result_t<T, Arg>, invoke_result_t<T, Args>> && ...);
 
   template <typename T, typename Arg, typename... Args>
-  constexpr bool can_visit_v =
+  constexpr b8 can_visit_v =
     can_multiple_invoke_v<T, Arg, Args...> && has_same_invoke_result_v<T, Arg, Args...>;
 
   template <typename T, typename... Args>
@@ -187,7 +187,7 @@ namespace soul
     typeset<T> && can_multiple_invoke_v<T, Args...> && has_same_invoke_result_v<T, Args...>;
 
   template <typename T1, typename T2>
-  inline constexpr bool can_convert_v = std::is_convertible_v<T1, T2>;
+  inline constexpr b8 can_convert_v = std::is_convertible_v<T1, T2>;
 
   template <typename T1, typename T2>
   concept ts_convertible_to = typeset<T1> && can_convert_v<T1, T2>;
@@ -218,16 +218,16 @@ namespace soul
   };
 
   template <typename T>
-  inline bool constexpr is_option_v = is_option<T>::value;
+  inline b8 constexpr is_option_v = is_option<T>::value;
 
   template <typename T>
   concept ts_option = is_option_v<T>;
 
   template <typename T>
-  inline bool constexpr can_compare_equality_v = std::equality_comparable<T>;
+  inline b8 constexpr can_compare_equality_v = std::equality_comparable<T>;
 
   template <typename T = void>
   struct static_assert_error {
-    static bool constexpr value = false;
+    static b8 constexpr value = false;
   };
 } // namespace soul

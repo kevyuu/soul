@@ -34,6 +34,7 @@
 static constexpr const char* RESOURCE_HLSL = R"HLSL(
 
 typedef uint u32;
+typedef bool b8;
 
 namespace soul
 {
@@ -54,11 +55,11 @@ namespace soulsl
   {
       uint id;
 
-      bool is_null() {
+      b8 is_null() {
           return id == UINT_MAX;
       }
 
-      bool is_valid() {
+      b8 is_valid() {
           return id != UINT_MAX;
       }
   };
@@ -347,7 +348,7 @@ namespace soul::gpu
       static constexpr const char* REQUIRED_LAYERS[] = {
         "VK_LAYER_KHRONOS_validation",
       };
-      auto is_required_layers_supported = []() -> bool {
+      auto is_required_layers_supported = []() -> b8 {
         SOUL_LOG_INFO("Check vulkan layer support.");
         u32 layer_count;
 
@@ -516,7 +517,7 @@ namespace soul::gpu
           device, nullptr, &extension_count, available_extensions.data());
 
         auto is_extension_available =
-          [&available_extensions](const char* required_extension) -> bool {
+          [&available_extensions](const char* required_extension) -> b8 {
           return std::ranges::any_of(
             available_extensions, [required_extension](const auto& properties) {
               return strcmp(properties.extensionName, required_extension);
@@ -1450,7 +1451,7 @@ namespace soul::gpu
     return buffer_id;
   }
 
-  auto System::is_owned_by_presentation_engine(TextureID texture_id) -> bool
+  auto System::is_owned_by_presentation_engine(TextureID texture_id) -> b8
   {
     if (get_swapchain_texture() != texture_id) {
       return false;
@@ -1458,7 +1459,7 @@ namespace soul::gpu
     return get_frame_context().image_available_semaphore.state == BinarySemaphore::State::SIGNALLED;
   }
 
-  auto System::create_buffer(const BufferDesc& desc, const bool use_linear_pool) -> BufferID
+  auto System::create_buffer(const BufferDesc& desc, const b8 use_linear_pool) -> BufferID
   {
     SOUL_ASSERT(0, desc.size > 0, "");
     SOUL_ASSERT(0, desc.usage_flags.any(), "");
@@ -2806,13 +2807,13 @@ namespace soul::gpu
     SOUL_VK_CHECK(vkQueuePresentKHR(vk_handle_, &present_info), "Fail to present queue");
   }
 
-  auto CommandQueue::is_waiting_binary_semaphore() const -> bool
+  auto CommandQueue::is_waiting_binary_semaphore() const -> b8
   {
     return std::ranges::any_of(
       wait_timeline_values_, [](u64 timeline_value) { return timeline_value == 0; });
   }
 
-  auto CommandQueue::is_waiting_timeline_semaphore() const -> bool
+  auto CommandQueue::is_waiting_timeline_semaphore() const -> b8
   {
     return std::ranges::any_of(
       wait_timeline_values_, [](u64 timeline_value) { return timeline_value != 0; });

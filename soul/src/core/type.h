@@ -9,28 +9,12 @@
 #include "glm/vec3.hpp"
 #include "glm/vec4.hpp"
 
+#include "core/builtins.h"
 #include "core/panic.h"
 #include "core/type_traits.h"
 
 namespace soul
 {
-  using i8 = int8_t;
-  using i16 = int16_t;
-  using i32 = int32_t;
-  using i64 = int64_t;
-
-  using b8 = bool;
-
-  using u8 = uint8_t;
-  using u16 = uint16_t;
-  using u32 = uint32_t;
-  using u64 = uint64_t;
-
-  using iptr = intptr_t;
-  using uptr = uintptr_t;
-
-  using byte = u8;
-  using usize = uint64_t;
 
   constexpr usize ONE_KILOBYTE = 1024;
   constexpr usize ONE_MEGABYTE = 1024 * ONE_KILOBYTE;

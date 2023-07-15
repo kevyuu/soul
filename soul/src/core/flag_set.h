@@ -48,7 +48,7 @@ namespace soul
     constexpr FlagSet(std::initializer_list<flag_type> init_list);
 
     constexpr auto set() -> FlagSet&;
-    constexpr auto set(flag_type bit, bool value = true) -> FlagSet&;
+    constexpr auto set(flag_type bit, b8 value = true) -> FlagSet&;
     constexpr auto reset() -> FlagSet&;
     constexpr auto reset(flag_type bit) -> FlagSet&;
     constexpr auto flip() -> FlagSet&;
@@ -56,29 +56,29 @@ namespace soul
 
     [[nodiscard]]
     constexpr auto
-    operator[](flag_type bit) const -> bool;
+    operator[](flag_type bit) const -> b8;
     constexpr auto operator|=(FlagSet flag) -> FlagSet&;
     constexpr auto operator&=(FlagSet flag) -> FlagSet&;
     constexpr auto operator^=(FlagSet flag) -> FlagSet&;
     [[nodiscard]]
     constexpr auto
     operator~() const -> FlagSet;
-    constexpr auto operator==(const FlagSet&) const -> bool = default;
+    constexpr auto operator==(const FlagSet&) const -> b8 = default;
 
     [[nodiscard]]
     constexpr auto count() const -> size_t;
     [[nodiscard]]
     constexpr auto size() const -> size_t;
     [[nodiscard]]
-    constexpr auto test(flag_type bit) const -> bool;
+    constexpr auto test(flag_type bit) const -> b8;
     [[nodiscard]]
-    constexpr auto test_any(FlagSet other) const -> bool;
+    constexpr auto test_any(FlagSet other) const -> b8;
     [[nodiscard]]
-    constexpr auto test_any(std::initializer_list<flag_type> other) const -> bool;
+    constexpr auto test_any(std::initializer_list<flag_type> other) const -> b8;
     [[nodiscard]]
-    constexpr auto any() const -> bool;
+    constexpr auto any() const -> b8;
     [[nodiscard]]
-    constexpr auto none() const -> bool;
+    constexpr auto none() const -> b8;
 
     template <usize IFlagCount = FLAG_COUNT>
       requires(IFlagCount <= 32)
@@ -98,7 +98,7 @@ namespace soul
     template <ts_fn<void, Flag> T>
     constexpr auto for_each(T func) const -> void;
 
-    template <ts_fn<bool, Flag> T>
+    template <ts_fn<b8, Flag> T>
     constexpr auto find_if(T func) const -> std::optional<Flag>;
 
     store_type flags_;
@@ -125,31 +125,31 @@ namespace soul
   }
 
   template <ts_flag Flag>
-  constexpr auto FlagSet<Flag>::test(flag_type bit) const -> bool
+  constexpr auto FlagSet<Flag>::test(flag_type bit) const -> b8
   {
     return flags_.test(to_underlying(bit));
   }
 
   template <ts_flag Flag>
-  constexpr auto FlagSet<Flag>::test_any(FlagSet other) const -> bool
+  constexpr auto FlagSet<Flag>::test_any(FlagSet other) const -> b8
   {
     return (*this & other).any();
   }
 
   template <ts_flag Flag>
-  constexpr auto FlagSet<Flag>::test_any(std::initializer_list<flag_type> other) const -> bool
+  constexpr auto FlagSet<Flag>::test_any(std::initializer_list<flag_type> other) const -> b8
   {
     return (*this & FlagSet(other)).any();
   }
 
   template <ts_flag Flag>
-  constexpr auto FlagSet<Flag>::any() const -> bool
+  constexpr auto FlagSet<Flag>::any() const -> b8
   {
     return flags_.any();
   }
 
   template <ts_flag Flag>
-  constexpr auto FlagSet<Flag>::none() const -> bool
+  constexpr auto FlagSet<Flag>::none() const -> b8
   {
     return flags_.none();
   }
@@ -194,10 +194,10 @@ namespace soul
   }
 
   template <ts_flag Flag>
-  template <ts_fn<bool, Flag> T>
+  template <ts_fn<b8, Flag> T>
   constexpr auto FlagSet<Flag>::find_if(T func) const -> std::optional<Flag>
   {
-    auto new_func = [func = std::move(func)](usize bit) -> bool {
+    auto new_func = [func = std::move(func)](usize bit) -> b8 {
       return func(flag_type(bit));
     };
     const auto find_result = flags_.find_if(new_func);
@@ -219,7 +219,7 @@ namespace soul
   }
 
   template <ts_flag Flag>
-  constexpr auto FlagSet<Flag>::operator[](flag_type bit) const -> bool
+  constexpr auto FlagSet<Flag>::operator[](flag_type bit) const -> b8
   {
     return test(bit);
   }
@@ -232,7 +232,7 @@ namespace soul
   }
 
   template <ts_flag Flag>
-  constexpr auto FlagSet<Flag>::set(flag_type bit, bool value) -> FlagSet<Flag>&
+  constexpr auto FlagSet<Flag>::set(flag_type bit, b8 value) -> FlagSet<Flag>&
   {
     flags_.set(to_underlying(bit), value);
     return *this;
