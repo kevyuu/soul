@@ -7,6 +7,7 @@
 struct GLFWwindow;
 class ImGuiRenderGraphPass;
 
+#include "builtins.h"
 #include "camera_manipulator.h"
 
 #include "memory/allocators/page_allocator.h"

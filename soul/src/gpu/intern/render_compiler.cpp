@@ -72,7 +72,7 @@ namespace soul::gpu::impl
     apply_pipeline_state(command.pipeline_state_id);
     apply_push_constant(command.push_constant_data, command.push_constant_size);
 
-    for (ui32 vert_buf_idx = 0; vert_buf_idx < MAX_VERTEX_BINDING; vert_buf_idx++) {
+    for (u32 vert_buf_idx = 0; vert_buf_idx < MAX_VERTEX_BINDING; vert_buf_idx++) {
       BufferID vert_buf_id = command.vertex_buffer_i_ds[vert_buf_idx];
       if (vert_buf_id.is_null()) {
         continue;
@@ -96,7 +96,7 @@ namespace soul::gpu::impl
     apply_pipeline_state(command.pipeline_state_id);
     apply_push_constant(command.push_constant_data, command.push_constant_size);
 
-    for (ui32 vert_buf_idx = 0; vert_buf_idx < MAX_VERTEX_BINDING; vert_buf_idx++) {
+    for (u32 vert_buf_idx = 0; vert_buf_idx < MAX_VERTEX_BINDING; vert_buf_idx++) {
       BufferID vert_buf_id = command.vertex_buffer_ids[vert_buf_idx];
       if (vert_buf_id.is_null()) {
         continue;
@@ -162,7 +162,7 @@ namespace soul::gpu::impl
       staging_buffer.vk_handle,
       dst_texture.vk_handle,
       VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-      soul::cast<ui32>(buffer_image_copies.size()),
+      soul::cast<u32>(buffer_image_copies.size()),
       buffer_image_copies.data());
   }
 
@@ -372,7 +372,7 @@ namespace soul::gpu::impl
 
     const auto build_ranges = Vector<VkAccelerationStructureBuildRangeInfoKHR>::transform(
       max_primitives_counts,
-      [](ui32 count) -> VkAccelerationStructureBuildRangeInfoKHR {
+      [](u32 count) -> VkAccelerationStructureBuildRangeInfoKHR {
         return {.primitiveCount = count};
       },
       scope_allocator);
@@ -421,7 +421,7 @@ namespace soul::gpu::impl
       std::ranges::transform(
         max_primitives_counts,
         build_range_list_vec.back(),
-        [](ui32 count) -> VkAccelerationStructureBuildRangeInfoKHR {
+        [](u32 count) -> VkAccelerationStructureBuildRangeInfoKHR {
           return {.primitiveCount = count};
         });
 
@@ -446,11 +446,11 @@ namespace soul::gpu::impl
     const auto scratch_buffer = gpu_system_.create_transient_buffer(scratch_buffer_desc);
     const auto scratch_buffer_addr = gpu_system_.get_gpu_address(scratch_buffer).id;
 
-    ui32 current_build_base_idx = 0;
-    ui32 current_build_count = 0;
+    u32 current_build_base_idx = 0;
+    u32 current_build_count = 0;
     usize current_build_scratch_size = 0;
 
-    for (ui32 build_idx = 0; build_idx < command.build_count; build_idx++) {
+    for (u32 build_idx = 0; build_idx < command.build_count; build_idx++) {
       auto current_scratch_size = build_scratch_sizes[build_idx];
       if (current_build_scratch_size + current_scratch_size > command.max_build_memory_size) {
         vkCmdBuildAccelerationStructuresKHR(
@@ -495,7 +495,7 @@ namespace soul::gpu::impl
   }
 
   auto RenderCompiler::apply_push_constant(
-    const void* push_constant_data, ui32 push_constant_size) -> void
+    const void* push_constant_data, u32 push_constant_size) -> void
   {
     if (push_constant_data == nullptr) {
       return;

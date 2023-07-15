@@ -66,8 +66,8 @@ struct MemProfile {
 
   static void RegisterAllocator(const char* name);
   static void UnregisterAllocator(const char* name);
-  static void RegisterAllocation(const char* name, const char* tag, const void* addr, ui32 size);
-  static void RegisterDeallocation(const char* name, const void* addr, ui32 size);
+  static void RegisterAllocation(const char* name, const char* tag, const void* addr, u32 size);
+  static void RegisterDeallocation(const char* name, const void* addr, u32 size);
   static void Snapshot(const char* name);
 };
 

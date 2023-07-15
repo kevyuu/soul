@@ -260,8 +260,8 @@ namespace soul::memory
   {
   public:
     struct Config {
-      ui8 allocate_clear_value;
-      ui8 free_clear_value;
+      u8 allocate_clear_value;
+      u8 free_clear_value;
     };
 
     explicit ClearValuesProxy(const Config& config)
@@ -303,8 +303,8 @@ namespace soul::memory
     auto on_post_cleanup() -> void override {}
 
   private:
-    ui8 on_alloc_clear_value_;
-    ui8 on_dealloc_clear_value_;
+    u8 on_alloc_clear_value_;
+    u8 on_dealloc_clear_value_;
 
     usize current_alloc_size_ = 0;
   };
@@ -373,7 +373,7 @@ namespace soul::memory
     auto on_post_cleanup() -> void override {}
 
   private:
-    static constexpr ui32 GUARD_SIZE = alignof(std::max_align_t);
+    static constexpr u32 GUARD_SIZE = alignof(std::max_align_t);
     static constexpr byte GUARD_FLAG = 0xAA;
     usize current_alloc_size_ = 0;
   };

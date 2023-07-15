@@ -22,7 +22,7 @@ class MSAASample final : public App
   static constexpr Vertex VERTICES[4] = {
     {{-0.5f, -0.5f}}, {{0.5f, -0.5f}}, {{0.5f, 0.5f}}, {{-0.5f, 0.5f}}};
 
-  using Index = ui16;
+  using Index = u16;
   static constexpr Index INDICES[] = {0, 1, 2, 2, 3, 0};
 
   gpu::ProgramID program_id_ = gpu::ProgramID();

@@ -2,7 +2,9 @@
 
 #include "core/flag_set.h"
 
-enum class LargeUint64TestEnum : ui64 {
+#include "builtins.h"
+
+enum class LargeUint64TestEnum : u64 {
   ONE,
   TWO,
   THREE,

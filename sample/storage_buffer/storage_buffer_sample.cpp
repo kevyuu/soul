@@ -25,7 +25,7 @@ class StorageBufferSampleApp final : public App
     {{0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}},
     {{-0.5f, 0.5f}, {1.0f, 1.0f, 1.0f}}};
 
-  using Index = ui16;
+  using Index = u16;
   static constexpr Index INDICES[] = {0, 1, 2, 2, 3, 0};
 
   gpu::ProgramID program_id_ = gpu::ProgramID();
@@ -70,7 +70,7 @@ class StorageBufferSampleApp final : public App
 
         struct PushConstant {
           gpu::DescriptorID transform_descriptor_id = gpu::DescriptorID::null();
-          ui32 offset = 0;
+          u32 offset = 0;
         };
 
         using Command = gpu::RenderCommandDrawIndex;
@@ -82,7 +82,7 @@ class StorageBufferSampleApp final : public App
           TRANSFORM_COUNT, [=, this, &push_constants](const usize index) -> Command {
             push_constants[index] = {
               .transform_descriptor_id = transform_descriptor_id,
-              .offset = soul::cast<ui32>(index * sizeof(Transform)),
+              .offset = soul::cast<u32>(index * sizeof(Transform)),
             };
             return {
               .pipeline_state_id = pipeline_state_id,

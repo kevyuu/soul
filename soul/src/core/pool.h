@@ -11,7 +11,7 @@
 namespace soul
 {
 
-  using PoolID = ui32;
+  using PoolID = u32;
 
   template <typename T, memory::allocator_type AllocatorType = memory::Allocator>
   class Pool
@@ -347,7 +347,7 @@ namespace soul
     destruct_units();
     size_ = 0;
     free_list_ = 0;
-    for (ui64 i = 0; i < capacity_; i++) {
+    for (u64 i = 0; i < capacity_; i++) {
       buffer_[i].next = i + 1;
     }
     bit_vector_.clear();

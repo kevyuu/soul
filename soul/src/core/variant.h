@@ -118,10 +118,10 @@ namespace soul
 
   public:
     static constexpr auto type_count = sizeof...(Ts);
-    using index_type = typename std::conditional < type_count < (std::numeric_limits<ui8>::max()),
-          ui8,
+    using index_type = typename std::conditional < type_count < (std::numeric_limits<u8>::max()),
+          u8,
           typename std::conditional<
-            type_count<(std::numeric_limits<ui16>::max)(), ui16, ui32>::type>::type;
+            type_count<(std::numeric_limits<u16>::max)(), u16, u32>::type>::type;
     static constexpr index_type none_index = std::numeric_limits<index_type>::max();
 
     static_assert(type_count < none_index);
@@ -334,7 +334,7 @@ namespace soul
   private:
     using storage = impl::RecursiveUnion<can_variant_trivial_destruct, 0, Ts...>;
     storage storage_;
-    ui8 active_index_;
+    u8 active_index_;
 
     constexpr Variant(const Variant& other)
       requires(can_variant_clone)

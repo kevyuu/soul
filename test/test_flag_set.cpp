@@ -9,13 +9,13 @@
 #include "large_uint64_enum.h"
 #include "util.h"
 
-enum class Uint8TestEnum : ui8 { ONE, TWO, THREE, FOUR, FIVE, SIX, COUNT };
+enum class Uint8TestEnum : u8 { ONE, TWO, THREE, FOUR, FIVE, SIX, COUNT };
 
-enum class Uint16TestEnum : ui16 { ONE, TWO, THREE, FOUR, FIVE, SIX, COUNT };
+enum class Uint16TestEnum : u16 { ONE, TWO, THREE, FOUR, FIVE, SIX, COUNT };
 
-enum class Uint32TestEnum : ui32 { ONE, TWO, THREE, FOUR, FIVE, SIX, COUNT };
+enum class Uint32TestEnum : u32 { ONE, TWO, THREE, FOUR, FIVE, SIX, COUNT };
 
-enum class Uint64TestEnum : ui64 { ONE, TWO, THREE, FOUR, FIVE, SIX, COUNT };
+enum class Uint64TestEnum : u64 { ONE, TWO, THREE, FOUR, FIVE, SIX, COUNT };
 
 using Uint8FlagSet = soul::FlagSet<Uint8TestEnum>;
 using Uint16FlagSet = soul::FlagSet<Uint16TestEnum>;
@@ -448,7 +448,7 @@ TEST(TestFlagSetToUint, TestFlagSetToUint)
   SOUL_TEST_ASSERT_EQ(Uint64FlagSet({Uint64TestEnum::ONE, Uint64TestEnum::THREE}).to_uint64(), 5u);
 
   // test fail compilation. Uncomment tests below, expected to generate compilation error since
-  // the LargeUint64TestEnum::COUNT exceeded the width of the ui32
+  // the LargeUint64TestEnum::COUNT exceeded the width of the u32
   // SOUL_TEST_ASSERT_EQ(LargeUint64FlagSet({ LargeUint64TestEnum::ONE, LargeUint64TestEnum::THREE
   // }).to_uint32(), 5u);
 }

@@ -12,25 +12,25 @@
 #include "core/panic.h"
 #include "core/type_traits.h"
 
-using i8 = int8_t;
-using i16 = int16_t;
-using i32 = int32_t;
-using i64 = int64_t;
-using bool32 = i32;
-
-using ui8 = uint8_t;
-using ui16 = uint16_t;
-using ui32 = uint32_t;
-using ui64 = uint64_t;
-
-using intptr = intptr_t;
-using uintptr = uintptr_t;
-
-using byte = ui8;
-using usize = uint64_t;
-
 namespace soul
 {
+  using i8 = int8_t;
+  using i16 = int16_t;
+  using i32 = int32_t;
+  using i64 = int64_t;
+
+  using b8 = bool;
+
+  using u8 = uint8_t;
+  using u16 = uint16_t;
+  using u32 = uint32_t;
+  using u64 = uint64_t;
+
+  using iptr = intptr_t;
+  using uptr = uintptr_t;
+
+  using byte = u8;
+  using usize = uint64_t;
 
   constexpr usize ONE_KILOBYTE = 1024;
   constexpr usize ONE_MEGABYTE = 1024 * ONE_KILOBYTE;
@@ -88,9 +88,9 @@ namespace soul
   using vec3i16 = vec3<i16>;
   using vec4i16 = vec4<i16>;
 
-  using vec2ui32 = vec2<ui32>;
-  using vec3ui32 = vec3<ui32>;
-  using vec4ui32 = vec4<ui32>;
+  using vec2ui32 = vec2<u32>;
+  using vec3ui32 = vec3<u32>;
+  using vec4ui32 = vec4<u32>;
 
   using vec2i32 = vec2<i32>;
   using vec3i32 = vec3<i32>;
@@ -109,15 +109,12 @@ namespace soul
     constexpr explicit matrix(store_type mat) : mat(mat) {}
 
     [[nodiscard]]
-    SOUL_ALWAYS_INLINE auto m(const ui8 row, const ui8 column) const -> float
+    SOUL_ALWAYS_INLINE auto m(const u8 row, const u8 column) const -> float
     {
       return mat[column][row];
     }
 
-    SOUL_ALWAYS_INLINE auto m(const ui8 row, const ui8 column) -> float&
-    {
-      return mat[column][row];
-    }
+    SOUL_ALWAYS_INLINE auto m(const u8 row, const u8 column) -> float& { return mat[column][row]; }
 
     static constexpr auto identity() -> this_type { return this_type(store_type(1)); }
   };
@@ -222,7 +219,7 @@ namespace soul
     if constexpr (!std::is_same_v<PointerDst, void*>) {
       SOUL_ASSERT(
         0,
-        reinterpret_cast<uintptr>(srcPtr) % alignof(Dst) == 0,
+        reinterpret_cast<uptr>(srcPtr) % alignof(Dst) == 0,
         "Source pointer is not aligned in PointerDst alignment!");
     }
     // ReSharper disable once CppCStyleCast
@@ -234,7 +231,7 @@ namespace soul
   {
     SOUL_ASSERT(
       0,
-      static_cast<ui64>(src) <= std::numeric_limits<IntegralDst>::max(),
+      static_cast<u64>(src) <= std::numeric_limits<IntegralDst>::max(),
       "Source value is larger than the destintation type maximum!");
     SOUL_ASSERT(
       0,
@@ -339,7 +336,7 @@ namespace soul
 
     static auto Iterates() -> FlagIter { return FlagIter(); }
 
-    static auto Count() -> ui64 { return to_underlying(Flag::COUNT); }
+    static auto Count() -> u64 { return to_underlying(Flag::COUNT); }
   };
 
 } // namespace soul

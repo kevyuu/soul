@@ -68,10 +68,10 @@ auto test_constructor() -> void
 
 TEST(TestBitVectorConstruction, TestDefaultConstructor)
 {
-  SOUL_TEST_RUN(test_constructor<ui8>());
-  SOUL_TEST_RUN(test_constructor<ui16>());
-  SOUL_TEST_RUN(test_constructor<ui32>());
-  SOUL_TEST_RUN(test_constructor<ui64>());
+  SOUL_TEST_RUN(test_constructor<u8>());
+  SOUL_TEST_RUN(test_constructor<u16>());
+  SOUL_TEST_RUN(test_constructor<u32>());
+  SOUL_TEST_RUN(test_constructor<u64>());
 }
 
 template <soul::ts_bit_block BlockType>
@@ -93,15 +93,15 @@ auto test_construction_init_fill_n(const usize size, const bool val) -> void
 
 TEST(TestBitVectorConstruction, TestConstructionInitFullN)
 {
-  SOUL_TEST_RUN(test_construction_init_fill_n<ui8>(0, false));
-  SOUL_TEST_RUN(test_construction_init_fill_n<ui8>(8, true));
-  SOUL_TEST_RUN(test_construction_init_fill_n<ui8>(1, false));
-  SOUL_TEST_RUN(test_construction_init_fill_n<ui8>(20, true));
+  SOUL_TEST_RUN(test_construction_init_fill_n<u8>(0, false));
+  SOUL_TEST_RUN(test_construction_init_fill_n<u8>(8, true));
+  SOUL_TEST_RUN(test_construction_init_fill_n<u8>(1, false));
+  SOUL_TEST_RUN(test_construction_init_fill_n<u8>(20, true));
 
-  SOUL_TEST_RUN(test_construction_init_fill_n<ui64>(0, true));
-  SOUL_TEST_RUN(test_construction_init_fill_n<ui64>(64, false));
-  SOUL_TEST_RUN(test_construction_init_fill_n<ui64>(1, true));
-  SOUL_TEST_RUN(test_construction_init_fill_n<ui64>(130, false));
+  SOUL_TEST_RUN(test_construction_init_fill_n<u64>(0, true));
+  SOUL_TEST_RUN(test_construction_init_fill_n<u64>(64, false));
+  SOUL_TEST_RUN(test_construction_init_fill_n<u64>(1, true));
+  SOUL_TEST_RUN(test_construction_init_fill_n<u64>(130, false));
 }
 
 template <soul::ts_bit_block BlockType>
@@ -114,15 +114,15 @@ auto test_construction_with_capacity(const usize capacity) -> void
 
 TEST(TestBitVectorConstruction, TestConstructionWithCapacity)
 {
-  SOUL_TEST_RUN(test_construction_with_capacity<ui8>(0));
-  SOUL_TEST_RUN(test_construction_with_capacity<ui8>(4));
-  SOUL_TEST_RUN(test_construction_with_capacity<ui8>(8));
-  SOUL_TEST_RUN(test_construction_with_capacity<ui8>(100));
+  SOUL_TEST_RUN(test_construction_with_capacity<u8>(0));
+  SOUL_TEST_RUN(test_construction_with_capacity<u8>(4));
+  SOUL_TEST_RUN(test_construction_with_capacity<u8>(8));
+  SOUL_TEST_RUN(test_construction_with_capacity<u8>(100));
 
-  SOUL_TEST_RUN(test_construction_with_capacity<ui64>(0));
-  SOUL_TEST_RUN(test_construction_with_capacity<ui64>(64));
-  SOUL_TEST_RUN(test_construction_with_capacity<ui64>(1));
-  SOUL_TEST_RUN(test_construction_with_capacity<ui64>(130));
+  SOUL_TEST_RUN(test_construction_with_capacity<u64>(0));
+  SOUL_TEST_RUN(test_construction_with_capacity<u64>(64));
+  SOUL_TEST_RUN(test_construction_with_capacity<u64>(1));
+  SOUL_TEST_RUN(test_construction_with_capacity<u64>(130));
 }
 
 template <soul::ts_bit_block BlockType>
@@ -137,13 +137,13 @@ auto test_construction_from_range(const usize size) -> void
 
 TEST(TestBitVectorConstruction, TestConstructionFromRange)
 {
-  SOUL_TEST_RUN(test_construction_from_range<ui8>(8));
-  SOUL_TEST_RUN(test_construction_from_range<ui8>(1));
-  SOUL_TEST_RUN(test_construction_from_range<ui8>(20));
+  SOUL_TEST_RUN(test_construction_from_range<u8>(8));
+  SOUL_TEST_RUN(test_construction_from_range<u8>(1));
+  SOUL_TEST_RUN(test_construction_from_range<u8>(20));
 
-  SOUL_TEST_RUN(test_construction_from_range<ui64>(64));
-  SOUL_TEST_RUN(test_construction_from_range<ui64>(1));
-  SOUL_TEST_RUN(test_construction_from_range<ui64>(130));
+  SOUL_TEST_RUN(test_construction_from_range<u64>(64));
+  SOUL_TEST_RUN(test_construction_from_range<u64>(1));
+  SOUL_TEST_RUN(test_construction_from_range<u64>(130));
 }
 
 template <soul::ts_bit_block BlockType>
@@ -157,15 +157,15 @@ auto test_clone(const usize size) -> void
 
 TEST(TestBitVectorConstruction, TestClone)
 {
-  SOUL_TEST_RUN(test_clone<ui8>(0));
-  SOUL_TEST_RUN(test_clone<ui8>(8));
-  SOUL_TEST_RUN(test_clone<ui8>(1));
-  SOUL_TEST_RUN(test_clone<ui8>(20));
+  SOUL_TEST_RUN(test_clone<u8>(0));
+  SOUL_TEST_RUN(test_clone<u8>(8));
+  SOUL_TEST_RUN(test_clone<u8>(1));
+  SOUL_TEST_RUN(test_clone<u8>(20));
 
-  SOUL_TEST_RUN(test_clone<ui64>(0));
-  SOUL_TEST_RUN(test_clone<ui64>(64));
-  SOUL_TEST_RUN(test_clone<ui64>(1));
-  SOUL_TEST_RUN(test_clone<ui64>(130));
+  SOUL_TEST_RUN(test_clone<u64>(0));
+  SOUL_TEST_RUN(test_clone<u64>(64));
+  SOUL_TEST_RUN(test_clone<u64>(1));
+  SOUL_TEST_RUN(test_clone<u64>(130));
 }
 
 template <soul::ts_bit_block BlockType>
@@ -179,15 +179,15 @@ auto test_move_constructor(const usize size) -> void
 
 TEST(TestBitVectorConstruction, TestMoveConstructor)
 {
-  SOUL_TEST_RUN(test_move_constructor<ui8>(0));
-  SOUL_TEST_RUN(test_move_constructor<ui8>(8));
-  SOUL_TEST_RUN(test_move_constructor<ui8>(1));
-  SOUL_TEST_RUN(test_move_constructor<ui8>(20));
+  SOUL_TEST_RUN(test_move_constructor<u8>(0));
+  SOUL_TEST_RUN(test_move_constructor<u8>(8));
+  SOUL_TEST_RUN(test_move_constructor<u8>(1));
+  SOUL_TEST_RUN(test_move_constructor<u8>(20));
 
-  SOUL_TEST_RUN(test_move_constructor<ui64>(0));
-  SOUL_TEST_RUN(test_move_constructor<ui64>(64));
-  SOUL_TEST_RUN(test_move_constructor<ui64>(1));
-  SOUL_TEST_RUN(test_move_constructor<ui64>(130));
+  SOUL_TEST_RUN(test_move_constructor<u64>(0));
+  SOUL_TEST_RUN(test_move_constructor<u64>(64));
+  SOUL_TEST_RUN(test_move_constructor<u64>(1));
+  SOUL_TEST_RUN(test_move_constructor<u64>(130));
 }
 
 class TestBitVectorManipulation : public testing::Test
@@ -197,18 +197,18 @@ public:
 
   TestBitVectorManipulation()
       : sources_vec(generate_random_bool_vector(RANDOM_BOOL_VECTOR_SIZE)),
-        u8_filled_bit_vector(soul::BitVector<ui8>::from(sources_vec)),
-        u32_filled_bit_vector(soul::BitVector<ui32>::from(sources_vec)),
-        u64_filled_bit_vector(soul::BitVector<ui64>::init_fill_n(RANDOM_BOOL_VECTOR_SIZE, true))
+        u8_filled_bit_vector(soul::BitVector<u8>::from(sources_vec)),
+        u32_filled_bit_vector(soul::BitVector<u32>::from(sources_vec)),
+        u64_filled_bit_vector(soul::BitVector<u64>::init_fill_n(RANDOM_BOOL_VECTOR_SIZE, true))
   {
   }
 
   std::vector<bool> sources_vec;
   soul::BitVector<> empty_bit_vector;
 
-  soul::BitVector<ui8> u8_filled_bit_vector;
-  soul::BitVector<ui32> u32_filled_bit_vector;
-  soul::BitVector<ui64> u64_filled_bit_vector;
+  soul::BitVector<u8> u8_filled_bit_vector;
+  soul::BitVector<u32> u32_filled_bit_vector;
+  soul::BitVector<u64> u64_filled_bit_vector;
 };
 
 TEST_F(TestBitVectorManipulation, TestBitVectorResize)

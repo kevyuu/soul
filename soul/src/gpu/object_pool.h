@@ -16,7 +16,7 @@ namespace soul::gpu
   public:
     struct ID {
       T* obj = nullptr;
-      ui64 cookie = 0;
+      u64 cookie = 0;
       auto operator<=>(const ID&) const = default;
     };
 
@@ -75,7 +75,7 @@ namespace soul::gpu
     Vector<T*> vacants_;
     Vector<T*> memories_;
     memory::Allocator* allocator_;
-    ui64 cookie = 0;
+    u64 cookie = 0;
   };
 
   template <typename T, size_t BLOCK_SIZE = 512>

@@ -16,7 +16,7 @@
 
 namespace soul::runtime
 {
-  using ThreadCount = ui16;
+  using ThreadCount = u16;
 
   using TempProxy = memory::NoOpProxy;
   using TempAllocator = memory::ProxyAllocator<memory::LinearAllocator, TempProxy>;
@@ -30,20 +30,20 @@ namespace soul::runtime
   using DefaultAllocator = memory::ProxyAllocator<memory::MallocAllocator, DefaultAllocatorProxy>;
 
   struct Config {
-    ui16 threadCount; // 0 to use hardware thread count
-    ui16 taskPoolCount;
+    u16 threadCount; // 0 to use hardware thread count
+    u16 taskPoolCount;
     TempAllocator* mainThreadTempAllocator;
-    ui64 workerTempAllocatorSize;
+    u64 workerTempAllocatorSize;
     DefaultAllocator* defaultAllocator;
   };
 
   struct Constant {
-    static constexpr ui32 TASK_ID_THREAD_INDEX_MASK = 0xFFFFC000;
-    static constexpr ui32 TASK_ID_THREAD_INDEX_SHIFT = 14;
-    static constexpr ui32 TASK_ID_TASK_INDEX_MASK = 0x00003FFF;
-    static constexpr ui32 TASK_ID_TASK_INDEX_SHIFT = 0;
+    static constexpr u32 TASK_ID_THREAD_INDEX_MASK = 0xFFFFC000;
+    static constexpr u32 TASK_ID_THREAD_INDEX_SHIFT = 14;
+    static constexpr u32 TASK_ID_TASK_INDEX_MASK = 0x00003FFF;
+    static constexpr u32 TASK_ID_TASK_INDEX_SHIFT = 0;
 
-    static constexpr ui16 MAX_THREAD_COUNT = 16;
+    static constexpr u16 MAX_THREAD_COUNT = 16;
     static constexpr usize MAX_TASK_PER_THREAD = 2u << (TASK_ID_THREAD_INDEX_SHIFT - 1);
   };
 
@@ -51,13 +51,13 @@ namespace soul::runtime
 
   // NOTE(kevinyu): We use id == 0 as both root and null value;
   struct TaskID {
-    ui32 id;
+    u32 id;
     static constexpr auto NULLVAL() -> TaskID { return {0, 0}; }
     static constexpr auto ROOT() -> TaskID { return NULLVAL(); }
 
     constexpr TaskID() : id(NULLVAL().id) {}
 
-    constexpr TaskID(ui32 thread_index, ui32 task_index)
+    constexpr TaskID(u32 thread_index, u32 task_index)
         : id(
             (thread_index << Constant::TASK_ID_THREAD_INDEX_SHIFT) |
             (task_index << Constant::TASK_ID_TASK_INDEX_SHIFT))
@@ -65,12 +65,12 @@ namespace soul::runtime
       SOUL_ASSERT(0, task_index < Constant::MAX_TASK_PER_THREAD, "Task Index overflow");
     }
 
-    [[nodiscard]] auto get_thread_index() const -> ui32
+    [[nodiscard]] auto get_thread_index() const -> u32
     {
       return (id & Constant::TASK_ID_THREAD_INDEX_MASK) >> Constant::TASK_ID_THREAD_INDEX_SHIFT;
     }
 
-    [[nodiscard]] auto get_task_index() const -> ui32
+    [[nodiscard]] auto get_task_index() const -> u32
     {
       return (id & Constant::TASK_ID_TASK_INDEX_MASK) >> Constant::TASK_ID_TASK_INDEX_SHIFT;
     }
@@ -84,15 +84,15 @@ namespace soul::runtime
   using TaskFunc = void (*)(TaskID taskID, void* data);
 
   struct alignas(SOUL_CACHELINE_SIZE) Task {
-    static constexpr ui32 STORAGE_SIZE_BYTE = SOUL_CACHELINE_SIZE - sizeof(TaskFunc) // func size
+    static constexpr u32 STORAGE_SIZE_BYTE = SOUL_CACHELINE_SIZE - sizeof(TaskFunc) // func size
                                                 - sizeof(TaskID) // parentID size
                                                 -
-                                                sizeof(std::atomic<ui16>); // unfinishedCount size
+                                                sizeof(std::atomic<u16>); // unfinishedCount size
 
     void* storage[STORAGE_SIZE_BYTE / sizeof(void*)] = {};
     TaskFunc func = nullptr;
     TaskID parent_id;
-    std::atomic<ui16> unfinished_count = {0};
+    std::atomic<u16> unfinished_count = {0};
   };
 
   static_assert(
@@ -119,9 +119,9 @@ namespace soul::runtime
     TaskDeque task_deque;
 
     Task task_pool[Constant::MAX_TASK_PER_THREAD];
-    ui16 task_count = 0;
+    u16 task_count = 0;
 
-    ui16 thread_index = 0;
+    u16 thread_index = 0;
 
     Vector<memory::Allocator*> allocator_stack{nullptr};
     TempAllocator* temp_allocator = nullptr;
@@ -154,7 +154,7 @@ namespace soul::runtime
     using ParallelForFunc = Func;
 
     explicit ParallelForTaskData(
-      ui32 start, ui32 count, ui32 min_count, ParallelForFunc&& func)
+      u32 start, u32 count, u32 min_count, ParallelForFunc&& func)
         : start(start),
           count(count),
           min_count(min_count),
@@ -162,9 +162,9 @@ namespace soul::runtime
     {
     }
 
-    ui32 start;
-    ui32 count;
-    ui32 min_count;
+    u32 start;
+    u32 count;
+    u32 min_count;
     ParallelForFunc func;
   };
 

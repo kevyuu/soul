@@ -151,7 +151,7 @@ class Texture3DSampleApp final : public App
     {{-1.0f, 1.0f}, {0.0f, 0.0f}}   // bottom right
   };
 
-  using Index = ui16;
+  using Index = u16;
   static constexpr Index INDICES[] = {0, 1, 2, 2, 3, 0};
 
   gpu::ProgramID program_id_ = gpu::ProgramID();
@@ -167,7 +167,7 @@ class Texture3DSampleApp final : public App
   {
     const auto tex_mem_size = dimension.x * dimension.y * dimension.z;
 
-    auto* data = allocator.allocate_array<ui8>(tex_mem_size);
+    auto* data = allocator.allocate_array<u8>(tex_mem_size);
     memset(data, 0, tex_mem_size);
 
     const PerlinNoise<float> perlin_noise;
@@ -179,9 +179,9 @@ class Texture3DSampleApp final : public App
 
     const auto noise_scale = static_cast<float>(dice()) + 4.0f;
 
-    for (ui32 z = 0; z < dimension.z; z++) {
-      for (ui32 y = 0; y < dimension.y; y++) {
-        for (ui32 x = 0; x < dimension.x; x++) {
+    for (u32 z = 0; z < dimension.z; z++) {
+      for (u32 y = 0; y < dimension.y; y++) {
+        for (u32 x = 0; x < dimension.x; x++) {
           const auto nx = static_cast<float>(x) / static_cast<float>(dimension.x);
           const auto ny = static_cast<float>(y) / static_cast<float>(dimension.y);
           const auto nz = static_cast<float>(z) / static_cast<float>(dimension.z);

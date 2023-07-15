@@ -22,15 +22,15 @@ namespace soul
 } // namespace soul
 
 struct TrivialObj {
-  ui8 x;
-  ui8 y;
+  u8 x;
+  u8 y;
 
   friend constexpr auto operator<=>(const TrivialObj& lhs, const TrivialObj& rhs) = default;
 };
 
 struct MoveOnlyObj {
-  ui8 x;
-  ui8 y;
+  u8 x;
+  u8 y;
 
   MoveOnlyObj(const MoveOnlyObj& other) = delete;
   MoveOnlyObj(MoveOnlyObj&& other) = default;
@@ -39,19 +39,19 @@ struct MoveOnlyObj {
   ~MoveOnlyObj() = default;
 };
 
-using TrivialVariant = soul::Variant<ui8, ui16, TrivialObj>;
+using TrivialVariant = soul::Variant<u8, u16, TrivialObj>;
 using ListTestObject = soul::Vector<TestObject>;
-using UntrivialVariant = soul::Variant<ListTestObject, TestObject, ui8>;
+using UntrivialVariant = soul::Variant<ListTestObject, TestObject, u8>;
 
-using MoveOnlyVariant = soul::Variant<TestObject, ui8, MoveOnlyObj>;
+using MoveOnlyVariant = soul::Variant<TestObject, u8, MoveOnlyObj>;
 
 TEST(TestVariantConstruction, TestConstructionFromValue)
 {
   {
-    const auto test_variant = TrivialVariant::from(ui16(20));
-    SOUL_TEST_ASSERT_EQ(test_variant.ref<ui16>(), 20);
-    SOUL_TEST_ASSERT_TRUE(test_variant.has_value<ui16>());
-    SOUL_TEST_ASSERT_FALSE(test_variant.has_value<ui8>());
+    const auto test_variant = TrivialVariant::from(u16(20));
+    SOUL_TEST_ASSERT_EQ(test_variant.ref<u16>(), 20);
+    SOUL_TEST_ASSERT_TRUE(test_variant.has_value<u16>());
+    SOUL_TEST_ASSERT_FALSE(test_variant.has_value<u8>());
     SOUL_TEST_ASSERT_FALSE(test_variant.has_value<TrivialObj>());
   }
 
@@ -61,8 +61,8 @@ TEST(TestVariantConstruction, TestConstructionFromValue)
     SOUL_TEST_ASSERT_EQ(test_variant.ref<TrivialObj>().x, 30);
     SOUL_TEST_ASSERT_EQ(test_variant.ref<TrivialObj>().y, 0);
     SOUL_TEST_ASSERT_TRUE(test_variant.has_value<TrivialObj>());
-    SOUL_TEST_ASSERT_FALSE(test_variant.has_value<ui8>());
-    SOUL_TEST_ASSERT_FALSE(test_variant.has_value<ui16>());
+    SOUL_TEST_ASSERT_FALSE(test_variant.has_value<u8>());
+    SOUL_TEST_ASSERT_FALSE(test_variant.has_value<u16>());
   }
 
   {
@@ -70,7 +70,7 @@ TEST(TestVariantConstruction, TestConstructionFromValue)
     SOUL_TEST_ASSERT_EQ(test_variant.ref<TestObject>().x, 3);
     SOUL_TEST_ASSERT_TRUE(test_variant.has_value<TestObject>());
     SOUL_TEST_ASSERT_FALSE(test_variant.has_value<ListTestObject>());
-    SOUL_TEST_ASSERT_FALSE(test_variant.has_value<ui8>());
+    SOUL_TEST_ASSERT_FALSE(test_variant.has_value<u8>());
   }
 
   {
@@ -82,18 +82,18 @@ TEST(TestVariantConstruction, TestConstructionFromValue)
     }
     SOUL_TEST_ASSERT_TRUE(test_variant.has_value<ListTestObject>());
     SOUL_TEST_ASSERT_FALSE(test_variant.has_value<TestObject>());
-    SOUL_TEST_ASSERT_FALSE(test_variant.has_value<ui8>());
+    SOUL_TEST_ASSERT_FALSE(test_variant.has_value<u8>());
   }
 }
 
 TEST(TestVariantConstructor, TestCopyConstructor)
 {
   {
-    const auto test_variant_src = TrivialVariant::from(ui16(20));
+    const auto test_variant_src = TrivialVariant::from(u16(20));
     const auto test_variant = test_variant_src;
-    SOUL_TEST_ASSERT_EQ(test_variant.ref<ui16>(), 20);
-    SOUL_TEST_ASSERT_TRUE(test_variant.has_value<ui16>());
-    SOUL_TEST_ASSERT_FALSE(test_variant.has_value<ui8>());
+    SOUL_TEST_ASSERT_EQ(test_variant.ref<u16>(), 20);
+    SOUL_TEST_ASSERT_TRUE(test_variant.has_value<u16>());
+    SOUL_TEST_ASSERT_FALSE(test_variant.has_value<u8>());
     SOUL_TEST_ASSERT_FALSE(test_variant.has_value<TrivialObj>());
     SOUL_TEST_ASSERT_EQ(test_variant, test_variant_src);
   }
@@ -105,8 +105,8 @@ TEST(TestVariantConstructor, TestCopyConstructor)
     SOUL_TEST_ASSERT_EQ(test_variant.ref<TrivialObj>().x, 30);
     SOUL_TEST_ASSERT_EQ(test_variant.ref<TrivialObj>().y, 0);
     SOUL_TEST_ASSERT_TRUE(test_variant.has_value<TrivialObj>());
-    SOUL_TEST_ASSERT_FALSE(test_variant.has_value<ui8>());
-    SOUL_TEST_ASSERT_FALSE(test_variant.has_value<ui16>());
+    SOUL_TEST_ASSERT_FALSE(test_variant.has_value<u8>());
+    SOUL_TEST_ASSERT_FALSE(test_variant.has_value<u16>());
   }
 }
 
@@ -122,23 +122,23 @@ TEST(TestVariantConstruction, TestClone)
     }
     SOUL_TEST_ASSERT_TRUE(test_variant_dst.has_value<ListTestObject>());
     SOUL_TEST_ASSERT_FALSE(test_variant_dst.has_value<TestObject>());
-    SOUL_TEST_ASSERT_FALSE(test_variant_dst.has_value<ui8>());
+    SOUL_TEST_ASSERT_FALSE(test_variant_dst.has_value<u8>());
   }
 
   {
-    auto test_variant_src = MoveOnlyVariant::from(ui8(3));
+    auto test_variant_src = MoveOnlyVariant::from(u8(3));
   }
 }
 
 TEST(TestVariantAssignmentOperator, TestCopyAssignment)
 {
   {
-    const auto test_variant_src = TrivialVariant::from(ui16(20));
-    auto test_variant_dst = TrivialVariant::from(ui16(40));
+    const auto test_variant_src = TrivialVariant::from(u16(20));
+    auto test_variant_dst = TrivialVariant::from(u16(40));
     test_variant_dst = test_variant_src;
-    SOUL_TEST_ASSERT_EQ(test_variant_dst.ref<ui16>(), 20);
-    SOUL_TEST_ASSERT_TRUE(test_variant_dst.has_value<ui16>());
-    SOUL_TEST_ASSERT_FALSE(test_variant_dst.has_value<ui8>());
+    SOUL_TEST_ASSERT_EQ(test_variant_dst.ref<u16>(), 20);
+    SOUL_TEST_ASSERT_TRUE(test_variant_dst.has_value<u16>());
+    SOUL_TEST_ASSERT_FALSE(test_variant_dst.has_value<u8>());
     SOUL_TEST_ASSERT_FALSE(test_variant_dst.has_value<TrivialObj>());
     SOUL_TEST_ASSERT_EQ(test_variant_dst, test_variant_src);
   }
@@ -151,7 +151,7 @@ TEST(TestVariantAssignmentOperator, TestMoveAssignment)
       std::views::iota(0, 10) | std::views::transform([](int i) { return TestObject(i); })));
     auto test_variant_dst = UntrivialVariant::from(ListTestObject::from(
       std::views::iota(3, 10) | std::views::transform([](int i) { return TestObject(i); })));
-    auto test_variant_src2 = UntrivialVariant::from(ui8(3));
+    auto test_variant_src2 = UntrivialVariant::from(u8(3));
     test_variant_dst = std::move(test_variant_src);
     SOUL_TEST_ASSERT_EQ(test_variant_dst.ref<ListTestObject>().size(), 10);
     for (int i = 0; i < 10; i++) {
@@ -159,7 +159,7 @@ TEST(TestVariantAssignmentOperator, TestMoveAssignment)
     }
     SOUL_TEST_ASSERT_TRUE(test_variant_dst.has_value<ListTestObject>());
     SOUL_TEST_ASSERT_FALSE(test_variant_dst.has_value<TestObject>());
-    SOUL_TEST_ASSERT_FALSE(test_variant_dst.has_value<ui8>());
+    SOUL_TEST_ASSERT_FALSE(test_variant_dst.has_value<u8>());
   }
 }
 
@@ -177,7 +177,7 @@ TEST(TestVariantCloneFrom, TestCloneFrom)
     }
     SOUL_TEST_ASSERT_TRUE(test_variant_dst.has_value<ListTestObject>());
     SOUL_TEST_ASSERT_FALSE(test_variant_dst.has_value<TestObject>());
-    SOUL_TEST_ASSERT_FALSE(test_variant_dst.has_value<ui8>());
+    SOUL_TEST_ASSERT_FALSE(test_variant_dst.has_value<u8>());
     SOUL_TEST_ASSERT_EQ(test_variant_dst, test_variant_src);
   }
 }
@@ -185,11 +185,11 @@ TEST(TestVariantCloneFrom, TestCloneFrom)
 TEST(TestVariantAssign, TestAssign)
 {
   {
-    auto test_variant = TrivialVariant::from(ui16(40));
-    test_variant.assign(ui16(20));
-    SOUL_TEST_ASSERT_EQ(test_variant.ref<ui16>(), 20);
-    SOUL_TEST_ASSERT_TRUE(test_variant.has_value<ui16>());
-    SOUL_TEST_ASSERT_FALSE(test_variant.has_value<ui8>());
+    auto test_variant = TrivialVariant::from(u16(40));
+    test_variant.assign(u16(20));
+    SOUL_TEST_ASSERT_EQ(test_variant.ref<u16>(), 20);
+    SOUL_TEST_ASSERT_TRUE(test_variant.has_value<u16>());
+    SOUL_TEST_ASSERT_FALSE(test_variant.has_value<u8>());
     SOUL_TEST_ASSERT_FALSE(test_variant.has_value<TrivialObj>());
   }
 
@@ -200,8 +200,8 @@ TEST(TestVariantAssign, TestAssign)
     SOUL_TEST_ASSERT_EQ(test_variant.ref<TrivialObj>().x, 30);
     SOUL_TEST_ASSERT_EQ(test_variant.ref<TrivialObj>().y, 0);
     SOUL_TEST_ASSERT_TRUE(test_variant.has_value<TrivialObj>());
-    SOUL_TEST_ASSERT_FALSE(test_variant.has_value<ui8>());
-    SOUL_TEST_ASSERT_FALSE(test_variant.has_value<ui16>());
+    SOUL_TEST_ASSERT_FALSE(test_variant.has_value<u8>());
+    SOUL_TEST_ASSERT_FALSE(test_variant.has_value<u16>());
   }
 
   {
@@ -216,7 +216,7 @@ TEST(TestVariantAssign, TestAssign)
     }
     SOUL_TEST_ASSERT_TRUE(test_variant_dst.has_value<ListTestObject>());
     SOUL_TEST_ASSERT_FALSE(test_variant_dst.has_value<TestObject>());
-    SOUL_TEST_ASSERT_FALSE(test_variant_dst.has_value<ui8>());
+    SOUL_TEST_ASSERT_FALSE(test_variant_dst.has_value<u8>());
   }
 }
 
@@ -225,17 +225,17 @@ TEST(TestVariantVisit, TestVisit)
   {
     enum class TrivialKind { UINT16, UINT8, TRIVIAL_OBJ };
     struct VisitResult {
-      ui16 val;
+      u16 val;
       TrivialKind kind;
       auto operator==(const VisitResult& other) const -> bool = default;
     };
     int x = 0;
     const auto visitor_set = soul::VisitorSet{
-      [&x](ui16 val) {
+      [&x](u16 val) {
         x += val;
         return VisitResult{val, TrivialKind::UINT16};
       },
-      [&x](ui8 val) {
+      [&x](u8 val) {
         x += val;
         return VisitResult{val, TrivialKind::UINT8};
       },
@@ -246,7 +246,7 @@ TEST(TestVariantVisit, TestVisit)
     };
     const auto expected_visit_result1 = VisitResult{20, TrivialKind::UINT16};
     SOUL_TEST_ASSERT_EQ(
-      TrivialVariant::from(ui16(20)).visit(visitor_set), expected_visit_result1);
+      TrivialVariant::from(u16(20)).visit(visitor_set), expected_visit_result1);
     SOUL_TEST_ASSERT_EQ(x, 20);
     auto test_variant2 = TrivialVariant::from(TrivialObj{30, 15});
     const auto expected_visit_result2 = VisitResult{15, TrivialKind::TRIVIAL_OBJ};
@@ -271,7 +271,7 @@ TEST(TestVariantVisit, TestVisit)
         x += val.x;
         return VisitResult{ListTestObject::with_capacity(5), UntrivialKind::TEST_OBJECT};
       },
-      [&x](ui8 val) {
+      [&x](u8 val) {
         x += val;
         return VisitResult{ListTestObject::with_size(10), UntrivialKind::UINT8};
       },
@@ -289,7 +289,7 @@ TEST(TestVariantVisit, TestVisit)
 TEST(TestVariantUnwrap, TestUnwrap)
 {
   {
-    auto val = TrivialVariant::from(ui16(40)).unwrap<ui16>();
+    auto val = TrivialVariant::from(u16(40)).unwrap<u16>();
     SOUL_TEST_ASSERT_EQ(val, 40);
   }
   {
@@ -311,9 +311,9 @@ TEST(TestVariantSwap, TestSwap)
   {
     auto test_variant1 = UntrivialVariant::from(ListTestObject::from(
       std::views::iota(0, 10) | std::views::transform([](int i) { return TestObject(i); })));
-    auto test_variant2 = UntrivialVariant::from(ui8(10));
+    auto test_variant2 = UntrivialVariant::from(u8(10));
     swap(test_variant1, test_variant2);
-    SOUL_TEST_ASSERT_EQ(test_variant1.ref<ui8>(), 10);
+    SOUL_TEST_ASSERT_EQ(test_variant1.ref<u8>(), 10);
     for (int i = 0; i < 10; i++) {
       SOUL_TEST_ASSERT_EQ(test_variant2.ref<ListTestObject>()[i], TestObject(i));
     }

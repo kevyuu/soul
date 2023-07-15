@@ -58,13 +58,13 @@ namespace soul::gpu
             impl::SecondaryCommandBuffer command_buffer =
               task_data.command_pools.request_secondary_command_buffer(
                 task_data.render_pass, 0, task_data.framebuffer);
-            const ui32 div = command_count / command_buffers.size();
-            const ui32 mod = command_count % command_buffers.size();
+            const u32 div = command_count / command_buffers.size();
+            const u32 mod = command_count % command_buffers.size();
 
             impl::RenderCompiler render_compiler(
               task_data.gpu_system, command_buffer.get_vk_handle());
             render_compiler.bind_descriptor_sets(VK_PIPELINE_BIND_POINT_GRAPHICS);
-            if (soul::cast<ui32>(index) < mod) {
+            if (soul::cast<u32>(index) < mod) {
               const usize start = index * (div + 1);
 
               for (usize i = 0; i < div + 1; i++) {
@@ -82,7 +82,7 @@ namespace soul::gpu
         runtime::run_task(task_id);
         runtime::wait_task(task_id);
         render_compiler_.execute_secondary_command_buffers(
-          soul::cast<ui32>(secondary_command_buffers.size()), secondary_command_buffers.data());
+          soul::cast<u32>(secondary_command_buffers.size()), secondary_command_buffers.data());
         render_compiler_.end_render_pass();
       } else {
         render_compiler_.begin_render_pass(*render_pass_begin_info_, VK_SUBPASS_CONTENTS_INLINE);
@@ -120,7 +120,7 @@ namespace soul::gpu
     impl::CommandPools& command_pools_;
     System& gpu_system_;
 
-    static constexpr ui32 SECONDARY_COMMAND_BUFFER_THRESHOLD = 128;
+    static constexpr u32 SECONDARY_COMMAND_BUFFER_THRESHOLD = 128;
   };
 
 } // namespace soul::gpu

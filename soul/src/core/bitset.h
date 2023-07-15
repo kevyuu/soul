@@ -43,12 +43,12 @@ namespace soul
       template <usize IBlockCount = BlockCount, ts_bit_block IBlockType = BlockType>
         requires(IBlockCount == 1 && sizeof(BlockType) <= 4)
       [[nodiscard]]
-      constexpr auto to_uint32() const -> ui32;
+      constexpr auto to_uint32() const -> u32;
 
       template <usize IBlockCount = BlockCount, ts_bit_block IBlockType = BlockType>
         requires(IBlockCount == 1 && sizeof(BlockType) <= 8)
       [[nodiscard]]
-      constexpr auto to_uint64() const -> ui64;
+      constexpr auto to_uint64() const -> u64;
 
       BlockType blocks_[BlockCount] = {};
 
@@ -95,7 +95,7 @@ namespace soul
     template <size_t BlockCount, ts_bit_block BlockType>
     template <usize IBlockCount, ts_bit_block IBlockType>
       requires(IBlockCount == 1 && sizeof(BlockType) <= 4)
-    constexpr auto BitsetImpl<BlockCount, BlockType>::to_uint32() const -> ui32
+    constexpr auto BitsetImpl<BlockCount, BlockType>::to_uint32() const -> u32
     {
       return blocks_[0];
     }
@@ -103,7 +103,7 @@ namespace soul
     template <size_t BlockCount, ts_bit_block BlockType>
     template <usize IBlockCount, ts_bit_block IBlockType>
       requires(IBlockCount == 1 && sizeof(BlockType) <= 8)
-    constexpr auto BitsetImpl<BlockCount, BlockType>::to_uint64() const -> ui64
+    constexpr auto BitsetImpl<BlockCount, BlockType>::to_uint64() const -> u64
     {
       return blocks_[0];
     }
@@ -209,7 +209,7 @@ namespace soul
     constexpr auto BitsetImpl<BlockCount, BlockType>::find_first() const -> std::optional<usize>
     {
       for (usize block_index = 0; block_index < BlockCount; block_index++) {
-        std::optional<ui32> pos = util::get_first_one_bit_pos(blocks_[block_index]);
+        std::optional<u32> pos = util::get_first_one_bit_pos(blocks_[block_index]);
         if (pos) {
           return (block_index * BITS_PER_BLOCK) + *pos;
         }

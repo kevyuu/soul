@@ -11,7 +11,7 @@ namespace soul
   class FlagMap
   {
   public:
-    static constexpr ui64 COUNT = to_underlying(EnumT::COUNT);
+    static constexpr u64 COUNT = to_underlying(EnumT::COUNT);
 
     using this_type = FlagMap<EnumT, ValT>;
     using value_type = ValT;

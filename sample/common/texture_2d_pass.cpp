@@ -59,7 +59,7 @@ static constexpr Vertex VERTICES[4] = {
   {{-1.0f, 1.0f}, {0.0f, 0.0f}}   // bottom left
 };
 
-using Index = ui16;
+using Index = u16;
 static constexpr Index INDICES[] = {0, 1, 2, 2, 3, 0};
 
 Texture2DRGPass::Texture2DRGPass(gpu::System* gpu_system) : gpu_system_(gpu_system)

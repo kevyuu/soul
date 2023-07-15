@@ -39,8 +39,8 @@ namespace soul::gpu
 
     struct Config {
       WSI* wsi = nullptr;
-      ui16 max_frame_in_flight = 0;
-      ui16 thread_count = 0;
+      u16 max_frame_in_flight = 0;
+      u16 thread_count = 0;
       usize transient_pool_size = 16 * ONE_MEGABYTE;
     };
 
@@ -65,13 +65,13 @@ namespace soul::gpu
     auto create_texture(const TextureDesc& desc, const TextureLoadDesc& load_desc) -> TextureID;
     auto create_texture(const TextureDesc& desc, ClearValue clear_value) -> TextureID;
     auto flush_texture(TextureID texture_id, TextureUsageFlags usage_flags) -> void;
-    auto get_texture_mip_levels(TextureID texture_id) const -> ui32;
+    auto get_texture_mip_levels(TextureID texture_id) const -> u32;
     auto get_texture_desc(TextureID texture_id) const -> const TextureDesc&;
     auto destroy_texture_descriptor(TextureID texture_id) -> void;
     auto destroy_texture(TextureID texture_id) -> void;
     auto get_texture(TextureID texture_id) -> impl::Texture&;
     auto get_texture(TextureID texture_id) const -> const impl::Texture&;
-    auto get_texture_view(TextureID texture_id, ui32 level, ui32 layer = 0)
+    auto get_texture_view(TextureID texture_id, u32 level, u32 layer = 0)
       -> impl::TextureView;
     auto get_texture_view(TextureID texture_id, SubresourceIndex subresource_index)
       -> impl::TextureView;
@@ -176,7 +176,7 @@ namespace soul::gpu
       -> VkAccelerationStructureBuildSizesInfoKHR;
     auto get_as_build_size_info(
       const VkAccelerationStructureBuildGeometryInfoKHR& build_info,
-      const ui32* max_primitives_counts) -> VkAccelerationStructureBuildSizesInfoKHR;
+      const u32* max_primitives_counts) -> VkAccelerationStructureBuildSizesInfoKHR;
 
     auto add_to_blas_group(BlasID blas_id, BlasGroupID blas_group_id) -> void;
     auto remove_from_blas_group(BlasID blas_id) -> void;

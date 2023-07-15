@@ -29,27 +29,27 @@ namespace soul
     auto cleanup() -> void;
 
     auto reserve(usize capacity) -> void;
-    auto add(ui64 key, const T& value) -> void;
-    auto add(ui64 key, T&& value) -> void;
+    auto add(u64 key, const T& value) -> void;
+    auto add(u64 key, T&& value) -> void;
 
-    auto remove(ui64 key) -> void;
+    auto remove(u64 key) -> void;
 
     [[nodiscard]]
-    auto is_exist(ui64 key) const noexcept -> bool
+    auto is_exist(u64 key) const noexcept -> bool
     {
       if (size_ == 0) {
         return false;
       }
-      ui32 index = find_index(key);
+      u32 index = find_index(key);
       return (indexes_[index].key == key && indexes_[index].dib != 0);
     }
 
     [[nodiscard]]
     auto
-    operator[](ui64 key) -> T&;
+    operator[](u64 key) -> T&;
     [[nodiscard]]
     auto
-    operator[](ui64 key) const -> const T&;
+    operator[](u64 key) const -> const T&;
 
     [[nodiscard]]
     auto size() const noexcept -> usize
@@ -71,7 +71,7 @@ namespace soul
     memory::Allocator* allocator_ = nullptr;
 
     struct Index {
-      ui64 key;
+      u64 key;
       usize dib;
     };
 
@@ -91,11 +91,11 @@ namespace soul
       SOUL_ASSERT(0, max_dib_ == 0, "");
     }
 
-    auto find_index(ui64 key) const -> usize
+    auto find_index(u64 key) const -> usize
     {
-      const ui32 baseIndex = key % capacity_;
+      const u32 baseIndex = key % capacity_;
       auto iter_index = baseIndex;
-      ui32 dib = 0;
+      u32 dib = 0;
       while ((indexes_[iter_index].key != key) && (indexes_[iter_index].dib != 0) &&
              (dib < max_dib_)) {
         dib++;
@@ -107,7 +107,7 @@ namespace soul
 
     auto remove_by_index(usize index) -> void
     {
-      ui32 next_index = index + 1;
+      u32 next_index = index + 1;
       next_index %= capacity_;
       while (indexes_[next_index].dib > 1) {
         indexes_[index].key = indexes_[next_index].key;
@@ -276,28 +276,28 @@ namespace soul
   }
 
   template <typename T>
-  auto UInt64HashMap<T>::add(ui64 key, const T& value) -> void
+  auto UInt64HashMap<T>::add(u64 key, const T& value) -> void
   {
     T valueToInsert = value;
     add(key, std::move(valueToInsert));
   }
 
   template <typename T>
-  auto UInt64HashMap<T>::add(ui64 key, T&& value) -> void
+  auto UInt64HashMap<T>::add(u64 key, T&& value) -> void
   {
     if (size_ == capacity_) {
       reserve(capacity_ * 2 + 8);
     }
-    const auto base_index = static_cast<ui32>(key % capacity_);
+    const auto base_index = static_cast<u32>(key % capacity_);
     auto iter_index = base_index;
     T value_to_insert = std::move(value);
     auto key_to_insert = key;
-    ui32 dib = 1;
+    u32 dib = 1;
     while (indexes_[iter_index].dib != 0) {
       if (indexes_[iter_index].dib < dib) {
-        const ui64 tmpKey = indexes_[iter_index].key;
+        const u64 tmpKey = indexes_[iter_index].key;
         T tmpValue = std::move(values_[iter_index]);
-        const ui32 tmpDIB = indexes_[iter_index].dib;
+        const u32 tmpDIB = indexes_[iter_index].dib;
         indexes_[iter_index].key = key_to_insert;
         indexes_[iter_index].dib = dib;
         if (max_dib_ < dib) {
@@ -323,9 +323,9 @@ namespace soul
   }
 
   template <typename T>
-  auto UInt64HashMap<T>::remove(ui64 key) -> void
+  auto UInt64HashMap<T>::remove(u64 key) -> void
   {
-    ui32 index = find_index(key);
+    u32 index = find_index(key);
     SOUL_ASSERT(
       0,
       indexes_[index].key == key && indexes_[index].dib != 0,
@@ -335,17 +335,17 @@ namespace soul
   }
 
   template <typename T>
-  auto UInt64HashMap<T>::operator[](ui64 key) -> T&
+  auto UInt64HashMap<T>::operator[](u64 key) -> T&
   {
-    ui32 index = find_index(key);
+    u32 index = find_index(key);
     SOUL_ASSERT(0, indexes_[index].key == key && indexes_[index].dib != 0, "");
     return values_[index];
   }
 
   template <typename T>
-  auto UInt64HashMap<T>::operator[](ui64 key) const -> const T&
+  auto UInt64HashMap<T>::operator[](u64 key) const -> const T&
   {
-    ui32 index = find_index(key);
+    u32 index = find_index(key);
     SOUL_ASSERT(0, indexes_[index].key == key && indexes_[index].dib != 0, "");
     return values_[index];
   }

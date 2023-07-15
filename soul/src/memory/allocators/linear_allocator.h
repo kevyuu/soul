@@ -27,7 +27,7 @@ namespace soul::memory
     Allocator* backing_allocator_;
     void* base_addr_ = nullptr;
     void* current_addr_ = nullptr;
-    ui64 size_ = 0;
+    u64 size_ = 0;
   };
 
 } // namespace soul::memory

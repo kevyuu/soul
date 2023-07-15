@@ -22,6 +22,8 @@
 #include "core/vector.h"
 #include "tiny_obj_loader.h"
 
+#include "builtins.h"
+
 namespace std::filesystem
 {
   class path;
@@ -57,7 +59,7 @@ struct ShapeObj {
   uint32_t mat_index;
 };
 
-using IndexObj = ui32;
+using IndexObj = u32;
 using MaterialIndexObj = i32;
 
 class ObjLoader

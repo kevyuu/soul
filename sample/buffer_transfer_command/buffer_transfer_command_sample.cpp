@@ -27,7 +27,7 @@ class BufferTransferCommandSample final : public App
     {{0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}},
     {{-0.5f, 0.5f}, {1.0f, 1.0f, 1.0f}}};
 
-  using Index = ui16;
+  using Index = u16;
   static constexpr Index INDICES[] = {0, 1, 2, 2, 3, 0};
 
   gpu::ProgramID program_id_ = gpu::ProgramID();
@@ -46,11 +46,11 @@ class BufferTransferCommandSample final : public App
     float y_start,
     float x_end,
     float y_end,
-    ui32 row_count,
-    ui32 col_count) -> void
+    u32 row_count,
+    u32 col_count) -> void
   {
-    for (ui32 col_idx = 0; col_idx < col_count; col_idx++) {
-      for (ui32 row_idx = 0; row_idx < row_count; row_idx++) {
+    for (u32 col_idx = 0; col_idx < col_count; col_idx++) {
+      for (u32 row_idx = 0; row_idx < row_count; row_idx++) {
         const auto x_offset = x_start + ((x_end - x_start) / static_cast<float>(col_count)) *
                                           (static_cast<float>(col_idx) + 0.5f);
         const auto y_offset = y_start + ((y_end - y_start) / static_cast<float>(row_count)) *
@@ -265,7 +265,7 @@ class BufferTransferCommandSample final : public App
 
         struct PushConstant {
           gpu::DescriptorID transform_descriptor_id = gpu::DescriptorID::null();
-          ui32 offset = 0;
+          u32 offset = 0;
         };
 
         auto pipeline_state_id = registry.get_pipeline_state(pipeline_desc);
@@ -280,7 +280,7 @@ class BufferTransferCommandSample final : public App
           push_constant_indexes, [=](usize push_constant_idx) -> PushConstant {
             return {
               .transform_descriptor_id = transform_buffer_descriptor_id,
-              .offset = soul::cast<ui32>(push_constant_idx * sizeof(Transform)),
+              .offset = soul::cast<u32>(push_constant_idx * sizeof(Transform)),
             };
           });
 

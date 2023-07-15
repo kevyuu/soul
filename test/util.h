@@ -14,6 +14,8 @@
 #include "core/views.h"
 #include "memory/allocator.h"
 
+#include "builtins.h"
+
 static const char* const DEFAULT_SOUL_TEST_MESSAGE = "---";
 static std::vector<std::string> soul_test_messages;
 

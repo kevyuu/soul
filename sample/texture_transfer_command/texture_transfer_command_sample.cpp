@@ -29,7 +29,7 @@ class Texture3DSampleApp final : public App
     {{-0.5f, 0.5f}, {1.0f, 1.0f, 1.0f}, {0.0f, 0.0f}}   // bottom right
   };
 
-  using Index = ui16;
+  using Index = u16;
   static constexpr Index INDICES[] = {0, 1, 2, 2, 3, 0};
 
   struct Transform {
@@ -46,7 +46,7 @@ class Texture3DSampleApp final : public App
   gpu::TextureID test_texture_id_ = gpu::TextureID();
   gpu::SamplerID test_sampler_id_ = gpu::SamplerID();
   void* test_texture_data_;
-  ui32 width_, height_, channel_count_;
+  u32 width_, height_, channel_count_;
 
   const std::chrono::steady_clock::time_point start_ = std::chrono::steady_clock::now();
 
@@ -249,7 +249,7 @@ public:
          gpu::TextureUsage::TRANSFER_SRC,
          gpu::TextureUsage::TRANSFER_DST},
         {gpu::QueueType::GRAPHIC},
-        {static_cast<ui32>(width), static_cast<ui32>(height)}));
+        {static_cast<u32>(width), static_cast<u32>(height)}));
       test_sampler_id_ = gpu_system_->request_sampler(
         gpu::SamplerDesc::same_filter_wrap(gpu::TextureFilter::LINEAR, gpu::TextureWrap::REPEAT));
     }

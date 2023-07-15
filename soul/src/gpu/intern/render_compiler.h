@@ -46,7 +46,7 @@ namespace soul::gpu::impl
       -> void;
     auto end_render_pass() -> void;
     auto execute_secondary_command_buffers(
-      ui32 count, const SecondaryCommandBuffer* secondary_command_buffers) -> void;
+      u32 count, const SecondaryCommandBuffer* secondary_command_buffers) -> void;
 
     auto compile_command(const RenderCommand& command) -> void;
     auto compile_command(const RenderCommandDraw& command) -> void;
@@ -64,7 +64,7 @@ namespace soul::gpu::impl
   private:
     auto apply_pipeline_state(PipelineStateID pipeline_state_id) -> void;
     auto apply_pipeline_state(VkPipeline pipeline, VkPipelineBindPoint pipeline_bind_point) -> void;
-    auto apply_push_constant(const void* push_constant_data, ui32 push_constant_size) -> void;
+    auto apply_push_constant(const void* push_constant_data, u32 push_constant_size) -> void;
 
     System& gpu_system_;
     VkCommandBuffer command_buffer_;

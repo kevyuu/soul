@@ -48,7 +48,7 @@ namespace soul::gpu
   };
 
   using GPUAddress = ID<GPUAddressStub, VkDeviceAddress, 0>;
-  static_assert(sizeof(GPUAddress) == sizeof(ui64), "GPUAddress size is not the same as ui64");
+  static_assert(sizeof(GPUAddress) == sizeof(u64), "GPUAddress size is not the same as u64");
 
   using TexturePool = ConcurrentObjectPool<impl::Texture>;
   using BufferPool = ConcurrentObjectPool<impl::Buffer>;
@@ -71,7 +71,7 @@ namespace soul::gpu
   using TlasID = ID<impl::Tlas, TlasPool::ID, TlasPool::NULLVAL>;
 
   struct Descriptor;
-  using DescriptorID = ID<Descriptor, ui32>;
+  using DescriptorID = ID<Descriptor, u32>;
 
   struct SamplerID {
     VkSampler vkHandle = VK_NULL_HANDLE;
@@ -84,7 +84,7 @@ namespace soul::gpu
 
   using PipelineStateID =
     ID<impl::PipelineState, PipelineStateCache::ID, PipelineStateCache::NULLVAL>;
-  using ProgramID = ID<impl::Program, ui16>;
+  using ProgramID = ID<impl::Program, u16>;
   using ShaderTableID = ID<impl::ShaderTable, ShaderTablePool::ID, ShaderTablePool::NULLVAL>;
 
 } // namespace soul::gpu

@@ -13,6 +13,6 @@ namespace soul::gpu
 
   auto compute_max_primitives_counts(
     const BlasBuildDesc& build_desc, memory::Allocator& allocator = *get_default_allocator())
-    -> Vector<ui32>;
+    -> Vector<u32>;
 
 } // namespace soul::gpu

@@ -19,14 +19,14 @@ namespace soul::memory::util
   [[nodiscard]] static auto pointer_align_forward(const void* address, const usize alignment)
     -> void*
   {
-    return (void*)((reinterpret_cast<uintptr>(address) + alignment) & ~(alignment - 1));
+    return (void*)((reinterpret_cast<uptr>(address) + alignment) & ~(alignment - 1));
     // NOLINT(performance-no-int-to-ptr)
   }
 
   [[nodiscard]] static auto pointer_align_backward(const void* address, const usize alignment)
     -> void*
   {
-    return (void*)(reinterpret_cast<uintptr>(address) &
+    return (void*)(reinterpret_cast<uptr>(address) &
                    ~(alignment - 1)); // NOLINT(performance-no-int-to-ptr)
   }
 

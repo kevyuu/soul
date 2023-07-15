@@ -83,12 +83,12 @@ namespace soul
     template <usize IFlagCount = FLAG_COUNT>
       requires(IFlagCount <= 32)
     [[nodiscard]]
-    constexpr auto to_uint32() const -> ui32;
+    constexpr auto to_uint32() const -> u32;
 
     template <usize IFlagCount = FLAG_COUNT>
       requires(IFlagCount <= 64)
     [[nodiscard]]
-    constexpr auto to_uint64() const -> ui64;
+    constexpr auto to_uint64() const -> u64;
 
     template <impl::dst_flag DstFlags, usize N>
       requires(N == to_underlying(Flag::COUNT))
@@ -157,7 +157,7 @@ namespace soul
   template <ts_flag Flag>
   template <usize IFlagCount>
     requires(IFlagCount <= 32)
-  constexpr auto FlagSet<Flag>::to_uint32() const -> ui32
+  constexpr auto FlagSet<Flag>::to_uint32() const -> u32
   {
     return flags_.to_uint32();
   }
@@ -165,7 +165,7 @@ namespace soul
   template <ts_flag Flag>
   template <usize IFlagCount>
     requires(IFlagCount <= 64)
-  constexpr auto FlagSet<Flag>::to_uint64() const -> ui64
+  constexpr auto FlagSet<Flag>::to_uint64() const -> u64
   {
     return flags_.to_uint64();
   }

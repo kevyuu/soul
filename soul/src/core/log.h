@@ -7,7 +7,7 @@
 
 namespace soul
 {
-  enum class LogLevel : ui8 { FATAL, WARN, ERROR, INFO, DEBUG, COUNT };
+  enum class LogLevel : u8 { FATAL, WARN, ERROR, INFO, DEBUG, COUNT };
 } // namespace soul
 
 namespace soul::memory

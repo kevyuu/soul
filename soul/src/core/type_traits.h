@@ -91,6 +91,12 @@ namespace soul
     } -> same_as<void>;
   };
 
+  template <typename T1, typename T2>
+  inline constexpr bool assert_same_as_v = [] {
+    static_assert(std::same_as<T1, T2>, "Type is not the same");
+    return true;
+  }();
+
   template <typename T>
   inline constexpr bool can_copy_or_clone_v = can_copy_v<T> || can_clone_v<T>;
 

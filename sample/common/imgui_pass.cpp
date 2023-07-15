@@ -92,7 +92,7 @@ ImGuiRenderGraphPass::ImGuiRenderGraphPass(soul::gpu::System* gpu_system) : gpu_
 
   const gpu::TextureRegionUpdate region = {
     .subresource = {.layer_count = 1},
-    .extent = {soul::cast<ui32>(width), soul::cast<ui32>(height), 1},
+    .extent = {soul::cast<u32>(width), soul::cast<u32>(height), 1},
   };
 
   const gpu::TextureLoadDesc load_desc = {
@@ -341,7 +341,7 @@ void ImGuiRenderGraphPass::add_pass(
               };
               push_constants.push_back(push_constant);
 
-              const auto first_index = soul::cast<ui16>(cmd.IdxOffset + global_idx_offset);
+              const auto first_index = soul::cast<u16>(cmd.IdxOffset + global_idx_offset);
 
               // ReSharper disable once CppUnreachableCode
               static constexpr gpu::IndexType INDEX_TYPE =
@@ -352,11 +352,11 @@ void ImGuiRenderGraphPass::add_pass(
                 .push_constant_data = &push_constants.back(),
                 .push_constant_size = sizeof(PushConstant),
                 .vertex_buffer_ids = {registry.get_buffer(parameter.vertex_buffer)},
-                .vertex_offsets = {soul::cast<ui16>(cmd.VtxOffset + global_vtx_offset)},
+                .vertex_offsets = {soul::cast<u16>(cmd.VtxOffset + global_vtx_offset)},
                 .index_buffer_id = registry.get_buffer(parameter.index_buffer),
                 .index_type = INDEX_TYPE,
                 .first_index = first_index,
-                .index_count = soul::cast<ui16>(cmd.ElemCount),
+                .index_count = soul::cast<u16>(cmd.ElemCount),
               };
               commands.push_back(command);
             }

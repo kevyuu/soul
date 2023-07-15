@@ -40,7 +40,7 @@ App::App(const AppConfig& app_config)
           memory::MutexProxy::Config(),
           memory::ProfileProxy::Config(),
           memory::CounterProxy::Config(),
-          memory::ClearValuesProxy::Config{ui8{0xFA}, ui8{0xFF}},
+          memory::ClearValuesProxy::Config{u8{0xFA}, u8{0xFF}},
           memory::BoundGuardProxy::Config())),
       page_allocator_("Page allocator"),
       proxy_page_allocator_(&page_allocator_, memory::ProfileProxy::Config()),

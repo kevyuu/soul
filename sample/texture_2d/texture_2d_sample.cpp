@@ -28,7 +28,7 @@ class Texture2DSampleApp final : public App
     {{-0.5f, 0.5f}, {1.0f, 1.0f, 1.0f}, {0.0f, 0.0f}}   // bottom right
   };
 
-  using Index = ui16;
+  using Index = u16;
   static constexpr Index INDICES[] = {0, 1, 2, 2, 3, 0};
 
   gpu::ProgramID program_id_ = gpu::ProgramID();
@@ -159,7 +159,7 @@ public:
 
       const gpu::TextureRegionUpdate region_load = {
         .subresource = {.layer_count = 1},
-        .extent = {static_cast<ui32>(width), static_cast<ui32>(height), 1},
+        .extent = {static_cast<u32>(width), static_cast<u32>(height), 1},
       };
 
       const gpu::TextureLoadDesc load_desc = {
@@ -176,7 +176,7 @@ public:
           1,
           {gpu::TextureUsage::SAMPLED},
           {gpu::QueueType::GRAPHIC},
-          {static_cast<ui32>(width), static_cast<ui32>(height)}),
+          {static_cast<u32>(width), static_cast<u32>(height)}),
         load_desc);
       gpu_system_->flush_texture(test_texture_id_, {gpu::TextureUsage::SAMPLED});
       test_sampler_id_ = gpu_system_->request_sampler(

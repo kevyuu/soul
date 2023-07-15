@@ -49,7 +49,7 @@ auto verify_full_bitset(const soul::Bitset<BitCount, BlockT> bitset) -> void
 }
 
 template <usize BitCount, soul::ts_bit_block BlockT>
-auto verify_bitset(const soul::Bitset<BitCount, BlockT> bitset, const std::set<ui64>& positions)
+auto verify_bitset(const soul::Bitset<BitCount, BlockT> bitset, const std::set<u64>& positions)
   -> void
 {
   for (usize position = 0; position < BitCount; position++) {
@@ -82,14 +82,14 @@ TEST(TestBitsetConstructor, TestBitSetDefaultConstructor)
   SOUL_TEST_RUN(test_bitset_constructor<8>());
   SOUL_TEST_RUN(test_bitset_constructor<17>());
   SOUL_TEST_RUN(test_bitset_constructor<32>());
-  SOUL_TEST_RUN(SOUL_SINGLE_ARG(test_bitset_constructor<10000, ui8>()));
-  SOUL_TEST_RUN(SOUL_SINGLE_ARG(test_bitset_constructor<16, ui64>()));
+  SOUL_TEST_RUN(SOUL_SINGLE_ARG(test_bitset_constructor<10000, u8>()));
+  SOUL_TEST_RUN(SOUL_SINGLE_ARG(test_bitset_constructor<16, u64>()));
 }
 
 template <usize BitCount, typename BlockTOptional = void>
-auto test_bitset_set(const std::set<ui64>& positions) -> void
+auto test_bitset_set(const std::set<u64>& positions) -> void
 {
-  using BlockT = std::conditional_t<std::is_void_v<BlockTOptional>, ui8, BlockTOptional>;
+  using BlockT = std::conditional_t<std::is_void_v<BlockTOptional>, u8, BlockTOptional>;
   using Bitset = std::conditional_t<
     std::is_void_v<BlockTOptional>,
     soul::Bitset<BitCount>,
@@ -108,15 +108,15 @@ TEST(TestBitsetSet, TestBitsetSet)
   SOUL_TEST_RUN(test_bitset_set<1>({0u}));
   SOUL_TEST_RUN(test_bitset_set<15>({1u, 7u, 14u}));
   SOUL_TEST_RUN(test_bitset_set<100>({0u, 99u}));
-  SOUL_TEST_RUN(SOUL_SINGLE_ARG(test_bitset_set<7, ui64>({0u, 3u, 5u})));
-  SOUL_TEST_RUN(SOUL_SINGLE_ARG(test_bitset_set<10000, ui8>({5u, 7u, 15u, 16u, 9999u})));
+  SOUL_TEST_RUN(SOUL_SINGLE_ARG(test_bitset_set<7, u64>({0u, 3u, 5u})));
+  SOUL_TEST_RUN(SOUL_SINGLE_ARG(test_bitset_set<10000, u8>({5u, 7u, 15u, 16u, 9999u})));
 }
 
 template <usize BitCount, soul::ts_bit_block BlockT>
-auto generate_position_set(const soul::Bitset<BitCount, BlockT>& bitset) -> std::set<ui64>
+auto generate_position_set(const soul::Bitset<BitCount, BlockT>& bitset) -> std::set<u64>
 {
-  std::set<ui64> result;
-  for (ui32 position = 0; position < BitCount; position++) {
+  std::set<u64> result;
+  for (u32 position = 0; position < BitCount; position++) {
     if (bitset.test(position)) {
       result.insert(position);
     }
@@ -130,7 +130,7 @@ auto generate_random_bitset(soul::Bitset<BitCount, BlockT>& bitset, const usize 
 {
   std::random_device random_device;
   std::mt19937 random_engine(random_device());
-  std::vector<ui32> vec(BitCount);
+  std::vector<u32> vec(BitCount);
   std::iota(vec.begin(), vec.end(), 0);
   std::ranges::shuffle(vec, random_engine);
   for (usize i = 0; i < set_count; i++) {
@@ -139,7 +139,7 @@ auto generate_random_bitset(soul::Bitset<BitCount, BlockT>& bitset, const usize 
 }
 
 template <usize BitCount, soul::ts_bit_block BlockT = soul::default_block_type_t<BitCount>>
-auto generate_bitset(const std::set<ui64>& positions) -> soul::Bitset<BitCount, BlockT>
+auto generate_bitset(const std::set<u64>& positions) -> soul::Bitset<BitCount, BlockT>
 {
   soul::Bitset<BitCount, BlockT> result;
   for (auto position : positions) {
@@ -170,8 +170,8 @@ TEST_F(TestBitsetManipulation, TestBitsetSetFalse)
 {
   auto test_set_false = []<usize BitCount, soul::ts_bit_block BlockT>(
                           soul::Bitset<BitCount, BlockT> bitset,
-                          const std::set<ui64> removed_positions) {
-    std::set<ui64> expected_set = generate_position_set(bitset);
+                          const std::set<u64> removed_positions) {
+    std::set<u64> expected_set = generate_position_set(bitset);
 
     for (auto position : removed_positions) {
       bitset.set(position, false);
@@ -222,7 +222,7 @@ TEST_F(TestBitsetManipulation, TestBitsetFlip)
 {
   auto test_flip =
     []<usize BitCount, soul::ts_bit_block BlockT>(soul::Bitset<BitCount, BlockT> bitset) {
-      std::set<ui64> expected_result;
+      std::set<u64> expected_result;
       for (usize i = 0; i < BitCount; i++) {
         if (!bitset.test(i)) {
           expected_result.insert(i);
@@ -243,7 +243,7 @@ TEST(TestBitsetOperator, TestBitsetOperatorNegate)
 {
   auto test_operator_negate =
     []<usize BitCount, soul::ts_bit_block BlockT>(soul::Bitset<BitCount, BlockT> bitset) {
-      std::set<ui64> expected_result;
+      std::set<u64> expected_result;
       for (usize i = 0; i < BitCount; i++) {
         if (!bitset.test(i)) {
           expected_result.insert(i);
@@ -263,7 +263,7 @@ TEST(TestBitsetOperator, TestBitsetOperatorAnd)
   auto test_operator_and = []<usize BitCount, soul::ts_bit_block BlockT>(
                              soul::Bitset<BitCount, BlockT> bitset1,
                              soul::Bitset<BitCount, BlockT> bitset2,
-                             const std::set<ui64> expected_result) {
+                             const std::set<u64> expected_result) {
     soul::Bitset<BitCount, BlockT> bitset_result = bitset1 & bitset2;
     verify_bitset(bitset_result, expected_result);
     bitset1 &= bitset2;
@@ -287,7 +287,7 @@ TEST(TestBitsetOperator, TestBitsetOperatorOr)
   auto test_operator_or = []<usize BitCount, soul::ts_bit_block BlockT>(
                             soul::Bitset<BitCount, BlockT> bitset1,
                             soul::Bitset<BitCount, BlockT> bitset2,
-                            const std::set<ui64> expected_result) {
+                            const std::set<u64> expected_result) {
     soul::Bitset<BitCount, BlockT> bitset_result = bitset1 | bitset2;
     verify_bitset(bitset_result, expected_result);
     bitset1 |= bitset2;
@@ -312,7 +312,7 @@ TEST(TestBitsetOperator, TestBitsetOperatorXor)
   auto test_operator_xor = []<usize BitCount, soul::ts_bit_block BlockT>(
                              soul::Bitset<BitCount, BlockT> bitset1,
                              soul::Bitset<BitCount, BlockT> bitset2) {
-    std::set<ui64> expected_result;
+    std::set<u64> expected_result;
     for (usize i = 0; i < BitCount; i++) {
       if (bitset1.test(i) != bitset2.test(i)) {
         expected_result.insert(i);
