@@ -20,7 +20,7 @@ namespace soul::math
     return static_cast<float>(a) / static_cast<float>(b);
   }
 
-  template <soul_size D1, soul_size D2, soul_size D3, typename T>
+  template <usize D1, usize D2, usize D3, typename T>
   SOUL_ALWAYS_INLINE auto mul(const matrix<D1, D2, T>& a, const matrix<D2, D3, T>& b) -> mat4f
   {
     return mat4f(a.mat * b.mat);
@@ -58,13 +58,13 @@ namespace soul::math
     return mat4f(glm::perspective(fovy, aspect, z_near, z_far));
   }
 
-  template <soul_size Row, soul_size Column, typename T>
+  template <usize Row, usize Column, typename T>
   SOUL_ALWAYS_INLINE auto inverse(const matrix<Row, Column, T>& mat) -> matrix<Row, Column, T>
   {
     return mat4f(glm::inverse(mat.mat));
   }
 
-  template <soul_size Row, soul_size Column, typename T>
+  template <usize Row, usize Column, typename T>
   SOUL_ALWAYS_INLINE auto transpose(const matrix<Row, Column, T>& mat) -> matrix<Row, Column, T>
   {
     return mat4f(glm::transpose(mat.mat));
@@ -76,7 +76,7 @@ namespace soul::math
     return glm::radians(degrees);
   }
 
-  template <soul_size Dim, typename T>
+  template <usize Dim, typename T>
   SOUL_ALWAYS_INLINE auto normalize(const vec<Dim, T>& x) -> vec<Dim, T>
   {
     return glm::normalize(x);
@@ -88,7 +88,7 @@ namespace soul::math
     return glm::cross(x, y);
   }
 
-  template <soul_size Dim, typename T>
+  template <usize Dim, typename T>
   SOUL_ALWAYS_INLINE auto dot(const vec<Dim, T>& x, const vec<Dim, T>& y) -> T
   {
     return glm::dot(x, y);

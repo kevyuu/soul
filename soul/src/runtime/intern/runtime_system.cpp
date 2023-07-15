@@ -68,7 +68,7 @@ namespace soul::runtime
           break;
         }
 
-        const soul_size thread_index = (rand_xorshf96() % db_.thread_count);
+        const usize thread_index = (rand_xorshf96() % db_.thread_count);
         task_id = db_.thread_contexts[thread_index].task_deque.steal();
       }
 
@@ -99,7 +99,7 @@ namespace soul::runtime
 
     db_.thread_contexts[0].temp_allocator->reset();
 
-    for (soul_size i = 1; i < db_.thread_count; i++) {
+    for (usize i = 1; i < db_.thread_count; i++) {
       db_.thread_contexts[i].task_count = 0;
       db_.thread_contexts[i].task_deque.reset();
       db_.thread_contexts[i].temp_allocator->reset();
@@ -128,8 +128,8 @@ namespace soul::runtime
 
   auto System::get_task_ptr(TaskID task_id) -> Task*
   {
-    const soul_size thread_index = task_id.get_thread_index();
-    const soul_size task_index = task_id.get_task_index();
+    const usize thread_index = task_id.get_thread_index();
+    const usize task_index = task_id.get_task_index();
 
     return &db_.thread_contexts[thread_index].task_pool[task_index];
   }
@@ -192,7 +192,7 @@ namespace soul::runtime
     // NOTE(kevinyu): i == 0 is for main thread
     Database::g_thread_context = &db_.thread_contexts[0];
 
-    for (uint16 i = 0; i < thread_count; ++i) {
+    for (ui16 i = 0; i < thread_count; ++i) {
       db_.thread_contexts[i].task_count = 0;
       db_.thread_contexts[i].thread_index = i;
       db_.thread_contexts[i].task_deque.init();
@@ -200,7 +200,7 @@ namespace soul::runtime
     }
 
     db_.is_terminated.store(false, std::memory_order_relaxed);
-    for (uint16 i = 1; i < thread_count; ++i) {
+    for (ui16 i = 1; i < thread_count; ++i) {
       db_.threads[i] = std::thread(&System::loop, this, &db_.thread_contexts[i]);
     }
     db_.active_task_count = 0;
@@ -255,15 +255,15 @@ namespace soul::runtime
       "There is still pending task in work deque! Active Task Count = %d.",
       db_.active_task_count);
     terminate();
-    for (uint64 i = 1; i < db_.thread_count; i++) {
+    for (ui64 i = 1; i < db_.thread_count; i++) {
       db_.threads[i].join();
     }
     db_.thread_contexts.cleanup();
   }
 
-  auto System::get_thread_count() const -> uint16 { return db_.thread_count; }
+  auto System::get_thread_count() const -> ui16 { return db_.thread_count; }
 
-  auto System::get_thread_id() -> uint16 { return Database::g_thread_context->thread_index; }
+  auto System::get_thread_id() -> ui16 { return Database::g_thread_context->thread_index; }
 
   auto System::get_thread_context() -> ThreadContext&
   {
@@ -290,12 +290,12 @@ namespace soul::runtime
     return get_thread_context().allocator_stack.back();
   }
 
-  auto System::allocate(uint32 size, uint32 alignment) -> void*
+  auto System::allocate(ui32 size, ui32 alignment) -> void*
   {
     return get_context_allocator()->allocate(size, alignment);
   }
 
-  auto System::deallocate(void* addr, uint32 size) -> void
+  auto System::deallocate(void* addr, ui32 size) -> void
   {
     get_context_allocator()->deallocate(addr);
   }

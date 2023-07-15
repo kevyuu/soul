@@ -13,7 +13,7 @@
     do {                                                                                           \
       VkResult _result = expr;                                                                     \
       if (_result != VK_SUCCESS) {                                                                 \
-        SOUL_LOG_ERROR("Vulkan error| expr = {}, result = {} ", #expr, soul_size(_result));        \
+        SOUL_LOG_ERROR("Vulkan error| expr = {}, result = {} ", #expr, usize(_result));        \
         SOUL_LOG_ERROR("Message = {}", message);                                                   \
       }                                                                                            \
     } while (0)
@@ -39,9 +39,9 @@ namespace soul::gpu
 
     struct Config {
       WSI* wsi = nullptr;
-      uint16 max_frame_in_flight = 0;
-      uint16 thread_count = 0;
-      soul_size transient_pool_size = 16 * ONE_MEGABYTE;
+      ui16 max_frame_in_flight = 0;
+      ui16 thread_count = 0;
+      usize transient_pool_size = 16 * ONE_MEGABYTE;
     };
 
     auto init(const Config& config) -> void;
@@ -65,20 +65,20 @@ namespace soul::gpu
     auto create_texture(const TextureDesc& desc, const TextureLoadDesc& load_desc) -> TextureID;
     auto create_texture(const TextureDesc& desc, ClearValue clear_value) -> TextureID;
     auto flush_texture(TextureID texture_id, TextureUsageFlags usage_flags) -> void;
-    auto get_texture_mip_levels(TextureID texture_id) const -> uint32;
+    auto get_texture_mip_levels(TextureID texture_id) const -> ui32;
     auto get_texture_desc(TextureID texture_id) const -> const TextureDesc&;
     auto destroy_texture_descriptor(TextureID texture_id) -> void;
     auto destroy_texture(TextureID texture_id) -> void;
     auto get_texture(TextureID texture_id) -> impl::Texture&;
     auto get_texture(TextureID texture_id) const -> const impl::Texture&;
-    auto get_texture_view(TextureID texture_id, uint32 level, uint32 layer = 0)
+    auto get_texture_view(TextureID texture_id, ui32 level, ui32 layer = 0)
       -> impl::TextureView;
     auto get_texture_view(TextureID texture_id, SubresourceIndex subresource_index)
       -> impl::TextureView;
     auto get_texture_view(TextureID texture_id, std::optional<SubresourceIndex> subresource)
       -> impl::TextureView;
 
-    auto get_blas_size_requirement(const BlasBuildDesc& build_desc) -> soul_size;
+    auto get_blas_size_requirement(const BlasBuildDesc& build_desc) -> usize;
     auto create_blas(const BlasDesc& desc, BlasGroupID blas_group_id = BlasGroupID::null())
       -> BlasID;
     auto destroy_blas(BlasID blas_id) -> void;
@@ -91,7 +91,7 @@ namespace soul::gpu
     auto get_blas_group(BlasGroupID blas_group_id) const -> const impl::BlasGroup&;
     auto get_blas_group(BlasGroupID blas_group_id) -> impl::BlasGroup&;
 
-    auto get_tlas_size_requirement(const TlasBuildDesc& build_desc) -> soul_size;
+    auto get_tlas_size_requirement(const TlasBuildDesc& build_desc) -> usize;
     auto create_tlas(const TlasDesc& desc) -> TlasID;
     auto destroy_tlas(TlasID tlas_id) -> void;
     auto get_tlas(TlasID tlas_id) const -> const impl::Tlas&;
@@ -161,7 +161,7 @@ namespace soul::gpu
   private:
     auto is_owned_by_presentation_engine(TextureID texture_id) -> bool;
     auto create_buffer(const BufferDesc& desc, bool use_linear_pool) -> BufferID;
-    auto create_staging_buffer(soul_size size) -> BufferID;
+    auto create_staging_buffer(usize size) -> BufferID;
     auto get_gpu_allocator() -> VmaAllocator;
 
     auto acquire_swapchain() -> VkResult;
@@ -176,7 +176,7 @@ namespace soul::gpu
       -> VkAccelerationStructureBuildSizesInfoKHR;
     auto get_as_build_size_info(
       const VkAccelerationStructureBuildGeometryInfoKHR& build_info,
-      const uint32* max_primitives_counts) -> VkAccelerationStructureBuildSizesInfoKHR;
+      const ui32* max_primitives_counts) -> VkAccelerationStructureBuildSizesInfoKHR;
 
     auto add_to_blas_group(BlasID blas_id, BlasGroupID blas_group_id) -> void;
     auto remove_from_blas_group(BlasID blas_id) -> void;

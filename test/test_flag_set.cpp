@@ -9,13 +9,13 @@
 #include "large_uint64_enum.h"
 #include "util.h"
 
-enum class Uint8TestEnum : uint8 { ONE, TWO, THREE, FOUR, FIVE, SIX, COUNT };
+enum class Uint8TestEnum : ui8 { ONE, TWO, THREE, FOUR, FIVE, SIX, COUNT };
 
-enum class Uint16TestEnum : uint16 { ONE, TWO, THREE, FOUR, FIVE, SIX, COUNT };
+enum class Uint16TestEnum : ui16 { ONE, TWO, THREE, FOUR, FIVE, SIX, COUNT };
 
-enum class Uint32TestEnum : uint32 { ONE, TWO, THREE, FOUR, FIVE, SIX, COUNT };
+enum class Uint32TestEnum : ui32 { ONE, TWO, THREE, FOUR, FIVE, SIX, COUNT };
 
-enum class Uint64TestEnum : uint64 { ONE, TWO, THREE, FOUR, FIVE, SIX, COUNT };
+enum class Uint64TestEnum : ui64 { ONE, TWO, THREE, FOUR, FIVE, SIX, COUNT };
 
 using Uint8FlagSet = soul::FlagSet<Uint8TestEnum>;
 using Uint16FlagSet = soul::FlagSet<Uint16TestEnum>;
@@ -272,7 +272,7 @@ TEST(TestFlagSetOperator, TestFlagSetOperatorOr)
 {
   auto test_operator_or = []<typename T>(soul::FlagSet<T> flag_set1, soul::FlagSet<T> flag_set2) {
     auto flag_set_result = flag_set1 | flag_set2;
-    soul_size expected_count = 0;
+    usize expected_count = 0;
     for (auto e : soul::FlagIter<T>()) {
       if (flag_set1.test(e) || flag_set2.test(e)) {
         SOUL_TEST_ASSERT_TRUE(flag_set_result.test(e));
@@ -298,7 +298,7 @@ TEST(TestFlagSetOperator, TestFlagSetOperatorAnd)
 {
   auto test_operator_and = []<typename T>(soul::FlagSet<T> flag_set1, soul::FlagSet<T> flag_set2) {
     auto flag_set_result = flag_set1 & flag_set2;
-    soul_size expected_count = 0;
+    usize expected_count = 0;
     for (auto e : soul::FlagIter<T>()) {
       if (flag_set1.test(e) && flag_set2.test(e)) {
         expected_count++;
@@ -327,7 +327,7 @@ TEST(TestFlagSetOperator, TestFlagSetOperatorXor)
 {
   auto test_operator_xor = []<typename T>(soul::FlagSet<T> flag_set1, soul::FlagSet<T> flag_set2) {
     auto flag_set_result = flag_set1 ^ flag_set2;
-    soul_size expected_count = 0;
+    usize expected_count = 0;
     for (auto e : soul::FlagIter<T>()) {
       if (flag_set1.test(e) != flag_set2.test(e)) {
         expected_count++;
@@ -448,7 +448,7 @@ TEST(TestFlagSetToUint, TestFlagSetToUint)
   SOUL_TEST_ASSERT_EQ(Uint64FlagSet({Uint64TestEnum::ONE, Uint64TestEnum::THREE}).to_uint64(), 5u);
 
   // test fail compilation. Uncomment tests below, expected to generate compilation error since
-  // the LargeUint64TestEnum::COUNT exceeded the width of the uint32
+  // the LargeUint64TestEnum::COUNT exceeded the width of the ui32
   // SOUL_TEST_ASSERT_EQ(LargeUint64FlagSet({ LargeUint64TestEnum::ONE, LargeUint64TestEnum::THREE
   // }).to_uint32(), 5u);
 }

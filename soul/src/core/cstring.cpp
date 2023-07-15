@@ -14,7 +14,7 @@ namespace soul
     data_[size_] = '\0';
   }
 
-  CString::CString(soul_size size, memory::Allocator& allocator)
+  CString::CString(usize size, memory::Allocator& allocator)
       : allocator_(&allocator), size_(size)
   {
     reserve(size + 1);
@@ -91,7 +91,7 @@ namespace soul
     swap(data_, rhs.data_);
   }
 
-  auto CString::reserve(soul_size new_capacity) -> void
+  auto CString::reserve(usize new_capacity) -> void
   {
     if (capacity_ >= new_capacity) {
       return;

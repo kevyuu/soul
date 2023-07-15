@@ -140,7 +140,7 @@ TEST(TestCStringSwap, TestCStringSwap)
 
 TEST(TestCStringReserve, TestCStringReserve)
 {
-  const auto test_reserve = [](soul::CString str, soul_size new_capacity) {
+  const auto test_reserve = [](soul::CString str, usize new_capacity) {
     const auto str_copy = str.clone();
     str.reserve(new_capacity);
     SOUL_TEST_ASSERT_GE(str.capacity(), new_capacity);

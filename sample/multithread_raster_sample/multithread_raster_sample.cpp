@@ -11,8 +11,8 @@ using namespace soul;
 
 class MultiThreadRasterSample final : public App
 {
-  static constexpr soul_size ROW_COUNT = 80;
-  static constexpr soul_size COL_COUNT = 30;
+  static constexpr usize ROW_COUNT = 80;
+  static constexpr usize COL_COUNT = 30;
 
   struct Vertex {
     vec2f position = {};
@@ -21,7 +21,7 @@ class MultiThreadRasterSample final : public App
   static constexpr Vertex VERTICES[4] = {
     {{-0.5f, -0.5f}}, {{0.5f, -0.5f}}, {{0.5f, 0.5f}}, {{-0.5f, 0.5f}}};
 
-  using Index = uint16;
+  using Index = ui16;
   static constexpr Index INDICES[] = {0, 1, 2, 2, 3, 0};
 
   gpu::ProgramID program_id_ = gpu::ProgramID();
@@ -36,15 +36,15 @@ class MultiThreadRasterSample final : public App
     float y_start,
     float x_end,
     float y_end,
-    uint32 row_count,
-    uint32 col_count) -> void
+    ui32 row_count,
+    ui32 col_count) -> void
   {
     std::random_device rd;
     std::mt19937 gen(rd());
     std::uniform_real_distribution<> dist(0, 1.0f);
 
-    for (uint32 col_idx = 0; col_idx < col_count; col_idx++) {
-      for (uint32 row_idx = 0; row_idx < row_count; row_idx++) {
+    for (ui32 col_idx = 0; col_idx < col_count; col_idx++) {
+      for (ui32 row_idx = 0; row_idx < row_count; row_idx++) {
         const auto x_offset = x_start + ((x_end - x_start) / static_cast<float>(col_count)) *
                                           (static_cast<float>(col_idx) + 0.5f);
         const auto y_offset = y_start + ((y_end - y_start) / static_cast<float>(row_count)) *
@@ -107,7 +107,7 @@ class MultiThreadRasterSample final : public App
         auto pipeline_state_id = registry.get_pipeline_state(pipeline_desc);
 
         command_list.template push<Command>(
-          push_constants_.size(), [=, this](const soul_size index) -> Command {
+          push_constants_.size(), [=, this](const usize index) -> Command {
             return {
               .pipeline_state_id = pipeline_state_id,
               .push_constant_data = &push_constants_[index],

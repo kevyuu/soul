@@ -11,9 +11,9 @@ using namespace soul;
 
 class Texture2DSampleApp final : public App
 {
-  static constexpr soul_size ROW_COUNT = 2;
-  static constexpr soul_size COL_COUNT = 2;
-  static constexpr soul_size TRANSFORM_COUNT = ROW_COUNT * COL_COUNT;
+  static constexpr usize ROW_COUNT = 2;
+  static constexpr usize COL_COUNT = 2;
+  static constexpr usize TRANSFORM_COUNT = ROW_COUNT * COL_COUNT;
 
   struct Vertex {
     vec2f position = {};
@@ -28,7 +28,7 @@ class Texture2DSampleApp final : public App
     {{-0.5f, 0.5f}, {1.0f, 1.0f, 1.0f}, {0.0f, 0.0f}}   // bottom right
   };
 
-  using Index = uint16;
+  using Index = ui16;
   static constexpr Index INDICES[] = {0, 1, 2, 2, 3, 0};
 
   gpu::ProgramID program_id_ = gpu::ProgramID();
@@ -159,12 +159,12 @@ public:
 
       const gpu::TextureRegionUpdate region_load = {
         .subresource = {.layer_count = 1},
-        .extent = {static_cast<uint32>(width), static_cast<uint32>(height), 1},
+        .extent = {static_cast<ui32>(width), static_cast<ui32>(height), 1},
       };
 
       const gpu::TextureLoadDesc load_desc = {
         .data = data,
-        .data_size = soul::cast<soul_size>(width * height * channel_count),
+        .data_size = soul::cast<usize>(width * height * channel_count),
         .region_count = 1,
         .regions = &region_load,
       };
@@ -176,7 +176,7 @@ public:
           1,
           {gpu::TextureUsage::SAMPLED},
           {gpu::QueueType::GRAPHIC},
-          {static_cast<uint32>(width), static_cast<uint32>(height)}),
+          {static_cast<ui32>(width), static_cast<ui32>(height)}),
         load_desc);
       gpu_system_->flush_texture(test_texture_id_, {gpu::TextureUsage::SAMPLED});
       test_sampler_id_ = gpu_system_->request_sampler(

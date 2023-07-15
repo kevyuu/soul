@@ -57,8 +57,8 @@ struct ShapeObj {
   uint32_t mat_index;
 };
 
-using IndexObj = uint32;
-using MaterialIndexObj = int32;
+using IndexObj = ui32;
+using MaterialIndexObj = i32;
 
 class ObjLoader
 {

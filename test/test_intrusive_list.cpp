@@ -64,7 +64,7 @@ auto verify_sequence(
     std::all_of(expected_objects.cbegin(), expected_objects.cend(), [&test_list](const T* val) {
       return test_list.contains(*val);
     }));
-  for (soul_size obj_idx = 0; obj_idx < expected_objects.size(); obj_idx++) {
+  for (usize obj_idx = 0; obj_idx < expected_objects.size(); obj_idx++) {
     auto location = test_list.locate(*expected_objects[obj_idx]);
     SOUL_TEST_ASSERT_EQ(std::distance(test_list.begin(), location), obj_idx);
     auto const_location = test_list.locate(*static_cast<const T*>(expected_objects[obj_idx]));
@@ -99,7 +99,7 @@ TEST(TestIntrusiveListPushBack, TestIntrusiveListPushBack)
   auto vec_val_single = generate_random_sequence<IntNode>(1);
   SOUL_TEST_RUN(test_push_back(list, vec_val_single));
 
-  static constexpr soul_size MULTI_PUSH_BACK_COUNT = 30;
+  static constexpr usize MULTI_PUSH_BACK_COUNT = 30;
   auto vec_val_multi = generate_random_sequence<IntNode>(MULTI_PUSH_BACK_COUNT);
   SOUL_TEST_RUN(test_push_back(list, vec_val_multi));
 }
@@ -131,14 +131,14 @@ TEST(TestIntrusiveListPushFront, TestIntrusiveListPushFront)
   auto vec_val_single = generate_random_sequence<IntNode>(1);
   SOUL_TEST_RUN(test_push_front(list, vec_val_single));
 
-  static constexpr soul_size MULTI_PUSH_FRONT_COUNT = 10;
+  static constexpr usize MULTI_PUSH_FRONT_COUNT = 10;
   auto vec_val_multi = generate_random_sequence<IntNode>(MULTI_PUSH_FRONT_COUNT);
   SOUL_TEST_RUN(test_push_front(list, vec_val_multi));
 }
 
 template <typename T>
 auto generate_random_intrusive_list(
-  soul::IntrusiveList<T>& list, std::vector<T>& vec, const soul_size size) -> void
+  soul::IntrusiveList<T>& list, std::vector<T>& vec, const usize size) -> void
 {
   vec = generate_random_sequence<T>(size);
   for (T& val : vec) {
@@ -169,7 +169,7 @@ struct RandomIntrusiveList {
 
   RandomIntrusiveList() {}
 
-  explicit RandomIntrusiveList(const soul_size size)
+  explicit RandomIntrusiveList(const usize size)
   {
     generate_random_intrusive_list(list, pool, size);
   }
@@ -237,7 +237,7 @@ TEST(TestIntrusiveListInsert, TestIntrusiveListInsert)
 {
   auto test_insert = []<typename T>(
                        soul::IntrusiveList<T>& test_list,
-                       soul_size position,
+                       usize position,
                        std::vector<T>& new_objects) {
     std::vector<T*> expected_objects;
     expected_objects.reserve(test_list.size() + new_objects.size());
@@ -279,7 +279,7 @@ TEST(TestIntrusiveListInsert, TestIntrusiveListInsert)
 
 TEST(TestIntrusiveListRemove, TestIntrusiveListRemove)
 {
-  auto test_remove = []<typename T>(soul::IntrusiveList<T>& list, soul_size position) {
+  auto test_remove = []<typename T>(soul::IntrusiveList<T>& list, usize position) {
     std::vector<T*> expected_objects;
     expected_objects.reserve(list.size() - 1);
     std::transform(
@@ -309,7 +309,7 @@ TEST(TestIntrusiveListRemove, TestIntrusiveListRemove)
 
 TEST(TestIntrusiveListErase, TestIntrusiveListEraseSingle)
 {
-  auto test_erase_single = []<typename T>(soul::IntrusiveList<T>& test_list, soul_size position) {
+  auto test_erase_single = []<typename T>(soul::IntrusiveList<T>& test_list, usize position) {
     std::vector<T*> expected_objects;
     expected_objects.reserve(test_list.size() - 1);
     std::transform(
@@ -340,7 +340,7 @@ TEST(TestIntrusiveListErase, TestIntrusiveListEraseSingle)
 TEST(TestIntrusiveListErase, TestIntrusiveListEraseRange)
 {
   auto test_erase_range =
-    []<typename T>(soul::IntrusiveList<T>& test_list, soul_size first, soul_size last) {
+    []<typename T>(soul::IntrusiveList<T>& test_list, usize first, usize last) {
       std::vector<T*> expected_objects;
       expected_objects.reserve(test_list.size() - (last - first));
       std::transform(
@@ -381,8 +381,8 @@ TEST_F(TestIntrusiveListSplice, TestIntrusiveListSpliceValue)
   auto test_splice_value = []<typename T>(
                              soul::IntrusiveList<T>& src_list,
                              soul::IntrusiveList<T>& dst_list,
-                             soul_size src_position,
-                             soul_size dst_position) {
+                             usize src_position,
+                             usize dst_position) {
     SOUL_TEST_ASSERT_NE(std::next(src_list.begin(), src_position), src_list.end());
     std::vector<T*> src_expected_objects;
     src_expected_objects.reserve(src_list.size() - 1);
@@ -444,7 +444,7 @@ TEST_F(TestIntrusiveListSplice, TestIntrusiveListSpliceList)
 {
   auto test_splice_list =
     []<typename T>(
-      soul::IntrusiveList<T>& src_list, soul::IntrusiveList<T>& dst_list, soul_size position) {
+      soul::IntrusiveList<T>& src_list, soul::IntrusiveList<T>& dst_list, usize position) {
       std::vector<T*> src_expected_objects;
 
       std::vector<T> src_expected_values;
@@ -485,8 +485,8 @@ TEST_F(TestIntrusiveListSplice, TestIntrusiveListSpliceListSingle)
   auto test_splice_list_single = []<typename T>(
                                    soul::IntrusiveList<T>& src_list,
                                    soul::IntrusiveList<T>& dst_list,
-                                   soul_size src_position,
-                                   soul_size dst_position) {
+                                   usize src_position,
+                                   usize dst_position) {
     SOUL_TEST_ASSERT_NE(std::next(src_list.begin(), src_position), src_list.end());
     std::vector<T*> src_expected_objects;
     src_expected_objects.reserve(src_list.size() - 1);
@@ -551,9 +551,9 @@ TEST_F(TestIntrusiveListSplice, TestIntrusiveListSpliceRange)
   auto test_splice_list_range = []<typename T>(
                                   soul::IntrusiveList<T>& src_list,
                                   soul::IntrusiveList<T>& dst_list,
-                                  soul_size src_position_start,
-                                  soul_size src_position_end,
-                                  soul_size dst_position) {
+                                  usize src_position_start,
+                                  usize src_position_end,
+                                  usize dst_position) {
     std::vector<T*> src_expected_objects;
     src_expected_objects.reserve(src_list.size() - (src_position_end - src_position_start));
     std::transform(

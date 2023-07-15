@@ -16,7 +16,7 @@ int TestAllocator::freeCountAll = 0;
 size_t TestAllocator::allocVolumeAll = 0;
 void* TestAllocator::lastAllocation = nullptr;
 
-auto TestAllocator::try_allocate(soul_size size, soul_size alignment, const char* tag)
+auto TestAllocator::try_allocate(usize size, usize alignment, const char* tag)
   -> soul::memory::Allocation
 {
   if (size == 0) {
@@ -31,7 +31,7 @@ auto TestAllocator::try_allocate(soul_size size, soul_size alignment, const char
   return {lastAllocation, size};
 }
 
-auto TestAllocator::get_allocation_size(void* addr) const -> soul_size
+auto TestAllocator::get_allocation_size(void* addr) const -> usize
 {
   if (addr == nullptr) {
     return 0;

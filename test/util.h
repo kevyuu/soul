@@ -233,9 +233,9 @@ class TestAllocator : public soul::memory::Allocator
 public:
   explicit TestAllocator(const char* name = "Test Malloc Allocator") : Allocator(name) {}
 
-  auto try_allocate(soul_size size, soul_size alignment, const char* tag)
+  auto try_allocate(usize size, usize alignment, const char* tag)
     -> soul::memory::Allocation override;
-  auto get_allocation_size(void* addr) const -> soul_size override;
+  auto get_allocation_size(void* addr) const -> usize override;
   auto deallocate(void* addr) -> void override;
 
   auto reset() -> void override {}
@@ -273,7 +273,7 @@ template <typename T>
 using Sequence = std::vector<T>;
 
 template <typename T>
-static auto generate_random_sequence(const soul_size size) -> Sequence<T>
+static auto generate_random_sequence(const usize size) -> Sequence<T>
 {
   std::random_device random_device;
   std::mt19937 random_engine(random_device());
@@ -291,7 +291,7 @@ static auto generate_random_sequence(const soul_size size) -> Sequence<T>
 }
 
 template <typename T>
-static auto generate_sequence(const soul_size size, const T& val) -> Sequence<T>
+static auto generate_sequence(const usize size, const T& val) -> Sequence<T>
 {
   Sequence<T> sequence(size);
   std::generate(sequence.begin(), sequence.end(), soul::duplicate_fn(val));

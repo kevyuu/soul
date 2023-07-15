@@ -58,7 +58,7 @@ namespace soul
 
     void cleanup();
 
-    void reserve(soul_size capacity);
+    void reserve(usize capacity);
 
     void insert(OwnRef<KeyT, true> key, OwnRef<ValT, true> value);
 
@@ -76,10 +76,10 @@ namespace soul
     operator[](const KeyT& key) const -> const ValT&;
 
     [[nodiscard]]
-    auto size() const -> soul_size;
+    auto size() const -> usize;
 
     [[nodiscard]]
-    auto capacity() const -> soul_size;
+    auto capacity() const -> usize;
 
     [[nodiscard]]
     auto empty() const -> bool;
@@ -87,7 +87,7 @@ namespace soul
   private:
     struct Index {
       KeyT key;
-      soul_size dib;
+      usize dib;
     };
 
     Hash hash_;
@@ -96,9 +96,9 @@ namespace soul
     Index* indexes_;
     ValT* values_;
 
-    soul_size size_ = 0;
-    soul_size capacity_ = 0;
-    soul_size max_dib_ = 0;
+    usize size_ = 0;
+    usize capacity_ = 0;
+    usize max_dib_ = 0;
 
     HashMap(const HashMap& other, AllocatorT& allocator = *get_default_allocator()) // NOLINT
         : allocator_(&allocator),
@@ -130,9 +130,9 @@ namespace soul
 
     void capacity_unchecked_insert(OwnRef<KeyT, true> key, OwnRef<ValT, true> value)
     {
-      const soul_size base_index = hash_(key.const_ref()) % capacity_;
+      const usize base_index = hash_(key.const_ref()) % capacity_;
       auto iter_index = base_index;
-      soul_size dib = 1;
+      usize dib = 1;
       while (indexes_[iter_index].dib != 0) {
         if (indexes_[iter_index].dib < dib) {
           key.swap_at(&indexes_[iter_index].key);
@@ -158,11 +158,11 @@ namespace soul
     }
 
     [[nodiscard]]
-    auto find_index(const KeyT& key) const -> soul_size
+    auto find_index(const KeyT& key) const -> usize
     {
-      const soul_size base_index = hash_(key) % capacity_;
+      const usize base_index = hash_(key) % capacity_;
       auto iter_index = base_index;
-      soul_size dib = 0;
+      usize dib = 0;
       while ((!key_equal_(indexes_[iter_index].key, key)) && (indexes_[iter_index].dib != 0) &&
              (dib < max_dib_)) {
         ++dib;
@@ -172,7 +172,7 @@ namespace soul
       return iter_index;
     }
 
-    void remove_by_index(soul_size index)
+    void remove_by_index(usize index)
     {
       auto next_index = index + 1;
       next_index %= capacity_;
@@ -192,14 +192,14 @@ namespace soul
       if constexpr (ts_copy<ValT>) {
         memcpy(values_, other.values_, sizeof(ValT) * other.capacity_);
       } else if constexpr (ts_clone<ValT>) {
-        for (soul_size i = 0; i < other.capacity_; ++i) {
+        for (usize i = 0; i < other.capacity_; ++i) {
           if (other.indexes_[i].dib == 0) {
             continue;
           }
           clone_at(values_ + i, other.values_[i]);
         }
       } else {
-        for (soul_size i = 0; i < other.capacity_; ++i) {
+        for (usize i = 0; i < other.capacity_; ++i) {
           if (other.indexes_[i].dib == 0) {
             continue;
           }
@@ -211,7 +211,7 @@ namespace soul
     void destruct_values()
     {
       if constexpr (can_nontrivial_destruct_v<ValT>) {
-        for (soul_size i = 0; i < capacity_; ++i) {
+        for (usize i = 0; i < capacity_; ++i) {
           if (indexes_[i].dib != 0) {
             values_[i].~U();
           }
@@ -340,7 +340,7 @@ namespace soul
     typename Hash,
     typename KeyEqual,
     memory::allocator_type AllocatorT>
-  void HashMap<KeyT, ValT, Hash, KeyEqual, AllocatorT>::reserve(soul_size capacity)
+  void HashMap<KeyT, ValT, Hash, KeyEqual, AllocatorT>::reserve(usize capacity)
   {
     SOUL_ASSERT(0, size_ == capacity_, "");
     Index* old_indexes = indexes_;
@@ -356,7 +356,7 @@ namespace soul
     if (old_capacity != 0) {
       SOUL_ASSERT(0, old_indexes != nullptr, "");
       SOUL_ASSERT(0, old_values != nullptr, "");
-      for (soul_size i = 0; i < old_capacity; ++i) {
+      for (usize i = 0; i < old_capacity; ++i) {
         if (old_indexes[i].dib != 0) {
           capacity_unchecked_insert(std::move(old_indexes[i].key), std::move(old_values[i]));
         }
@@ -390,7 +390,7 @@ namespace soul
       if (old_capacity != 0) {
         SOUL_ASSERT(0, old_indexes != nullptr, "");
         SOUL_ASSERT(0, old_values != nullptr, "");
-        for (soul_size i = 0; i < old_capacity; ++i) {
+        for (usize i = 0; i < old_capacity; ++i) {
           if (old_indexes[i].dib != 0) {
             capacity_unchecked_insert(std::move(old_indexes[i].key), std::move(old_values[i]));
           }
@@ -414,7 +414,7 @@ namespace soul
     memory::allocator_type AllocatorT>
   void HashMap<KeyT, ValT, Hash, KeyEqual, AllocatorT>::remove(const KeyT& key)
   {
-    soul_size index = find_index(key);
+    usize index = find_index(key);
     SOUL_ASSERT(
       0,
       key_equal_(indexes_[index].key, key) && indexes_[index].dib != 0,
@@ -434,7 +434,7 @@ namespace soul
     if (capacity_ == 0) {
       return false;
     }
-    soul_size index = find_index(key);
+    usize index = find_index(key);
     return (key_equal_(indexes_[index].key, key) && indexes_[index].dib != 0);
   }
 
@@ -446,7 +446,7 @@ namespace soul
     memory::allocator_type AllocatorT>
   auto HashMap<KeyT, ValT, Hash, KeyEqual, AllocatorT>::operator[](const KeyT& key) -> ValT&
   {
-    soul_size index = find_index(key);
+    usize index = find_index(key);
     SOUL_ASSERT(
       0, key_equal_(indexes_[index].key, key) && indexes_[index].dib != 0, "Hashmap key not found");
     return values_[index];
@@ -461,7 +461,7 @@ namespace soul
   auto HashMap<KeyT, ValT, Hash, KeyEqual, AllocatorT>::operator[](const KeyT& key) const
     -> const ValT&
   {
-    soul_size index = find_index(key);
+    usize index = find_index(key);
     SOUL_ASSERT(
       0, key_equal(indexes_[index].key, key) && indexes_[index].dib != 0, "Hashmap key not found");
     return values_[index];
@@ -473,7 +473,7 @@ namespace soul
     typename Hash,
     typename KeyEqual,
     memory::allocator_type AllocatorT>
-  auto HashMap<KeyT, ValT, Hash, KeyEqual, AllocatorT>::size() const -> soul_size
+  auto HashMap<KeyT, ValT, Hash, KeyEqual, AllocatorT>::size() const -> usize
   {
     return size_;
   }
@@ -484,7 +484,7 @@ namespace soul
     typename Hash,
     typename KeyEqual,
     memory::allocator_type AllocatorT>
-  auto HashMap<KeyT, ValT, Hash, KeyEqual, AllocatorT>::capacity() const -> soul_size
+  auto HashMap<KeyT, ValT, Hash, KeyEqual, AllocatorT>::capacity() const -> usize
   {
     return capacity_;
   }

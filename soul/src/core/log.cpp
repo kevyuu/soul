@@ -11,7 +11,7 @@ namespace soul::impl
   namespace
   {
     struct LogBuffer {
-      static constexpr soul_size CAPACITY = 8192;
+      static constexpr usize CAPACITY = 8192;
       Mutex lock;
       CString buffer;
 

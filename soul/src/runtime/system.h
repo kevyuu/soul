@@ -58,7 +58,7 @@ namespace soul::runtime
 
     template <typename Func>
     auto create_parallel_for_task_recursive(
-      TaskID parent, uint32 start, uint32 data_count, uint32 block_size, Func&& func) -> TaskID
+      TaskID parent, ui32 start, ui32 data_count, ui32 block_size, Func&& func) -> TaskID
     {
       using TaskData = ParallelForTaskData<Func>;
 
@@ -70,17 +70,17 @@ namespace soul::runtime
       static auto parallel_func = [](TaskID taskID, void* data) {
         TaskData& task_data = (*static_cast<TaskData*>(data));
         if (task_data.count > task_data.min_count) {
-          const uint32 left_count = task_data.count / 2;
+          const ui32 left_count = task_data.count / 2;
           const TaskID left_task_id = get().create_parallel_for_task_recursive(
             taskID, task_data.start, left_count, task_data.min_count, task_data.func);
           get().task_run(left_task_id);
 
-          const uint32 right_count = task_data.count - left_count;
+          const ui32 right_count = task_data.count - left_count;
           const TaskID right_task_id = get().create_parallel_for_task_recursive(
             taskID, task_data.start + left_count, right_count, task_data.min_count, task_data.func);
           get().task_run(right_task_id);
         } else {
-          for (soul_size i = 0; i < task_data.count; i++) {
+          for (usize i = 0; i < task_data.count; i++) {
             task_data.func(task_data.start + i);
           }
         }
@@ -93,7 +93,7 @@ namespace soul::runtime
     }
 
     template <ts_fn<void,int> Fn>
-    auto create_parallel_for_task(TaskID parent, uint32 count, uint32 block_size, Fn&& func)
+    auto create_parallel_for_task(TaskID parent, ui32 count, ui32 block_size, Fn&& func)
       -> TaskID
     {
       return create_parallel_for_task_recursive(
@@ -103,8 +103,8 @@ namespace soul::runtime
     auto wait_task(TaskID task_id) -> void;
     auto task_run(TaskID task_id) -> void;
 
-    auto get_thread_count() const -> uint16;
-    static auto get_thread_id() -> uint16;
+    auto get_thread_count() const -> ui16;
+    static auto get_thread_id() -> ui16;
     auto get_thread_context() -> ThreadContext&;
 
     static auto get() -> System&
@@ -116,8 +116,8 @@ namespace soul::runtime
     auto push_allocator(memory::Allocator* allocator) -> void;
     auto pop_allocator() -> void;
     auto get_context_allocator() -> memory::Allocator*;
-    auto allocate(uint32 size, uint32 alignment) -> void*;
-    auto deallocate(void* addr, uint32 size) -> void;
+    auto allocate(ui32 size, ui32 alignment) -> void*;
+    auto deallocate(void* addr, ui32 size) -> void;
     auto get_temp_allocator() -> TempAllocator*;
 
   private:

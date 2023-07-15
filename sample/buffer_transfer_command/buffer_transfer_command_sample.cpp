@@ -12,9 +12,9 @@ using namespace soul;
 
 class BufferTransferCommandSample final : public App
 {
-  static constexpr soul_size ROW_COUNT = 2;
-  static constexpr soul_size COL_COUNT = 2;
-  static constexpr soul_size TRANSFORM_COUNT = ROW_COUNT * COL_COUNT;
+  static constexpr usize ROW_COUNT = 2;
+  static constexpr usize COL_COUNT = 2;
+  static constexpr usize TRANSFORM_COUNT = ROW_COUNT * COL_COUNT;
 
   struct Vertex {
     vec2f position = {};
@@ -27,7 +27,7 @@ class BufferTransferCommandSample final : public App
     {{0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}},
     {{-0.5f, 0.5f}, {1.0f, 1.0f, 1.0f}}};
 
-  using Index = uint16;
+  using Index = ui16;
   static constexpr Index INDICES[] = {0, 1, 2, 2, 3, 0};
 
   gpu::ProgramID program_id_ = gpu::ProgramID();
@@ -46,11 +46,11 @@ class BufferTransferCommandSample final : public App
     float y_start,
     float x_end,
     float y_end,
-    uint32 row_count,
-    uint32 col_count) -> void
+    ui32 row_count,
+    ui32 col_count) -> void
   {
-    for (uint32 col_idx = 0; col_idx < col_count; col_idx++) {
-      for (uint32 row_idx = 0; row_idx < row_count; row_idx++) {
+    for (ui32 col_idx = 0; col_idx < col_count; col_idx++) {
+      for (ui32 row_idx = 0; row_idx < row_count; row_idx++) {
         const auto x_offset = x_start + ((x_end - x_start) / static_cast<float>(col_count)) *
                                           (static_cast<float>(col_idx) + 0.5f);
         const auto y_offset = y_start + ((y_end - y_start) / static_cast<float>(row_count)) *
@@ -265,7 +265,7 @@ class BufferTransferCommandSample final : public App
 
         struct PushConstant {
           gpu::DescriptorID transform_descriptor_id = gpu::DescriptorID::null();
-          uint32 offset = 0;
+          ui32 offset = 0;
         };
 
         auto pipeline_state_id = registry.get_pipeline_state(pipeline_desc);
@@ -275,18 +275,18 @@ class BufferTransferCommandSample final : public App
 
         const auto push_constants_count =
           transforms_q1_.size() + transforms_q2_.size() + transient_transforms_.size();
-        const auto push_constant_indexes = std::views::iota(soul_size(0), push_constants_count);
+        const auto push_constant_indexes = std::views::iota(usize(0), push_constants_count);
         auto push_constants = Vector<PushConstant>::transform(
-          push_constant_indexes, [=](soul_size push_constant_idx) -> PushConstant {
+          push_constant_indexes, [=](usize push_constant_idx) -> PushConstant {
             return {
               .transform_descriptor_id = transform_buffer_descriptor_id,
-              .offset = soul::cast<uint32>(push_constant_idx * sizeof(Transform)),
+              .offset = soul::cast<ui32>(push_constant_idx * sizeof(Transform)),
             };
           });
 
         using Command = gpu::RenderCommandDrawIndex;
         command_list.template push<Command>(
-          push_constants.size(), [=, this, &push_constants](const soul_size index) -> Command {
+          push_constants.size(), [=, this, &push_constants](const usize index) -> Command {
             return {
               .pipeline_state_id = pipeline_state_id,
               .push_constant_data = &push_constants[index],

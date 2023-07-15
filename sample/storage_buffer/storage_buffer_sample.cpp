@@ -10,9 +10,9 @@ using namespace soul;
 
 class StorageBufferSampleApp final : public App
 {
-  static constexpr soul_size ROW_COUNT = 4;
-  static constexpr soul_size COL_COUNT = 5;
-  static constexpr soul_size TRANSFORM_COUNT = ROW_COUNT * COL_COUNT;
+  static constexpr usize ROW_COUNT = 4;
+  static constexpr usize COL_COUNT = 5;
+  static constexpr usize TRANSFORM_COUNT = ROW_COUNT * COL_COUNT;
 
   struct Vertex {
     vec2f position = {};
@@ -25,7 +25,7 @@ class StorageBufferSampleApp final : public App
     {{0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}},
     {{-0.5f, 0.5f}, {1.0f, 1.0f, 1.0f}}};
 
-  using Index = uint16;
+  using Index = ui16;
   static constexpr Index INDICES[] = {0, 1, 2, 2, 3, 0};
 
   gpu::ProgramID program_id_ = gpu::ProgramID();
@@ -70,7 +70,7 @@ class StorageBufferSampleApp final : public App
 
         struct PushConstant {
           gpu::DescriptorID transform_descriptor_id = gpu::DescriptorID::null();
-          uint32 offset = 0;
+          ui32 offset = 0;
         };
 
         using Command = gpu::RenderCommandDrawIndex;
@@ -79,10 +79,10 @@ class StorageBufferSampleApp final : public App
         auto pipeline_state_id = registry.get_pipeline_state(pipeline_desc);
         auto push_constants = Vector<PushConstant>::with_size(TRANSFORM_COUNT);
         command_list.template push<Command>(
-          TRANSFORM_COUNT, [=, this, &push_constants](const soul_size index) -> Command {
+          TRANSFORM_COUNT, [=, this, &push_constants](const usize index) -> Command {
             push_constants[index] = {
               .transform_descriptor_id = transform_descriptor_id,
-              .offset = soul::cast<uint32>(index * sizeof(Transform)),
+              .offset = soul::cast<ui32>(index * sizeof(Transform)),
             };
             return {
               .pipeline_state_id = pipeline_state_id,
@@ -141,7 +141,7 @@ public:
     gpu_system_->flush_buffer(index_buffer_id_);
 
     auto transforms = Vector<Transform>::with_size(TRANSFORM_COUNT);
-    for (soul_size transform_idx = 0; transform_idx < transforms.size(); transform_idx++) {
+    for (usize transform_idx = 0; transform_idx < transforms.size(); transform_idx++) {
       const auto col_idx = transform_idx % COL_COUNT;
       const auto row_idx = transform_idx / COL_COUNT;
       const auto x_offset = -1.0f + (2.0f / COL_COUNT) * (static_cast<float>(col_idx) + 0.5f);

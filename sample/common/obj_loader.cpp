@@ -86,7 +86,7 @@ auto ObjLoader::load_model(const std::filesystem::path& filepath) -> void
 
   // Fixing material indices
   for (auto& mi : mat_indexes) {
-    if (mi < 0 || mi > soul::cast<int32>(materials.size())) {
+    if (mi < 0 || mi > soul::cast<i32>(materials.size())) {
       mi = 0;
     }
   }

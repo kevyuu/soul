@@ -43,16 +43,16 @@ namespace soul::runtime
   }
 
   template <ts_fn<void,int> Fn>
-  auto parallel_for_task_create(TaskID parent, uint32 count, uint32 blockSize, Fn&& func)
+  auto parallel_for_task_create(TaskID parent, ui32 count, ui32 blockSize, Fn&& func)
     -> TaskID
   {
     return System::get().create_parallel_for_task_recursive(
       parent, 0, count, blockSize, std::forward<Fn>(func));
   }
 
-  inline auto get_thread_id() -> uint16 { return System::get().get_thread_id(); }
+  inline auto get_thread_id() -> ui16 { return System::get().get_thread_id(); }
 
-  inline auto get_thread_count() -> uint16 { return System::get().get_thread_count(); }
+  inline auto get_thread_count() -> ui16 { return System::get().get_thread_count(); }
 
   inline auto push_allocator(memory::Allocator* allocator) -> void
   {
@@ -68,12 +68,12 @@ namespace soul::runtime
 
   inline auto get_temp_allocator() -> TempAllocator* { return System::get().get_temp_allocator(); }
 
-  inline auto allocate(uint32 size, uint32 alignment) -> void*
+  inline auto allocate(ui32 size, ui32 alignment) -> void*
   {
     return System::get().allocate(size, alignment);
   }
 
-  inline auto deallocate(void* addr, uint32 size) -> void
+  inline auto deallocate(void* addr, ui32 size) -> void
   {
     return System::get().deallocate(addr, size);
   }

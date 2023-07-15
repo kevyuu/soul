@@ -139,7 +139,7 @@ namespace soul::gpu
     auto on_new_frame() -> void
     {
       frame_index_ = (frame_index_ + 1) % RingSize;
-      soul_size free_count = 0;
+      usize free_count = 0;
       for (Item& item : rings_[frame_index_]) {
         auto search_key = get_search_key(item.key);
         auto item_id = map_[search_key];
@@ -157,7 +157,7 @@ namespace soul::gpu
     struct Item : public IntrusiveListNode {
       KeyType key;
       ValType val;
-      soul_size index = 0;
+      usize index = 0;
     };
 
     struct ItemKey {
@@ -207,7 +207,7 @@ namespace soul::gpu
     ObjectPool<Item> object_pool_;
     using Ring = IntrusiveList<Item>;
     Ring rings_[RingSize];
-    soul_size frame_index_ = 0;
+    usize frame_index_ = 0;
     Hash hash_op_;
     ValDeleter deleter_;
   };

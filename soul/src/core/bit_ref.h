@@ -10,7 +10,7 @@ namespace soul
   {
   public:
     using this_type = BitRef<BlockT>;
-    BitRef(BlockT* ptr, soul_size bit_index);
+    BitRef(BlockT* ptr, usize bit_index);
 
     ~BitRef() = default;
 
@@ -33,7 +33,7 @@ namespace soul
     BitRef(BitRef&&) noexcept = default;
 
     BlockT* bit_block_ = nullptr;
-    soul_size bit_index_ = 0;
+    usize bit_index_ = 0;
     BitRef() = default;
 
     auto set_true() -> void;
@@ -45,7 +45,7 @@ namespace soul
   };
 
   template <ts_bit_block ElementType>
-  BitRef<ElementType>::BitRef(ElementType* ptr, const soul_size bit_index)
+  BitRef<ElementType>::BitRef(ElementType* ptr, const usize bit_index)
       : bit_block_(ptr), bit_index_(bit_index)
   {
   }

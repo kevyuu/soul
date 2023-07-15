@@ -24,7 +24,7 @@ namespace soul::gpu::impl
   {
   public:
     explicit BindlessDescriptorSet(
-      uint32 capacity,
+      ui32 capacity,
       VkDescriptorType descriptor_type,
       memory::Allocator* allocator = runtime::get_context_allocator());
     BindlessDescriptorSet(const BindlessDescriptorSet&) = delete;
@@ -47,9 +47,9 @@ namespace soul::gpu::impl
 
   private:
     memory::Allocator* allocator_;
-    uint32 free_head_;
-    uint32* list_;
-    uint32 capacity_;
+    ui32 free_head_;
+    ui32* list_;
+    ui32 capacity_;
     VkDescriptorType descriptor_type_;
     VkDescriptorSet descriptor_set_ = VK_NULL_HANDLE;
     VkDescriptorSetLayout descriptor_set_layout_ = VK_NULL_HANDLE;
@@ -92,11 +92,11 @@ namespace soul::gpu::impl
     }
 
   private:
-    static constexpr uint32 STORAGE_BUFFER_DESCRIPTOR_COUNT = 512u * 1024;
-    static constexpr uint32 SAMPLER_DESCRIPTOR_COUNT = 4u * 1024;
-    static constexpr uint32 SAMPLED_IMAGE_DESCRIPTOR_COUNT = 512u * 1024;
-    static constexpr uint32 STORAGE_IMAGE_DESCRIPTOR_COUNT = 512u * 1024;
-    static constexpr uint32 AS_DESCRIPTOR_COUNT = 512u;
+    static constexpr ui32 STORAGE_BUFFER_DESCRIPTOR_COUNT = 512u * 1024;
+    static constexpr ui32 SAMPLER_DESCRIPTOR_COUNT = 4u * 1024;
+    static constexpr ui32 SAMPLED_IMAGE_DESCRIPTOR_COUNT = 512u * 1024;
+    static constexpr ui32 STORAGE_IMAGE_DESCRIPTOR_COUNT = 512u * 1024;
+    static constexpr ui32 AS_DESCRIPTOR_COUNT = 512u;
 
     VkDescriptorPool descriptor_pool_ = VK_NULL_HANDLE;
     BindlessDescriptorSet storage_buffer_descriptor_set_;

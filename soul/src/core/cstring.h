@@ -22,7 +22,7 @@ namespace soul
     using reference = char&;
     using const_reference = const char&;
 
-    explicit CString(soul_size size, memory::Allocator& allocator = *get_default_allocator());
+    explicit CString(usize size, memory::Allocator& allocator = *get_default_allocator());
 
     CString(const char*, memory::Allocator& allocator);
 
@@ -47,7 +47,7 @@ namespace soul
 
     friend auto swap(CString& a, CString& b) noexcept -> void { a.swap(b); }
 
-    auto reserve(soul_size new_capacity) -> void;
+    auto reserve(usize new_capacity) -> void;
 
     auto push_back(char c) -> void;
 
@@ -59,10 +59,10 @@ namespace soul
     void appendf(std::format_string<Args...> fmt, Args&&... args);
 
     [[nodiscard]]
-    auto capacity() const -> soul_size;
+    auto capacity() const -> usize;
 
     [[nodiscard]]
-    auto size() const -> soul_size;
+    auto size() const -> usize;
 
     [[nodiscard]]
     auto data() -> pointer;
@@ -73,8 +73,8 @@ namespace soul
   private:
     struct HeapLayout {
       value_type* data;
-      soul_size capacity;
-      soul_size size;
+      usize capacity;
+      usize size;
     };
 
     struct SSOLayout {
@@ -83,8 +83,8 @@ namespace soul
     };
 
     memory::Allocator* allocator_;
-    soul_size capacity_ = 0;
-    soul_size size_ = 0; // string size, not counting NULL
+    usize capacity_ = 0;
+    usize size_ = 0; // string size, not counting NULL
     char* data_ = nullptr;
 
     CString(const CString&);
@@ -106,13 +106,13 @@ namespace soul
   }
 
   [[nodiscard]]
-  inline auto CString::capacity() const -> soul_size
+  inline auto CString::capacity() const -> usize
   {
     return capacity_;
   }
 
   [[nodiscard]]
-  inline auto CString::size() const -> soul_size
+  inline auto CString::size() const -> usize
   {
     return size_;
   }

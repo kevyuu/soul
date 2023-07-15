@@ -37,7 +37,7 @@ namespace soul
   template <
     typename T,
     memory::allocator_type AllocatorT = memory::Allocator,
-    soul_size inline_element_count = 0>
+    usize inline_element_count = 0>
   class Vector
   {
   public:
@@ -52,7 +52,7 @@ namespace soul
     using reverse_iterator = std::reverse_iterator<iterator>;
     using const_reverse_iterator = std::reverse_iterator<const_iterator>;
 
-    static constexpr soul_size INLINE_ELEMENT_COUNT = inline_element_count;
+    static constexpr usize INLINE_ELEMENT_COUNT = inline_element_count;
 
     explicit Vector(AllocatorT* allocator = get_default_allocator());
     Vector(Vector&& other) noexcept;
@@ -60,11 +60,11 @@ namespace soul
     ~Vector();
 
     [[nodiscard]]
-    static auto with_size(soul_size size, AllocatorT& allocator = *get_default_allocator())
+    static auto with_size(usize size, AllocatorT& allocator = *get_default_allocator())
       -> this_type;
 
     [[nodiscard]]
-    static auto with_capacity(soul_size capacity, AllocatorT& allocator = *get_default_allocator())
+    static auto with_capacity(usize capacity, AllocatorT& allocator = *get_default_allocator())
       -> this_type;
 
     template <std::ranges::input_range RangeT>
@@ -73,13 +73,13 @@ namespace soul
 
     [[nodiscard]]
     static auto fill_n(
-      soul_size size, const value_type& val, AllocatorT& allocator = *get_default_allocator())
+      usize size, const value_type& val, AllocatorT& allocator = *get_default_allocator())
       -> this_type
       requires ts_copy<T>;
 
     template <ts_generate_fn<T> Fn>
     [[nodiscard]]
-    static auto generate_n(Fn fn, soul_size size, AllocatorT& allocator = *get_default_allocator())
+    static auto generate_n(Fn fn, usize size, AllocatorT& allocator = *get_default_allocator())
       -> this_type;
 
     template <std::ranges::input_range RangeT, typename Fn>
@@ -95,7 +95,7 @@ namespace soul
 
     void clone_from(const this_type& other);
 
-    void assign(soul_size size, const value_type& value)
+    void assign(usize size, const value_type& value)
       requires ts_copy<T>;
 
     template <std::ranges::input_range RangeT>
@@ -142,10 +142,10 @@ namespace soul
     auto crend() const -> const_reverse_iterator;
 
     [[nodiscard]]
-    auto capacity() const noexcept -> soul_size;
+    auto capacity() const noexcept -> usize;
 
     [[nodiscard]]
-    auto size() const noexcept -> soul_size;
+    auto size() const noexcept -> usize;
 
     [[nodiscard]]
     auto empty() const noexcept -> bool;
@@ -155,9 +155,9 @@ namespace soul
     [[nodiscard]]
     auto get_allocator() const noexcept -> AllocatorT*;
 
-    void resize(soul_size size);
+    void resize(usize size);
 
-    void reserve(soul_size capacity);
+    void reserve(usize capacity);
 
     void push_back(OwnRef<T> item);
 
@@ -167,14 +167,14 @@ namespace soul
 
     void pop_back();
 
-    void pop_back(soul_size count);
+    void pop_back(usize count);
 
     void clear() noexcept;
 
     void cleanup();
 
     [[nodiscard]]
-    auto add(OwnRef<T> item) -> soul_size;
+    auto add(OwnRef<T> item) -> usize;
 
     template <typename... Args>
     auto emplace_back(Args&&... args) -> reference;
@@ -202,20 +202,20 @@ namespace soul
 
     [[nodiscard]]
     auto
-    operator[](soul_size idx) -> reference;
+    operator[](usize idx) -> reference;
 
     [[nodiscard]]
     auto
-    operator[](soul_size idx) const -> const_reference;
+    operator[](usize idx) const -> const_reference;
 
   private:
     SOUL_NO_UNIQUE_ADDRESS RawBuffer<T, inline_element_count> stack_storage_;
-    static constexpr soul_size GROWTH_FACTOR = 2;
+    static constexpr usize GROWTH_FACTOR = 2;
     static constexpr bool IS_SBO = inline_element_count > 0;
     AllocatorT* allocator_ = nullptr;
     T* buffer_ = stack_storage_.data();
-    soul_size size_ = 0;
-    soul_size capacity_ = inline_element_count;
+    usize size_ = 0;
+    usize capacity_ = inline_element_count;
 
     Vector(const Vector& other, AllocatorT& allocator);
 
@@ -225,25 +225,25 @@ namespace soul
 
     explicit Vector(
       vector_construct::with_size_t tag,
-      soul_size size,
+      usize size,
       AllocatorT& allocator = *get_default_allocator());
 
     explicit Vector(
       vector_construct::fill_n_t tag,
       const value_type& val,
-      soul_size size,
+      usize size,
       AllocatorT& allocator = *get_default_allocator());
 
     template <ts_generate_fn<T> Fn>
     explicit Vector(
       vector_construct::generate_n_t tag,
       Fn fn,
-      soul_size size,
+      usize size,
       AllocatorT& allocator = *get_default_allocator());
 
     explicit Vector(
       vector_construct::with_capacity_t tag,
-      soul_size capacity,
+      usize capacity,
       AllocatorT& allocator = *get_default_allocator());
 
     template <std::ranges::input_range RangeT>
@@ -260,20 +260,20 @@ namespace soul
       AllocatorT& allocator = *get_default_allocator());
 
     [[nodiscard]]
-    static auto get_new_capacity(soul_size old_capacity) -> soul_size;
+    static auto get_new_capacity(usize old_capacity) -> usize;
 
-    void init_reserve(soul_size capacity);
+    void init_reserve(usize capacity);
 
     [[nodiscard]]
     auto is_using_stack_storage() const -> bool;
   };
 
-  template <typename T, memory::allocator_type AllocatorT, soul_size N>
+  template <typename T, memory::allocator_type AllocatorT, usize N>
   Vector<T, AllocatorT, N>::Vector(AllocatorT* allocator) : allocator_(allocator)
   {
   }
 
-  template <typename T, memory::allocator_type AllocatorT, soul_size N>
+  template <typename T, memory::allocator_type AllocatorT, usize N>
   Vector<T, AllocatorT, N>::Vector(const Vector& other)
       : allocator_(other.allocator_), size_(other.size_)
   {
@@ -285,7 +285,7 @@ namespace soul
     }
   }
 
-  template <typename T, memory::allocator_type AllocatorT, soul_size N>
+  template <typename T, memory::allocator_type AllocatorT, usize N>
   Vector<T, AllocatorT, N>::Vector(const Vector& other, AllocatorT& allocator)
       : allocator_(&allocator), size_(other.size_)
   {
@@ -297,7 +297,7 @@ namespace soul
     }
   }
 
-  template <typename T, memory::allocator_type AllocatorT, soul_size N>
+  template <typename T, memory::allocator_type AllocatorT, usize N>
   Vector<T, AllocatorT, N>::Vector(Vector&& other) noexcept
       : allocator_(std::exchange(other.allocator_, nullptr))
   {
@@ -310,28 +310,28 @@ namespace soul
     size_ = std::exchange(other.size_, 0);
   }
 
-  template <typename T, memory::allocator_type AllocatorT, soul_size N>
+  template <typename T, memory::allocator_type AllocatorT, usize N>
   Vector<T, AllocatorT, N>::Vector(
-    vector_construct::with_size_t /*tag*/, soul_size size, AllocatorT& allocator)
+    vector_construct::with_size_t /*tag*/, usize size, AllocatorT& allocator)
       : allocator_(&allocator), size_(size)
   {
     init_reserve(size);
     uninitialized_value_construct_n(buffer_, size);
   }
 
-  template <typename T, memory::allocator_type AllocatorT, soul_size N>
+  template <typename T, memory::allocator_type AllocatorT, usize N>
   Vector<T, AllocatorT, N>::Vector(
-    vector_construct::with_capacity_t /*tag*/, soul_size capacity, AllocatorT& allocator)
+    vector_construct::with_capacity_t /*tag*/, usize capacity, AllocatorT& allocator)
       : allocator_(&allocator)
   {
     init_reserve(capacity);
   }
 
-  template <typename T, memory::allocator_type AllocatorT, soul_size N>
+  template <typename T, memory::allocator_type AllocatorT, usize N>
   Vector<T, AllocatorT, N>::Vector(
     vector_construct::fill_n_t /*tag*/,
     const value_type& val,
-    soul_size size,
+    usize size,
     AllocatorT& allocator)
       : allocator_(&allocator), size_(size)
   {
@@ -339,24 +339,24 @@ namespace soul
     std::uninitialized_fill_n(buffer_, size, val);
   }
 
-  template <typename T, memory::allocator_type AllocatorT, soul_size N>
+  template <typename T, memory::allocator_type AllocatorT, usize N>
   template <ts_generate_fn<T> Fn>
   Vector<T, AllocatorT, N>::Vector(
-    vector_construct::generate_n_t /*tag*/, Fn fn, soul_size size, AllocatorT& allocator)
+    vector_construct::generate_n_t /*tag*/, Fn fn, usize size, AllocatorT& allocator)
       : allocator_(&allocator), size_(size)
   {
     init_reserve(size);
     uninitialized_generate_n(fn, size, buffer_);
   }
 
-  template <typename T, memory::allocator_type AllocatorT, soul_size N>
+  template <typename T, memory::allocator_type AllocatorT, usize N>
   template <std::ranges::input_range RangeT>
   Vector<T, AllocatorT, N>::Vector(
     vector_construct::from_t /*tag*/, RangeT&& range, AllocatorT& allocator)
       : allocator_(&allocator)
   {
     if constexpr (std::ranges::sized_range<RangeT> || std::ranges::forward_range<RangeT>) {
-      const auto size = soul_size(std::ranges::distance(range));
+      const auto size = usize(std::ranges::distance(range));
       init_reserve(size);
       uninitialized_copy_n(std::ranges::begin(range), size, buffer_);
       size_ = size;
@@ -367,14 +367,14 @@ namespace soul
     }
   }
 
-  template <typename T, memory::allocator_type AllocatorT, soul_size N>
+  template <typename T, memory::allocator_type AllocatorT, usize N>
   template <std::ranges::input_range RangeT, typename Fn>
   Vector<T, AllocatorT, N>::Vector(
     vector_construct::transform_t /*tag*/, RangeT&& range, Fn fn, AllocatorT& allocator)
       : allocator_(&allocator)
   {
     if constexpr (std::ranges::sized_range<RangeT> || std::ranges::forward_range<RangeT>) {
-      const auto size = soul_size(std::ranges::distance(range));
+      const auto size = usize(std::ranges::distance(range));
       init_reserve(size);
       uninitialized_transform_construct_n(std::ranges::begin(range), std::move(fn), size, buffer_);
       size_ = size;
@@ -385,7 +385,7 @@ namespace soul
     }
   }
 
-  template <typename T, memory::allocator_type AllocatorT, soul_size N>
+  template <typename T, memory::allocator_type AllocatorT, usize N>
   auto Vector<T, AllocatorT, N>::operator=(const Vector& rhs) -> this_type&
   {
     // NOLINT(bugprone-unhandled-self-assignment) use copy and swap idiom
@@ -393,7 +393,7 @@ namespace soul
     return *this;
   }
 
-  template <typename T, memory::allocator_type AllocatorT, soul_size N>
+  template <typename T, memory::allocator_type AllocatorT, usize N>
   auto Vector<T, AllocatorT, N>::operator=(Vector&& other) noexcept -> this_type&
   {
     if (this->allocator_ == other.allocator_) {
@@ -404,55 +404,55 @@ namespace soul
     return *this;
   }
 
-  template <typename T, memory::allocator_type AllocatorT, soul_size N>
+  template <typename T, memory::allocator_type AllocatorT, usize N>
   Vector<T, AllocatorT, N>::~Vector()
   {
     cleanup();
   }
 
-  template <typename T, memory::allocator_type AllocatorT, soul_size N>
-  auto Vector<T, AllocatorT, N>::with_size(soul_size size, AllocatorT& allocator) -> this_type
+  template <typename T, memory::allocator_type AllocatorT, usize N>
+  auto Vector<T, AllocatorT, N>::with_size(usize size, AllocatorT& allocator) -> this_type
   {
     return this_type(vector_construct::with_size, size, allocator);
   }
 
-  template <typename T, memory::allocator_type AllocatorT, soul_size N>
+  template <typename T, memory::allocator_type AllocatorT, usize N>
   auto Vector<T, AllocatorT, N>::fill_n(
-    soul_size size, const value_type& val, AllocatorT& allocator) -> this_type
+    usize size, const value_type& val, AllocatorT& allocator) -> this_type
     requires ts_copy<T>
   {
     return this_type(vector_construct::fill_n, val, size, allocator);
   }
 
-  template <typename T, memory::allocator_type AllocatorT, soul_size N>
+  template <typename T, memory::allocator_type AllocatorT, usize N>
   template <ts_generate_fn<T> Fn>
-  auto Vector<T, AllocatorT, N>::generate_n(Fn fn, soul_size size, AllocatorT& allocator)
+  auto Vector<T, AllocatorT, N>::generate_n(Fn fn, usize size, AllocatorT& allocator)
     -> this_type
   {
     return this_type(vector_construct::generate_n, fn, size, allocator);
   }
 
-  template <typename T, memory::allocator_type AllocatorT, soul_size inline_element_count>
+  template <typename T, memory::allocator_type AllocatorT, usize inline_element_count>
   auto Vector<T, AllocatorT, inline_element_count>::clone() const -> this_type
   {
     return Vector(*this);
   }
 
-  template <typename T, memory::allocator_type AllocatorT, soul_size inline_element_count>
+  template <typename T, memory::allocator_type AllocatorT, usize inline_element_count>
   auto Vector<T, AllocatorT, inline_element_count>::clone(memory::Allocator& allocator) const
     -> this_type
   {
     return Vector(*this, allocator);
   }
 
-  template <typename T, memory::allocator_type AllocatorT, soul_size N>
-  auto Vector<T, AllocatorT, N>::with_capacity(soul_size capacity, AllocatorT& allocator)
+  template <typename T, memory::allocator_type AllocatorT, usize N>
+  auto Vector<T, AllocatorT, N>::with_capacity(usize capacity, AllocatorT& allocator)
     -> this_type
   {
     return this_type(vector_construct::with_capacity, capacity, allocator);
   }
 
-  template <typename T, memory::allocator_type AllocatorT, soul_size N>
+  template <typename T, memory::allocator_type AllocatorT, usize N>
   template <std::ranges::input_range RangeT>
   [[nodiscard]]
   auto Vector<T, AllocatorT, N>::from(RangeT&& range, AllocatorT& allocator) -> this_type
@@ -460,7 +460,7 @@ namespace soul
     return this_type(vector_construct::from, std::forward<RangeT>(range), allocator);
   }
 
-  template <typename T, memory::allocator_type AllocatorT, soul_size N>
+  template <typename T, memory::allocator_type AllocatorT, usize N>
   template <std::ranges::input_range RangeT, typename Fn>
   [[nodiscard]]
   auto Vector<T, AllocatorT, N>::transform(RangeT&& range, Fn fn, AllocatorT& allocator)
@@ -470,14 +470,14 @@ namespace soul
       vector_construct::transform, std::forward<RangeT>(range), std::move(fn), allocator);
   }
 
-  template <typename T, memory::allocator_type AllocatorT, soul_size inline_element_count>
+  template <typename T, memory::allocator_type AllocatorT, usize inline_element_count>
   void Vector<T, AllocatorT, inline_element_count>::clone_from(const this_type& other)
   {
     *this = other;
   }
 
-  template <typename T, memory::allocator_type AllocatorT, soul_size N>
-  void Vector<T, AllocatorT, N>::assign(soul_size size, const value_type& value)
+  template <typename T, memory::allocator_type AllocatorT, usize N>
+  void Vector<T, AllocatorT, N>::assign(usize size, const value_type& value)
     requires ts_copy<T>
   {
     if (size > capacity_) {
@@ -494,13 +494,13 @@ namespace soul
     }
   }
 
-  template <typename T, memory::allocator_type AllocatorT, soul_size N>
+  template <typename T, memory::allocator_type AllocatorT, usize N>
   template <std::ranges::input_range RangeT>
   void Vector<T, AllocatorT, N>::assign(RangeT&& range)
   {
     if constexpr (std::ranges::sized_range<RangeT> || std::ranges::forward_range<RangeT>) {
 
-      const auto new_size = soul::cast<soul_size>(std::ranges::distance(range));
+      const auto new_size = soul::cast<usize>(std::ranges::distance(range));
 
       if (new_size > capacity_) {
 
@@ -554,7 +554,7 @@ namespace soul
     }
   }
 
-  template <typename T, memory::allocator_type AllocatorT, soul_size N>
+  template <typename T, memory::allocator_type AllocatorT, usize N>
   void Vector<T, AllocatorT, N>::swap(this_type& other) noexcept
   {
     using std::swap;
@@ -582,97 +582,97 @@ namespace soul
     swap(capacity_, other.capacity_);
   }
 
-  template <typename T, memory::allocator_type AllocatorT, soul_size inline_element_count>
+  template <typename T, memory::allocator_type AllocatorT, usize inline_element_count>
   auto Vector<T, AllocatorT, inline_element_count>::begin() -> iterator
   {
     return buffer_;
   }
 
-  template <typename T, memory::allocator_type AllocatorT, soul_size inline_element_count>
+  template <typename T, memory::allocator_type AllocatorT, usize inline_element_count>
   auto Vector<T, AllocatorT, inline_element_count>::begin() const -> const_iterator
   {
     return buffer_;
   }
 
-  template <typename T, memory::allocator_type AllocatorT, soul_size inline_element_count>
+  template <typename T, memory::allocator_type AllocatorT, usize inline_element_count>
   auto Vector<T, AllocatorT, inline_element_count>::cbegin() const -> const_iterator
   {
     return buffer_;
   }
 
-  template <typename T, memory::allocator_type AllocatorT, soul_size inline_element_count>
+  template <typename T, memory::allocator_type AllocatorT, usize inline_element_count>
   auto Vector<T, AllocatorT, inline_element_count>::end() -> iterator
   {
     return buffer_ + size_;
   }
 
-  template <typename T, memory::allocator_type AllocatorT, soul_size inline_element_count>
+  template <typename T, memory::allocator_type AllocatorT, usize inline_element_count>
   auto Vector<T, AllocatorT, inline_element_count>::end() const -> const_iterator
   {
     return buffer_ + size_;
   }
 
-  template <typename T, memory::allocator_type AllocatorT, soul_size inline_element_count>
+  template <typename T, memory::allocator_type AllocatorT, usize inline_element_count>
   auto Vector<T, AllocatorT, inline_element_count>::cend() const -> const_iterator
   {
     return buffer_ + size_;
   }
 
-  template <typename T, memory::allocator_type AllocatorT, soul_size inline_element_count>
+  template <typename T, memory::allocator_type AllocatorT, usize inline_element_count>
   auto Vector<T, AllocatorT, inline_element_count>::rbegin() -> reverse_iterator
   {
     return reverse_iterator(end());
   }
 
-  template <typename T, memory::allocator_type AllocatorT, soul_size inline_element_count>
+  template <typename T, memory::allocator_type AllocatorT, usize inline_element_count>
   auto Vector<T, AllocatorT, inline_element_count>::rbegin() const -> const_reverse_iterator
   {
     return const_reverse_iterator(cend());
   }
 
-  template <typename T, memory::allocator_type AllocatorT, soul_size inline_element_count>
+  template <typename T, memory::allocator_type AllocatorT, usize inline_element_count>
   auto Vector<T, AllocatorT, inline_element_count>::crbegin() const -> const_reverse_iterator
   {
     return const_reverse_iterator(cend());
   }
 
-  template <typename T, memory::allocator_type AllocatorT, soul_size inline_element_count>
+  template <typename T, memory::allocator_type AllocatorT, usize inline_element_count>
   auto Vector<T, AllocatorT, inline_element_count>::rend() -> reverse_iterator
   {
     return reverse_iterator(begin());
   }
 
-  template <typename T, memory::allocator_type AllocatorT, soul_size inline_element_count>
+  template <typename T, memory::allocator_type AllocatorT, usize inline_element_count>
   auto Vector<T, AllocatorT, inline_element_count>::rend() const -> const_reverse_iterator
   {
     return const_reverse_iterator(cbegin());
   }
 
-  template <typename T, memory::allocator_type AllocatorT, soul_size inline_element_count>
+  template <typename T, memory::allocator_type AllocatorT, usize inline_element_count>
   auto Vector<T, AllocatorT, inline_element_count>::crend() const -> const_reverse_iterator
   {
     return const_reverse_iterator(cbegin());
   }
 
-  template <typename T, memory::allocator_type AllocatorT, soul_size inline_element_count>
-  auto Vector<T, AllocatorT, inline_element_count>::capacity() const noexcept -> soul_size
+  template <typename T, memory::allocator_type AllocatorT, usize inline_element_count>
+  auto Vector<T, AllocatorT, inline_element_count>::capacity() const noexcept -> usize
   {
     return capacity_;
   }
 
-  template <typename T, memory::allocator_type AllocatorT, soul_size inline_element_count>
-  auto Vector<T, AllocatorT, inline_element_count>::size() const noexcept -> soul_size
+  template <typename T, memory::allocator_type AllocatorT, usize inline_element_count>
+  auto Vector<T, AllocatorT, inline_element_count>::size() const noexcept -> usize
   {
     return size_;
   }
 
-  template <typename T, memory::allocator_type AllocatorT, soul_size inline_element_count>
+  template <typename T, memory::allocator_type AllocatorT, usize inline_element_count>
   auto Vector<T, AllocatorT, inline_element_count>::empty() const noexcept -> bool
   {
     return size_ == 0;
   }
 
-  template <typename T, memory::allocator_type AllocatorT, soul_size N>
+  template <typename T, memory::allocator_type AllocatorT, usize N>
   void Vector<T, AllocatorT, N>::set_allocator(AllocatorT& allocator) noexcept
   {
     if (buffer_ != stack_storage_.data()) {
@@ -684,14 +684,14 @@ namespace soul
     allocator_ = &allocator;
   }
 
-  template <typename T, memory::allocator_type AllocatorT, soul_size N>
+  template <typename T, memory::allocator_type AllocatorT, usize N>
   auto Vector<T, AllocatorT, N>::get_allocator() const noexcept -> AllocatorT*
   {
     return allocator_;
   }
 
-  template <typename T, memory::allocator_type AllocatorT, soul_size N>
-  void Vector<T, AllocatorT, N>::resize(soul_size size)
+  template <typename T, memory::allocator_type AllocatorT, usize N>
+  void Vector<T, AllocatorT, N>::resize(usize size)
   {
     if (size > size_) {
       if (size > capacity_) {
@@ -704,8 +704,8 @@ namespace soul
     size_ = size;
   }
 
-  template <typename T, memory::allocator_type AllocatorT, soul_size N>
-  void Vector<T, AllocatorT, N>::reserve(soul_size capacity)
+  template <typename T, memory::allocator_type AllocatorT, usize N>
+  void Vector<T, AllocatorT, N>::reserve(usize capacity)
   {
     if (capacity < capacity_) {
       return;
@@ -721,14 +721,14 @@ namespace soul
     }
   }
 
-  template <typename T, memory::allocator_type AllocatorT, soul_size N>
+  template <typename T, memory::allocator_type AllocatorT, usize N>
   void Vector<T, AllocatorT, N>::clear() noexcept
   {
     std::destroy_n(buffer_, size_);
     size_ = 0;
   }
 
-  template <typename T, memory::allocator_type AllocatorT, soul_size N>
+  template <typename T, memory::allocator_type AllocatorT, usize N>
   void Vector<T, AllocatorT, N>::cleanup()
   {
     clear();
@@ -739,7 +739,7 @@ namespace soul
     capacity_ = N;
   }
 
-  template <typename T, memory::allocator_type AllocatorT, soul_size N>
+  template <typename T, memory::allocator_type AllocatorT, usize N>
   void Vector<T, AllocatorT, N>::push_back(OwnRef<T> item)
   {
     if (size_ == capacity_) {
@@ -749,7 +749,7 @@ namespace soul
     ++size_;
   }
 
-  template <typename T, memory::allocator_type AllocatorT, soul_size N>
+  template <typename T, memory::allocator_type AllocatorT, usize N>
   void Vector<T, AllocatorT, N>::generate_back(ts_generate_fn<T> auto fn)
   {
     if (size_ == capacity_) {
@@ -758,7 +758,7 @@ namespace soul
     generate_at(buffer_ + size_, fn);
     ++size_;
   }
-  template <typename T, memory::allocator_type AllocatorT, soul_size N>
+  template <typename T, memory::allocator_type AllocatorT, usize N>
   void Vector<T, AllocatorT, N>::pop_back()
   {
     SOUL_ASSERT(0, size_ != 0, "Cannot pop_back an empty sbo_vector");
@@ -766,22 +766,22 @@ namespace soul
     std::destroy_n(buffer_ + size_, 1);
   }
 
-  template <typename T, memory::allocator_type AllocatorT, soul_size N>
-  void Vector<T, AllocatorT, N>::pop_back(soul_size count)
+  template <typename T, memory::allocator_type AllocatorT, usize N>
+  void Vector<T, AllocatorT, N>::pop_back(usize count)
   {
     SOUL_ASSERT(0, size_ >= count, "Cannot pop back more than sbo_vector size");
     size_ = size_ - count;
     std::destroy_n(buffer_ + size_, count);
   }
 
-  template <typename T, memory::allocator_type AllocatorT, soul_size N>
-  auto Vector<T, AllocatorT, N>::add(OwnRef<T> item) -> soul_size
+  template <typename T, memory::allocator_type AllocatorT, usize N>
+  auto Vector<T, AllocatorT, N>::add(OwnRef<T> item) -> usize
   {
     push_back(std::move(item));
     return size_ - 1;
   }
 
-  template <typename T, memory::allocator_type AllocatorT, soul_size N>
+  template <typename T, memory::allocator_type AllocatorT, usize N>
   template <typename... Args>
   auto Vector<T, AllocatorT, N>::emplace_back(Args&&... args) -> reference
   {
@@ -794,12 +794,12 @@ namespace soul
     return *item;
   }
 
-  template <typename T, memory::allocator_type AllocatorT, soul_size N>
+  template <typename T, memory::allocator_type AllocatorT, usize N>
   template <std::ranges::input_range RangeT>
   void Vector<T, AllocatorT, N>::append(RangeT&& range)
   {
     if constexpr (std::ranges::sized_range<RangeT> || std::ranges::forward_range<RangeT>) {
-      const auto range_size = soul_size(std::ranges::distance(range));
+      const auto range_size = usize(std::ranges::distance(range));
       const auto new_size = size_ + range_size;
       reserve(new_size);
       uninitialized_copy_n(std::ranges::begin(range), range_size, buffer_ + size_);
@@ -811,48 +811,48 @@ namespace soul
     }
   }
 
-  template <typename T, memory::allocator_type AllocatorT, soul_size inline_element_count>
+  template <typename T, memory::allocator_type AllocatorT, usize inline_element_count>
   auto Vector<T, AllocatorT, inline_element_count>::data() noexcept -> pointer
   {
     return buffer_;
   }
 
-  template <typename T, memory::allocator_type AllocatorT, soul_size inline_element_count>
+  template <typename T, memory::allocator_type AllocatorT, usize inline_element_count>
   auto Vector<T, AllocatorT, inline_element_count>::data() const noexcept -> const_pointer
   {
     return buffer_;
   }
 
-  template <typename T, memory::allocator_type AllocatorT, soul_size inline_element_count>
+  template <typename T, memory::allocator_type AllocatorT, usize inline_element_count>
   auto Vector<T, AllocatorT, inline_element_count>::front() -> reference
   {
     SOUL_ASSERT(0, size_ != 0, "Vector cannot be empty when calling Vector::front()");
     return buffer_[0];
   }
 
-  template <typename T, memory::allocator_type AllocatorT, soul_size inline_element_count>
+  template <typename T, memory::allocator_type AllocatorT, usize inline_element_count>
   auto Vector<T, AllocatorT, inline_element_count>::front() const -> const_reference
   {
     SOUL_ASSERT(0, size_ != 0, "Vector cannot be empty when calling Vector::front()");
     return buffer_[0];
   }
 
-  template <typename T, memory::allocator_type AllocatorT, soul_size inline_element_count>
+  template <typename T, memory::allocator_type AllocatorT, usize inline_element_count>
   auto Vector<T, AllocatorT, inline_element_count>::back() noexcept -> reference
   {
     SOUL_ASSERT(0, size_ != 0, "Vector cannot be empty when calling Vector::back()");
     return buffer_[size_ - 1];
   }
 
-  template <typename T, memory::allocator_type AllocatorT, soul_size inline_element_count>
+  template <typename T, memory::allocator_type AllocatorT, usize inline_element_count>
   auto Vector<T, AllocatorT, inline_element_count>::back() const noexcept -> const_reference
   {
     SOUL_ASSERT(0, size_ != 0, "Vector cannot be empty when calling Vector::back()");
     return buffer_[size_ - 1];
   }
 
-  template <typename T, memory::allocator_type AllocatorT, soul_size inline_element_count>
-  auto Vector<T, AllocatorT, inline_element_count>::operator[](soul_size idx) -> reference
+  template <typename T, memory::allocator_type AllocatorT, usize inline_element_count>
+  auto Vector<T, AllocatorT, inline_element_count>::operator[](usize idx) -> reference
   {
     SOUL_ASSERT(
       0,
@@ -863,8 +863,8 @@ namespace soul
     return buffer_[idx];
   }
 
-  template <typename T, memory::allocator_type AllocatorT, soul_size inline_element_count>
-  auto Vector<T, AllocatorT, inline_element_count>::operator[](soul_size idx) const
+  template <typename T, memory::allocator_type AllocatorT, usize inline_element_count>
+  auto Vector<T, AllocatorT, inline_element_count>::operator[](usize idx) const
     -> const_reference
   {
     SOUL_ASSERT(
@@ -872,14 +872,14 @@ namespace soul
     return buffer_[idx];
   }
 
-  template <typename T, memory::allocator_type AllocatorT, soul_size N>
-  auto Vector<T, AllocatorT, N>::get_new_capacity(soul_size old_capacity) -> soul_size
+  template <typename T, memory::allocator_type AllocatorT, usize N>
+  auto Vector<T, AllocatorT, N>::get_new_capacity(usize old_capacity) -> usize
   {
     return old_capacity * GROWTH_FACTOR + 8;
   }
 
-  template <typename T, memory::allocator_type AllocatorT, soul_size N>
-  void Vector<T, AllocatorT, N>::init_reserve(soul_size capacity)
+  template <typename T, memory::allocator_type AllocatorT, usize N>
+  void Vector<T, AllocatorT, N>::init_reserve(usize capacity)
   {
     auto need_heap = true;
     if constexpr (IS_SBO) {
@@ -891,7 +891,7 @@ namespace soul
     }
   }
 
-  template <typename T, memory::allocator_type AllocatorT, soul_size N>
+  template <typename T, memory::allocator_type AllocatorT, usize N>
   auto Vector<T, AllocatorT, N>::is_using_stack_storage() const -> bool
   {
     if constexpr (!IS_SBO) {
@@ -900,7 +900,7 @@ namespace soul
     return buffer_ == stack_storage_.data();
   }
 
-  template <typename T, memory::allocator_type AllocatorT, soul_size N>
+  template <typename T, memory::allocator_type AllocatorT, usize N>
   auto operator==(const Vector<T, AllocatorT, N>& lhs, const Vector<T, AllocatorT, N>& rhs) -> bool
   {
     if (lhs.size() != rhs.size()) {

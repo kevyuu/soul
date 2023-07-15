@@ -12,12 +12,12 @@ namespace soul::util
 {
 
   template <std::unsigned_integral T>
-  constexpr auto get_first_one_bit_pos(T x) noexcept -> std::optional<uint32>
+  constexpr auto get_first_one_bit_pos(T x) noexcept -> std::optional<ui32>
   {
     if (x == 0) {
       return std::nullopt;
     }
-    constexpr uint32 bit_count = sizeof(T) * 8;
+    constexpr ui32 bit_count = sizeof(T) * 8;
     static_assert(bit_count <= 64);
     if (x) {
       uint32_t n = 1;
@@ -48,18 +48,18 @@ namespace soul::util
         x >>= 2;
       }
 
-      return (n - (static_cast<uint32>(x) & 1u));
+      return (n - (static_cast<ui32>(x) & 1u));
     }
     return std::nullopt;
   }
 
   template <std::unsigned_integral T>
-  constexpr auto get_last_one_bit_pos(T x) noexcept -> std::optional<uint32>
+  constexpr auto get_last_one_bit_pos(T x) noexcept -> std::optional<ui32>
   {
-    constexpr uint32 bit_count = sizeof(T) * 8;
+    constexpr ui32 bit_count = sizeof(T) * 8;
     static_assert(bit_count <= 64);
     if (x) {
-      uint32 n = 0;
+      ui32 n = 0;
       if constexpr (bit_count > 32) {
         if (x & 0xFFFFFFFF00000000) {
           n += 32;
@@ -95,10 +95,10 @@ namespace soul::util
   }
 
   template <std::unsigned_integral T>
-  constexpr auto get_one_bit_count(T x) noexcept -> soul_size
+  constexpr auto get_one_bit_count(T x) noexcept -> usize
   {
     if (std::is_constant_evaluated()) {
-      soul_size count = 0;
+      usize count = 0;
       while (x) {
         auto bit_pos = *get_first_one_bit_pos(x);
         count++;
@@ -108,16 +108,16 @@ namespace soul::util
     }
     // ReSharper disable once CppUnreachableCode
     static_assert(sizeof(T) <= 8);
-    if constexpr (std::same_as<T, uint8> || std::same_as<T, uint16>) {
+    if constexpr (std::same_as<T, ui8> || std::same_as<T, ui16>) {
       return pop_count_16(x);
     }
-    if constexpr (std::same_as<T, uint32>) {
+    if constexpr (std::same_as<T, ui32>) {
       return pop_count_32(x);
     }
     return pop_count_64(x);
   }
 
-  template <std::unsigned_integral Integral, ts_fn<void, uint32> Fn>
+  template <std::unsigned_integral Integral, ts_fn<void, ui32> Fn>
   auto for_each_one_bit_pos(Integral value, const Fn& func) -> void
   {
     while (value) {
@@ -172,19 +172,19 @@ namespace soul::util
   // NOLINTEND(cert-err33-c)
 
   constexpr auto hash_fnv1_bytes(
-    const uint8* data, const soul_size size, const uint64 initial = 0xcbf29ce484222325ull) -> uint64
+    const ui8* data, const usize size, const ui64 initial = 0xcbf29ce484222325ull) -> ui64
   {
     auto hash = initial;
-    for (uint32 i = 0; i < size; i++) {
+    for (ui32 i = 0; i < size; i++) {
       hash = (hash * 0x100000001b3ull) ^ data[i];
     }
     return hash;
   }
 
   template <typename T>
-  constexpr auto hash_fnv1(const T* data, const uint64 initial = 0xcbf29ce484222325ull) -> uint64
+  constexpr auto hash_fnv1(const T* data, const ui64 initial = 0xcbf29ce484222325ull) -> ui64
   {
-    return hash_fnv1_bytes(reinterpret_cast<const uint8*>(data), sizeof(data), initial);
+    return hash_fnv1_bytes(reinterpret_cast<const ui8*>(data), sizeof(data), initial);
   }
 
   template <ts_arithmetic T>
@@ -211,7 +211,7 @@ namespace soul::util
   }
 
   template <std::integral Integral>
-  constexpr auto align_up(Integral x, soul_size a) noexcept -> Integral
+  constexpr auto align_up(Integral x, usize a) noexcept -> Integral
   {
     return Integral((x + (Integral(a) - 1)) & ~Integral(a - 1));
   }

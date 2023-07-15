@@ -12,31 +12,29 @@
 #include "core/panic.h"
 #include "core/type_traits.h"
 
-using int8 = int8_t;
-using int16 = int16_t;
-using int32 = int32_t;
-using int64 = int64_t;
-using bool32 = int32;
+using i8 = int8_t;
+using i16 = int16_t;
+using i32 = int32_t;
+using i64 = int64_t;
+using bool32 = i32;
 
-using uint8 = uint8_t;
-using uint16 = uint16_t;
-using uint32 = uint32_t;
-using uint64 = uint64_t;
+using ui8 = uint8_t;
+using ui16 = uint16_t;
+using ui32 = uint32_t;
+using ui64 = uint64_t;
 
 using intptr = intptr_t;
 using uintptr = uintptr_t;
 
-using memory_index = size_t;
-
-using byte = uint8;
-using soul_size = uint64_t;
+using byte = ui8;
+using usize = uint64_t;
 
 namespace soul
 {
 
-  constexpr soul_size ONE_KILOBYTE = 1024;
-  constexpr soul_size ONE_MEGABYTE = 1024 * ONE_KILOBYTE;
-  constexpr soul_size ONE_GIGABYTE = 1024 * ONE_MEGABYTE;
+  constexpr usize ONE_KILOBYTE = 1024;
+  constexpr usize ONE_MEGABYTE = 1024 * ONE_KILOBYTE;
+  constexpr usize ONE_GIGABYTE = 1024 * ONE_MEGABYTE;
 
   template <typename Val, typename Err>
   using expected = tl::expected<Val, Err>;
@@ -50,7 +48,7 @@ namespace soul
   template <typename T>
   concept ts_bit_block = std::unsigned_integral<T>;
 
-  template <typename T, soul_size N>
+  template <typename T, usize N>
   struct RawBuffer {
     alignas(T) std::byte buffer[sizeof(T) * N];
 
@@ -66,7 +64,7 @@ namespace soul
     auto data() const -> const T* { return nullptr; }
   };
 
-  template <soul_size Dim, typename T>
+  template <usize Dim, typename T>
   using vec = glm::vec<Dim, T, glm::defaultp>;
 
   template <typename T>
@@ -86,19 +84,19 @@ namespace soul
   using vec3d = vec3<double>;
   using vec4d = vec4<double>;
 
-  using vec2i16 = vec2<int16>;
-  using vec3i16 = vec3<int16>;
-  using vec4i16 = vec4<int16>;
+  using vec2i16 = vec2<i16>;
+  using vec3i16 = vec3<i16>;
+  using vec4i16 = vec4<i16>;
 
-  using vec2ui32 = vec2<uint32>;
-  using vec3ui32 = vec3<uint32>;
-  using vec4ui32 = vec4<uint32>;
+  using vec2ui32 = vec2<ui32>;
+  using vec3ui32 = vec3<ui32>;
+  using vec4ui32 = vec4<ui32>;
 
-  using vec2i32 = vec2<int32>;
-  using vec3i32 = vec3<int32>;
-  using vec4i32 = vec4<int32>;
+  using vec2i32 = vec2<i32>;
+  using vec3i32 = vec3<i32>;
+  using vec4i32 = vec4<i32>;
 
-  template <soul_size Row, soul_size Column, typename T>
+  template <usize Row, usize Column, typename T>
   struct matrix {
     using this_type = matrix<Column, Row, T>;
     using store_type = glm::mat<Column, Row, T, glm::defaultp>;
@@ -111,12 +109,12 @@ namespace soul
     constexpr explicit matrix(store_type mat) : mat(mat) {}
 
     [[nodiscard]]
-    SOUL_ALWAYS_INLINE auto m(const uint8 row, const uint8 column) const -> float
+    SOUL_ALWAYS_INLINE auto m(const ui8 row, const ui8 column) const -> float
     {
       return mat[column][row];
     }
 
-    SOUL_ALWAYS_INLINE auto m(const uint8 row, const uint8 column) -> float&
+    SOUL_ALWAYS_INLINE auto m(const ui8 row, const ui8 column) -> float&
     {
       return mat[column][row];
     }
@@ -191,7 +189,7 @@ namespace soul
     }
 
     struct Corners {
-      static constexpr soul_size COUNT = 8;
+      static constexpr usize COUNT = 8;
       vec3f vertices[COUNT];
     };
 
@@ -236,11 +234,11 @@ namespace soul
   {
     SOUL_ASSERT(
       0,
-      static_cast<uint64>(src) <= std::numeric_limits<IntegralDst>::max(),
+      static_cast<ui64>(src) <= std::numeric_limits<IntegralDst>::max(),
       "Source value is larger than the destintation type maximum!");
     SOUL_ASSERT(
       0,
-      static_cast<int64>(src) >= std::numeric_limits<IntegralDst>::min(),
+      static_cast<i64>(src) >= std::numeric_limits<IntegralDst>::min(),
       "Source value is smaller than the destination type minimum!");
     return static_cast<IntegralDst>(src);
   }
@@ -341,7 +339,7 @@ namespace soul
 
     static auto Iterates() -> FlagIter { return FlagIter(); }
 
-    static auto Count() -> uint64 { return to_underlying(Flag::COUNT); }
+    static auto Count() -> ui64 { return to_underlying(Flag::COUNT); }
   };
 
 } // namespace soul

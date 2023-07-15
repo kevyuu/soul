@@ -10,12 +10,6 @@ namespace soul
   using true_type = std::true_type;
 
   template <typename T>
-  inline bool constexpr is_pointer_v = std::is_pointer_v<T>;
-
-  template <typename T>
-  concept ts_pointer = is_pointer_v<T>;
-
-  template <typename T>
   inline bool constexpr is_const_v = std::is_const_v<T>;
 
   template <typename T1, typename T2>
@@ -147,6 +141,15 @@ namespace soul
 
   template <typename T>
   concept typeset = ts_clone<T> || ts_copy<T> || ts_move_only<T> || ts_immovable<T>;
+
+  template <typename T>
+  concept ts_integral = std::integral<T>;
+
+  template <typename T>
+  inline bool constexpr is_pointer_v = std::is_pointer_v<T>;
+
+  template <typename T>
+  concept ts_pointer = typeset<T> && is_pointer_v<T>;
 
   template <typename T, typename... Args>
   constexpr bool can_invoke_v =

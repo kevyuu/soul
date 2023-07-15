@@ -18,12 +18,12 @@ namespace soul::gpu
     struct RGResourceID;
 
     struct RGResourceID {
-      uint32 index = std::numeric_limits<uint32>::max();
+      ui32 index = std::numeric_limits<ui32>::max();
 
-      static constexpr uint8 EXTERNAL_BIT_POSITION = 31;
+      static constexpr ui8 EXTERNAL_BIT_POSITION = 31;
 
-      static auto internal_id(const uint32 index) -> RGResourceID { return {index}; }
-      static auto external_id(const uint32 index) -> RGResourceID
+      static auto internal_id(const ui32 index) -> RGResourceID { return {index}; }
+      static auto external_id(const ui32 index) -> RGResourceID
       {
         return {index | 1u << EXTERNAL_BIT_POSITION};
       }
@@ -35,13 +35,13 @@ namespace soul::gpu
       }
 
       [[nodiscard]]
-      auto get_index() const -> uint32
+      auto get_index() const -> ui32
       {
         return index & ~(1u << EXTERNAL_BIT_POSITION);
       }
     };
 
-    constexpr RGResourceID RG_RESOURCE_ID_NULL = {std::numeric_limits<uint32>::max()};
+    constexpr RGResourceID RG_RESOURCE_ID_NULL = {std::numeric_limits<ui32>::max()};
 
     using RGBufferID = RGResourceID;
     constexpr RGBufferID RG_BUFFER_ID_NULL = RG_RESOURCE_ID_NULL;
@@ -104,10 +104,10 @@ namespace soul::gpu
   concept ray_tracing_pass_executable = pass_executable<Func, Data, PIPELINE_FLAGS_RAY_TRACING>;
 
   // ID
-  using PassNodeID = ID<PassBaseNode, uint16>;
-  using ResourceNodeID = ID<impl::ResourceNode, uint16>;
+  using PassNodeID = ID<PassBaseNode, ui16>;
+  using ResourceNodeID = ID<impl::ResourceNode, ui16>;
 
-  enum class RGResourceType : uint8 { BUFFER, TEXTURE, TLAS, BLAS_GROUP, USER_RESOURCE, COUNT };
+  enum class RGResourceType : ui8 { BUFFER, TEXTURE, TLAS, BLAS_GROUP, USER_RESOURCE, COUNT };
 
   template <RGResourceType resource_type>
   struct TypedResourceNodeID {
@@ -137,15 +137,15 @@ namespace soul::gpu
     TextureType type = TextureType::D2;
     TextureFormat format = TextureFormat::RGBA8;
     vec3ui32 extent;
-    uint32 mip_levels = 1;
-    uint16 layer_count = 1;
+    ui32 mip_levels = 1;
+    ui16 layer_count = 1;
     TextureSampleCount sample_count = TextureSampleCount::COUNT_1;
     bool clear = false;
     ClearValue clear_value;
 
     static auto create_d2(
       const TextureFormat format,
-      const uint32 mip_levels,
+      const ui32 mip_levels,
       const vec2ui32 dimension,
       bool clear = false,
       ClearValue clear_value = {},
@@ -164,7 +164,7 @@ namespace soul::gpu
 
     static auto create_d3(
       const TextureFormat format,
-      const uint32 mip_levels,
+      const ui32 mip_levels,
       const vec3ui32 dimension,
       bool clear = false,
       ClearValue clear_value = {},
@@ -183,9 +183,9 @@ namespace soul::gpu
 
     static auto create_d2_array(
       const TextureFormat format,
-      const uint32 mip_levels,
+      const ui32 mip_levels,
       const vec2ui32 dimension,
-      const uint16 layer_count,
+      const ui16 layer_count,
       bool clear = false,
       ClearValue clear_value = {}) -> RGTextureDesc
     {
@@ -201,7 +201,7 @@ namespace soul::gpu
   };
 
   struct RGBufferDesc {
-    soul_size size = 0;
+    usize size = 0;
   };
 
   struct ColorAttachmentDesc {
@@ -226,7 +226,7 @@ namespace soul::gpu
     ClearValue clear_value;
   };
 
-  enum class ShaderBufferReadUsage : uint8 { UNIFORM, STORAGE, COUNT };
+  enum class ShaderBufferReadUsage : ui8 { UNIFORM, STORAGE, COUNT };
 
   struct ShaderBufferReadAccess {
     BufferNodeID node_id;
@@ -234,7 +234,7 @@ namespace soul::gpu
     ShaderBufferReadUsage usage;
   };
 
-  enum class ShaderBufferWriteUsage : uint8 { UNIFORM, STORAGE, COUNT };
+  enum class ShaderBufferWriteUsage : ui8 { UNIFORM, STORAGE, COUNT };
 
   struct ShaderBufferWriteAccess {
     BufferNodeID input_node_id;
@@ -243,7 +243,7 @@ namespace soul::gpu
     ShaderBufferWriteUsage usage;
   };
 
-  enum class ShaderTextureReadUsage : uint8 { UNIFORM, STORAGE, COUNT };
+  enum class ShaderTextureReadUsage : ui8 { UNIFORM, STORAGE, COUNT };
 
   struct ShaderTextureReadAccess {
     TextureNodeID node_id;
@@ -252,7 +252,7 @@ namespace soul::gpu
     SubresourceIndexRange view_range;
   };
 
-  enum class ShaderTextureWriteUsage : uint8 { STORAGE, COUNT };
+  enum class ShaderTextureWriteUsage : ui8 { STORAGE, COUNT };
 
   struct ShaderTextureWriteAccess {
     TextureNodeID input_node_id;
@@ -286,7 +286,7 @@ namespace soul::gpu
     BufferNodeID node_id;
   };
 
-  enum class TransferDataSource : uint8 { GPU, CPU, COUNT };
+  enum class TransferDataSource : ui8 { GPU, CPU, COUNT };
 
   struct TransferDstBufferAccess {
     TransferDataSource data_source = TransferDataSource::COUNT;
@@ -323,16 +323,16 @@ namespace soul::gpu
       TextureType type = TextureType::D2;
       TextureFormat format = TextureFormat::COUNT;
       vec3ui32 extent = {};
-      uint32 mip_levels = 1;
-      uint16 layer_count = 1;
+      ui32 mip_levels = 1;
+      ui16 layer_count = 1;
       TextureSampleCount sample_count = TextureSampleCount::COUNT_1;
       bool clear = false;
       ClearValue clear_value = {};
 
       [[nodiscard]]
-      auto get_view_count() const -> soul_size
+      auto get_view_count() const -> usize
       {
-        return soul::cast<uint64>(mip_levels) * layer_count;
+        return soul::cast<ui64>(mip_levels) * layer_count;
       }
     };
 
@@ -345,7 +345,7 @@ namespace soul::gpu
 
     struct RGInternalBuffer {
       const char* name = nullptr;
-      soul_size size = 0;
+      usize size = 0;
       bool clear = false;
     };
 

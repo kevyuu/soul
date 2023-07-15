@@ -424,7 +424,7 @@ namespace soul::gpu
     };
     TextureSampleCountFlags result;
     util::for_each_one_bit_pos(
-      flags, [&result](soul_size bit_position) { result.set(MAP[bit_position]); });
+      flags, [&result](usize bit_position) { result.set(MAP[bit_position]); });
     return result;
   }
 

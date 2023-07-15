@@ -33,7 +33,7 @@ namespace soul
   {
   public:
     using flag_type = Flag;
-    static constexpr soul_size FLAG_COUNT = to_underlying(Flag::COUNT);
+    static constexpr usize FLAG_COUNT = to_underlying(Flag::COUNT);
     using store_type = Bitset<FLAG_COUNT>;
 
     // Default constructor (all 0s)
@@ -80,17 +80,17 @@ namespace soul
     [[nodiscard]]
     constexpr auto none() const -> bool;
 
-    template <soul_size IFlagCount = FLAG_COUNT>
+    template <usize IFlagCount = FLAG_COUNT>
       requires(IFlagCount <= 32)
     [[nodiscard]]
-    constexpr auto to_uint32() const -> uint32;
+    constexpr auto to_uint32() const -> ui32;
 
-    template <soul_size IFlagCount = FLAG_COUNT>
+    template <usize IFlagCount = FLAG_COUNT>
       requires(IFlagCount <= 64)
     [[nodiscard]]
-    constexpr auto to_uint64() const -> uint64;
+    constexpr auto to_uint64() const -> ui64;
 
-    template <impl::dst_flag DstFlags, soul_size N>
+    template <impl::dst_flag DstFlags, usize N>
       requires(N == to_underlying(Flag::COUNT))
     [[nodiscard]]
     constexpr auto map(const DstFlags (&mapping)[N]) const -> DstFlags;
@@ -107,7 +107,7 @@ namespace soul
     explicit constexpr FlagSet(store_type flags) : flags_(flags) {}
 
     constexpr auto flags_from_init_list(std::initializer_list<flag_type> init_list) -> store_type;
-    static constexpr soul_size MASK = (1u << FLAG_COUNT) - 1;
+    static constexpr usize MASK = (1u << FLAG_COUNT) - 1;
   };
 
   template <ts_flag Flag>
@@ -155,23 +155,23 @@ namespace soul
   }
 
   template <ts_flag Flag>
-  template <soul_size IFlagCount>
+  template <usize IFlagCount>
     requires(IFlagCount <= 32)
-  constexpr auto FlagSet<Flag>::to_uint32() const -> uint32
+  constexpr auto FlagSet<Flag>::to_uint32() const -> ui32
   {
     return flags_.to_uint32();
   }
 
   template <ts_flag Flag>
-  template <soul_size IFlagCount>
+  template <usize IFlagCount>
     requires(IFlagCount <= 64)
-  constexpr auto FlagSet<Flag>::to_uint64() const -> uint64
+  constexpr auto FlagSet<Flag>::to_uint64() const -> ui64
   {
     return flags_.to_uint64();
   }
 
   template <ts_flag Flag>
-  template <impl::dst_flag DstFlags, soul_size N>
+  template <impl::dst_flag DstFlags, usize N>
     requires(N == to_underlying(Flag::COUNT))
   constexpr auto FlagSet<Flag>::map(const DstFlags (&mapping)[N]) const -> DstFlags
   {
@@ -189,7 +189,7 @@ namespace soul
   template <ts_fn<void, Flag> T>
   constexpr auto FlagSet<Flag>::for_each(T func) const -> void
   {
-    auto new_func = [func = std::move(func)](soul_size bit) { func(flag_type(bit)); };
+    auto new_func = [func = std::move(func)](usize bit) { func(flag_type(bit)); };
     flags_.for_each(new_func);
   }
 
@@ -197,7 +197,7 @@ namespace soul
   template <ts_fn<bool, Flag> T>
   constexpr auto FlagSet<Flag>::find_if(T func) const -> std::optional<Flag>
   {
-    auto new_func = [func = std::move(func)](soul_size bit) -> bool {
+    auto new_func = [func = std::move(func)](usize bit) -> bool {
       return func(flag_type(bit));
     };
     const auto find_result = flags_.find_if(new_func);

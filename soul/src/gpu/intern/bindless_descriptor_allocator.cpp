@@ -169,10 +169,10 @@ namespace soul::gpu::impl
   }
 
   BindlessDescriptorSet::BindlessDescriptorSet(
-    const uint32 capacity, VkDescriptorType descriptor_type, memory::Allocator* allocator)
+    const ui32 capacity, VkDescriptorType descriptor_type, memory::Allocator* allocator)
       : allocator_(allocator),
         free_head_(0),
-        list_(allocator->allocate_array<uint32>(capacity)),
+        list_(allocator->allocate_array<ui32>(capacity)),
         capacity_(capacity),
         descriptor_type_(descriptor_type)
   {

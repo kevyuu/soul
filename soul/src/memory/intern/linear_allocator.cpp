@@ -5,7 +5,7 @@ namespace soul::memory
 {
 
   LinearAllocator::LinearAllocator(
-    const char* name, const soul_size size, Allocator* backing_allocator)
+    const char* name, const usize size, Allocator* backing_allocator)
       : Allocator(name), backing_allocator_(backing_allocator)
   {
     SOUL_ASSERT(0, backing_allocator_ != nullptr, "");
@@ -20,10 +20,10 @@ namespace soul::memory
   auto LinearAllocator::reset() -> void { current_addr_ = base_addr_; }
 
   auto LinearAllocator::try_allocate(
-    const soul_size size, const soul_size alignment, const char* tag) -> Allocation
+    const usize size, const usize alignment, const char* tag) -> Allocation
   {
     auto* const size_addr =
-      soul::cast<soul_size*>(util::pointer_align_forward(current_addr_, alignof(soul_size)));
+      soul::cast<usize*>(util::pointer_align_forward(current_addr_, alignof(usize)));
     void* const addr = util::pointer_align_forward(util::pointer_add(size_addr, size), alignment);
     if (util::pointer_add(base_addr_, size_) < util::pointer_add(addr, size)) {
       return {nullptr, 0};
@@ -33,14 +33,14 @@ namespace soul::memory
     return {addr, size};
   }
 
-  auto LinearAllocator::get_allocation_size(void* addr) const -> soul_size
+  auto LinearAllocator::get_allocation_size(void* addr) const -> usize
   {
     if (addr == nullptr) {
       return 0;
     }
     void* size_addr =
-      util::pointer_align_backward(util::pointer_sub(addr, sizeof(soul_size)), alignof(soul_size));
-    return *soul::cast<soul_size*>(size_addr);
+      util::pointer_align_backward(util::pointer_sub(addr, sizeof(usize)), alignof(usize));
+    return *soul::cast<usize*>(size_addr);
   }
 
   auto LinearAllocator::deallocate(void* addr) -> void {}

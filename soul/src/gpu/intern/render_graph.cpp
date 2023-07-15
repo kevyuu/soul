@@ -9,14 +9,14 @@ namespace soul::gpu
 
   TextureNodeID RenderGraph::import_texture(const char* name, TextureID texture_id)
   {
-    const auto resource_index = soul::cast<uint32>(
+    const auto resource_index = soul::cast<ui32>(
       external_textures_.add(RGExternalTexture({.name = name, .texture_id = texture_id})));
     return create_resource_node<RGResourceType::TEXTURE>(RGResourceID::external_id(resource_index));
   }
 
   TextureNodeID RenderGraph::create_texture(const char* name, const RGTextureDesc& desc)
   {
-    const auto resource_index = soul::cast<uint32>(internal_textures_.add(RGInternalTexture{
+    const auto resource_index = soul::cast<ui32>(internal_textures_.add(RGInternalTexture{
       .name = name,
       .type = desc.type,
       .format = desc.format,
@@ -31,7 +31,7 @@ namespace soul::gpu
 
   BufferNodeID RenderGraph::import_buffer(const char* name, const BufferID buffer_id)
   {
-    const auto resource_index = soul::cast<uint32>(external_buffers_.add(RGExternalBuffer{
+    const auto resource_index = soul::cast<ui32>(external_buffers_.add(RGExternalBuffer{
       .name = name,
       .buffer_id = buffer_id,
     }));
@@ -44,21 +44,21 @@ namespace soul::gpu
       0, desc.size > 0, "Render Graph buffer size must be greater than zero!, name = %s", name);
 
     const auto resource_index =
-      soul::cast<uint32>(internal_buffers_.add(RGInternalBuffer{.name = name, .size = desc.size}));
+      soul::cast<ui32>(internal_buffers_.add(RGInternalBuffer{.name = name, .size = desc.size}));
     return create_resource_node<RGResourceType::BUFFER>(RGResourceID::internal_id(resource_index));
   }
 
   TlasNodeID RenderGraph::import_tlas(const char* name, TlasID tlas_id)
   {
     const auto resource_index =
-      soul::cast<uint32>(external_tlas_list_.add(RGExternalTlas{.name = name, .tlas_id = tlas_id}));
+      soul::cast<ui32>(external_tlas_list_.add(RGExternalTlas{.name = name, .tlas_id = tlas_id}));
 
     return create_resource_node<RGResourceType::TLAS>(RGResourceID::external_id(resource_index));
   }
 
   BlasGroupNodeID RenderGraph::import_blas_group(const char* name, BlasGroupID blas_group_id)
   {
-    const auto resource_index = soul::cast<uint32>(external_blas_group_list_.add(
+    const auto resource_index = soul::cast<ui32>(external_blas_group_list_.add(
       RGExternalBlasGroup{.name = name, .blas_group_id = blas_group_id}));
 
     return create_resource_node<RGResourceType::BLAS_GROUP>(

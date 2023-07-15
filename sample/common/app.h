@@ -19,8 +19,8 @@ namespace soul::gpu
 } // namespace soul::gpu
 
 struct ScreenDimension {
-  int32 width;
-  int32 height;
+  i32 width;
+  i32 height;
 };
 
 struct AppConfig {
@@ -44,7 +44,7 @@ public:
 
   auto run() -> void;
   auto get_elapsed_seconds() const -> float;
-  auto get_frame_index() const -> soul_size;
+  auto get_frame_index() const -> usize;
 
   static auto get_exe_path() -> std::filesystem::path;
   static auto get_media_path() -> std::filesystem::path;
@@ -65,7 +65,7 @@ private:
   WindowData window_data_;
 
   const AppConfig app_config_;
-  soul_size frame_index_ = 0;
+  usize frame_index_ = 0;
 
   const std::chrono::steady_clock::time_point start_ = std::chrono::steady_clock::now();
 

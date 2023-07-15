@@ -23,9 +23,9 @@ namespace soul::runtime
     ~ScopeAllocator() override;
 
     auto reset() -> void override;
-    auto try_allocate(soul_size size, soul_size alignment, const char* tag)
+    auto try_allocate(usize size, usize alignment, const char* tag)
       -> memory::Allocation override;
-    auto get_allocation_size(void* addr) const -> soul_size override;
+    auto get_allocation_size(void* addr) const -> usize override;
     auto deallocate(void* addr) -> void override;
 
   private:
@@ -66,7 +66,7 @@ namespace soul::runtime
 
   template <typename BackingAllocator>
   auto ScopeAllocator<BackingAllocator>::try_allocate(
-    soul_size size, soul_size alignment, const char* tag) -> memory::Allocation
+    usize size, usize alignment, const char* tag) -> memory::Allocation
   {
     memory::Allocation allocation = backing_allocator_->try_allocate(size, alignment, tag);
     if (allocation.addr == nullptr) {
@@ -77,7 +77,7 @@ namespace soul::runtime
   }
 
   template <typename BackingAllocator>
-  auto ScopeAllocator<BackingAllocator>::get_allocation_size(void* addr) const -> soul_size
+  auto ScopeAllocator<BackingAllocator>::get_allocation_size(void* addr) const -> usize
   {
     return backing_allocator_->get_allocation_size(addr);
   }

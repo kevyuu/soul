@@ -26,16 +26,16 @@ using VectorInt = soul::Vector<int>;
 using VectorObj = soul::Vector<TestObject>;
 using VectorListObj = soul::Vector<ListTestObject>;
 
-constexpr soul_size CONSTRUCTOR_VECTOR_SIZE = 10;
+constexpr usize CONSTRUCTOR_VECTOR_SIZE = 10;
 constexpr int CONSTRUCTOR_VECTOR_DEFAULT_VALUE = 7;
 
 template <typename T>
-static auto generate_random_array(T* arr, soul_size size) -> void
+static auto generate_random_array(T* arr, usize size) -> void
 {
   std::random_device random_device;
   std::mt19937 random_engine(random_device());
   std::uniform_int_distribution<int> dist(1, 100);
-  for (soul_size i = 0; i < size; i++) {
+  for (usize i = 0; i < size; i++) {
     if constexpr (std::same_as<T, ListTestObject>) {
       arr[i] = T::with_size(dist(random_engine));
     } else {
@@ -50,7 +50,7 @@ auto all_equal(const soul::Vector<T>& vec, const T& val) -> bool
   return std::ranges::all_of(vec, [&val](const T& x) { return x == val; });
 }
 
-template <typename T, soul_size N>
+template <typename T, usize N>
 auto verify_vector(const soul::Vector<T>& vec, const std::array<T, N>& arr) -> bool
 {
   return std::equal(vec.begin(), vec.end(), std::begin(arr));
@@ -92,7 +92,7 @@ TEST(TestVectorConstruction, TestCustomAllocatorConstructor)
 }
 
 template <typename T>
-auto test_construction_with_size(const soul_size size) -> void
+auto test_construction_with_size(const usize size) -> void
 {
   auto vector = soul::Vector<T>::with_size(size);
   SOUL_TEST_ASSERT_EQ(vector.size(), size);
@@ -111,7 +111,7 @@ TEST(TestVectorConstruction, TestConstructionWithSize)
 }
 
 template <typename T>
-auto test_construction_fill_n(const soul_size size, const T& val) -> void
+auto test_construction_fill_n(const usize size, const T& val) -> void
 {
   auto vector = soul::Vector<T>::fill_n(size, val);
   SOUL_TEST_ASSERT_EQ(vector.size(), size);
@@ -125,7 +125,7 @@ TEST(TestVectorConstruction, TestConstructorFillN)
 }
 
 template <typename T, soul::ts_generate_fn<T> Fn>
-void test_construction_generate_n(Fn fn, const soul_size size)
+void test_construction_generate_n(Fn fn, const usize size)
 {
   T val = std::invoke(fn);
   const auto vector = soul::Vector<T>::generate_n(fn, size);
@@ -148,7 +148,7 @@ TEST(TestVectorConstruction, TestConstructionGenerateN)
 }
 
 template <typename T>
-void test_construction_with_capacity(const soul_size capacity)
+void test_construction_with_capacity(const usize capacity)
 {
   const auto vector = soul::Vector<T>::with_capacity(capacity);
   SOUL_TEST_ASSERT_EQ(vector.size(), 0);
@@ -261,7 +261,7 @@ TEST_F(TestVectorConstructionWithSourceData, TestRangeConstructionWithAllocator)
 }
 
 template <typename T>
-auto test_vector_getter(const soul_size size) -> void
+auto test_vector_getter(const usize size) -> void
 {
   SOUL_TEST_ASSERT_NE(size, 0);
   auto arr = new T[size];
@@ -330,7 +330,7 @@ TEST_F(TestVectorManipulation, TestVectorSetAllocator)
 TEST_F(TestVectorManipulation, TestVectorCloneFrom)
 {
   auto test_assignment_operator =
-    []<typename T>(const soul::Vector<T>& sample_vector, const soul_size size) {
+    []<typename T>(const soul::Vector<T>& sample_vector, const usize size) {
       auto test_vector = sample_vector.clone();
       soul::memory::Allocator* allocator = test_vector.get_allocator();
       auto src_arr = new T[size];
@@ -365,7 +365,7 @@ TEST_F(TestVectorManipulation, TestVectorCloneFrom)
 TEST_F(TestVectorManipulation, TestVectorMoveAssignmentOperator)
 {
   auto test_move_assignment_operator =
-    []<typename T>(const soul::Vector<T>& sample_vector, const soul_size size) {
+    []<typename T>(const soul::Vector<T>& sample_vector, const usize size) {
       auto test_vector = sample_vector.clone();
       soul::memory::Allocator* allocator = test_vector.get_allocator();
       auto src_arr = new T[size];
@@ -400,11 +400,11 @@ TEST_F(TestVectorManipulation, TestVectorMoveAssignmentOperator)
 
 TEST_F(TestVectorManipulation, TestVectorAssignWithSizeAndValue)
 {
-  static constexpr soul_size ASSIGN_VECTOR_SIZE = 5;
+  static constexpr usize ASSIGN_VECTOR_SIZE = 5;
   static constexpr auto ASSIGN_VECTOR_DEFAULT_VALUE = 8;
 
   auto test_assign_with_size_and_value =
-    []<typename T>(const soul::Vector<T>& sample_vector, const soul_size size, const T& val) {
+    []<typename T>(const soul::Vector<T>& sample_vector, const usize size, const T& val) {
       auto test_vector = sample_vector.clone();
       test_vector.assign(size, val);
       SOUL_TEST_ASSERT_EQ(test_vector.size(), size);
@@ -414,7 +414,7 @@ TEST_F(TestVectorManipulation, TestVectorAssignWithSizeAndValue)
   SOUL_TEST_RUN(test_assign_with_size_and_value(
     vector_int_empty, ASSIGN_VECTOR_SIZE, ASSIGN_VECTOR_DEFAULT_VALUE));
 
-  static constexpr soul_size ASSIGN_VECTOR_OFFSET_SIZE = 2;
+  static constexpr usize ASSIGN_VECTOR_OFFSET_SIZE = 2;
   SOUL_TEST_RUN(test_assign_with_size_and_value(
     vector_int_arr,
     vector_int_arr.size() + ASSIGN_VECTOR_OFFSET_SIZE,
@@ -427,7 +427,7 @@ TEST_F(TestVectorManipulation, TestVectorAssignWithSizeAndValue)
 
 TEST_F(TestVectorManipulation, TestVectorAssignRange)
 {
-  auto test_assignment = []<typename T>(soul::Vector<T>& vector, soul_size size) {
+  auto test_assignment = []<typename T>(soul::Vector<T>& vector, usize size) {
     T* arr = new T[size];
     SCOPE_EXIT(delete[] arr);
     generate_random_array(arr, size);
@@ -451,7 +451,7 @@ TEST_F(TestVectorManipulation, TestVectorAssignRange)
 
 TEST_F(TestVectorManipulation, TestVectorSwap)
 {
-  auto test_swap = []<typename T>(soul::Vector<T>& test_vector, soul_size size) {
+  auto test_swap = []<typename T>(soul::Vector<T>& test_vector, usize size) {
     T* arr = new T[size];
     SCOPE_EXIT(delete[] arr);
     generate_random_array(arr, size);
@@ -483,7 +483,7 @@ TEST_F(TestVectorManipulation, TestVectorSwap)
 
 TEST_F(TestVectorManipulation, TestVectorResize)
 {
-  auto test_resize = []<typename T>(const soul::Vector<T>& sample_vector, const soul_size size) {
+  auto test_resize = []<typename T>(const soul::Vector<T>& sample_vector, const usize size) {
     auto test_vector = sample_vector.clone();
     soul::Vector<T> test_copy = test_vector.clone();
     if constexpr (std::same_as<T, TestObject> || std::same_as<T, ListTestObject>) {
@@ -491,7 +491,7 @@ TEST_F(TestVectorManipulation, TestVectorResize)
     }
     test_vector.resize(size);
     SOUL_TEST_ASSERT_EQ(test_vector.size(), size);
-    soul_size smaller_size = std::min(test_vector.size(), test_copy.size());
+    usize smaller_size = std::min(test_vector.size(), test_copy.size());
     SOUL_TEST_ASSERT_TRUE(
       std::equal(test_vector.begin(), test_vector.begin() + smaller_size, test_copy.begin()));
     if (size > test_copy.size()) {
@@ -508,8 +508,8 @@ TEST_F(TestVectorManipulation, TestVectorResize)
         const auto destructed_objects_count = std::accumulate(
           test_copy.begin() + size,
           test_copy.end(),
-          soul_size(0),
-          [](const soul_size prev, const ListTestObject& curr) { return prev + curr.size(); });
+          usize(0),
+          [](const usize prev, const ListTestObject& curr) { return prev + curr.size(); });
         SOUL_TEST_ASSERT_EQ(
           TestObject::sTODtorCount - TestObject::sTOCtorCount, destructed_objects_count);
       }
@@ -534,7 +534,7 @@ TEST_F(TestVectorManipulation, TestVectorResize)
 
 TEST_F(TestVectorManipulation, TestVectorReserve)
 {
-  auto test_reserve = []<typename T>(soul::Vector<T>& test_vector, const soul_size new_capacity) {
+  auto test_reserve = []<typename T>(soul::Vector<T>& test_vector, const usize new_capacity) {
     const auto old_capacity = test_vector.capacity();
     soul::Vector<T> test_copy = test_vector.clone();
     test_vector.reserve(new_capacity);
@@ -641,7 +641,7 @@ TEST_F(TestVectorManipulation, TestVectorPopBack)
   SOUL_TEST_RUN(test_pop_back(vector_list_testobj_arr));
 
   auto test_pop_back_with_size =
-    []<typename T>(const soul::Vector<T>& sample_vector, const soul_size pop_back_size) {
+    []<typename T>(const soul::Vector<T>& sample_vector, const usize pop_back_size) {
       auto test_vector = sample_vector.clone();
       soul::Vector<T> test_copy = test_vector.clone();
       if constexpr (std::same_as<T, TestObject>) {
@@ -686,7 +686,7 @@ TEST_F(TestVectorManipulation, TestVectorEmplaceBack)
 TEST_F(TestVectorManipulation, TestVectorAppend)
 {
   auto test_append = []<typename T>(
-                       const soul::Vector<T>& test_vector, const soul_size append_size) {
+                       const soul::Vector<T>& test_vector, const usize append_size) {
     auto src_append_arr = new T[append_size];
     SCOPE_EXIT(delete[] src_append_arr);
     generate_random_array(src_append_arr, append_size);
@@ -727,8 +727,8 @@ TEST_F(TestVectorManipulation, TestVectorClear)
 {
   auto test_clear = []<typename T>(const soul::Vector<T>& sample_vector) {
     auto test_vector = sample_vector.clone();
-    const soul_size old_capacity = test_vector.capacity();
-    const soul_size old_size = test_vector.size();
+    const usize old_capacity = test_vector.capacity();
+    const usize old_size = test_vector.size();
     if constexpr (std::same_as<T, TestObject>) {
       TestObject::reset();
     }
@@ -752,7 +752,7 @@ TEST_F(TestVectorManipulation, TestVectorCleanup)
 {
   auto test_cleanup = []<typename T>(const soul::Vector<T>& sample_vector) {
     auto test_vector = sample_vector.clone();
-    const soul_size old_size = test_vector.size();
+    const usize old_size = test_vector.size();
     if constexpr (std::same_as<T, TestObject>) {
       TestObject::reset();
     }

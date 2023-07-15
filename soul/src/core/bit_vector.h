@@ -44,7 +44,7 @@ namespace soul
     ~BitVector();
 
     [[nodiscard]]
-    static auto with_capacity(soul_size capacity, AllocatorT& allocator = *get_default_allocator())
+    static auto with_capacity(usize capacity, AllocatorT& allocator = *get_default_allocator())
       -> this_type;
 
     template <std::ranges::input_range RangeT>
@@ -53,7 +53,7 @@ namespace soul
 
     [[nodiscard]]
     static auto init_fill_n(
-      soul_size size, bool val, AllocatorT& allocator = *get_default_allocator()) -> this_type;
+      usize size, bool val, AllocatorT& allocator = *get_default_allocator()) -> this_type;
 
     [[nodiscard]]
     auto clone() const -> this_type;
@@ -65,10 +65,10 @@ namespace soul
     friend void swap(this_type& a, this_type& b) noexcept { a.swap(b); }
 
     [[nodiscard]]
-    auto capacity() const noexcept -> soul_size;
+    auto capacity() const noexcept -> usize;
 
     [[nodiscard]]
-    auto size() const noexcept -> soul_size;
+    auto size() const noexcept -> usize;
 
     [[nodiscard]]
     auto empty() const noexcept -> bool;
@@ -78,9 +78,9 @@ namespace soul
     [[nodiscard]]
     auto get_allocator() const noexcept -> AllocatorT*;
 
-    void resize(soul_size size);
+    void resize(usize size);
 
-    void reserve(soul_size capacity);
+    void reserve(usize capacity);
 
     void clear() noexcept;
 
@@ -92,7 +92,7 @@ namespace soul
 
     void pop_back();
 
-    void pop_back(soul_size count);
+    void pop_back(usize count);
 
     [[nodiscard]]
     auto front() noexcept -> reference;
@@ -108,16 +108,16 @@ namespace soul
 
     [[nodiscard]]
     auto
-    operator[](soul_size index) -> reference;
+    operator[](usize index) -> reference;
 
     [[nodiscard]]
     auto
-    operator[](soul_size index) const -> const_reference;
+    operator[](usize index) const -> const_reference;
 
     [[nodiscard]]
-    auto test(soul_size index, bool default_value) const -> bool;
+    auto test(usize index, bool default_value) const -> bool;
 
-    void set(soul_size index, bool value = true);
+    void set(usize index, bool value = true);
 
     void set();
 
@@ -126,45 +126,45 @@ namespace soul
   private:
     AllocatorT* allocator_;
     BlockT* blocks_ = nullptr;
-    soul_size size_ = 0;
-    soul_size capacity_ = 0;
+    usize size_ = 0;
+    usize capacity_ = 0;
 
-    static constexpr soul_size BLOCK_BIT_COUNT = sizeof(BlockT) * 8;
-    static constexpr soul_size GROWTH_FACTOR = 2;
+    static constexpr usize BLOCK_BIT_COUNT = sizeof(BlockT) * 8;
+    static constexpr usize GROWTH_FACTOR = 2;
 
     BitVector(const BitVector& other);
 
     BitVector(const BitVector& other, AllocatorT& allocator);
 
-    BitVector(bit_vector_construct::with_capacity_t tag, soul_size capacity, AllocatorT& allocator);
+    BitVector(bit_vector_construct::with_capacity_t tag, usize capacity, AllocatorT& allocator);
 
     template <std::ranges::input_range RangeT>
     BitVector(bit_vector_construct::from_t tag, RangeT&& range, AllocatorT& allocator);
 
     BitVector(
-      bit_vector_construct::init_fill_n_t tag, soul_size size, bool val, AllocatorT& allocator);
+      bit_vector_construct::init_fill_n_t tag, usize size, bool val, AllocatorT& allocator);
 
     auto operator=(const BitVector& other) -> BitVector&;
 
-    auto get_bit_ref(soul_size index) -> reference;
+    auto get_bit_ref(usize index) -> reference;
 
     [[nodiscard]]
-    auto get_bool(soul_size index) const -> bool;
+    auto get_bool(usize index) const -> bool;
 
-    static auto get_new_capacity(soul_size old_capacity) -> soul_size;
+    static auto get_new_capacity(usize old_capacity) -> usize;
 
-    void init_reserve(soul_size capacity);
+    void init_reserve(usize capacity);
 
-    void init_resize(soul_size size, bool val);
-
-    [[nodiscard]]
-    static auto get_block_count(soul_size size) -> soul_size;
+    void init_resize(usize size, bool val);
 
     [[nodiscard]]
-    static auto get_block_index(soul_size index) -> soul_size;
+    static auto get_block_count(usize size) -> usize;
 
     [[nodiscard]]
-    static auto get_block_offset(soul_size index) -> soul_size;
+    static auto get_block_index(usize index) -> usize;
+
+    [[nodiscard]]
+    static auto get_block_offset(usize index) -> usize;
   };
 
   template <ts_bit_block BlockT, memory::allocator_type AllocatorT>
@@ -199,7 +199,7 @@ namespace soul
 
   template <ts_bit_block BlockT, memory::allocator_type AllocatorT>
   BitVector<BlockT, AllocatorT>::BitVector(
-    bit_vector_construct::with_capacity_t /* tag */, soul_size capacity, AllocatorT& allocator)
+    bit_vector_construct::with_capacity_t /* tag */, usize capacity, AllocatorT& allocator)
       : allocator_(&allocator)
   {
     init_reserve(capacity);
@@ -221,7 +221,7 @@ namespace soul
 
   template <ts_bit_block BlockT, memory::allocator_type AllocatorT>
   BitVector<BlockT, AllocatorT>::BitVector(
-    bit_vector_construct::init_fill_n_t /* tag */, soul_size size, bool val, AllocatorT& allocator)
+    bit_vector_construct::init_fill_n_t /* tag */, usize size, bool val, AllocatorT& allocator)
       : allocator_(&allocator)
   {
     init_resize(size, val);
@@ -257,7 +257,7 @@ namespace soul
 
   template <ts_bit_block BlockT, memory::allocator_type AllocatorT>
   [[nodiscard]]
-  auto BitVector<BlockT, AllocatorT>::with_capacity(soul_size capacity, AllocatorT& allocator)
+  auto BitVector<BlockT, AllocatorT>::with_capacity(usize capacity, AllocatorT& allocator)
     -> this_type
   {
     return BitVector(bit_vector_construct::with_capacity, capacity, allocator);
@@ -273,7 +273,7 @@ namespace soul
 
   template <ts_bit_block BlockT, memory::allocator_type AllocatorT>
   [[nodiscard]]
-  auto BitVector<BlockT, AllocatorT>::init_fill_n(soul_size size, bool val, AllocatorT& allocator)
+  auto BitVector<BlockT, AllocatorT>::init_fill_n(usize size, bool val, AllocatorT& allocator)
     -> this_type
   {
     return BitVector(bit_vector_construct::init_fill_n, size, val, allocator);
@@ -304,13 +304,13 @@ namespace soul
   }
 
   template <ts_bit_block BlockT, memory::allocator_type AllocatorT>
-  auto BitVector<BlockT, AllocatorT>::capacity() const noexcept -> soul_size
+  auto BitVector<BlockT, AllocatorT>::capacity() const noexcept -> usize
   {
     return capacity_;
   }
 
   template <ts_bit_block BlockT, memory::allocator_type AllocatorT>
-  auto BitVector<BlockT, AllocatorT>::size() const noexcept -> soul_size
+  auto BitVector<BlockT, AllocatorT>::size() const noexcept -> usize
   {
     return size_;
   }
@@ -341,7 +341,7 @@ namespace soul
   }
 
   template <ts_bit_block BlockT, memory::allocator_type AllocatorT>
-  void BitVector<BlockT, AllocatorT>::resize(const soul_size size)
+  void BitVector<BlockT, AllocatorT>::resize(const usize size)
   {
     if (size > size_) {
       if (size > capacity_) {
@@ -356,7 +356,7 @@ namespace soul
   }
 
   template <ts_bit_block BlockT, memory::allocator_type AllocatorT>
-  void BitVector<BlockT, AllocatorT>::reserve(const soul_size capacity)
+  void BitVector<BlockT, AllocatorT>::reserve(const usize capacity)
   {
     if (capacity < capacity_) {
       return;
@@ -415,7 +415,7 @@ namespace soul
   }
 
   template <ts_bit_block BlockT, memory::allocator_type AllocatorT>
-  void BitVector<BlockT, AllocatorT>::pop_back(const soul_size count)
+  void BitVector<BlockT, AllocatorT>::pop_back(const usize count)
   {
     SOUL_ASSERT(0, size_ >= count, "");
     size_ -= count;
@@ -451,21 +451,21 @@ namespace soul
   }
 
   template <ts_bit_block BlockT, memory::allocator_type AllocatorT>
-  auto BitVector<BlockT, AllocatorT>::operator[](const soul_size index) -> reference
+  auto BitVector<BlockT, AllocatorT>::operator[](const usize index) -> reference
   {
     SOUL_ASSERT(0, index < size_, "");
     return get_bit_ref(index);
   }
 
   template <ts_bit_block BlockT, memory::allocator_type AllocatorT>
-  auto BitVector<BlockT, AllocatorT>::operator[](const soul_size index) const -> const_reference
+  auto BitVector<BlockT, AllocatorT>::operator[](const usize index) const -> const_reference
   {
     SOUL_ASSERT(0, index < size_, "");
     return get_bool(index);
   }
 
   template <ts_bit_block BlockT, memory::allocator_type AllocatorT>
-  auto BitVector<BlockT, AllocatorT>::test(const soul_size index, const bool default_value) const
+  auto BitVector<BlockT, AllocatorT>::test(const usize index, const bool default_value) const
     -> bool
   {
     if (index >= size_) {
@@ -475,7 +475,7 @@ namespace soul
   }
 
   template <ts_bit_block BlockT, memory::allocator_type AllocatorT>
-  void BitVector<BlockT, AllocatorT>::set(const soul_size index, const bool value)
+  void BitVector<BlockT, AllocatorT>::set(const usize index, const bool value)
   {
     if (index >= size_) {
       resize(index + 1);
@@ -496,25 +496,25 @@ namespace soul
   }
 
   template <ts_bit_block BlockT, memory::allocator_type AllocatorT>
-  auto BitVector<BlockT, AllocatorT>::get_bit_ref(const soul_size index) -> reference
+  auto BitVector<BlockT, AllocatorT>::get_bit_ref(const usize index) -> reference
   {
     return reference(blocks_ + get_block_index(index), get_block_offset(index));
   }
 
   template <ts_bit_block BlockT, memory::allocator_type AllocatorT>
-  auto BitVector<BlockT, AllocatorT>::get_bool(const soul_size index) const -> bool
+  auto BitVector<BlockT, AllocatorT>::get_bool(const usize index) const -> bool
   {
     return blocks_[get_block_index(index)] & (BlockT(1) << get_block_offset(index));
   }
 
   template <ts_bit_block BlockT, memory::allocator_type AllocatorT>
-  auto BitVector<BlockT, AllocatorT>::get_new_capacity(const soul_size old_capacity) -> soul_size
+  auto BitVector<BlockT, AllocatorT>::get_new_capacity(const usize old_capacity) -> usize
   {
     return old_capacity * GROWTH_FACTOR + BLOCK_BIT_COUNT;
   }
 
   template <ts_bit_block BlockT, memory::allocator_type AllocatorT>
-  void BitVector<BlockT, AllocatorT>::init_reserve(const soul_size capacity)
+  void BitVector<BlockT, AllocatorT>::init_reserve(const usize capacity)
   {
     const auto block_count = get_block_count(capacity);
     blocks_ = allocator_->template allocate_array<BlockT>(block_count);
@@ -522,7 +522,7 @@ namespace soul
   }
 
   template <ts_bit_block BlockT, memory::allocator_type AllocatorT>
-  void BitVector<BlockT, AllocatorT>::init_resize(const soul_size size, const bool val)
+  void BitVector<BlockT, AllocatorT>::init_resize(const usize size, const bool val)
   {
     const auto block_count = get_block_count(size);
     blocks_ = allocator_->template allocate_array<BlockT>(block_count);
@@ -532,19 +532,19 @@ namespace soul
   }
 
   template <ts_bit_block BlockT, memory::allocator_type AllocatorT>
-  auto BitVector<BlockT, AllocatorT>::get_block_count(const soul_size size) -> soul_size
+  auto BitVector<BlockT, AllocatorT>::get_block_count(const usize size) -> usize
   {
     return (size + BLOCK_BIT_COUNT - 1) / BLOCK_BIT_COUNT;
   }
 
   template <ts_bit_block BlockT, memory::allocator_type AllocatorT>
-  auto BitVector<BlockT, AllocatorT>::get_block_index(const soul_size index) -> soul_size
+  auto BitVector<BlockT, AllocatorT>::get_block_index(const usize index) -> usize
   {
     return index / BLOCK_BIT_COUNT;
   }
 
   template <ts_bit_block BlockT, memory::allocator_type AllocatorT>
-  auto BitVector<BlockT, AllocatorT>::get_block_offset(const soul_size index) -> soul_size
+  auto BitVector<BlockT, AllocatorT>::get_block_offset(const usize index) -> usize
   {
     return index % BLOCK_BIT_COUNT;
   }

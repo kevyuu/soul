@@ -165,8 +165,8 @@ TEST(TestOptionAndThen, TestAndThen)
     const auto opt_some_listtestobj =
       OptListObj::some(ListTestObject::generate_n([] { return TestObject(5); }, 10));
     const auto result = opt_some_listtestobj.and_then(
-      [](const ListTestObject& val) { return soul::Option<soul_size>::some(val.size()); });
-    verify_option_equal(result, soul::Option<soul_size>::some(10));
+      [](const ListTestObject& val) { return soul::Option<usize>::some(val.size()); });
+    verify_option_equal(result, soul::Option<usize>::some(10));
   }
 
   {
@@ -192,7 +192,7 @@ TEST(TestOptionTransform, TestTransform)
       OptListObj::some(ListTestObject::generate_n([] { return TestObject(5); }, 10));
     const auto result =
       opt_some_listtestobj.transform([](const ListTestObject& val) { return val.size(); });
-    verify_option_equal(result, soul::Option<soul_size>::some(10));
+    verify_option_equal(result, soul::Option<usize>::some(10));
   }
 
   {

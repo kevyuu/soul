@@ -17,12 +17,12 @@ namespace soul::memory
     ~PageAllocator() override = default;
 
     auto reset() -> void override;
-    auto try_allocate(soul_size size, soul_size alignment, const char* tag) -> Allocation override;
-    [[nodiscard]] auto get_allocation_size(void* addr) const -> soul_size override;
+    auto try_allocate(usize size, usize alignment, const char* tag) -> Allocation override;
+    [[nodiscard]] auto get_allocation_size(void* addr) const -> usize override;
     auto deallocate(void* addr) -> void override;
 
   private:
-    soul_size page_size_ = 0;
+    usize page_size_ = 0;
   };
 
 } // namespace soul::memory

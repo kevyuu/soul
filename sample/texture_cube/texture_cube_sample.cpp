@@ -36,7 +36,7 @@ class TextureCubeSampleApp final : public App
     {-5.0f, 5.0f, -5.0f},
   };
 
-  using SkyboxIndex = uint16;
+  using SkyboxIndex = ui16;
   static constexpr SkyboxIndex SKYBOX_INDICES[] = {
     // Right
     1,
@@ -196,7 +196,7 @@ public:
       using namespace std;
       ifstream file(path, ios::binary);
       std::vector<uint8_t> contents((istreambuf_iterator<char>(file)), {});
-      image::KtxBundle ktx(contents.data(), soul::cast<uint32>(contents.size()));
+      image::KtxBundle ktx(contents.data(), soul::cast<ui32>(contents.size()));
       const auto& ktxinfo = ktx.getInfo();
       const auto nmips = ktx.getNumMipLevels();
 
@@ -220,15 +220,15 @@ public:
       const auto* skybox_data = ktx.getRawData();
       const auto skybox_data_size = ktx.getTotalSize();
 
-      for (uint32 level = 0; level < nmips; level++) {
-        uint8* level_data;
-        uint32 level_size;
+      for (ui32 level = 0; level < nmips; level++) {
+        ui8* level_data;
+        ui32 level_size;
         ktx.getBlob({level, 0, 0}, &level_data, &level_size);
         const auto level_width = std::max(1u, ktxinfo.pixelWidth >> level);
         const auto level_height = std::max(1u, ktxinfo.pixelHeight >> level);
 
         const gpu::TextureRegionUpdate region_update = {
-          .buffer_offset = soul::cast<uint64>(level_data - skybox_data),
+          .buffer_offset = soul::cast<ui64>(level_data - skybox_data),
           .subresource = {.mip_level = level, .base_array_layer = 0, .layer_count = 6},
           .extent = {level_width, level_height, 1},
         };
@@ -238,7 +238,7 @@ public:
       const gpu::TextureLoadDesc load_desc = {
         .data = skybox_data,
         .data_size = skybox_data_size,
-        .region_count = soul::cast<uint32>(region_loads.size()),
+        .region_count = soul::cast<ui32>(region_loads.size()),
         .regions = region_loads.data(),
       };
 

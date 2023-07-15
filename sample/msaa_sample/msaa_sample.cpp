@@ -22,7 +22,7 @@ class MSAASample final : public App
   static constexpr Vertex VERTICES[4] = {
     {{-0.5f, -0.5f}}, {{0.5f, -0.5f}}, {{0.5f, 0.5f}}, {{-0.5f, 0.5f}}};
 
-  using Index = uint16;
+  using Index = ui16;
   static constexpr Index INDICES[] = {0, 1, 2, 2, 3, 0};
 
   gpu::ProgramID program_id_ = gpu::ProgramID();
@@ -163,7 +163,7 @@ class MSAASample final : public App
 
         using Command = gpu::RenderCommandDrawIndex;
         command_list.template push<Command>(
-          push_constants_.size(), [=, this](const soul_size index) -> Command {
+          push_constants_.size(), [=, this](const usize index) -> Command {
             return {
               .pipeline_state_id = pipeline_state_id,
               .push_constant_data = &push_constants_[index],

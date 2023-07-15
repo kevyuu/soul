@@ -8,11 +8,11 @@ namespace soul::memory
 
   struct Allocation {
     void* addr = nullptr;
-    soul_size size = 0;
+    usize size = 0;
 
     Allocation() = default;
 
-    Allocation(void* addr, soul_size size) : addr(addr), size(size) {}
+    Allocation(void* addr, usize size) : addr(addr), size(size) {}
   };
 
   class Allocator
@@ -28,21 +28,21 @@ namespace soul::memory
     auto operator=(Allocator&& other) -> Allocator& = delete;
     virtual ~Allocator() = default;
 
-    virtual auto try_allocate(soul_size size, soul_size alignment, const char* tag)
+    virtual auto try_allocate(usize size, usize alignment, const char* tag)
       -> Allocation = 0;
     virtual auto deallocate(void* addr) -> void = 0;
-    virtual auto get_allocation_size(void* addr) const -> soul_size = 0;
+    virtual auto get_allocation_size(void* addr) const -> usize = 0;
     virtual auto reset() -> void = 0;
 
     [[nodiscard]] auto name() const -> const char* { return name_; }
 
-    [[nodiscard]] auto allocate(const soul_size size, const soul_size alignment) -> void*
+    [[nodiscard]] auto allocate(const usize size, const usize alignment) -> void*
     {
       const Allocation allocation = try_allocate(size, alignment, "untagged");
       return allocation.addr;
     }
 
-    [[nodiscard]] auto allocate(const soul_size size, const soul_size alignment, const char* tag)
+    [[nodiscard]] auto allocate(const usize size, const usize alignment, const char* tag)
       -> void*
     {
       const Allocation allocation = try_allocate(size, alignment, tag);
@@ -50,7 +50,7 @@ namespace soul::memory
     }
 
     template <typename T>
-    [[nodiscard]] auto allocate_array(const soul_size count, const char* tag = "untagged") -> T*
+    [[nodiscard]] auto allocate_array(const usize count, const char* tag = "untagged") -> T*
     {
       const Allocation allocation = try_allocate(count * sizeof(T), alignof(T), tag);
       // NOLINT(bugprone-sizeof-expression)
@@ -58,7 +58,7 @@ namespace soul::memory
     }
 
     template <typename T>
-    auto deallocate_array(T* addr, const soul_size count) -> void
+    auto deallocate_array(T* addr, const usize count) -> void
     {
       deallocate(addr); // NOLINT(bugprone-sizeof-expression)
     }

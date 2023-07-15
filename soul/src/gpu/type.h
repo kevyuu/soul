@@ -104,10 +104,10 @@ namespace soul::gpu
     VERTEX_ELEMENT_NORMALIZED = 0x2,
     VERTEX_ELEMENT_ENUM_END_BIT
   };
-  using VertexElementFlags = uint8;
+  using VertexElementFlags = ui8;
   static_assert(VERTEX_ELEMENT_ENUM_END_BIT - 1 <= std::numeric_limits<VertexElementFlags>::max());
 
-  enum class ShaderStage : uint8 {
+  enum class ShaderStage : ui8 {
     VERTEX,
     GEOMETRY,
     FRAGMENT,
@@ -124,9 +124,9 @@ namespace soul::gpu
   constexpr ShaderStageFlags SHADER_STAGES_RAY_TRACING =
     ShaderStageFlags({ShaderStage::RAYGEN, ShaderStage::MISS, ShaderStage::CLOSEST_HIT});
 
-  enum class ShaderGroup : uint8 { RAYGEN, MISS, HIT, CALLABLE, COUNT };
+  enum class ShaderGroup : ui8 { RAYGEN, MISS, HIT, CALLABLE, COUNT };
 
-  enum class PipelineStage : uint32 {
+  enum class PipelineStage : ui32 {
     TOP_OF_PIPE,
     DRAW_INDIRECT,
     VERTEX_INPUT,
@@ -150,7 +150,7 @@ namespace soul::gpu
   using PipelineStageFlags = FlagSet<PipelineStage>;
   const auto PIPELINE_STAGE_FLAGS_ALL = ~PipelineStageFlags();
 
-  enum class AccessType : uint32 {
+  enum class AccessType : ui32 {
     INDIRECT_COMMAND_READ,
     INDEX_READ,
     VERTEX_ATTRIBUTE_READ,
@@ -184,7 +184,7 @@ namespace soul::gpu
     AccessType::MEMORY_WRITE,
     AccessType::AS_WRITE};
 
-  enum class PipelineType : uint8 { NON_SHADER, RASTER, COMPUTE, RAY_TRACING, COUNT };
+  enum class PipelineType : ui8 { NON_SHADER, RASTER, COMPUTE, RAY_TRACING, COUNT };
 
   using PipelineFlags = FlagSet<PipelineType>;
   constexpr auto PIPELINE_FLAGS_NON_SHADER = PipelineFlags{PipelineType::NON_SHADER};
@@ -192,13 +192,13 @@ namespace soul::gpu
   constexpr auto PIPELINE_FLAGS_COMPUTE = PipelineFlags{PipelineType::COMPUTE};
   constexpr auto PIPELINE_FLAGS_RAY_TRACING = PipelineFlags{PipelineType::RAY_TRACING};
 
-  enum class QueueType : uint8 { GRAPHIC, COMPUTE, TRANSFER, COUNT, NONE = COUNT };
+  enum class QueueType : ui8 { GRAPHIC, COMPUTE, TRANSFER, COUNT, NONE = COUNT };
 
   using QueueFlags = FlagSet<QueueType>;
   constexpr QueueFlags QUEUE_DEFAULT = {
     QueueType::GRAPHIC, QueueType::COMPUTE, QueueType::TRANSFER};
 
-  enum class BufferUsage : uint8 {
+  enum class BufferUsage : ui8 {
     INDEX,
     VERTEX,
     UNIFORM,
@@ -214,7 +214,7 @@ namespace soul::gpu
 
   using BufferUsageFlags = FlagSet<BufferUsage>;
 
-  enum class TextureUsage : uint8 {
+  enum class TextureUsage : ui8 {
     SAMPLED,
     COLOR_ATTACHMENT,
     DEPTH_STENCIL_ATTACHMENT,
@@ -227,9 +227,9 @@ namespace soul::gpu
 
   using TextureUsageFlags = FlagSet<TextureUsage>;
 
-  enum class TextureType : uint8 { D1, D2, D2_ARRAY, D3, CUBE, COUNT };
+  enum class TextureType : ui8 { D1, D2, D2_ARRAY, D3, CUBE, COUNT };
 
-  enum class TextureFormat : uint16 {
+  enum class TextureFormat : ui16 {
     R8,
 
     DEPTH16,
@@ -258,9 +258,9 @@ namespace soul::gpu
     COUNT
   };
 
-  enum class TextureFilter : uint8 { NEAREST, LINEAR, COUNT };
+  enum class TextureFilter : ui8 { NEAREST, LINEAR, COUNT };
 
-  enum class TextureWrap : uint8 {
+  enum class TextureWrap : ui8 {
     REPEAT,
     MIRRORED_REPEAT,
     CLAMP_TO_EDGE,
@@ -269,7 +269,7 @@ namespace soul::gpu
     COUNT
   };
 
-  enum class Topology : uint8 {
+  enum class Topology : ui8 {
     POINT_LIST,
     LINE_LIST,
     LINE_STRIP,
@@ -279,13 +279,13 @@ namespace soul::gpu
     COUNT
   };
 
-  enum class PolygonMode : uint8 { FILL, LINE, POINT, COUNT };
+  enum class PolygonMode : ui8 { FILL, LINE, POINT, COUNT };
 
-  enum class CullMode : uint8 { NONE, FRONT, BACK, FRONT_AND_BACK, COUNT };
+  enum class CullMode : ui8 { NONE, FRONT, BACK, FRONT_AND_BACK, COUNT };
 
-  enum class FrontFace : uint8 { CLOCKWISE, COUNTER_CLOCKWISE, COUNT };
+  enum class FrontFace : ui8 { CLOCKWISE, COUNTER_CLOCKWISE, COUNT };
 
-  enum class CompareOp : uint8 {
+  enum class CompareOp : ui8 {
     NEVER,
     LESS,
     EQUAL,
@@ -297,7 +297,7 @@ namespace soul::gpu
     COUNT
   };
 
-  enum class BlendFactor : uint8 {
+  enum class BlendFactor : ui8 {
     ZERO,
     ONE,
     SRC_COLOR,
@@ -320,9 +320,9 @@ namespace soul::gpu
     COUNT
   };
 
-  enum class BlendOp : uint8 { ADD, SUBTRACT, REVERSE_SUBTRACT, MIN, MAX, COUNT };
+  enum class BlendOp : ui8 { ADD, SUBTRACT, REVERSE_SUBTRACT, MIN, MAX, COUNT };
 
-  enum class TextureLayout : uint8 {
+  enum class TextureLayout : ui8 {
     DONT_CARE,
     UNDEFINED,
     GENERAL,
@@ -353,25 +353,25 @@ namespace soul::gpu
 
     struct DepthStencil {
       float depth = 0.0f;
-      uint32 stencil = 0;
+      ui32 stencil = 0;
       DepthStencil() = default;
 
-      DepthStencil(const float depth, const uint32 stencil) : depth(depth), stencil(stencil) {}
+      DepthStencil(const float depth, const ui32 stencil) : depth(depth), stencil(stencil) {}
     } depth_stencil;
 
     ClearValue() = default;
 
-    ClearValue(vec4f color, float depth, uint32 stencil)
+    ClearValue(vec4f color, float depth, ui32 stencil)
         : color(color), depth_stencil(depth, stencil)
     {
     }
 
-    ClearValue(vec4ui32 color, float depth, uint32 stencil)
+    ClearValue(vec4ui32 color, float depth, ui32 stencil)
         : color(color), depth_stencil(depth, stencil)
     {
     }
 
-    ClearValue(vec4i32 color, float depth, uint32 stencil)
+    ClearValue(vec4i32 color, float depth, ui32 stencil)
         : color(color), depth_stencil(depth, stencil)
     {
     }
@@ -380,34 +380,34 @@ namespace soul::gpu
   class SubresourceIndex
   {
   private:
-    using value_type = uint32;
+    using value_type = ui32;
 
     static constexpr value_type LEVEL_MASK = 0xFFFF;
     static constexpr value_type LEVEL_BIT_SHIFT = 0;
 
     static constexpr value_type LAYER_MASK = 0xFFFF0000;
-    static constexpr uint8 LAYER_BIT_SHIFT = 16;
+    static constexpr ui8 LAYER_BIT_SHIFT = 16;
 
     value_type index_ = 0;
 
   public:
     constexpr SubresourceIndex() = default;
 
-    constexpr explicit SubresourceIndex(const uint16 level, const uint16 layer)
-        : index_(soul::cast<uint32>(level | soul::cast<uint32>(layer) << LAYER_BIT_SHIFT))
+    constexpr explicit SubresourceIndex(const ui16 level, const ui16 layer)
+        : index_(soul::cast<ui32>(level | soul::cast<ui32>(layer) << LAYER_BIT_SHIFT))
     {
     }
 
     [[nodiscard]]
-    constexpr auto get_level() const -> uint16
+    constexpr auto get_level() const -> ui16
     {
-      return soul::cast<uint16>((index_ & LEVEL_MASK) >> LEVEL_BIT_SHIFT);
+      return soul::cast<ui16>((index_ & LEVEL_MASK) >> LEVEL_BIT_SHIFT);
     }
 
     [[nodiscard]]
-    constexpr auto get_layer() const -> uint16
+    constexpr auto get_layer() const -> ui16
     {
-      return soul::cast<uint16>((index_ & LAYER_MASK) >> LAYER_BIT_SHIFT);
+      return soul::cast<ui16>((index_ & LAYER_MASK) >> LAYER_BIT_SHIFT);
     }
   };
 
@@ -415,15 +415,15 @@ namespace soul::gpu
     using value_type = SubresourceIndex;
 
     SubresourceIndex base;
-    uint16 level_count = 1;
-    uint16 layer_count = 1;
+    ui16 level_count = 1;
+    ui16 layer_count = 1;
 
     class ConstIterator
     {
     private:
-      uint16 mip_ = 0;
-      uint16 layer_ = 1;
-      uint16 mip_end_ = 1;
+      ui16 mip_ = 0;
+      ui16 layer_ = 1;
+      ui16 mip_end_ = 1;
 
     public:
       using pointer_type = SubresourceIndex*;
@@ -433,7 +433,7 @@ namespace soul::gpu
 
       ConstIterator() noexcept = default;
 
-      ConstIterator(const uint16 mip, const uint16 layer, const uint16 mip_end) noexcept
+      ConstIterator(const ui16 mip, const ui16 layer, const ui16 mip_end) noexcept
           : mip_(mip), layer_(layer), mip_end_(mip_end)
       {
       }
@@ -480,22 +480,22 @@ namespace soul::gpu
     auto begin() noexcept -> const_iterator
     {
       return const_iterator{
-        base.get_level(), base.get_layer(), soul::cast<uint16>(base.get_level() + level_count)};
+        base.get_level(), base.get_layer(), soul::cast<ui16>(base.get_level() + level_count)};
     }
 
     auto end() noexcept -> const_iterator
     {
       return const_iterator{
         base.get_level(),
-        soul::cast<uint16>(base.get_layer() + layer_count),
-        soul::cast<uint16>(base.get_level() + level_count)};
+        soul::cast<ui16>(base.get_layer() + layer_count),
+        soul::cast<ui16>(base.get_level() + level_count)};
     }
 
     [[nodiscard]]
     auto begin() const noexcept -> const_iterator
     {
       return const_iterator{
-        base.get_level(), base.get_layer(), soul::cast<uint16>(base.get_level() + level_count)};
+        base.get_level(), base.get_layer(), soul::cast<ui16>(base.get_level() + level_count)};
     }
 
     [[nodiscard]]
@@ -503,8 +503,8 @@ namespace soul::gpu
     {
       return const_iterator{
         base.get_level(),
-        soul::cast<uint16>(base.get_layer() + layer_count),
-        soul::cast<uint16>(base.get_level() + level_count)};
+        soul::cast<ui16>(base.get_layer() + layer_count),
+        soul::cast<ui16>(base.get_level() + level_count)};
     }
   };
 
@@ -518,19 +518,19 @@ namespace soul::gpu
   };
 
   struct BufferRegionCopy {
-    soul_size src_offset = 0;
-    soul_size dst_offset = 0;
-    soul_size size = 0;
+    usize src_offset = 0;
+    usize dst_offset = 0;
+    usize size = 0;
   };
 
   struct BufferUpdateDesc {
     const void* data = nullptr;
-    uint32 region_load_count = 0;
+    ui32 region_load_count = 0;
     BufferRegionCopy* region_loads = nullptr;
   };
 
   struct BufferDesc {
-    soul_size size = 0;
+    usize size = 0;
     BufferUsageFlags usage_flags;
     QueueFlags queue_flags = QUEUE_DEFAULT;
     std::optional<MemoryOption> memory_option = std::nullopt;
@@ -538,9 +538,9 @@ namespace soul::gpu
   };
 
   struct TextureSubresourceLayers {
-    uint32 mip_level;
-    uint32 base_array_layer;
-    uint32 layer_count;
+    ui32 mip_level;
+    ui32 base_array_layer;
+    ui32 layer_count;
   };
 
   struct TextureRegionCopy {
@@ -552,9 +552,9 @@ namespace soul::gpu
   };
 
   struct TextureRegionUpdate {
-    soul_size buffer_offset = 0;
-    uint32 buffer_row_length = 0;
-    uint32 buffer_image_height = 0;
+    usize buffer_offset = 0;
+    ui32 buffer_row_length = 0;
+    ui32 buffer_image_height = 0;
     TextureSubresourceLayers subresource = {};
     Offset3D offset;
     Extent3D extent;
@@ -562,15 +562,15 @@ namespace soul::gpu
 
   struct TextureLoadDesc {
     const void* data = nullptr;
-    soul_size data_size = 0;
+    usize data_size = 0;
 
-    uint32 region_count = 0;
+    ui32 region_count = 0;
     const TextureRegionUpdate* regions = nullptr;
 
     bool generate_mipmap = false;
   };
 
-  enum class TextureSampleCount : uint8 {
+  enum class TextureSampleCount : ui8 {
     COUNT_1,
     COUNT_2,
     COUNT_4,
@@ -587,8 +587,8 @@ namespace soul::gpu
     TextureType type = TextureType::D2;
     TextureFormat format = TextureFormat::COUNT;
     vec3ui32 extent;
-    uint32 mip_levels = 1;
-    uint16 layer_count = 1;
+    ui32 mip_levels = 1;
+    ui16 layer_count = 1;
     TextureSampleCount sample_count = TextureSampleCount::COUNT_1;
     TextureUsageFlags usage_flags;
     QueueFlags queue_flags;
@@ -597,7 +597,7 @@ namespace soul::gpu
     static auto d2(
       const char* name,
       TextureFormat format,
-      uint32 mip_levels,
+      ui32 mip_levels,
       TextureUsageFlags usage_flags,
       QueueFlags queue_flags,
       const vec2ui32 dimension,
@@ -617,7 +617,7 @@ namespace soul::gpu
     static auto d3(
       const char* name,
       TextureFormat format,
-      uint32 mip_levels,
+      ui32 mip_levels,
       TextureUsageFlags usage_flags,
       QueueFlags queue_flags,
       const vec3ui32 dimension) -> TextureDesc
@@ -635,11 +635,11 @@ namespace soul::gpu
     static auto d2_array(
       const char* name,
       TextureFormat format,
-      uint32 mip_levels,
+      ui32 mip_levels,
       TextureUsageFlags usage_flags,
       QueueFlags queue_flags,
       const vec2ui32 dimension,
-      uint16 layer_count) -> TextureDesc
+      ui16 layer_count) -> TextureDesc
     {
       return {
         .type = TextureType::D2_ARRAY,
@@ -655,7 +655,7 @@ namespace soul::gpu
     static auto cube(
       const char* name,
       TextureFormat format,
-      uint32 mip_levels,
+      ui32 mip_levels,
       TextureUsageFlags usage_flags,
       QueueFlags queue_flags,
       const vec2ui32 dimension) -> TextureDesc
@@ -672,9 +672,9 @@ namespace soul::gpu
     }
 
     [[nodiscard]]
-    auto get_view_count() const -> soul_size
+    auto get_view_count() const -> usize
     {
-      return soul::cast<soul_size>(mip_levels) * layer_count;
+      return soul::cast<usize>(mip_levels) * layer_count;
     }
   };
 
@@ -712,9 +712,9 @@ namespace soul::gpu
     }
   };
 
-  enum class RTBuildMode : uint8 { REBUILD, UPDATE, COUNT };
+  enum class RTBuildMode : ui8 { REBUILD, UPDATE, COUNT };
 
-  enum class RTBuildFlag : uint8 {
+  enum class RTBuildFlag : ui8 {
     ALLOW_UPDATE,
     ALLOW_COMPACTION,
     PREFER_FAST_TRACE,
@@ -725,28 +725,28 @@ namespace soul::gpu
 
   using RTBuildFlags = FlagSet<RTBuildFlag>;
 
-  enum class RTGeometryType : uint8 { TRIANGLE, AABB, COUNT };
+  enum class RTGeometryType : ui8 { TRIANGLE, AABB, COUNT };
 
-  enum class RTGeometryFlag : uint8 { OPAQUE, NO_DUPLICATE_ANY_HIT_INVOCATION, COUNT };
+  enum class RTGeometryFlag : ui8 { OPAQUE, NO_DUPLICATE_ANY_HIT_INVOCATION, COUNT };
 
   using RTGeometryFlags = FlagSet<RTGeometryFlag>;
 
   struct RTTriangleDesc {
     TextureFormat vertex_format;
     GPUAddress vertex_data;
-    uint64 vertex_stride;
-    uint32 vertex_count;
+    ui64 vertex_stride;
+    ui32 vertex_count;
     IndexType index_type;
     GPUAddress index_data;
     GPUAddress transform_data;
-    uint32 index_count;
-    uint32 index_offset;
-    uint32 first_vertex;
-    uint32 transform_offset;
+    ui32 index_count;
+    ui32 index_offset;
+    ui32 first_vertex;
+    ui32 transform_offset;
   };
 
   struct RTAABBDesc {
-    uint32 count;
+    ui32 count;
     GPUAddress data;
     uint64_t stride;
   };
@@ -761,7 +761,7 @@ namespace soul::gpu
     } content;
   };
 
-  enum class RTGeometryInstanceFlag : uint32 {
+  enum class RTGeometryInstanceFlag : ui32 {
     // The enum values are kept consistent with D3D12_RAYTRACING_INSTANCE_FLAGS
     // and VkGeometryInstanceFlagBitsKHR.
     TRIANGLE_FACING_CULL_DISABLE,
@@ -775,43 +775,43 @@ namespace soul::gpu
 
   struct RTInstanceDesc {
     float transform[3][4] = {};
-    uint32 instance_id : 24 = {};
-    uint32 instance_mask : 8 = {};
-    uint32 sbt_offset : 24 = {};
-    uint32 flags : 8 = {};
+    ui32 instance_id : 24 = {};
+    ui32 instance_mask : 8 = {};
+    ui32 sbt_offset : 24 = {};
+    ui32 flags : 8 = {};
     GPUAddress blas_gpu_address;
 
     RTInstanceDesc() = default;
     RTInstanceDesc(
       mat4f in_transform,
-      uint32 instance_id,
-      uint32 instance_mask,
-      uint32 sbt_offset,
+      ui32 instance_id,
+      ui32 instance_mask,
+      ui32 sbt_offset,
       RTGeometryInstanceFlags flags,
       GPUAddress blas_gpu_address);
   };
 
   struct TlasDesc {
     const char* name = nullptr;
-    soul_size size = 0;
+    usize size = 0;
   };
 
   struct BlasDesc {
     const char* name = nullptr;
-    soul_size size = 0;
+    usize size = 0;
   };
 
   struct TlasBuildDesc {
     RTBuildFlags build_flags;
     RTGeometryFlags geometry_flags;
     GPUAddress instance_data;
-    uint32 instance_count = 0;
-    uint32 instance_offset = 0;
+    ui32 instance_count = 0;
+    ui32 instance_offset = 0;
   };
 
   struct BlasBuildDesc {
     RTBuildFlags flags;
-    uint32 geometry_count;
+    ui32 geometry_count;
     const RTGeometryDesc* geometry_descs;
   };
 
@@ -845,13 +845,13 @@ namespace soul::gpu
   static constexpr auto ENTRY_POINT_UNUSED = VK_SHADER_UNUSED_KHR;
 
   struct RTGeneralShaderGroup {
-    uint32 entry_point = ENTRY_POINT_UNUSED;
+    ui32 entry_point = ENTRY_POINT_UNUSED;
   };
 
   struct RTTriangleHitGroup {
-    uint32 any_hit_entry_point = ENTRY_POINT_UNUSED;
-    uint32 closest_hit_entry_point = ENTRY_POINT_UNUSED;
-    uint32 intersection_entry_point = ENTRY_POINT_UNUSED;
+    ui32 any_hit_entry_point = ENTRY_POINT_UNUSED;
+    ui32 closest_hit_entry_point = ENTRY_POINT_UNUSED;
+    ui32 intersection_entry_point = ENTRY_POINT_UNUSED;
   };
 
   struct ShaderDefine {
@@ -860,28 +860,28 @@ namespace soul::gpu
   };
 
   struct ProgramDesc {
-    soul_size search_path_count = 0;
+    usize search_path_count = 0;
     const std::filesystem::path* search_paths = nullptr;
-    soul_size shader_define_count = 0;
+    usize shader_define_count = 0;
     const ShaderDefine* shader_defines = nullptr;
-    soul_size source_count = 0;
+    usize source_count = 0;
     const ShaderSource* sources = nullptr;
-    soul_size entry_point_count = 0;
+    usize entry_point_count = 0;
     const ShaderEntryPoint* entry_points = nullptr;
   };
 
   struct ShaderTableDesc {
     ProgramID program_id;
     const RTGeneralShaderGroup raygen_group;
-    uint32 miss_group_count;
+    ui32 miss_group_count;
     const RTGeneralShaderGroup* miss_groups;
-    uint32 hit_group_count;
+    ui32 hit_group_count;
     const RTTriangleHitGroup* hit_groups;
-    uint32 max_recursion_depth;
+    ui32 max_recursion_depth;
     const char* name;
   };
 
-  enum class RTPipelineFlag : uint8 { SKIP_TRIANGLE, SKIP_PROCEDURAL_PRIMITIVES, COUNT };
+  enum class RTPipelineFlag : ui8 { SKIP_TRIANGLE, SKIP_PROCEDURAL_PRIMITIVES, COUNT };
 
   using RTPipelineFlags = FlagSet<RTPipelineFlag>;
 
@@ -893,7 +893,7 @@ namespace soul::gpu
     ATTACHMENT_CLEAR_BIT = 0x10,
     ATTACHMENT_ENUM_END_BIT
   };
-  using AttachmentFlags = uint8;
+  using AttachmentFlags = ui8;
   static_assert(ATTACHMENT_ENUM_END_BIT - 1 < std::numeric_limits<AttachmentFlags>::max());
 
   struct Attachment {
@@ -912,12 +912,12 @@ namespace soul::gpu
     InputLayoutDesc input_layout;
 
     struct InputBindingDesc {
-      uint32 stride = 0;
+      ui32 stride = 0;
     } input_bindings[MAX_INPUT_BINDING_PER_SHADER];
 
     struct InputAttrDesc {
-      uint32 binding = 0;
-      uint32 offset = 0;
+      ui32 binding = 0;
+      ui32 offset = 0;
       VertexElementType type = VertexElementType::DEFAULT;
       VertexElementFlags flags = 0;
     } input_attributes[MAX_INPUT_PER_SHADER];
@@ -932,7 +932,7 @@ namespace soul::gpu
       FrontFace front_face = FrontFace::CLOCKWISE;
     } raster;
 
-    uint8 color_attachment_count = 0;
+    ui8 color_attachment_count = 0;
 
     struct ColorAttachmentDesc {
       bool blend_enable = false;
@@ -1020,8 +1020,8 @@ namespace soul::gpu
     };
 
     struct ProgramDescriptorBinding {
-      uint8 count = 0;
-      uint8 attachment_index = 0;
+      ui8 count = 0;
+      ui8 attachment_index = 0;
       VkShaderStageFlags shader_stage_flags = 0;
       VkPipelineStageFlags pipeline_stage_flags = 0;
     };
@@ -1044,8 +1044,8 @@ namespace soul::gpu
     };
 
     struct QueueData {
-      uint32 count = 0;
-      uint32 indices[3] = {};
+      ui32 count = 0;
+      ui32 indices[3] = {};
     };
 
     struct Swapchain {
@@ -1053,7 +1053,7 @@ namespace soul::gpu
       VkSwapchainKHR vk_handle = VK_NULL_HANDLE;
       VkSurfaceFormatKHR format = {};
       VkExtent2D extent = {};
-      uint32 image_count = 0;
+      ui32 image_count = 0;
       SBOVector<TextureID> textures;
       SBOVector<VkImage> images;
       SBOVector<VkImageView> image_views;
@@ -1061,7 +1061,7 @@ namespace soul::gpu
 
     struct DescriptorSetLayoutBinding {
       VkDescriptorType descriptor_type;
-      uint32 descriptor_count;
+      ui32 descriptor_count;
       VkShaderStageFlags stage_flags;
     };
 
@@ -1080,13 +1080,13 @@ namespace soul::gpu
     };
 
     struct ShaderDescriptorBinding {
-      uint8 count = 0;
-      uint8 attachmentIndex = 0;
+      ui8 count = 0;
+      ui8 attachmentIndex = 0;
     };
 
     struct ShaderInput {
       VkFormat format = VK_FORMAT_UNDEFINED;
-      uint32 offset = 0;
+      ui32 offset = 0;
     };
 
     using VisibleAccessMatrix = FlagMap<PipelineStage, AccessFlags>;
@@ -1218,7 +1218,7 @@ namespace soul::gpu
     struct Blas {
       struct BlasGroupData {
         BlasGroupID group_id;
-        soul_size index = 0;
+        usize index = 0;
       };
 
       BlasDesc desc;
@@ -1263,7 +1263,7 @@ namespace soul::gpu
     };
 
     struct BinarySemaphore {
-      enum class State : uint8 { INIT, SIGNALLED, WAITED, COUNT };
+      enum class State : ui8 { INIT, SIGNALLED, WAITED, COUNT };
 
       VkSemaphore vk_handle = VK_NULL_HANDLE;
       State state = State::INIT;
@@ -1282,9 +1282,9 @@ namespace soul::gpu
     };
 
     struct TimelineSemaphore {
-      uint32 queue_family_index;
+      ui32 queue_family_index;
       VkSemaphore vk_handle;
-      uint64 counter;
+      ui64 counter;
 
       static auto null() -> TimelineSemaphore { return {}; }
       [[nodiscard]]
@@ -1322,7 +1322,7 @@ namespace soul::gpu
     class CommandQueue
     {
     public:
-      auto init(VkDevice device, uint32 family_index, uint32 queue_index) -> void;
+      auto init(VkDevice device, ui32 family_index, ui32 queue_index) -> void;
       auto wait(Semaphore semaphore, VkPipelineStageFlags wait_stages) -> void;
       auto wait(BinarySemaphore* semaphore, VkPipelineStageFlags wait_stages) -> void;
       auto wait(TimelineSemaphore semaphore, VkPipelineStageFlags wait_stages) -> void;
@@ -1330,10 +1330,10 @@ namespace soul::gpu
       auto get_timeline_semaphore() -> TimelineSemaphore;
       auto submit(PrimaryCommandBuffer command_buffer, BinarySemaphore* = nullptr) -> void;
       auto flush(BinarySemaphore* binary_semaphore = nullptr) -> void;
-      auto present(VkSwapchainKHR swapchain, uint32 swapchain_index, BinarySemaphore* semaphore)
+      auto present(VkSwapchainKHR swapchain, ui32 swapchain_index, BinarySemaphore* semaphore)
         -> void;
       [[nodiscard]]
-      auto get_family_index() const -> uint32
+      auto get_family_index() const -> ui32
       {
         return family_index_;
       }
@@ -1347,14 +1347,14 @@ namespace soul::gpu
 
       VkDevice device_ = VK_NULL_HANDLE;
       VkQueue vk_handle_ = VK_NULL_HANDLE;
-      uint32 family_index_ = 0;
+      ui32 family_index_ = 0;
       SBOVector<VkSemaphore> wait_semaphores_;
       SBOVector<VkPipelineStageFlags> wait_stages_;
-      SBOVector<uint64> wait_timeline_values_;
+      SBOVector<ui64> wait_timeline_values_;
       SBOVector<VkCommandBuffer> commands_;
 
       VkSemaphore timeline_semaphore_ = VK_NULL_HANDLE;
-      uint64 current_timeline_values_ = 0;
+      ui64 current_timeline_values_ = 0;
     };
 
     class SecondaryCommandBuffer
@@ -1410,7 +1410,7 @@ namespace soul::gpu
         allocator_initializer_.end();
       }
 
-      auto init(VkDevice device, VkCommandBufferLevel level, uint32 queue_family_index) -> void;
+      auto init(VkDevice device, VkCommandBufferLevel level, ui32 queue_family_index) -> void;
       auto reset() -> void;
       auto request() -> VkCommandBuffer;
 
@@ -1420,7 +1420,7 @@ namespace soul::gpu
       VkCommandPool vk_handle_ = VK_NULL_HANDLE;
       Vector<VkCommandBuffer> allocated_buffers_;
       VkCommandBufferLevel level_ = VK_COMMAND_BUFFER_LEVEL_MAX_ENUM;
-      uint16 count_ = 0;
+      ui16 count_ = 0;
     };
 
     class CommandPools
@@ -1432,7 +1432,7 @@ namespace soul::gpu
         allocator_initializer_.end();
       }
 
-      auto init(VkDevice device, const CommandQueues& queues, soul_size thread_count) -> void;
+      auto init(VkDevice device, const CommandQueues& queues, usize thread_count) -> void;
       auto reset() -> void;
 
       auto request_command_buffer(QueueType queue_type) -> PrimaryCommandBuffer;
@@ -1476,17 +1476,17 @@ namespace soul::gpu
       CommandPools* command_pools_ = nullptr;
 
       auto get_thread_context() -> ThreadContext&;
-      auto get_staging_buffer(soul_size size) -> StagingBuffer;
+      auto get_staging_buffer(usize size) -> StagingBuffer;
       auto get_transfer_command_buffer() -> PrimaryCommandBuffer;
       auto get_mipmap_gen_command_buffer() -> PrimaryCommandBuffer;
       auto get_clear_command_buffer() -> PrimaryCommandBuffer;
-      auto load_staging_buffer(const StagingBuffer&, const void* data, soul_size size) -> void;
+      auto load_staging_buffer(const StagingBuffer&, const void* data, usize size) -> void;
       auto load_staging_buffer(
         const StagingBuffer&,
         const void* data,
-        soul_size count,
-        soul_size type_size,
-        soul_size stride) -> void;
+        usize count,
+        usize type_size,
+        usize stride) -> void;
 
       Vector<ThreadContext> thread_contexts_;
     };
@@ -1530,7 +1530,7 @@ namespace soul::gpu
       BinarySemaphore image_available_semaphore;
       BinarySemaphore render_finished_semaphore;
 
-      uint32 swapchain_index = 0;
+      ui32 swapchain_index = 0;
 
       struct Garbages {
         Vector<TextureID> textures;
@@ -1585,7 +1585,7 @@ namespace soul::gpu
       GPUProperties gpu_properties = {};
       VkPhysicalDeviceMemoryProperties physical_device_memory_properties = {};
       VkPhysicalDeviceFeatures physical_device_features = {};
-      FlagMap<QueueType, uint32> queue_family_indices;
+      FlagMap<QueueType, ui32> queue_family_indices;
 
       CommandQueues queues;
 
@@ -1595,8 +1595,8 @@ namespace soul::gpu
       Swapchain swapchain;
 
       Vector<FrameContext> frame_contexts;
-      uint32 frame_counter = 0;
-      uint32 current_frame = 0;
+      ui32 frame_counter = 0;
+      ui32 current_frame = 0;
 
       VmaAllocator gpu_allocator = VK_NULL_HANDLE;
       Vector<VmaPool> linear_pools;
@@ -1638,7 +1638,7 @@ namespace soul::gpu
   } // namespace impl
 
   // Render Command API
-  enum class RenderCommandType : uint8 {
+  enum class RenderCommandType : ui8 {
     DRAW,
     DRAW_INDEX,
     COPY_TEXTURE,
@@ -1669,35 +1669,35 @@ namespace soul::gpu
     static constexpr PipelineType PIPELINE_TYPE = PipelineType::RASTER;
     PipelineStateID pipeline_state_id;
     void* push_constant_data = nullptr;
-    uint32 push_constant_size = 0;
+    ui32 push_constant_size = 0;
     BufferID vertex_buffer_i_ds[MAX_VERTEX_BINDING];
-    uint16 vertex_offsets[MAX_VERTEX_BINDING] = {};
-    uint32 vertex_count = 0;
-    uint32 instance_count = 0;
-    uint32 first_vertex = 0;
-    uint32 first_instance = 0;
+    ui16 vertex_offsets[MAX_VERTEX_BINDING] = {};
+    ui32 vertex_count = 0;
+    ui32 instance_count = 0;
+    ui32 first_vertex = 0;
+    ui32 first_instance = 0;
   };
 
   struct RenderCommandDrawIndex : RenderCommandTyped<RenderCommandType::DRAW_INDEX> {
     static constexpr PipelineType PIPELINE_TYPE = PipelineType::RASTER;
     PipelineStateID pipeline_state_id;
     const void* push_constant_data = nullptr;
-    uint32 push_constant_size = 0;
+    ui32 push_constant_size = 0;
     BufferID vertex_buffer_ids[MAX_VERTEX_BINDING];
-    uint16 vertex_offsets[MAX_VERTEX_BINDING] = {};
+    ui16 vertex_offsets[MAX_VERTEX_BINDING] = {};
     BufferID index_buffer_id;
-    soul_size index_offset = 0;
+    usize index_offset = 0;
     IndexType index_type = IndexType::UINT16;
-    uint32 first_index = 0;
-    uint32 index_count = 0;
+    ui32 first_index = 0;
+    ui32 index_count = 0;
   };
 
   struct RenderCommandUpdateTexture : RenderCommandTyped<RenderCommandType::UPDATE_TEXTURE> {
     static constexpr PipelineType PIPELINE_TYPE = PipelineType::NON_SHADER;
     TextureID dst_texture = TextureID::null();
     const void* data = nullptr;
-    soul_size data_size = 0;
-    uint32 region_count = 0;
+    usize data_size = 0;
+    ui32 region_count = 0;
     const TextureRegionUpdate* regions = nullptr;
   };
 
@@ -1705,7 +1705,7 @@ namespace soul::gpu
     static constexpr PipelineType PIPELINE_TYPE = PipelineType::NON_SHADER;
     TextureID src_texture = TextureID::null();
     TextureID dst_texture = TextureID::null();
-    uint32 region_count = 0;
+    ui32 region_count = 0;
     const TextureRegionCopy* regions = nullptr;
   };
 
@@ -1713,7 +1713,7 @@ namespace soul::gpu
     static constexpr PipelineType PIPELINE_TYPE = PipelineType::NON_SHADER;
     BufferID dst_buffer = BufferID::null();
     void* data = nullptr;
-    uint32 region_count = 0;
+    ui32 region_count = 0;
     const BufferRegionCopy* regions = nullptr;
   };
 
@@ -1721,7 +1721,7 @@ namespace soul::gpu
     static constexpr PipelineType PIPELINE_TYPE = PipelineType::NON_SHADER;
     BufferID src_buffer = BufferID::null();
     BufferID dst_buffer = BufferID::null();
-    uint32 region_count = 0;
+    ui32 region_count = 0;
     const BufferRegionCopy* regions = nullptr;
   };
 
@@ -1729,7 +1729,7 @@ namespace soul::gpu
     static constexpr PipelineType PIPELINE_TYPE = PipelineType::COMPUTE;
     PipelineStateID pipeline_state_id;
     void* push_constant_data = nullptr;
-    uint32 push_constant_size = 0;
+    ui32 push_constant_size = 0;
     vec3ui32 group_count;
   };
 
@@ -1737,7 +1737,7 @@ namespace soul::gpu
     static constexpr PipelineType PIPELINE_TYPE = PipelineType::RAY_TRACING;
     ShaderTableID shader_table_id;
     void* push_constant_data = nullptr;
-    uint32 push_constant_size = 0;
+    ui32 push_constant_size = 0;
     vec3ui32 dimension;
   };
 
@@ -1757,15 +1757,15 @@ namespace soul::gpu
 
   struct RenderCommandBatchBuildBlas : RenderCommandTyped<RenderCommandType::BATCH_BUILD_BLAS> {
     static constexpr PipelineType PIPELINE_TYPE = PipelineType::NON_SHADER;
-    uint32 build_count;
+    ui32 build_count;
     RenderCommandBuildBlas* builds;
-    soul_size max_build_memory_size;
+    usize max_build_memory_size;
   };
 
   template <typename Func, typename RenderCommandType>
   concept command_generator =
-    std::invocable<Func, soul_size> &&
-    std::same_as<RenderCommandType, std::invoke_result_t<Func, soul_size>>;
+    std::invocable<Func, usize> &&
+    std::same_as<RenderCommandType, std::invoke_result_t<Func, usize>>;
 
   template <typename T, PipelineFlags pipeline_flags>
   concept render_command =

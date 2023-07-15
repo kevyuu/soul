@@ -12,9 +12,9 @@ using namespace soul;
 class Texture3DSampleApp final : public App
 {
 
-  static constexpr soul_size ROW_COUNT = 2;
-  static constexpr soul_size COL_COUNT = 2;
-  static constexpr soul_size TRANSFORM_COUNT = ROW_COUNT * COL_COUNT;
+  static constexpr usize ROW_COUNT = 2;
+  static constexpr usize COL_COUNT = 2;
+  static constexpr usize TRANSFORM_COUNT = ROW_COUNT * COL_COUNT;
 
   struct Vertex {
     vec2f position = {};
@@ -29,7 +29,7 @@ class Texture3DSampleApp final : public App
     {{-0.5f, 0.5f}, {1.0f, 1.0f, 1.0f}, {0.0f, 0.0f}}   // bottom right
   };
 
-  using Index = uint16;
+  using Index = ui16;
   static constexpr Index INDICES[] = {0, 1, 2, 2, 3, 0};
 
   struct Transform {
@@ -46,7 +46,7 @@ class Texture3DSampleApp final : public App
   gpu::TextureID test_texture_id_ = gpu::TextureID();
   gpu::SamplerID test_sampler_id_ = gpu::SamplerID();
   void* test_texture_data_;
-  uint32 width_, height_, channel_count_;
+  ui32 width_, height_, channel_count_;
 
   const std::chrono::steady_clock::time_point start_ = std::chrono::steady_clock::now();
 
@@ -82,7 +82,7 @@ class Texture3DSampleApp final : public App
             command_list.push(Command{
               .dst_texture = registry.get_texture(parameter.persistent_texture),
               .data = test_texture_data_,
-              .data_size = soul::cast<soul_size>(width_ * height_ * 4),
+              .data_size = soul::cast<usize>(width_ * height_ * 4),
               .region_count = 1,
               .regions = &region,
             });
@@ -249,7 +249,7 @@ public:
          gpu::TextureUsage::TRANSFER_SRC,
          gpu::TextureUsage::TRANSFER_DST},
         {gpu::QueueType::GRAPHIC},
-        {static_cast<uint32>(width), static_cast<uint32>(height)}));
+        {static_cast<ui32>(width), static_cast<ui32>(height)}));
       test_sampler_id_ = gpu_system_->request_sampler(
         gpu::SamplerDesc::same_filter_wrap(gpu::TextureFilter::LINEAR, gpu::TextureWrap::REPEAT));
     }

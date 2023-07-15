@@ -12,7 +12,7 @@ namespace soul
   public:
     Slice() = default;
 
-    Slice(Vector<T>* array, soul_size begin, soul_size end)
+    Slice(Vector<T>* array, usize begin, usize end)
         : vector_(array), begin_idx_(begin), end_idx_(end), size_(end_idx_ - begin_idx_)
     {
     }
@@ -23,7 +23,7 @@ namespace soul
     auto operator=(Slice&& other) noexcept -> Slice& = default;
     ~Slice() = default;
 
-    auto set(Vector<T>* array, soul_size begin, soul_size end) -> void
+    auto set(Vector<T>* array, usize begin, usize end) -> void
     {
       vector_ = array;
       begin_idx_ = begin;
@@ -31,19 +31,19 @@ namespace soul
       size_ = end_idx_ - begin_idx_;
     }
 
-    [[nodiscard]] auto operator[](soul_size idx) -> T&
+    [[nodiscard]] auto operator[](usize idx) -> T&
     {
       SOUL_ASSERT(0, idx < size_, "");
       return (*vector_)[begin_idx_ + idx];
     }
 
-    [[nodiscard]] auto operator[](soul_size idx) const -> const T&
+    [[nodiscard]] auto operator[](usize idx) const -> const T&
     {
       SOUL_ASSERT(0, idx < size_, "");
       return this->operator[](idx);
     }
 
-    [[nodiscard]] auto size() const -> soul_size { return size_; }
+    [[nodiscard]] auto size() const -> usize { return size_; }
 
     [[nodiscard]] auto begin() const -> const T* { return vector_->data() + begin_idx_; }
     [[nodiscard]] auto end() const -> const T* { return vector_->data() + end_idx_; }
@@ -51,14 +51,14 @@ namespace soul
     [[nodiscard]] auto begin() -> T* { return vector_->data() + begin_idx_; }
     [[nodiscard]] auto end() -> T* { return vector_->data() + end_idx_; }
 
-    [[nodiscard]] auto get_begin_idx() const -> soul_size { return begin_idx_; }
-    [[nodiscard]] auto get_end_idx() const -> soul_size { return end_idx_; }
+    [[nodiscard]] auto get_begin_idx() const -> usize { return begin_idx_; }
+    [[nodiscard]] auto get_end_idx() const -> usize { return end_idx_; }
 
   private:
     Vector<T>* vector_ = nullptr;
-    soul_size begin_idx_ = 0;
-    soul_size end_idx_ = 0;
-    soul_size size_ = 0;
+    usize begin_idx_ = 0;
+    usize end_idx_ = 0;
+    usize size_ = 0;
   };
 
 } // namespace soul

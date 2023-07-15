@@ -16,7 +16,7 @@ namespace soul::gpu
   public:
     struct ID {
       T* obj = nullptr;
-      uint64 cookie = 0;
+      ui64 cookie = 0;
       auto operator<=>(const ID&) const = default;
     };
 
@@ -50,7 +50,7 @@ namespace soul::gpu
         if (!memory) {
           return NULLVAL;
         }
-        for (soul_size object_idx = 0; object_idx < num_objects; object_idx++) {
+        for (usize object_idx = 0; object_idx < num_objects; object_idx++) {
           vacants_.push_back(&memory[object_idx]);
         }
         memories_.push_back(memory);
@@ -75,7 +75,7 @@ namespace soul::gpu
     Vector<T*> vacants_;
     Vector<T*> memories_;
     memory::Allocator* allocator_;
-    uint64 cookie = 0;
+    ui64 cookie = 0;
   };
 
   template <typename T, size_t BLOCK_SIZE = 512>

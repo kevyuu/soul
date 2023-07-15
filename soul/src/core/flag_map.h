@@ -11,7 +11,7 @@ namespace soul
   class FlagMap
   {
   public:
-    static constexpr uint64 COUNT = to_underlying(EnumT::COUNT);
+    static constexpr ui64 COUNT = to_underlying(EnumT::COUNT);
 
     using this_type = FlagMap<EnumT, ValT>;
     using value_type = ValT;
@@ -43,7 +43,7 @@ namespace soul
       return {Array<ValT, COUNT>::init_generate(fn)};
     }
 
-    template <ts_fn<ValT, soul_size> Fn>
+    template <ts_fn<ValT, usize> Fn>
     [[nodiscard]]
     static constexpr auto init_index_transform(Fn fn) -> this_type
     {
@@ -76,7 +76,7 @@ namespace soul
     }
 
     [[nodiscard]]
-    constexpr auto size() const -> soul_size
+    constexpr auto size() const -> usize
     {
       return buffer_.size();
     }
@@ -178,7 +178,7 @@ namespace soul
   consteval auto FlagMap<EnumT, ValT>::from_val_list(const ValT (&list)[N]) noexcept -> this_type
   {
     static_assert(N == COUNT);
-    const auto create_array = [&]<soul_size... I>(std::index_sequence<I...>) -> this_type {
+    const auto create_array = [&]<usize... I>(std::index_sequence<I...>) -> this_type {
       return {list[I]...};
     };
     return create_array(std::make_index_sequence<COUNT>());

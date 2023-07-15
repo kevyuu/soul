@@ -66,11 +66,11 @@ namespace soul::gpu
   }
 
   auto compute_max_primitives_counts(const BlasBuildDesc& build_desc, memory::Allocator& allocator)
-    -> Vector<uint32>
+    -> Vector<ui32>
   {
-    return Vector<uint32>::transform(
+    return Vector<ui32>::transform(
       std::span(build_desc.geometry_descs, build_desc.geometry_count),
-      [](const RTGeometryDesc& desc) -> uint32 {
+      [](const RTGeometryDesc& desc) -> ui32 {
         if (desc.type == RTGeometryType::TRIANGLE) {
           return desc.content.triangles.index_count / 3;
         }

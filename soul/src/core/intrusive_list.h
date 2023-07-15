@@ -166,7 +166,7 @@ namespace soul
     [[nodiscard]] auto rend() const noexcept -> const_reverse_iterator;
     [[nodiscard]] auto crend() const noexcept -> const_reverse_iterator;
 
-    [[nodiscard]] auto size() const noexcept -> soul_size;
+    [[nodiscard]] auto size() const noexcept -> usize;
     [[nodiscard]] auto empty() const noexcept -> bool;
 
     [[nodiscard]] auto front() -> reference;
@@ -304,9 +304,9 @@ namespace soul
   }
 
   template <intrusive_node_type T>
-  auto IntrusiveList<T>::size() const noexcept -> soul_size
+  auto IntrusiveList<T>::size() const noexcept -> usize
   {
-    soul_size size = 0;
+    usize size = 0;
     for (const IntrusiveListNode* node = anchor_.next; node != &anchor_; node = node->next) {
       size++;
     }

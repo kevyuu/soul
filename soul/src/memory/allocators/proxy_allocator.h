@@ -9,14 +9,14 @@ namespace soul::memory
 {
 
   struct AllocateParam {
-    soul_size size = 0;
-    soul_size alignment = 0;
+    usize size = 0;
+    usize alignment = 0;
     const char* tag = nullptr;
   };
 
   struct DeallocateParam {
     void* addr = nullptr;
-    soul_size size = 0;
+    usize size = 0;
   };
 
   class Proxy
@@ -30,7 +30,7 @@ namespace soul::memory
     virtual ~Proxy() = default;
 
     virtual auto get_base_addr(void* addr) const -> void* { return addr; }
-    [[nodiscard]] virtual auto get_base_size(const soul_size size) const -> soul_size
+    [[nodiscard]] virtual auto get_base_size(const usize size) const -> usize
     {
       return size;
     }
@@ -131,9 +131,9 @@ namespace soul::memory
       return base_addr;
     }
 
-    [[nodiscard]] auto get_base_size(const soul_size size) const -> soul_size override
+    [[nodiscard]] auto get_base_size(const usize size) const -> usize override
     {
-      soul_size base_size = proxy1_.get_base_size(size);
+      usize base_size = proxy1_.get_base_size(size);
       base_size = proxy2_.get_base_size(base_size);
       base_size = proxy3_.get_base_size(base_size);
       base_size = proxy4_.get_base_size(base_size);
@@ -253,15 +253,15 @@ namespace soul::memory
     auto on_post_cleanup() -> void override {}
 
   private:
-    soul_size _counter = 0;
+    usize _counter = 0;
   };
 
   class ClearValuesProxy final : public Proxy
   {
   public:
     struct Config {
-      uint8 allocate_clear_value;
-      uint8 free_clear_value;
+      ui8 allocate_clear_value;
+      ui8 free_clear_value;
     };
 
     explicit ClearValuesProxy(const Config& config)
@@ -303,10 +303,10 @@ namespace soul::memory
     auto on_post_cleanup() -> void override {}
 
   private:
-    uint8 on_alloc_clear_value_;
-    uint8 on_dealloc_clear_value_;
+    ui8 on_alloc_clear_value_;
+    ui8 on_dealloc_clear_value_;
 
-    soul_size current_alloc_size_ = 0;
+    usize current_alloc_size_ = 0;
   };
 
   class BoundGuardProxy final : public Proxy
@@ -322,7 +322,7 @@ namespace soul::memory
       return util::pointer_sub(addr, GUARD_SIZE);
     }
 
-    [[nodiscard]] auto get_base_size(const soul_size size) const -> soul_size override
+    [[nodiscard]] auto get_base_size(const usize size) const -> usize override
     {
       return size - 2llu * GUARD_SIZE;
     }
@@ -355,7 +355,7 @@ namespace soul::memory
         auto base_front = soul::cast<byte*>(util::pointer_sub(dealloc_param.addr, GUARD_SIZE));
         auto base_back =
           soul::cast<byte*>(util::pointer_add(dealloc_param.addr, dealloc_param.size));
-        for (soul_size i = 0; i < GUARD_SIZE; i++) {
+        for (usize i = 0; i < GUARD_SIZE; i++) {
           SOUL_ASSERT(0, base_front[i] == GUARD_FLAG, "");
           SOUL_ASSERT(0, base_back[i] == GUARD_FLAG, "");
         }
@@ -373,9 +373,9 @@ namespace soul::memory
     auto on_post_cleanup() -> void override {}
 
   private:
-    static constexpr uint32 GUARD_SIZE = alignof(std::max_align_t);
+    static constexpr ui32 GUARD_SIZE = alignof(std::max_align_t);
     static constexpr byte GUARD_FLAG = 0xAA;
-    soul_size current_alloc_size_ = 0;
+    usize current_alloc_size_ = 0;
   };
 
   class ProfileProxy final : public Proxy
@@ -482,7 +482,7 @@ namespace soul::memory
       proxy_.on_post_cleanup();
     }
 
-    auto try_allocate(const soul_size size, const soul_size alignment, const char* tag)
+    auto try_allocate(const usize size, const usize alignment, const char* tag)
       -> Allocation override
     {
       if (size == 0) {
@@ -494,7 +494,7 @@ namespace soul::memory
       return proxy_.on_post_allocate(allocation);
     }
 
-    [[nodiscard]] auto get_allocation_size(void* addr) const -> soul_size override
+    [[nodiscard]] auto get_allocation_size(void* addr) const -> usize override
     {
       void* base_addr = proxy_.get_base_addr(addr);
       return proxy_.get_base_size(allocator->get_allocation_size(base_addr));

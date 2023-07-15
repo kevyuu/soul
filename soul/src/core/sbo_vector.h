@@ -5,10 +5,10 @@
 namespace soul
 {
 
-  static constexpr soul_size PREFERRED_SBO_VECTOR_SIZEOF = 64;
+  static constexpr usize PREFERRED_SBO_VECTOR_SIZEOF = 64;
 
   template <typename T>
-  static constexpr auto get_sbo_vector_default_inline_element_count() -> soul_size
+  static constexpr auto get_sbo_vector_default_inline_element_count() -> usize
   {
     static_assert(
       sizeof(T) <= 256,
@@ -23,7 +23,7 @@ namespace soul
 
   template <
     typename T,
-    soul_size N = get_sbo_vector_default_inline_element_count<T>(),
+    usize N = get_sbo_vector_default_inline_element_count<T>(),
     memory::allocator_type AllocatorType = memory::Allocator>
   using SBOVector = Vector<T, AllocatorType, N>;
 

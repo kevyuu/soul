@@ -10,7 +10,7 @@ namespace soul::gpu::impl
   struct BufferAccess {
     PipelineStageFlags stage_flags;
     AccessFlags access_flags;
-    uint32 buffer_info_idx = 0;
+    ui32 buffer_info_idx = 0;
   };
 
   struct TextureAccess {
@@ -18,14 +18,14 @@ namespace soul::gpu::impl
     AccessFlags access_flags;
 
     VkImageLayout layout = VK_IMAGE_LAYOUT_UNDEFINED;
-    uint32 texture_info_idx = 0;
+    ui32 texture_info_idx = 0;
     SubresourceIndex view;
   };
 
   struct ResourceAccess {
     PipelineStageFlags stage_flags;
     AccessFlags access_flags;
-    uint32 resource_info_idx;
+    ui32 resource_info_idx;
   };
 
   struct BufferExecInfo {
@@ -40,7 +40,7 @@ namespace soul::gpu::impl
     ResourceCacheState cache_state;
 
     Vector<PassNodeID> passes;
-    uint32 pass_counter = 0;
+    ui32 pass_counter = 0;
   };
 
   struct TextureViewExecInfo {
@@ -48,7 +48,7 @@ namespace soul::gpu::impl
     Semaphore pending_semaphore = TimelineSemaphore::null();
     ResourceCacheState cache_state;
     Vector<PassNodeID> passes;
-    uint32 pass_counter = 0;
+    ui32 pass_counter = 0;
     VkImageLayout layout = VK_IMAGE_LAYOUT_UNDEFINED;
   };
 
@@ -59,17 +59,17 @@ namespace soul::gpu::impl
     QueueFlags queue_flags;
     TextureID texture_id;
     TextureViewExecInfo* view = nullptr;
-    uint32 mip_levels = 0;
-    uint32 layers = 0;
+    ui32 mip_levels = 0;
+    ui32 layers = 0;
 
     [[nodiscard]]
-    auto get_view_count() const -> soul_size
+    auto get_view_count() const -> usize
     {
-      return soul::cast<soul_size>(mip_levels) * layers;
+      return soul::cast<usize>(mip_levels) * layers;
     }
 
     [[nodiscard]]
-    auto get_view_index(const SubresourceIndex index) const -> soul_size
+    auto get_view_index(const SubresourceIndex index) const -> usize
     {
       return index.get_layer() * mip_levels + index.get_level();
     }
@@ -91,13 +91,13 @@ namespace soul::gpu::impl
     ResourceCacheState cache_state;
 
     Vector<PassNodeID> passes;
-    uint32 pass_counter = 0;
+    ui32 pass_counter = 0;
   };
 
   class PassDependencyGraph
   {
   public:
-    enum class DependencyType : uint8 {
+    enum class DependencyType : ui8 {
       READ_AFTER_WRITE,
       WRITE_AFTER_WRITE,
       WRITE_AFTER_READ,
@@ -111,7 +111,7 @@ namespace soul::gpu::impl
     using NodeList = Vector<PassNodeID>;
     using NodeDependencyMatrix = FlagMap<DependencyType, BitVector<>>;
 
-    PassDependencyGraph(soul_size pass_node_count, std::span<const ResourceNode> resource_nodes);
+    PassDependencyGraph(usize pass_node_count, std::span<const ResourceNode> resource_nodes);
     [[nodiscard]]
     auto get_dependency_flags(PassNodeID src_node_id, PassNodeID dst_node_id) const
       -> DependencyFlags;
@@ -129,7 +129,7 @@ namespace soul::gpu::impl
     }
 
     [[nodiscard]]
-    auto get_dependency_level(PassNodeID node_id) const -> soul_size
+    auto get_dependency_level(PassNodeID node_id) const -> usize
     {
       return dependency_levels_[node_id.id];
     }
@@ -138,20 +138,20 @@ namespace soul::gpu::impl
       PassNodeID src_node_id, PassNodeID dst_node_id, DependencyType dependency_type) -> void;
 
   private:
-    soul_size pass_node_count_;
+    usize pass_node_count_;
     NodeDependencyMatrix dependency_matrixes_;
     Vector<NodeList> dependencies_;
     Vector<NodeList> dependants_;
-    Vector<soul_size> dependency_levels_;
+    Vector<usize> dependency_levels_;
 
     static constexpr auto UNINITIALIZED_DEPENDENCY_LEVEL = ~0u;
     [[nodiscard]]
-    auto get_pass_node_count() const -> soul_size;
+    auto get_pass_node_count() const -> usize;
     [[nodiscard]]
     auto get_dependency_matrix_index(PassNodeID src_node_id, PassNodeID dst_node_id) const
-      -> soul_size;
+      -> usize;
 
-    auto calculate_dependency_level(PassNodeID pass_node_id) -> soul_size;
+    auto calculate_dependency_level(PassNodeID pass_node_id) -> usize;
   };
 
   struct PassExecInfo {
@@ -219,16 +219,16 @@ namespace soul::gpu::impl
     auto get_texture(TextureNodeID node_id) const -> Texture&;
 
     [[nodiscard]]
-    auto get_buffer_info_index(BufferNodeID node_id) const -> uint32;
+    auto get_buffer_info_index(BufferNodeID node_id) const -> ui32;
 
     [[nodiscard]]
-    auto get_texture_info_index(TextureNodeID nodeID) const -> uint32;
+    auto get_texture_info_index(TextureNodeID nodeID) const -> ui32;
 
     [[nodiscard]]
-    auto get_tlas_resource_info_index(TlasNodeID node_id) const -> uint32;
+    auto get_tlas_resource_info_index(TlasNodeID node_id) const -> ui32;
 
     [[nodiscard]]
-    auto get_blas_group_resource_info_index(BlasGroupNodeID node_id) const -> uint32;
+    auto get_blas_group_resource_info_index(BlasGroupNodeID node_id) const -> ui32;
 
   private:
     const RenderGraph* render_graph_;
@@ -263,14 +263,14 @@ namespace soul::gpu::impl
     auto compute_pass_order() -> void;
 
     [[nodiscard]]
-    auto create_render_pass(uint32 pass_index) -> VkRenderPass;
+    auto create_render_pass(ui32 pass_index) -> VkRenderPass;
 
     [[nodiscard]]
-    auto create_framebuffer(uint32 pass_index, VkRenderPass render_pass) -> VkFramebuffer;
+    auto create_framebuffer(ui32 pass_index, VkRenderPass render_pass) -> VkFramebuffer;
 
     auto sync_external() -> void;
 
-    auto execute_pass(uint32 pass_index, PrimaryCommandBuffer command_buffer) -> void;
+    auto execute_pass(ui32 pass_index, PrimaryCommandBuffer command_buffer) -> void;
 
     auto init_shader_buffers(
       std::span<const ShaderBufferReadAccess> access_list,

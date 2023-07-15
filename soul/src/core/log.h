@@ -7,7 +7,7 @@
 
 namespace soul
 {
-  enum class LogLevel : uint8 { FATAL, WARN, ERROR, INFO, DEBUG, COUNT };
+  enum class LogLevel : ui8 { FATAL, WARN, ERROR, INFO, DEBUG, COUNT };
 } // namespace soul
 
 namespace soul::memory
@@ -39,7 +39,7 @@ namespace soul::impl
   template <LogLevel log_level, typename... Args>
   auto log(
     const char* const file_name,
-    const soul_size line,
+    const usize line,
     std::format_string<Args...> fmt,
     Args&&... args) -> void
   {
@@ -55,7 +55,7 @@ namespace soul::impl
   template <typename... Args>
   auto log_fatal(
     const char* const file_name,
-    const soul_size line,
+    const usize line,
     std::format_string<Args...> fmt,
     Args&&... args) -> void
   {
@@ -65,7 +65,7 @@ namespace soul::impl
   template <typename... Args>
   auto log_warn(
     const char* const file_name,
-    const soul_size line,
+    const usize line,
     std::format_string<Args...> fmt,
     Args&&... args) -> void
   {
@@ -75,7 +75,7 @@ namespace soul::impl
   template <typename... Args>
   auto log_error(
     const char* const file_name,
-    const soul_size line,
+    const usize line,
     std::format_string<Args...> fmt,
     Args&&... args) -> void
   {
@@ -85,7 +85,7 @@ namespace soul::impl
   template <typename... Args>
   auto log_info(
     const char* const file_name,
-    const soul_size line,
+    const usize line,
     std::format_string<Args...> fmt,
     Args&&... args) -> void
   {
@@ -95,7 +95,7 @@ namespace soul::impl
   template <typename... Args>
   auto log_debug(
     const char* const file_name,
-    const soul_size line,
+    const usize line,
     std::format_string<Args...> fmt,
     Args&&... args) -> void
   {

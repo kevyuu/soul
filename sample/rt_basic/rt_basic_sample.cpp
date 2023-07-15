@@ -28,7 +28,7 @@ struct ObjModel {
 
 struct ObjInstance {
   mat4f transform;     // Matrix of the instance
-  uint32 obj_index{0}; // Model index reference
+  ui32 obj_index{0}; // Model index reference
 };
 
 struct Texture {
@@ -100,7 +100,7 @@ class RTBasicSampleApp final : public App
             [this](const auto& parameter, const auto& registry, auto& command_list) {
               runtime::ScopeAllocator scope_allocator("build blas execute");
               Vector<gpu::RenderCommandBuildBlas> render_commands(&scope_allocator);
-              for (soul_size model_idx = 0; model_idx < models_.size(); model_idx++) {
+              for (usize model_idx = 0; model_idx < models_.size(); model_idx++) {
                 const auto& model = models_[model_idx];
                 const auto geom_desc =
                   scope_allocator.create<gpu::RTGeometryDesc>(gpu::RTGeometryDesc{
@@ -135,7 +135,7 @@ class RTBasicSampleApp final : public App
 
               static constexpr auto MAX_BLAS_BUILD_MEMORY = 1ull << 29;
               command_list.push(gpu::RenderCommandBatchBuildBlas{
-                .build_count = soul::cast<uint32>(render_commands.size()),
+                .build_count = soul::cast<ui32>(render_commands.size()),
                 .builds = render_commands.data(),
                 .max_build_memory_size = MAX_BLAS_BUILD_MEMORY,
               });
@@ -206,7 +206,7 @@ class RTBasicSampleApp final : public App
                   {
                     .instance_data =
                       gpu_system_->get_gpu_address(registry.get_buffer(parameter.instance_buffer)),
-                    .instance_count = soul::cast<uint32>(instances_.size()),
+                    .instance_count = soul::cast<ui32>(instances_.size()),
                   },
               });
             })
@@ -321,7 +321,7 @@ class RTBasicSampleApp final : public App
     const std::filesystem::path& model_path, const mat4f transform = mat4f::identity()) -> void
   {
     instances_.push_back(
-      ObjInstance{.transform = transform, .obj_index = soul::cast<uint32>(models_.size())});
+      ObjInstance{.transform = transform, .obj_index = soul::cast<ui32>(models_.size())});
 
     ObjLoader obj_loader;
     obj_loader.load_model(model_path);
@@ -365,16 +365,16 @@ class RTBasicSampleApp final : public App
         1,
         {gpu::TextureUsage::SAMPLED},
         {gpu::QueueType::COMPUTE},
-        {soul::cast<uint32>(texture_width), soul::cast<uint32>(texture_height)});
+        {soul::cast<ui32>(texture_width), soul::cast<ui32>(texture_height)});
 
       const gpu::TextureRegionUpdate region_load = {
         .subresource = {.layer_count = 1},
-        .extent = {static_cast<uint32>(texture_width), static_cast<uint32>(texture_height), 1},
+        .extent = {static_cast<ui32>(texture_width), static_cast<ui32>(texture_height), 1},
       };
 
       const gpu::TextureLoadDesc load_desc = {
         .data = texture_pixels,
-        .data_size = soul::cast<soul_size>(texture_width * texture_height * 4),
+        .data_size = soul::cast<usize>(texture_width * texture_height * 4),
         .region_count = 1,
         .regions = &region_load,
         .generate_mipmap = true,
@@ -432,8 +432,8 @@ class RTBasicSampleApp final : public App
     gpu_obj_descs_.push_back(gpu_obj_desc);
 
     models_.push_back(ObjModel{
-      .indices_count = soul::cast<uint32>(obj_loader.indices.size()),
-      .vertices_count = soul::cast<uint32>(obj_loader.vertices.size()),
+      .indices_count = soul::cast<ui32>(obj_loader.indices.size()),
+      .vertices_count = soul::cast<ui32>(obj_loader.vertices.size()),
       .vertex_buffer = vertex_buffer,
       .index_buffer = index_buffer,
       .mat_color_buffer = material_buffer,
@@ -480,7 +480,7 @@ class RTBasicSampleApp final : public App
   {
     const auto tlas_size = gpu_system_->get_tlas_size_requirement({
       .build_flags = {gpu::RTBuildFlag::PREFER_FAST_BUILD},
-      .instance_count = soul::cast<uint32>(instances_.size()),
+      .instance_count = soul::cast<ui32>(instances_.size()),
     });
     tlas_id_ = gpu_system_->create_tlas({.name = "Tlas", .size = tlas_size});
   }

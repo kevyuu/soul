@@ -96,11 +96,11 @@ namespace soul::gpu::impl
   }
 
   PassDependencyGraph::PassDependencyGraph(
-    soul_size pass_node_count, std::span<const ResourceNode> resource_nodes)
+    usize pass_node_count, std::span<const ResourceNode> resource_nodes)
       : pass_node_count_(pass_node_count),
         dependencies_(Vector<NodeList>::with_size(pass_node_count)),
         dependants_(Vector<NodeList>::with_size(pass_node_count)),
-        dependency_levels_(Vector<soul_size>::with_size(pass_node_count))
+        dependency_levels_(Vector<usize>::with_size(pass_node_count))
   {
     for (auto& dependency_matrix : dependency_matrixes_) {
       dependency_matrix.resize(pass_node_count * pass_node_count);
@@ -126,7 +126,7 @@ namespace soul::gpu::impl
     }
 
     std::ranges::fill(dependency_levels_, UNINITIALIZED_DEPENDENCY_LEVEL);
-    for (soul_size pass_index = 0; pass_index < pass_node_count; pass_index++) {
+    for (usize pass_index = 0; pass_index < pass_node_count; pass_index++) {
       calculate_dependency_level(PassNodeID(pass_index));
     }
   }
@@ -158,18 +158,18 @@ namespace soul::gpu::impl
       get_dependency_matrix_index(src_node_id, dst_node_id));
   }
 
-  auto PassDependencyGraph::get_pass_node_count() const -> soul_size { return pass_node_count_; }
+  auto PassDependencyGraph::get_pass_node_count() const -> usize { return pass_node_count_; }
 
   auto PassDependencyGraph::get_dependency_matrix_index(
-    const PassNodeID src_node_id, const PassNodeID dst_node_id) const -> soul_size
+    const PassNodeID src_node_id, const PassNodeID dst_node_id) const -> usize
   {
     return src_node_id.id * get_pass_node_count() + dst_node_id.id;
   }
 
-  auto PassDependencyGraph::calculate_dependency_level(PassNodeID pass_node_id) -> soul_size
+  auto PassDependencyGraph::calculate_dependency_level(PassNodeID pass_node_id) -> usize
   {
     if (dependency_levels_[pass_node_id.id] == UNINITIALIZED_DEPENDENCY_LEVEL) {
-      soul_size dependency_level = 0u;
+      usize dependency_level = 0u;
       for (const auto dependency_node_id : dependencies_[pass_node_id.id]) {
         dependency_level =
           std::max(dependency_level, 1 + calculate_dependency_level(dependency_node_id));
@@ -213,29 +213,29 @@ namespace soul::gpu::impl
         render_graph_->get_external_blas_group_list().size());
 
     constexpr auto fold_internal_texture_view_count =
-      [](soul_size count, const RGInternalTexture& internal_texture) {
+      [](usize count, const RGInternalTexture& internal_texture) {
         return count + internal_texture.get_view_count();
       };
     auto fold_external_texture_view_count =
       [gpu_system =
-         this->gpu_system_](const soul_size count, const RGExternalTexture& external_texture) {
+         this->gpu_system_](const usize count, const RGExternalTexture& external_texture) {
         const TextureDesc& desc = gpu_system->get_texture(external_texture.texture_id).desc;
         return count + desc.get_view_count();
       };
 
-    const soul_size internal_view_count = std::accumulate(
+    const usize internal_view_count = std::accumulate(
       internal_textures.begin(),
       internal_textures.end(),
-      soul_size(0),
+      usize(0),
       fold_internal_texture_view_count);
-    const soul_size external_view_count = std::accumulate(
+    const usize external_view_count = std::accumulate(
       external_textures.begin(),
       external_textures.end(),
-      soul_size(0),
+      usize(0),
       fold_external_texture_view_count);
     texture_view_infos_.resize(internal_view_count + external_view_count);
 
-    for (soul_size texture_info_idx = 0, view_offset = 0;
+    for (usize texture_info_idx = 0, view_offset = 0;
          texture_info_idx < internal_texture_infos_.size();
          texture_info_idx++) {
       TextureExecInfo& texture_info = internal_texture_infos_[texture_info_idx];
@@ -245,7 +245,7 @@ namespace soul::gpu::impl
       view_offset += texture_info.get_view_count();
     }
 
-    for (soul_size texture_info_idx = 0, view_offset = internal_view_count;
+    for (usize texture_info_idx = 0, view_offset = internal_view_count;
          texture_info_idx < external_texture_infos_.size();
          texture_info_idx++) {
       TextureExecInfo& texture_info = external_texture_infos_[texture_info_idx];
@@ -497,7 +497,7 @@ namespace soul::gpu::impl
       }
     }
 
-    for (soul_size i = 0; i < render_graph_->get_internal_buffers().size(); i++) {
+    for (usize i = 0; i < render_graph_->get_internal_buffers().size(); i++) {
       const RGInternalBuffer& rg_buffer = render_graph_->get_internal_buffers()[i];
       BufferExecInfo& buffer_info = buffer_infos_[i];
 
@@ -509,7 +509,7 @@ namespace soul::gpu::impl
       });
     }
 
-    for (soul_size i = 0; i < external_buffer_infos_.size(); i++) {
+    for (usize i = 0; i < external_buffer_infos_.size(); i++) {
       BufferExecInfo& buffer_info = external_buffer_infos_[i];
       if (buffer_info.passes.empty()) {
         continue;
@@ -517,7 +517,7 @@ namespace soul::gpu::impl
       buffer_info.buffer_id = render_graph_->get_external_buffers()[i].buffer_id;
     }
 
-    for (soul_size i = 0; i < render_graph_->get_internal_textures().size(); i++) {
+    for (usize i = 0; i < render_graph_->get_internal_textures().size(); i++) {
       const RGInternalTexture& rg_texture = render_graph_->get_internal_textures()[i];
       TextureExecInfo& texture_info = texture_infos_[i];
 
@@ -542,7 +542,7 @@ namespace soul::gpu::impl
       }
     }
 
-    for (soul_size i = 0; i < external_texture_infos_.size(); i++) {
+    for (usize i = 0; i < external_texture_infos_.size(); i++) {
       TextureExecInfo& texture_info = external_texture_infos_[i];
       texture_info.texture_id = render_graph_->get_external_textures()[i].texture_id;
     }
@@ -600,7 +600,7 @@ namespace soul::gpu::impl
     std::ranges::sort(pass_order_, pass_compare_func);
   }
 
-  auto RenderGraphExecution::create_render_pass(const uint32 pass_index) -> VkRenderPass
+  auto RenderGraphExecution::create_render_pass(const ui32 pass_index) -> VkRenderPass
   {
     SOUL_PROFILE_ZONE();
     SOUL_ASSERT_MAIN_THREAD();
@@ -610,7 +610,7 @@ namespace soul::gpu::impl
     const RGRenderTarget& render_target = pass_node->get_render_target();
 
     auto get_render_pass_attachment = [this, pass_index](const auto& attachment) -> Attachment {
-      const uint32 texture_info_idx = get_texture_info_index(attachment.out_node_id);
+      const ui32 texture_info_idx = get_texture_info_index(attachment.out_node_id);
       const TextureExecInfo& texture_info = texture_infos_[texture_info_idx];
       const auto& texture = gpu_system_->get_texture(texture_info.texture_id);
 
@@ -650,7 +650,7 @@ namespace soul::gpu::impl
     return gpu_system_->request_render_pass(render_pass_key);
   }
 
-  auto RenderGraphExecution::create_framebuffer(uint32 pass_index, VkRenderPass render_pass)
+  auto RenderGraphExecution::create_framebuffer(ui32 pass_index, VkRenderPass render_pass)
     -> VkFramebuffer
   {
     SOUL_ASSERT_MAIN_THREAD();
@@ -658,7 +658,7 @@ namespace soul::gpu::impl
     const auto pass_node = render_graph_->get_pass_nodes()[pass_index];
 
     VkImageView image_views[2 * MAX_COLOR_ATTACHMENT_PER_SHADER + 1];
-    uint32 image_view_count = 0;
+    ui32 image_view_count = 0;
     const RGRenderTarget& render_target = pass_node->get_render_target();
 
     for (const ColorAttachment& attachment : render_target.color_attachments) {
@@ -788,14 +788,14 @@ namespace soul::gpu::impl
       compute_non_texture_sync_info(buffer.cache_state, buffer_info);
     }
 
-    for (soul_size tlas_idx = 0; tlas_idx < external_tlas_resource_infos_.size(); tlas_idx++) {
+    for (usize tlas_idx = 0; tlas_idx < external_tlas_resource_infos_.size(); tlas_idx++) {
       auto& resource_exec_info = external_tlas_resource_infos_[tlas_idx];
       const auto& rg_external_tlas = render_graph_->get_external_tlas_list()[tlas_idx];
       const auto& tlas = gpu_system_->get_tlas(rg_external_tlas.tlas_id);
       compute_non_texture_sync_info(tlas.cache_state, resource_exec_info);
     }
 
-    for (soul_size blas_group_idx = 0; blas_group_idx < external_blas_group_resource_infos_.size();
+    for (usize blas_group_idx = 0; blas_group_idx < external_blas_group_resource_infos_.size();
          blas_group_idx++) {
       auto& resource_exec_info = external_blas_group_resource_infos_[blas_group_idx];
       const auto& rg_external_blas_group =
@@ -818,7 +818,7 @@ namespace soul::gpu::impl
   }
 
   auto RenderGraphExecution::execute_pass(
-    const uint32 pass_index, PrimaryCommandBuffer command_buffer) -> void
+    const ui32 pass_index, PrimaryCommandBuffer command_buffer) -> void
   {
     SOUL_PROFILE_ZONE();
     const auto& pass_node = *render_graph_->get_pass_nodes()[pass_index];
@@ -832,7 +832,7 @@ namespace soul::gpu::impl
       VkFramebuffer framebuffer = create_framebuffer(pass_index, render_pass);
 
       VkClearValue clear_values[2 * MAX_COLOR_ATTACHMENT_PER_SHADER + 1];
-      uint32 clear_count = 0;
+      ui32 clear_count = 0;
 
       for (const ColorAttachment& attachment : render_target.color_attachments) {
         ClearValue clear_value = attachment.desc.clear_value;
@@ -1139,26 +1139,26 @@ namespace soul::gpu::impl
           vk_cast(pipeline_src_stage_flags),
           vk_cast(pipeline_dst_stage_flags),
           0,
-          soul::cast<uint32>(pipeline_barriers.size()),
+          soul::cast<ui32>(pipeline_barriers.size()),
           pipeline_barriers.data(),
-          soul::cast<uint32>(pipeline_buffer_barriers.size()),
+          soul::cast<ui32>(pipeline_buffer_barriers.size()),
           pipeline_buffer_barriers.data(),
-          soul::cast<uint32>(pipeline_image_barriers.size()),
+          soul::cast<ui32>(pipeline_image_barriers.size()),
           pipeline_image_barriers.data());
       }
 
       if (!events.empty()) {
         vkCmdWaitEvents(
           cmd_buffer.get_vk_handle(),
-          soul::cast<uint32>(events.size()),
+          soul::cast<ui32>(events.size()),
           events.data(),
           vk_cast(event_src_stage_flags),
           vk_cast(event_dst_stage_flags),
-          soul::cast<uint32>(event_barriers.size()),
+          soul::cast<ui32>(event_barriers.size()),
           event_barriers.data(),
-          soul::cast<uint32>(event_buffer_barriers.size()),
+          soul::cast<ui32>(event_buffer_barriers.size()),
           event_buffer_barriers.data(),
-          soul::cast<uint32>(event_image_barriers.size()),
+          soul::cast<ui32>(event_image_barriers.size()),
           event_image_barriers.data());
       }
 
@@ -1172,7 +1172,7 @@ namespace soul::gpu::impl
           nullptr,
           0,
           nullptr,
-          soul::cast<uint32>(semaphore_layout_barriers.size()),
+          soul::cast<ui32>(semaphore_layout_barriers.size()),
           semaphore_layout_barriers.data());
       }
 
@@ -1182,7 +1182,7 @@ namespace soul::gpu::impl
       for (const BufferAccess& access : pass_info.buffer_accesses) {
         const BufferExecInfo& buffer_info = buffer_infos_[access.buffer_info_idx];
         if (buffer_info.pass_counter != buffer_info.passes.size() - 1) {
-          uint32 next_pass_idx = buffer_info.passes[buffer_info.pass_counter + 1].id;
+          ui32 next_pass_idx = buffer_info.passes[buffer_info.pass_counter + 1].id;
           const auto next_queue_type =
             render_graph_->get_pass_nodes()[next_pass_idx]->get_queue_type();
           is_queue_type_dependent[next_queue_type] = true;
@@ -1196,7 +1196,7 @@ namespace soul::gpu::impl
         }
         const TextureViewExecInfo& texture_view_info = *texture_info.get_view(access.view);
         if (texture_view_info.pass_counter != texture_view_info.passes.size() - 1) {
-          uint32 next_pass_idx = texture_view_info.passes[texture_view_info.pass_counter + 1].id;
+          ui32 next_pass_idx = texture_view_info.passes[texture_view_info.pass_counter + 1].id;
           const auto next_queue_type =
             render_graph_->get_pass_nodes()[next_pass_idx]->get_queue_type();
           is_queue_type_dependent[next_queue_type] = true;
@@ -1206,7 +1206,7 @@ namespace soul::gpu::impl
       for (const ResourceAccess& access : pass_info.resource_accesses) {
         const ResourceExecInfo& resource_info = resource_infos_[access.resource_info_idx];
         if (resource_info.pass_counter != resource_info.passes.size() - 1) {
-          uint32 next_pass_idx = resource_info.passes[resource_info.pass_counter + 1].id;
+          ui32 next_pass_idx = resource_info.passes[resource_info.pass_counter + 1].id;
           const auto next_queue_type =
             render_graph_->get_pass_nodes()[next_pass_idx]->get_queue_type();
           is_queue_type_dependent[next_queue_type] = true;
@@ -1321,7 +1321,7 @@ namespace soul::gpu::impl
       if (texture_info.view->passes.empty()) {
         continue;
       }
-      uint64 last_pass_idx = texture_info.view->passes.back().id;
+      ui64 last_pass_idx = texture_info.view->passes.back().id;
       SOUL_ASSERT(
         0,
         std::all_of(
@@ -1363,13 +1363,13 @@ namespace soul::gpu::impl
 
   auto RenderGraphExecution::is_external(const BufferExecInfo& info) const -> bool
   {
-    return soul::cast<uint32>(&info - buffer_infos_.data()) >=
+    return soul::cast<ui32>(&info - buffer_infos_.data()) >=
            render_graph_->get_internal_buffers().size();
   }
 
   auto RenderGraphExecution::is_external(const TextureExecInfo& info) const -> bool
   {
-    return soul::cast<uint32>(&info - texture_infos_.data()) >=
+    return soul::cast<ui32>(&info - texture_infos_.data()) >=
            render_graph_->get_internal_textures().size();
   }
 
@@ -1402,40 +1402,40 @@ namespace soul::gpu::impl
     return gpu_system_->get_texture(get_texture_id(node_id));
   }
 
-  auto RenderGraphExecution::get_buffer_info_index(const BufferNodeID node_id) const -> uint32
+  auto RenderGraphExecution::get_buffer_info_index(const BufferNodeID node_id) const -> ui32
   {
     const auto& node = render_graph_->get_resource_node(node_id);
     if (node.resource_id.is_external()) {
-      return soul::cast<uint32>(render_graph_->get_internal_buffers().size()) +
+      return soul::cast<ui32>(render_graph_->get_internal_buffers().size()) +
              node.resource_id.get_index();
     }
     return node.resource_id.get_index();
   }
 
-  auto RenderGraphExecution::get_texture_info_index(TextureNodeID nodeID) const -> uint32
+  auto RenderGraphExecution::get_texture_info_index(TextureNodeID nodeID) const -> ui32
   {
     const auto& node = render_graph_->get_resource_node(nodeID);
     if (node.resource_id.is_external()) {
-      return soul::cast<uint32>(render_graph_->get_internal_textures().size()) +
+      return soul::cast<ui32>(render_graph_->get_internal_textures().size()) +
              node.resource_id.get_index();
     }
     return node.resource_id.get_index();
   }
 
-  auto RenderGraphExecution::get_tlas_resource_info_index(TlasNodeID node_id) const -> uint32
+  auto RenderGraphExecution::get_tlas_resource_info_index(TlasNodeID node_id) const -> ui32
   {
     const auto& node = render_graph_->get_resource_node(node_id);
     SOUL_ASSERT(0, node.resource_id.is_external());
-    return soul::cast<uint32>(external_tlas_resource_infos_.get_begin_idx()) +
+    return soul::cast<ui32>(external_tlas_resource_infos_.get_begin_idx()) +
            node.resource_id.get_index();
   }
 
   auto RenderGraphExecution::get_blas_group_resource_info_index(BlasGroupNodeID node_id) const
-    -> uint32
+    -> ui32
   {
     const auto& node = render_graph_->get_resource_node(node_id);
     SOUL_ASSERT(0, node.resource_id.is_external());
-    return soul::cast<uint32>(external_blas_group_resource_infos_.get_begin_idx()) +
+    return soul::cast<ui32>(external_blas_group_resource_infos_.get_begin_idx()) +
            node.resource_id.get_index();
   }
 

@@ -40,7 +40,7 @@ App::App(const AppConfig& app_config)
           memory::MutexProxy::Config(),
           memory::ProfileProxy::Config(),
           memory::CounterProxy::Config(),
-          memory::ClearValuesProxy::Config{uint8{0xFA}, uint8{0xFF}},
+          memory::ClearValuesProxy::Config{ui8{0xFA}, ui8{0xFF}},
           memory::BoundGuardProxy::Config())),
       page_allocator_("Page allocator"),
       proxy_page_allocator_(&page_allocator_, memory::ProfileProxy::Config()),
@@ -181,7 +181,7 @@ auto App::get_elapsed_seconds() const -> float
   return elapsed_seconds_float;
 }
 
-auto App::get_frame_index() const -> soul_size { return frame_index_; }
+auto App::get_frame_index() const -> usize { return frame_index_; }
 
 auto App::get_exe_path() -> std::filesystem::path
 {

@@ -15,7 +15,7 @@ namespace soul::memory
 
   auto PageAllocator::reset() -> void{};
 
-  auto PageAllocator::try_allocate(soul_size size, soul_size alignment, const char* tag)
+  auto PageAllocator::try_allocate(usize size, usize alignment, const char* tag)
     -> Allocation
   {
     auto new_size = util::pointer_page_size_round(size, page_size_);
@@ -24,7 +24,7 @@ namespace soul::memory
     return {addr, new_size};
   }
 
-  auto PageAllocator::get_allocation_size(void* addr) const -> soul_size
+  auto PageAllocator::get_allocation_size(void* addr) const -> usize
   {
     if (addr == nullptr) {
       return 0;

@@ -24,11 +24,11 @@ class IndexBufferSampleApp final : public App
     {{0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}},
     {{-0.5f, 0.5f}, {1.0f, 1.0f, 1.0f}}};
 
-  using Index = uint16;
+  using Index = ui16;
   static constexpr Index INDICES[] = {0, 1, 2, 2, 3, 0};
-  static_assert(std::same_as<Index, uint16> || std::same_as<Index, uint32>);
+  static_assert(std::same_as<Index, ui16> || std::same_as<Index, ui32>);
   static constexpr gpu::IndexType INDEX_TYPE =
-    std::same_as<Index, uint16> ? gpu::IndexType::UINT16 : gpu::IndexType::UINT32;
+    std::same_as<Index, ui16> ? gpu::IndexType::UINT16 : gpu::IndexType::UINT32;
 
   gpu::BufferID vertex_buffer_id_;
   gpu::BufferID index_buffer_id_;
