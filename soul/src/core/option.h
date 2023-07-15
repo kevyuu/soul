@@ -306,7 +306,7 @@ namespace soul
   {
     if (other.is_some_) {
       construct_at(&value_, std::move(other.value_));
-      is_some_ = true;
+      other.is_some_ = false;
     }
   }
 
@@ -317,6 +317,9 @@ namespace soul
     if (other.is_some_) {
       if (is_some_) {
         value_ = std::move(other.value_);
+      } else {
+        is_some_ = true;
+        construct_at(&value_, std::move(other.value_));
       }
     } else {
       reset();
