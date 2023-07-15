@@ -60,13 +60,13 @@ namespace soul
   template <typename T>
   using vec4 = vec<4, T>;
 
-  using vec2f = vec2<float>;
-  using vec3f = vec3<float>;
-  using vec4f = vec4<float>;
+  using vec2f = vec2<f32>;
+  using vec3f = vec3<f32>;
+  using vec4f = vec4<f32>;
 
-  using vec2d = vec2<double>;
-  using vec3d = vec3<double>;
-  using vec4d = vec4<double>;
+  using vec2d = vec2<f64>;
+  using vec3d = vec3<f64>;
+  using vec4d = vec4<f64>;
 
   using vec2i16 = vec2<i16>;
   using vec3i16 = vec3<i16>;
@@ -93,12 +93,12 @@ namespace soul
     constexpr explicit matrix(store_type mat) : mat(mat) {}
 
     [[nodiscard]]
-    SOUL_ALWAYS_INLINE auto m(const u8 row, const u8 column) const -> float
+    SOUL_ALWAYS_INLINE auto m(const u8 row, const u8 column) const -> f32
     {
       return mat[column][row];
     }
 
-    SOUL_ALWAYS_INLINE auto m(const u8 row, const u8 column) -> float& { return mat[column][row]; }
+    SOUL_ALWAYS_INLINE auto m(const u8 row, const u8 column) -> f32& { return mat[column][row]; }
 
     static constexpr auto identity() -> this_type { return this_type(store_type(1)); }
   };
@@ -106,8 +106,8 @@ namespace soul
   template <typename T>
   using matrix4x4 = matrix<4, 4, T>;
 
-  using mat3f = matrix<3, 3, float>;
-  using mat4f = matrix<4, 4, float>;
+  using mat3f = matrix<3, 3, f32>;
+  using mat4f = matrix<4, 4, f32>;
 
   template <ts_arithmetic T>
   struct Quaternion {
@@ -140,7 +140,7 @@ namespace soul
     }
   };
 
-  using Quaternionf = Quaternion<float>;
+  using Quaternionf = Quaternion<f32>;
 
   struct Transformf {
     vec3f position;
@@ -149,8 +149,8 @@ namespace soul
   };
 
   struct AABB {
-    vec3f min = vec3f(std::numeric_limits<float>::max());
-    vec3f max = vec3f(std::numeric_limits<float>::lowest());
+    vec3f min = vec3f(std::numeric_limits<f32>::max());
+    vec3f max = vec3f(std::numeric_limits<f32>::lowest());
 
     AABB() = default;
 

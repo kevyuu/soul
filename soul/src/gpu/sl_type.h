@@ -7,12 +7,12 @@ namespace soulsl
 
   using DescriptorID = soul::gpu::DescriptorID;
 
-  using float1 = float;
+  using float1 = soul::f32;
   using float2 = soul::vec2f;
   using float3 = soul::vec3f;
   using float4 = soul::vec4f;
 
-  using double1 = double;
+  using double1 = soul::f64;
   using double2 = soul::vec2d;
   using double3 = soul::vec3d;
   using double4 = soul::vec4d;

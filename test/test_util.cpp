@@ -10,8 +10,7 @@ TEST(TestCoreUtil, TestGetFirstOneBitPos)
 
   SOUL_TEST_ASSERT_EQ(soul::util::get_first_one_bit_pos(u16{0b1000'0000'0000'0000}).value(), 15);
   SOUL_TEST_ASSERT_EQ(soul::util::get_first_one_bit_pos(u16{0b0100'0100'0100'0001}).value(), 0);
-  SOUL_TEST_ASSERT_EQ(
-    soul::util::get_first_one_bit_pos(static_cast<u16>(~u16{0})).value(), 0);
+  SOUL_TEST_ASSERT_EQ(soul::util::get_first_one_bit_pos(static_cast<u16>(~u16{0})).value(), 0);
   SOUL_TEST_ASSERT_FALSE(soul::util::get_first_one_bit_pos(u16{0}));
 
   SOUL_TEST_ASSERT_EQ(soul::util::get_first_one_bit_pos(u32{1}).value(), 0);
@@ -24,8 +23,7 @@ TEST(TestCoreUtil, TestGetFirstOneBitPos)
   SOUL_TEST_ASSERT_FALSE(soul::util::get_first_one_bit_pos(u64{0}));
   SOUL_TEST_ASSERT_EQ(soul::util::get_first_one_bit_pos(~u64{0}).value(), 0);
   SOUL_TEST_ASSERT_EQ(soul::util::get_first_one_bit_pos(u64{0x40000000}).value(), 30);
-  SOUL_TEST_ASSERT_EQ(
-    soul::util::get_first_one_bit_pos(u64{18446744069414584320llu}).value(), 32);
+  SOUL_TEST_ASSERT_EQ(soul::util::get_first_one_bit_pos(u64{18446744069414584320llu}).value(), 32);
 }
 
 TEST(TestCoreUtil, TestGetLastOneBitPos)
@@ -36,8 +34,7 @@ TEST(TestCoreUtil, TestGetLastOneBitPos)
 
   SOUL_TEST_ASSERT_EQ(soul::util::get_last_one_bit_pos(u16{0b1000'0000'0000'0000}).value(), 15);
   SOUL_TEST_ASSERT_EQ(soul::util::get_last_one_bit_pos(u16{0b0100'0100'0100'0001}).value(), 14);
-  SOUL_TEST_ASSERT_EQ(
-    soul::util::get_last_one_bit_pos(static_cast<u16>(~u16{0})).value(), 15);
+  SOUL_TEST_ASSERT_EQ(soul::util::get_last_one_bit_pos(static_cast<u16>(~u16{0})).value(), 15);
   SOUL_TEST_ASSERT_FALSE(soul::util::get_last_one_bit_pos(u16{0}));
 
   SOUL_TEST_ASSERT_EQ(soul::util::get_last_one_bit_pos(u32{1}).value(), 0);
@@ -96,8 +93,7 @@ TEST(TestCoreUtil, TestForEachOneBitPos)
 
   std::vector<u32> expected_result_all_set(16);
   std::iota(std::begin(expected_result_all_set), std::end(expected_result_all_set), 0);
-  SOUL_TEST_RUN(
-    test_for_each_one_bit_pos(static_cast<u16>(~u16{0}), expected_result_all_set));
+  SOUL_TEST_RUN(test_for_each_one_bit_pos(static_cast<u16>(~u16{0}), expected_result_all_set));
 
   SOUL_TEST_RUN(
     test_for_each_one_bit_pos(u64{0x4F000200}, std::vector<u32>({9, 24, 25, 26, 27, 30})));

@@ -17,6 +17,9 @@ namespace soul
   using u32 = std::uint32_t;
   using u64 = std::uint64_t;
 
+  using f32 = float;
+  using f64 = double;
+
   using iptr = std::intptr_t;
   using uptr = std::uintptr_t;
 

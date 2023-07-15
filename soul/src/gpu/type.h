@@ -44,10 +44,10 @@ namespace soul::gpu
   };
 
   struct Viewport {
-    float x = 0;
-    float y = 0;
-    float width = 0;
-    float height = 0;
+    f32 x = 0;
+    f32 y = 0;
+    f32 width = 0;
+    f32 height = 0;
   };
 
   using Offset3D = vec3i32;
@@ -352,26 +352,26 @@ namespace soul::gpu
     } color;
 
     struct DepthStencil {
-      float depth = 0.0f;
+      f32 depth = 0.0f;
       u32 stencil = 0;
       DepthStencil() = default;
 
-      DepthStencil(const float depth, const u32 stencil) : depth(depth), stencil(stencil) {}
+      DepthStencil(const f32 depth, const u32 stencil) : depth(depth), stencil(stencil) {}
     } depth_stencil;
 
     ClearValue() = default;
 
-    ClearValue(vec4f color, float depth, u32 stencil)
+    ClearValue(vec4f color, f32 depth, u32 stencil)
         : color(color), depth_stencil(depth, stencil)
     {
     }
 
-    ClearValue(vec4ui32 color, float depth, u32 stencil)
+    ClearValue(vec4ui32 color, f32 depth, u32 stencil)
         : color(color), depth_stencil(depth, stencil)
     {
     }
 
-    ClearValue(vec4i32 color, float depth, u32 stencil)
+    ClearValue(vec4i32 color, f32 depth, u32 stencil)
         : color(color), depth_stencil(depth, stencil)
     {
     }
@@ -686,7 +686,7 @@ namespace soul::gpu
     TextureWrap wrap_v = TextureWrap::CLAMP_TO_EDGE;
     TextureWrap wrap_w = TextureWrap::CLAMP_TO_EDGE;
     b8 anisotropy_enable = false;
-    float max_anisotropy = 0.0f;
+    f32 max_anisotropy = 0.0f;
     b8 compare_enable = false;
     CompareOp compare_op = CompareOp::COUNT;
 
@@ -694,7 +694,7 @@ namespace soul::gpu
       const TextureFilter filter,
       const TextureWrap wrap,
       const b8 anisotropy_enable = false,
-      const float max_anisotropy = 0.0f,
+      const f32 max_anisotropy = 0.0f,
       const b8 compare_enable = false,
       const CompareOp compare_op = CompareOp::ALWAYS) -> SamplerDesc
     {
@@ -774,7 +774,7 @@ namespace soul::gpu
   using RTGeometryInstanceFlags = FlagSet<RTGeometryInstanceFlag>;
 
   struct RTInstanceDesc {
-    float transform[3][4] = {};
+    f32 transform[3][4] = {};
     u32 instance_id : 24 = {};
     u32 instance_mask : 8 = {};
     u32 sbt_offset : 24 = {};
@@ -926,7 +926,7 @@ namespace soul::gpu
     Rect2D scissor;
 
     struct RasterDesc {
-      float line_width = 1.0f;
+      f32 line_width = 1.0f;
       PolygonMode polygon_mode = PolygonMode::FILL;
       CullMode cull_mode = CullMode::NONE;
       FrontFace front_face = FrontFace::CLOCKWISE;
@@ -956,8 +956,8 @@ namespace soul::gpu
     DepthStencilAttachmentDesc depth_stencil_attachment;
 
     struct DepthBiasDesc {
-      float constant = 0.0f;
-      float slope = 0.0f;
+      f32 constant = 0.0f;
+      f32 slope = 0.0f;
     };
 
     DepthBiasDesc depth_bias;

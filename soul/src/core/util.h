@@ -205,9 +205,9 @@ namespace soul::util
   inline auto get_random_color() -> vec3f
   {
     return {
-      get_random_number<float>(0.0f, 1.0f),
-      get_random_number<float>(0.0f, 1.0f),
-      get_random_number<float>(0.0f, 1.0f)};
+      get_random_number<f32>(0.0f, 1.0f),
+      get_random_number<f32>(0.0f, 1.0f),
+      get_random_number<f32>(0.0f, 1.0f)};
   }
 
   template <std::integral Integral>

@@ -14,4 +14,7 @@ using u16 = soul::u16;
 using u32 = soul::u32;
 using u64 = soul::u64;
 
+using f32 = soul::f32;
+using f64 = soul::f64;
+
 using usize = uint64_t;

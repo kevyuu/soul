@@ -692,7 +692,7 @@ namespace soul::gpu
       }
 
       VkDeviceQueueCreateInfo queue_create_info[4] = {};
-      float priorities[4] = {1.0f, 1.0f, 1.0f, 1.0f};
+      f32 priorities[4] = {1.0f, 1.0f, 1.0f, 1.0f};
       u32 queue_create_info_count = 1;
 
       queue_create_info[0].sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
@@ -2632,8 +2632,8 @@ namespace soul::gpu
   }
 
   auto System::get_as_build_size_info(
-    const VkAccelerationStructureBuildGeometryInfoKHR& build_info,
-    const u32* max_primitives_counts) -> VkAccelerationStructureBuildSizesInfoKHR
+    const VkAccelerationStructureBuildGeometryInfoKHR& build_info, const u32* max_primitives_counts)
+    -> VkAccelerationStructureBuildSizesInfoKHR
   {
     VkAccelerationStructureBuildSizesInfoKHR size_info = {
       .sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_SIZES_INFO_KHR};

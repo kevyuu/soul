@@ -15,9 +15,9 @@ namespace soul::math
   }
 
   template <std::integral T>
-  auto fdiv(T a, T b) -> float
+  auto fdiv(T a, T b) -> f32
   {
-    return static_cast<float>(a) / static_cast<float>(b);
+    return static_cast<f32>(a) / static_cast<f32>(b);
   }
 
   template <usize D1, usize D2, usize D3, typename T>
