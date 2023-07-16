@@ -73,7 +73,7 @@ struct SoulTestMessageScope {
 constexpr uint32_t K_MAGIC_VALUE = 0x01f1cbe8;
 
 struct TestObject {
-  int x;            // Value for the TestObject.
+  int x;          // Value for the TestObject.
   b8 throwOnCopy; // Throw an exception of this object is copied, moved, or assigned to another.
   int64_t id;
   // Unique id for each object, equal to its creation number. This value is not coped from other
@@ -152,6 +152,7 @@ struct TestObject {
   ~TestObject()
   {
     if (magicValue != K_MAGIC_VALUE) {
+      SOUL_PANIC("MagicValue is wrong");
       ++sMagicErrorCount;
     }
     magicValue = 0;
