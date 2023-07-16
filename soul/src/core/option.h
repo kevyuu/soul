@@ -20,6 +20,13 @@ namespace soul
   template <typeset T>
   class Option;
 
+  template <typename T, typename SomeT = match_any>
+  inline constexpr b8 is_option_v =
+    [] { return is_specialization_v<T, Option> && is_match_v<SomeT, typename T::some_type>; }();
+
+  template <typename T, typename SomeT = match_any>
+  concept ts_option = is_option_v<T, SomeT>;
+
   template <typename T, typename Arg>
   concept ts_option_and_then_fn = ts_invocable<T, Arg> && is_option_v<std::invoke_result_t<T, Arg>>;
 
@@ -204,6 +211,8 @@ namespace soul
     using val_ret_type = std::remove_cv_t<T>;
 
   public:
+    using some_type = T;
+
     constexpr Option() noexcept : dummy_() {}
 
     constexpr Option(None none_val) : dummy_() {} // NOLINT

@@ -11,6 +11,15 @@ namespace soul
   using false_type = std::false_type;
   using true_type = std::true_type;
 
+  struct match_any {
+    match_any() = delete;
+    match_any(const match_any&) = delete;
+    match_any(match_any&&) noexcept = delete;
+    auto operator=(const match_any&) -> match_any& = delete;
+    auto operator=(match_any&&) -> match_any& = delete;
+    ~match_any() = delete;
+  };
+
   template <typename T>
   inline b8 constexpr is_const_v = std::is_const_v<T>;
 
@@ -19,6 +28,13 @@ namespace soul
 
   template <typename T1, typename T2>
   concept same_as = std::is_same_v<T1, T2>;
+
+  template <typename T1, typename T2>
+  inline b8 constexpr is_match_v =
+    is_same_v<T1, T2> || is_same_v<T1, match_any> || is_same_v<T2, match_any>;
+
+  template <typename T1, typename T2>
+  inline b8 constexpr match_as = is_match_v<T1, T2>;
 
   template <typename T>
   inline b8 constexpr is_lvalue_reference_v = std::is_lvalue_reference_v<T>;
@@ -206,23 +222,6 @@ namespace soul
   template <typename T>
   concept ts_arithmetic = std::is_arithmetic_v<T>;
 
-  template <typeset T>
-  class Option;
-
-  template <typeset T>
-  struct is_option : false_type {
-  };
-
-  template <typename T>
-  struct is_option<Option<T>> : true_type {
-  };
-
-  template <typename T>
-  inline b8 constexpr is_option_v = is_option<T>::value;
-
-  template <typename T>
-  concept ts_option = is_option_v<T>;
-
   template <typename T>
   inline b8 constexpr can_compare_equality_v = std::equality_comparable<T>;
 
@@ -230,4 +229,15 @@ namespace soul
   struct static_assert_error {
     static b8 constexpr value = false;
   };
+
+  template <class T, template <class...> class Template>
+  struct is_specialization : std::false_type {
+  };
+
+  template <template <class...> class Template, class... Args>
+  struct is_specialization<Template<Args...>, Template> : std::true_type {
+  };
+
+  template <class T, template <class...> class Template>
+  inline b8 constexpr is_specialization_v = is_specialization<T, Template>::value;
 } // namespace soul
