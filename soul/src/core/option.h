@@ -27,9 +27,6 @@ namespace soul
   template <typename T, typename SomeT = match_any>
   concept ts_option = is_option_v<T, SomeT>;
 
-  template <typename T, typename Arg>
-  concept ts_option_and_then_fn = ts_invocable<T, Arg> && is_option_v<std::invoke_result_t<T, Arg>>;
-
   namespace impl
   {
     struct OptionConstruct {
@@ -82,7 +79,7 @@ namespace soul
         return opt.is_some() ? std::move(opt.some_ref()) : std::invoke(fn);
       }
 
-      template <ts_option_and_then_fn<T&> Fn, typename FnReturnT = std::invoke_result_t<Fn, T&>>
+      template <typeset Fn, ts_option FnReturnT = std::invoke_result_t<Fn, T&>>
       [[nodiscard]]
       constexpr auto and_then(Fn fn) & -> FnReturnT
       {
@@ -93,9 +90,7 @@ namespace soul
         return FnReturnT{};
       }
 
-      template <
-        ts_option_and_then_fn<const T&> Fn,
-        typename FnReturnT = std::invoke_result_t<Fn, const T&>>
+      template <typeset Fn, ts_option FnReturnT = std::invoke_result_t<Fn, const T&>>
       [[nodiscard]]
       constexpr auto and_then(Fn fn) const& -> FnReturnT
       {
@@ -106,7 +101,7 @@ namespace soul
         return FnReturnT{};
       }
 
-      template <ts_option_and_then_fn<T&&> Fn, typename FnReturnT = std::invoke_result_t<Fn, T&&>>
+      template <typeset Fn, ts_option FnReturnT = std::invoke_result_t<Fn, T&&>>
       [[nodiscard]]
       constexpr auto and_then(Fn fn) && -> FnReturnT
       {
@@ -117,20 +112,11 @@ namespace soul
         return FnReturnT{};
       }
 
-      template <
-        ts_option_and_then_fn<const T&&> Fn,
-        typename FnReturnT = std::invoke_result_t<Fn, const T&&>>
+      template <typename Fn>
       [[nodiscard]]
-      constexpr auto and_then(Fn fn) const&& -> FnReturnT
-      {
-        const auto& opt = get_option();
-        if (opt.is_some()) {
-          return std::invoke(fn, std::move(opt.some_ref()));
-        }
-        return FnReturnT{};
-      }
+      constexpr auto and_then(Fn fn) const&& = delete;
 
-      template <ts_invocable<T&> Fn, typename FnReturnT = std::invoke_result_t<Fn, T&>>
+      template <typeset Fn, typename FnReturnT = std::invoke_result_t<Fn, T&>>
       [[nodiscard]]
       constexpr auto transform(Fn fn) & -> Option<FnReturnT>
       {
@@ -142,7 +128,7 @@ namespace soul
         return Option<FnReturnT>();
       }
 
-      template <ts_invocable<const T&> Fn, typename FnReturnT = std::invoke_result_t<Fn, const T&>>
+      template <typeset Fn, typename FnReturnT = std::invoke_result_t<Fn, const T&>>
       [[nodiscard]]
       constexpr auto transform(Fn fn) const& -> Option<FnReturnT>
       {
@@ -154,7 +140,7 @@ namespace soul
         return Option<FnReturnT>();
       }
 
-      template <ts_invocable<T&&> Fn, typename FnReturnT = std::invoke_result_t<Fn, T&&>>
+      template <typeset Fn, typename FnReturnT = std::invoke_result_t<Fn, T&&>>
       [[nodiscard]]
       constexpr auto transform(Fn fn) && -> Option<FnReturnT>
       {
@@ -166,19 +152,9 @@ namespace soul
         return Option<FnReturnT>();
       }
 
-      template <
-        ts_invocable<const T&&> Fn,
-        typename FnReturnT = std::invoke_result_t<Fn, const T&&>>
+      template <typename Fn>
       [[nodiscard]]
-      constexpr auto transform(Fn fn) const&& -> Option<FnReturnT>
-      {
-        const auto& opt = get_option();
-        if (opt.is_some()) {
-          return Option<FnReturnT>::init_generate(
-            [&, this] { return std::invoke(fn, std::move(opt.some_ref())); });
-        }
-        return Option<FnReturnT>();
-      }
+      constexpr auto transform(Fn fn) const&& = delete;
 
     private:
       [[nodiscard]]
