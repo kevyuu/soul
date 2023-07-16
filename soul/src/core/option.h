@@ -62,6 +62,17 @@ namespace soul
       }
 
       [[nodiscard]]
+      constexpr auto unwrap_or(OwnRef<T> default_val) const& -> val_ret_type
+        requires(can_trivial_copy_v<Option<T>>)
+      {
+        auto& opt = get_option();
+        if (opt.is_some()) {
+          return opt.some_ref();
+        }
+        return default_val;
+      }
+
+      [[nodiscard]]
       constexpr auto unwrap_or(OwnRef<T> default_val) && -> val_ret_type
       {
         auto& opt = get_option();
