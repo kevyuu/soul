@@ -156,6 +156,29 @@ namespace soul
       [[nodiscard]]
       constexpr auto transform(Fn fn) const&& = delete;
 
+      template <ts_fn<Option<T>> Fn>
+      [[nodiscard]]
+      constexpr auto or_else(Fn fn) const& -> Option<T>
+        requires(can_trivial_copy_v<Option<T>>)
+      {
+        auto& opt = get_option();
+        if (opt.is_some()) {
+          return opt;
+        }
+        return std::invoke(fn);
+      }
+
+      template <ts_fn<Option<T>> Fn>
+      [[nodiscard]]
+      constexpr auto or_else(Fn fn) && -> Option<T>
+      {
+        auto& opt = get_option();
+        if (opt.is_some()) {
+          return std::move(opt);
+        }
+        return std::invoke(fn);
+      }
+
     private:
       [[nodiscard]]
       auto get_option() -> Option<T>&

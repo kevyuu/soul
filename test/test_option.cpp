@@ -268,6 +268,36 @@ TEST(TestOptionTransform, TestTransform)
   }
 }
 
+TEST(TestOptionOrElse, TestOrElse)
+{
+  {
+    const auto result = OptInt().or_else([] { return OptInt::some(3); });
+    verify_option_equal(result, OptInt::some(3));
+  }
+
+  {
+    const auto opt_int_some = OptInt::some(5);
+    const auto result = opt_int_some.or_else([] { return OptInt::some(3); });
+    verify_option_equal(result, OptInt::some(5));
+  }
+
+  {
+    const auto expected_list_object = ListTestObject::from(
+      std::views::iota(3, 10) | std::views::transform([](i32 val) { return TestObject(val); }));
+    const auto expected_opt = OptListObj::some(expected_list_object.clone());
+    const auto result = OptListObj().or_else([&] { return expected_opt.clone(); });
+    verify_option_equal(result, expected_opt);
+  }
+
+  {
+    const auto expected_list_object = ListTestObject::from(
+      std::views::iota(3, 10) | std::views::transform([](i32 val) { return TestObject(val); }));
+    const auto expected_opt = OptListObj::some(expected_list_object.clone());
+    const auto result = expected_opt.clone().or_else([&] { return OptListObj(); });
+    verify_option_equal(result, expected_opt);
+  }
+}
+
 TEST(TestOptionReset, TestReset)
 {
   auto opt_int_none = OptInt();
