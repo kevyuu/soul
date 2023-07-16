@@ -214,6 +214,16 @@ TEST(TestOptionUnwrapOr, TestOptionUnwrapOr)
 
 TEST(TestOptionUnwrapOrElse, TestUnwrapOrElse)
 {
+  {
+    auto test_opt_some = OptInt::some(10);
+    SOUL_TEST_ASSERT_EQ(test_opt_some.unwrap_or_else([] { return 5; }), 10);
+  }
+
+  {
+    auto test_opt_none = OptInt();
+    SOUL_TEST_ASSERT_EQ(test_opt_none.unwrap_or_else([] { return 5; }), 5);
+  }
+
   SOUL_TEST_ASSERT_EQ(OptInt::some(3).unwrap_or_else([] { return 5; }), 3);
   SOUL_TEST_ASSERT_EQ(OptInt().unwrap_or_else([]() { return 5; }), 5);
 

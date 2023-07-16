@@ -90,6 +90,15 @@ namespace soul
 
       template <ts_fn<std::remove_cv_t<T>> Fn>
       [[nodiscard]]
+      constexpr auto unwrap_or_else(Fn fn) const& -> val_ret_type
+        requires(can_trivial_copy_v<Option<T>>)
+      {
+        auto& opt = get_option();
+        return opt.is_some() ? opt.some_ref() : std::invoke(fn);
+      }
+
+      template <ts_fn<std::remove_cv_t<T>> Fn>
+      [[nodiscard]]
       constexpr auto unwrap_or_else(Fn fn) && -> val_ret_type
       {
         auto& opt = get_option();
