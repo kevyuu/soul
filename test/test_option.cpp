@@ -52,6 +52,9 @@ auto test_construction_some(const T& val)
   auto option = soul::Option<T>::some(soul::duplicate(val));
   SOUL_TEST_ASSERT_TRUE(option.is_some());
   SOUL_TEST_ASSERT_EQ(option.some_ref(), val);
+  if constexpr (soul::can_trivial_copy_v<T>) {
+    SOUL_TEST_ASSERT_EQ(option.unwrap(), val);
+  }
   SOUL_TEST_ASSERT_EQ(std::move(option).unwrap(), val);
 }
 

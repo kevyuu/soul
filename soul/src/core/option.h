@@ -56,6 +56,12 @@ namespace soul
       }
 
       [[nodiscard]]
+      constexpr auto unwrap() const& -> val_ret_type
+      {
+        return get_option().some_ref();
+      }
+
+      [[nodiscard]]
       constexpr auto unwrap() && -> val_ret_type
       {
         return std::move(get_option().some_ref());
