@@ -333,6 +333,23 @@ TEST(TestOptionReset, TestReset)
   verify_option_equal(opt_some_listtestobj, OptListObj());
 }
 
+TEST(TestOptionIsSomeAnd, TestIsSomeAnd)
+{
+  {
+    auto is_some_fn = [](int val) { return val == 5; };
+    SOUL_TEST_ASSERT_TRUE(OptInt::some(5).is_some_and(is_some_fn));
+    SOUL_TEST_ASSERT_FALSE(OptInt::some(3).is_some_and(is_some_fn));
+    SOUL_TEST_ASSERT_FALSE(OptInt().is_some_and(is_some_fn));
+  }
+
+  {
+    auto is_some_fn = [](const TestObject& val) { return val == TestObject(5); };
+    SOUL_TEST_ASSERT_TRUE(OptObj::some(TestObject(5)).is_some_and(is_some_fn));
+    SOUL_TEST_ASSERT_FALSE(OptObj::some(TestObject(3)).is_some_and(is_some_fn));
+    SOUL_TEST_ASSERT_FALSE(OptObj().is_some_and(is_some_fn));
+  }
+}
+
 template <typename T>
 auto test_swap(const soul::Option<T>& sample_opt_lhs, const soul::Option<T>& sample_opt_rhs)
 {

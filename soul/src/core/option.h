@@ -49,10 +49,7 @@ namespace soul
       constexpr auto is_some_and(Fn fn) const -> b8
       {
         const auto& opt = get_option();
-        if (opt.is_some()) {
-          return true;
-        }
-        return std::invoke(fn, opt.some_ref());
+        return opt.is_some() && std::invoke(fn, opt.some_ref());
       }
 
       [[nodiscard]]
