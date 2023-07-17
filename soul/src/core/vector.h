@@ -329,10 +329,7 @@ namespace soul
 
   template <typename T, memory::allocator_type AllocatorT, usize N>
   Vector<T, AllocatorT, N>::Vector(
-    vector_construct::fill_n_t /*tag*/,
-    const value_type& val,
-    usize size,
-    AllocatorT& allocator)
+    vector_construct::fill_n_t /*tag*/, const value_type& val, usize size, AllocatorT& allocator)
       : allocator_(&allocator), size_(size)
   {
     init_reserve(size);
@@ -417,8 +414,8 @@ namespace soul
   }
 
   template <typename T, memory::allocator_type AllocatorT, usize N>
-  auto Vector<T, AllocatorT, N>::fill_n(
-    usize size, const value_type& val, AllocatorT& allocator) -> this_type
+  auto Vector<T, AllocatorT, N>::fill_n(usize size, const value_type& val, AllocatorT& allocator)
+    -> this_type
     requires ts_copy<T>
   {
     return this_type(vector_construct::fill_n, val, size, allocator);
@@ -426,8 +423,7 @@ namespace soul
 
   template <typename T, memory::allocator_type AllocatorT, usize N>
   template <ts_generate_fn<T> Fn>
-  auto Vector<T, AllocatorT, N>::generate_n(Fn fn, usize size, AllocatorT& allocator)
-    -> this_type
+  auto Vector<T, AllocatorT, N>::generate_n(Fn fn, usize size, AllocatorT& allocator) -> this_type
   {
     return this_type(vector_construct::generate_n, fn, size, allocator);
   }
@@ -446,8 +442,7 @@ namespace soul
   }
 
   template <typename T, memory::allocator_type AllocatorT, usize N>
-  auto Vector<T, AllocatorT, N>::with_capacity(usize capacity, AllocatorT& allocator)
-    -> this_type
+  auto Vector<T, AllocatorT, N>::with_capacity(usize capacity, AllocatorT& allocator) -> this_type
   {
     return this_type(vector_construct::with_capacity, capacity, allocator);
   }
@@ -883,8 +878,7 @@ namespace soul
   }
 
   template <typename T, memory::allocator_type AllocatorT, usize inline_element_count>
-  auto Vector<T, AllocatorT, inline_element_count>::operator[](usize idx) const
-    -> const_reference
+  auto Vector<T, AllocatorT, inline_element_count>::operator[](usize idx) const -> const_reference
   {
     SOUL_ASSERT(
       0, idx < size_, "Out of bound access to array detected. idx = %llu, _size=%llu", idx, size_);
