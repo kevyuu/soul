@@ -1,0 +1,12 @@
+---
+Checks: "
+  -modernize-use-trailing-return-type,
+  -cppcoreguidelines-avoid-non-const-global-variables,
+"
+CheckOptions:
+  - key: cppcoreguidelines-avoid-do-while.IgnoreMacros
+    value: 1
+WarningsAsErrors: ''
+HeaderFilterRegex: ''
+InheritParentConfig: true
+FormatStyle:     none
