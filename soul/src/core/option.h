@@ -87,19 +87,25 @@ namespace soul
         return default_val;
       }
 
-      template <ts_fn<std::remove_cv_t<T>> Fn>
+      template <ts_invocable Fn>
       [[nodiscard]]
       constexpr auto unwrap_or_else(Fn fn) const& -> val_ret_type
         requires(can_trivial_copy_v<Option<T>>)
       {
+        static_assert(
+          ts_convertible_to<invoke_result_t<Fn>, val_ret_type>,
+          "fn return type need to be convertible to Option::some_type");
         auto& opt = get_option();
-        return opt.is_some() ? opt.some_ref() : std::invoke(fn);
+        return opt.is_some() ? opt.some_ref() : static_cast<val_ret_type>(std::invoke(fn));
       }
 
-      template <ts_fn<std::remove_cv_t<T>> Fn>
+      template <ts_invocable Fn>
       [[nodiscard]]
       constexpr auto unwrap_or_else(Fn fn) && -> val_ret_type
       {
+        static_assert(
+          ts_convertible_to<invoke_result_t<Fn>, val_ret_type>,
+          "fn return type need to be convertible to Option::some_type");
         auto& opt = get_option();
         return opt.is_some() ? std::move(opt.some_ref()) : std::invoke(fn);
       }
@@ -447,4 +453,119 @@ namespace soul
     return left.is_some() == right.is_some();
   }
 
+  template <ts_pointer T>
+  class Option<NotNull<T>> : public impl::OptionBase<NotNull<T>>
+  {
+  public:
+    using some_type = NotNull<T>;
+    using ptr_type = T;
+
+    constexpr Option() : not_null_ptr_(NotNull<T>::new_unchecked(nullptr)) {}
+
+    constexpr Option(None none) : not_null_ptr_(NotNull<T>::new_unchecked(nullptr)) {} // NOLINT
+
+    constexpr Option(T ptr) : not_null_ptr_(NotNull<T>::new_unchecked(ptr)) {} // NOLINT
+
+    constexpr Option(NotNull<T>) = delete;
+
+    constexpr Option(const Option&) = default;
+
+    constexpr Option(Option&&) noexcept = default;
+
+    constexpr auto operator=(const Option&) -> Option& = default;
+
+    constexpr auto operator=(Option&&) noexcept -> Option& = default;
+
+    ~Option() = default;
+
+    constexpr operator T() const { return not_null_ptr_.get_unchecked(); } // NOLINT
+
+    constexpr operator NotNull<T>() const = delete;
+
+    constexpr void swap(Option& other) { not_null_ptr_.swap(other.not_null_ptr_); }
+
+    [[nodiscard]]
+    static constexpr auto some(NotNull<T> not_null_ptr) noexcept -> Option
+    {
+      T ptr = not_null_ptr;
+      return Option(ptr);
+    }
+
+    template <ts_fn<NotNull<T>> Fn>
+    [[nodiscard]]
+    static constexpr auto init_generate(Fn fn) noexcept -> Option
+    {
+      return Option::some(std::invoke(fn));
+    }
+
+    [[nodiscard]]
+    constexpr auto some_ref() -> NotNull<T>&
+    {
+      return not_null_ptr_;
+    }
+
+    [[nodiscard]]
+    constexpr auto some_ref() const -> const NotNull<T>&
+    {
+      return not_null_ptr_;
+    }
+
+    [[nodiscard]]
+    constexpr auto is_some() const -> b8
+    {
+      return not_null_ptr_.get_unchecked() != nullptr;
+    }
+
+    constexpr void reset() { not_null_ptr_.set_unchecked(nullptr); }
+
+    [[nodiscard]]
+    constexpr auto unwrap_or(NotNull<T> default_val) const -> NotNull<T>
+    {
+      if (is_some()) {
+        return not_null_ptr_;
+      }
+      return default_val;
+    }
+
+    auto operator++() -> Option& = delete;
+    auto operator--() -> Option& = delete;
+    auto operator++(int) -> Option = delete;
+    auto operator--(int) -> Option = delete;
+    auto operator+=(std::ptrdiff_t) -> Option = delete;
+    auto operator-=(std::ptrdiff_t) -> Option = delete;
+    void operator[](std::ptrdiff_t) const = delete;
+
+  private:
+    NotNull<T> not_null_ptr_;
+  };
+
+  template <typename T, typename PtrT = match_any>
+  inline constexpr b8 is_maybe_null_v = [] {
+    if constexpr (is_option_v<T>) {
+      return is_not_null_v<typename T::some_type, PtrT>;
+    }
+    return false;
+  }();
+
+  template <typename T, typename PtrT = match_any>
+  concept ts_maybe_null = is_maybe_null_v<T, PtrT>;
+
+  template <ts_pointer T>
+  using MaybeNull = Option<NotNull<T>>;
+
+  // more unwanted operators
+  template <ts_pointer T, ts_pointer U>
+  auto operator-(const MaybeNull<T>&, const MaybeNull<U>&) -> std::ptrdiff_t = delete;
+  template <ts_pointer T>
+  auto operator-(const MaybeNull<T>&, std::ptrdiff_t) -> MaybeNull<T> = delete;
+  template <ts_pointer T>
+  auto operator+(const MaybeNull<T>&, std::ptrdiff_t) -> MaybeNull<T> = delete;
+  template <ts_pointer T>
+  auto operator+(std::ptrdiff_t, const MaybeNull<T>&) -> MaybeNull<T> = delete;
+
+  template <typeset T>
+  constexpr auto operator<=>(const MaybeNull<T>& lhs, const MaybeNull<T>& rhs) noexcept
+  {
+    return operator<=>(lhs.get(), rhs.get());
+  }
 } // namespace soul
