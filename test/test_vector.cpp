@@ -732,6 +732,20 @@ TEST_F(TestVectorManipulation, TestVectorEmplaceBack)
 
   SOUL_TEST_RUN(test_emplace_back(vector_testobj_empty));
   SOUL_TEST_RUN(test_emplace_back(vector_testobj_arr));
+
+  auto test_emplace_back_self_referential = []<typename T>(const soul::Vector<T>& sample_vector) {
+    using Vector = soul::Vector<T>;
+
+    auto test_vector = sample_vector.clone();
+    test_vector.reserve(test_vector.capacity() + 10);
+    test_vector.shrink_to_fit();
+    test_vector.emplace_back(test_vector.back());
+    SOUL_TEST_ASSERT_EQ(test_vector.size(), sample_vector.size() + 1);
+    SOUL_TEST_ASSERT_TRUE(std::equal(test_vector.begin(), test_vector.end(), test_vector.begin()));
+    SOUL_TEST_ASSERT_EQ(test_vector.back(), sample_vector.back());
+  };
+
+  SOUL_TEST_RUN(test_emplace_back_self_referential(vector_int_arr));
 }
 
 TEST_F(TestVectorManipulation, TestVectorAppend)

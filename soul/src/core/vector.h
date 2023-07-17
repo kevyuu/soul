@@ -818,12 +818,20 @@ namespace soul
   auto Vector<T, AllocatorT, N>::emplace_back(Args&&... args) -> reference
   {
     if (size_ == capacity_) {
-      reserve(get_new_capacity(capacity_));
+      const auto new_capacity = get_new_capacity(capacity_);
+      T* old_buffer = buffer_;
+      buffer_ = allocator_->template allocate_array<T>(new_capacity);
+      soul::construct_at(buffer_ + size_, std::forward<Args>(args)...);
+      uninitialized_move_n(old_buffer, size_, buffer_);
+      if (old_buffer != stack_storage_.data()) {
+        allocator_->deallocate_array(old_buffer, capacity_);
+      }
+      capacity_ = new_capacity;
+    } else {
+      soul::construct_at(buffer_ + size_, std::forward<Args>(args)...);
     }
-    T* item = (buffer_ + size_);
-    new (item) T(std::forward<Args>(args)...);
     ++size_;
-    return *item;
+    return *(buffer_ + size_ - 1);
   }
 
   template <typename T, memory::allocator_type AllocatorT, usize N>
