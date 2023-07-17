@@ -279,12 +279,11 @@ TEST_F(TestSBOVectorConstructionWithSourceData, TestCloneWithCustomAllocator)
 
 TEST_F(TestSBOVectorConstructionWithSourceData, TestMoveConstructor)
 {
-  auto test_move_constructor =
-    []<typename T, usize N>(const soul::SBOVector<T, N>& vector_src) {
-      soul::SBOVector<T, N> vector_src_copy = vector_src.clone();
-      soul::SBOVector<T, N> vector_dst(std::move(vector_src_copy));
-      verify_sbo_vector(vector_dst, vector_src);
-    };
+  auto test_move_constructor = []<typename T, usize N>(const soul::SBOVector<T, N>& vector_src) {
+    soul::SBOVector<T, N> vector_src_copy = vector_src.clone();
+    soul::SBOVector<T, N> vector_dst(std::move(vector_src_copy));
+    verify_sbo_vector(vector_dst, vector_src);
+  };
 
   SOUL_TEST_RUN(test_move_constructor(vector_int_src));
   SOUL_TEST_RUN(test_move_constructor(vector_to_src));
@@ -393,8 +392,8 @@ TEST(TestSBOVectorCopyAssignmentOperator, TestSBOVectorCopyAssignmentOperator)
   auto type_set_test = []<typename T>() {
     auto src_size_set_test = [](const usize src_size) {
       constexpr auto default_inline_count = soul::get_sbo_vector_default_inline_element_count<T>();
-      SOUL_TEST_RUN(test_copy_assignment_operator<T>(
-        src_size, std::max<usize>(default_inline_count / 2, 1)));
+      SOUL_TEST_RUN(
+        test_copy_assignment_operator<T>(src_size, std::max<usize>(default_inline_count / 2, 1)));
       SOUL_TEST_RUN(test_copy_assignment_operator<T>(src_size, default_inline_count * 2));
       SOUL_TEST_RUN(test_copy_assignment_operator<T>(src_size, default_inline_count));
 
@@ -439,8 +438,8 @@ TEST(TestSBOVectorMoveAssingmentOperator, TestSBOVectorMoveAssignmentOperator)
   auto type_set_test = []<typename T>() {
     auto src_size_set_test = [](const usize src_size) {
       constexpr auto default_inline_count = soul::get_sbo_vector_default_inline_element_count<T>();
-      SOUL_TEST_RUN(test_move_assignment_operator<T>(
-        src_size, std::max<usize>(default_inline_count / 2, 1)));
+      SOUL_TEST_RUN(
+        test_move_assignment_operator<T>(src_size, std::max<usize>(default_inline_count / 2, 1)));
       SOUL_TEST_RUN(test_move_assignment_operator<T>(src_size, default_inline_count * 2));
       SOUL_TEST_RUN(test_move_assignment_operator<T>(src_size, default_inline_count));
 
@@ -658,6 +657,45 @@ TEST(TestSBOVectorReserve, TestSBOVectorReserve)
     SOUL_TEST_RUN(SOUL_SINGLE_ARG(test_reserve<T, 8>(16, 8)));
     SOUL_TEST_RUN(SOUL_SINGLE_ARG(test_reserve<T, 8>(16, 32)));
     SOUL_TEST_RUN(SOUL_SINGLE_ARG(test_reserve<T, 8>(16, 2)));
+  };
+
+  SOUL_TEST_RUN(type_set_test.operator()<int>());
+  SOUL_TEST_RUN(type_set_test.operator()<TestObject>());
+  SOUL_TEST_RUN(type_set_test.operator()<ListTestObject>());
+}
+
+template <typename T, usize N = soul::get_sbo_vector_default_inline_element_count<T>()>
+void test_shrink_to_fit(const usize vec_size, const usize capacity)
+{
+  const auto sequence = generate_random_sequence<T>(vec_size);
+  auto vector = create_vector_from_sequence<T, N>(sequence);
+  const auto old_capacity = vector.capacity();
+  vector.reserve(capacity);
+  vector.shrink_to_fit();
+  verify_sbo_vector(vector, sequence);
+  if (vec_size > N) {
+    SOUL_TEST_ASSERT_EQ(vector.capacity(), vec_size);
+  } else {
+    SOUL_TEST_ASSERT_EQ(vector.capacity(), N);
+  }
+}
+
+TEST(TestSBOVectorShrinkToFit, TestShrinkToFit)
+{
+  auto type_set_test = []<typename T>() {
+    constexpr auto default_inline_element_count =
+      soul::get_sbo_vector_default_inline_element_count<T>();
+    SOUL_TEST_RUN(test_shrink_to_fit<T>(0, default_inline_element_count - 1));
+    SOUL_TEST_RUN(test_shrink_to_fit<T>(0, default_inline_element_count));
+    SOUL_TEST_RUN(test_shrink_to_fit<T>(0, default_inline_element_count * 2));
+
+    SOUL_TEST_RUN(SOUL_SINGLE_ARG(test_shrink_to_fit<T, 8>(4, 8)));
+    SOUL_TEST_RUN(SOUL_SINGLE_ARG(test_shrink_to_fit<T, 8>(4, 16)));
+    SOUL_TEST_RUN(SOUL_SINGLE_ARG(test_shrink_to_fit<T, 8>(4, 2)));
+
+    SOUL_TEST_RUN(SOUL_SINGLE_ARG(test_shrink_to_fit<T, 8>(16, 8)));
+    SOUL_TEST_RUN(SOUL_SINGLE_ARG(test_shrink_to_fit<T, 8>(16, 32)));
+    SOUL_TEST_RUN(SOUL_SINGLE_ARG(test_shrink_to_fit<T, 8>(16, 2)));
   };
 
   SOUL_TEST_RUN(type_set_test.operator()<int>());

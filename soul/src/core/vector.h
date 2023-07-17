@@ -167,6 +167,8 @@ namespace soul
 
     void pop_back(usize count);
 
+    void shrink_to_fit();
+
     void clear() noexcept;
 
     void cleanup();
@@ -770,6 +772,25 @@ namespace soul
     SOUL_ASSERT(0, size_ >= count, "Cannot pop back more than sbo_vector size");
     size_ = size_ - count;
     std::destroy_n(buffer_ + size_, count);
+  }
+
+  template <typename T, memory::allocator_type AllocatorT, usize inline_element_count>
+  void Vector<T, AllocatorT, inline_element_count>::shrink_to_fit()
+  {
+    if (capacity_ == size_ || is_using_stack_storage()) {
+      return;
+    }
+    T* old_buffer = buffer_;
+    const auto old_capacity = capacity_;
+    if (size_ > inline_element_count) {
+      buffer_ = allocator_->template allocate_array<T>(size_);
+      capacity_ = size_;
+    } else {
+      buffer_ = stack_storage_.data();
+      capacity_ = inline_element_count;
+    }
+    uninitialized_move_n(old_buffer, size_, buffer_);
+    allocator_->deallocate_array(old_buffer, old_capacity);
   }
 
   template <typename T, memory::allocator_type AllocatorT, usize N>

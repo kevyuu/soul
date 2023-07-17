@@ -559,6 +559,27 @@ TEST_F(TestVectorManipulation, TestVectorReserve)
   SOUL_TEST_RUN(test_reserve(vector_list_testobj_arr, vector_list_testobj_arr.capacity() - 2));
 }
 
+TEST_F(TestVectorManipulation, TestVectorShrinkToFit)
+{
+  auto test_shrink_to_fit = []<typename T>(soul::Vector<T>& test_vector, const usize new_capacity) {
+    const auto old_capacity = test_vector.capacity();
+    soul::Vector<T> test_copy = test_vector.clone();
+    test_vector.reserve(new_capacity);
+    test_vector.shrink_to_fit();
+    SOUL_TEST_ASSERT_TRUE(std::ranges::equal(test_vector, test_copy));
+    SOUL_TEST_ASSERT_EQ(test_vector.capacity(), test_copy.size());
+  };
+
+  SOUL_TEST_RUN(test_shrink_to_fit(vector_int_empty, 5));
+  SOUL_TEST_RUN(test_shrink_to_fit(vector_testobj_empty, 5));
+  SOUL_TEST_RUN(test_shrink_to_fit(vector_list_testobj_empty, 5));
+
+  SOUL_TEST_RUN(test_shrink_to_fit(vector_int_arr, vector_int_arr.capacity() + 3));
+  SOUL_TEST_RUN(test_shrink_to_fit(vector_testobj_arr, vector_testobj_arr.capacity() + 5));
+  SOUL_TEST_RUN(
+    test_shrink_to_fit(vector_list_testobj_arr, vector_list_testobj_arr.capacity() + 5));
+}
+
 TEST_F(TestVectorManipulation, TestVectorPushBack)
 {
   auto test_push_back = []<typename T>(const soul::Vector<T>& sample_vector, const T& val) {
@@ -685,8 +706,7 @@ TEST_F(TestVectorManipulation, TestVectorEmplaceBack)
 
 TEST_F(TestVectorManipulation, TestVectorAppend)
 {
-  auto test_append = []<typename T>(
-                       const soul::Vector<T>& test_vector, const usize append_size) {
+  auto test_append = []<typename T>(const soul::Vector<T>& test_vector, const usize append_size) {
     auto src_append_arr = new T[append_size];
     SCOPE_EXIT(delete[] src_append_arr);
     generate_random_array(src_append_arr, append_size);
