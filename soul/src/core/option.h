@@ -21,8 +21,12 @@ namespace soul
   class Option;
 
   template <typename T, typename SomeT = match_any>
-  inline constexpr b8 is_option_v =
-    [] { return is_specialization_v<T, Option> && is_match_v<SomeT, typename T::some_type>; }();
+  inline constexpr b8 is_option_v = [] {
+    if constexpr (is_specialization_v<T, Option>) {
+      return is_match_v<SomeT, typename T::some_type>;
+    }
+    return false;
+  }();
 
   template <typename T, typename SomeT = match_any>
   concept ts_option = is_option_v<T, SomeT>;

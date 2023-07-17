@@ -378,3 +378,15 @@ TEST(TestOptionSwap, TestSwap)
   SOUL_TEST_RUN(test_swap(OptListObj(), OptListObj()));
   SOUL_TEST_RUN(test_swap(test_some_optlistobj, test_some_optlistobj2));
 }
+
+static_assert(!soul::is_option_v<TestObject>);
+static_assert(soul::is_option_v<OptObj>);
+static_assert(soul::is_option_v<OptObj, soul::match_any>);
+static_assert(!soul::is_option_v<OptObj, i32>);
+static_assert(soul::is_option_v<OptObj, TestObject>);
+
+static_assert(!soul::ts_option<TestObject>);
+static_assert(soul::ts_option<OptObj>);
+static_assert(soul::ts_option<OptObj, soul::match_any>);
+static_assert(!soul::ts_option<OptObj, i32>);
+static_assert(soul::ts_option<OptObj, TestObject>);
