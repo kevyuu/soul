@@ -610,6 +610,20 @@ TEST_F(TestVectorManipulation, TestVectorPushBack)
   SOUL_TEST_RUN(test_push_back(vector_int_arr, 5));
   SOUL_TEST_RUN(test_push_back(vector_testobj_arr, TestObject(5)));
   SOUL_TEST_RUN(test_push_back(vector_list_testobj_arr, ListTestObject::with_size(5)));
+
+  auto test_push_back_self_referential = []<typename T>(const soul::Vector<T>& sample_vector) {
+    using Vector = soul::Vector<T>;
+
+    auto test_vector = sample_vector.clone();
+    test_vector.reserve(test_vector.capacity() + 10);
+    test_vector.shrink_to_fit();
+    test_vector.push_back(test_vector.back());
+    SOUL_TEST_ASSERT_EQ(test_vector.size(), sample_vector.size() + 1);
+    SOUL_TEST_ASSERT_TRUE(std::equal(test_vector.begin(), test_vector.end(), test_vector.begin()));
+    SOUL_TEST_ASSERT_EQ(test_vector.back(), sample_vector.back());
+  };
+
+  SOUL_TEST_RUN(test_push_back_self_referential(vector_int_arr));
 }
 
 TEST_F(TestVectorManipulation, TestVectorGenerateBack)

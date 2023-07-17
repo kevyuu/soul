@@ -738,9 +738,18 @@ namespace soul
   void Vector<T, AllocatorT, N>::push_back(OwnRef<T> item)
   {
     if (size_ == capacity_) {
-      reserve(get_new_capacity(capacity_));
+      const auto new_capacity = get_new_capacity(capacity_);
+      T* old_buffer = buffer_;
+      buffer_ = allocator_->template allocate_array<T>(new_capacity);
+      item.store_at(buffer_ + size_);
+      uninitialized_move_n(old_buffer, size_, buffer_);
+      if (old_buffer != stack_storage_.data()) {
+        allocator_->deallocate_array(old_buffer, capacity_);
+      }
+      capacity_ = new_capacity;
+    } else {
+      item.store_at(buffer_ + size_);
     }
-    item.store_at(buffer_ + size_);
     ++size_;
   }
 
