@@ -161,8 +161,6 @@ namespace soul
 
     void push_back(OwnRef<T> item);
 
-    auto push_back() -> reference;
-
     void generate_back(ts_generate_fn<T> auto fn);
 
     void pop_back();
