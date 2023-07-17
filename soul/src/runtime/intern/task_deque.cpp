@@ -11,11 +11,7 @@ namespace soul::runtime
     _top.store(0, std::memory_order_relaxed);
   }
 
-  void TaskDeque::shutdown()
-  {
-    SOUL_ASSERT_MAIN_THREAD();
-    free(_tasks);
-  }
+  void TaskDeque::shutdown() { SOUL_ASSERT_MAIN_THREAD(); }
 
   void TaskDeque::reset()
   {
