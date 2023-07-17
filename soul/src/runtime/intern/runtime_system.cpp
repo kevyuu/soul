@@ -3,6 +3,7 @@
 #include "core/architecture.h"
 #include "core/panic.h"
 #include "core/profile.h"
+#include "core/util.h"
 #include "memory/allocators/linear_allocator.h"
 #include "memory/allocators/proxy_allocator.h"
 #include "runtime/system.h"
@@ -68,7 +69,7 @@ namespace soul::runtime
           break;
         }
 
-        const usize thread_index = (rand_xorshf96() % db_.thread_count);
+        const usize thread_index = (util::get_random_number<u64>(0, db_.thread_count));
         task_id = db_.thread_contexts[thread_index].task_deque.steal();
       }
 
@@ -295,7 +296,7 @@ namespace soul::runtime
     return get_context_allocator()->allocate(size, alignment);
   }
 
-  void System::deallocate(void* addr, u32 size) { get_context_allocator()->deallocate(addr); }
+  void System::deallocate(void* addr, u32 /* size */) { get_context_allocator()->deallocate(addr); }
 
   auto System::get_temp_allocator() -> TempAllocator*
   {

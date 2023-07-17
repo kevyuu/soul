@@ -31,10 +31,10 @@ namespace soul
 
 // compatibility with non-clang compilers...
 #ifndef __has_attribute
-#  define __has_attribute(x) SOUL_NOOP
+#  define __has_attribute(x) __noop
 #endif
 #ifndef __has_builtin
-#  define __has_builtin(x) SOUL_NOOP
+#  define __has_builtin(x) __noop
 #endif
 
 #if __has_builtin(__builtin_expect)

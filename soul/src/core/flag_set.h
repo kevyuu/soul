@@ -63,7 +63,7 @@ namespace soul
     [[nodiscard]]
     constexpr auto
     operator~() const -> FlagSet;
-    constexpr auto operator==(const FlagSet&) const -> b8 = default;
+    constexpr auto operator==(const FlagSet& other) const -> bool = default;
 
     [[nodiscard]]
     constexpr auto count() const -> size_t;

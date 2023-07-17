@@ -1000,12 +1000,12 @@ namespace soul::gpu
     struct GraphicPipelineStateKey {
       GraphicPipelineStateDesc desc;
       TextureSampleCount sample_count = TextureSampleCount::COUNT_1;
-      auto operator==(const GraphicPipelineStateKey&) const -> b8 = default;
+      auto operator==(const GraphicPipelineStateKey&) const -> bool = default;
     };
 
     struct ComputePipelineStateKey {
       ComputePipelineStateDesc desc;
-      auto operator==(const ComputePipelineStateKey&) const -> b8 = default;
+      auto operator==(const ComputePipelineStateKey&) const -> bool = default;
     };
 
     struct PipelineState {

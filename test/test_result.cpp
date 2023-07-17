@@ -23,7 +23,7 @@ using namespace soul;
 
 struct TrivialOk {
   int x, y;
-  auto operator==(const TrivialOk&) const -> b8 = default;
+  auto operator==(const TrivialOk&) const -> bool = default;
 };
 using TrivialErr = u64;
 using NontrivialErr = ListTestObject;

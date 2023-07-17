@@ -227,7 +227,7 @@ TEST(TestVariantVisit, TestVisit)
     struct VisitResult {
       u16 val;
       TrivialKind kind;
-      auto operator==(const VisitResult& other) const -> b8 = default;
+      auto operator==(const VisitResult& other) const -> bool = default;
     };
     int x = 0;
     const auto visitor_set = soul::VisitorSet{
@@ -258,7 +258,7 @@ TEST(TestVariantVisit, TestVisit)
     struct VisitResult {
       ListTestObject val;
       UntrivialKind kind;
-      auto operator==(const VisitResult& other) const -> b8 = default;
+      auto operator==(const VisitResult& other) const -> bool = default;
     };
     usize x = 0;
     const auto visitor_set = soul::VisitorSet{
