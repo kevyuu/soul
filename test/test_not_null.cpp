@@ -87,3 +87,13 @@ TEST(TestNotNullSwap, TestSwap)
   SOUL_TEST_ASSERT_EQ(not_null_test_obj2->x, test_obj.x);
   SOUL_TEST_ASSERT_EQ((*not_null_test_obj2).x, test_obj.x);
 }
+
+static_assert(!soul::is_not_null_v<int*>);
+static_assert(soul::is_not_null_v<soul::NotNull<soul::i32*>>);
+static_assert(soul::is_not_null_v<soul::NotNull<soul::i32*>, soul::match_any>);
+static_assert(!soul::is_not_null_v<soul::NotNull<soul::i32*>, soul::u64*>);
+
+static_assert(!soul::ts_not_null<int*>);
+static_assert(soul::ts_not_null<soul::NotNull<soul::i32*>>);
+static_assert(soul::ts_not_null<soul::NotNull<soul::i32*>, soul::match_any>);
+static_assert(!soul::ts_not_null<soul::NotNull<soul::i32*>, soul::u64*>);

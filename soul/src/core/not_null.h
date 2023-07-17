@@ -17,9 +17,26 @@ namespace soul
 
   template <ts_pointer T>
     requires(!is_const_v<T>)
+  class NotNull;
+
+  template <typename T, typename PtrT = match_any>
+  inline constexpr b8 is_not_null_v = [] {
+    if constexpr (!is_specialization_v<T, NotNull>) {
+      return false;
+    } else {
+      return is_match_v<typename T::ptr_type, PtrT>;
+    }
+  }();
+
+  template <typename T, typename PtrT = match_any>
+  concept ts_not_null = is_not_null_v<T, PtrT>;
+
+  template <ts_pointer T>
+    requires(!is_const_v<T>)
   class NotNull
   {
   public:
+    using ptr_type = T;
     constexpr NotNull(const NotNull& other) = default;
     constexpr auto operator=(const NotNull& other) -> NotNull& = default;
     constexpr NotNull(NotNull&& other) noexcept = default;
