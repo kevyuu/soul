@@ -39,7 +39,7 @@ auto test_clone_from(const T& src, const T& sample_dst)
 {
   auto dst = sample_dst.clone();
   dst.clone_from(src);
-  verify_equal<T>(dst, src);
+  verify_equal(dst, src);
 }
 
 template <typeset T>
@@ -48,7 +48,7 @@ auto test_move_assignment(const T& sample_src, const T& sample_dst)
   auto src = duplicate(sample_src);
   auto dst = duplicate(sample_dst);
   dst = std::move(src);
-  verify_equal<T>(dst, sample_src);
+  verify_equal(dst, sample_src);
 }
 
 template <typeset T>
@@ -57,6 +57,6 @@ auto test_swap(const T& sample_lhs, const T& sample_rhs)
   auto lhs = duplicate(sample_lhs);
   auto rhs = duplicate(sample_rhs);
   swap(lhs, rhs);
-  verify_equal<T>(rhs, sample_lhs);
-  verify_equal<T>(lhs, sample_rhs);
+  verify_equal(rhs, sample_lhs);
+  verify_equal(lhs, sample_rhs);
 }
