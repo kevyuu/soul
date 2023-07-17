@@ -205,23 +205,24 @@ TEST_F(TestFlagSetManipulation, TestFlagSetReset)
   SOUL_TEST_RUN(test_reset(test_filled_flag_set));
   SOUL_TEST_RUN(test_reset(test_empty_flag_set));
 
-  auto test_reset_position = []<soul::ts_scoped_enum T>(soul::FlagSet<T> test_flag_set, T position) {
-    auto old_flag_set = test_flag_set;
-    test_flag_set.reset(position);
-    SOUL_TEST_ASSERT_FALSE(test_flag_set.test(position));
-    SOUL_TEST_ASSERT_FALSE(test_flag_set[position]);
-    for (auto e : soul::FlagIter<T>()) {
-      if (e != position) {
-        SOUL_TEST_ASSERT_EQ(test_flag_set.test(e), old_flag_set.test(e));
+  auto test_reset_position =
+    []<soul::ts_scoped_enum T>(soul::FlagSet<T> test_flag_set, T position) {
+      auto old_flag_set = test_flag_set;
+      test_flag_set.reset(position);
+      SOUL_TEST_ASSERT_FALSE(test_flag_set.test(position));
+      SOUL_TEST_ASSERT_FALSE(test_flag_set[position]);
+      for (auto e : soul::FlagIter<T>()) {
+        if (e != position) {
+          SOUL_TEST_ASSERT_EQ(test_flag_set.test(e), old_flag_set.test(e));
+        }
       }
-    }
 
-    if (old_flag_set.test(position)) {
-      SOUL_TEST_ASSERT_EQ(test_flag_set.count(), old_flag_set.count() - 1);
-    } else {
-      SOUL_TEST_ASSERT_EQ(test_flag_set.count(), old_flag_set.count());
-    }
-  };
+      if (old_flag_set.test(position)) {
+        SOUL_TEST_ASSERT_EQ(test_flag_set.count(), old_flag_set.count() - 1);
+      } else {
+        SOUL_TEST_ASSERT_EQ(test_flag_set.count(), old_flag_set.count());
+      }
+    };
 
   SOUL_TEST_RUN(test_reset_position(test_filled_flag_set, Uint8TestEnum::TWO));
   SOUL_TEST_RUN(test_reset_position(test_filled_flag_set, Uint8TestEnum::ONE));

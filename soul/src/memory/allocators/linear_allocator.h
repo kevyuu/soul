@@ -20,7 +20,8 @@ namespace soul::memory
     auto try_allocate(usize size, usize alignment, const char* tag) -> Allocation override;
     auto get_allocation_size(void* addr) const -> usize override;
     auto deallocate(void* addr) -> void override;
-    [[nodiscard]] auto get_marker() const noexcept -> void*;
+    [[nodiscard]]
+    auto get_marker() const noexcept -> void*;
     auto rewind(void* addr) noexcept -> void;
 
   private:

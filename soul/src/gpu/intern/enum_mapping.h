@@ -297,41 +297,25 @@ namespace soul::gpu
     if (normalized) {
       switch (type) {
       // Single Component Types
-      case ElementType::BYTE:
-        return VK_FORMAT_R8_SNORM;
-      case ElementType::UBYTE:
-        return VK_FORMAT_R8_UNORM;
-      case ElementType::SHORT:
-        return VK_FORMAT_R16_SNORM;
-      case ElementType::USHORT:
-        return VK_FORMAT_R16_UNORM;
+      case ElementType::BYTE: return VK_FORMAT_R8_SNORM;
+      case ElementType::UBYTE: return VK_FORMAT_R8_UNORM;
+      case ElementType::SHORT: return VK_FORMAT_R16_SNORM;
+      case ElementType::USHORT: return VK_FORMAT_R16_UNORM;
       // Two Component Types
-      case ElementType::BYTE2:
-        return VK_FORMAT_R8G8_SNORM;
-      case ElementType::UBYTE2:
-        return VK_FORMAT_R8G8_UNORM;
-      case ElementType::SHORT2:
-        return VK_FORMAT_R16G16_SNORM;
-      case ElementType::USHORT2:
-        return VK_FORMAT_R16G16_UNORM;
+      case ElementType::BYTE2: return VK_FORMAT_R8G8_SNORM;
+      case ElementType::UBYTE2: return VK_FORMAT_R8G8_UNORM;
+      case ElementType::SHORT2: return VK_FORMAT_R16G16_SNORM;
+      case ElementType::USHORT2: return VK_FORMAT_R16G16_UNORM;
       // Three Component Types
-      case ElementType::BYTE3:
-        return VK_FORMAT_R8G8B8_SNORM;
-      case ElementType::UBYTE3:
-        return VK_FORMAT_R8G8B8_UNORM;
-      case ElementType::SHORT3:
-        return VK_FORMAT_R16G16B16_SNORM;
-      case ElementType::USHORT3:
-        return VK_FORMAT_R16G16B16_UNORM;
+      case ElementType::BYTE3: return VK_FORMAT_R8G8B8_SNORM;
+      case ElementType::UBYTE3: return VK_FORMAT_R8G8B8_UNORM;
+      case ElementType::SHORT3: return VK_FORMAT_R16G16B16_SNORM;
+      case ElementType::USHORT3: return VK_FORMAT_R16G16B16_UNORM;
       // Four Component Types
-      case ElementType::BYTE4:
-        return VK_FORMAT_R8G8B8A8_SNORM;
-      case ElementType::UBYTE4:
-        return VK_FORMAT_R8G8B8A8_UNORM;
-      case ElementType::SHORT4:
-        return VK_FORMAT_R16G16B16A16_SNORM;
-      case ElementType::USHORT4:
-        return VK_FORMAT_R16G16B16A16_UNORM;
+      case ElementType::BYTE4: return VK_FORMAT_R8G8B8A8_SNORM;
+      case ElementType::UBYTE4: return VK_FORMAT_R8G8B8A8_UNORM;
+      case ElementType::SHORT4: return VK_FORMAT_R16G16B16A16_SNORM;
+      case ElementType::USHORT4: return VK_FORMAT_R16G16B16A16_UNORM;
       case ElementType::INT:
       case ElementType::UINT:
       case ElementType::FLOAT:
@@ -342,70 +326,43 @@ namespace soul::gpu
       case ElementType::HALF2:
       case ElementType::HALF3:
       case ElementType::HALF4:
-      case ElementType::COUNT:
-        SOUL_NOT_IMPLEMENTED();
-        return VK_FORMAT_UNDEFINED;
+      case ElementType::COUNT: SOUL_NOT_IMPLEMENTED(); return VK_FORMAT_UNDEFINED;
       }
     }
     switch (type) {
     // Single Component Types
-    case ElementType::BYTE:
-      return integer ? VK_FORMAT_R8_SINT : VK_FORMAT_R8_SSCALED;
-    case ElementType::UBYTE:
-      return integer ? VK_FORMAT_R8_UINT : VK_FORMAT_R8_USCALED;
-    case ElementType::SHORT:
-      return integer ? VK_FORMAT_R16_SINT : VK_FORMAT_R16_SSCALED;
-    case ElementType::USHORT:
-      return integer ? VK_FORMAT_R16_UINT : VK_FORMAT_R16_USCALED;
-    case ElementType::HALF:
-      return VK_FORMAT_R16_SFLOAT;
-    case ElementType::INT:
-      return VK_FORMAT_R32_SINT;
-    case ElementType::UINT:
-      return VK_FORMAT_R32_UINT;
-    case ElementType::FLOAT:
-      return VK_FORMAT_R32_SFLOAT;
+    case ElementType::BYTE: return integer ? VK_FORMAT_R8_SINT : VK_FORMAT_R8_SSCALED;
+    case ElementType::UBYTE: return integer ? VK_FORMAT_R8_UINT : VK_FORMAT_R8_USCALED;
+    case ElementType::SHORT: return integer ? VK_FORMAT_R16_SINT : VK_FORMAT_R16_SSCALED;
+    case ElementType::USHORT: return integer ? VK_FORMAT_R16_UINT : VK_FORMAT_R16_USCALED;
+    case ElementType::HALF: return VK_FORMAT_R16_SFLOAT;
+    case ElementType::INT: return VK_FORMAT_R32_SINT;
+    case ElementType::UINT: return VK_FORMAT_R32_UINT;
+    case ElementType::FLOAT: return VK_FORMAT_R32_SFLOAT;
     // Two Component Types
-    case ElementType::BYTE2:
-      return integer ? VK_FORMAT_R8G8_SINT : VK_FORMAT_R8G8_SSCALED;
-    case ElementType::UBYTE2:
-      return integer ? VK_FORMAT_R8G8_UINT : VK_FORMAT_R8G8_USCALED;
-    case ElementType::SHORT2:
-      return integer ? VK_FORMAT_R16G16_SINT : VK_FORMAT_R16G16_SSCALED;
-    case ElementType::USHORT2:
-      return integer ? VK_FORMAT_R16G16_UINT : VK_FORMAT_R16G16_USCALED;
-    case ElementType::HALF2:
-      return VK_FORMAT_R16G16_SFLOAT;
-    case ElementType::FLOAT2:
-      return VK_FORMAT_R32G32_SFLOAT;
+    case ElementType::BYTE2: return integer ? VK_FORMAT_R8G8_SINT : VK_FORMAT_R8G8_SSCALED;
+    case ElementType::UBYTE2: return integer ? VK_FORMAT_R8G8_UINT : VK_FORMAT_R8G8_USCALED;
+    case ElementType::SHORT2: return integer ? VK_FORMAT_R16G16_SINT : VK_FORMAT_R16G16_SSCALED;
+    case ElementType::USHORT2: return integer ? VK_FORMAT_R16G16_UINT : VK_FORMAT_R16G16_USCALED;
+    case ElementType::HALF2: return VK_FORMAT_R16G16_SFLOAT;
+    case ElementType::FLOAT2: return VK_FORMAT_R32G32_SFLOAT;
     // Three Component Types
-    case ElementType::BYTE3:
-      return VK_FORMAT_R8G8B8_SINT;
-    case ElementType::UBYTE3:
-      return VK_FORMAT_R8G8B8_UINT;
-    case ElementType::SHORT3:
-      return VK_FORMAT_R16G16B16_SINT;
-    case ElementType::USHORT3:
-      return VK_FORMAT_R16G16B16_UINT;
-    case ElementType::HALF3:
-      return VK_FORMAT_R16G16B16_SFLOAT;
-    case ElementType::FLOAT3:
-      return VK_FORMAT_R32G32B32_SFLOAT;
+    case ElementType::BYTE3: return VK_FORMAT_R8G8B8_SINT;
+    case ElementType::UBYTE3: return VK_FORMAT_R8G8B8_UINT;
+    case ElementType::SHORT3: return VK_FORMAT_R16G16B16_SINT;
+    case ElementType::USHORT3: return VK_FORMAT_R16G16B16_UINT;
+    case ElementType::HALF3: return VK_FORMAT_R16G16B16_SFLOAT;
+    case ElementType::FLOAT3: return VK_FORMAT_R32G32B32_SFLOAT;
     // Four Component Types
-    case ElementType::BYTE4:
-      return integer ? VK_FORMAT_R8G8B8A8_SINT : VK_FORMAT_R8G8B8A8_SSCALED;
-    case ElementType::UBYTE4:
-      return integer ? VK_FORMAT_R8G8B8A8_UINT : VK_FORMAT_R8G8B8A8_USCALED;
+    case ElementType::BYTE4: return integer ? VK_FORMAT_R8G8B8A8_SINT : VK_FORMAT_R8G8B8A8_SSCALED;
+    case ElementType::UBYTE4: return integer ? VK_FORMAT_R8G8B8A8_UINT : VK_FORMAT_R8G8B8A8_USCALED;
     case ElementType::SHORT4:
       return integer ? VK_FORMAT_R16G16B16A16_SINT : VK_FORMAT_R16G16B16A16_SSCALED;
     case ElementType::USHORT4:
       return integer ? VK_FORMAT_R16G16B16A16_UINT : VK_FORMAT_R16G16B16A16_USCALED;
-    case ElementType::HALF4:
-      return VK_FORMAT_R16G16B16A16_SFLOAT;
-    case ElementType::FLOAT4:
-      return VK_FORMAT_R32G32B32A32_SFLOAT;
-    case ElementType::COUNT:
-      SOUL_NOT_IMPLEMENTED();
+    case ElementType::HALF4: return VK_FORMAT_R16G16B16A16_SFLOAT;
+    case ElementType::FLOAT4: return VK_FORMAT_R32G32B32A32_SFLOAT;
+    case ElementType::COUNT: SOUL_NOT_IMPLEMENTED();
     }
     return VK_FORMAT_UNDEFINED;
   }

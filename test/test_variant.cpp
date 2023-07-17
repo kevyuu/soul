@@ -245,8 +245,7 @@ TEST(TestVariantVisit, TestVisit)
       },
     };
     const auto expected_visit_result1 = VisitResult{20, TrivialKind::UINT16};
-    SOUL_TEST_ASSERT_EQ(
-      TrivialVariant::from(u16(20)).visit(visitor_set), expected_visit_result1);
+    SOUL_TEST_ASSERT_EQ(TrivialVariant::from(u16(20)).visit(visitor_set), expected_visit_result1);
     SOUL_TEST_ASSERT_EQ(x, 20);
     auto test_variant2 = TrivialVariant::from(TrivialObj{30, 15});
     const auto expected_visit_result2 = VisitResult{15, TrivialKind::TRIVIAL_OBJ};

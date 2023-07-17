@@ -23,8 +23,7 @@ namespace soul::runtime
     ~ScopeAllocator() override;
 
     auto reset() -> void override;
-    auto try_allocate(usize size, usize alignment, const char* tag)
-      -> memory::Allocation override;
+    auto try_allocate(usize size, usize alignment, const char* tag) -> memory::Allocation override;
     auto get_allocation_size(void* addr) const -> usize override;
     auto deallocate(void* addr) -> void override;
 
@@ -34,7 +33,8 @@ namespace soul::runtime
     Allocator* fallback_allocator_ = nullptr;
     Vector<memory::Allocation> fallback_allocations_;
 
-    [[nodiscard]] auto get_marker() const noexcept -> void*;
+    [[nodiscard]]
+    auto get_marker() const noexcept -> void*;
     auto rewind(void* addr) noexcept -> void;
   };
 
@@ -65,8 +65,8 @@ namespace soul::runtime
   }
 
   template <typename BackingAllocator>
-  auto ScopeAllocator<BackingAllocator>::try_allocate(
-    usize size, usize alignment, const char* tag) -> memory::Allocation
+  auto ScopeAllocator<BackingAllocator>::try_allocate(usize size, usize alignment, const char* tag)
+    -> memory::Allocation
   {
     memory::Allocation allocation = backing_allocator_->try_allocate(size, alignment, tag);
     if (allocation.addr == nullptr) {

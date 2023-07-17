@@ -44,38 +44,90 @@ namespace soul
 
     auto cleanup() -> void;
 
-    [[nodiscard]] auto data() -> pointer { return &buffer_[0]; }
-    [[nodiscard]] auto data() const -> const_pointer { return &buffer_[0]; }
+    [[nodiscard]]
+    auto data() -> pointer
+    {
+      return &buffer_[0];
+    }
+    [[nodiscard]]
+    auto data() const -> const_pointer
+    {
+      return &buffer_[0];
+    }
 
-    [[nodiscard]] auto operator[](usize idx) -> reference;
-    [[nodiscard]] auto operator[](usize idx) const -> const_reference;
+    [[nodiscard]]
+    auto
+    operator[](usize idx) -> reference;
+    [[nodiscard]]
+    auto
+    operator[](usize idx) const -> const_reference;
 
-    [[nodiscard]] auto size() const -> usize { return size_; }
+    [[nodiscard]]
+    auto size() const -> usize
+    {
+      return size_;
+    }
 
-    [[nodiscard]] auto begin() -> iterator { return buffer_; }
-    [[nodiscard]] auto begin() const -> const_iterator { return buffer_; }
-    [[nodiscard]] auto cbegin() const -> const_iterator { return buffer_; }
+    [[nodiscard]]
+    auto begin() -> iterator
+    {
+      return buffer_;
+    }
+    [[nodiscard]]
+    auto begin() const -> const_iterator
+    {
+      return buffer_;
+    }
+    [[nodiscard]]
+    auto cbegin() const -> const_iterator
+    {
+      return buffer_;
+    }
 
-    [[nodiscard]] auto end() -> iterator { return buffer_ + size_; }
-    [[nodiscard]] auto end() const -> const_iterator { return buffer_ + size_; }
-    [[nodiscard]] auto cend() const -> const_iterator { return buffer_ + size_; }
+    [[nodiscard]]
+    auto end() -> iterator
+    {
+      return buffer_ + size_;
+    }
+    [[nodiscard]]
+    auto end() const -> const_iterator
+    {
+      return buffer_ + size_;
+    }
+    [[nodiscard]]
+    auto cend() const -> const_iterator
+    {
+      return buffer_ + size_;
+    }
 
-    [[nodiscard]] auto rbegin() -> reverse_iterator { return reverse_iterator(end()); }
-    [[nodiscard]] auto rbegin() const -> const_reverse_iterator
+    [[nodiscard]]
+    auto rbegin() -> reverse_iterator
+    {
+      return reverse_iterator(end());
+    }
+    [[nodiscard]]
+    auto rbegin() const -> const_reverse_iterator
     {
       return const_reverse_iterator(cend());
     }
-    [[nodiscard]] auto crbegin() const -> const_reverse_iterator
+    [[nodiscard]]
+    auto crbegin() const -> const_reverse_iterator
     {
       return const_reverse_iterator(cend());
     }
 
-    [[nodiscard]] auto rend() -> reverse_iterator { return reverse_iterator(begin()); }
-    [[nodiscard]] auto rend() const -> const_reverse_iterator
+    [[nodiscard]]
+    auto rend() -> reverse_iterator
+    {
+      return reverse_iterator(begin());
+    }
+    [[nodiscard]]
+    auto rend() const -> const_reverse_iterator
     {
       return const_reverse_iterator(cbegin());
     }
-    [[nodiscard]] auto crend() const -> const_reverse_iterator
+    [[nodiscard]]
+    auto crend() const -> const_reverse_iterator
     {
       return const_reverse_iterator(cbegin());
     }

@@ -36,9 +36,12 @@ namespace soul::gpu
 
     ~RenderGraphRegistry() = default;
 
-    [[nodiscard]] auto get_buffer(BufferNodeID buffer_node_id) const -> BufferID;
-    [[nodiscard]] auto get_texture(TextureNodeID texture_node_id) const -> TextureID;
-    [[nodiscard]] auto get_tlas(TlasNodeID tlas_node_id) const -> TlasID;
+    [[nodiscard]]
+    auto get_buffer(BufferNodeID buffer_node_id) const -> BufferID;
+    [[nodiscard]]
+    auto get_texture(TextureNodeID texture_node_id) const -> TextureID;
+    [[nodiscard]]
+    auto get_tlas(TlasNodeID tlas_node_id) const -> TlasID;
     auto get_pipeline_state(const GraphicPipelineStateDesc& desc) -> PipelineStateID;
     auto get_pipeline_state(const ComputePipelineStateDesc& desc) -> PipelineStateID;
 

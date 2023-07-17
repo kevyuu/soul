@@ -27,7 +27,7 @@ struct ObjModel {
 };
 
 struct ObjInstance {
-  mat4f transform;     // Matrix of the instance
+  mat4f transform;  // Matrix of the instance
   u32 obj_index{0}; // Model index reference
 };
 

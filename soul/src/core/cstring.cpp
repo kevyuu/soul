@@ -14,8 +14,7 @@ namespace soul
     data_[size_] = '\0';
   }
 
-  CString::CString(usize size, memory::Allocator& allocator)
-      : allocator_(&allocator), size_(size)
+  CString::CString(usize size, memory::Allocator& allocator) : allocator_(&allocator), size_(size)
   {
     reserve(size + 1);
     data_[size_] = '\0';

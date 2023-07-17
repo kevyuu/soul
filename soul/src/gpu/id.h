@@ -77,9 +77,17 @@ namespace soul::gpu
     VkSampler vkHandle = VK_NULL_HANDLE;
     DescriptorID descriptorID;
 
-    [[nodiscard]] auto is_null() const -> b8 { return vkHandle == VK_NULL_HANDLE; }
+    [[nodiscard]]
+    auto is_null() const -> b8
+    {
+      return vkHandle == VK_NULL_HANDLE;
+    }
 
-    [[nodiscard]] auto is_valid() const -> b8 { return !this->is_null(); }
+    [[nodiscard]]
+    auto is_valid() const -> b8
+    {
+      return !this->is_null();
+    }
   };
 
   using PipelineStateID =

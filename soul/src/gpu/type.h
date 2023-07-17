@@ -361,18 +361,13 @@ namespace soul::gpu
 
     ClearValue() = default;
 
-    ClearValue(vec4f color, f32 depth, u32 stencil)
-        : color(color), depth_stencil(depth, stencil)
+    ClearValue(vec4f color, f32 depth, u32 stencil) : color(color), depth_stencil(depth, stencil) {}
+
+    ClearValue(vec4ui32 color, f32 depth, u32 stencil) : color(color), depth_stencil(depth, stencil)
     {
     }
 
-    ClearValue(vec4ui32 color, f32 depth, u32 stencil)
-        : color(color), depth_stencil(depth, stencil)
-    {
-    }
-
-    ClearValue(vec4i32 color, f32 depth, u32 stencil)
-        : color(color), depth_stencil(depth, stencil)
+    ClearValue(vec4i32 color, f32 depth, u32 stencil) : color(color), depth_stencil(depth, stencil)
     {
     }
   };
@@ -1482,11 +1477,7 @@ namespace soul::gpu
       auto get_clear_command_buffer() -> PrimaryCommandBuffer;
       auto load_staging_buffer(const StagingBuffer&, const void* data, usize size) -> void;
       auto load_staging_buffer(
-        const StagingBuffer&,
-        const void* data,
-        usize count,
-        usize type_size,
-        usize stride) -> void;
+        const StagingBuffer&, const void* data, usize count, usize type_size, usize stride) -> void;
 
       Vector<ThreadContext> thread_contexts_;
     };
@@ -1763,9 +1754,8 @@ namespace soul::gpu
   };
 
   template <typename Func, typename RenderCommandType>
-  concept command_generator =
-    std::invocable<Func, usize> &&
-    std::same_as<RenderCommandType, std::invoke_result_t<Func, usize>>;
+  concept command_generator = std::invocable<Func, usize> &&
+                              std::same_as<RenderCommandType, std::invoke_result_t<Func, usize>>;
 
   template <typename T, PipelineFlags pipeline_flags>
   concept render_command =

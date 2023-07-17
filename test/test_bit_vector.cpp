@@ -249,8 +249,7 @@ TEST_F(TestBitVectorManipulation, TestBitVectorResize)
 TEST_F(TestBitVectorManipulation, TestBitVectorReserve)
 {
   auto test_reserve = []<soul::ts_bit_block BlockType>(
-                        const soul::BitVector<BlockType>& sample_vector,
-                        const usize new_capacity) {
+                        const soul::BitVector<BlockType>& sample_vector, const usize new_capacity) {
     auto test_vector = sample_vector.clone();
     auto expected_vector = get_vector_from_bit_vector(test_vector);
     expected_vector.reserve(new_capacity);
@@ -344,8 +343,7 @@ TEST_F(TestBitVectorManipulation, TestBitVectorPushBack)
   SOUL_TEST_RUN(test_push_back(u64_filled_bit_vector, false));
 
   auto test_push_back_with_val = []<soul::ts_bit_block BlockType>(
-                                   const soul::BitVector<BlockType>& sample_vector,
-                                   const b8 val) {
+                                   const soul::BitVector<BlockType>& sample_vector, const b8 val) {
     auto test_vector = sample_vector.clone();
     auto expected_vector = get_vector_from_bit_vector(test_vector);
     expected_vector.push_back(val);

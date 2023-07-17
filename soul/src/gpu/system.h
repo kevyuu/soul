@@ -13,7 +13,7 @@
     do {                                                                                           \
       VkResult _result = expr;                                                                     \
       if (_result != VK_SUCCESS) {                                                                 \
-        SOUL_LOG_ERROR("Vulkan error| expr = {}, result = {} ", #expr, usize(_result));        \
+        SOUL_LOG_ERROR("Vulkan error| expr = {}, result = {} ", #expr, usize(_result));            \
         SOUL_LOG_ERROR("Message = {}", message);                                                   \
       }                                                                                            \
     } while (0)
@@ -71,8 +71,7 @@ namespace soul::gpu
     auto destroy_texture(TextureID texture_id) -> void;
     auto get_texture(TextureID texture_id) -> impl::Texture&;
     auto get_texture(TextureID texture_id) const -> const impl::Texture&;
-    auto get_texture_view(TextureID texture_id, u32 level, u32 layer = 0)
-      -> impl::TextureView;
+    auto get_texture_view(TextureID texture_id, u32 level, u32 layer = 0) -> impl::TextureView;
     auto get_texture_view(TextureID texture_id, SubresourceIndex subresource_index)
       -> impl::TextureView;
     auto get_texture_view(TextureID texture_id, std::optional<SubresourceIndex> subresource)

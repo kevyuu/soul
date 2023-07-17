@@ -18,7 +18,8 @@ namespace soul::memory
 
     auto reset() -> void override;
     auto try_allocate(usize size, usize alignment, const char* tag) -> Allocation override;
-    [[nodiscard]] auto get_allocation_size(void* addr) const -> usize override;
+    [[nodiscard]]
+    auto get_allocation_size(void* addr) const -> usize override;
     auto deallocate(void* addr) -> void override;
 
   private:

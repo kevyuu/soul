@@ -42,9 +42,8 @@ namespace soul::runtime
     return taskID;
   }
 
-  template <ts_fn<void,int> Fn>
-  auto parallel_for_task_create(TaskID parent, u32 count, u32 blockSize, Fn&& func)
-    -> TaskID
+  template <ts_fn<void, int> Fn>
+  auto parallel_for_task_create(TaskID parent, u32 count, u32 blockSize, Fn&& func) -> TaskID
   {
     return System::get().create_parallel_for_task_recursive(
       parent, 0, count, blockSize, std::forward<Fn>(func));

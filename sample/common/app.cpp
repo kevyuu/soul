@@ -1,8 +1,8 @@
 #include "app.h"
 #include "imgui_impl_glfw.h"
 
-#include "core/panic.h"
 #include "core/log.h"
+#include "core/panic.h"
 #include "core/type.h"
 
 #include "gpu/glfw_wsi.h"

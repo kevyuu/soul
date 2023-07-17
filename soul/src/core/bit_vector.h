@@ -52,8 +52,8 @@ namespace soul
     static auto from(RangeT&& range, AllocatorT& allocator = *get_default_allocator()) -> this_type;
 
     [[nodiscard]]
-    static auto init_fill_n(
-      usize size, b8 val, AllocatorT& allocator = *get_default_allocator()) -> this_type;
+    static auto init_fill_n(usize size, b8 val, AllocatorT& allocator = *get_default_allocator())
+      -> this_type;
 
     [[nodiscard]]
     auto clone() const -> this_type;
@@ -141,8 +141,7 @@ namespace soul
     template <std::ranges::input_range RangeT>
     BitVector(bit_vector_construct::from_t tag, RangeT&& range, AllocatorT& allocator);
 
-    BitVector(
-      bit_vector_construct::init_fill_n_t tag, usize size, b8 val, AllocatorT& allocator);
+    BitVector(bit_vector_construct::init_fill_n_t tag, usize size, b8 val, AllocatorT& allocator);
 
     auto operator=(const BitVector& other) -> BitVector&;
 
@@ -465,8 +464,7 @@ namespace soul
   }
 
   template <ts_bit_block BlockT, memory::allocator_type AllocatorT>
-  auto BitVector<BlockT, AllocatorT>::test(const usize index, const b8 default_value) const
-    -> b8
+  auto BitVector<BlockT, AllocatorT>::test(const usize index, const b8 default_value) const -> b8
   {
     if (index >= size_) {
       return default_value;

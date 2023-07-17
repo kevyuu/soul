@@ -197,9 +197,7 @@ namespace soul
   template <ts_fn<b8, Flag> T>
   constexpr auto FlagSet<Flag>::find_if(T func) const -> std::optional<Flag>
   {
-    auto new_func = [func = std::move(func)](usize bit) -> b8 {
-      return func(flag_type(bit));
-    };
+    auto new_func = [func = std::move(func)](usize bit) -> b8 { return func(flag_type(bit)); };
     const auto find_result = flags_.find_if(new_func);
     if (find_result) {
       return static_cast<Flag>(find_result.value());

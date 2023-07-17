@@ -65,29 +65,48 @@ namespace soul::runtime
       SOUL_ASSERT(0, task_index < Constant::MAX_TASK_PER_THREAD, "Task Index overflow");
     }
 
-    [[nodiscard]] auto get_thread_index() const -> u32
+    [[nodiscard]]
+    auto get_thread_index() const -> u32
     {
       return (id & Constant::TASK_ID_THREAD_INDEX_MASK) >> Constant::TASK_ID_THREAD_INDEX_SHIFT;
     }
 
-    [[nodiscard]] auto get_task_index() const -> u32
+    [[nodiscard]]
+    auto get_task_index() const -> u32
     {
       return (id & Constant::TASK_ID_TASK_INDEX_MASK) >> Constant::TASK_ID_TASK_INDEX_SHIFT;
     }
 
-    [[nodiscard]] auto operator==(const TaskID& other) const -> b8 { return other.id == id; }
-    [[nodiscard]] auto operator!=(const TaskID& other) const -> b8 { return other.id != id; }
-    [[nodiscard]] auto is_root() const -> b8 { return id == ROOT().id; }
-    [[nodiscard]] auto is_null() const -> b8 { return id == NULLVAL().id; }
+    [[nodiscard]]
+    auto
+    operator==(const TaskID& other) const -> b8
+    {
+      return other.id == id;
+    }
+    [[nodiscard]]
+    auto
+    operator!=(const TaskID& other) const -> b8
+    {
+      return other.id != id;
+    }
+    [[nodiscard]]
+    auto is_root() const -> b8
+    {
+      return id == ROOT().id;
+    }
+    [[nodiscard]]
+    auto is_null() const -> b8
+    {
+      return id == NULLVAL().id;
+    }
   };
 
   using TaskFunc = void (*)(TaskID taskID, void* data);
 
   struct alignas(SOUL_CACHELINE_SIZE) Task {
     static constexpr u32 STORAGE_SIZE_BYTE = SOUL_CACHELINE_SIZE - sizeof(TaskFunc) // func size
-                                                - sizeof(TaskID) // parentID size
-                                                -
-                                                sizeof(std::atomic<u16>); // unfinishedCount size
+                                             - sizeof(TaskID)                       // parentID size
+                                             - sizeof(std::atomic<u16>); // unfinishedCount size
 
     void* storage[STORAGE_SIZE_BYTE / sizeof(void*)] = {};
     TaskFunc func = nullptr;
@@ -128,7 +147,7 @@ namespace soul::runtime
   };
 
   struct Database {
-    thread_local static ThreadContext* g_thread_context;
+    thread_local static ThreadContext* g_thread_context; // NOLINT
     FixedVector<ThreadContext> thread_contexts;
     std::thread threads[Constant::MAX_THREAD_COUNT];
 
@@ -153,8 +172,7 @@ namespace soul::runtime
   struct ParallelForTaskData {
     using ParallelForFunc = Func;
 
-    explicit ParallelForTaskData(
-      u32 start, u32 count, u32 min_count, ParallelForFunc&& func)
+    explicit ParallelForTaskData(u32 start, u32 count, u32 min_count, ParallelForFunc&& func)
         : start(start),
           count(count),
           min_count(min_count),

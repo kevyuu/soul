@@ -15,8 +15,7 @@ namespace soul::memory
 
   auto PageAllocator::reset() -> void{};
 
-  auto PageAllocator::try_allocate(usize size, usize alignment, const char* tag)
-    -> Allocation
+  auto PageAllocator::try_allocate(usize size, usize alignment, const char* tag) -> Allocation
   {
     auto new_size = util::pointer_page_size_round(size, page_size_);
     void* addr = VirtualAlloc(nullptr, new_size, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);

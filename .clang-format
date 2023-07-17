@@ -4,6 +4,7 @@ BasedOnStyle: LLVM
 AlignAfterOpenBracket: AlwaysBreak
 AllowAllArgumentsOnNextLine: true
 AllowAllParametersOfDeclarationOnNextLine: true
+AllowShortCaseLabelsOnASingleLine: true
 AlwaysBreakAfterReturnType: None
 AlwaysBreakTemplateDeclarations: Yes
 BinPackArguments: false

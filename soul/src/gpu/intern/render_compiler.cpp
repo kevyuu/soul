@@ -49,9 +49,7 @@ namespace soul::gpu::impl
   {
     SOUL_PROFILE_ZONE();
 #define COMPILE_PACKET(TYPE_STRUCT)                                                                \
-  case TYPE_STRUCT::TYPE:                                                                          \
-    compile_command(*static_cast<const TYPE_STRUCT*>(&command));                                   \
-    break
+  case TYPE_STRUCT::TYPE: compile_command(*static_cast<const TYPE_STRUCT*>(&command)); break
 
     switch (command.type) {
       COMPILE_PACKET(RenderCommandDraw);
@@ -61,8 +59,7 @@ namespace soul::gpu::impl
       COMPILE_PACKET(RenderCommandUpdateBuffer);
       COMPILE_PACKET(RenderCommandCopyBuffer);
       COMPILE_PACKET(RenderCommandDispatch);
-    case RenderCommandType::COUNT:
-      SOUL_NOT_IMPLEMENTED();
+    case RenderCommandType::COUNT: SOUL_NOT_IMPLEMENTED();
     }
   }
 
@@ -494,8 +491,8 @@ namespace soul::gpu::impl
     }
   }
 
-  auto RenderCompiler::apply_push_constant(
-    const void* push_constant_data, u32 push_constant_size) -> void
+  auto RenderCompiler::apply_push_constant(const void* push_constant_data, u32 push_constant_size)
+    -> void
   {
     if (push_constant_data == nullptr) {
       return;

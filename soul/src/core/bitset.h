@@ -149,8 +149,7 @@ namespace soul
     }
 
     template <size_t BlockCount, ts_bit_block BlockType>
-    constexpr auto BitsetImpl<BlockCount, BlockType>::set(const usize index, const b8 val)
-      -> void
+    constexpr auto BitsetImpl<BlockCount, BlockType>::set(const usize index, const b8 val) -> void
     {
       if (val) {
         blocks_[get_block_index(index)] |= get_block_one_mask(index);
@@ -218,8 +217,8 @@ namespace soul
     }
 
     template <size_t BlockCount, ts_bit_block BlockType>
-    constexpr auto BitsetImpl<BlockCount, BlockType>::find_next(
-      const usize last_find_index) const -> std::optional<usize>
+    constexpr auto BitsetImpl<BlockCount, BlockType>::find_next(const usize last_find_index) const
+      -> std::optional<usize>
     {
       const auto start_find_index = last_find_index + 1;
       auto block_index = get_block_index(start_find_index);
@@ -257,8 +256,8 @@ namespace soul
     }
 
     template <size_t BlockCount, ts_bit_block BlockType>
-    constexpr auto BitsetImpl<BlockCount, BlockType>::find_prev(
-      const usize last_find_index) const -> std::optional<usize>
+    constexpr auto BitsetImpl<BlockCount, BlockType>::find_prev(const usize last_find_index) const
+      -> std::optional<usize>
     {
       if (last_find_index > 0) {
         auto block_index = get_block_index(last_find_index);
@@ -283,8 +282,7 @@ namespace soul
 
     template <size_t BlockCount, ts_bit_block BlockType>
     template <ts_fn<b8, usize> Fn>
-    constexpr auto BitsetImpl<BlockCount, BlockType>::find_if(Fn fn) const
-      -> std::optional<usize>
+    constexpr auto BitsetImpl<BlockCount, BlockType>::find_if(Fn fn) const -> std::optional<usize>
     {
       for (usize block_index = 0; block_index < BlockCount; block_index++) {
         auto block = blocks_[block_index];
@@ -306,8 +304,7 @@ namespace soul
     }
 
     template <size_t BlockCount, ts_bit_block BlockType>
-    constexpr auto BitsetImpl<BlockCount, BlockType>::get_block_index(const usize index)
-      -> usize
+    constexpr auto BitsetImpl<BlockCount, BlockType>::get_block_index(const usize index) -> usize
     {
       return index / BITS_PER_BLOCK;
     }
@@ -424,8 +421,7 @@ namespace soul
   }
 
   template <usize BitCount, ts_bit_block BlockType>
-  constexpr auto Bitset<BitCount, BlockType>::set(const usize index, const b8 val)
-    -> this_type&
+  constexpr auto Bitset<BitCount, BlockType>::set(const usize index, const b8 val) -> this_type&
   {
     base_type::set(index, val);
     return *this;

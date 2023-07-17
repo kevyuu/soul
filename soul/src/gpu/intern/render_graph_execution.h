@@ -97,12 +97,7 @@ namespace soul::gpu::impl
   class PassDependencyGraph
   {
   public:
-    enum class DependencyType : u8 {
-      READ_AFTER_WRITE,
-      WRITE_AFTER_WRITE,
-      WRITE_AFTER_READ,
-      COUNT
-    };
+    enum class DependencyType : u8 { READ_AFTER_WRITE, WRITE_AFTER_WRITE, WRITE_AFTER_READ, COUNT };
 
     using DependencyFlags = FlagSet<DependencyType>;
     static constexpr DependencyFlags OP_AFTER_WRITE_DEPENDENCY = {
@@ -148,8 +143,7 @@ namespace soul::gpu::impl
     [[nodiscard]]
     auto get_pass_node_count() const -> usize;
     [[nodiscard]]
-    auto get_dependency_matrix_index(PassNodeID src_node_id, PassNodeID dst_node_id) const
-      -> usize;
+    auto get_dependency_matrix_index(PassNodeID src_node_id, PassNodeID dst_node_id) const -> usize;
 
     auto calculate_dependency_level(PassNodeID pass_node_id) -> usize;
   };

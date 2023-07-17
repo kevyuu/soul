@@ -30,7 +30,8 @@ namespace soul::memory
     virtual ~Proxy() = default;
 
     virtual auto get_base_addr(void* addr) const -> void* { return addr; }
-    [[nodiscard]] virtual auto get_base_size(const usize size) const -> usize
+    [[nodiscard]]
+    virtual auto get_base_size(const usize size) const -> usize
     {
       return size;
     }
@@ -131,7 +132,8 @@ namespace soul::memory
       return base_addr;
     }
 
-    [[nodiscard]] auto get_base_size(const usize size) const -> usize override
+    [[nodiscard]]
+    auto get_base_size(const usize size) const -> usize override
     {
       usize base_size = proxy1_.get_base_size(size);
       base_size = proxy2_.get_base_size(base_size);
@@ -322,7 +324,8 @@ namespace soul::memory
       return util::pointer_sub(addr, GUARD_SIZE);
     }
 
-    [[nodiscard]] auto get_base_size(const usize size) const -> usize override
+    [[nodiscard]]
+    auto get_base_size(const usize size) const -> usize override
     {
       return size - 2llu * GUARD_SIZE;
     }
@@ -494,7 +497,8 @@ namespace soul::memory
       return proxy_.on_post_allocate(allocation);
     }
 
-    [[nodiscard]] auto get_allocation_size(void* addr) const -> usize override
+    [[nodiscard]]
+    auto get_allocation_size(void* addr) const -> usize override
     {
       void* base_addr = proxy_.get_base_addr(addr);
       return proxy_.get_base_size(allocator->get_allocation_size(base_addr));
@@ -511,7 +515,11 @@ namespace soul::memory
       proxy_.on_post_deallocate();
     }
 
-    [[nodiscard]] auto get_marker() const noexcept -> void* { return allocator->get_marker(); }
+    [[nodiscard]]
+    auto get_marker() const noexcept -> void*
+    {
+      return allocator->get_marker();
+    }
 
     auto rewind(void* addr) noexcept -> void { allocator->rewind(addr); }
 

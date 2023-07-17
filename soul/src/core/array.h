@@ -133,8 +133,7 @@ namespace soul
   constexpr auto Array<T, element_count>::init_generate(Fn fn) -> this_type
   {
     static_assert(element_count <= MAX_BRACE_INIT_SIZE);
-    const auto create_array =
-      []<usize... idx>(std::index_sequence<idx...>, Fn fn) -> this_type {
+    const auto create_array = []<usize... idx>(std::index_sequence<idx...>, Fn fn) -> this_type {
       return {(static_cast<void>(idx), std::invoke(fn))...};
     };
     return create_array(std::make_index_sequence<element_count>(), fn);
@@ -146,8 +145,7 @@ namespace soul
   constexpr auto Array<T, element_count>::init_index_transform(Fn fn) -> this_type
   {
     static_assert(element_count <= MAX_BRACE_INIT_SIZE);
-    const auto create_array =
-      []<usize... idx>(std::index_sequence<idx...>, Fn fn) -> this_type {
+    const auto create_array = []<usize... idx>(std::index_sequence<idx...>, Fn fn) -> this_type {
       return {(std::invoke(fn, idx))...};
     };
     return create_array(std::make_index_sequence<element_count>(), fn);

@@ -125,8 +125,7 @@ auto generate_position_set(const soul::Bitset<BitCount, BlockT>& bitset) -> std:
 }
 
 template <usize BitCount, soul::ts_bit_block BlockT>
-auto generate_random_bitset(soul::Bitset<BitCount, BlockT>& bitset, const usize set_count)
-  -> void
+auto generate_random_bitset(soul::Bitset<BitCount, BlockT>& bitset, const usize set_count) -> void
 {
   std::random_device random_device;
   std::mt19937 random_engine(random_device());
@@ -360,8 +359,7 @@ TEST(TestBitsetForEach, TestBitsetForEach)
 TEST(TestBitSetFindIf, TestBitSetFindIf)
 {
   auto test_find_if = []<usize BitCount, soul::ts_bit_block BlockT>(
-                        soul::Bitset<BitCount, BlockT> bitset,
-                        std::vector<usize> test_positions) {
+                        soul::Bitset<BitCount, BlockT> bitset, std::vector<usize> test_positions) {
     std::vector<usize> expected_positions;
     for (usize i = 0; i < BitCount; i++) {
       if (bitset.test(i)) {
@@ -375,8 +373,7 @@ TEST(TestBitSetFindIf, TestBitSetFindIf)
     SOUL_TEST_ASSERT_TRUE(std::ranges::equal(positions, expected_positions));
 
     for (auto position : test_positions) {
-      const auto find_result =
-        bitset.find_if([position](usize bit) { return bit == position; });
+      const auto find_result = bitset.find_if([position](usize bit) { return bit == position; });
       if (position < BitCount && bitset.test(position)) {
         SOUL_TEST_ASSERT_EQ(find_result.value(), position);
       } else {

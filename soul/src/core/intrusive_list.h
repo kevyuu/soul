@@ -150,29 +150,45 @@ namespace soul
     auto swap(this_type& rhs) noexcept -> void;
     friend auto swap(this_type& a, this_type& b) noexcept -> void { a.swap(b); }
 
-    [[nodiscard]] auto begin() noexcept -> iterator;
-    [[nodiscard]] auto begin() const noexcept -> const_iterator;
-    [[nodiscard]] auto cbegin() const noexcept -> const_iterator;
+    [[nodiscard]]
+    auto begin() noexcept -> iterator;
+    [[nodiscard]]
+    auto begin() const noexcept -> const_iterator;
+    [[nodiscard]]
+    auto cbegin() const noexcept -> const_iterator;
 
-    [[nodiscard]] auto end() noexcept -> iterator;
-    [[nodiscard]] auto end() const noexcept -> const_iterator;
-    [[nodiscard]] auto cend() const noexcept -> const_iterator;
+    [[nodiscard]]
+    auto end() noexcept -> iterator;
+    [[nodiscard]]
+    auto end() const noexcept -> const_iterator;
+    [[nodiscard]]
+    auto cend() const noexcept -> const_iterator;
 
     auto rbegin() noexcept -> reverse_iterator;
-    [[nodiscard]] auto rbegin() const noexcept -> const_reverse_iterator;
-    [[nodiscard]] auto crbegin() const noexcept -> const_reverse_iterator;
+    [[nodiscard]]
+    auto rbegin() const noexcept -> const_reverse_iterator;
+    [[nodiscard]]
+    auto crbegin() const noexcept -> const_reverse_iterator;
 
     auto rend() noexcept -> reverse_iterator;
-    [[nodiscard]] auto rend() const noexcept -> const_reverse_iterator;
-    [[nodiscard]] auto crend() const noexcept -> const_reverse_iterator;
+    [[nodiscard]]
+    auto rend() const noexcept -> const_reverse_iterator;
+    [[nodiscard]]
+    auto crend() const noexcept -> const_reverse_iterator;
 
-    [[nodiscard]] auto size() const noexcept -> usize;
-    [[nodiscard]] auto empty() const noexcept -> b8;
+    [[nodiscard]]
+    auto size() const noexcept -> usize;
+    [[nodiscard]]
+    auto empty() const noexcept -> b8;
 
-    [[nodiscard]] auto front() -> reference;
-    [[nodiscard]] auto front() const -> const_reference;
-    [[nodiscard]] auto back() -> reference;
-    [[nodiscard]] auto back() const -> const_reference;
+    [[nodiscard]]
+    auto front() -> reference;
+    [[nodiscard]]
+    auto front() const -> const_reference;
+    [[nodiscard]]
+    auto back() -> reference;
+    [[nodiscard]]
+    auto back() const -> const_reference;
 
     auto push_front(value_type& x) -> void;
     auto push_back(value_type& x) -> void;
@@ -181,8 +197,10 @@ namespace soul
 
     auto contains(const value_type& x) const -> b8;
 
-    [[nodiscard]] auto locate(value_type& x) -> iterator;
-    [[nodiscard]] auto locate(const value_type& x) const -> const_iterator;
+    [[nodiscard]]
+    auto locate(value_type& x) -> iterator;
+    [[nodiscard]]
+    auto locate(const value_type& x) const -> const_iterator;
 
     auto insert(const_iterator pos, value_type& x) -> iterator;
     auto erase(const_iterator pos) -> iterator;

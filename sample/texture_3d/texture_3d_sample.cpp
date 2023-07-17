@@ -28,7 +28,8 @@ private:
 
   static auto lerp(T t, T a, T b) -> T { return a + t * (b - a); }
 
-  [[nodiscard]] auto grad(const int hash, T x, T y, T z) const -> T
+  [[nodiscard]]
+  auto grad(const int hash, T x, T y, T z) const -> T
   {
     // Convert LO 4 bits of hash code into 12 gradient directions
     const auto h = hash & 15;
@@ -52,7 +53,8 @@ public:
     }
   }
 
-  [[nodiscard]] auto noise(T x, T y, T z) const -> T
+  [[nodiscard]]
+  auto noise(T x, T y, T z) const -> T
   {
     // Find unit cube that contains point
     const auto X = static_cast<int32_t>(floor(x)) & 255;
@@ -116,7 +118,8 @@ public:
     persistence_ = static_cast<T>(0.5);
   }
 
-  [[nodiscard]] auto noise(T x, T y, T z) const -> T
+  [[nodiscard]]
+  auto noise(T x, T y, T z) const -> T
   {
     T sum = 0;
     T frequency = static_cast<T>(1);

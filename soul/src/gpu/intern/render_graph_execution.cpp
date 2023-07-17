@@ -817,8 +817,8 @@ namespace soul::gpu::impl
     }
   }
 
-  auto RenderGraphExecution::execute_pass(
-    const u32 pass_index, PrimaryCommandBuffer command_buffer) -> void
+  auto RenderGraphExecution::execute_pass(const u32 pass_index, PrimaryCommandBuffer command_buffer)
+    -> void
   {
     SOUL_PROFILE_ZONE();
     const auto& pass_node = *render_graph_->get_pass_nodes()[pass_index];

@@ -38,10 +38,8 @@ namespace soul::impl
 
   template <LogLevel log_level, typename... Args>
   auto log(
-    const char* const file_name,
-    const usize line,
-    std::format_string<Args...> fmt,
-    Args&&... args) -> void
+    const char* const file_name, const usize line, std::format_string<Args...> fmt, Args&&... args)
+    -> void
   {
     if (log_level <= impl::LOG_LEVEL) {
       CString message;
@@ -54,50 +52,40 @@ namespace soul::impl
 
   template <typename... Args>
   auto log_fatal(
-    const char* const file_name,
-    const usize line,
-    std::format_string<Args...> fmt,
-    Args&&... args) -> void
+    const char* const file_name, const usize line, std::format_string<Args...> fmt, Args&&... args)
+    -> void
   {
     log<LogLevel::FATAL>(file_name, line, std::move(fmt), std::forward<Args>(args)...);
   }
 
   template <typename... Args>
   auto log_warn(
-    const char* const file_name,
-    const usize line,
-    std::format_string<Args...> fmt,
-    Args&&... args) -> void
+    const char* const file_name, const usize line, std::format_string<Args...> fmt, Args&&... args)
+    -> void
   {
     log<LogLevel::WARN>(file_name, line, std::move(fmt), std::forward<Args>(args)...);
   }
 
   template <typename... Args>
   auto log_error(
-    const char* const file_name,
-    const usize line,
-    std::format_string<Args...> fmt,
-    Args&&... args) -> void
+    const char* const file_name, const usize line, std::format_string<Args...> fmt, Args&&... args)
+    -> void
   {
     log<LogLevel::ERROR>(file_name, line, std::move(fmt), std::forward<Args>(args)...);
   }
 
   template <typename... Args>
   auto log_info(
-    const char* const file_name,
-    const usize line,
-    std::format_string<Args...> fmt,
-    Args&&... args) -> void
+    const char* const file_name, const usize line, std::format_string<Args...> fmt, Args&&... args)
+    -> void
   {
     log<LogLevel::INFO>(file_name, line, std::move(fmt), std::forward<Args>(args)...);
   }
 
   template <typename... Args>
   auto log_debug(
-    const char* const file_name,
-    const usize line,
-    std::format_string<Args...> fmt,
-    Args&&... args) -> void
+    const char* const file_name, const usize line, std::format_string<Args...> fmt, Args&&... args)
+    -> void
   {
     log<LogLevel::DEBUG>(file_name, line, std::move(fmt), std::forward<Args>(args)...);
   }
