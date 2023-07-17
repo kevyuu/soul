@@ -12,20 +12,29 @@ namespace soul::runtime
   {
   public:
     ScopeAllocator() = delete;
+
     explicit ScopeAllocator(
       const char* name,
       BackingAllocator* backing_allocator = get_temp_allocator(),
       Allocator* fallback_allocator = get_default_allocator()) noexcept;
+
     ScopeAllocator(const ScopeAllocator& other) = delete;
+
     auto operator=(const ScopeAllocator& other) -> ScopeAllocator& = delete;
+
     ScopeAllocator(ScopeAllocator&& other) = delete;
+
     auto operator=(ScopeAllocator&& other) -> ScopeAllocator& = delete;
+
     ~ScopeAllocator() override;
 
-    auto reset() -> void override;
+    void reset() override;
+
     auto try_allocate(usize size, usize alignment, const char* tag) -> memory::Allocation override;
+
     auto get_allocation_size(void* addr) const -> usize override;
-    auto deallocate(void* addr) -> void override;
+
+    void deallocate(void* addr) override;
 
   private:
     BackingAllocator* backing_allocator_ = nullptr;
@@ -35,7 +44,8 @@ namespace soul::runtime
 
     [[nodiscard]]
     auto get_marker() const noexcept -> void*;
-    auto rewind(void* addr) noexcept -> void;
+
+    void rewind(void* addr) noexcept;
   };
 
   template <typename BackingAllocator>
@@ -59,7 +69,7 @@ namespace soul::runtime
   }
 
   template <typename BackingAllocator>
-  auto ScopeAllocator<BackingAllocator>::reset() -> void
+  void ScopeAllocator<BackingAllocator>::reset()
   {
     rewind(scope_base_addr_);
   }
@@ -83,7 +93,7 @@ namespace soul::runtime
   }
 
   template <typename BackingAllocator>
-  auto ScopeAllocator<BackingAllocator>::deallocate(void* addr) -> void
+  void ScopeAllocator<BackingAllocator>::deallocate(void* addr)
   {
   }
 
@@ -94,7 +104,7 @@ namespace soul::runtime
   }
 
   template <typename BackingAllocator>
-  auto ScopeAllocator<BackingAllocator>::rewind(void* addr) noexcept -> void
+  void ScopeAllocator<BackingAllocator>::rewind(void* addr) noexcept
   {
     backing_allocator_->rewind(addr);
   }

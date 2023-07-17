@@ -17,23 +17,28 @@ namespace soul::runtime
   {
   public:
     System() = default;
+
     System(const System&) = delete;
+
     auto operator=(const System&) -> System& = delete;
+
     System(System&&) = delete;
+
     auto operator=(System&&) -> System& = delete;
+
     ~System() = default;
 
     /*
       Initialize the Runtime System. Only call this from the main thread.
     */
-    auto init(const Config& config) -> void;
+    void init(const Config& config);
 
     /*
       Cleanup all runtime system resource. Only call this from the main thread.
     */
-    auto shutdown() -> void;
+    void shutdown();
 
-    auto begin_frame() -> void;
+    void begin_frame();
 
     template <execution Execute>
     auto create_task(TaskID parent, Execute&& lambda) -> TaskID
@@ -99,11 +104,14 @@ namespace soul::runtime
         parent, 0, count, block_size, std::forward<Fn>(func));
     }
 
-    auto wait_task(TaskID task_id) -> void;
-    auto task_run(TaskID task_id) -> void;
+    void wait_task(TaskID task_id);
+
+    void task_run(TaskID task_id);
 
     auto get_thread_count() const -> u16;
+
     static auto get_thread_id() -> u16;
+
     auto get_thread_context() -> ThreadContext&;
 
     static auto get() -> System&
@@ -112,25 +120,34 @@ namespace soul::runtime
       return instance;
     }
 
-    auto push_allocator(memory::Allocator* allocator) -> void;
-    auto pop_allocator() -> void;
+    void push_allocator(memory::Allocator* allocator);
+
+    void pop_allocator();
+
     auto get_context_allocator() -> memory::Allocator*;
+
     auto allocate(u32 size, u32 alignment) -> void*;
-    auto deallocate(void* addr, u32 size) -> void;
+
+    void deallocate(void* addr, u32 size);
+
     auto get_temp_allocator() -> TempAllocator*;
 
   private:
     auto create_task(TaskID parent, TaskFunc func) -> TaskID;
+
     auto get_task_ptr(TaskID task_id) -> Task*;
-    auto finish_task(Task* task) -> void;
+
+    void finish_task(Task* task);
+
     static auto is_task_complete(Task* task) -> b8;
 
-    auto loop(ThreadContext* thread_context) -> void;
-    auto execute(TaskID task) -> void;
+    void loop(ThreadContext* thread_context);
 
-    auto terminate() -> void;
+    void execute(TaskID task);
 
-    auto init_root_task() -> void;
+    void terminate();
+
+    void init_root_task();
 
     Database db_;
   };

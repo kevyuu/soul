@@ -28,7 +28,7 @@ namespace soul::runtime
 
   thread_local ThreadContext* Database::g_thread_context = nullptr;
 
-  auto System::execute(TaskID task_id) -> void
+  void System::execute(TaskID task_id)
   {
     {
       std::lock_guard<std::mutex> lock(db_.loop_mutex);
@@ -39,7 +39,7 @@ namespace soul::runtime
     finish_task(task);
   }
 
-  auto System::loop(ThreadContext* thread_context) -> void
+  void System::loop(ThreadContext* thread_context)
   {
     Database::g_thread_context = thread_context;
 
@@ -79,7 +79,7 @@ namespace soul::runtime
     }
   }
 
-  auto System::terminate() -> void
+  void System::terminate()
   {
     db_.is_terminated.store(true);
     {
@@ -88,7 +88,7 @@ namespace soul::runtime
     db_.loop_cond_var.notify_all();
   }
 
-  auto System::begin_frame() -> void
+  void System::begin_frame()
   {
     SOUL_PROFILE_ZONE();
     SOUL_ASSERT_MAIN_THREAD();
@@ -143,7 +143,7 @@ namespace soul::runtime
 
   // TODO(kevinyu) : Implement stealing from other deque when waiting for task.
   // Currently we only try to pop task from our thread local deque.
-  auto System::wait_task(TaskID task_id) -> void
+  void System::wait_task(TaskID task_id)
   {
     ThreadContext* thread_state = Database::g_thread_context;
     Task* task_to_wait = get_task_ptr(task_id);
@@ -162,7 +162,7 @@ namespace soul::runtime
     }
   }
 
-  auto System::init_root_task() -> void
+  void System::init_root_task()
   {
     // NOTE(kevinyu): TaskID 0 is ROOT. TaskID 0 is used as parent for all task
     db_.thread_contexts[0].task_pool[0].unfinished_count.store(0, std::memory_order_relaxed);
@@ -170,7 +170,7 @@ namespace soul::runtime
     db_.thread_contexts[0].task_deque.reset();
   }
 
-  auto System::init(const Config& config) -> void
+  void System::init(const Config& config)
   {
     db_.default_allocator = config.defaultAllocator;
     db_.temp_allocator_size = config.workerTempAllocatorSize;
@@ -210,7 +210,7 @@ namespace soul::runtime
     init_root_task();
   }
 
-  auto System::task_run(TaskID task_id) -> void
+  void System::task_run(TaskID task_id)
   {
     Database::g_thread_context->task_deque.push(task_id);
     {
@@ -220,7 +220,7 @@ namespace soul::runtime
     db_.loop_cond_var.notify_all();
   }
 
-  auto System::finish_task(Task* task) -> void
+  void System::finish_task(Task* task)
   {
     // NOTE(kevinyu): make sure _isCompleteTask() return true only after the task truly finish.
     // Without std::memory_order_release, this operation can be reorder before the task is executed.
@@ -245,7 +245,7 @@ namespace soul::runtime
     }
   }
 
-  auto System::shutdown() -> void
+  void System::shutdown()
   {
     SOUL_ASSERT_MAIN_THREAD();
 
@@ -270,13 +270,13 @@ namespace soul::runtime
     return db_.thread_contexts[get_thread_id()];
   }
 
-  auto System::push_allocator(memory::Allocator* allocator) -> void
+  void System::push_allocator(memory::Allocator* allocator)
   {
     SOUL_ASSERT(0, db_.default_allocator != nullptr, "");
     get_thread_context().allocator_stack.push_back(allocator);
   }
 
-  auto System::pop_allocator() -> void
+  void System::pop_allocator()
   {
     SOUL_ASSERT(0, !get_thread_context().allocator_stack.empty(), "");
     get_thread_context().allocator_stack.pop_back();
@@ -295,10 +295,7 @@ namespace soul::runtime
     return get_context_allocator()->allocate(size, alignment);
   }
 
-  auto System::deallocate(void* addr, u32 size) -> void
-  {
-    get_context_allocator()->deallocate(addr);
-  }
+  void System::deallocate(void* addr, u32 size) { get_context_allocator()->deallocate(addr); }
 
   auto System::get_temp_allocator() -> TempAllocator*
   {

@@ -4,20 +4,20 @@
 namespace soul::runtime
 {
 
-  auto TaskDeque::init() -> void
+  void TaskDeque::init()
   {
     SOUL_ASSERT_MAIN_THREAD();
     _bottom.store(0, std::memory_order_relaxed);
     _top.store(0, std::memory_order_relaxed);
   }
 
-  auto TaskDeque::shutdown() -> void
+  void TaskDeque::shutdown()
   {
     SOUL_ASSERT_MAIN_THREAD();
     free(_tasks);
   }
 
-  auto TaskDeque::reset() -> void
+  void TaskDeque::reset()
   {
     SOUL_ASSERT_MAIN_THREAD();
 
@@ -31,7 +31,7 @@ namespace soul::runtime
     _top.store(0, std::memory_order_seq_cst);
   }
 
-  auto TaskDeque::push(TaskID task) -> void
+  void TaskDeque::push(TaskID task)
   {
     auto bottom = _bottom.load(std::memory_order_relaxed);
     SOUL_ASSERT(

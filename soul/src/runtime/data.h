@@ -124,14 +124,18 @@ namespace soul::runtime
     std::atomic<i32> _bottom;
     std::atomic<i32> _top;
 
-    auto init() -> void;
-    auto shutdown() -> void;
+    void init();
 
-    auto reset() -> void;
-    auto push(TaskID task) -> void;
+    void shutdown();
+
+    void reset();
+
+    void push(TaskID task);
+
     auto pop() -> TaskID; // return nullptr if empty
-    auto steal()
-      -> TaskID; // return nullptr if empty or fail (other thread do steal operation concurrently)
+
+    // return nullptr if empty or fail (other thread do steal operation concurrently)
+    auto steal() -> TaskID;
   };
 
   struct alignas(SOUL_CACHELINE_SIZE) ThreadContext {

@@ -7,11 +7,11 @@
 namespace soul::runtime
 {
 
-  inline auto init(const Config& config) -> void { System::get().init(config); }
+  inline void init(const Config& config) { System::get().init(config); }
 
-  inline auto shutdown() -> void { System::get().shutdown(); }
+  inline void shutdown() { System::get().shutdown(); }
 
-  inline auto begin_frame() -> void { System::get().begin_frame(); }
+  inline void begin_frame() { System::get().begin_frame(); }
 
   inline auto create_task(const TaskID parent = TaskID::ROOT()) -> TaskID
   {
@@ -24,11 +24,11 @@ namespace soul::runtime
     return System::get().create_task(parent, std::forward<Execute>(lambda));
   }
 
-  inline auto wait_task(TaskID taskID) -> void { System::get().wait_task(taskID); }
+  inline void wait_task(TaskID taskID) { System::get().wait_task(taskID); }
 
-  inline auto run_task(TaskID taskID) -> void { System::get().task_run(taskID); }
+  inline void run_task(TaskID taskID) { System::get().task_run(taskID); }
 
-  inline auto run_and_wait_task(TaskID task_id) -> void
+  inline void run_and_wait_task(TaskID task_id)
   {
     run_task(task_id);
     wait_task(task_id);
@@ -53,12 +53,12 @@ namespace soul::runtime
 
   inline auto get_thread_count() -> u16 { return System::get().get_thread_count(); }
 
-  inline auto push_allocator(memory::Allocator* allocator) -> void
+  inline void push_allocator(memory::Allocator* allocator)
   {
     System::get().push_allocator(allocator);
   }
 
-  inline auto pop_allocator() -> void { System::get().pop_allocator(); }
+  inline void pop_allocator() { System::get().pop_allocator(); }
 
   inline auto get_context_allocator() -> memory::Allocator*
   {
@@ -72,17 +72,14 @@ namespace soul::runtime
     return System::get().allocate(size, alignment);
   }
 
-  inline auto deallocate(void* addr, u32 size) -> void
-  {
-    return System::get().deallocate(addr, size);
-  }
+  inline void deallocate(void* addr, u32 size) { return System::get().deallocate(addr, size); }
 
   struct AllocatorInitializer {
     AllocatorInitializer() = delete;
 
     explicit AllocatorInitializer(memory::Allocator* allocator) { push_allocator(allocator); }
 
-    auto end() -> void { pop_allocator(); }
+    void end() { pop_allocator(); }
   };
 
   struct AllocatorZone {
