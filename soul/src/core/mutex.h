@@ -4,6 +4,7 @@
 #include <mutex>
 #include <shared_mutex>
 
+#include "core/type.h"
 #include "profile.h"
 
 namespace soul
