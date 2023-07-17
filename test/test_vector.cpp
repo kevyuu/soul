@@ -653,6 +653,22 @@ TEST_F(TestVectorManipulation, TestVectorGenerateBack)
   const auto test_list_object = ListTestObject::with_size(5);
   SOUL_TEST_RUN(test_generate_back(vector_testobj_arr, soul::clone_fn(test_object)));
   SOUL_TEST_RUN(test_generate_back(vector_list_testobj_arr, soul::clone_fn(test_list_object)));
+
+  auto test_generate_back_self_referential = []<typename T>(const soul::Vector<T>& sample_vector) {
+    using Vector = soul::Vector<T>;
+
+    auto test_vector = sample_vector.clone();
+    test_vector.reserve(test_vector.capacity() + 10);
+    test_vector.shrink_to_fit();
+    test_vector.generate_back(soul::duplicate_fn(test_vector.back()));
+    SOUL_TEST_ASSERT_EQ(test_vector.size(), sample_vector.size() + 1);
+    SOUL_TEST_ASSERT_TRUE(std::equal(test_vector.begin(), test_vector.end(), test_vector.begin()));
+    SOUL_TEST_ASSERT_EQ(test_vector.back(), sample_vector.back());
+  };
+
+  SOUL_TEST_RUN(test_generate_back_self_referential(vector_int_arr));
+  SOUL_TEST_RUN(test_generate_back_self_referential(vector_testobj_arr));
+  SOUL_TEST_RUN(test_generate_back_self_referential(vector_list_testobj_arr));
 }
 
 TEST_F(TestVectorManipulation, TestVectorPopBack)

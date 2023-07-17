@@ -757,9 +757,18 @@ namespace soul
   void Vector<T, AllocatorT, N>::generate_back(ts_generate_fn<T> auto fn)
   {
     if (size_ == capacity_) {
-      reserve(get_new_capacity(capacity_));
+      const auto new_capacity = get_new_capacity(capacity_);
+      T* old_buffer = buffer_;
+      buffer_ = allocator_->template allocate_array<T>(new_capacity);
+      generate_at(buffer_ + size_, fn);
+      uninitialized_move_n(old_buffer, size_, buffer_);
+      if (old_buffer != stack_storage_.data()) {
+        allocator_->deallocate_array(old_buffer, capacity_);
+      }
+      capacity_ = new_capacity;
+    } else {
+      generate_at(buffer_ + size_, fn);
     }
-    generate_at(buffer_ + size_, fn);
     ++size_;
   }
   template <typename T, memory::allocator_type AllocatorT, usize N>
