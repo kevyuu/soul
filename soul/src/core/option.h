@@ -8,8 +8,6 @@
 #include "core/uninitialized.h"
 #include "core/util.h"
 
-#include <optional>
-
 namespace soul
 {
   class None
