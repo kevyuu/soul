@@ -833,8 +833,19 @@ namespace soul
     if constexpr (std::ranges::sized_range<RangeT> || std::ranges::forward_range<RangeT>) {
       const auto range_size = usize(std::ranges::distance(range));
       const auto new_size = size_ + range_size;
-      reserve(new_size);
-      uninitialized_copy_n(std::ranges::begin(range), range_size, buffer_ + size_);
+      if (new_size > capacity_) {
+        const auto new_capacity = get_new_capacity(capacity_);
+        T* old_buffer = buffer_;
+        buffer_ = allocator_->template allocate_array<T>(new_capacity);
+        uninitialized_copy_n(std::ranges::begin(range), range_size, buffer_ + size_);
+        uninitialized_move_n(old_buffer, size_, buffer_);
+        if (old_buffer != stack_storage_.data()) {
+          allocator_->deallocate_array(old_buffer, capacity_);
+        }
+        capacity_ = new_capacity;
+      } else {
+        uninitialized_copy_n(std::ranges::begin(range), range_size, buffer_ + size_);
+      }
       size_ = new_size;
     } else {
       for (auto it = std::ranges::begin(range), last = std::ranges::end(range); it != last; it++) {

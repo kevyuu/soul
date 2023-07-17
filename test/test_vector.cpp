@@ -771,6 +771,21 @@ TEST_F(TestVectorManipulation, TestVectorAppend)
   SOUL_TEST_RUN(test_append(vector_int_arr, 0));
   SOUL_TEST_RUN(test_append(vector_testobj_arr, 0));
   SOUL_TEST_RUN(test_append(vector_list_testobj_arr, 0));
+
+  auto test_append_self_referential = []<typename T>(const soul::Vector<T>& test_vector) {
+    using Vector = soul::Vector<T>;
+
+    Vector test_copy1 = test_vector.clone();
+    test_copy1.append(soul::views::duplicate_span(test_copy1.begin(), test_copy1.size()));
+    SOUL_TEST_ASSERT_EQ(test_copy1.size(), test_vector.size() + test_vector.size());
+    SOUL_TEST_ASSERT_TRUE(std::equal(test_vector.begin(), test_vector.end(), test_copy1.begin()));
+    SOUL_TEST_ASSERT_TRUE(
+      std::equal(test_copy1.begin() + test_vector.size(), test_copy1.end(), test_vector.begin()));
+  };
+
+  SOUL_TEST_RUN(test_append_self_referential(vector_int_arr));
+  SOUL_TEST_RUN(test_append_self_referential(vector_testobj_arr));
+  SOUL_TEST_RUN(test_append_self_referential(vector_list_testobj_arr));
 }
 
 TEST_F(TestVectorManipulation, TestVectorClear)
