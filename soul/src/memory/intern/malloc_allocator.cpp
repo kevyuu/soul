@@ -3,7 +3,7 @@
 namespace soul::memory
 {
 
-  MallocAllocator::MallocAllocator(const char* name) noexcept : Allocator(name) {}
+  MallocAllocator::MallocAllocator(const char* name) : Allocator(name) {}
 
   auto MallocAllocator::reset() -> void { SOUL_NOT_IMPLEMENTED(); }
 

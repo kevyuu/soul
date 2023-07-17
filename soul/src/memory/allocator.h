@@ -20,7 +20,7 @@ namespace soul::memory
   public:
     Allocator() = delete;
 
-    explicit Allocator(const char* name) noexcept : name_(name) {}
+    explicit Allocator(const char* name) : name_(name) {}
 
     Allocator(const Allocator& other) = delete;
 

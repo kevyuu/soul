@@ -31,9 +31,9 @@ namespace soul::memory
     void deallocate(void* addr) override;
 
     [[nodiscard]]
-    auto get_marker() const noexcept -> void*;
+    auto get_marker() const -> void*;
 
-    void rewind(void* addr) noexcept;
+    void rewind(void* addr);
 
   private:
     Allocator* backing_allocator_;

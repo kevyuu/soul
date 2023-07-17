@@ -531,12 +531,12 @@ namespace soul::memory
     }
 
     [[nodiscard]]
-    auto get_marker() const noexcept -> void*
+    auto get_marker() const -> void*
     {
       return allocator->get_marker();
     }
 
-    void rewind(void* addr) noexcept { allocator->rewind(addr); }
+    void rewind(void* addr) { allocator->rewind(addr); }
 
   private:
     Proxy proxy_;

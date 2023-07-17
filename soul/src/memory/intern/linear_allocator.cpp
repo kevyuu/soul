@@ -44,9 +44,9 @@ namespace soul::memory
 
   void LinearAllocator::deallocate(void* addr) {}
 
-  auto LinearAllocator::get_marker() const noexcept -> void* { return current_addr_; }
+  auto LinearAllocator::get_marker() const -> void* { return current_addr_; }
 
-  void LinearAllocator::rewind(void* addr) noexcept
+  void LinearAllocator::rewind(void* addr)
   {
     SOUL_ASSERT(0, addr >= base_addr_ && addr <= current_addr_, "");
     current_addr_ = addr;
