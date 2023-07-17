@@ -1,8 +1,5 @@
 #pragma once
 
-#include <limits>
-
-#include "core/maybe_null.h"
 #include "core/meta.h"
 #include "core/own_ref.h"
 #include "core/type.h"
@@ -118,8 +115,8 @@ namespace soul
 
   public:
     static constexpr auto type_count = sizeof...(Ts);
-    using index_type = typename std::conditional < type_count < (std::numeric_limits<u8>::max()),
-          u8,
+    using index_type = typename std::conditional < type_count < (std::numeric_limits<u8>::max()), u8
+      ,
           typename std::conditional<
             type_count<(std::numeric_limits<u16>::max)(), u16, u32>::type>::type;
     static constexpr index_type none_index = std::numeric_limits<index_type>::max();
