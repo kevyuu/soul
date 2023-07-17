@@ -1,5 +1,6 @@
 #pragma once
 
+#include "core/not_null.h"
 #include "core/type_traits.h"
 
 #include <memory>
@@ -37,12 +38,12 @@ namespace soul
   }
 
   template <typeset T>
-  void duplicate_from(T& dst, const T& src)
+  void duplicate_from(NotNull<T*> dst, const T& src)
   {
     if constexpr (can_clone_v<T>) {
-      dst.clone_from(src);
+      dst->clone_from(src);
     } else {
-      dst = src;
+      *dst = src;
     }
   }
 

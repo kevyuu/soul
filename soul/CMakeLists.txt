@@ -11,6 +11,7 @@ set(SOUL_HEADERS
     src/core/math.h
     src/core/not_null.h
     src/core/option.h
+    src/core/result.h
     src/core/packed_pool.h
     src/core/panic.h
     src/core/profile.h
