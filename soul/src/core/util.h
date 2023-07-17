@@ -1,5 +1,6 @@
 #pragma once
 
+#include <limits>
 #include <optional>
 #include <random>
 
@@ -187,27 +188,32 @@ namespace soul::util
     return hash_fnv1_bytes(reinterpret_cast<const u8*>(data), sizeof(data), initial);
   }
 
-  template <ts_arithmetic T>
-  auto get_random_number(T min, T max) -> T
+  [[nodiscard]]
+  inline auto get_random_u32() -> u32
   {
-    thread_local std::random_device rd;
-    thread_local std::mt19937 mt(rd());
-    if constexpr (std::is_floating_point_v<T>) {
-      std::uniform_real_distribution<T> distribution(min, max);
-      return distribution(mt);
-    } else {
-      std::uniform_int_distribution<T> distribution(min, max);
-      return distribution(mt);
-    }
+    thread_local u32 x = 123456789;
+    thread_local u32 y = 362436069;
+    thread_local u32 z = 521288629;
+
+    x ^= x << 16u;
+    x ^= x >> 5u;
+    x ^= x << 1u;
+
+    u32 t = x;
+    x = y;
+    y = z;
+    z = t ^ x ^ y;
+
+    return z;
   }
 
   [[nodiscard]]
   inline auto get_random_color() -> vec3f
   {
-    return {
-      get_random_number<f32>(0.0f, 1.0f),
-      get_random_number<f32>(0.0f, 1.0f),
-      get_random_number<f32>(0.0f, 1.0f)};
+    auto get_random_float = []() -> f32 {
+      return f32(get_random_u32()) / f32(std::numeric_limits<u32>::max());
+    };
+    return {get_random_float(), get_random_float(), get_random_float()};
   }
 
   template <std::integral Integral>
