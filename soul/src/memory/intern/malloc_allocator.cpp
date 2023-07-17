@@ -21,6 +21,6 @@ namespace soul::memory
     return _msize(addr);
   }
 
-  auto MallocAllocator::deallocate(void* addr) -> void { free(addr); }
+  void MallocAllocator::deallocate(void* addr) { free(addr); }
 
 } // namespace soul::memory

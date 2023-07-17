@@ -4,7 +4,7 @@
 
 namespace soul::memory
 {
-  auto ProfileProxy::on_pre_init(const char* name) -> void
+  void ProfileProxy::on_pre_init(const char* name)
   {
     SOUL_MEMPROFILE_REGISTER_ALLOCATOR(name);
     name_ = name;
@@ -32,6 +32,6 @@ namespace soul::memory
     return dealloc_param;
   }
 
-  auto ProfileProxy::on_pre_cleanup() -> void { SOUL_MEMPROFILE_DEREGISTER_ALLOCATOR(_name); }
+  void ProfileProxy::on_pre_cleanup() { SOUL_MEMPROFILE_DEREGISTER_ALLOCATOR(_name); }
 
 } // namespace soul::memory

@@ -23,15 +23,22 @@ namespace soul::memory
     explicit Allocator(const char* name) noexcept : name_(name) {}
 
     Allocator(const Allocator& other) = delete;
+
     auto operator=(const Allocator& other) -> Allocator& = delete;
+
     Allocator(Allocator&& other) = delete;
+
     auto operator=(Allocator&& other) -> Allocator& = delete;
+
     virtual ~Allocator() = default;
 
     virtual auto try_allocate(usize size, usize alignment, const char* tag) -> Allocation = 0;
-    virtual auto deallocate(void* addr) -> void = 0;
+
+    virtual void deallocate(void* addr) = 0;
+
     virtual auto get_allocation_size(void* addr) const -> usize = 0;
-    virtual auto reset() -> void = 0;
+
+    virtual void reset() = 0;
 
     [[nodiscard]]
     auto name() const -> const char*
@@ -63,7 +70,7 @@ namespace soul::memory
     }
 
     template <typename T>
-    auto deallocate_array(T* addr, const usize count) -> void
+    void deallocate_array(T* addr, const usize count)
     {
       deallocate(addr); // NOLINT(bugprone-sizeof-expression)
     }
@@ -77,7 +84,7 @@ namespace soul::memory
     }
 
     template <typename Type>
-    auto destroy(Type* ptr) -> void
+    void destroy(Type* ptr)
     {
       SOUL_ASSERT(0, ptr != nullptr, "");
       if constexpr (!std::is_trivially_destructible_v<Type>) {

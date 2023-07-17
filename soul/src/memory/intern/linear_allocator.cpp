@@ -16,7 +16,7 @@ namespace soul::memory
 
   LinearAllocator::~LinearAllocator() { backing_allocator_->deallocate(base_addr_); }
 
-  auto LinearAllocator::reset() -> void { current_addr_ = base_addr_; }
+  void LinearAllocator::reset() { current_addr_ = base_addr_; }
 
   auto LinearAllocator::try_allocate(const usize size, const usize alignment, const char* tag)
     -> Allocation
@@ -42,11 +42,11 @@ namespace soul::memory
     return *soul::cast<usize*>(size_addr);
   }
 
-  auto LinearAllocator::deallocate(void* addr) -> void {}
+  void LinearAllocator::deallocate(void* addr) {}
 
   auto LinearAllocator::get_marker() const noexcept -> void* { return current_addr_; }
 
-  auto LinearAllocator::rewind(void* addr) noexcept -> void
+  void LinearAllocator::rewind(void* addr) noexcept
   {
     SOUL_ASSERT(0, addr >= base_addr_ && addr <= current_addr_, "");
     current_addr_ = addr;

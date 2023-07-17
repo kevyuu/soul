@@ -9,20 +9,31 @@ namespace soul::memory
   {
   public:
     LinearAllocator() = delete;
+
     LinearAllocator(const char* name, usize size, Allocator* backing_allocator);
+
     LinearAllocator(const LinearAllocator& other) = delete;
+
     auto operator=(const LinearAllocator& other) -> LinearAllocator& = delete;
+
     LinearAllocator(LinearAllocator&& other) = delete;
+
     auto operator=(LinearAllocator&& other) -> LinearAllocator& = delete;
+
     ~LinearAllocator() override;
 
-    auto reset() -> void override;
+    void reset() override;
+
     auto try_allocate(usize size, usize alignment, const char* tag) -> Allocation override;
+
     auto get_allocation_size(void* addr) const -> usize override;
-    auto deallocate(void* addr) -> void override;
+
+    void deallocate(void* addr) override;
+
     [[nodiscard]]
     auto get_marker() const noexcept -> void*;
-    auto rewind(void* addr) noexcept -> void;
+
+    void rewind(void* addr) noexcept;
 
   private:
     Allocator* backing_allocator_;

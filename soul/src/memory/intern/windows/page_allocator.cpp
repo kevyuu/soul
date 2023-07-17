@@ -13,7 +13,7 @@ namespace soul::memory
     page_size_ = s_sys_info.dwPageSize;
   }
 
-  auto PageAllocator::reset() -> void{};
+  void PageAllocator::reset(){};
 
   auto PageAllocator::try_allocate(usize size, usize alignment, const char* tag) -> Allocation
   {
@@ -33,7 +33,7 @@ namespace soul::memory
     return memory_basic_information.RegionSize;
   }
 
-  auto PageAllocator::deallocate(void* addr) -> void
+  void PageAllocator::deallocate(void* addr)
   {
     const auto is_success = VirtualFree(addr, 0, MEM_RELEASE);
     SOUL_ASSERT(0, is_success, "");
