@@ -15,32 +15,43 @@ namespace soul
     ~BitRef() = default;
 
     auto operator=(b8 val) -> BitRef&;
+
     auto operator=(const BitRef& rhs) -> BitRef&;
+
     auto operator=(BitRef&& rhs) noexcept -> BitRef&;
 
     auto operator|=(b8 val) -> BitRef&;
+
     auto operator&=(b8 val) -> BitRef&;
+
     auto operator^=(b8 val) -> BitRef&;
 
     auto operator~() const -> b8;
+
     operator b8() const; // NOLINT(hicpp-explicit-conversions)
+                         //
     auto flip() -> BitRef&;
 
     auto operator&() -> void = delete; // NOLINT(google-runtime-operator)
 
   private:
     BitRef(const BitRef&) = default;
+
     BitRef(BitRef&&) noexcept = default;
 
     BlockT* bit_block_ = nullptr;
+
     usize bit_index_ = 0;
+
     BitRef() = default;
 
-    auto set_true() -> void;
-    auto set_false() -> void;
+    void set_true();
+
+    void set_false();
 
     [[nodiscard]]
     auto get_mask() const -> BlockT;
+
     auto copy_from(const BitRef& rhs) -> void;
   };
 
@@ -131,13 +142,13 @@ namespace soul
   }
 
   template <ts_bit_block BlockT>
-  auto BitRef<BlockT>::set_true() -> void
+  void BitRef<BlockT>::set_true()
   {
     *bit_block_ |= get_mask();
   }
 
   template <ts_bit_block BlockT>
-  auto BitRef<BlockT>::set_false() -> void
+  void BitRef<BlockT>::set_false()
   {
     *bit_block_ &= ~get_mask();
   }
@@ -149,7 +160,7 @@ namespace soul
   }
 
   template <ts_bit_block ElementType>
-  auto BitRef<ElementType>::copy_from(const BitRef& rhs) -> void
+  void BitRef<ElementType>::copy_from(const BitRef& rhs)
   {
     bit_block_ = rhs.bit_block_;
     bit_index_ = rhs.bit_index_;
