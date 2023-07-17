@@ -16,7 +16,7 @@ namespace soul::runtime
     explicit ScopeAllocator(
       const char* name,
       BackingAllocator* backing_allocator = get_temp_allocator(),
-      Allocator* fallback_allocator = get_default_allocator()) noexcept;
+      Allocator* fallback_allocator = get_default_allocator());
 
     ScopeAllocator(const ScopeAllocator& other) = delete;
 
@@ -43,14 +43,14 @@ namespace soul::runtime
     Vector<memory::Allocation> fallback_allocations_;
 
     [[nodiscard]]
-    auto get_marker() const noexcept -> void*;
+    auto get_marker() const -> void*;
 
-    void rewind(void* addr) noexcept;
+    void rewind(void* addr);
   };
 
   template <typename BackingAllocator>
   ScopeAllocator<BackingAllocator>::ScopeAllocator(
-    const char* name, BackingAllocator* backing_allocator, Allocator* fallback_allocator) noexcept
+    const char* name, BackingAllocator* backing_allocator, Allocator* fallback_allocator)
       : Allocator(name),
         backing_allocator_(backing_allocator),
         scope_base_addr_(backing_allocator_->get_marker()),
@@ -98,13 +98,13 @@ namespace soul::runtime
   }
 
   template <typename BackingAllocator>
-  auto ScopeAllocator<BackingAllocator>::get_marker() const noexcept -> void*
+  auto ScopeAllocator<BackingAllocator>::get_marker() const -> void*
   {
     return backing_allocator_->getMarker();
   }
 
   template <typename BackingAllocator>
-  void ScopeAllocator<BackingAllocator>::rewind(void* addr) noexcept
+  void ScopeAllocator<BackingAllocator>::rewind(void* addr)
   {
     backing_allocator_->rewind(addr);
   }
