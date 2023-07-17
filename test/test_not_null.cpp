@@ -16,6 +16,7 @@ namespace soul
     static TestAllocator test_allocator("Test default allocator");
     return &test_allocator;
   }
+
 } // namespace soul
 
 TEST(TestNotNullConstruction, TestConstructionFromRawPointer)
@@ -64,4 +65,25 @@ TEST(TestNotNullAssignment, TestAssignment)
   SOUL_TEST_ASSERT_EQ(not_null_test_obj, &test_obj2);
   SOUL_TEST_ASSERT_EQ(not_null_test_obj->x, test_obj2.x);
   SOUL_TEST_ASSERT_EQ((*not_null_test_obj).x, test_obj2.x);
+}
+
+TEST(TestNotNullSwap, TestSwap)
+{
+  const auto test_obj = TestObject(4);
+  auto not_null_test_obj = soul::ptrof(test_obj);
+
+  const auto test_obj2 = TestObject(5);
+  auto not_null_test_obj2 = soul::ptrof(test_obj2);
+
+  swap(not_null_test_obj, not_null_test_obj2);
+
+  SOUL_TEST_ASSERT_EQ(*not_null_test_obj, test_obj2);
+  SOUL_TEST_ASSERT_EQ(not_null_test_obj, &test_obj2);
+  SOUL_TEST_ASSERT_EQ(not_null_test_obj->x, test_obj2.x);
+  SOUL_TEST_ASSERT_EQ((*not_null_test_obj).x, test_obj2.x);
+
+  SOUL_TEST_ASSERT_EQ(*not_null_test_obj2, test_obj);
+  SOUL_TEST_ASSERT_EQ(not_null_test_obj2, &test_obj);
+  SOUL_TEST_ASSERT_EQ(not_null_test_obj2->x, test_obj.x);
+  SOUL_TEST_ASSERT_EQ((*not_null_test_obj2).x, test_obj.x);
 }

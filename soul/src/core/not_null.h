@@ -27,6 +27,16 @@ namespace soul
     constexpr ~NotNull() = default;
 
     constexpr NotNull(T ptr) : ptr_(ptr) { SOUL_ASSERT(0, ptr != nullptr); } // NOLINT
+
+    constexpr void swap(NotNull& other)
+    {
+      const auto tmp_ptr = ptr_;
+      ptr_ = other.ptr_;
+      other.ptr_ = tmp_ptr;
+    }
+
+    friend constexpr void swap(NotNull& lhs, NotNull& rhs) { lhs.swap(rhs); }
+
     constexpr static auto new_unchecked(T ptr) -> NotNull<T>
     {
       return NotNull(impl::NotNullConstruct::new_unchecked, ptr);
