@@ -13,6 +13,9 @@ target_link_libraries(test_vector PRIVATE GTest::gtest GTest::gtest_main soul)
 add_executable(test_option test_option.cpp util.cpp)
 target_link_libraries(test_option PRIVATE GTest::gtest GTest::gtest_main soul)
 
+add_executable(test_maybe_null test_maybe_null.cpp util.cpp)
+target_link_libraries(test_maybe_null PRIVATE GTest::gtest GTest::gtest_main soul)
+
 add_executable(test_result test_result.cpp util.cpp)
 target_link_libraries(test_result PRIVATE GTest::gtest GTest::gtest_main soul)
 
@@ -45,6 +48,7 @@ add_test(gtest_core_util test_core_util)
 add_test(gtest_array test_array)
 add_test(gtest_vector test_vector)
 add_test(gtest_option test_option)
+add_test(gtest_maybe_null test_maybe_null)
 add_test(gtest_result test_result)
 add_test(gtest_not_null test_not_null)
 add_test(gtest_intrusive_list test_intrusive_list)

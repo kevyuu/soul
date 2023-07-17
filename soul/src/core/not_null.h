@@ -58,6 +58,8 @@ namespace soul
     {
       return NotNull(impl::NotNullConstruct::new_unchecked, ptr);
     }
+    constexpr auto get_unchecked() const -> T { return ptr_; }
+    constexpr auto set_unchecked(T ptr) { ptr_ = ptr; }
 
     constexpr operator T() const { return ptr_; } // NOLINT
     constexpr auto operator*() const -> std::remove_pointer_t<T>& { return *ptr_; }
