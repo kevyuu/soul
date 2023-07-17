@@ -65,7 +65,7 @@ namespace soul::memory
     struct Config {
     };
 
-    explicit NoOpProxy(const Config& config) {}
+    explicit NoOpProxy(const Config& /* config */) {}
 
     void on_pre_init(const char* name) override {}
 
@@ -237,10 +237,10 @@ namespace soul::memory
     struct Config {
     };
 
-    explicit CounterProxy(const Config& config) {}
+    explicit CounterProxy(const Config& /* config */) {}
 
     CounterProxy() = default;
-    void on_pre_init(const char* name) override { _counter = 0; }
+    void on_pre_init(const char* /* name */) override { _counter = 0; }
 
     void on_post_init() override {}
 
@@ -327,7 +327,7 @@ namespace soul::memory
     struct Config {
     };
 
-    explicit BoundGuardProxy(const Config& config) {}
+    explicit BoundGuardProxy(const Config& /* config */) {}
 
     auto get_base_addr(void* addr) const -> void* override
     {
@@ -397,7 +397,7 @@ namespace soul::memory
     struct Config {
     };
 
-    explicit ProfileProxy(const Config& config) {}
+    explicit ProfileProxy(const Config& /* config */) {}
 
     void on_pre_init(const char* name) override;
 
@@ -426,7 +426,7 @@ namespace soul::memory
     struct Config {
     };
 
-    explicit MutexProxy(const Config& config) {}
+    explicit MutexProxy(const Config& /* config */) {}
 
     void on_pre_init(const char* name) override {}
 

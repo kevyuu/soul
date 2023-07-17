@@ -18,7 +18,7 @@ namespace soul::memory
 
   void LinearAllocator::reset() { current_addr_ = base_addr_; }
 
-  auto LinearAllocator::try_allocate(const usize size, const usize alignment, const char* tag)
+  auto LinearAllocator::try_allocate(const usize size, const usize alignment, const char* /* tag */)
     -> Allocation
   {
     auto* const size_addr =

@@ -7,7 +7,8 @@ namespace soul::memory
 
   auto MallocAllocator::reset() -> void { SOUL_NOT_IMPLEMENTED(); }
 
-  auto MallocAllocator::try_allocate(usize size, usize alignment, const char* tag) -> Allocation
+  auto MallocAllocator::try_allocate(usize size, usize /* alignment */, const char* /* tag */)
+    -> Allocation
   {
     void* addr = malloc(size);
     return {addr, size};

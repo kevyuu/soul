@@ -70,7 +70,7 @@ namespace soul::memory
     }
 
     template <typename T>
-    void deallocate_array(T* addr, const usize count)
+    void deallocate_array(T* addr, const usize /* count */)
     {
       deallocate(addr); // NOLINT(bugprone-sizeof-expression)
     }
