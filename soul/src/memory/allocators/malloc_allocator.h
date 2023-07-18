@@ -10,7 +10,7 @@ namespace soul::memory
   public:
     MallocAllocator() = delete;
 
-    MallocAllocator(const char* name);
+    explicit MallocAllocator(const char* name);
 
     MallocAllocator(const MallocAllocator& other) = delete;
 

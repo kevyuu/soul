@@ -10,7 +10,7 @@ namespace soul::memory
   auto MallocAllocator::try_allocate(usize size, usize /* alignment */, const char* /* tag */)
     -> Allocation
   {
-    void* addr = malloc(size);
+    void* addr = malloc(size); // NOLINT
     return {addr, size};
   }
 
@@ -22,6 +22,9 @@ namespace soul::memory
     return _msize(addr);
   }
 
-  void MallocAllocator::deallocate(void* addr) { free(addr); }
+  void MallocAllocator::deallocate(void* addr)
+  {
+    free(addr); // NOLINT
+  }
 
 } // namespace soul::memory

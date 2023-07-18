@@ -337,7 +337,7 @@ namespace soul::memory
     [[nodiscard]]
     auto get_base_size(const usize size) const -> usize override
     {
-      return size - 2llu * GUARD_SIZE;
+      return size - 2ull * GUARD_SIZE;
     }
 
     void on_pre_init(const char* name) override {}
@@ -347,7 +347,7 @@ namespace soul::memory
     auto on_pre_allocate(const AllocateParam& alloc_param) -> AllocateParam override
     {
       current_alloc_size_ = alloc_param.size;
-      return {alloc_param.size + 2llu * GUARD_SIZE, GUARD_SIZE, alloc_param.tag};
+      return {alloc_param.size + 2ull * GUARD_SIZE, GUARD_SIZE, alloc_param.tag};
     }
 
     auto on_post_allocate(const Allocation allocation) -> Allocation override
@@ -357,24 +357,23 @@ namespace soul::memory
         util::pointer_add(allocation.addr, GUARD_SIZE + current_alloc_size_),
         GUARD_FLAG,
         GUARD_SIZE);
-      SOUL_ASSERT(0, allocation.size > 2llu * GUARD_SIZE, "");
-      return {util::pointer_add(allocation.addr, GUARD_SIZE), allocation.size - 2llu * GUARD_SIZE};
+      SOUL_ASSERT(0, allocation.size > 2ull * GUARD_SIZE, "");
+      return {util::pointer_add(allocation.addr, GUARD_SIZE), allocation.size - 2ull * GUARD_SIZE};
     }
 
     auto on_pre_deallocate(const DeallocateParam& dealloc_param) -> DeallocateParam override
     {
       if (dealloc_param.addr != nullptr) {
         SOUL_ASSERT(0, dealloc_param.size != 0, "This proxy need size in its deallocate call");
-        auto base_front = soul::cast<byte*>(util::pointer_sub(dealloc_param.addr, GUARD_SIZE));
-        auto base_back =
-          soul::cast<byte*>(util::pointer_add(dealloc_param.addr, dealloc_param.size));
+        auto* base_front = cast<byte*>(util::pointer_sub(dealloc_param.addr, GUARD_SIZE));
+        auto* base_back = cast<byte*>(util::pointer_add(dealloc_param.addr, dealloc_param.size));
         for (usize i = 0; i < GUARD_SIZE; i++) {
           SOUL_ASSERT(0, base_front[i] == GUARD_FLAG, "");
           SOUL_ASSERT(0, base_back[i] == GUARD_FLAG, "");
         }
         return {
           util::pointer_sub(dealloc_param.addr, GUARD_SIZE),
-          dealloc_param.size + 2llu * GUARD_SIZE};
+          dealloc_param.size + 2ull * GUARD_SIZE};
       }
       return dealloc_param;
     }
