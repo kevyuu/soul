@@ -262,6 +262,9 @@ namespace soul
     [[nodiscard]]
     static auto get_new_capacity(usize old_capacity) -> usize;
 
+    [[nodiscard]]
+    static auto get_new_capacity(usize old_capacity, usize minimum_capacity) -> usize;
+
     void init_reserve(usize capacity);
 
     [[nodiscard]]
@@ -842,7 +845,7 @@ namespace soul
       const auto range_size = usize(std::ranges::distance(range));
       const auto new_size = size_ + range_size;
       if (new_size > capacity_) {
-        const auto new_capacity = get_new_capacity(capacity_);
+        const auto new_capacity = get_new_capacity(capacity_, new_size);
         T* old_buffer = buffer_;
         buffer_ = allocator_->template allocate_array<T>(new_capacity);
         uninitialized_copy_n(std::ranges::begin(range), range_size, buffer_ + size_);
@@ -926,6 +929,14 @@ namespace soul
   auto Vector<T, AllocatorT, N>::get_new_capacity(usize old_capacity) -> usize
   {
     return old_capacity * GROWTH_FACTOR + 8;
+  }
+
+  template <typename T, memory::allocator_type AllocatorT, usize N>
+  auto Vector<T, AllocatorT, N>::get_new_capacity(usize old_capacity, usize minimum_capacity)
+    -> usize
+  {
+    const auto new_capacity = old_capacity * GROWTH_FACTOR + 8;
+    return (new_capacity > minimum_capacity) ? new_capacity : minimum_capacity;
   }
 
   template <typename T, memory::allocator_type AllocatorT, usize N>
