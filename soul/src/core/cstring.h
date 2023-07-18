@@ -166,7 +166,7 @@ namespace soul
 
   template <typename... Args>
   CString::CString(
-    Construct::WithCapacityThenFormat,
+    Construct::WithCapacityThenFormat /* tag */,
     usize capacity,
     memory::Allocator* allocator,
     std::format_string<Args...> fmt,
