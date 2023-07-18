@@ -12,7 +12,7 @@
 namespace soul::runtime
 {
 
-  thread_local ThreadContext* Database::g_thread_context = nullptr;
+  thread_local ThreadContext* Database::g_thread_context = nullptr; // NOLINT
 
   void System::execute(TaskID task_id)
   {
@@ -176,7 +176,7 @@ namespace soul::runtime
     db_.thread_contexts.init(*config.defaultAllocator, thread_count);
 
     // NOTE(kevinyu): i == 0 is for main thread
-    Database::g_thread_context = &db_.thread_contexts[0];
+    Database::g_thread_context = db_.thread_contexts.data();
 
     for (u16 i = 0; i < thread_count; ++i) {
       db_.thread_contexts[i].task_count = 0;

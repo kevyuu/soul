@@ -87,6 +87,14 @@ namespace soul::runtime
 
     explicit AllocatorZone(memory::Allocator* allocator) { push_allocator(allocator); }
 
+    AllocatorZone(const AllocatorZone& other) = delete;
+
+    AllocatorZone(AllocatorZone&& other) = delete;
+
+    auto operator=(const AllocatorZone&) = delete;
+
+    auto operator=(AllocatorZone&&) = delete;
+
     ~AllocatorZone() { pop_allocator(); }
   };
 

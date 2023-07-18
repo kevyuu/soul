@@ -49,7 +49,7 @@ namespace soul::runtime
         "Consider increase the storage size of the"
         "task or dynamically allocate the memory.");
 
-      static auto call = [](TaskID taskID, void* data) {
+      auto call = [](TaskID taskID, void* data) {
         Execute& lambda = *static_cast<Execute*>(data);
         lambda(taskID);
         lambda.~Execute();
@@ -72,7 +72,7 @@ namespace soul::runtime
         "ParallelForTaskData size is too big. TaskData = %d"
         "Consider to increase the storage size of the task.");
 
-      static auto parallel_func = [](TaskID taskID, void* data) {
+      auto parallel_func = [](TaskID taskID, void* data) {
         TaskData& task_data = (*static_cast<TaskData*>(data));
         if (task_data.count > task_data.min_count) {
           const u32 left_count = task_data.count / 2;
