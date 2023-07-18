@@ -1,6 +1,6 @@
 #pragma once
 
-#include "core/panic.h"
+#include "core/panic_lite.h"
 #include "core/type_traits.h"
 
 namespace soul
@@ -43,7 +43,10 @@ namespace soul
     constexpr auto operator=(NotNull&& other) noexcept -> NotNull& = default;
     constexpr ~NotNull() = default;
 
-    constexpr NotNull(T ptr) : ptr_(ptr) { SOUL_ASSERT(0, ptr != nullptr); } // NOLINT
+    constexpr NotNull(T ptr) : ptr_(ptr) // NOLINT
+    {
+      SOUL_ASSERT_LITE(0, ptr != nullptr, "Cannot assign a nullptr to NotNull");
+    }
 
     constexpr void swap(NotNull& other)
     {

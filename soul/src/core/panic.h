@@ -6,6 +6,7 @@
 #include <string_view>
 
 #include "compiler.h"
+#include "panic_lite.h"
 
 namespace soul
 {
@@ -84,12 +85,7 @@ namespace soul
     do {                                                                                           \
       soul::panic(__FILE__, __LINE__, __FUNCTION__, ##__VA_ARGS__);                                \
     } while (0)
-#  define SOUL_NOT_IMPLEMENTED()                                                                   \
-    do {                                                                                           \
-      soul::panic(__FILE__, __LINE__, __FUNCTION__, "Not implemented yet! \n");                    \
-    } while (0)
 #else
 #  define SOUL_ASSERT(paranoia, test, ...) ((void)0)
 #  define SOUL_PANIC(...) ((void)0)
-#  define SOUL_NOT_IMPLEMENTED() ((void)0)
 #endif

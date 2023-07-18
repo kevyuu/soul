@@ -14,6 +14,7 @@ set(SOUL_HEADERS
     src/core/result.h
     src/core/packed_pool.h
     src/core/panic.h
+    src/core/panic_lite.h
     src/core/profile.h
     src/core/pool.h
     src/core/static_array.h
@@ -51,6 +52,7 @@ set(SOUL_SOURCES_WINDOWS src/memory/intern/windows/page_allocator.cpp)
 set(SOUL_SOURCES
     src/core/log.cpp
     src/core/panic.cpp
+    src/core/panic_lite.cpp
     src/core/cstring.cpp
     src/gpu/intern/common.cpp
     src/gpu/intern/glfw_wsi.cpp
