@@ -3,6 +3,7 @@
 #include <format>
 
 #include "core/config.h"
+#include "core/not_null.h"
 #include "core/type.h"
 
 namespace soul::memory
@@ -12,7 +13,6 @@ namespace soul::memory
 
 namespace soul
 {
-
   class CString
   {
   public:
@@ -22,34 +22,49 @@ namespace soul
     using reference = char&;
     using const_reference = const char&;
 
-    explicit CString(usize size, memory::Allocator& allocator = *get_default_allocator());
-
-    CString(const char*, memory::Allocator& allocator);
-
-    explicit CString(memory::Allocator* allocator = get_default_allocator());
-
-    CString(const char*); // NOLINT(hicpp-explicit-conversions)
+    explicit CString(NotNull<memory::Allocator*> allocator = get_default_allocator());
 
     CString(CString&&) noexcept;
 
     auto operator=(CString&&) noexcept -> CString&;
 
-    auto operator=(const char*) -> CString&;
+    void assign(const char*);
 
     ~CString();
+
+    [[nodiscard]]
+    static auto with_capacity(
+      usize capacity, NotNull<memory::Allocator*> allocator = get_default_allocator()) -> CString;
+
+    template <typename... Args>
+    [[nodiscard]]
+    static auto with_capacity_then_format(
+      usize capacity,
+      NotNull<memory::Allocator*> allocator,
+      std::format_string<Args...> fmt,
+      Args&&... args) -> CString;
+
+    [[nodiscard]]
+    static auto from(
+      NotNull<const char*> str, NotNull<memory::Allocator*> allocator = get_default_allocator())
+      -> CString;
+
+    [[nodiscard]]
+    static auto with_size(
+      usize size, NotNull<memory::Allocator*> allocator = get_default_allocator()) -> CString;
 
     [[nodiscard]]
     auto clone() const -> CString;
 
     auto clone_from(const CString& other);
 
-    auto swap(CString&) noexcept -> void;
+    void swap(CString&) noexcept;
 
-    friend auto swap(CString& a, CString& b) noexcept -> void { a.swap(b); }
+    friend void swap(CString& a, CString& b) noexcept { a.swap(b); }
 
-    auto reserve(usize new_capacity) -> void;
+    void reserve(usize new_capacity);
 
-    auto push_back(char c) -> void;
+    void push_back(char c);
 
     auto append(const CString& x) -> CString&;
 
@@ -83,11 +98,44 @@ namespace soul
     };
 
     memory::Allocator* allocator_;
-    usize capacity_ = 0;
     usize size_ = 0; // string size, not counting NULL
+    usize capacity_ = 0;
     char* data_ = nullptr;
 
+    struct Construct {
+      struct WithCapacity {
+      };
+      static constexpr auto with_capacity = WithCapacity{};
+
+      struct WithCapacityThenFormat {
+      };
+      static constexpr auto with_capacity_then_format = WithCapacityThenFormat{};
+
+      struct From {
+      };
+      static constexpr auto from = From{};
+
+      struct WithSize {
+      };
+      static constexpr auto with_size = WithSize{};
+    };
+
+    CString(Construct::WithCapacity tag, usize capacity, NotNull<memory::Allocator*> allocator);
+
+    template <typename... Args>
+    CString(
+      Construct::WithCapacityThenFormat /* tag */,
+      usize capacity,
+      memory::Allocator* allocator,
+      std::format_string<Args...> fmt,
+      Args&&... args);
+
+    CString(Construct::From tag, NotNull<const char*> str, NotNull<memory::Allocator*> allocator);
+
+    CString(Construct::WithSize tag, usize size, NotNull<memory::Allocator*> allocator);
+
     CString(const CString&);
+
     auto operator=(const CString&) -> CString&;
   };
 
@@ -100,7 +148,30 @@ namespace soul
   inline auto CString::clone_from(const CString& other) { *this = other; }
 
   template <typename... Args>
+  auto CString::with_capacity_then_format(
+    usize capacity,
+    NotNull<memory::Allocator*> allocator,
+    std::format_string<Args...> fmt,
+    Args&&... args) -> CString
+  {
+    return CString(
+      Construct::with_capacity_then_format, capacity, allocator, fmt, std::forward<Args>(args)...);
+  }
+
+  template <typename... Args>
   void CString::appendf(std::format_string<Args...> fmt, Args&&... args)
+  {
+    std::format_to(std::back_inserter(*this), std::move(fmt), std::forward<Args>(args)...);
+  }
+
+  template <typename... Args>
+  CString::CString(
+    Construct::WithCapacityThenFormat,
+    usize capacity,
+    memory::Allocator* allocator,
+    std::format_string<Args...> fmt,
+    Args&&... args)
+      : CString(Construct::with_capacity, capacity, allocator)
   {
     std::format_to(std::back_inserter(*this), std::move(fmt), std::forward<Args>(args)...);
   }

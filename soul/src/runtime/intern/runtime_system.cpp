@@ -1,6 +1,7 @@
 #include <thread>
 
 #include "core/architecture.h"
+#include "core/cstring.h"
 #include "core/panic.h"
 #include "core/profile.h"
 #include "core/util.h"
@@ -28,9 +29,9 @@ namespace soul::runtime
   {
     Database::g_thread_context = thread_context;
 
-    char threadName[512];
-    sprintf(threadName, "Worker Thread = %d", get_thread_id());
-    SOUL_PROFILE_THREAD_SET_NAME(threadName);
+    const auto thread_name = CString::with_capacity_then_format(
+      512, get_default_allocator(), "Worker Thread = {}", get_thread_id());
+    SOUL_PROFILE_THREAD_SET_NAME(thread_name.data());
 
     char temp_allocator_name[512];
     memory::LinearAllocator linear_allocator(

@@ -2077,7 +2077,7 @@ namespace soul::gpu
       program.shaders.push_back(Shader{
         .stage = stage,
         .vk_handle = shader_module,
-        .entry_point = entry_point.name,
+        .entry_point = CString::from(entry_point.name),
       });
     }
 

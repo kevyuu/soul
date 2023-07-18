@@ -64,7 +64,7 @@ static constexpr Index INDICES[] = {0, 1, 2, 2, 3, 0};
 
 Texture2DRGPass::Texture2DRGPass(gpu::System* gpu_system) : gpu_system_(gpu_system)
 {
-  gpu::ShaderSource shader_source = gpu::ShaderString(TEXTURE_2D_HLSL);
+  gpu::ShaderSource shader_source = gpu::ShaderString(CString::from(TEXTURE_2D_HLSL));
   std::filesystem::path search_path = "shaders/";
   constexpr auto entry_points = std::to_array<gpu::ShaderEntryPoint>(
     {{gpu::ShaderStage::VERTEX, "vsMain"}, {gpu::ShaderStage::FRAGMENT, "psMain"}});

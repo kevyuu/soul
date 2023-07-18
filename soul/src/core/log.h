@@ -46,7 +46,7 @@ namespace soul::impl
       message.appendf(
         "[{}]:{}:{}::", impl::LOG_PREFIX[log_level], relative_from_project_path(file_name), line);
       message.appendf(std::move(fmt), std::forward<Args>(args)...);
-      impl::log(log_level, message.data());
+      impl::log(log_level, message);
     }
   }
 

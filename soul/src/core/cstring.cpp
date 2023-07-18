@@ -1,6 +1,5 @@
 #include <algorithm>
 #include <cstdarg>
-#include <cstdio>
 
 #include "core/cstring.h"
 #include "core/panic.h"
@@ -8,27 +7,30 @@
 
 namespace soul
 {
-  CString::CString(memory::Allocator* allocator) : allocator_(allocator)
+  CString::CString(NotNull<memory::Allocator*> allocator) : allocator_(allocator)
   {
     reserve(1);
     data_[size_] = '\0';
   }
 
-  CString::CString(usize size, memory::Allocator& allocator) : allocator_(&allocator), size_(size)
+  CString::CString(
+    Construct::From /* tag */, NotNull<const char*> str, NotNull<memory::Allocator*> allocator)
+      : allocator_(allocator),
+        size_(strlen(str)),
+        capacity_(size_ + 1),
+        data_(allocator->allocate_array<char>(size_ + 1))
   {
-    reserve(size + 1);
-    data_[size_] = '\0';
-  }
-
-  CString::CString(const char* str, memory::Allocator& allocator) : allocator_(&allocator)
-  {
-    SOUL_ASSERT(0, str != nullptr, "Constructing CString with nullptr is undefined behaviour");
-    size_ = strlen(str);
-    reserve(size_ + 1);
     memcpy(data_, str, capacity_ * sizeof(char));
   }
 
-  CString::CString(const char* str) : CString(str, *get_default_allocator()) {}
+  CString::CString(Construct::WithSize /* tag */, usize size, NotNull<memory::Allocator*> allocator)
+      : allocator_(allocator),
+        size_(size),
+        capacity_(size_ + 1),
+        data_(allocator->allocate_array<char>(size_ + 1))
+  {
+    data_[size_] = '\0';
+  }
 
   CString::CString(const CString& rhs)
       : allocator_(rhs.allocator_),
@@ -40,6 +42,14 @@ namespace soul
             : static_cast<char*>(allocator_->allocate(rhs.capacity_, alignof(char))))
   {
     std::copy(rhs.data_, rhs.data_ + rhs.capacity_, data_);
+  }
+
+  CString::CString(
+    Construct::WithCapacity /* tag */, usize capacity, NotNull<memory::Allocator*> allocator)
+      : allocator_(allocator),
+        capacity_(capacity),
+        data_(allocator_->allocate_array<char>(capacity))
+  {
   }
 
   auto CString::operator=(const CString& other) -> CString&
@@ -62,7 +72,7 @@ namespace soul
     return *this;
   }
 
-  auto CString::operator=(const char* buf) -> CString&
+  void CString::assign(const char* buf)
   {
     SOUL_ASSERT(0, buf != nullptr, "Assigning nullptr to CString is undefined behaviour");
     size_ = strlen(buf);
@@ -70,7 +80,6 @@ namespace soul
       reserve(size_ + 1);
     }
     std::copy(buf, buf + size_ + 1, data_);
-    return *this;
   }
 
   CString::~CString()
@@ -79,6 +88,21 @@ namespace soul
       SOUL_ASSERT(0, capacity_ != 0, "");
       allocator_->deallocate(data_);
     }
+  }
+
+  auto CString::with_capacity(usize capacity, NotNull<memory::Allocator*> allocator) -> CString
+  {
+    return CString(Construct::with_capacity, capacity, allocator);
+  }
+
+  auto CString::from(NotNull<const char*> str, NotNull<memory::Allocator*> allocator) -> CString
+  {
+    return CString(Construct::from, str, allocator);
+  }
+
+  auto CString::with_size(usize size, NotNull<memory::Allocator*> allocator) -> CString
+  {
+    return CString(Construct::with_size, size, allocator);
   }
 
   auto CString::swap(CString& rhs) noexcept -> void
@@ -95,7 +119,7 @@ namespace soul
     if (capacity_ >= new_capacity) {
       return;
     }
-    auto* const new_data = static_cast<char*>(allocator_->allocate(new_capacity, alignof(char)));
+    auto* const new_data = cast<char*>(allocator_->allocate(new_capacity, alignof(char)));
     if (data_ != nullptr) {
       memcpy(new_data, data_, capacity_ * sizeof(char));
       allocator_->deallocate(data_);
