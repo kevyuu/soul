@@ -8,6 +8,7 @@
 #include "gpu/glfw_wsi.h"
 #include "gpu/gpu.h"
 #include "memory/allocators/page_allocator.h"
+#include "runtime/data.h"
 #include "runtime/runtime.h"
 
 #include <GLFW/glfw3.h>
@@ -17,6 +18,8 @@
 #include "memory/allocators/proxy_allocator.h"
 
 #include <windows.h>
+
+#include <iostream>
 
 using namespace soul;
 
@@ -31,6 +34,45 @@ auto glfw_framebuffer_size_callback(GLFWwindow* window, int width, int height) -
   auto window_data = static_cast<WindowData*>(glfwGetWindowUserPointer(window));
   window_data->resized = true;
 }
+namespace
+{
+  [[nodiscard]]
+  auto init_glfw_and_create_window(const AppConfig& app_config, NotNull<WindowData*> window_data)
+    -> NotNull<GLFWwindow*>
+  {
+    glfwSetErrorCallback(glfw_print_error_callback);
+    const bool glfw_init_success = glfwInit();
+    SOUL_ASSERT(0, glfw_init_success, "GLFW initialization failed!");
+    glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
+    glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
+
+    SOUL_ASSERT(0, glfwVulkanSupported(), "Vulkan is not supported by glfw");
+
+    auto window = [&app_config]() -> NotNull<GLFWwindow*> {
+      if (app_config.screen_dimension) {
+        const ScreenDimension screen_dimension = *app_config.screen_dimension;
+        return glfwCreateWindow(
+          screen_dimension.width, screen_dimension.height, "Vulkan", nullptr, nullptr);
+      } else {
+        NotNull<const GLFWvidmode*> mode = glfwGetVideoMode(glfwGetPrimaryMonitor());
+        GLFWwindow* window =
+          glfwCreateWindow(mode->width, mode->height, "Vulkan", nullptr, nullptr);
+        glfwMaximizeWindow(window);
+        return window;
+      }
+    }();
+    glfwSetWindowUserPointer(window, window_data);
+    glfwSetFramebufferSizeCallback(window, glfw_framebuffer_size_callback);
+    return window;
+  }
+} // namespace
+
+RuntimeInitializer::RuntimeInitializer(const soul::runtime::Config& config)
+{
+  SOUL_PROFILE_THREAD_SET_NAME("Main Thread");
+
+  runtime::init(config);
+};
 
 App::App(const AppConfig& app_config)
     : malloc_allocator_("Default Allocator"),
@@ -47,40 +89,14 @@ App::App(const AppConfig& app_config)
       linear_allocator_(
         "Main Thread Temporary Allocator", 10 * ONE_MEGABYTE, &proxy_page_allocator_),
       temp_allocator_(&linear_allocator_, runtime::TempProxy::Config()),
+      runtime_initializer_({0, 4096, &temp_allocator_, 20 * ONE_MEGABYTE, &default_allocator_}),
+      window_(init_glfw_and_create_window(app_config, &window_data_)),
+      wsi_(default_allocator_.create<gpu::GLFWWsi>(window_).unwrap()),
+      gpu_system_(default_allocator_.create<gpu::System>(&default_allocator_).unwrap()),
       app_config_(app_config),
       camera_man_(
         {0.1f, 0.01f, vec3f(0.0f, 1.0f, 0.0f)}, vec3f(0, 0, 1.0f), vec3f(0, 0, 0), vec3f(0, 1, 0))
 {
-  SOUL_PROFILE_THREAD_SET_NAME("Main Thread");
-
-  runtime::init({0, 4096, &temp_allocator_, 20 * ONE_MEGABYTE, &default_allocator_});
-
-  glfwSetErrorCallback(glfw_print_error_callback);
-  const bool glfw_init_success = glfwInit();
-  SOUL_ASSERT(0, glfw_init_success, "GLFW initialization failed!");
-  glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-  glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
-  SOUL_LOG_INFO("GLFW Initialization sucessful");
-
-  SOUL_ASSERT(0, glfwVulkanSupported(), "Vulkan is not supported by glfw");
-
-  if (app_config.screen_dimension) {
-    const ScreenDimension screen_dimension = *app_config.screen_dimension;
-    window_ =
-      glfwCreateWindow(screen_dimension.width, screen_dimension.height, "Vulkan", nullptr, nullptr);
-  } else {
-    const GLFWvidmode* mode = glfwGetVideoMode(glfwGetPrimaryMonitor());
-    SOUL_ASSERT(0, mode != nullptr, "Mode cannot be nullpointer");
-    window_ = glfwCreateWindow(mode->width, mode->height, "Vulkan", nullptr, nullptr);
-    glfwMaximizeWindow(window_);
-  }
-  SOUL_LOG_INFO("GLFW window creation sucessful");
-  wsi_ = default_allocator_.create<gpu::GLFWWsi>(window_);
-
-  glfwSetWindowUserPointer(window_, &window_data_);
-  glfwSetFramebufferSizeCallback(window_, glfw_framebuffer_size_callback);
-
-  gpu_system_ = default_allocator_.create<gpu::System>(runtime::get_context_allocator());
   const gpu::System::Config config = {
     .wsi = wsi_, .max_frame_in_flight = 3, .thread_count = runtime::get_thread_count()};
 
@@ -95,6 +111,9 @@ App::App(const AppConfig& app_config)
   unsigned char* font_pixels;
   io.Fonts->GetTexDataAsRGBA32(&font_pixels, &width, &height);
 
+  if (runtime::get_context_allocator() != &default_allocator_) {
+    std::cout << "Context allocator is null" << std::endl;
+  }
   if (app_config.enable_imgui) {
     imgui_render_graph_pass_ =
       runtime::get_context_allocator()->create<ImGuiRenderGraphPass>(gpu_system_);
@@ -104,7 +123,7 @@ App::App(const AppConfig& app_config)
 App::~App()
 {
   if (app_config_.enable_imgui) {
-    runtime::get_context_allocator()->destroy(imgui_render_graph_pass_);
+    runtime::get_context_allocator()->destroy(NotNull(imgui_render_graph_pass_));
   }
   default_allocator_.destroy(gpu_system_);
   default_allocator_.destroy(wsi_);

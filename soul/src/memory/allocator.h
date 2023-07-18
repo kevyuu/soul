@@ -1,5 +1,7 @@
 #pragma once
 
+#include "core/not_null.h"
+#include "core/option.h"
 #include "core/panic.h"
 #include "core/type.h"
 
@@ -77,14 +79,14 @@ namespace soul::memory
 
     template <typename Type, typename... Args>
     [[nodiscard]]
-    auto create(Args&&... args) -> Type*
+    auto create(Args&&... args) -> MaybeNull<Type*>
     {
       Allocation allocation = try_allocate(sizeof(Type), alignof(Type), "untagged");
       return allocation.addr ? new (allocation.addr) Type(std::forward<Args>(args)...) : nullptr;
     }
 
     template <typename Type>
-    void destroy(Type* ptr)
+    void destroy(NotNull<Type*> ptr)
     {
       SOUL_ASSERT(0, ptr != nullptr, "");
       if constexpr (!std::is_trivially_destructible_v<Type>) {

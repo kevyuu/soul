@@ -3,6 +3,7 @@
 #include <optional>
 
 #include "gpu/render_graph.h"
+#include "runtime/data.h"
 
 struct GLFWwindow;
 class ImGuiRenderGraphPass;
@@ -33,6 +34,10 @@ struct WindowData {
   bool resized = false;
 };
 
+struct RuntimeInitializer {
+  explicit RuntimeInitializer(const soul::runtime::Config& config);
+};
+
 class App
 {
 public:
@@ -58,12 +63,13 @@ private:
     proxy_page_allocator_;
   soul::memory::LinearAllocator linear_allocator_;
   soul::runtime::TempAllocator temp_allocator_;
+  RuntimeInitializer runtime_initializer_;
 
-  GLFWwindow* window_ = nullptr;
+  WindowData window_data_;
+  soul::NotNull<GLFWwindow*> window_;
   ImGuiRenderGraphPass* imgui_render_graph_pass_ = nullptr;
 
-  soul::gpu::GLFWWsi* wsi_ = nullptr;
-  WindowData window_data_;
+  soul::NotNull<soul::gpu::GLFWWsi*> wsi_;
 
   const AppConfig app_config_;
   usize frame_index_ = 0;
@@ -76,7 +82,7 @@ private:
   virtual auto handle_input() -> void {}
 
 protected:
-  soul::gpu::System* gpu_system_ = nullptr;
+  soul::NotNull<soul::gpu::System*> gpu_system_;
   soul::gpu::GPUProperties gpu_properties_ = {};
   CameraManipulator camera_man_;
 };

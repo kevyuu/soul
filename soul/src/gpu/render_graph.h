@@ -728,11 +728,14 @@ namespace soul::gpu
       static_assert(pass_executable<Executable, Parameter, pipeline_flags>);
 
       using Node = PassNode<pipeline_flags, Parameter, Executable>;
-      auto node = allocator_->create<Node>(name, queue_type, std::forward<Executable>(execute));
-      pass_nodes_.push_back(node);
-      RGDependencyBuilder<pipeline_flags> builder(PassNodeID(pass_nodes_.size() - 1), *node, *this);
-      setup(node->get_parameter(), builder);
-      return *node;
+      auto node_ptr =
+        allocator_->create<Node>(name, queue_type, std::forward<Executable>(execute)).unwrap();
+      auto node_base_ptr = NotNull<PassBaseNode*>(node_ptr);
+      pass_nodes_.push_back(node_base_ptr);
+      RGDependencyBuilder<pipeline_flags> builder(
+        PassNodeID(pass_nodes_.size() - 1), *node_ptr, *this);
+      setup(node_ptr->get_parameter(), builder);
+      return *node_ptr;
     }
 
     template <typename Parameter, typename Setup, typename Executable>
@@ -747,15 +750,17 @@ namespace soul::gpu
 
       constexpr auto pipeline_flags = PipelineFlags{PipelineType::RASTER};
       using Node = PassNode<pipeline_flags, Parameter, Executable>;
-      auto* node =
-        allocator_->create<Node>(name, QueueType::GRAPHIC, std::forward<Executable>(execute));
-      pass_nodes_.push_back(node);
+      const auto node_ptr =
+        allocator_->create<Node>(name, QueueType::GRAPHIC, std::forward<Executable>(execute))
+          .unwrap();
+      const auto node_base_ptr = NotNull<PassBaseNode*>(node_ptr);
+      pass_nodes_.push_back(node_base_ptr);
       const auto pass_node_id = PassNodeID(pass_nodes_.size() - 1);
-      RGDependencyBuilder<pipeline_flags> builder(pass_node_id, *node, *this);
+      RGDependencyBuilder<pipeline_flags> builder(pass_node_id, *node_ptr, *this);
       builder.set_render_target(render_target);
-      setup(node->get_parameter(), builder);
+      setup(node_ptr->get_parameter(), builder);
 
-      return *node;
+      return *node_ptr;
     }
 
     template <typename Parameter, typename Setup, typename Executable>
@@ -799,7 +804,7 @@ namespace soul::gpu
     auto import_blas_group(const char* name, BlasGroupID blas_group_id) -> BlasGroupNodeID;
 
     [[nodiscard]]
-    auto get_pass_nodes() const -> const Vector<PassBaseNode*>&
+    auto get_pass_nodes() const -> const Vector<NotNull<PassBaseNode*>>&
     {
       return pass_nodes_;
     }
@@ -846,7 +851,7 @@ namespace soul::gpu
     auto get_buffer_desc(BufferNodeID node_id, const System& gpu_system) const -> RGBufferDesc;
 
   private:
-    Vector<PassBaseNode*> pass_nodes_;
+    Vector<NotNull<PassBaseNode*>> pass_nodes_;
 
     Vector<impl::ResourceNode> resource_nodes_;
 

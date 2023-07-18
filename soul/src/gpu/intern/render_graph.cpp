@@ -116,7 +116,7 @@ namespace soul::gpu
 
   RenderGraph::~RenderGraph()
   {
-    for (auto* pass_node : pass_nodes_) {
+    for (auto pass_node : pass_nodes_) {
       allocator_->destroy(pass_node);
     }
   }
