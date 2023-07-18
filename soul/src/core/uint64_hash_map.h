@@ -3,6 +3,7 @@
 #include "core/config.h"
 #include "core/panic.h"
 #include "core/type.h"
+#include "memory/allocator.h"
 
 namespace soul
 {
@@ -91,6 +92,7 @@ namespace soul
       SOUL_ASSERT(0, max_dib_ == 0, "");
     }
 
+    [[nodiscard]]
     auto find_index(u64 key) const -> usize
     {
       const u32 baseIndex = key % capacity_;
@@ -172,11 +174,12 @@ namespace soul
   };
 
   template <typename T>
-  UInt64HashMap<T>::UInt64HashMap(const UInt64HashMap& other) : allocator_(other.allocator_)
+  UInt64HashMap<T>::UInt64HashMap(const UInt64HashMap& other)
+      : allocator_(other.allocator_),
+        size_(other.size()),
+        capacity_(other.capacity()),
+        max_dib_(other.max_dib_)
   {
-    capacity_ = other.capacity();
-    size_ = other.size();
-    max_dib_ = other.max_dib_;
 
     indexes_ = static_cast<Index*>(allocator_->allocate(capacity_ * sizeof(Index), alignof(Index)));
     memcpy(indexes_, other.indexes_, sizeof(Index) * capacity_);
@@ -195,14 +198,13 @@ namespace soul
 
   template <typename T>
   UInt64HashMap<T>::UInt64HashMap(UInt64HashMap&& other) noexcept
+      : allocator_(std::move(other.allocator_)),
+        indexes_(std::move(other.indexes_)),
+        values_(std::move(other.values_)),
+        size_(std::move(other.size_)),
+        capacity_(std::move(other.capacity_)),
+        max_dib_(std::move(other.max_dib_))
   {
-    indexes_ = std::move(other.indexes_);
-    values_ = std::move(other.values_);
-    size_ = std::move(other.size_);
-    capacity_ = std::move(other.capacity_);
-    max_dib_ = std::move(other.max_dib_);
-    allocator_ = std::move(other.allocator_);
-
     other.indexes_ = nullptr;
     other.values_ = nullptr;
     other.size_ = 0;
