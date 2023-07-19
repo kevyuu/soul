@@ -3,7 +3,6 @@
 #include <cstddef>
 #include <cstdint>
 #include <limits>
-#include <tl/expected.hpp>
 
 #include "glm/vec2.hpp"
 #include "glm/vec3.hpp"
