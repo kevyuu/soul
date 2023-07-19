@@ -1,3 +1,7 @@
+// NOLINTBEGIN(hicpp-signed-bitwise)
+// NOLINTBEGIN(cppcoreguidelines-init-variables)
+// NOLINTBEGIN(readability-implicit-bool-conversion)
+
 #include <cstddef>
 #include <limits>
 #include <random>
@@ -16,6 +20,7 @@
 #include "gpu/intern/render_graph_execution.h"
 #include "gpu/render_graph.h"
 #include "gpu/system.h"
+#include "gpu/type.h"
 #include "math/math.h"
 #include "memory/allocator.h"
 #include "runtime/scope_allocator.h"
@@ -152,46 +157,114 @@ namespace soul::gpu
     wrl::ComPtr<IDxcIncludeHandler> default_include_handler;
   };
 
-  static auto pick_surface_extent(
-    const VkSurfaceCapabilitiesKHR capabilities, const vec2ui32 dimension) -> VkExtent2D
+  namespace
   {
-    SOUL_LOG_INFO("Picking vulkan swap extent");
-    if (capabilities.currentExtent.width != std::numeric_limits<uint32_t>::max()) {
-      SOUL_LOG_INFO(
-        "vulkanPickSwapExtent | Extent = {} {}",
-        capabilities.currentExtent.width,
-        capabilities.currentExtent.height);
-      return capabilities.currentExtent;
-    }
-    return {
-      .width = std::max(
-        capabilities.minImageExtent.width,
-        std::min(capabilities.maxImageExtent.width, dimension.x)),
-      .height = std::max(
-        capabilities.minImageExtent.height,
-        std::min(capabilities.maxImageExtent.height, dimension.y))};
-  };
-
-  static auto pick_surface_format(VkPhysicalDevice physical_device, VkSurfaceKHR surface)
-    -> VkSurfaceFormatKHR
-  {
-    runtime::ScopeAllocator<> scope_allocator("GPU::System::init::pickSurfaceFormat");
-    SOUL_LOG_INFO("Picking surface format.");
-    Vector<VkSurfaceFormatKHR> formats(&scope_allocator);
-    u32 format_count;
-    vkGetPhysicalDeviceSurfaceFormatsKHR(physical_device, surface, &format_count, nullptr);
-    SOUL_ASSERT(0, format_count != 0, "Surface format count is zero!");
-    formats.resize(format_count);
-    vkGetPhysicalDeviceSurfaceFormatsKHR(physical_device, surface, &format_count, formats.data());
-    for (const VkSurfaceFormatKHR surface_format : formats) {
-      if (
-        surface_format.format == VK_FORMAT_B8G8R8A8_UNORM &&
-        surface_format.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
-        return surface_format;
+    auto pick_surface_extent(const VkSurfaceCapabilitiesKHR capabilities, const vec2ui32 dimension)
+      -> VkExtent2D
+    {
+      SOUL_LOG_INFO("Picking vulkan swap extent");
+      if (capabilities.currentExtent.width != std::numeric_limits<uint32_t>::max()) {
+        SOUL_LOG_INFO(
+          "vulkanPickSwapExtent | Extent = {} {}",
+          capabilities.currentExtent.width,
+          capabilities.currentExtent.height);
+        return capabilities.currentExtent;
       }
+      return {
+        .width = std::max(
+          capabilities.minImageExtent.width,
+          std::min(capabilities.maxImageExtent.width, dimension.x)),
+        .height = std::max(
+          capabilities.minImageExtent.height,
+          std::min(capabilities.maxImageExtent.height, dimension.y))};
+    };
+
+    auto pick_surface_format(VkPhysicalDevice physical_device, VkSurfaceKHR surface)
+      -> VkSurfaceFormatKHR
+    {
+      runtime::ScopeAllocator<> scope_allocator("GPU::System::init::pickSurfaceFormat");
+      SOUL_LOG_INFO("Picking surface format.");
+      Vector<VkSurfaceFormatKHR> formats(&scope_allocator);
+      u32 format_count;
+      vkGetPhysicalDeviceSurfaceFormatsKHR(physical_device, surface, &format_count, nullptr);
+      SOUL_ASSERT(0, format_count != 0, "Surface format count is zero!");
+      formats.resize(format_count);
+      vkGetPhysicalDeviceSurfaceFormatsKHR(physical_device, surface, &format_count, formats.data());
+      for (const VkSurfaceFormatKHR surface_format : formats) {
+        if (
+          surface_format.format == VK_FORMAT_B8G8R8A8_UNORM &&
+          surface_format.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
+          return surface_format;
+        }
+      }
+      return formats[0];
+    };
+
+    auto vma_alloc_callback(
+      void* user_data,
+      const size_t size,
+      const size_t alignment,
+      VkSystemAllocationScope /* allocation_scope */) -> void*
+    {
+      auto* const allocator = static_cast<memory::Allocator*>(user_data);
+      return allocator->allocate(size, alignment);
     }
-    return formats[0];
-  };
+
+    auto vma_reallocation_callback(
+      void* user_data,
+      void* addr,
+      const size_t size,
+      const size_t alignment,
+      VkSystemAllocationScope /* scope */) -> void*
+    {
+      auto* const allocator = static_cast<memory::Allocator*>(user_data);
+
+      if (addr != nullptr) {
+        allocator->deallocate(addr);
+      }
+      return allocator->allocate(size, alignment);
+    }
+
+    auto vma_free_callback(void* user_data, void* addr) -> void
+    {
+      if (addr == nullptr) {
+        return;
+      }
+      auto* const allocator = static_cast<memory::Allocator*>(user_data);
+      allocator->deallocate(addr);
+    }
+
+    auto VKAPI_CALL debug_callback(
+      const VkDebugUtilsMessageSeverityFlagBitsEXT message_severity,
+      [[maybe_unused]] VkDebugUtilsMessageTypeFlagsEXT message_type,
+      const VkDebugUtilsMessengerCallbackDataEXT* callback_data,
+      void* /* user_data */) -> VkBool32
+    {
+      switch (message_severity) {
+      case VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT: {
+        break;
+      }
+      case VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT: {
+        SOUL_LOG_INFO("VkDebugUtils: {}", callback_data->pMessage);
+        break;
+      }
+      case VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT: {
+        SOUL_LOG_WARN("VkDebugUtils: {}", callback_data->pMessage);
+        break;
+      }
+      case VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT: {
+        SOUL_LOG_ERROR("VkDebugUtils: {}", callback_data->pMessage);
+        SOUL_PANIC("Vulkan Error!");
+        break;
+      }
+      case VK_DEBUG_UTILS_MESSAGE_SEVERITY_FLAG_BITS_MAX_ENUM_EXT: {
+        SOUL_NOT_IMPLEMENTED();
+        break;
+      }
+      }
+      return VK_FALSE;
+    }
+  } // namespace
 
   auto create_dxc_session() -> DxcSession
   {
@@ -227,71 +300,6 @@ namespace soul::gpu
   {
     static DxcSession dxc_global_session = create_dxc_session();
     return &dxc_global_session;
-  }
-
-  static auto vma_alloc_callback(
-    void* user_data,
-    const size_t size,
-    const size_t alignment,
-    VkSystemAllocationScope allocation_scope) -> void*
-  {
-    const auto allocator = static_cast<memory::Allocator*>(user_data);
-    return allocator->allocate(size, alignment);
-  }
-
-  static auto vma_reallocation_callback(
-    void* user_data,
-    void* addr,
-    const size_t size,
-    const size_t alignment,
-    VkSystemAllocationScope scope) -> void*
-  {
-    const auto allocator = static_cast<memory::Allocator*>(user_data);
-
-    if (addr != nullptr) {
-      allocator->deallocate(addr);
-    }
-    return allocator->allocate(size, alignment);
-  }
-
-  static auto vma_free_callback(void* user_data, void* addr) -> void
-  {
-    if (addr == nullptr) {
-      return;
-    }
-    const auto allocator = static_cast<memory::Allocator*>(user_data);
-    allocator->deallocate(addr);
-  }
-
-  static auto VKAPI_CALL debug_callback(
-    const VkDebugUtilsMessageSeverityFlagBitsEXT message_severity,
-    [[maybe_unused]] VkDebugUtilsMessageTypeFlagsEXT message_type,
-    const VkDebugUtilsMessengerCallbackDataEXT* callback_data,
-    void* user_data) -> VkBool32
-  {
-    switch (message_severity) {
-    case VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT: {
-      break;
-    }
-    case VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT: {
-      SOUL_LOG_INFO("VkDebugUtils: {}", callback_data->pMessage);
-      break;
-    }
-    case VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT: {
-      SOUL_LOG_WARN("VkDebugUtils: {}", callback_data->pMessage);
-      break;
-    }
-    case VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT: {
-      SOUL_LOG_ERROR("VkDebugUtils: {}", callback_data->pMessage);
-      SOUL_PANIC("Vulkan Error!");
-      break;
-    }
-    case VK_DEBUG_UTILS_MESSAGE_SEVERITY_FLAG_BITS_MAX_ENUM_EXT: {
-      SOUL_NOT_IMPLEMENTED();
-      break;
-    }
-    }
-    return VK_FALSE;
   }
 
   auto System::init(const Config& config) -> void
@@ -462,7 +470,7 @@ namespace soul::gpu
       db->physical_device = VK_NULL_HANDLE;
       auto best_score = -1;
 
-      FlagMap<QueueType, u32> queue_family_indices;
+      FlagMap<QueueType, u32> queue_family_indices{};
 
       for (VkPhysicalDevice device : devices) {
 
@@ -1088,14 +1096,15 @@ namespace soul::gpu
     }
 
     if (desc.name != nullptr) {
-      char tex_name[1024];
-      sprintf(tex_name, "%s(%d)", desc.name, _db.frame_counter);
+      runtime::ScopeAllocator scope_allocator("Texture name");
+      const auto tex_name = CString::with_capacity_then_format(
+        1024, &scope_allocator, "{}({})", desc.name, _db.frame_counter);
       const VkDebugUtilsObjectNameInfoEXT image_name_info = {
         VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
         nullptr,
         VK_OBJECT_TYPE_IMAGE,
         reinterpret_cast<u64>(texture.vk_handle),
-        tex_name,
+        tex_name.data(),
       };
 
       vkSetDebugUtilsObjectNameEXT(_db.device, &image_name_info);
@@ -1109,8 +1118,7 @@ namespace soul::gpu
   {
     SOUL_ASSERT(0, load_desc.data != nullptr, "");
     SOUL_ASSERT(0, load_desc.data_size != 0, "");
-    SOUL_ASSERT(0, load_desc.regions != nullptr, "");
-    SOUL_ASSERT(0, load_desc.region_count != 0, "");
+    SOUL_ASSERT(0, load_desc.regions.size() != 0, "");
 
     TextureDesc new_desc = desc;
     new_desc.usage_flags |= {TextureUsage::TRANSFER_DST};
@@ -1145,8 +1153,7 @@ namespace soul::gpu
     return texture_id;
   }
 
-  auto System::flush_texture(const TextureID texture_id, const TextureUsageFlags usage_flags)
-    -> void
+  void System::flush_texture(const TextureID texture_id, const TextureUsageFlags usage_flags)
   {
     get_frame_context().gpu_resource_finalizer.finalize(get_texture(texture_id), usage_flags);
   }
@@ -1183,7 +1190,7 @@ namespace soul::gpu
     get_frame_context().garbages.textures.push_back(id);
   }
 
-  auto System::get_texture(const TextureID texture_id) -> Texture&
+  auto System::get_texture(const TextureID texture_id) -> Texture& // NOLINT
   {
     return *_db.texture_pool.get(texture_id.id);
   }
@@ -1653,7 +1660,7 @@ namespace soul::gpu
 
   auto System::request_pipeline_state(
     const GraphicPipelineStateDesc& desc,
-    VkRenderPass renderPass,
+    VkRenderPass render_pass,
     const TextureSampleCount sample_count) -> PipelineStateID
   {
     // TODO(kevinyu): Do we need to hash renderPass as well?
@@ -1668,11 +1675,11 @@ namespace soul::gpu
                                            const TextureSampleCount sample_count) -> PipelineState {
       runtime::ScopeAllocator<> scope_allocator("create_graphic_pipeline_state");
 
-      Program* program = get_program_ptr(desc.program_id);
+      const Program& program = get_program(desc.program_id);
 
       Vector<VkPipelineShaderStageCreateInfo> shader_stage_infos(&scope_allocator);
 
-      for (const auto& shader : program->shaders) {
+      for (const auto& shader : program.shaders) {
         if (shader.vk_handle == VK_NULL_HANDLE) {
           continue;
         }
@@ -1745,7 +1752,7 @@ namespace soul::gpu
       VkVertexInputAttributeDescription attr_descs[MAX_INPUT_PER_SHADER];
       u32 attr_desc_count = 0;
       for (u32 i = 0; i < MAX_INPUT_PER_SHADER; i++) {
-        auto& input_attribute = desc.input_attributes[i];
+        const auto& input_attribute = desc.input_attributes[i];
         if (input_attribute.type == VertexElementType::DEFAULT) {
           continue;
         }
@@ -1846,7 +1853,7 @@ namespace soul::gpu
       return {pipeline, VK_PIPELINE_BIND_POINT_GRAPHICS, desc.program_id};
     };
     return PipelineStateID(_db.pipeline_state_cache.create(
-      key, create_graphic_pipeline_state, desc, renderPass, sample_count));
+      key, create_graphic_pipeline_state, desc, render_pass, sample_count));
   }
 
   auto System::request_pipeline_state(const ComputePipelineStateDesc& desc) -> PipelineStateID
@@ -1858,10 +1865,10 @@ namespace soul::gpu
 
     auto create_compute_pipeline_state =
       [this](const ComputePipelineStateDesc& desc) -> PipelineState {
-      const Program* program = get_program_ptr(desc.program_id);
+      const auto& program = get_program(desc.program_id);
 
-      SOUL_ASSERT(0, program->shaders.size() == 1, "");
-      const Shader& compute_shader = program->shaders[0];
+      SOUL_ASSERT(0, program.shaders.size() == 1, "");
+      const Shader& compute_shader = program.shaders[0];
       SOUL_ASSERT(0, compute_shader.stage == ShaderStage::COMPUTE, "");
       const VkPipelineShaderStageCreateInfo compute_shader_stage_create_info = {
         .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
@@ -1905,6 +1912,7 @@ namespace soul::gpu
 
   auto System::create_program(const ProgramDesc& program_desc) -> expected<ProgramID, Error>
   {
+    SOUL_ASSERT(0, program_desc.entry_points.size() != 0, "");
     runtime::ScopeAllocator<> scope_allocator("gpu::System::create_program(const ProgramDesc&");
 
     const auto program_id = ProgramID(_db.programs.create());
@@ -1914,13 +1922,13 @@ namespace soul::gpu
     auto* session = get_dxc_session();
 
     Vector<const CString*> shader_sources(&scope_allocator);
-    shader_sources.reserve(program_desc.source_count);
+    shader_sources.reserve(program_desc.sources.size());
     Vector<CString> shader_file_sources(&scope_allocator);
-    shader_file_sources.reserve(program_desc.source_count);
+    shader_file_sources.reserve(program_desc.sources.size());
 
-    for (auto& source : std::span(program_desc.sources, program_desc.source_count)) {
+    for (const auto& source : program_desc.sources) {
       if (std::holds_alternative<ShaderFile>(source)) {
-        const ShaderFile& shader_file = std::get<ShaderFile>(source);
+        const auto& shader_file = std::get<ShaderFile>(source);
         const std::filesystem::path& path = shader_file.path;
         const std::filesystem::path full_path = [&path, &program_desc]() -> std::filesystem::path {
           if (path.is_absolute()) {
@@ -1928,8 +1936,7 @@ namespace soul::gpu
               0, std::filesystem::exists(path), "%s does not exist", path.string().c_str());
             return canonical(path);
           }
-          for (const auto& search_path :
-               std::span(program_desc.search_paths, program_desc.search_path_count)) {
+          for (const auto& search_path : program_desc.search_paths) {
             auto full_path_candidate = search_path / path;
             if (exists(full_path_candidate)) {
               return canonical(full_path_candidate);
@@ -1942,7 +1949,7 @@ namespace soul::gpu
         shader_file_sources.push_back(util::load_file(full_path_str.c_str(), scope_allocator));
         shader_sources.push_back(&shader_file_sources.back());
       } else {
-        const ShaderString& shader_string = std::get<ShaderString>(source);
+        const auto& shader_string = std::get<ShaderString>(source);
         shader_sources.push_back(&shader_string.source);
       }
     }
@@ -1977,8 +1984,7 @@ namespace soul::gpu
       SOUL_PANIC("Fail to create source blob");
     }
 
-    for (const auto& entry_point :
-         std::span(program_desc.entry_points, program_desc.entry_point_count)) {
+    for (const auto& entry_point : program_desc.entry_points) {
       const auto stage = entry_point.stage;
       const char* entry_point_name = entry_point.name;
       if (entry_point_name == nullptr) {
@@ -2004,12 +2010,13 @@ namespace soul::gpu
       const auto entry_point_name_size = strlen(entry_point.name) + 1;
       auto* entry_point_wide_chars = scope_allocator.allocate_array<wchar_t>(entry_point_name_size);
       size_t entry_point_out_size;
-      mbstowcs_s(
+      const auto result = mbstowcs_s(
         &entry_point_out_size,
         entry_point_wide_chars,
         entry_point_name_size,
         entry_point.name,
         entry_point_name_size);
+      SOUL_ASSERT(0, result != -1, "Invalid multibyte characters");
       arguments.push_back(L"-E");
       arguments.push_back(entry_point_wide_chars);
 
@@ -2025,12 +2032,13 @@ namespace soul::gpu
       arguments.push_back(L"-T");
       arguments.push_back(target_profile_map[stage]);
 
-      arguments.push_back(L"-I");
+      if (program_desc.search_paths.size() > 0) {
+        arguments.push_back(L"-I");
+      }
 
       std::vector<std::wstring> search_paths;
-      for (usize search_path_idx = 0; search_path_idx < program_desc.search_path_count;
-           search_path_idx++) {
-        search_paths.push_back(program_desc.search_paths[search_path_idx].wstring());
+      for (const auto& search_path : program_desc.search_paths) {
+        search_paths.push_back(search_path.wstring());
         arguments.push_back(search_paths.back().c_str());
       }
 
@@ -2060,7 +2068,7 @@ namespace soul::gpu
       if (
         SUCCEEDED(result_op->GetOutput(DXC_OUT_ERRORS, IID_PPV_ARGS(&pErrors), nullptr)) &&
         pErrors != nullptr && pErrors->GetStringLength() != 0) {
-        wprintf(L"Warnings and Errors:\n%S\n", pErrors->GetStringPointer());
+        wprintf(L"Warnings and Errors:\n%S\n", pErrors->GetStringPointer()); // NOLINT
       }
 
       // Get compilation result
@@ -2084,13 +2092,13 @@ namespace soul::gpu
     return program_id;
   }
 
-  auto System::get_program_ptr(const ProgramID program_id) -> Program*
+  auto System::get_program(ProgramID program_id) const -> const Program&
   {
     SOUL_ASSERT(0, program_id.is_valid(), "");
-    return &_db.programs[program_id.id];
+    return _db.programs[program_id.id];
   }
 
-  auto System::get_program(const ProgramID program_id) -> const Program&
+  auto System::get_program(ProgramID program_id) -> Program&
   {
     SOUL_ASSERT(0, program_id.is_valid(), "");
     return _db.programs[program_id.id];
@@ -2116,12 +2124,11 @@ namespace soul::gpu
     };
     sh_group_infos.push_back(sh_raygen_group_create_info);
 
-    for (u32 miss_group_id = 0; miss_group_id < shader_table_desc.miss_group_count;
-         miss_group_id++) {
+    for (const auto& miss_group : shader_table_desc.miss_groups) {
       const VkRayTracingShaderGroupCreateInfoKHR sh_group_create_info = {
         .sType = VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_KHR,
         .type = VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR,
-        .generalShader = shader_table_desc.miss_groups[miss_group_id].entry_point,
+        .generalShader = miss_group.entry_point,
         .closestHitShader = VK_SHADER_UNUSED_KHR,
         .anyHitShader = VK_SHADER_UNUSED_KHR,
         .intersectionShader = VK_SHADER_UNUSED_KHR,
@@ -2129,14 +2136,14 @@ namespace soul::gpu
       sh_group_infos.push_back(sh_group_create_info);
     }
 
-    for (u32 hit_group_id = 0; hit_group_id < shader_table_desc.hit_group_count; hit_group_id++) {
+    for (const auto hit_group : shader_table_desc.hit_groups) {
       const VkRayTracingShaderGroupCreateInfoKHR sh_group_create_info = {
         .sType = VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_KHR,
         .type = VK_RAY_TRACING_SHADER_GROUP_TYPE_TRIANGLES_HIT_GROUP_KHR,
         .generalShader = VK_SHADER_UNUSED_KHR,
-        .closestHitShader = shader_table_desc.hit_groups[hit_group_id].closest_hit_entry_point,
-        .anyHitShader = shader_table_desc.hit_groups[hit_group_id].any_hit_entry_point,
-        .intersectionShader = shader_table_desc.hit_groups[hit_group_id].intersection_entry_point,
+        .closestHitShader = hit_group.closest_hit_entry_point,
+        .anyHitShader = hit_group.any_hit_entry_point,
+        .intersectionShader = hit_group.intersection_entry_point,
       };
       sh_group_infos.push_back(sh_group_create_info);
     }
@@ -2181,7 +2188,7 @@ namespace soul::gpu
     }
 
     const auto total_group_count =
-      1 + shader_table_desc.miss_group_count + shader_table_desc.hit_group_count;
+      1 + shader_table_desc.miss_groups.size() + shader_table_desc.hit_groups.size();
 
     const auto handle_size = _db.ray_tracing_properties.shaderGroupHandleSize;
     const auto sbt_size = total_group_count * handle_size;
@@ -2196,15 +2203,13 @@ namespace soul::gpu
       util::align_up(handle_size, _db.ray_tracing_properties.shaderGroupHandleAlignment);
     const auto handle_base_alignment = _db.ray_tracing_properties.shaderGroupBaseAlignment;
 
-    FlagMap<ShaderGroup, usize> group_counts;
+    FlagMap<ShaderGroup, usize> group_counts = {};
     group_counts[ShaderGroup::RAYGEN] = 1;
-    group_counts[ShaderGroup::MISS] = shader_table_desc.miss_group_count;
-    group_counts[ShaderGroup::HIT] = shader_table_desc.hit_group_count;
+    group_counts[ShaderGroup::MISS] = shader_table_desc.miss_groups.size();
+    group_counts[ShaderGroup::HIT] = shader_table_desc.hit_groups.size();
     group_counts[ShaderGroup::CALLABLE] = 0;
 
-    FlagMap<ShaderGroup, usize> strides;
-
-    std::ranges::fill(strides, handle_size_aligned);
+    auto strides = FlagMap<ShaderGroup, usize>::init_fill(handle_size_aligned);
     strides[ShaderGroup::RAYGEN] = util::align_up(handle_size_aligned, handle_base_alignment);
 
     const auto group_names = FlagMap<ShaderGroup, const char*>::from_key_val_list({
@@ -2285,7 +2290,7 @@ namespace soul::gpu
       .addressModeU = vk_cast(desc.wrap_u),
       .addressModeV = vk_cast(desc.wrap_v),
       .addressModeW = vk_cast(desc.wrap_w),
-      .anisotropyEnable = desc.anisotropy_enable,
+      .anisotropyEnable = cast<VkBool32>(desc.anisotropy_enable),
       .maxAnisotropy = desc.max_anisotropy,
       .compareEnable = desc.compare_enable ? VK_TRUE : VK_FALSE,
       .compareOp = vk_cast(desc.compare_op),
@@ -2388,7 +2393,7 @@ namespace soul::gpu
     const u8 input_attachment_count = attachment_count - color_attachment_count;
 
     for (const auto resolve_attachment : key.resolve_attachments) {
-      if (resolve_attachment.flags & ATTACHMENT_ACTIVE_BIT) {
+      if ((resolve_attachment.flags & ATTACHMENT_ACTIVE_BIT) != 0) {
         VkAttachmentDescription& attachment = attachments[attachment_count];
         attachment.format = vk_cast(resolve_attachment.format);
         attachment.samples = vk_cast(resolve_attachment.sampleCount);
@@ -2424,7 +2429,7 @@ namespace soul::gpu
                                ? attachment_refs + color_attachment_count + input_attachment_count
                                : nullptr};
 
-    if (key.depth_attachment.flags & ATTACHMENT_ACTIVE_BIT) {
+    if ((key.depth_attachment.flags & ATTACHMENT_ACTIVE_BIT) != 0) {
       const auto flags = key.depth_attachment.flags;
       VkAttachmentDescription& attachment = attachments[attachment_count];
       attachment.format = vk_cast(key.depth_attachment.format);
@@ -2669,10 +2674,10 @@ namespace soul::gpu
     blas_list.pop_back();
   }
 
-  auto CommandQueue::init(VkDevice inDevice, u32 inFamilyIndex, u32 queue_index) -> void
+  auto CommandQueue::init(VkDevice device, u32 family_index, u32 queue_index) -> void
   {
-    device_ = inDevice;
-    family_index_ = inFamilyIndex;
+    device_ = device;
+    family_index_ = family_index;
     vkGetDeviceQueue(device_, family_index_, queue_index, &vk_handle_);
     init_timeline_semaphore();
   }
@@ -2703,7 +2708,7 @@ namespace soul::gpu
     wait_timeline_values_.push_back(0);
   }
 
-  auto CommandQueue::wait(TimelineSemaphore sync_counter, VkPipelineStageFlags wait_stages) -> void
+  auto CommandQueue::wait(TimelineSemaphore semaphore, VkPipelineStageFlags wait_stages) -> void
   {
     SOUL_ASSERT_MAIN_THREAD();
     SOUL_ASSERT(0, wait_stages != 0, "");
@@ -2712,9 +2717,9 @@ namespace soul::gpu
       flush();
     }
 
-    wait_semaphores_.push_back(sync_counter.vk_handle);
+    wait_semaphores_.push_back(semaphore.vk_handle);
     wait_stages_.push_back(wait_stages);
-    wait_timeline_values_.push_back(sync_counter.counter);
+    wait_timeline_values_.push_back(semaphore.counter);
   }
 
   auto CommandQueue::get_timeline_semaphore() -> TimelineSemaphore
@@ -2840,8 +2845,8 @@ namespace soul::gpu
       &render_graph,
       this,
       runtime::get_context_allocator(),
-      _db.queues,
-      get_frame_context().command_pools);
+      &_db.queues,
+      &get_frame_context().command_pools);
     execution.init();
     get_frame_context().gpu_resource_initializer.flush(_db.queues, *this);
     get_frame_context().gpu_resource_finalizer.flush(
@@ -3251,7 +3256,7 @@ namespace soul::gpu
       allocated_buffers_.push_back(cmd_buffer);
     }
 
-    const auto cmd_buffer = allocated_buffers_[count_];
+    VkCommandBuffer cmd_buffer = allocated_buffers_[count_];
     count_++;
     return cmd_buffer;
   }
@@ -3299,7 +3304,7 @@ namespace soul::gpu
 
   auto CommandPools::request_command_buffer(const QueueType queue_type) -> PrimaryCommandBuffer
   {
-    const auto cmd_buffer = primary_pools_[runtime::get_thread_id()][queue_type].request();
+    VkCommandBuffer cmd_buffer = primary_pools_[runtime::get_thread_id()][queue_type].request();
     const VkCommandBufferBeginInfo begin_info = {
       .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
       .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT};
@@ -3452,7 +3457,7 @@ namespace soul::gpu
         {},
       };
 
-      const auto transfer_command_buffer = get_transfer_command_buffer().get_vk_handle();
+      VkCommandBuffer transfer_command_buffer = get_transfer_command_buffer().get_vk_handle();
       vkCmdBeginDebugUtilsLabelEXT(transfer_command_buffer, &pass_label);
       vkCmdCopyBuffer(
         transfer_command_buffer, staging_buffer.vk_handle, buffer.vk_handle, 1, &copy_region);
@@ -3503,8 +3508,7 @@ namespace soul::gpu
       1,
       &before_transfer_barrier);
 
-    for (usize load_idx = 0; load_idx < load_desc.region_count; load_idx++) {
-      const TextureRegionUpdate& region_load = load_desc.regions[load_idx];
+    for (const auto region_load : load_desc.regions) {
 
       const VkBufferImageCopy copy_region = {
         .bufferOffset = region_load.buffer_offset,
@@ -3742,7 +3746,8 @@ namespace soul::gpu
     };
   }
 
-  auto GPUResourceInitializer::flush(CommandQueues& command_queues, System& gpu_system) -> void
+  auto GPUResourceInitializer::flush(CommandQueues& command_queues, System& /* gpu_system */)
+    -> void
   {
     SOUL_ASSERT_MAIN_THREAD();
     for (auto& thread_context : thread_contexts_) {
@@ -3866,7 +3871,7 @@ namespace soul::gpu
   }
 
   auto GPUResourceFinalizer::flush(
-    CommandPools& command_pools, CommandQueues& command_queues, System& gpu_system) -> void
+    CommandPools& command_pools, CommandQueues& command_queues, System& /* gpu_system */) -> void
   {
     SOUL_ASSERT_MAIN_THREAD();
     runtime::ScopeAllocator scope_allocator("Resource Finalizer Flush");
@@ -3957,3 +3962,6 @@ namespace soul::gpu
     std::memcpy(transform, &vk_transform, sizeof(transform));
   }
 } // namespace soul::gpu
+// NOLINTEND(readability-implicit-bool-conversion)
+// NOLINTEND(cppcoreguidelines-init-variables)
+// NOLINTEND(hicpp-signed-bitwise)

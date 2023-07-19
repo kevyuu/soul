@@ -159,11 +159,11 @@ namespace soul::gpu::impl
   {
   public:
     RenderGraphExecution(
-      const RenderGraph* render_graph,
-      System* system,
-      memory::Allocator* allocator,
-      CommandQueues& command_queues,
-      CommandPools& command_pools)
+      NotNull<const RenderGraph*> render_graph,
+      NotNull<System*> system,
+      NotNull<memory::Allocator*> allocator,
+      NotNull<CommandQueues*> command_queues,
+      NotNull<CommandPools*> command_pools)
         : render_graph_(render_graph),
           gpu_system_(system),
           command_queues_(command_queues),
@@ -225,13 +225,13 @@ namespace soul::gpu::impl
     auto get_blas_group_resource_info_index(BlasGroupNodeID node_id) const -> u32;
 
   private:
-    const RenderGraph* render_graph_;
-    System* gpu_system_;
+    NotNull<const RenderGraph*> render_graph_;
+    NotNull<System*> gpu_system_;
 
     FlagMap<QueueType, VkEvent> external_events_;
     FlagMap<QueueType, PipelineStageFlags> external_events_stage_flags_;
-    CommandQueues& command_queues_;
-    CommandPools& command_pools_;
+    NotNull<CommandQueues*> command_queues_;
+    NotNull<CommandPools*> command_pools_;
 
     Vector<BufferExecInfo> buffer_infos_;
     Slice<BufferExecInfo> internal_buffer_infos_;

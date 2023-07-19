@@ -1,6 +1,7 @@
 #include <random>
 #include "core/type.h"
 #include "gpu/gpu.h"
+#include "gpu/type.h"
 #include "math/math.h"
 
 #include "shaders/multithread_raster_type.hlsl"
@@ -128,15 +129,14 @@ public:
   {
     gpu::ShaderSource shader_source = gpu::ShaderFile("multithread_raster_sample.hlsl");
     std::filesystem::path search_path = "shaders/";
-    constexpr auto entry_points = std::to_array<gpu::ShaderEntryPoint>(
-      {{gpu::ShaderStage::VERTEX, "vs_main"}, {gpu::ShaderStage::FRAGMENT, "ps_main"}});
+    constexpr auto entry_points = soul::Array{
+      gpu::ShaderEntryPoint{gpu::ShaderStage::VERTEX, "vs_main"},
+      gpu::ShaderEntryPoint{gpu::ShaderStage::FRAGMENT, "ps_main"},
+    };
     const gpu::ProgramDesc program_desc = {
-      .search_path_count = 1,
-      .search_paths = &search_path,
-      .source_count = 1,
-      .sources = &shader_source,
-      .entry_point_count = entry_points.size(),
-      .entry_points = entry_points.data(),
+      .search_paths = u32cspan(&search_path, 1),
+      .sources = u32cspan(&shader_source, 1),
+      .entry_points = entry_points.cspan<u32>(),
     };
     auto result = gpu_system_->create_program(program_desc);
     if (!result) {

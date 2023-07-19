@@ -61,22 +61,38 @@ namespace soul::gpu::impl
   public:
     explicit BindlessDescriptorAllocator(
       memory::Allocator* allocator = runtime::get_context_allocator());
+
+    BindlessDescriptorAllocator(const BindlessDescriptorAllocator&) = delete;
+
+    BindlessDescriptorAllocator(BindlessDescriptorAllocator&&) noexcept = delete;
+
+    auto operator=(const BindlessDescriptorAllocator&) noexcept
+      -> BindlessDescriptorAllocator = delete;
+
+    auto operator=(BindlessDescriptorAllocator&&) noexcept -> BindlessDescriptorAllocator = delete;
+
     ~BindlessDescriptorAllocator();
+
     auto init(VkDevice device) -> void;
 
     auto create_storage_buffer_descriptor(VkBuffer buffer) -> DescriptorID;
+
     auto destroy_storage_buffer_descriptor(DescriptorID id) -> void;
 
     auto create_sampled_image_descriptor(VkImageView image_view) -> DescriptorID;
+
     auto destroy_sampled_image_descriptor(DescriptorID id) -> void;
 
     auto create_storage_image_descriptor(VkImageView image_view) -> DescriptorID;
+
     auto destroy_storage_image_descriptor(DescriptorID id) -> void;
 
     auto create_sampler_descriptor(VkSampler sampler) -> DescriptorID;
+
     auto destroy_sampler_descriptor(DescriptorID id) -> void;
 
     auto create_as_descriptor(VkAccelerationStructureKHR as) -> DescriptorID;
+
     auto destroy_as_descriptor(DescriptorID id) -> void;
 
     auto get_pipeline_layout() const -> VkPipelineLayout { return pipeline_layout_; }

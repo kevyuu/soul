@@ -14,8 +14,8 @@ namespace soul::gpu::impl
 
   auto RenderCompiler::bind_descriptor_sets(VkPipelineBindPoint pipeline_bind_point) -> void
   {
-    const auto pipeline_layout = gpu_system_.get_bindless_pipeline_layout();
-    const auto bindless_descriptor_sets = gpu_system_.get_bindless_descriptor_sets();
+    const auto pipeline_layout = gpu_system_->get_bindless_pipeline_layout();
+    const auto bindless_descriptor_sets = gpu_system_->get_bindless_descriptor_sets();
     vkCmdBindDescriptorSets(
       command_buffer_,
       pipeline_bind_point,
@@ -74,7 +74,7 @@ namespace soul::gpu::impl
       if (vert_buf_id.is_null()) {
         continue;
       }
-      const Buffer& vertex_buffer = gpu_system_.get_buffer(vert_buf_id);
+      const Buffer& vertex_buffer = gpu_system_->get_buffer(vert_buf_id);
       SOUL_ASSERT(0, vertex_buffer.desc.usage_flags.test(BufferUsage::VERTEX), "");
       VkDeviceSize offsets[] = {0};
       vkCmdBindVertexBuffers(command_buffer_, vert_buf_idx, 1, &vertex_buffer.vk_handle, offsets);
@@ -98,13 +98,13 @@ namespace soul::gpu::impl
       if (vert_buf_id.is_null()) {
         continue;
       }
-      const Buffer& vertex_buffer = gpu_system_.get_buffer(vert_buf_id);
+      const Buffer& vertex_buffer = gpu_system_->get_buffer(vert_buf_id);
       SOUL_ASSERT(0, vertex_buffer.desc.usage_flags.test(BufferUsage::VERTEX), "");
       VkDeviceSize offsets[] = {0};
       vkCmdBindVertexBuffers(command_buffer_, vert_buf_idx, 1, &vertex_buffer.vk_handle, offsets);
     }
 
-    const Buffer& index_buffer = gpu_system_.get_buffer(command.index_buffer_id);
+    const Buffer& index_buffer = gpu_system_->get_buffer(command.index_buffer_id);
     SOUL_ASSERT(0, index_buffer.desc.usage_flags.test(gpu::BufferUsage::INDEX), "");
 
     vkCmdBindIndexBuffer(
@@ -116,11 +116,11 @@ namespace soul::gpu::impl
   auto RenderCompiler::compile_command(const RenderCommandUpdateTexture& command) -> void
   {
     runtime::ScopeAllocator scope_allocator("compile_command::RenderCommandUpdateTexture");
-    const Texture& dst_texture = gpu_system_.get_texture(command.dst_texture);
+    const Texture& dst_texture = gpu_system_->get_texture(command.dst_texture);
 
-    const auto gpu_allocator = gpu_system_.get_gpu_allocator();
-    const BufferID staging_buffer_id = gpu_system_.create_staging_buffer(command.data_size);
-    const Buffer& staging_buffer = gpu_system_.get_buffer(staging_buffer_id);
+    const auto gpu_allocator = gpu_system_->get_gpu_allocator();
+    const BufferID staging_buffer_id = gpu_system_->create_staging_buffer(command.data_size);
+    const Buffer& staging_buffer = gpu_system_->get_buffer(staging_buffer_id);
     void* mapped_data;
     vmaMapMemory(gpu_allocator, staging_buffer.allocation, &mapped_data);
     memcpy(mapped_data, command.data, command.data_size);
@@ -151,8 +151,8 @@ namespace soul::gpu::impl
         }};
     };
 
-    const auto buffer_image_copies = Vector<VkBufferImageCopy>::transform(
-      std::span(command.regions, command.region_count), get_buffer_image_copy, scope_allocator);
+    const auto buffer_image_copies =
+      Vector<VkBufferImageCopy>::transform(command.regions, get_buffer_image_copy, scope_allocator);
 
     vkCmdCopyBufferToImage(
       command_buffer_,
@@ -166,8 +166,8 @@ namespace soul::gpu::impl
   auto RenderCompiler::compile_command(const RenderCommandCopyTexture& command) -> void
   {
     SOUL_PROFILE_ZONE();
-    const auto& src_texture = gpu_system_.get_texture(command.src_texture);
-    const auto& dst_texture = gpu_system_.get_texture(command.dst_texture);
+    const auto& src_texture = gpu_system_->get_texture(command.src_texture);
+    const auto& dst_texture = gpu_system_->get_texture(command.dst_texture);
 
     const auto src_aspect_mask = vk_cast_format_to_aspect_flags(src_texture.desc.format);
     const auto dst_aspect_mask = vk_cast_format_to_aspect_flags(dst_texture.desc.format);
@@ -183,8 +183,8 @@ namespace soul::gpu::impl
         .dstOffset = get_vk_offset_3d(copy_region.dst_offset),
         .extent = get_vk_extent_3d(copy_region.extent)};
     };
-    const auto image_copies = Vector<VkImageCopy>::transform(
-      std::span(command.regions, command.region_count), to_vk_image_copy, scope_allocator);
+    const auto image_copies =
+      Vector<VkImageCopy>::transform(command.regions, to_vk_image_copy, scope_allocator);
 
     vkCmdCopyImage(
       command_buffer_,
@@ -192,19 +192,19 @@ namespace soul::gpu::impl
       VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
       dst_texture.vk_handle,
       VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-      command.region_count,
+      command.regions.size(),
       image_copies.data());
   }
 
   auto RenderCompiler::compile_command(const RenderCommandUpdateBuffer& command) -> void
   {
-    const auto gpu_allocator = gpu_system_.get_gpu_allocator();
-    const auto& dst_buffer = gpu_system_.get_buffer(command.dst_buffer);
+    const auto gpu_allocator = gpu_system_->get_gpu_allocator();
+    const auto& dst_buffer = gpu_system_->get_buffer(command.dst_buffer);
     if (dst_buffer.memory_property_flags & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) {
       SOUL_ASSERT(0, dst_buffer.memory_property_flags & VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, "");
       void* mapped_data;
       vmaMapMemory(gpu_allocator, dst_buffer.allocation, &mapped_data);
-      for (usize region_idx = 0; region_idx < command.region_count; region_idx++) {
+      for (usize region_idx = 0; region_idx < command.regions.size(); region_idx++) {
         const auto& region_load = command.regions[region_idx];
         memcpy(
           memory::util::pointer_add(mapped_data, region_load.dst_offset),
@@ -213,10 +213,9 @@ namespace soul::gpu::impl
       }
       vmaUnmapMemory(gpu_allocator, dst_buffer.allocation);
     } else {
-      for (usize region_idx = 0; region_idx < command.region_count; region_idx++) {
-        const auto& region_load = command.regions[region_idx];
-        const BufferID staging_buffer_id = gpu_system_.create_staging_buffer(region_load.size);
-        const Buffer& staging_buffer = gpu_system_.get_buffer(staging_buffer_id);
+      for (const auto& region_load : command.regions) {
+        const BufferID staging_buffer_id = gpu_system_->create_staging_buffer(region_load.size);
+        const Buffer& staging_buffer = gpu_system_->get_buffer(staging_buffer_id);
         void* mapped_data;
         vmaMapMemory(gpu_allocator, staging_buffer.allocation, &mapped_data);
         memcpy(
@@ -235,11 +234,11 @@ namespace soul::gpu::impl
   auto RenderCompiler::compile_command(const RenderCommandCopyBuffer& command) -> void
   {
     runtime::ScopeAllocator<> scope_allocator("compile_command::RenderCommandCopyBuffer");
-    const auto src_buffer = gpu_system_.get_buffer(command.src_buffer);
-    const auto dst_buffer = gpu_system_.get_buffer(command.dst_buffer);
+    const auto src_buffer = gpu_system_->get_buffer(command.src_buffer);
+    const auto dst_buffer = gpu_system_->get_buffer(command.dst_buffer);
 
     const auto region_copies = Vector<VkBufferCopy>::transform(
-      std::span(command.regions, command.region_count),
+      command.regions,
       [](BufferRegionCopy region_copy) -> VkBufferCopy {
         return {
           .srcOffset = region_copy.src_offset,
@@ -252,7 +251,7 @@ namespace soul::gpu::impl
       command_buffer_,
       src_buffer.vk_handle,
       dst_buffer.vk_handle,
-      command.region_count,
+      command.regions.size(),
       region_copies.data());
   }
 
@@ -269,7 +268,7 @@ namespace soul::gpu::impl
   {
     SOUL_PROFILE_ZONE();
     apply_push_constant(command.push_constant_data, command.push_constant_size);
-    const auto& shader_table = gpu_system_.get_shader_table(command.shader_table_id);
+    const auto& shader_table = gpu_system_->get_shader_table(command.shader_table_id);
     apply_pipeline_state(shader_table.pipeline, VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR);
     vkCmdTraceRaysKHR(
       command_buffer_,
@@ -284,10 +283,10 @@ namespace soul::gpu::impl
 
   auto RenderCompiler::compile_command(const RenderCommandBuildTlas& command) -> void
   {
-    const auto& tlas = gpu_system_.get_tlas(command.tlas_id);
+    const auto& tlas = gpu_system_->get_tlas(command.tlas_id);
     const auto& build_desc = command.build_desc;
 
-    const auto size_info = gpu_system_.get_as_build_size_info(command.build_desc);
+    const auto size_info = gpu_system_->get_as_build_size_info(command.build_desc);
 
     const BufferDesc scratch_buffer_desc = {
       .size = size_info.buildScratchSize,
@@ -298,8 +297,8 @@ namespace soul::gpu::impl
           .required = {MemoryProperty::DEVICE_LOCAL},
         },
     };
-    const auto scratch_buffer_id = gpu_system_.create_transient_buffer(scratch_buffer_desc);
-    const auto scratch_buffer_address = gpu_system_.get_gpu_address(scratch_buffer_id);
+    const auto scratch_buffer_id = gpu_system_->create_transient_buffer(scratch_buffer_desc);
+    const auto scratch_buffer_address = gpu_system_->get_gpu_address(scratch_buffer_id);
 
     const VkAccelerationStructureGeometryInstancesDataKHR as_instance = {
       .sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_INSTANCES_DATA_KHR,
@@ -333,7 +332,7 @@ namespace soul::gpu::impl
   {
     runtime::ScopeAllocator<> scope_allocator("compile_command(const RenderCommandBuildBlas&)");
 
-    const auto& dst_blas = gpu_system_.get_blas(command.dst_blas_id);
+    const auto& dst_blas = gpu_system_->get_blas(command.dst_blas_id);
     const auto& build_desc = command.build_desc;
 
     auto as_geometries = Vector<VkAccelerationStructureGeometryKHR>::with_size(
@@ -344,7 +343,7 @@ namespace soul::gpu::impl
     const auto max_primitives_counts = compute_max_primitives_counts(build_desc, scope_allocator);
 
     const auto size_info =
-      gpu_system_.get_as_build_size_info(build_info, max_primitives_counts.data());
+      gpu_system_->get_as_build_size_info(build_info, max_primitives_counts.data());
     CString as_scratch_buffer_name(&scope_allocator);
     if (dst_blas.desc.name != nullptr) {
       as_scratch_buffer_name.appendf("{}_scratch_buffer", dst_blas.desc.name);
@@ -357,11 +356,11 @@ namespace soul::gpu::impl
       .memory_option = MemoryOption{.required = {MemoryProperty::DEVICE_LOCAL}},
       .name = as_scratch_buffer_name.data(),
     };
-    const auto scratch_buffer_id = gpu_system_.create_transient_buffer(scratch_buffer_desc);
-    const auto scratch_buffer_address = gpu_system_.get_gpu_address(scratch_buffer_id);
+    const auto scratch_buffer_id = gpu_system_->create_transient_buffer(scratch_buffer_desc);
+    const auto scratch_buffer_address = gpu_system_->get_gpu_address(scratch_buffer_id);
 
     if (command.src_blas_id.is_valid()) {
-      const auto& src_blas = gpu_system_.get_blas(command.src_blas_id);
+      const auto& src_blas = gpu_system_->get_blas(command.src_blas_id);
       build_info.srcAccelerationStructure = src_blas.vk_handle;
     }
     build_info.dstAccelerationStructure = dst_blas.vk_handle;
@@ -382,20 +381,20 @@ namespace soul::gpu::impl
     runtime::ScopeAllocator<> scope_allocator(
       "compile_command(const RenderCommandBatchBuildBlas&)");
     Vector<VkAccelerationStructureBuildGeometryInfoKHR> build_infos(&scope_allocator);
-    build_infos.reserve(command.build_count);
+    build_infos.reserve(command.builds.size());
 
     using ASGeometryList = SBOVector<VkAccelerationStructureGeometryKHR, 1>;
     Vector<ASGeometryList> as_geometry_list_vec(&scope_allocator);
-    as_geometry_list_vec.reserve(command.build_count);
+    as_geometry_list_vec.reserve(command.builds.size());
 
     Vector<VkAccelerationStructureBuildRangeInfoKHR*> build_range_list_vec(&scope_allocator);
-    build_range_list_vec.reserve(command.build_count);
+    build_range_list_vec.reserve(command.builds.size());
 
     Vector<usize> build_scratch_sizes(&scope_allocator);
-    build_scratch_sizes.reserve(command.build_count);
+    build_scratch_sizes.reserve(command.builds.size());
 
     auto total_size = 0u;
-    for (const auto& blas_build : std::span(command.builds, command.build_count)) {
+    for (const auto& blas_build : command.builds) {
       const auto& build_desc = blas_build.build_desc;
       as_geometry_list_vec.generate_back(
         [&] { return ASGeometryList::with_size(build_desc.geometry_count, scope_allocator); });
@@ -404,9 +403,9 @@ namespace soul::gpu::impl
 
       const auto max_primitives_counts = compute_max_primitives_counts(build_desc, scope_allocator);
 
-      const auto& dst_blas = gpu_system_.get_blas(blas_build.dst_blas_id);
+      const auto& dst_blas = gpu_system_->get_blas(blas_build.dst_blas_id);
       if (blas_build.src_blas_id.is_valid()) {
-        const auto& src_blas = gpu_system_.get_blas(blas_build.src_blas_id);
+        const auto& src_blas = gpu_system_->get_blas(blas_build.src_blas_id);
         build_info.srcAccelerationStructure = src_blas.vk_handle;
       }
       build_info.dstAccelerationStructure = dst_blas.vk_handle;
@@ -423,7 +422,7 @@ namespace soul::gpu::impl
         });
 
       const auto size_info =
-        gpu_system_.get_as_build_size_info(build_info, max_primitives_counts.data());
+        gpu_system_->get_as_build_size_info(build_info, max_primitives_counts.data());
       const auto scratch_size = blas_build.build_mode == RTBuildMode::REBUILD
                                   ? size_info.buildScratchSize
                                   : size_info.updateScratchSize;
@@ -440,14 +439,14 @@ namespace soul::gpu::impl
       .memory_option = MemoryOption{.required = {MemoryProperty::DEVICE_LOCAL}},
       .name = "Batch blas scratch buffer",
     };
-    const auto scratch_buffer = gpu_system_.create_transient_buffer(scratch_buffer_desc);
-    const auto scratch_buffer_addr = gpu_system_.get_gpu_address(scratch_buffer).id;
+    const auto scratch_buffer = gpu_system_->create_transient_buffer(scratch_buffer_desc);
+    const auto scratch_buffer_addr = gpu_system_->get_gpu_address(scratch_buffer).id;
 
     u32 current_build_base_idx = 0;
     u32 current_build_count = 0;
     usize current_build_scratch_size = 0;
 
-    for (u32 build_idx = 0; build_idx < command.build_count; build_idx++) {
+    for (u32 build_idx = 0; build_idx < command.builds.size(); build_idx++) {
       auto current_scratch_size = build_scratch_sizes[build_idx];
       if (current_build_scratch_size + current_scratch_size > command.max_build_memory_size) {
         vkCmdBuildAccelerationStructuresKHR(
@@ -478,7 +477,7 @@ namespace soul::gpu::impl
   {
     SOUL_PROFILE_ZONE();
     SOUL_ASSERT(0, pipeline_state_id.is_valid(), "");
-    const PipelineState& pipeline_state = gpu_system_.get_pipeline_state(pipeline_state_id);
+    const PipelineState& pipeline_state = gpu_system_->get_pipeline_state(pipeline_state_id);
     apply_pipeline_state(pipeline_state.vk_handle, pipeline_state.bind_point);
   }
 
@@ -500,7 +499,7 @@ namespace soul::gpu::impl
     SOUL_PROFILE_ZONE();
     vkCmdPushConstants(
       command_buffer_,
-      gpu_system_.get_bindless_pipeline_layout(),
+      gpu_system_->get_bindless_pipeline_layout(),
       VK_SHADER_STAGE_ALL,
       0,
       push_constant_size,

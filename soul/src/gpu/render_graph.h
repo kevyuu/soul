@@ -31,7 +31,7 @@ namespace soul::gpu
       [[nodiscard]]
       auto is_external() const -> b8
       {
-        return index & (1u << EXTERNAL_BIT_POSITION);
+        return (index & (1u << EXTERNAL_BIT_POSITION)) != 0u;
       }
 
       [[nodiscard]]
@@ -447,49 +447,72 @@ namespace soul::gpu
   {
   public:
     static constexpr auto PIPELINE_FLAGS = pipeline_flags;
-    RGDependencyBuilder(PassNodeID pass_id, PassBaseNode& pass_node, RenderGraph& render_graph);
+
+    [[nodiscard]]
+    static auto New(
+      PassNodeID pass_id, NotNull<PassBaseNode*> pass_node, NotNull<RenderGraph*> render_graph)
+    {
+      return RGDependencyBuilder(pass_id, pass_node, render_graph);
+    }
+
     auto add_shader_buffer(
       BufferNodeID node_id, ShaderStageFlags stage_flags, ShaderBufferReadUsage usage_type)
       -> BufferNodeID;
+
     auto add_shader_buffer(
       BufferNodeID node_id, ShaderStageFlags stage_flags, ShaderBufferWriteUsage usage_type)
       -> BufferNodeID;
+
     auto add_shader_texture(
       TextureNodeID node_id,
       ShaderStageFlags stage_flags,
       ShaderTextureReadUsage usage_type,
       SubresourceIndexRange view = SubresourceIndexRange()) -> TextureNodeID;
+
     auto add_shader_texture(
       TextureNodeID node_id,
       ShaderStageFlags stage_flags,
       ShaderTextureWriteUsage usage_type,
       SubresourceIndexRange view = SubresourceIndexRange()) -> TextureNodeID;
+
     auto add_shader_tlas(TlasNodeID node_id, ShaderStageFlags stage_flags) -> TlasNodeID;
+
     auto add_shader_blas_group(BlasGroupNodeID node_id, ShaderStageFlags stage_flags)
       -> BlasGroupNodeID;
+
     auto add_vertex_buffer(BufferNodeID node_id) -> BufferNodeID;
+
     auto add_index_buffer(BufferNodeID node_id) -> BufferNodeID;
 
     auto add_src_buffer(BufferNodeID node_id) -> BufferNodeID;
+
     auto add_dst_buffer(
       BufferNodeID node_id, TransferDataSource data_source = TransferDataSource::GPU)
       -> BufferNodeID;
+
     auto add_src_texture(TextureNodeID node_id) -> TextureNodeID;
+
     auto add_dst_texture(
       TextureNodeID node_id, TransferDataSource data_source = TransferDataSource::GPU)
       -> TextureNodeID;
 
     auto add_as_build_input(BufferNodeID node_id) -> BufferNodeID;
+
     auto add_as_build_input(BlasGroupNodeID node_id) -> BlasGroupNodeID;
+
     auto add_as_build_dst(TlasNodeID node_id) -> TlasNodeID;
+
     auto add_as_build_dst(BlasGroupNodeID node_id) -> BlasGroupNodeID;
 
-    auto set_render_target(const RGRenderTargetDesc& render_target_desc) -> void;
+    void set_render_target(const RGRenderTargetDesc& render_target_desc);
 
   private:
-    const PassNodeID pass_id_;
-    PassBaseNode& pass_node_;
-    RenderGraph& render_graph_;
+    PassNodeID pass_id_;
+    PassBaseNode* pass_node_;
+    RenderGraph* render_graph_;
+
+    RGDependencyBuilder(
+      PassNodeID pass_id, NotNull<PassBaseNode*> pass_node, NotNull<RenderGraph*> render_graph);
   };
 
   class PassBaseNode
@@ -632,16 +655,16 @@ namespace soul::gpu
 
   protected:
     const char* name_ = nullptr;
-    const PipelineFlags pipeline_flags_;
-    const QueueType queue_type_;
+    PipelineFlags pipeline_flags_;
+    QueueType queue_type_;
 
   private:
-    virtual auto execute(
-      RenderGraphRegistry& registry,
-      impl::RenderCompiler& render_compiler,
+    virtual void execute(
+      NotNull<RenderGraphRegistry*> registry,
+      NotNull<impl::RenderCompiler*> render_compiler,
       const VkRenderPassBeginInfo* render_pass_begin_info,
-      impl::CommandPools& command_pools,
-      System& gpu_system) const -> void = 0;
+      NotNull<impl::CommandPools*> command_pools,
+      NotNull<System*> gpu_system) const = 0;
 
     Vector<TransferSrcBufferAccess> source_buffers_;
     Vector<TransferDstBufferAccess> destination_buffers_;
@@ -691,12 +714,12 @@ namespace soul::gpu
     {
       return parameter_;
     }
-    auto execute(
-      RenderGraphRegistry& render_graph_execution,
-      impl::RenderCompiler& render_compiler,
+    void execute(
+      NotNull<RenderGraphRegistry*> registry,
+      NotNull<impl::RenderCompiler*> render_compiler,
       const VkRenderPassBeginInfo* render_pass_begin_info,
-      impl::CommandPools& command_pools,
-      System& gpu_system) const -> void override;
+      NotNull<impl::CommandPools*> command_pools,
+      NotNull<System*> gpu_system) const override;
 
   private:
     auto get_parameter() -> Parameter& { return parameter_; }
@@ -715,9 +738,13 @@ namespace soul::gpu
     }
 
     RenderGraph(const RenderGraph& other) = delete;
+
     RenderGraph(RenderGraph&& other) = delete;
+
     auto operator=(const RenderGraph& other) -> RenderGraph& = delete;
+
     auto operator=(RenderGraph&& other) -> RenderGraph& = delete;
+
     ~RenderGraph();
 
     template <typename Parameter, PipelineFlags pipeline_flags, typename Setup, typename Executable>
@@ -728,13 +755,19 @@ namespace soul::gpu
       static_assert(pass_executable<Executable, Parameter, pipeline_flags>);
 
       using Node = PassNode<pipeline_flags, Parameter, Executable>;
+
       auto node_ptr =
         allocator_->create<Node>(name, queue_type, std::forward<Executable>(execute)).unwrap();
+
       auto node_base_ptr = NotNull<PassBaseNode*>(node_ptr);
+
       pass_nodes_.push_back(node_base_ptr);
-      RGDependencyBuilder<pipeline_flags> builder(
-        PassNodeID(pass_nodes_.size() - 1), *node_ptr, *this);
+
+      auto builder = RGDependencyBuilder<pipeline_flags>::New(
+        PassNodeID(pass_nodes_.size() - 1), node_ptr, this);
+
       setup(node_ptr->get_parameter(), builder);
+
       return *node_ptr;
     }
 
@@ -756,7 +789,7 @@ namespace soul::gpu
       const auto node_base_ptr = NotNull<PassBaseNode*>(node_ptr);
       pass_nodes_.push_back(node_base_ptr);
       const auto pass_node_id = PassNodeID(pass_nodes_.size() - 1);
-      RGDependencyBuilder<pipeline_flags> builder(pass_node_id, *node_ptr, *this);
+      auto builder = RGDependencyBuilder<pipeline_flags>::New(pass_node_id, node_ptr, this);
       builder.set_render_target(render_target);
       setup(node_ptr->get_parameter(), builder);
 
@@ -872,12 +905,18 @@ namespace soul::gpu
 
     auto create_resource_node(RGResourceType resource_type, impl::RGResourceID resource_id)
       -> ResourceNodeID;
-    auto read_resource_node(ResourceNodeID resource_node_id, PassNodeID pass_node_id) -> void;
+
+    void read_resource_node(ResourceNodeID resource_node_id, PassNodeID pass_node_id);
+
     auto write_resource_node(ResourceNodeID resource_node_id, PassNodeID pass_node_id)
       -> ResourceNodeID;
+
     [[nodiscard]]
     auto get_resource_node(ResourceNodeID node_id) const -> const impl::ResourceNode&;
+
+    [[nodiscard]]
     auto get_resource_node(ResourceNodeID node_id) -> impl::ResourceNode&;
+
     [[nodiscard]]
     auto get_resource_nodes() const -> std::span<const impl::ResourceNode>;
 
@@ -888,8 +927,8 @@ namespace soul::gpu
     }
 
     template <RGResourceType resource_type>
-    auto read_resource_node(TypedResourceNodeID<resource_type> node_id, PassNodeID pass_node_id)
-      -> void
+    void read_resource_node(TypedResourceNodeID<resource_type> node_id, PassNodeID pass_node_id)
+
     {
       read_resource_node(node_id.id, pass_node_id);
     }
@@ -912,7 +951,7 @@ namespace soul::gpu
 
   template <PipelineFlags pipeline_flags>
   RGDependencyBuilder<pipeline_flags>::RGDependencyBuilder(
-    const PassNodeID pass_id, PassBaseNode& pass_node, RenderGraph& render_graph)
+    PassNodeID pass_id, NotNull<PassBaseNode*> pass_node, NotNull<RenderGraph*> render_graph)
       : pass_id_(pass_id), pass_node_(pass_node), render_graph_(render_graph)
   {
   }
@@ -924,8 +963,8 @@ namespace soul::gpu
   {
     static_assert(pipeline_flags.test_any(
       {PipelineType::RASTER, PipelineType::COMPUTE, PipelineType::RAY_TRACING}));
-    render_graph_.read_resource_node(node_id, pass_id_);
-    pass_node_.shader_buffer_read_accesses_.push_back(
+    render_graph_->read_resource_node(node_id, pass_id_);
+    pass_node_->shader_buffer_read_accesses_.push_back(
       ShaderBufferReadAccess{node_id, stage_flags, usage_type});
     return node_id;
   }
@@ -937,8 +976,8 @@ namespace soul::gpu
   {
     static_assert(pipeline_flags.test_any(
       {PipelineType::RASTER, PipelineType::COMPUTE, PipelineType::RAY_TRACING}));
-    const auto out_node_id = render_graph_.write_resource_node(node_id, pass_id_);
-    pass_node_.shader_buffer_write_accesses_.push_back(
+    const auto out_node_id = render_graph_->write_resource_node(node_id, pass_id_);
+    pass_node_->shader_buffer_write_accesses_.push_back(
       ShaderBufferWriteAccess{node_id, out_node_id, stage_flags, usage_type});
     return out_node_id;
   }
@@ -952,8 +991,8 @@ namespace soul::gpu
   {
     static_assert(pipeline_flags.test_any(
       {PipelineType::RASTER, PipelineType::COMPUTE, PipelineType::RAY_TRACING}));
-    render_graph_.read_resource_node(node_id, pass_id_);
-    pass_node_.shader_texture_read_accesses_.push_back(
+    render_graph_->read_resource_node(node_id, pass_id_);
+    pass_node_->shader_texture_read_accesses_.push_back(
       ShaderTextureReadAccess{node_id, stage_flags, usage_type, view});
     return node_id;
   }
@@ -967,8 +1006,8 @@ namespace soul::gpu
   {
     static_assert(pipeline_flags.test_any(
       {PipelineType::RASTER, PipelineType::COMPUTE, PipelineType::RAY_TRACING}));
-    const auto out_node_id = render_graph_.write_resource_node(node_id, pass_id_);
-    pass_node_.shader_texture_write_accesses_.push_back(
+    const auto out_node_id = render_graph_->write_resource_node(node_id, pass_id_);
+    pass_node_->shader_texture_write_accesses_.push_back(
       ShaderTextureWriteAccess{node_id, out_node_id, stage_flags, usage_type, view});
     return out_node_id;
   }
@@ -978,8 +1017,8 @@ namespace soul::gpu
     TlasNodeID node_id, ShaderStageFlags stage_flags) -> TlasNodeID
   {
     static_assert(pipeline_flags.test_any({PipelineType::RAY_TRACING}));
-    render_graph_.read_resource_node(node_id, pass_id_);
-    pass_node_.shader_tlas_read_accesses_.push_back(ShaderTlasReadAccess{node_id, stage_flags});
+    render_graph_->read_resource_node(node_id, pass_id_);
+    pass_node_->shader_tlas_read_accesses_.push_back(ShaderTlasReadAccess{node_id, stage_flags});
     return node_id;
   }
 
@@ -987,8 +1026,8 @@ namespace soul::gpu
   auto RGDependencyBuilder<pipeline_flags>::add_shader_blas_group(
     BlasGroupNodeID node_id, ShaderStageFlags stage_flags) -> BlasGroupNodeID
   {
-    render_graph_.read_resource_node(node_id, pass_id_);
-    pass_node_.shader_blas_group_read_accesses_.push_back(
+    render_graph_->read_resource_node(node_id, pass_id_);
+    pass_node_->shader_blas_group_read_accesses_.push_back(
       ShaderBlasGroupReadAccess{node_id, stage_flags});
     return node_id;
   }
@@ -997,8 +1036,8 @@ namespace soul::gpu
   auto RGDependencyBuilder<pipeline_flags>::add_vertex_buffer(BufferNodeID node_id) -> BufferNodeID
   {
     static_assert(pipeline_flags.test(PipelineType::RASTER));
-    render_graph_.read_resource_node(node_id, pass_id_);
-    pass_node_.vertex_buffers_.push_back(node_id);
+    render_graph_->read_resource_node(node_id, pass_id_);
+    pass_node_->vertex_buffers_.push_back(node_id);
     return node_id;
   }
 
@@ -1006,8 +1045,8 @@ namespace soul::gpu
   auto RGDependencyBuilder<pipeline_flags>::add_index_buffer(BufferNodeID node_id) -> BufferNodeID
   {
     static_assert(pipeline_flags.test(PipelineType::RASTER));
-    render_graph_.read_resource_node(node_id, pass_id_);
-    pass_node_.index_buffers_.push_back(node_id);
+    render_graph_->read_resource_node(node_id, pass_id_);
+    pass_node_->index_buffers_.push_back(node_id);
     return node_id;
   }
 
@@ -1015,8 +1054,8 @@ namespace soul::gpu
   auto RGDependencyBuilder<pipeline_flags>::add_src_buffer(BufferNodeID node_id) -> BufferNodeID
   {
     static_assert(pipeline_flags.test(PipelineType::NON_SHADER));
-    render_graph_.read_resource_node(node_id, pass_id_);
-    pass_node_.source_buffers_.push_back(TransferSrcBufferAccess{node_id});
+    render_graph_->read_resource_node(node_id, pass_id_);
+    pass_node_->source_buffers_.push_back(TransferSrcBufferAccess{node_id});
     return node_id;
   }
 
@@ -1025,8 +1064,8 @@ namespace soul::gpu
     BufferNodeID node_id, TransferDataSource data_source) -> BufferNodeID
   {
     static_assert(pipeline_flags.test(PipelineType::NON_SHADER));
-    BufferNodeID out_node_id = render_graph_.write_resource_node(node_id, pass_id_);
-    pass_node_.destination_buffers_.push_back(TransferDstBufferAccess{
+    BufferNodeID out_node_id = render_graph_->write_resource_node(node_id, pass_id_);
+    pass_node_->destination_buffers_.push_back(TransferDstBufferAccess{
       .data_source = data_source, .input_node_id = node_id, .output_node_id = out_node_id});
     return out_node_id;
   }
@@ -1035,8 +1074,8 @@ namespace soul::gpu
   auto RGDependencyBuilder<pipeline_flags>::add_src_texture(TextureNodeID node_id) -> TextureNodeID
   {
     static_assert(pipeline_flags.test(PipelineType::NON_SHADER));
-    render_graph_.read_resource_node(node_id, pass_id_);
-    pass_node_.source_textures_.push_back(TransferSrcTextureAccess{node_id});
+    render_graph_->read_resource_node(node_id, pass_id_);
+    pass_node_->source_textures_.push_back(TransferSrcTextureAccess{node_id});
     return node_id;
   }
 
@@ -1045,8 +1084,8 @@ namespace soul::gpu
     TextureNodeID node_id, TransferDataSource data_source) -> TextureNodeID
   {
     static_assert(pipeline_flags.test(PipelineType::NON_SHADER));
-    TextureNodeID out_node_id = render_graph_.write_resource_node(node_id, pass_id_);
-    pass_node_.destination_textures_.push_back(TransferDstTextureAccess{
+    TextureNodeID out_node_id = render_graph_->write_resource_node(node_id, pass_id_);
+    pass_node_->destination_textures_.push_back(TransferDstTextureAccess{
       .data_source = data_source, .input_node_id = node_id, .output_node_id = out_node_id});
     return out_node_id;
   }
@@ -1055,8 +1094,8 @@ namespace soul::gpu
   auto RGDependencyBuilder<pipeline_flags>::add_as_build_input(BufferNodeID node_id) -> BufferNodeID
   {
     static_assert(pipeline_flags.test(PipelineType::NON_SHADER));
-    render_graph_.read_resource_node(node_id, pass_id_);
-    pass_node_.as_build_input_buffers_.push_back({node_id});
+    render_graph_->read_resource_node(node_id, pass_id_);
+    pass_node_->as_build_input_buffers_.push_back({node_id});
     return node_id;
   }
 
@@ -1065,8 +1104,8 @@ namespace soul::gpu
     -> BlasGroupNodeID
   {
     static_assert(pipeline_flags.test(PipelineType::NON_SHADER));
-    render_graph_.read_resource_node(node_id, pass_id_);
-    pass_node_.as_build_input_blas_groups_.push_back({node_id});
+    render_graph_->read_resource_node(node_id, pass_id_);
+    pass_node_->as_build_input_blas_groups_.push_back({node_id});
     return node_id;
   }
 
@@ -1074,8 +1113,8 @@ namespace soul::gpu
   auto RGDependencyBuilder<pipeline_flags>::add_as_build_dst(TlasNodeID node_id) -> TlasNodeID
   {
     static_assert(pipeline_flags.test(PipelineType::NON_SHADER));
-    const auto out_node_id = render_graph_.write_resource_node(node_id, pass_id_);
-    pass_node_.as_build_dst_tlas_list_.push_back(
+    const auto out_node_id = render_graph_->write_resource_node(node_id, pass_id_);
+    pass_node_->as_build_dst_tlas_list_.push_back(
       AsBuildDstTlasAccess{.input_node_id = node_id, .output_node_id = out_node_id});
     return out_node_id;
   }
@@ -1085,57 +1124,61 @@ namespace soul::gpu
     -> BlasGroupNodeID
   {
     static_assert(pipeline_flags.test(PipelineType::NON_SHADER));
-    const auto out_node_id = render_graph_.write_resource_node(node_id, pass_id_);
-    pass_node_.as_build_dst_blas_group_list_.push_back(
+    const auto out_node_id = render_graph_->write_resource_node(node_id, pass_id_);
+    pass_node_->as_build_dst_blas_group_list_.push_back(
       AsBuildDstBlasGroupAccess{.input_node_id = node_id, .output_node_id = out_node_id});
     return out_node_id;
   }
 
   template <PipelineFlags pipeline_flags>
-  auto RGDependencyBuilder<pipeline_flags>::set_render_target(
-    const RGRenderTargetDesc& render_target_desc) -> void
+  void RGDependencyBuilder<pipeline_flags>::set_render_target(
+    const RGRenderTargetDesc& render_target_desc)
   {
     static_assert(pipeline_flags.test(PipelineType::RASTER));
     auto to_output_attachment =
       [this]<typename AttachmentDesc>(const AttachmentDesc attachment_desc) -> auto {
       AttachmentAccess<AttachmentDesc> access = {
-        .out_node_id = render_graph_.write_resource_node(attachment_desc.node_id, pass_id_),
+        .out_node_id = render_graph_->write_resource_node(attachment_desc.node_id, pass_id_),
         .desc = attachment_desc};
       return access;
     };
 
     std::ranges::transform(
       render_target_desc.color_attachments,
-      std::back_inserter(pass_node_.render_target_.color_attachments),
+      std::back_inserter(pass_node_->render_target_.color_attachments),
       to_output_attachment);
+
     std::ranges::transform(
       render_target_desc.resolve_attachments,
-      std::back_inserter(pass_node_.render_target_.resolve_attachments),
+      std::back_inserter(pass_node_->render_target_.resolve_attachments),
       to_output_attachment);
+
     if (render_target_desc.depth_stencil_attachment.node_id.is_valid()) {
       const auto& depth_desc = render_target_desc.depth_stencil_attachment;
       const TextureNodeID out_node_id =
         depth_desc.depth_write_enable
           ? depth_desc.node_id
-          : render_graph_.write_resource_node(depth_desc.node_id, pass_id_);
-      pass_node_.render_target_.depth_stencil_attachment = {
+          : render_graph_->write_resource_node(depth_desc.node_id, pass_id_);
+
+      pass_node_->render_target_.depth_stencil_attachment = {
         .out_node_id = out_node_id, .desc = depth_desc};
     }
-    pass_node_.render_target_.dimension = render_target_desc.dimension;
-    pass_node_.render_target_.sample_count = render_target_desc.sample_count;
+
+    pass_node_->render_target_.dimension = render_target_desc.dimension;
+    pass_node_->render_target_.sample_count = render_target_desc.sample_count;
   }
 
   template <PipelineFlags pipeline_flags, typename Parameter, typename Execute>
-  auto PassNode<pipeline_flags, Parameter, Execute>::execute(
-    RenderGraphRegistry& registry,
-    impl::RenderCompiler& render_compiler,
+  void PassNode<pipeline_flags, Parameter, Execute>::execute(
+    NotNull<RenderGraphRegistry*> registry,
+    NotNull<impl::RenderCompiler*> render_compiler,
     const VkRenderPassBeginInfo* render_pass_begin_info,
-    impl::CommandPools& command_pools,
-    System& gpu_system) const -> void
+    NotNull<impl::CommandPools*> command_pools,
+    NotNull<System*> gpu_system) const
   {
-    CommandList<pipeline_flags> command_list(
+    auto command_list = CommandList<pipeline_flags>::New(
       render_compiler, render_pass_begin_info, command_pools, gpu_system);
-    execute_(parameter_, registry, command_list);
+    execute_(parameter_, *registry, command_list);
   }
 
 } // namespace soul::gpu

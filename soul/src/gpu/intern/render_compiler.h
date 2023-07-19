@@ -33,17 +33,18 @@ namespace soul::gpu::impl
   class RenderCompiler
   {
   public:
-    constexpr RenderCompiler(System& gpu_system, VkCommandBuffer command_buffer)
-        : gpu_system_(gpu_system),
-          command_buffer_(command_buffer),
-          current_pipeline_(VK_NULL_HANDLE)
+    [[nodiscard]]
+    static auto New(NotNull<System*> gpu_system, VkCommandBuffer command_buffer)
     {
+      return RenderCompiler(gpu_system, command_buffer);
     }
 
     auto bind_descriptor_sets(VkPipelineBindPoint pipeline_bind_point) -> void;
+
     auto begin_render_pass(
       const VkRenderPassBeginInfo& render_pass_begin_info, VkSubpassContents subpass_contents)
       -> void;
+
     auto end_render_pass() -> void;
     auto execute_secondary_command_buffers(
       u32 count, const SecondaryCommandBuffer* secondary_command_buffers) -> void;
@@ -66,9 +67,14 @@ namespace soul::gpu::impl
     auto apply_pipeline_state(VkPipeline pipeline, VkPipelineBindPoint pipeline_bind_point) -> void;
     auto apply_push_constant(const void* push_constant_data, u32 push_constant_size) -> void;
 
-    System& gpu_system_;
+    NotNull<System*> gpu_system_;
     VkCommandBuffer command_buffer_;
-    VkPipeline current_pipeline_;
+    VkPipeline current_pipeline_ = VK_NULL_HANDLE;
+
+    RenderCompiler(NotNull<System*> gpu_system, VkCommandBuffer command_buffer)
+        : gpu_system_(gpu_system), command_buffer_(command_buffer)
+    {
+    }
   };
 
 } // namespace soul::gpu::impl

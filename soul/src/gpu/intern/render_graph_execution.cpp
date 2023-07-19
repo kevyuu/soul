@@ -13,7 +13,7 @@
 namespace soul::gpu::impl
 {
 
-  auto SHADER_BUFFER_READ_USAGE_MAP =
+  constexpr auto SHADER_BUFFER_READ_USAGE_MAP =
     FlagMap<ShaderBufferReadUsage, BufferUsageFlags>::from_val_list(
       {BufferUsageFlags({BufferUsage::UNIFORM}), {BufferUsage::STORAGE}});
 
@@ -23,7 +23,7 @@ namespace soul::gpu::impl
   }
 
   using ShaderBufferWriteMap = FlagMap<ShaderBufferWriteUsage, BufferUsageFlags>;
-  auto SHADER_BUFFER_WRITE_USAGE_MAP =
+  constexpr auto SHADER_BUFFER_WRITE_USAGE_MAP =
     ShaderBufferWriteMap::from_val_list({{BufferUsage::UNIFORM}, {BufferUsage::STORAGE}});
 
   constexpr auto get_buffer_usage_flags(ShaderBufferWriteUsage usage) -> BufferUsageFlags
@@ -31,7 +31,7 @@ namespace soul::gpu::impl
     return SHADER_BUFFER_WRITE_USAGE_MAP[usage];
   }
 
-  auto SHADER_TEXTURE_READ_USAGE_MAP =
+  constexpr auto SHADER_TEXTURE_READ_USAGE_MAP =
     FlagMap<ShaderTextureReadUsage, TextureUsageFlags>::from_val_list(
       {{TextureUsage::SAMPLED}, {TextureUsage::STORAGE}});
 
@@ -41,7 +41,7 @@ namespace soul::gpu::impl
   }
 
   using ShaderTextureWriteMap = FlagMap<ShaderTextureWriteUsage, TextureUsageFlags>;
-  auto SHADER_TEXTURE_WRITE_USAGE_MAP =
+  constexpr auto SHADER_TEXTURE_WRITE_USAGE_MAP =
     ShaderTextureWriteMap::from_val_list({{TextureUsage::STORAGE}});
 
   constexpr auto get_texture_usage_flags(ShaderTextureWriteUsage usage) -> TextureUsageFlags
@@ -738,7 +738,7 @@ namespace soul::gpu::impl
             } else if (external_queue_type != QueueType::NONE) {
               view_info.pending_event = VK_NULL_HANDLE;
               view_info.pending_semaphore =
-                command_queues_[external_queue_type].get_timeline_semaphore();
+                command_queues_->ref(external_queue_type).get_timeline_semaphore();
             }
           }
         });
@@ -776,7 +776,7 @@ namespace soul::gpu::impl
         } else if (external_queue_type != QueueType::COUNT) {
           resource_exec_info.pending_event = VK_NULL_HANDLE;
           resource_exec_info.pending_semaphore =
-            command_queues_[external_queue_type].get_timeline_semaphore();
+            command_queues_->ref(external_queue_type).get_timeline_semaphore();
         }
       };
 
@@ -807,12 +807,12 @@ namespace soul::gpu::impl
     // Sync events
     for (const auto queue_type : FlagIter<QueueType>()) {
       if (external_events_[queue_type] != VK_NULL_HANDLE) {
-        const auto sync_event_command_buffer = command_pools_.request_command_buffer(queue_type);
+        const auto sync_event_command_buffer = command_pools_->request_command_buffer(queue_type);
         vkCmdSetEvent(
           sync_event_command_buffer.get_vk_handle(),
           external_events_[queue_type],
           vk_cast(external_events_stage_flags_[queue_type]));
-        command_queues_[queue_type].submit(sync_event_command_buffer);
+        command_queues_->ref(queue_type).submit(sync_event_command_buffer);
       }
     }
   }
@@ -860,8 +860,11 @@ namespace soul::gpu::impl
         .pClearValues = clear_values};
       begin_info = &render_pass_begin_info;
     }
-    RenderGraphRegistry registry(*gpu_system_, *this, render_pass, render_target.sample_count);
-    RenderCompiler render_compiler(*gpu_system_, command_buffer.get_vk_handle());
+    auto registry =
+      RenderGraphRegistry::New(gpu_system_, this, render_pass, render_target.sample_count);
+
+    auto render_compiler = RenderCompiler::New(gpu_system_, command_buffer.get_vk_handle());
+
     pass_node.get_pipeline_flags().for_each([&render_compiler](PipelineType pipeline_type) {
       constexpr auto MAPPING = FlagMap<PipelineType, VkPipelineBindPoint>::from_val_list({
         VK_PIPELINE_BIND_POINT_MAX_ENUM,
@@ -874,7 +877,7 @@ namespace soul::gpu::impl
         render_compiler.bind_descriptor_sets(bind_point);
       }
     });
-    pass_node.execute(registry, render_compiler, begin_info, command_pools_, *gpu_system_);
+    pass_node.execute(&registry, &render_compiler, begin_info, command_pools_, gpu_system_);
   }
 
   auto RenderGraphExecution::run() -> void
@@ -902,10 +905,10 @@ namespace soul::gpu::impl
         "Pass Node Scope Allocator", runtime::get_temp_allocator());
       PassBaseNode* pass_node = render_graph_->get_pass_nodes()[pass_index];
       auto current_queue_type = pass_node->get_queue_type();
-      auto& command_queue = command_queues_[current_queue_type];
+      auto& command_queue = command_queues_->ref(current_queue_type);
       auto& pass_info = pass_infos_[pass_index];
 
-      const auto cmd_buffer = command_pools_.request_command_buffer(current_queue_type);
+      const auto cmd_buffer = command_pools_->request_command_buffer(current_queue_type);
 
       vec3f color = util::get_random_color();
       const VkDebugUtilsLabelEXT passLabel = {
@@ -949,8 +952,8 @@ namespace soul::gpu::impl
         }
 
         if (is_semaphore_valid(resource_info.pending_semaphore)) {
-          command_queues_[current_queue_type].wait(
-            resource_info.pending_semaphore, vk_cast(barrier.stage_flags));
+          command_queues_->ref(current_queue_type)
+            .wait(resource_info.pending_semaphore, vk_cast(barrier.stage_flags));
           resource_info.pending_semaphore = TimelineSemaphore::null();
           resource_info.cache_state.commit_wait_semaphore(
             queue_owner, current_queue_type, barrier.stage_flags);
@@ -998,8 +1001,8 @@ namespace soul::gpu::impl
         }
 
         if (is_semaphore_valid(buffer_info.pending_semaphore)) {
-          command_queues_[current_queue_type].wait(
-            buffer_info.pending_semaphore, vk_cast(barrier.stage_flags));
+          command_queues_->ref(current_queue_type)
+            .wait(buffer_info.pending_semaphore, vk_cast(barrier.stage_flags));
           buffer_info.pending_semaphore = TimelineSemaphore::null();
           buffer_info.cache_state.commit_wait_semaphore(
             buffer_info.cache_state.queue_owner, current_queue_type, barrier.stage_flags);

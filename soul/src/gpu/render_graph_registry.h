@@ -2,6 +2,7 @@
 
 #include "gpu/render_graph.h"
 #include "gpu/type.h"
+#include <vulkan/vulkan_core.h>
 
 namespace soul::gpu
 {
@@ -16,16 +17,14 @@ namespace soul::gpu
   public:
     RenderGraphRegistry() = delete;
 
-    RenderGraphRegistry(
-      System& system,
-      const impl::RenderGraphExecution& execution,
-      const VkRenderPass render_pass = VK_NULL_HANDLE,
+    [[nodiscard]]
+    static auto New(
+      NotNull<System*> system,
+      NotNull<const impl::RenderGraphExecution*> execution,
+      VkRenderPass render_pass = VK_NULL_HANDLE,
       const TextureSampleCount sample_count = TextureSampleCount::COUNT_1)
-        : system_(system),
-          execution_(execution),
-          render_pass_(render_pass),
-          sample_count_(sample_count)
     {
+      return RenderGraphRegistry(system, execution, render_pass, sample_count);
     }
 
     RenderGraphRegistry(const RenderGraphRegistry& other) = delete;
@@ -46,10 +45,22 @@ namespace soul::gpu
     auto get_pipeline_state(const ComputePipelineStateDesc& desc) -> PipelineStateID;
 
   private:
-    System& system_;
-    const impl::RenderGraphExecution& execution_;
+    NotNull<System*> system_;
+    NotNull<const impl::RenderGraphExecution*> execution_;
     VkRenderPass render_pass_;
-    const TextureSampleCount sample_count_;
+    TextureSampleCount sample_count_;
+
+    RenderGraphRegistry(
+      NotNull<System*> system,
+      NotNull<const impl::RenderGraphExecution*> execution,
+      VkRenderPass render_pass,
+      const TextureSampleCount sample_count)
+        : system_(system),
+          execution_(execution),
+          render_pass_(render_pass),
+          sample_count_(sample_count)
+    {
+    }
   };
 
 } // namespace soul::gpu

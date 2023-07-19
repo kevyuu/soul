@@ -39,7 +39,7 @@ namespace soul::gpu
     return IMAGE_LAYOUT_MAP[layout];
   }
 
-  static auto FORMAT_MAP = FlagMap<TextureFormat, VkFormat>::from_val_list({
+  static constexpr auto FORMAT_MAP = FlagMap<TextureFormat, VkFormat>::from_val_list({
     VK_FORMAT_R8_UNORM,
 
     VK_FORMAT_D16_UNORM,
@@ -71,7 +71,7 @@ namespace soul::gpu
     return FORMAT_MAP[format];
   }
 
-  static auto IMAGE_TYPE_MAP = FlagMap<TextureType, VkImageType>::from_val_list({
+  static constexpr auto IMAGE_TYPE_MAP = FlagMap<TextureType, VkImageType>::from_val_list({
     VK_IMAGE_TYPE_1D,
     VK_IMAGE_TYPE_2D,
     VK_IMAGE_TYPE_2D,
@@ -130,7 +130,7 @@ namespace soul::gpu
     return IMAGE_ASPECT_FLAGS_MAP[format];
   }
 
-  static auto FILTER_MAP =
+  static constexpr auto FILTER_MAP =
     FlagMap<TextureFilter, VkFilter>::from_val_list({VK_FILTER_NEAREST, VK_FILTER_LINEAR});
 
   SOUL_ALWAYS_INLINE auto vk_cast(const TextureFilter filter) -> VkFilter
@@ -138,8 +138,9 @@ namespace soul::gpu
     return FILTER_MAP[filter];
   }
 
-  static auto MIPMAP_FILTER_MAP = FlagMap<TextureFilter, VkSamplerMipmapMode>::from_val_list(
-    {VK_SAMPLER_MIPMAP_MODE_NEAREST, VK_SAMPLER_MIPMAP_MODE_LINEAR});
+  static constexpr auto MIPMAP_FILTER_MAP =
+    FlagMap<TextureFilter, VkSamplerMipmapMode>::from_val_list(
+      {VK_SAMPLER_MIPMAP_MODE_NEAREST, VK_SAMPLER_MIPMAP_MODE_LINEAR});
 
   SOUL_ALWAYS_INLINE auto vk_cast_mipmap_filter(const TextureFilter filter) -> VkSamplerMipmapMode
   {
@@ -227,7 +228,7 @@ namespace soul::gpu
       VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_STORAGE_BIT_KHR |
       VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR |
       VK_BUFFER_USAGE_SHADER_BINDING_TABLE_BIT_KHR;
-    if (result & need_buffer_device_address_bit) {
+    if ((result & need_buffer_device_address_bit) != 0u) {
       result |= VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT_KHR;
     }
     return result;
@@ -291,8 +292,8 @@ namespace soul::gpu
   SOUL_ALWAYS_INLINE auto vk_cast(const VertexElementType type, const VertexElementFlags flags)
     -> VkFormat
   {
-    const b8 integer = flags & VERTEX_ELEMENT_INTEGER_TARGET;
-    const b8 normalized = flags & VERTEX_ELEMENT_NORMALIZED;
+    const b8 integer = (flags & VERTEX_ELEMENT_INTEGER_TARGET) != 0;
+    const b8 normalized = (flags & VERTEX_ELEMENT_NORMALIZED) != 0;
     using ElementType = VertexElementType;
     if (normalized) {
       switch (type) {

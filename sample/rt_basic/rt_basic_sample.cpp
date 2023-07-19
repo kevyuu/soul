@@ -1,6 +1,8 @@
 #include "core/type.h"
 #include "gpu/gpu.h"
+#include "gpu/id.h"
 #include "gpu/sl_type.h"
+#include "gpu/type.h"
 #include "math/math.h"
 #include "obj_loader.h"
 
@@ -122,6 +124,7 @@ class RTBasicSampleApp final : public App
                   });
 
                 render_commands.push_back(gpu::RenderCommandBuildBlas{
+                  .src_blas_id = gpu::BlasID::null(),
                   .dst_blas_id = blas_ids_[model_idx],
                   .build_mode = gpu::RTBuildMode::REBUILD,
                   .build_desc =
@@ -135,8 +138,7 @@ class RTBasicSampleApp final : public App
 
               static constexpr auto MAX_BLAS_BUILD_MEMORY = 1ull << 29;
               command_list.push(gpu::RenderCommandBatchBuildBlas{
-                .build_count = soul::cast<u32>(render_commands.size()),
-                .builds = render_commands.data(),
+                .builds = u32cspan(render_commands.data(), render_commands.size()),
                 .max_build_memory_size = MAX_BLAS_BUILD_MEMORY,
               });
             })
@@ -177,8 +179,7 @@ class RTBasicSampleApp final : public App
               command_list.push(gpu::RenderCommandUpdateBuffer{
                 .dst_buffer = registry.get_buffer(parameter.instance_buffer),
                 .data = instance_descs.data(),
-                .region_count = 1,
-                .regions = &region,
+                .regions = u32cspan(&region, 1),
               });
             })
           .get_parameter()
@@ -252,8 +253,7 @@ class RTBasicSampleApp final : public App
             const Command command = {
               .dst_buffer = registry.get_buffer(parameter.buffer),
               .data = soul::cast<void*>(&gpu_scene_),
-              .region_count = 1,
-              .regions = &region_copy,
+              .regions = {&region_copy, 1},
             };
             command_list.push(command);
           })
@@ -375,8 +375,7 @@ class RTBasicSampleApp final : public App
       const gpu::TextureLoadDesc load_desc = {
         .data = texture_pixels,
         .data_size = soul::cast<usize>(texture_width * texture_height * 4),
-        .region_count = 1,
-        .regions = &region_load,
+        .regions = {&region_load, 1},
         .generate_mipmap = true,
       };
 
@@ -491,19 +490,16 @@ public:
   {
     gpu::ShaderSource shader_source = gpu::ShaderFile("rt_basic_sample.hlsl");
     std::filesystem::path search_path = "shaders/";
-    const auto entry_points = std::to_array<gpu::ShaderEntryPoint>({
-      {gpu::ShaderStage::RAYGEN, "rgen_main"},
-      {gpu::ShaderStage::MISS, "rmiss_main"},
-      {gpu::ShaderStage::MISS, "rmiss_shadow_main"},
-      {gpu::ShaderStage::CLOSEST_HIT, "rchit_main"},
-    });
+    const auto entry_points = soul::Array{
+      gpu::ShaderEntryPoint{gpu::ShaderStage::RAYGEN, "rgen_main"},
+      gpu::ShaderEntryPoint{gpu::ShaderStage::MISS, "rmiss_main"},
+      gpu::ShaderEntryPoint{gpu::ShaderStage::MISS, "rmiss_shadow_main"},
+      gpu::ShaderEntryPoint{gpu::ShaderStage::CLOSEST_HIT, "rchit_main"},
+    };
     const gpu::ProgramDesc program_desc = {
-      .search_path_count = 1,
-      .search_paths = &search_path,
-      .source_count = 1,
-      .sources = &shader_source,
-      .entry_point_count = entry_points.size(),
-      .entry_points = entry_points.data(),
+      .search_paths = u32cspan(&search_path, 1),
+      .sources = u32cspan(&shader_source, 1),
+      .entry_points = entry_points.cspan<u32>(),
     };
     auto result = gpu_system_->create_program(program_desc);
     if (!result) {
@@ -511,17 +507,17 @@ public:
     }
     program_id_ = result.value();
 
-    const auto miss_groups =
-      std::to_array<gpu::RTGeneralShaderGroup>({{.entry_point = 1}, {.entry_point = 2}});
+    const auto miss_groups = soul::Array{
+      gpu::RTGeneralShaderGroup{.entry_point = 1},
+      gpu::RTGeneralShaderGroup{.entry_point = 2},
+    };
+
     const gpu::RTTriangleHitGroup hit_group = {.closest_hit_entry_point = 3};
     const gpu::ShaderTableDesc shader_table_desc = {
       .program_id = program_id_,
       .raygen_group = {.entry_point = 0},
-      .miss_group_count = miss_groups.size(),
-      .miss_groups = miss_groups.data(),
-      .hit_group_count = 1,
-      .hit_groups = &hit_group,
-      .max_recursion_depth = 2,
+      .miss_groups = u32cspan(miss_groups.data(), miss_groups.size()),
+      .hit_groups = u32cspan(&hit_group, 1),
       .name = "Shader Table",
     };
     shader_table_id_ = gpu_system_->create_shader_table(shader_table_desc);

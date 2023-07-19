@@ -247,8 +247,7 @@ class Texture3DSampleApp final : public App
                 .dst_texture = registry.get_texture(parameter.noise_texture),
                 .data = data,
                 .data_size = soul::cast<usize>(DIMENSION.x) * DIMENSION.y * DIMENSION.z,
-                .region_count = 1,
-                .regions = &region_load,
+                .regions = u32cspan(&region_load, 1),
               };
               command_list.template push<Command>(command);
             })
@@ -285,8 +284,7 @@ class Texture3DSampleApp final : public App
             command_list.push(gpu::RenderCommandCopyTexture{
               .src_texture = registry.get_texture(parameter.src_noise_texture),
               .dst_texture = registry.get_texture(parameter.dst_noise_texture),
-              .region_count = 1,
-              .regions = &region_copy,
+              .regions = u32cspan(&region_copy, 1),
             });
           })
         .get_parameter();
@@ -363,15 +361,14 @@ public:
     runtime::ScopeAllocator scope_allocator("Texture 3D Sample App");
     gpu::ShaderSource shader_source = gpu::ShaderFile("texture_3d_sample.hlsl");
     std::filesystem::path search_path = "shaders/";
-    constexpr auto entry_points = std::to_array<gpu::ShaderEntryPoint>(
-      {{gpu::ShaderStage::VERTEX, "vsMain"}, {gpu::ShaderStage::FRAGMENT, "psMain"}});
+    const auto entry_points = soul::Array{
+      gpu::ShaderEntryPoint{gpu::ShaderStage::VERTEX, "vsMain"},
+      gpu::ShaderEntryPoint{gpu::ShaderStage::FRAGMENT, "psMain"},
+    };
     const gpu::ProgramDesc program_desc = {
-      .search_path_count = 1,
-      .search_paths = &search_path,
-      .source_count = 1,
-      .sources = &shader_source,
-      .entry_point_count = entry_points.size(),
-      .entry_points = entry_points.data(),
+      .search_paths = u32cspan(&search_path, 1),
+      .sources = u32cspan(&shader_source, 1),
+      .entry_points = entry_points.cspan<u32>(),
     };
     auto result = gpu_system_->create_program(program_desc);
     if (!result) {
@@ -408,9 +405,9 @@ public:
       const gpu::TextureLoadDesc load_desc = {
         .data = data,
         .data_size = soul::cast<usize>(DIMENSION.x) * DIMENSION.y * DIMENSION.z * CHANNEL_COUNT,
-        .region_count = 1,
-        .regions = &region_load,
+        .regions = {&region_load, 1},
       };
+
       test_texture_id_ = gpu_system_->create_texture(
         gpu::TextureDesc::d3(
           "Test texture",

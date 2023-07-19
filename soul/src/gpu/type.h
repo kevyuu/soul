@@ -30,8 +30,20 @@ namespace soul::gpu
   public:
     [[nodiscard]]
     virtual auto create_vulkan_surface(VkInstance instance) -> VkSurfaceKHR = 0;
+
+    WSI() = default;
+
+    WSI(const WSI& other) = delete;
+
+    WSI(WSI&& other) = delete;
+
+    auto operator=(const WSI& other) -> WSI& = delete;
+
+    auto operator=(WSI&& other) -> WSI& = delete;
+
     [[nodiscard]]
     virtual auto get_framebuffer_size() const -> vec2ui32 = 0;
+
     virtual ~WSI() = default;
   };
 
@@ -41,6 +53,7 @@ namespace soul::gpu
   struct Rect2D {
     Offset2D offset;
     Extent2D extent;
+    auto operator==(const Rect2D& other) const -> bool = default;
   };
 
   struct Viewport {
@@ -48,6 +61,7 @@ namespace soul::gpu
     f32 y = 0;
     f32 width = 0;
     f32 height = 0;
+    auto operator==(const Viewport& other) const -> bool = default;
   };
 
   using Offset3D = vec3i32;
@@ -520,8 +534,7 @@ namespace soul::gpu
 
   struct BufferUpdateDesc {
     const void* data = nullptr;
-    u32 region_load_count = 0;
-    BufferRegionCopy* region_loads = nullptr;
+    Span<const BufferRegionCopy*, u32> regions = nilspan;
   };
 
   struct BufferDesc {
@@ -559,8 +572,7 @@ namespace soul::gpu
     const void* data = nullptr;
     usize data_size = 0;
 
-    u32 region_count = 0;
-    const TextureRegionUpdate* regions = nullptr;
+    Span<const TextureRegionUpdate*, u32> regions = nilspan;
 
     b8 generate_mipmap = false;
   };
@@ -855,25 +867,19 @@ namespace soul::gpu
   };
 
   struct ProgramDesc {
-    usize search_path_count = 0;
-    const std::filesystem::path* search_paths = nullptr;
-    usize shader_define_count = 0;
-    const ShaderDefine* shader_defines = nullptr;
-    usize source_count = 0;
-    const ShaderSource* sources = nullptr;
-    usize entry_point_count = 0;
-    const ShaderEntryPoint* entry_points = nullptr;
+    Span<const std::filesystem::path*, u32> search_paths = nilspan;
+    Span<const ShaderDefine*, u32> shader_defines = nilspan;
+    Span<const ShaderSource*, u32> sources = nilspan;
+    Span<const ShaderEntryPoint*, u32> entry_points = nilspan;
   };
 
   struct ShaderTableDesc {
     ProgramID program_id;
-    const RTGeneralShaderGroup raygen_group;
-    u32 miss_group_count;
-    const RTGeneralShaderGroup* miss_groups;
-    u32 hit_group_count;
-    const RTTriangleHitGroup* hit_groups;
-    u32 max_recursion_depth;
-    const char* name;
+    RTGeneralShaderGroup raygen_group;
+    Span<const RTGeneralShaderGroup*, u32> miss_groups = nilspan;
+    Span<const RTTriangleHitGroup*, u32> hit_groups = nilspan;
+    u32 max_recursion_depth = 0;
+    const char* name = nullptr;
   };
 
   enum class RTPipelineFlag : u8 { SKIP_TRIANGLE, SKIP_PROCEDURAL_PRIMITIVES, COUNT };
@@ -895,10 +901,12 @@ namespace soul::gpu
     TextureFormat format;
     TextureSampleCount sampleCount;
     AttachmentFlags flags;
+    auto operator==(const Attachment&) const -> bool = default;
   };
 
   struct InputLayoutDesc {
     Topology topology = Topology::TRIANGLE_LIST;
+    auto operator==(const InputLayoutDesc&) const -> bool = default;
   };
 
   struct GraphicPipelineStateDesc {
@@ -908,6 +916,7 @@ namespace soul::gpu
 
     struct InputBindingDesc {
       u32 stride = 0;
+      auto operator==(const InputBindingDesc&) const -> bool = default;
     } input_bindings[MAX_INPUT_BINDING_PER_SHADER];
 
     struct InputAttrDesc {
@@ -915,16 +924,18 @@ namespace soul::gpu
       u32 offset = 0;
       VertexElementType type = VertexElementType::DEFAULT;
       VertexElementFlags flags = 0;
+      auto operator==(const InputAttrDesc&) const -> bool = default;
     } input_attributes[MAX_INPUT_PER_SHADER];
 
     Viewport viewport;
-    Rect2D scissor;
+    Rect2D scissor = {};
 
     struct RasterDesc {
       f32 line_width = 1.0f;
       PolygonMode polygon_mode = PolygonMode::FILL;
       CullMode cull_mode = CullMode::NONE;
       FrontFace front_face = FrontFace::CLOCKWISE;
+      auto operator==(const RasterDesc&) const -> bool = default;
     } raster;
 
     u8 color_attachment_count = 0;
@@ -938,6 +949,7 @@ namespace soul::gpu
       BlendFactor src_alpha_blend_factor = BlendFactor::ZERO;
       BlendFactor dst_alpha_blend_factor = BlendFactor::ZERO;
       BlendOp alpha_blend_op = BlendOp::ADD;
+      auto operator==(const ColorAttachmentDesc&) const -> bool = default;
     };
 
     ColorAttachmentDesc color_attachments[MAX_COLOR_ATTACHMENT_PER_SHADER];
@@ -946,6 +958,7 @@ namespace soul::gpu
       b8 depth_test_enable = false;
       b8 depth_write_enable = false;
       CompareOp depth_compare_op = CompareOp::NEVER;
+      auto operator==(const DepthStencilAttachmentDesc&) const -> bool = default;
     };
 
     DepthStencilAttachmentDesc depth_stencil_attachment;
@@ -953,19 +966,12 @@ namespace soul::gpu
     struct DepthBiasDesc {
       f32 constant = 0.0f;
       f32 slope = 0.0f;
+      auto operator==(const DepthBiasDesc&) const -> bool = default;
     };
 
     DepthBiasDesc depth_bias;
 
-    auto operator==(const GraphicPipelineStateDesc& other) const -> b8
-    {
-      return (memcmp(this, &other, sizeof(GraphicPipelineStateDesc)) == 0);
-    }
-
-    auto operator!=(const GraphicPipelineStateDesc& other) const -> b8
-    {
-      return (memcmp(this, &other, sizeof(GraphicPipelineStateDesc)) != 0);
-    }
+    auto operator==(const GraphicPipelineStateDesc& other) const -> bool = default;
   };
 
   struct ComputePipelineStateDesc {
@@ -974,11 +980,6 @@ namespace soul::gpu
     auto operator==(const ComputePipelineStateDesc& other) const -> b8
     {
       return (memcmp(this, &other, sizeof(ComputePipelineStateDesc)) == 0);
-    }
-
-    auto operator!=(const ComputePipelineStateDesc& other) const -> b8
-    {
-      return (memcmp(this, &other, sizeof(ComputePipelineStateDesc)) != 0);
     }
   };
 
@@ -1318,22 +1319,37 @@ namespace soul::gpu
     {
     public:
       auto init(VkDevice device, u32 family_index, u32 queue_index) -> void;
+
       auto wait(Semaphore semaphore, VkPipelineStageFlags wait_stages) -> void;
+
       auto wait(BinarySemaphore* semaphore, VkPipelineStageFlags wait_stages) -> void;
+
       auto wait(TimelineSemaphore semaphore, VkPipelineStageFlags wait_stages) -> void;
-      auto get_vk_handle() const -> VkQueue { return vk_handle_; }
+
+      [[nodiscard]]
+      auto get_vk_handle() const -> VkQueue
+      {
+        return vk_handle_;
+      }
+
       auto get_timeline_semaphore() -> TimelineSemaphore;
+
       auto submit(PrimaryCommandBuffer command_buffer, BinarySemaphore* = nullptr) -> void;
+
       auto flush(BinarySemaphore* binary_semaphore = nullptr) -> void;
+
       auto present(VkSwapchainKHR swapchain, u32 swapchain_index, BinarySemaphore* semaphore)
         -> void;
+
       [[nodiscard]]
       auto get_family_index() const -> u32
       {
         return family_index_;
       }
+
       [[nodiscard]]
       auto is_waiting_binary_semaphore() const -> b8;
+
       [[nodiscard]]
       auto is_waiting_timeline_semaphore() const -> b8;
 
@@ -1500,14 +1516,14 @@ namespace soul::gpu
         // here.
         // - alignas seems to be relevant
         // - only happen on release mode
-        ThreadContext() {}
+        ThreadContext() {} // NOLINT
 
         ThreadContext(const ThreadContext&) = delete;
         auto operator=(const ThreadContext&) -> ThreadContext& = delete;
         ThreadContext(ThreadContext&&) = default;
         auto operator=(ThreadContext&&) -> ThreadContext& = default;
 
-        ~ThreadContext() {}
+        ~ThreadContext() {} // NOLINT
       };
 
       Vector<ThreadContext> thread_contexts_;
@@ -1576,7 +1592,7 @@ namespace soul::gpu
       GPUProperties gpu_properties = {};
       VkPhysicalDeviceMemoryProperties physical_device_memory_properties = {};
       VkPhysicalDeviceFeatures physical_device_features = {};
-      FlagMap<QueueType, u32> queue_family_indices;
+      FlagMap<QueueType, u32> queue_family_indices = {};
 
       CommandQueues queues;
 
@@ -1653,7 +1669,7 @@ namespace soul::gpu
   struct RenderCommandTyped : RenderCommand {
     static const RenderCommandType TYPE = RENDER_COMMAND_TYPE;
 
-    RenderCommandTyped() { type = TYPE; }
+    RenderCommandTyped() : RenderCommand(TYPE) {}
   };
 
   struct RenderCommandDraw : RenderCommandTyped<RenderCommandType::DRAW> {
@@ -1688,32 +1704,28 @@ namespace soul::gpu
     TextureID dst_texture = TextureID::null();
     const void* data = nullptr;
     usize data_size = 0;
-    u32 region_count = 0;
-    const TextureRegionUpdate* regions = nullptr;
+    Span<const TextureRegionUpdate*, u32> regions = nilspan;
   };
 
   struct RenderCommandCopyTexture : RenderCommandTyped<RenderCommandType::COPY_TEXTURE> {
     static constexpr PipelineType PIPELINE_TYPE = PipelineType::NON_SHADER;
     TextureID src_texture = TextureID::null();
     TextureID dst_texture = TextureID::null();
-    u32 region_count = 0;
-    const TextureRegionCopy* regions = nullptr;
+    Span<const TextureRegionCopy*, u32> regions = nilspan;
   };
 
   struct RenderCommandUpdateBuffer : RenderCommandTyped<RenderCommandType::UPDATE_BUFFER> {
     static constexpr PipelineType PIPELINE_TYPE = PipelineType::NON_SHADER;
     BufferID dst_buffer = BufferID::null();
     void* data = nullptr;
-    u32 region_count = 0;
-    const BufferRegionCopy* regions = nullptr;
+    Span<const BufferRegionCopy*, u32> regions = nilspan;
   };
 
   struct RenderCommandCopyBuffer : RenderCommandTyped<RenderCommandType::COPY_BUFFER> {
     static constexpr PipelineType PIPELINE_TYPE = PipelineType::NON_SHADER;
     BufferID src_buffer = BufferID::null();
     BufferID dst_buffer = BufferID::null();
-    u32 region_count = 0;
-    const BufferRegionCopy* regions = nullptr;
+    Span<const BufferRegionCopy*, u32> regions = nilspan;
   };
 
   struct RenderCommandDispatch : RenderCommandTyped<RenderCommandType::DISPATCH> {
@@ -1742,15 +1754,14 @@ namespace soul::gpu
     static constexpr PipelineType PIPELINE_TYPE = PipelineType::NON_SHADER;
     BlasID src_blas_id;
     BlasID dst_blas_id;
-    RTBuildMode build_mode;
+    RTBuildMode build_mode = RTBuildMode::REBUILD;
     BlasBuildDesc build_desc;
   };
 
   struct RenderCommandBatchBuildBlas : RenderCommandTyped<RenderCommandType::BATCH_BUILD_BLAS> {
     static constexpr PipelineType PIPELINE_TYPE = PipelineType::NON_SHADER;
-    u32 build_count;
-    RenderCommandBuildBlas* builds;
-    usize max_build_memory_size;
+    Span<const RenderCommandBuildBlas*, u32> builds = nilspan;
+    usize max_build_memory_size = 0;
   };
 
   template <typename Func, typename RenderCommandType>

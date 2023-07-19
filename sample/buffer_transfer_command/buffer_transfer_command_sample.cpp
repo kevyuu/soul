@@ -1,11 +1,13 @@
 #include "core/type.h"
 #include "gpu/gpu.h"
+#include "gpu/type.h"
 #include "math/math.h"
 
 #include "shaders/transform.hlsl"
 
 #include <app.h>
 
+#include <array>
 #include <ranges>
 
 using namespace soul;
@@ -124,8 +126,7 @@ class BufferTransferCommandSample final : public App
               const gpu::RenderCommandUpdateBuffer command = {
                 .dst_buffer = registry.get_buffer(parameter.transform_buffer_q1),
                 .data = &transform,
-                .region_count = 1,
-                .regions = &region_copy,
+                .regions = u32cspan(&region_copy, 1),
               };
               command_list.push(command);
             }
@@ -141,8 +142,7 @@ class BufferTransferCommandSample final : public App
               const gpu::RenderCommandUpdateBuffer command = {
                 .dst_buffer = registry.get_buffer(parameter.transform_buffer_q2),
                 .data = &transform,
-                .region_count = 1,
-                .regions = &region_copy,
+                .regions = u32cspan(&region_copy, 1),
               };
               command_list.push(command);
             }
@@ -156,8 +156,7 @@ class BufferTransferCommandSample final : public App
               const gpu::RenderCommandUpdateBuffer command = {
                 .dst_buffer = registry.get_buffer(parameter.transient_transform_buffer),
                 .data = transient_transforms_.data(),
-                .region_count = 1,
-                .regions = &region_copy,
+                .regions = u32cspan(&region_copy, 1),
               };
               command_list.push(command);
             }
@@ -199,9 +198,9 @@ class BufferTransferCommandSample final : public App
             command_list.template push<Command>({
               .src_buffer = registry.get_buffer(parameter.transform_buffer_q1),
               .dst_buffer = registry.get_buffer(parameter.copy_dst_transform_buffer),
-              .region_count = 1,
-              .regions = &region_copy_q1,
+              .regions = u32cspan(&region_copy_q1, 1),
             });
+
             const gpu::BufferRegionCopy region_copy_q2 = {
               .dst_offset = transforms_q1_.size() * sizeof(Transform),
               .size = transforms_q2_.size() * sizeof(Transform),
@@ -209,9 +208,9 @@ class BufferTransferCommandSample final : public App
             command_list.template push<Command>({
               .src_buffer = registry.get_buffer(parameter.transform_buffer_q2),
               .dst_buffer = registry.get_buffer(parameter.copy_dst_transform_buffer),
-              .region_count = 1,
-              .regions = &region_copy_q2,
+              .regions = u32cspan(&region_copy_q2, 1),
             });
+
             const gpu::BufferRegionCopy region_copy_transient = {
               .dst_offset = (transforms_q1_.size() + transforms_q2_.size()) * sizeof(Transform),
               .size = transient_transforms_.size() * sizeof(Transform),
@@ -219,8 +218,7 @@ class BufferTransferCommandSample final : public App
             command_list.template push<Command>({
               .src_buffer = registry.get_buffer(parameter.transient_transform_buffer),
               .dst_buffer = registry.get_buffer(parameter.copy_dst_transform_buffer),
-              .region_count = 1,
-              .regions = &region_copy_transient,
+              .regions = u32cspan(&region_copy_transient, 1),
             });
           })
         .get_parameter();
@@ -307,15 +305,15 @@ public:
   {
     gpu::ShaderSource shader_source = gpu::ShaderFile("buffer_transfer_command_sample.hlsl");
     std::filesystem::path search_path = "shaders/";
-    constexpr auto entry_points = std::to_array<gpu::ShaderEntryPoint>(
-      {{gpu::ShaderStage::VERTEX, "vsMain"}, {gpu::ShaderStage::FRAGMENT, "psMain"}});
+    constexpr auto entry_points = soul::Array{
+      gpu::ShaderEntryPoint{gpu::ShaderStage::VERTEX, "vsMain"},
+      gpu::ShaderEntryPoint{gpu::ShaderStage::FRAGMENT, "psMain"},
+    };
+
     const gpu::ProgramDesc program_desc = {
-      .search_path_count = 1,
-      .search_paths = &search_path,
-      .source_count = 1,
-      .sources = &shader_source,
-      .entry_point_count = entry_points.size(),
-      .entry_points = entry_points.data(),
+      .search_paths = u32cspan(&search_path, 1),
+      .sources = u32cspan(&shader_source, 1),
+      .entry_points = entry_points.cspan<u32>(),
     };
     auto result = gpu_system_->create_program(program_desc);
     if (!result) {

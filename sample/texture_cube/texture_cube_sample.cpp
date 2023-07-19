@@ -1,5 +1,6 @@
 #include "core/type.h"
 #include "gpu/gpu.h"
+#include "gpu/type.h"
 #include "math/math.h"
 
 #include "runtime/scope_allocator.h"
@@ -156,15 +157,14 @@ public:
     runtime::ScopeAllocator scope_allocator("Texture Cube Sample App");
     gpu::ShaderSource shader_source = gpu::ShaderFile("texture_cube_sample.hlsl");
     std::filesystem::path search_path = "shaders/";
-    constexpr auto entry_points = std::to_array<gpu::ShaderEntryPoint>(
-      {{gpu::ShaderStage::VERTEX, "vsMain"}, {gpu::ShaderStage::FRAGMENT, "psMain"}});
+    constexpr auto entry_points = soul::Array{
+      gpu::ShaderEntryPoint{gpu::ShaderStage::VERTEX, "vsMain"},
+      gpu::ShaderEntryPoint{gpu::ShaderStage::FRAGMENT, "psMain"},
+    };
     const gpu::ProgramDesc program_desc = {
-      .search_path_count = 1,
-      .search_paths = &search_path,
-      .source_count = 1,
-      .sources = &shader_source,
-      .entry_point_count = entry_points.size(),
-      .entry_points = entry_points.data(),
+      .search_paths = u32cspan(&search_path, 1),
+      .sources = u32cspan(&shader_source, 1),
+      .entry_points = entry_points.cspan<u32>(),
     };
     auto result = gpu_system_->create_program(program_desc);
     if (!result) {
@@ -238,8 +238,7 @@ public:
       const gpu::TextureLoadDesc load_desc = {
         .data = skybox_data,
         .data_size = skybox_data_size,
-        .region_count = soul::cast<u32>(region_loads.size()),
-        .regions = region_loads.data(),
+        .regions = region_loads.cspan<u32>(),
       };
 
       const auto texture_id = gpu_system_->create_texture(tex_desc, load_desc);

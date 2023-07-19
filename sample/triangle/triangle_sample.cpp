@@ -1,6 +1,7 @@
 #include "core/panic.h"
 #include "core/type.h"
 #include "gpu/gpu.h"
+#include "gpu/type.h"
 
 #include <app.h>
 
@@ -55,15 +56,14 @@ public:
   {
     gpu::ShaderSource shader_source = gpu::ShaderFile("triangle_sample.hlsl");
     const std::filesystem::path search_path = "shaders/";
-    const auto entry_points = std::to_array<gpu::ShaderEntryPoint>(
-      {{gpu::ShaderStage::VERTEX, "vsMain"}, {gpu::ShaderStage::FRAGMENT, "fsMain"}});
+    const auto entry_points = soul::Array{
+      gpu::ShaderEntryPoint{gpu::ShaderStage::VERTEX, "vsMain"},
+      gpu::ShaderEntryPoint{gpu::ShaderStage::FRAGMENT, "fsMain"},
+    };
     const gpu::ProgramDesc program_desc = {
-      .search_path_count = 1,
-      .search_paths = &search_path,
-      .source_count = 1,
-      .sources = &shader_source,
-      .entry_point_count = entry_points.size(),
-      .entry_points = entry_points.data(),
+      .search_paths = u32cspan(&search_path, 1),
+      .sources = u32cspan(&shader_source, 1),
+      .entry_points = entry_points.cspan<u32>(),
     };
     program_id_ = gpu_system_->create_program(program_desc).value();
   }

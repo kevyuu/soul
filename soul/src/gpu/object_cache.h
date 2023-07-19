@@ -90,7 +90,7 @@ namespace soul::gpu
   {
   public:
     using ID = ValType*;
-    static constexpr ValType* NULLVAL = nullptr;
+    static constexpr const ValType* NULLVAL = nullptr;
 
     explicit RingCache(
       memory::Allocator* allocator = get_default_allocator(), ValDeleter deleter = ValDeleter())
@@ -172,7 +172,7 @@ namespace soul::gpu
       auto operator()(const ItemKey& item_key) const noexcept -> std::size_t
       {
         if (item_key.key == nullptr) {
-          return false;
+          return 0u;
         }
         return item_key.hash;
       }

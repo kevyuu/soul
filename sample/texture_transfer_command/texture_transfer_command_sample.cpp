@@ -1,5 +1,6 @@
 #include "core/type.h"
 #include "gpu/gpu.h"
+#include "gpu/type.h"
 #include "math/math.h"
 
 #define STB_IMAGE_IMPLEMENTATION
@@ -83,8 +84,7 @@ class Texture3DSampleApp final : public App
               .dst_texture = registry.get_texture(parameter.persistent_texture),
               .data = test_texture_data_,
               .data_size = soul::cast<usize>(width_ * height_ * 4),
-              .region_count = 1,
-              .regions = &region,
+              .regions = u32cspan(&region, 1),
             });
           })
         .get_parameter();
@@ -116,8 +116,7 @@ class Texture3DSampleApp final : public App
             command_list.push(gpu::RenderCommandCopyTexture{
               .src_texture = registry.get_texture(parameter.src_texture),
               .dst_texture = registry.get_texture(parameter.dst_texture),
-              .region_count = 1,
-              .regions = &region,
+              .regions = u32cspan(&region, 1),
             });
           })
         .get_parameter();
@@ -198,15 +197,14 @@ public:
   {
     gpu::ShaderSource shader_source = gpu::ShaderFile("texture_transfer_command_sample.hlsl");
     std::filesystem::path search_path = "shaders/";
-    constexpr auto entry_points = std::to_array<gpu::ShaderEntryPoint>(
-      {{gpu::ShaderStage::VERTEX, "vsMain"}, {gpu::ShaderStage::FRAGMENT, "psMain"}});
+    constexpr auto entry_points = soul::Array{
+      gpu::ShaderEntryPoint{gpu::ShaderStage::VERTEX, "vsMain"},
+      gpu::ShaderEntryPoint{gpu::ShaderStage::FRAGMENT, "psMain"},
+    };
     const gpu::ProgramDesc program_desc = {
-      .search_path_count = 1,
-      .search_paths = &search_path,
-      .source_count = 1,
-      .sources = &shader_source,
-      .entry_point_count = entry_points.size(),
-      .entry_points = entry_points.data(),
+      .search_paths = u32cspan(&search_path, 1),
+      .sources = u32cspan(&shader_source, 1),
+      .entry_points = entry_points.cspan<u32>(),
     };
     auto result = gpu_system_->create_program(program_desc);
     if (!result) {

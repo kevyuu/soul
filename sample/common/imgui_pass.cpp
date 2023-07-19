@@ -1,5 +1,6 @@
 #include "gpu/gpu.h"
 
+#include "gpu/type.h"
 #include "imgui_pass.h"
 
 #include "gpu/render_graph.h"
@@ -68,15 +69,14 @@ ImGuiRenderGraphPass::ImGuiRenderGraphPass(soul::gpu::System* gpu_system) : gpu_
 
   gpu::ShaderSource shader_source = gpu::ShaderString(CString::from(IMGUI_HLSL));
   std::filesystem::path search_path = "shaders/";
-  constexpr auto entry_points = std::to_array<gpu::ShaderEntryPoint>(
-    {{gpu::ShaderStage::VERTEX, "vsMain"}, {gpu::ShaderStage::FRAGMENT, "psMain"}});
+  constexpr auto entry_points = soul::Array{
+    gpu::ShaderEntryPoint{gpu::ShaderStage::VERTEX, "vsMain"},
+    gpu::ShaderEntryPoint{gpu::ShaderStage::FRAGMENT, "psMain"},
+  };
   const gpu::ProgramDesc program_desc = {
-    .search_path_count = 1,
-    .search_paths = &search_path,
-    .source_count = 1,
-    .sources = &shader_source,
-    .entry_point_count = entry_points.size(),
-    .entry_points = entry_points.data(),
+    .search_paths = u32cspan(&search_path, 1),
+    .sources = u32cspan(&shader_source, 1),
+    .entry_points = entry_points.cspan<u32>(),
   };
   auto result = gpu_system_->create_program(program_desc);
   if (!result) {
@@ -98,8 +98,7 @@ ImGuiRenderGraphPass::ImGuiRenderGraphPass(soul::gpu::System* gpu_system) : gpu_
   const gpu::TextureLoadDesc load_desc = {
     .data = font_pixels,
     .data_size = soul::cast<usize>(width) * height * 4 * sizeof(char),
-    .region_count = 1,
-    .regions = &region,
+    .regions = u32cspan(&region, 1),
   };
 
   const auto font_tex_desc = gpu::TextureDesc::d2(
@@ -109,6 +108,7 @@ ImGuiRenderGraphPass::ImGuiRenderGraphPass(soul::gpu::System* gpu_system) : gpu_
     {gpu::TextureUsage::SAMPLED},
     {gpu::QueueType::GRAPHIC},
     vec2ui32(width, height));
+
   font_texture_id_ = gpu_system_->create_texture(font_tex_desc, load_desc);
   gpu_system_->flush_texture(font_texture_id_, {gpu::TextureUsage::SAMPLED});
   font_sampler_id_ = gpu_system->request_sampler(gpu::SamplerDesc::same_filter_wrap(
@@ -186,8 +186,7 @@ void ImGuiRenderGraphPass::add_pass(
             command_list.push(Command{
               .dst_buffer = registry.get_buffer(parameter.vertex_buffer),
               .data = im_draw_verts.data(),
-              .region_count = 1,
-              .regions = &region,
+              .regions = u32cspan(&region, 1),
             });
           }
           {
@@ -204,8 +203,7 @@ void ImGuiRenderGraphPass::add_pass(
             command_list.push(Command{
               .dst_buffer = registry.get_buffer(parameter.index_buffer),
               .data = im_draw_indexes.data(),
-              .region_count = 1,
-              .regions = &region,
+              .regions = u32cspan(&region, 1),
             });
           }
 
@@ -223,8 +221,7 @@ void ImGuiRenderGraphPass::add_pass(
             command_list.template push<Command>({
               .dst_buffer = registry.get_buffer(parameter.transform_buffer),
               .data = &transform,
-              .region_count = 1,
-              .regions = &region,
+              .regions = u32cspan(&region, 1),
             });
           }
         })

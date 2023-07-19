@@ -6,7 +6,7 @@
 #include "gpu/type.h"
 
 #if defined(SOUL_ASSERT_ENABLE)
-#  define SOUL_VK_CHECK(result, ...) SOUL_ASSERT(0, result == VK_SUCCESS, ##__VA_ARGS__)
+#  define SOUL_VK_CHECK(result, ...) SOUL_ASSERT(1, result == VK_SUCCESS, ##__VA_ARGS__)
 #else
 #  include "core/log.h"
 #  define SOUL_VK_CHECK(expr, message)                                                             \
@@ -16,7 +16,7 @@
         SOUL_LOG_ERROR("Vulkan error| expr = {}, result = {} ", #expr, usize(_result));            \
         SOUL_LOG_ERROR("Message = {}", message);                                                   \
       }                                                                                            \
-    } while (0)
+    } while (1)
 #endif
 
 #include <span>
@@ -41,22 +41,22 @@ namespace soul::gpu
       WSI* wsi = nullptr;
       u16 max_frame_in_flight = 0;
       u16 thread_count = 0;
-      usize transient_pool_size = 16 * ONE_MEGABYTE;
+      usize transient_pool_size = 17 * ONE_MEGABYTE;
     };
 
-    auto init(const Config& config) -> void;
-    auto init_frame_context(const Config& config) -> void;
+    void init(const Config& config);
+    void init_frame_context(const Config& config);
 
     auto get_gpu_properties() const -> const GPUProperties&;
 
-    auto shutdown() -> void;
+    void shutdown();
 
     auto create_buffer(const BufferDesc& desc) -> BufferID;
     auto create_buffer(const BufferDesc& desc, const void* data) -> BufferID;
     auto create_transient_buffer(const BufferDesc& desc) -> BufferID;
-    auto flush_buffer(BufferID buffer_id) -> void;
-    auto destroy_buffer_descriptor(BufferID buffer_id) -> void;
-    auto destroy_buffer(BufferID buffer_id) -> void;
+    void flush_buffer(BufferID buffer_id);
+    void destroy_buffer_descriptor(BufferID buffer_id);
+    void destroy_buffer(BufferID buffer_id);
     auto get_buffer(BufferID buffer_id) -> impl::Buffer&;
     auto get_buffer(BufferID buffer_id) const -> const impl::Buffer&;
     auto get_gpu_address(BufferID buffer_id) const -> GPUAddress;
@@ -64,11 +64,11 @@ namespace soul::gpu
     auto create_texture(const TextureDesc& desc) -> TextureID;
     auto create_texture(const TextureDesc& desc, const TextureLoadDesc& load_desc) -> TextureID;
     auto create_texture(const TextureDesc& desc, ClearValue clear_value) -> TextureID;
-    auto flush_texture(TextureID texture_id, TextureUsageFlags usage_flags) -> void;
+    void flush_texture(TextureID texture_id, TextureUsageFlags usage_flags);
     auto get_texture_mip_levels(TextureID texture_id) const -> u32;
     auto get_texture_desc(TextureID texture_id) const -> const TextureDesc&;
-    auto destroy_texture_descriptor(TextureID texture_id) -> void;
-    auto destroy_texture(TextureID texture_id) -> void;
+    void destroy_texture_descriptor(TextureID texture_id);
+    void destroy_texture(TextureID texture_id);
     auto get_texture(TextureID texture_id) -> impl::Texture&;
     auto get_texture(TextureID texture_id) const -> const impl::Texture&;
     auto get_texture_view(TextureID texture_id, u32 level, u32 layer = 0) -> impl::TextureView;
@@ -80,36 +80,36 @@ namespace soul::gpu
     auto get_blas_size_requirement(const BlasBuildDesc& build_desc) -> usize;
     auto create_blas(const BlasDesc& desc, BlasGroupID blas_group_id = BlasGroupID::null())
       -> BlasID;
-    auto destroy_blas(BlasID blas_id) -> void;
+    void destroy_blas(BlasID blas_id);
     auto get_blas(BlasID blas_id) const -> const impl::Blas&;
     auto get_blas(BlasID blas_id) -> impl::Blas&;
     auto get_gpu_address(BlasID blas_id) const -> GPUAddress;
 
     auto create_blas_group(const char* name) -> BlasGroupID;
-    auto destroy_blas_group(BlasGroupID blas_group_id) -> void;
+    void destroy_blas_group(BlasGroupID blas_group_id);
     auto get_blas_group(BlasGroupID blas_group_id) const -> const impl::BlasGroup&;
     auto get_blas_group(BlasGroupID blas_group_id) -> impl::BlasGroup&;
 
     auto get_tlas_size_requirement(const TlasBuildDesc& build_desc) -> usize;
     auto create_tlas(const TlasDesc& desc) -> TlasID;
-    auto destroy_tlas(TlasID tlas_id) -> void;
+    void destroy_tlas(TlasID tlas_id);
     auto get_tlas(TlasID tlas_id) const -> const impl::Tlas&;
     auto get_tlas(TlasID tlas_id) -> impl::Tlas&;
 
     auto create_program(const ProgramDesc& program_desc) -> expected<ProgramID, Error>;
-    auto get_program_ptr(ProgramID program_id) -> impl::Program*;
-    auto get_program(ProgramID program_id) -> const impl::Program&;
+    auto get_program(ProgramID program_id) const -> const impl::Program&;
+    auto get_program(ProgramID program_id) -> impl::Program&;
 
     auto create_shader_table(const ShaderTableDesc& shader_table_desc) -> ShaderTableID;
-    auto destroy_shader_table(ShaderTableID shader_table_id) -> void;
+    void destroy_shader_table(ShaderTableID shader_table_id);
     auto get_shader_table(ShaderTableID shader_table_id) const -> const impl::ShaderTable&;
     auto get_shader_table(ShaderTableID shader_table_id) -> impl::ShaderTable&;
 
     auto request_pipeline_state(
-      const GraphicPipelineStateDesc& key,
+      const GraphicPipelineStateDesc& desc,
       VkRenderPass render_pass,
       TextureSampleCount sample_count) -> PipelineStateID;
-    auto request_pipeline_state(const ComputePipelineStateDesc& key) -> PipelineStateID;
+    auto request_pipeline_state(const ComputePipelineStateDesc& desc) -> PipelineStateID;
     auto get_pipeline_state(PipelineStateID pipeline_state_id) -> const impl::PipelineState&;
     auto get_bindless_pipeline_layout() const -> VkPipelineLayout;
     auto get_bindless_descriptor_sets() const -> impl::BindlessDescriptorSets;
@@ -127,19 +127,19 @@ namespace soul::gpu
     auto get_as_descriptor_id(TlasID tlas_id) const -> DescriptorID;
 
     auto create_binary_semaphore() -> impl::BinarySemaphore;
-    auto destroy_binary_semaphore(impl::BinarySemaphore id) -> void;
+    void destroy_binary_semaphore(impl::BinarySemaphore semaphore);
 
     auto create_event() -> VkEvent;
-    auto destroy_event(VkEvent event) -> void;
+    void destroy_event(VkEvent event);
 
-    auto execute(const RenderGraph& render_graph) -> void;
+    void execute(const RenderGraph& render_graph);
 
-    auto flush() -> void;
-    auto flush_frame() -> void;
-    auto begin_frame() -> void;
-    auto end_frame() -> void;
+    void flush();
+    void flush_frame();
+    void begin_frame();
+    void end_frame();
 
-    auto recreate_swapchain() -> void;
+    void recreate_swapchain();
     auto get_swapchain_extent() -> vec2ui32;
     auto get_swapchain_texture() -> TextureID;
 
@@ -148,7 +148,7 @@ namespace soul::gpu
     auto request_render_pass(const impl::RenderPassKey& key) -> VkRenderPass;
 
     auto create_framebuffer(const VkFramebufferCreateInfo& info) -> VkFramebuffer;
-    auto destroy_framebuffer(VkFramebuffer framebuffer) -> void;
+    void destroy_framebuffer(VkFramebuffer framebuffer);
 
     auto get_queue_data_from_queue_flags(QueueFlags flags) const -> impl::QueueData;
 
@@ -165,9 +165,9 @@ namespace soul::gpu
 
     auto acquire_swapchain() -> VkResult;
 
-    auto wait_sync_counter(impl::TimelineSemaphore sync_counter) -> void;
+    void wait_sync_counter(impl::TimelineSemaphore sync_counter);
 
-    auto calculate_gpu_properties() -> void;
+    void calculate_gpu_properties();
 
     auto get_as_build_size_info(const TlasBuildDesc& build_desc)
       -> VkAccelerationStructureBuildSizesInfoKHR;
@@ -177,8 +177,8 @@ namespace soul::gpu
       const VkAccelerationStructureBuildGeometryInfoKHR& build_info,
       const u32* max_primitives_counts) -> VkAccelerationStructureBuildSizesInfoKHR;
 
-    auto add_to_blas_group(BlasID blas_id, BlasGroupID blas_group_id) -> void;
-    auto remove_from_blas_group(BlasID blas_id) -> void;
+    void add_to_blas_group(BlasID blas_id, BlasGroupID blas_group_id);
+    void remove_from_blas_group(BlasID blas_id);
 
     Config config_;
   };

@@ -191,7 +191,8 @@ namespace soul::gpu::impl
     };
 
     constexpr VkDescriptorBindingFlags flags =
-      VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT | VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT |
+      VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT |   // NOLINT
+      VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT | // NOLINT
       VK_DESCRIPTOR_BINDING_UPDATE_UNUSED_WHILE_PENDING_BIT;
 
     const VkDescriptorSetLayoutBindingFlagsCreateInfo flag_info = {
