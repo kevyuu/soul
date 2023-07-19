@@ -6,6 +6,7 @@
 #include "core/objops.h"
 #include "core/own_ref.h"
 #include "core/panic.h"
+#include "core/span.h"
 #include "core/util.h"
 #include "memory/allocator.h"
 
@@ -187,6 +188,18 @@ namespace soul
 
     [[nodiscard]]
     auto data() const noexcept -> const_pointer;
+
+    template <ts_unsigned_integral SpanSizeT>
+    [[nodiscard]]
+    auto span() -> Span<pointer, SpanSizeT>;
+
+    template <ts_unsigned_integral SpanSizeT>
+    [[nodiscard]]
+    auto span() const -> Span<const_pointer, SpanSizeT>;
+
+    template <ts_unsigned_integral SpanSizeT>
+    [[nodiscard]]
+    auto cspan() const -> Span<const_pointer, SpanSizeT>;
 
     [[nodiscard]]
     auto front() -> reference;
@@ -875,6 +888,27 @@ namespace soul
   auto Vector<T, AllocatorT, inline_element_count>::data() const noexcept -> const_pointer
   {
     return buffer_;
+  }
+
+  template <typename T, memory::allocator_type AllocatorT, usize inline_element_count>
+  template <ts_unsigned_integral SpanSizeT>
+  auto Vector<T, AllocatorT, inline_element_count>::span() -> Span<pointer, SpanSizeT>
+  {
+    return {data(), cast<SpanSizeT>(size())};
+  }
+
+  template <typename T, memory::allocator_type AllocatorT, usize inline_element_count>
+  template <ts_unsigned_integral SpanSizeT>
+  auto Vector<T, AllocatorT, inline_element_count>::span() const -> Span<const_pointer, SpanSizeT>
+  {
+    return {data(), cast<SpanSizeT>(size())};
+  }
+
+  template <typename T, memory::allocator_type AllocatorT, usize inline_element_count>
+  template <ts_unsigned_integral SpanSizeT>
+  auto Vector<T, AllocatorT, inline_element_count>::cspan() const -> Span<const_pointer, SpanSizeT>
+  {
+    return {data(), cast<SpanSizeT>(size())};
   }
 
   template <typename T, memory::allocator_type AllocatorT, usize inline_element_count>
