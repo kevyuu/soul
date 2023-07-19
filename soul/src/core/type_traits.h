@@ -168,6 +168,9 @@ namespace soul
   concept ts_integral = std::integral<T>;
 
   template <typename T>
+  concept ts_unsigned_integral = std::unsigned_integral<T>;
+
+  template <typename T>
   inline b8 constexpr is_pointer_v = std::is_pointer_v<T>;
 
   template <typename T>
@@ -240,4 +243,7 @@ namespace soul
 
   template <class T, template <class...> class Template>
   inline b8 constexpr is_specialization_v = is_specialization<T, Template>::value;
+
+  template <typename T>
+  using remove_pointer_t = std::remove_pointer_t<T>;
 } // namespace soul
