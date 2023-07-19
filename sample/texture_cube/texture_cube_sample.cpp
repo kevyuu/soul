@@ -167,7 +167,7 @@ public:
       .entry_points = entry_points.cspan<u32>(),
     };
     auto result = gpu_system_->create_program(program_desc);
-    if (result.is_ok()) {
+    if (result.is_err()) {
       SOUL_PANIC("Fail to create program");
     }
     program_id_ = result.ok_ref();
