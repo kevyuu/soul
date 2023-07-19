@@ -75,6 +75,18 @@ namespace soul
       return buffer_[to_underlying(index)];
     }
 
+    constexpr auto ref(EnumT index) noexcept -> reference
+    {
+      SOUL_ASSERT(0, to_underlying(index) < to_underlying(EnumT::COUNT), "");
+      return buffer_[to_underlying(index)];
+    }
+
+    constexpr auto ref(EnumT index) const -> const_reference
+    {
+      SOUL_ASSERT(0, to_underlying(index) < to_underlying(EnumT::COUNT), "");
+      return buffer_[to_underlying(index)];
+    }
+
     [[nodiscard]]
     constexpr auto size() const -> usize
     {
