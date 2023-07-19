@@ -6,6 +6,9 @@
 
 namespace soul
 {
+  struct NilSpan {
+  };
+  constexpr auto nilspan = NilSpan{};
 
   template <ts_pointer T, ts_unsigned_integral SizeT>
   class Span
@@ -51,6 +54,8 @@ namespace soul
         : data_(other.begin()), size_(other.size())
     {
     }
+
+    Span(NilSpan /* nil */) : Span(nullptr, 0) {} // NOLINT
 
     [[nodiscard]]
     auto begin() -> iterator
@@ -122,6 +127,40 @@ namespace soul
     auto crend() const -> const_reverse_iterator
     {
       return const_reverse_iterator(cbegin());
+    }
+
+    auto operator[](usize idx) -> reference
+    {
+      SOUL_ASSERT(
+        0,
+        idx < size_,
+        "Out of bound access to span detected. idx = %llu, _size = %llu",
+        idx,
+        size_);
+      return data_[idx];
+    }
+
+    auto operator[](usize idx) const -> const_reference
+    {
+      SOUL_ASSERT(
+        0,
+        idx < size_,
+        "Out of bound access to span detected. idx = %llu, _size = %llu",
+        idx,
+        size_);
+      return data_[idx];
+    }
+
+    [[nodiscard]]
+    auto data() noexcept -> MaybeNull<pointer>
+    {
+      return data_;
+    }
+
+    [[nodiscard]]
+    auto data() const noexcept -> MaybeNull<const_pointer>
+    {
+      return data_;
     }
 
     [[nodiscard]]
