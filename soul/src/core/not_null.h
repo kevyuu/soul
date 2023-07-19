@@ -48,6 +48,13 @@ namespace soul
       SOUL_ASSERT_LITE(0, ptr != nullptr, "Cannot assign a nullptr to NotNull");
     }
 
+    template <typename U>
+      requires(can_convert_v<U, T>)
+    constexpr NotNull(NotNull<U> ptr) : ptr_(ptr) // NOLINT
+    {
+      SOUL_ASSERT_LITE(0, ptr != nullptr, "Cannot assign a nullptr to NotNull");
+    }
+
     constexpr void swap(NotNull& other)
     {
       const auto tmp_ptr = ptr_;
