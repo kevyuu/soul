@@ -20,15 +20,6 @@ namespace soul
   constexpr usize ONE_MEGABYTE = 1024 * ONE_KILOBYTE;
   constexpr usize ONE_GIGABYTE = 1024 * ONE_MEGABYTE;
 
-  template <typename Val, typename Err>
-  using expected = tl::expected<Val, Err>;
-
-  template <class E>
-  auto make_unexpected(E&& e) -> tl::unexpected<std::decay_t<E>>
-  {
-    return unexpected<std::decay_t<E>>(std::forward<E>(e));
-  }
-
   template <typename T>
   concept ts_bit_block = std::unsigned_integral<T>;
 

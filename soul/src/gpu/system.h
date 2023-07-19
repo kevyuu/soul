@@ -2,6 +2,7 @@
 
 #include "core/cstring.h"
 #include "core/panic.h"
+#include "core/result.h"
 #include "gpu/intern/bindless_descriptor_allocator.h"
 #include "gpu/type.h"
 
@@ -96,7 +97,7 @@ namespace soul::gpu
     auto get_tlas(TlasID tlas_id) const -> const impl::Tlas&;
     auto get_tlas(TlasID tlas_id) -> impl::Tlas&;
 
-    auto create_program(const ProgramDesc& program_desc) -> expected<ProgramID, Error>;
+    auto create_program(const ProgramDesc& program_desc) -> Result<ProgramID, Error>;
     auto get_program(ProgramID program_id) const -> const impl::Program&;
     auto get_program(ProgramID program_id) -> impl::Program&;
 

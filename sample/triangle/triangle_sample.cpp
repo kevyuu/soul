@@ -65,7 +65,7 @@ public:
       .sources = u32cspan(&shader_source, 1),
       .entry_points = entry_points.cspan<u32>(),
     };
-    program_id_ = gpu_system_->create_program(program_desc).value();
+    program_id_ = gpu_system_->create_program(program_desc).ok_ref();
   }
 };
 
