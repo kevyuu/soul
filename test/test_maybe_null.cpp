@@ -54,15 +54,15 @@ TEST(TestMaybeNullConstruction, TestConstruction)
   }
 
   {
-    const MaybeNull<i32*> test_maybe_null = none;
+    const MaybeNull<i32*> test_maybe_null = nilopt;
     SOUL_TEST_ASSERT_EQ(test_maybe_null, nullptr);
   }
 
   test_copy_constructor(MaybeNull<i32*>::some(ptrof(test_int)));
-  test_copy_constructor(MaybeNull<i32*>(none));
+  test_copy_constructor(MaybeNull<i32*>(nilopt));
 
   test_move_constructor(MaybeNull<i32*>::some(ptrof(test_int)));
-  test_move_constructor(MaybeNull<i32*>(none));
+  test_move_constructor(MaybeNull<i32*>(nilopt));
 }
 
 TEST(TestMaybeNullManipulation, TestManipulation)

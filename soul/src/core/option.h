@@ -10,10 +10,10 @@
 
 namespace soul
 {
-  class None
+  class NilOpt
   {
   };
-  constexpr auto none = None{};
+  constexpr auto nilopt = NilOpt{};
 
   template <typeset T>
   class Option;
@@ -245,7 +245,7 @@ namespace soul
 
     constexpr Option() noexcept : dummy_() {}
 
-    constexpr Option(None none_val) : dummy_() {} // NOLINT
+    constexpr Option(NilOpt none_val) : dummy_() {} // NOLINT
 
     constexpr Option(const Option& other) noexcept
       requires(can_trivial_copy_v<T>)
@@ -462,7 +462,7 @@ namespace soul
 
     constexpr Option() : not_null_ptr_(NotNull<T>::new_unchecked(nullptr)) {}
 
-    constexpr Option(None none) : not_null_ptr_(NotNull<T>::new_unchecked(nullptr)) {} // NOLINT
+    constexpr Option(NilOpt none) : not_null_ptr_(NotNull<T>::new_unchecked(nullptr)) {} // NOLINT
 
     constexpr Option(T ptr) : not_null_ptr_(NotNull<T>::new_unchecked(ptr)) {} // NOLINT
 
