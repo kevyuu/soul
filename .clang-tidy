@@ -1,20 +1,57 @@
 ---
-Checks: "*,
+Checks: "
+        *,
         -abseil-*,
         -altera-*,
         -android-*,
         -fuchsia-*,
         -google-*,
         -llvm*,
-        -modernize-use-trailing-return-type,
         -zircon-*,
-        -readability-else-after-return,
-        -readability-static-accessed-through-instance,
-        -readability-avoid-const-params-in-decls,
+
+        -bugprone-easily-swappable-parameters,
+        -bugprone-unhandled-self-assignment
+
+        -cert-oop54-cpp
+
+        -cppcoreguidelines-avoid-c-arrays,
+        -cppcoreguidelines-avoid-magic-numbers,
+        -cppcoreguidelines-pro-bounds-pointer-arithmetic,
         -cppcoreguidelines-non-private-member-variables-in-classes,
-        -misc-non-private-member-variables-in-classes,
         -cppcoreguidelines-pro-type-union-access,
+        -cppcoreguidelines-pro-bounds-array-to-pointer-decay,
+        -cppcoreguidelines-pro-type-reinterpret-cast,
+        -cppcoreguidelines-pro-type-vararg,
+        -cppcoreguidelines-macro-usage,
+        -cppcoreguidelines-pro-bounds-constant-array-index,
+        -cppcoreguidelines-owning-memory,
+
+        -hicpp-avoid-c-arrays,
+        -hicpp-no-array-decay,
+        -hicpp-uppercase-literal-suffix,
+        -hicpp-signed-bitwise,
+
+        -misc-non-private-member-variables-in-classes,
+        -misc-no-recursion,
+
+        -modernize-avoid-c-arrays,
+        -modernize-return-braced-init-list,
+
+        -readability-avoid-const-params-in-decls,
+        -readability-else-after-return,
+        -readability-function-cognitive-complexity,        
+        -readability-identifier-length,
+        -readability-magic-numbers,
+        -readability-static-accessed-through-instance,
+        -readability-uppercase-literal-suffix,
+        -readability-convert-member-functions-to-static,
+        -readability-simplify-boolean-expr,
+        -readability-make-member-function-const,
+        -readability-qualified-auto,
 "
+CheckOptions:
+  - key: cppcoreguidelines-avoid-do-while.IgnoreMacros
+    value: 1
 WarningsAsErrors: ''
 HeaderFilterRegex: ''
 FormatStyle:     none
