@@ -31,6 +31,14 @@ auto verify_array(const soul::Array<T, element_count>& arr, RangeT&& range)
   SOUL_TEST_ASSERT_TRUE(std::equal(range.begin(), range.end(), arr.begin()));
 }
 
+TEST(TestArrayConstruction, TestConstructFromBraceInitList)
+{
+  const auto array = soul::Array{1, 2, -3};
+  SOUL_TEST_ASSERT_EQ(array[0], 1);
+  SOUL_TEST_ASSERT_EQ(array[1], 2);
+  SOUL_TEST_ASSERT_EQ(array[2], -3);
+  SOUL_TEST_ASSERT_EQ(array.cspan<u32>().size(), 3);
+};
 TEST(TestArrayConstruction, TestDefaultConstructor)
 {
   auto test_default_constructor = []<typename T, usize element_count>() {

@@ -1,11 +1,14 @@
 #pragma once
 
-#include <array>
+#include "core/span.h"
 #include "core/type.h"
 #include "core/type_traits.h"
 
 namespace soul
 {
+
+  static constexpr usize MAX_BRACE_INIT_SIZE = 32;
+
   template <typename T, usize element_count>
   struct Array {
 
@@ -21,15 +24,18 @@ namespace soul
     using const_reverse_iterator = std::reverse_iterator<const_iterator>;
 
     [[nodiscard]]
-    static constexpr auto init_fill(const T& val) -> this_type;
+    static constexpr auto init_fill(const T& val) -> this_type
+      requires(element_count <= MAX_BRACE_INIT_SIZE);
 
     template <ts_generate_fn<T> Fn>
     [[nodiscard]]
-    static constexpr auto init_generate(Fn fn) -> this_type;
+    static constexpr auto init_generate(Fn fn) -> this_type
+      requires(element_count <= MAX_BRACE_INIT_SIZE);
 
     template <ts_fn<T, usize> Fn>
     [[nodiscard]]
-    static constexpr auto init_index_transform(Fn fn) -> this_type;
+    static constexpr auto init_index_transform(Fn fn) -> this_type
+      requires(element_count <= MAX_BRACE_INIT_SIZE);
 
     constexpr void swap(this_type& other) noexcept;
 
@@ -37,7 +43,7 @@ namespace soul
 
     [[nodiscard]]
     constexpr auto clone() const -> this_type
-      requires ts_clone<T>;
+      requires(ts_clone<T> && element_count <= MAX_BRACE_INIT_SIZE);
 
     constexpr void clone_from(const this_type& other)
       requires ts_clone<T>;
@@ -47,6 +53,18 @@ namespace soul
 
     [[nodiscard]]
     constexpr auto data() const noexcept -> const_pointer;
+
+    template <ts_unsigned_integral SpanSizeT>
+    [[nodiscard]]
+    auto span() -> Span<pointer, SpanSizeT>;
+
+    template <ts_unsigned_integral SpanSizeT>
+    [[nodiscard]]
+    auto span() const -> Span<const_pointer, SpanSizeT>;
+
+    template <ts_unsigned_integral SpanSizeT>
+    [[nodiscard]]
+    auto cspan() const -> Span<const_pointer, SpanSizeT>;
 
     [[nodiscard]]
     constexpr auto front() -> reference;
@@ -113,13 +131,11 @@ namespace soul
     T buffer_[element_count];
   };
 
-  static constexpr usize MAX_BRACE_INIT_SIZE = 32;
-
   template <typename T, usize element_count>
   [[nodiscard]]
   constexpr auto Array<T, element_count>::init_fill(const T& val) -> this_type
+    requires(element_count <= MAX_BRACE_INIT_SIZE)
   {
-    static_assert(element_count <= MAX_BRACE_INIT_SIZE);
     const auto create_array =
       []<usize... idx>(std::index_sequence<idx...>, const T& val) -> this_type {
       return {(static_cast<void>(idx), val)...};
@@ -131,8 +147,8 @@ namespace soul
   template <ts_generate_fn<T> Fn>
   [[nodiscard]]
   constexpr auto Array<T, element_count>::init_generate(Fn fn) -> this_type
+    requires(element_count <= MAX_BRACE_INIT_SIZE)
   {
-    static_assert(element_count <= MAX_BRACE_INIT_SIZE);
     const auto create_array = []<usize... idx>(std::index_sequence<idx...>, Fn fn) -> this_type {
       return {(static_cast<void>(idx), std::invoke(fn))...};
     };
@@ -143,6 +159,7 @@ namespace soul
   template <ts_fn<T, usize> Fn>
   [[nodiscard]]
   constexpr auto Array<T, element_count>::init_index_transform(Fn fn) -> this_type
+    requires(element_count <= MAX_BRACE_INIT_SIZE)
   {
     static_assert(element_count <= MAX_BRACE_INIT_SIZE);
     const auto create_array = []<usize... idx>(std::index_sequence<idx...>, Fn fn) -> this_type {
@@ -163,7 +180,7 @@ namespace soul
   template <typename T, usize element_count>
   [[nodiscard]]
   constexpr auto Array<T, element_count>::clone() const -> this_type
-    requires ts_clone<T>
+    requires(ts_clone<T> && element_count <= MAX_BRACE_INIT_SIZE)
   {
     const auto create_array =
       []<usize... idx>(std::index_sequence<idx...>, const this_type& original) -> this_type {
@@ -191,6 +208,27 @@ namespace soul
   constexpr auto Array<T, element_count>::data() const noexcept -> const_pointer
   {
     return buffer_;
+  }
+
+  template <typename T, usize element_count>
+  template <ts_unsigned_integral SpanSizeT>
+  auto Array<T, element_count>::span() -> Span<pointer, SpanSizeT>
+  {
+    return {data(), cast<SpanSizeT>(size())};
+  }
+
+  template <typename T, usize element_count>
+  template <ts_unsigned_integral SpanSizeT>
+  auto Array<T, element_count>::span() const -> Span<const_pointer, SpanSizeT>
+  {
+    return {data(), cast<SpanSizeT>(size())};
+  }
+
+  template <typename T, usize element_count>
+  template <ts_unsigned_integral SpanSizeT>
+  auto Array<T, element_count>::cspan() const -> Span<const_pointer, SpanSizeT>
+  {
+    return {data(), cast<SpanSizeT>(size())};
   }
 
   template <typename T, usize element_count>
@@ -469,5 +507,6 @@ namespace soul
       return nullptr;
     }
   };
-
+  template <class T, class... U>
+  Array(T, U...) -> Array<T, 1 + sizeof...(U)>;
 } // namespace soul
