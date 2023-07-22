@@ -1,6 +1,5 @@
-#include "rt_common.hlsl"
-#include "wavefront_func.hlsl"
-#include "rt_basic_type.hlsl"
+#include "shaders/rt_type.hlsl"
+#include "shaders/rt_basic_type.hlsl"
 
 [[vk::push_constant]]
 RayTracingPushConstant push_constant;
@@ -20,7 +19,7 @@ void rgen_main()
 {
 	uint3 LaunchID = DispatchRaysIndex();
 	uint3 LaunchSize = DispatchRaysDimensions();
-	GPUObjScene scene = get_buffer<GPUObjScene>(push_constant.scene_descriptor_id, 0);
+	RTObjScene scene = get_buffer<RTObjScene>(push_constant.scene_descriptor_id, 0);
 
 	const float2 pixel_center = float2(LaunchID.xy) + float2(0.5, 0.5);
 	const float2 in_uv = pixel_center / float2(LaunchSize.xy);
@@ -49,7 +48,7 @@ void rgen_main()
 [shader("miss")]
 void rmiss_main(inout ColorPayload p)
 {
-	GPUObjScene scene = get_buffer<GPUObjScene>(push_constant.scene_descriptor_id, 0);
+	RTObjScene scene = get_buffer<RTObjScene>(push_constant.scene_descriptor_id, 0);
 	p.hit_value = scene.clear_color.xyz;
 }
 
@@ -69,14 +68,14 @@ void rchit_main(inout ColorPayload p, in float2 attribs)
 {
 	const float3 barycentrics = float3(1.0f - attribs.x - attribs.y, attribs.x, attribs.y);
 
-  GPUObjScene scene = get_buffer<GPUObjScene>(push_constant.scene_descriptor_id, 0);
-  GPUObjDesc gpu_obj_desc = get_buffer_array<GPUObjDesc>(scene.gpu_obj_buffer_descriptor_id, InstanceID());
+  RTObjScene scene = get_buffer<RTObjScene>(push_constant.scene_descriptor_id, 0);
+  RTObjDesc gpu_obj_desc = get_buffer_array<RTObjDesc>(scene.gpu_obj_buffer_descriptor_id, InstanceID());
 
   const uint3 triangle_indices = get_buffer_array<uint3>(gpu_obj_desc.index_descriptor_id, PrimitiveIndex());
 
-  const GPUObjVertex v0 = get_buffer_array<GPUObjVertex>(gpu_obj_desc.vertex_descriptor_id, triangle_indices.x);
-	const GPUObjVertex v1 = get_buffer_array<GPUObjVertex>(gpu_obj_desc.vertex_descriptor_id, triangle_indices.y);
-	const GPUObjVertex v2 = get_buffer_array<GPUObjVertex>(gpu_obj_desc.vertex_descriptor_id, triangle_indices.z);
+  const RTObjVertex v0 = get_buffer_array<RTObjVertex>(gpu_obj_desc.vertex_descriptor_id, triangle_indices.x);
+	const RTObjVertex v1 = get_buffer_array<RTObjVertex>(gpu_obj_desc.vertex_descriptor_id, triangle_indices.y);
+	const RTObjVertex v2 = get_buffer_array<RTObjVertex>(gpu_obj_desc.vertex_descriptor_id, triangle_indices.z);
 
   const float3 object_pos = v0.position * barycentrics.x + v1.position * barycentrics.y + v2.position * barycentrics.z;
 	const float3 world_pos = mul(ObjectToWorld3x4(), float4(object_pos, 1));
@@ -84,7 +83,7 @@ void rchit_main(inout ColorPayload p, in float2 attribs)
 	const float3 world_normal = mul(ObjectToWorld3x4(), float4(object_normal, 1));
 
 	int mat_index = get_buffer_array<int>(gpu_obj_desc.material_indices_descriptor_id, PrimitiveIndex());
-	GPUObjMaterial material = get_buffer_array<GPUObjMaterial>(gpu_obj_desc.material_descriptor_id, mat_index);
+	WavefrontMaterial material = get_buffer_array<WavefrontMaterial>(gpu_obj_desc.material_descriptor_id, mat_index);
 
 	float3 L;
 	float light_intensity = scene.light_intensity;

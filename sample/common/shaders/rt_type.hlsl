@@ -1,4 +1,9 @@
-struct GPUObjDesc
+#ifndef RT_TYPE_HLSL
+#define RT_TYPE_HLSL
+
+#include "shaders/wavefront_material.hlsl"
+
+struct RTObjDesc
 {
 	soulsl::DescriptorID vertex_descriptor_id;         // Address of the Vertex buffer
 	soulsl::DescriptorID index_descriptor_id;          // Address of the index buffer
@@ -6,22 +11,7 @@ struct GPUObjDesc
 	soulsl::DescriptorID material_indices_descriptor_id;  // Address of the triangle material index buffer
 };
 
-struct GPUObjMaterial
-{
-	soulsl::float3 ambient;
-	soulsl::float3 diffuse;
-	soulsl::float3 specular;
-	soulsl::float3 transmittance;
-	soulsl::float3 emission;
-	float shininess;
-	float ior;
-	float dissolve;
-
-	int illum;
-	soulsl::DescriptorID diffuse_texture_id;
-};
-
-struct GPUObjVertex  // See ObjLoader, copy of VertexObj, could be compressed for device
+struct RTObjVertex  // See ObjLoader, copy of VertexObj, could be compressed for device
 {
 	soulsl::float3 position;
 	soulsl::float3 normal;
@@ -29,7 +19,7 @@ struct GPUObjVertex  // See ObjLoader, copy of VertexObj, could be compressed fo
 	soulsl::float2 tex_coord;
 };
 
-struct GPUObjScene
+struct RTObjScene
 {
 	soulsl::DescriptorID gpu_obj_buffer_descriptor_id;
   soulsl::float3 camera_position;
@@ -41,3 +31,4 @@ struct GPUObjScene
 	int light_type;
 };
 
+#endif

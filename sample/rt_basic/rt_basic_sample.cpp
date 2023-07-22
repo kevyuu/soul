@@ -14,7 +14,7 @@
 #include "camera_manipulator.h"
 #include "runtime/scope_allocator.h"
 #include "shaders/rt_basic_type.hlsl"
-#include "shaders/rt_common.hlsl"
+#include "shaders/rt_type.hlsl"
 #include "stb_image.h"
 
 using namespace soul;
@@ -45,7 +45,7 @@ class RTBasicSampleApp final : public App
   Texture2DRGPass texture_2d_pass;
 
   SBOVector<ObjModel> models_;
-  SBOVector<GPUObjDesc> gpu_obj_descs_;
+  SBOVector<RTObjDesc> gpu_obj_descs_;
   gpu::BufferID gpu_obj_buffer_;
   SBOVector<Texture> textures_;
   SBOVector<ObjInstance> instances_;
@@ -56,7 +56,7 @@ class RTBasicSampleApp final : public App
 
   gpu::ProgramID program_id_;
   gpu::ShaderTableID shader_table_id_;
-  GPUObjScene gpu_scene_;
+  RTObjScene gpu_scene_;
   bool need_rebuild_blas_ = false;
   bool need_rebuild_tlas_ = false;
 
@@ -219,7 +219,7 @@ class RTBasicSampleApp final : public App
     const vec2ui32 viewport = gpu_system_->get_swapchain_extent();
 
     const auto scene_buffer =
-      render_graph.create_buffer("Scene Buffer", {.size = sizeof(GPUObjScene)});
+      render_graph.create_buffer("Scene Buffer", {.size = sizeof(RTObjScene)});
     struct GPUSceneUploadPassParameter {
       gpu::BufferNodeID buffer;
     };
@@ -249,8 +249,7 @@ class RTBasicSampleApp final : public App
           },
           [this](const auto& parameter, auto& registry, auto& command_list) {
             using Command = gpu::RenderCommandUpdateBuffer;
-            const gpu::BufferRegionCopy region_copy = {
-              .dst_offset = 0, .size = sizeof(GPUObjScene)};
+            const gpu::BufferRegionCopy region_copy = {.dst_offset = 0, .size = sizeof(RTObjScene)};
             const Command command = {
               .dst_buffer = registry.get_buffer(parameter.buffer),
               .data = soul::cast<void*>(&gpu_scene_),
@@ -385,9 +384,9 @@ class RTBasicSampleApp final : public App
       stbi_image_free(texture_pixels);
     }
 
-    SBOVector<GPUObjMaterial> gpu_materials;
+    SBOVector<WavefrontMaterial> gpu_materials;
     for (const auto& material : obj_loader.materials) {
-      gpu_materials.push_back(GPUObjMaterial{
+      gpu_materials.push_back(WavefrontMaterial{
         .ambient = material.ambient,
         .diffuse = material.diffuse,
         .specular = material.specular,
@@ -405,7 +404,7 @@ class RTBasicSampleApp final : public App
     }
 
     const gpu::BufferDesc material_buffer_desc = {
-      .size = gpu_materials.size() * sizeof(GPUObjMaterial),
+      .size = gpu_materials.size() * sizeof(WavefrontMaterial),
       .usage_flags = {gpu::BufferUsage::STORAGE},
       .queue_flags = {gpu::QueueType::GRAPHIC},
       .name = "Material buffer",
@@ -422,7 +421,7 @@ class RTBasicSampleApp final : public App
     const auto material_indices_buffer =
       gpu_system_->create_buffer(material_indices_buffer_desc, obj_loader.mat_indexes.data());
 
-    const GPUObjDesc gpu_obj_desc = {
+    const RTObjDesc gpu_obj_desc = {
       .vertex_descriptor_id = gpu_system_->get_ssbo_descriptor_id(vertex_buffer),
       .index_descriptor_id = gpu_system_->get_ssbo_descriptor_id(index_buffer),
       .material_descriptor_id = gpu_system_->get_ssbo_descriptor_id(material_buffer),
@@ -447,10 +446,10 @@ class RTBasicSampleApp final : public App
   {
     gpu_obj_buffer_ = gpu_system_->create_buffer(
       {
-        .size = sizeof(GPUObjDesc) * gpu_obj_descs_.size(),
+        .size = sizeof(RTObjDesc) * gpu_obj_descs_.size(),
         .usage_flags = {gpu::BufferUsage::STORAGE},
         .queue_flags = {gpu::QueueType::GRAPHIC},
-        .name = "GPUObj buffer",
+        .name = "RTObj buffer",
       },
       gpu_obj_descs_.data());
   }
@@ -490,7 +489,7 @@ public:
       : App(app_config), texture_2d_pass(gpu_system_)
   {
     gpu::ShaderSource shader_source = gpu::ShaderFile("rt_basic_sample.hlsl");
-    std::filesystem::path search_path = "shaders/";
+    std::filesystem::path search_path = "./";
     const auto entry_points = soul::Array{
       gpu::ShaderEntryPoint{gpu::ShaderStage::RAYGEN, "rgen_main"},
       gpu::ShaderEntryPoint{gpu::ShaderStage::MISS, "rmiss_main"},

@@ -1,6 +1,5 @@
 #include "shaders/draw_indexed_indirect_type.hlsl"
 #include "shaders/raster_type.hlsl"
-#include "shaders/wavefront_func2.hlsl"
 
 [[vk::push_constant]] RasterPushConstant push_constant;
 

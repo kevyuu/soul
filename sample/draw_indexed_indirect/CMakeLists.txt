@@ -2,8 +2,7 @@ set(SHADER_SOURCES
   shaders/draw_indexed_indirect_sample.hlsl 
   shaders/draw_indexed_indirect_type.hlsl
   ../common/shaders/wavefront_material.hlsl
-  ../common/shaders/raster_type.hlsl
-  ../common/shaders/wavefront_func2.hlsl)
+  ../common/shaders/raster_type.hlsl)
 
 create_shaders_target(draw_indexed_indirect_shaders "${SHADER_SOURCES}")
 

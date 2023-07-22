@@ -1,6 +1,6 @@
 set(SHADER_SOURCES
-    ../common/shaders/rt_common.hlsl
-    ../common/shaders/wavefront_func.hlsl
+    ../common/shaders/rt_type.hlsl
+    ../common/shaders/wavefront_material.hlsl
     shaders/rt_basic_type.hlsl
     shaders/rt_basic_sample.hlsl)
 
