@@ -5,6 +5,7 @@
 #include "core/type.h"
 #include "glm/glm.hpp"
 #include "glm/gtc/matrix_transform.hpp"
+#include <glm/ext/scalar_constants.hpp>
 
 namespace soul::math
 {
@@ -23,7 +24,7 @@ namespace soul::math
   template <usize D1, usize D2, usize D3, typename T>
   SOUL_ALWAYS_INLINE auto mul(const matrix<D1, D2, T>& a, const matrix<D2, D3, T>& b) -> mat4f
   {
-    return mat4f(a.mat * b.mat);
+    return matrix<D1, D2, T>(a.mat * b.mat);
   }
 
   template <typename T>
@@ -55,19 +56,49 @@ namespace soul::math
   template <typename T>
   SOUL_ALWAYS_INLINE auto perspective(T fovy, T aspect, T z_near, T z_far) -> matrix4x4<T>
   {
-    return mat4f(glm::perspective(fovy, aspect, z_near, z_far));
+    T fov_rad = fovy;
+    T focal_length = 1.0f / std::tan(fov_rad / 2.0f);
+
+    T x = focal_length / aspect;
+    T y = -focal_length;
+    T A = z_far / (z_near - z_far);
+    T B = z_near * A;
+
+    matrix4x4<T> result;
+
+    result.m(0, 0) = x;
+    result.m(0, 1) = 0.0f;
+    result.m(0, 2) = 0.0f;
+    result.m(0, 3) = 0.0f;
+
+    result.m(1, 0) = 0.0f;
+    result.m(1, 1) = y;
+    result.m(1, 2) = 0.0f;
+    result.m(1, 3) = 0.0f;
+
+    result.m(2, 0) = 0.0f;
+    result.m(2, 1) = 0.0f;
+    result.m(2, 2) = A;
+    result.m(2, 3) = B;
+
+    result.m(3, 0) = 0.0f;
+    result.m(3, 1) = 0.0f;
+    result.m(3, 2) = T(-1.0);
+    result.m(3, 3) = 0.0f;
+
+    return result;
   }
 
   template <usize Row, usize Column, typename T>
   SOUL_ALWAYS_INLINE auto inverse(const matrix<Row, Column, T>& mat) -> matrix<Row, Column, T>
   {
-    return mat4f(glm::inverse(mat.mat));
+    return matrix<Row, Column, T>(glm::inverse(mat.mat));
   }
 
   template <usize Row, usize Column, typename T>
   SOUL_ALWAYS_INLINE auto transpose(const matrix<Row, Column, T>& mat) -> matrix<Row, Column, T>
   {
-    return mat4f(glm::transpose(mat.mat));
+    return matrix<Row, Column, T>(glm::transpose(mat.mat));
   }
 
   template <typename T>

@@ -1,4 +1,5 @@
 #include <volk.h>
+#include "gpu/type.h"
 #include <vulkan/vulkan_core.h>
 
 #include "core/log.h"
@@ -51,16 +52,23 @@ namespace soul::gpu::impl
 #define COMPILE_PACKET(TYPE_STRUCT)                                                                \
   case TYPE_STRUCT::TYPE: compile_command(*static_cast<const TYPE_STRUCT*>(&command)); break
 
+    // NOLINTBEGIN(cppcoreguidelines-pro-type-static-cast-downcast)
     switch (command.type) {
       COMPILE_PACKET(RenderCommandDraw);
       COMPILE_PACKET(RenderCommandDrawIndex);
+      COMPILE_PACKET(RenderCommandDrawIndexedIndirect);
       COMPILE_PACKET(RenderCommandUpdateTexture);
       COMPILE_PACKET(RenderCommandCopyTexture);
       COMPILE_PACKET(RenderCommandUpdateBuffer);
       COMPILE_PACKET(RenderCommandCopyBuffer);
       COMPILE_PACKET(RenderCommandDispatch);
+      COMPILE_PACKET(RenderCommandBuildBlas);
+      COMPILE_PACKET(RenderCommandBatchBuildBlas);
+      COMPILE_PACKET(RenderCommandBuildTlas);
+      COMPILE_PACKET(RenderCommandRayTrace);
     case RenderCommandType::COUNT: SOUL_NOT_IMPLEMENTED();
     }
+    // NOLINTEND(cppcoreguidelines-pro-type-static-cast-downcast)
   }
 
   auto RenderCompiler::compile_command(const RenderCommandDraw& command) -> void
@@ -113,6 +121,34 @@ namespace soul::gpu::impl
       command_buffer_, command.index_count, 1, command.first_index, command.vertex_offsets[0], 1);
   }
 
+  void RenderCompiler::compile_command(const RenderCommandDrawIndexedIndirect& command)
+  {
+    SOUL_PROFILE_ZONE();
+    apply_pipeline_state(command.pipeline_state_id);
+    apply_push_constant(command.push_constant_data, command.push_constant_size);
+
+    for (u32 vert_buf_idx = 0; vert_buf_idx < MAX_VERTEX_BINDING; vert_buf_idx++) {
+      BufferID vert_buf_id = command.vertex_buffer_ids[vert_buf_idx];
+      if (vert_buf_id.is_null()) {
+        continue;
+      }
+      const Buffer& vertex_buffer = gpu_system_->get_buffer(vert_buf_id);
+      SOUL_ASSERT(0, vertex_buffer.desc.usage_flags.test(BufferUsage::VERTEX), "");
+      VkDeviceSize offsets[] = {0};
+      vkCmdBindVertexBuffers(command_buffer_, vert_buf_idx, 1, &vertex_buffer.vk_handle, offsets);
+    }
+
+    const Buffer& index_buffer = gpu_system_->get_buffer(command.index_buffer_id);
+    SOUL_ASSERT(0, index_buffer.desc.usage_flags.test(gpu::BufferUsage::INDEX), "");
+
+    vkCmdBindIndexBuffer(
+      command_buffer_, index_buffer.vk_handle, command.index_offset, vk_cast(command.index_type));
+
+    const Buffer& buffer = gpu_system_->get_buffer(command.buffer_id);
+    vkCmdDrawIndexedIndirect(
+      command_buffer_, buffer.vk_handle, command.offset, command.draw_count, command.stride);
+  }
+
   auto RenderCompiler::compile_command(const RenderCommandUpdateTexture& command) -> void
   {
     runtime::ScopeAllocator scope_allocator("compile_command::RenderCommandUpdateTexture");
@@ -121,7 +157,7 @@ namespace soul::gpu::impl
     const auto gpu_allocator = gpu_system_->get_gpu_allocator();
     const BufferID staging_buffer_id = gpu_system_->create_staging_buffer(command.data_size);
     const Buffer& staging_buffer = gpu_system_->get_buffer(staging_buffer_id);
-    void* mapped_data;
+    void* mapped_data; // NOLINT
     vmaMapMemory(gpu_allocator, staging_buffer.allocation, &mapped_data);
     memcpy(mapped_data, command.data, command.data_size);
     vmaUnmapMemory(gpu_allocator, staging_buffer.allocation);
@@ -200,9 +236,9 @@ namespace soul::gpu::impl
   {
     const auto gpu_allocator = gpu_system_->get_gpu_allocator();
     const auto& dst_buffer = gpu_system_->get_buffer(command.dst_buffer);
-    if (dst_buffer.memory_property_flags & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) {
+    if ((dst_buffer.memory_property_flags & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) != 0u) {
       SOUL_ASSERT(0, dst_buffer.memory_property_flags & VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, "");
-      void* mapped_data;
+      void* mapped_data; // NOLINT
       vmaMapMemory(gpu_allocator, dst_buffer.allocation, &mapped_data);
       for (usize region_idx = 0; region_idx < command.regions.size(); region_idx++) {
         const auto& region_load = command.regions[region_idx];
@@ -216,7 +252,7 @@ namespace soul::gpu::impl
       for (const auto& region_load : command.regions) {
         const BufferID staging_buffer_id = gpu_system_->create_staging_buffer(region_load.size);
         const Buffer& staging_buffer = gpu_system_->get_buffer(staging_buffer_id);
-        void* mapped_data;
+        void* mapped_data; // NOLINT
         vmaMapMemory(gpu_allocator, staging_buffer.allocation, &mapped_data);
         memcpy(
           mapped_data,

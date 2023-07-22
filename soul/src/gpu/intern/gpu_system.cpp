@@ -38,6 +38,8 @@
 
 static constexpr const char* RESOURCE_HLSL = R"HLSL(
 
+#define SOULSL_CONST_FUNCTION
+
 typedef uint u32;
 typedef bool b8;
 
@@ -70,14 +72,17 @@ namespace soulsl
   };
   static const DescriptorID DESCRIPTOR_ID_NULL = { UINT_MAX };
 
+  typedef float float1;
   typedef vector <float, 2> float2;
   typedef vector <float, 3> float3;
   typedef vector <float, 4> float4;
 
+  typedef double double1;
   typedef vector <double, 2> double2;
   typedef vector <double, 3> double3;
   typedef vector <double, 4> double4;
 
+  typedef uint uint1;
   typedef vector <uint, 2> uint2;
   typedef vector <uint, 3> uint3;
   typedef vector <uint, 4> uint4;
@@ -254,7 +259,7 @@ namespace soul::gpu
       }
       case VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT: {
         SOUL_LOG_ERROR("VkDebugUtils: {}", callback_data->pMessage);
-        SOUL_PANIC("Vulkan Error!");
+        SOUL_PANIC("Vulkan Error!, VkDebugUtils: {}", callback_data->pMessage);
         break;
       }
       case VK_DEBUG_UTILS_MESSAGE_SEVERITY_FLAG_BITS_MAX_ENUM_EXT: {
@@ -739,6 +744,7 @@ namespace soul::gpu
 
       VkPhysicalDeviceFeatures device_features = {
         .geometryShader = VK_TRUE,
+        .multiDrawIndirect = VK_TRUE,
         .fillModeNonSolid = VK_TRUE,
         .fragmentStoresAndAtomics = VK_TRUE,
         .shaderInt64 = VK_TRUE,
@@ -1728,14 +1734,13 @@ namespace soul::gpu
         .pScissors = &scissor,
       };
 
-      static auto POLYGON_MODE_MAP = FlagMap<PolygonMode, VkPolygonMode>::from_val_list(
-        {VK_POLYGON_MODE_FILL, VK_POLYGON_MODE_LINE, VK_POLYGON_MODE_POINT});
-
       const VkPipelineRasterizationStateCreateInfo rasterizer_state = {
         .sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO,
         .depthClampEnable = VK_FALSE,
         .rasterizerDiscardEnable = VK_FALSE,
-        .polygonMode = POLYGON_MODE_MAP[desc.raster.polygon_mode],
+        .polygonMode = vk_cast(desc.raster.polygon_mode),
+        .cullMode = vk_cast(desc.raster.cull_mode),
+        .frontFace = vk_cast(desc.raster.front_face),
         .depthBiasEnable =
           (desc.depth_bias.slope != 0.0f || desc.depth_bias.constant != 0.0f) ? VK_TRUE : VK_FALSE,
         .depthBiasConstantFactor = desc.depth_bias.constant,
@@ -1942,7 +1947,7 @@ namespace soul::gpu
               return canonical(full_path_candidate);
             }
           }
-          SOUL_ASSERT(0, false, "Cannot find file %s in any search path", path.string().c_str());
+          SOUL_ASSERT(0, false, "Cannot find file {} in any search path", path.string().c_str());
           return "";
         }();
         auto full_path_str = full_path.string();

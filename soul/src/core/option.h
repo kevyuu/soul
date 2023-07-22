@@ -453,6 +453,18 @@ namespace soul
     return left.is_some() == right.is_some();
   }
 
+  template <typeset T>
+  constexpr auto someopt(const T& val) -> Option<T>
+  {
+    return Option<T>::some(val);
+  };
+
+  template <typeset T>
+  constexpr auto someopt(T&& val) -> Option<T>
+  {
+    return Option<T>::some(std::move(val)); // NOLINT
+  };
+
   template <ts_pointer T>
   class Option<NotNull<T>> : public impl::OptionBase<NotNull<T>>
   {

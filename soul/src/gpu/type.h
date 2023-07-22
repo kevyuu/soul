@@ -14,7 +14,6 @@
 #include "gpu/constant.h"
 #include "gpu/id.h"
 #include "gpu/intern/bindless_descriptor_allocator.h"
-#include "gpu/intern/render_compiler.h"
 #include "gpu/object_cache.h"
 #include "gpu/object_pool.h"
 #include "memory/allocators/proxy_allocator.h"
@@ -215,6 +214,7 @@ namespace soul::gpu
   enum class BufferUsage : u8 {
     INDEX,
     VERTEX,
+    INDIRECT,
     UNIFORM,
     STORAGE,
     TRANSFER_SRC,
@@ -295,7 +295,8 @@ namespace soul::gpu
 
   enum class PolygonMode : u8 { FILL, LINE, POINT, COUNT };
 
-  enum class CullMode : u8 { NONE, FRONT, BACK, FRONT_AND_BACK, COUNT };
+  enum class CullMode : u8 { FRONT, BACK, COUNT };
+  using CullModeFlags = FlagSet<CullMode>;
 
   enum class FrontFace : u8 { CLOCKWISE, COUNTER_CLOCKWISE, COUNT };
 
@@ -719,6 +720,14 @@ namespace soul::gpu
     }
   };
 
+  struct DrawIndexedIndirectCommand {
+    u32 index_count = 0;
+    u32 instance_count = 0;
+    u32 first_index = 0;
+    i32 vertex_offset = 0;
+    u32 first_instance = 0;
+  };
+
   enum class RTBuildMode : u8 { REBUILD, UPDATE, COUNT };
 
   enum class RTBuildFlag : u8 {
@@ -933,7 +942,7 @@ namespace soul::gpu
     struct RasterDesc {
       f32 line_width = 1.0f;
       PolygonMode polygon_mode = PolygonMode::FILL;
-      CullMode cull_mode = CullMode::NONE;
+      CullModeFlags cull_mode = {};
       FrontFace front_face = FrontFace::CLOCKWISE;
       auto operator==(const RasterDesc&) const -> bool = default;
     } raster;
@@ -1648,6 +1657,7 @@ namespace soul::gpu
   enum class RenderCommandType : u8 {
     DRAW,
     DRAW_INDEX,
+    DRAW_INDEXED_INDIRECT,
     COPY_TEXTURE,
     UPDATE_TEXTURE,
     UPDATE_BUFFER,
@@ -1697,6 +1707,23 @@ namespace soul::gpu
     IndexType index_type = IndexType::UINT16;
     u32 first_index = 0;
     u32 index_count = 0;
+  };
+
+  struct RenderCommandDrawIndexedIndirect
+      : RenderCommandTyped<RenderCommandType::DRAW_INDEXED_INDIRECT> {
+    static constexpr PipelineType PIPELINE_TYPE = PipelineType::RASTER;
+    PipelineStateID pipeline_state_id;
+    const void* push_constant_data = nullptr;
+    u32 push_constant_size = 0;
+    BufferID vertex_buffer_ids[MAX_VERTEX_BINDING];
+    u16 vertex_offsets[MAX_VERTEX_BINDING] = {};
+    BufferID index_buffer_id;
+    usize index_offset = 0;
+    IndexType index_type = IndexType::UINT16;
+    BufferID buffer_id;
+    u64 offset = 0;
+    u32 draw_count = 0;
+    u32 stride = 0;
   };
 
   struct RenderCommandUpdateTexture : RenderCommandTyped<RenderCommandType::UPDATE_TEXTURE> {

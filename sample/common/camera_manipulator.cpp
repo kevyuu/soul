@@ -33,6 +33,8 @@ auto CameraManipulator::get_camera(
   *camera_up = up_;
 }
 
+auto CameraManipulator::get_position() -> soul::vec3f { return position_; }
+
 auto CameraManipulator::get_camera_target() const -> soul::vec3f { return target_; }
 
 auto CameraManipulator::set_camera_target(soul::vec3f target) -> void { target_ = target; }

@@ -58,12 +58,13 @@ namespace soul::impl
     }
     log_buffer.buffer.append(message);
     log_buffer.buffer.push_back('\n');
+    flush_log(log_level); // TODO(kevinyu): make it only trigger if panic happen
   }
 
   auto flush_log(LogLevel log_level) -> void
   {
     auto& log_buffers = impl::get_log_buffers();
-    std::lock_guard guard(log_buffers[log_level].lock);
+    // std::lock_guard guard(log_buffers[log_level].lock); // TODO(kevinyu): Fix this lock bug
     impl::log_flush_no_lock(log_level);
   }
 

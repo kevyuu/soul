@@ -1,7 +1,5 @@
-#ifndef WAVEFRONT_FUNC_HLSL
-#define WAVEFRONT_FUNC_HLSL
 
-soulsl::float3 compute_diffuse(GPUObjMaterial mat, soulsl::float3 light_dir, soulsl::float3 normal)
+soulsl::float3 compute_diffuse(WavefrontMaterial mat, soulsl::float3 light_dir, soulsl::float3 normal)
 {
 	// Lambertian
 	float dotNL = max(dot(normal, light_dir), 0.0);
@@ -11,7 +9,7 @@ soulsl::float3 compute_diffuse(GPUObjMaterial mat, soulsl::float3 light_dir, sou
 	return c;
 }
 
-soulsl::float3 compute_specular(GPUObjMaterial mat, soulsl::float3 view_dir, 
+soulsl::float3 compute_specular(WavefrontMaterial mat, soulsl::float3 view_dir, 
 	soulsl::float3 light_dir, soulsl::float3 normal)
 {
 	if (mat.illum < 2)
@@ -30,4 +28,3 @@ soulsl::float3 compute_specular(GPUObjMaterial mat, soulsl::float3 view_dir,
 	return soulsl::float3(mat.specular * specular);
 }
 
-#endif // WAVEFRONT_FUNC_HLSL

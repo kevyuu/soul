@@ -1,5 +1,6 @@
 #pragma once
 
+#include "gpu/intern/render_compiler.h"
 #include "gpu/system.h"
 #include <vulkan/vulkan_core.h>
 

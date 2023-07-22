@@ -70,6 +70,14 @@ namespace soul
   using vec3i32 = vec3<i32>;
   using vec4i32 = vec4<i32>;
 
+  // A matrix to represent multiplication with column vector
+  // Read this article if you are confused.
+  // https://fgiesen.wordpress.com/2012/02/12/row-major-vs-column-major-row-vectors-vs-column-vectors/
+  // Internally we use glm to store the matrix, glm use column major ordering
+  // and multiply column vector (used by gilbert strang lecture).
+  // This struct provide and accessor m(row, column) both row and column refer
+  // to the row and column of matrix, not the c++ 2d array that represent it
+  // This is done to be consistent with our shader.
   template <usize Row, usize Column, typename T>
   struct matrix {
     using this_type = matrix<Column, Row, T>;

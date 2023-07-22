@@ -22,6 +22,7 @@ public:
     -> void;
   auto get_camera(
     soul::vec3f* camera_position, soul::vec3f* camera_target, soul::vec3f* camera_up) const -> void;
+  auto get_position() -> soul::vec3f;
   auto get_camera_target() const -> soul::vec3f;
   auto set_camera_target(soul::vec3f target) -> void;
 

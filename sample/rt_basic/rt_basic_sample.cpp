@@ -230,6 +230,7 @@ class RTBasicSampleApp final : public App
     const auto view_inverse = math::inverse(camera_man_.get_view_matrix());
     gpu_scene_ = {
       .gpu_obj_buffer_descriptor_id = gpu_system_->get_ssbo_descriptor_id(gpu_obj_buffer_),
+      .camera_position = camera_man_.get_position(),
       .view_inverse = view_inverse,
       .projection_inverse = projection_inverse,
       .clear_color = clear_color_,

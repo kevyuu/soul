@@ -69,16 +69,16 @@ void rchit_main(inout ColorPayload p, in float2 attribs)
 {
 	const float3 barycentrics = float3(1.0f - attribs.x - attribs.y, attribs.x, attribs.y);
 
-    GPUObjScene scene = get_buffer<GPUObjScene>(push_constant.scene_descriptor_id, 0);
-    GPUObjDesc gpu_obj_desc = get_buffer_array<GPUObjDesc>(scene.gpu_obj_buffer_descriptor_id, InstanceID());
+  GPUObjScene scene = get_buffer<GPUObjScene>(push_constant.scene_descriptor_id, 0);
+  GPUObjDesc gpu_obj_desc = get_buffer_array<GPUObjDesc>(scene.gpu_obj_buffer_descriptor_id, InstanceID());
 
-    const uint3 triangle_indices = get_buffer_array<uint3>(gpu_obj_desc.index_descriptor_id, PrimitiveIndex());
+  const uint3 triangle_indices = get_buffer_array<uint3>(gpu_obj_desc.index_descriptor_id, PrimitiveIndex());
 
-    const GPUObjVertex v0 = get_buffer_array<GPUObjVertex>(gpu_obj_desc.vertex_descriptor_id, triangle_indices.x);
+  const GPUObjVertex v0 = get_buffer_array<GPUObjVertex>(gpu_obj_desc.vertex_descriptor_id, triangle_indices.x);
 	const GPUObjVertex v1 = get_buffer_array<GPUObjVertex>(gpu_obj_desc.vertex_descriptor_id, triangle_indices.y);
 	const GPUObjVertex v2 = get_buffer_array<GPUObjVertex>(gpu_obj_desc.vertex_descriptor_id, triangle_indices.z);
 
-    const float3 object_pos = v0.position * barycentrics.x + v1.position * barycentrics.y + v2.position * barycentrics.z;
+  const float3 object_pos = v0.position * barycentrics.x + v1.position * barycentrics.y + v2.position * barycentrics.z;
 	const float3 world_pos = mul(ObjectToWorld3x4(), float4(object_pos, 1));
 	const float3 object_normal = v0.normal * barycentrics.x + v1.normal * barycentrics.y + v2.normal * barycentrics.z;
 	const float3 world_normal = mul(ObjectToWorld3x4(), float4(object_normal, 1));

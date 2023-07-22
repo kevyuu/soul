@@ -32,6 +32,7 @@ struct GPUObjVertex  // See ObjLoader, copy of VertexObj, could be compressed fo
 struct GPUObjScene
 {
 	soulsl::DescriptorID gpu_obj_buffer_descriptor_id;
+  soulsl::float3 camera_position;
 	soulsl::float4x4 view_inverse;
 	soulsl::float4x4 projection_inverse;
 	soulsl::float4 clear_color;

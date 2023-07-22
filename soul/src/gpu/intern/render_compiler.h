@@ -2,6 +2,7 @@
 
 #include "gpu/constant.h"
 #include "gpu/id.h"
+#include "gpu/type.h"
 
 namespace soul::gpu
 {
@@ -10,6 +11,7 @@ namespace soul::gpu
   struct RenderCommand;
   struct RenderCommandDraw;
   struct RenderCommandDrawIndex;
+  struct RenderCommandDrawIndexedIndirect;
   struct RenderCommandUpdateTexture;
   struct RenderCommandCopyTexture;
   struct RenderCommandUpdateBuffer;
@@ -49,18 +51,19 @@ namespace soul::gpu::impl
     auto execute_secondary_command_buffers(
       u32 count, const SecondaryCommandBuffer* secondary_command_buffers) -> void;
 
-    auto compile_command(const RenderCommand& command) -> void;
-    auto compile_command(const RenderCommandDraw& command) -> void;
-    auto compile_command(const RenderCommandDrawIndex& command) -> void;
-    auto compile_command(const RenderCommandUpdateTexture& command) -> void;
-    auto compile_command(const RenderCommandCopyTexture& command) -> void;
-    auto compile_command(const RenderCommandUpdateBuffer& command) -> void;
-    auto compile_command(const RenderCommandCopyBuffer& command) -> void;
-    auto compile_command(const RenderCommandDispatch& command) -> void;
-    auto compile_command(const RenderCommandBuildBlas& command) -> void;
-    auto compile_command(const RenderCommandBatchBuildBlas& command) -> void;
-    auto compile_command(const RenderCommandBuildTlas& command) -> void;
-    auto compile_command(const RenderCommandRayTrace& command) -> void;
+    void compile_command(const RenderCommand& command);
+    void compile_command(const RenderCommandDraw& command);
+    void compile_command(const RenderCommandDrawIndex& command);
+    void compile_command(const RenderCommandDrawIndexedIndirect& command);
+    void compile_command(const RenderCommandUpdateTexture& command);
+    void compile_command(const RenderCommandCopyTexture& command);
+    void compile_command(const RenderCommandUpdateBuffer& command);
+    void compile_command(const RenderCommandCopyBuffer& command);
+    void compile_command(const RenderCommandDispatch& command);
+    void compile_command(const RenderCommandBuildBlas& command);
+    void compile_command(const RenderCommandBatchBuildBlas& command);
+    void compile_command(const RenderCommandBuildTlas& command);
+    void compile_command(const RenderCommandRayTrace& command);
 
   private:
     auto apply_pipeline_state(PipelineStateID pipeline_state_id) -> void;
