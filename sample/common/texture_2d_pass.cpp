@@ -26,7 +26,7 @@ VSOutput vsMain(VSInput input)
 {
 	VSOutput output;
 	output.position = float4(input.position, 0.0, 1.0);
-	output.tex_coord = input.tex_coord;
+	output.tex_coord = float2(input.tex_coord.x, input.tex_coord.y);
 	return output;
 }
 
@@ -54,10 +54,10 @@ struct Vertex {
 };
 
 static constexpr Vertex VERTICES[4] = {
-  {{-1.0f, -1.0f}, {0.0f, 1.0f}}, // top left
-  {{1.0f, -1.0f}, {1.0f, 1.0f}},  // top right
-  {{1.0f, 1.0f}, {1.0f, 0.0f}},   // bottom right
-  {{-1.0f, 1.0f}, {0.0f, 0.0f}}   // bottom left
+  {{-1.0f, -1.0f}, {0.0f, 0.0f}}, // top left
+  {{1.0f, -1.0f}, {1.0f, 0.0f}},  // top right
+  {{1.0f, 1.0f}, {1.0f, 1.0f}},   // bottom right
+  {{-1.0f, 1.0f}, {0.0f, 1.0f}}   // bottom left
 };
 
 using Index = u16;
@@ -136,7 +136,7 @@ auto Texture2DRGPass::add_pass(const Parameter& parameter, gpu::RenderGraph& ren
              .type = gpu::VertexElementType::FLOAT2},
             {.binding = 0,
              .offset = offsetof(Vertex, texture_coords),
-             .type = gpu::VertexElementType::FLOAT3},
+             .type = gpu::VertexElementType::FLOAT2},
           },
         .viewport =
           {
