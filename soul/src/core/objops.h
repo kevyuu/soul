@@ -168,6 +168,22 @@ namespace soul
     }
   }
 
+  template <class T, ts_fn<T, usize> Fn>
+  inline constexpr void uninitialized_transform_index_construct(
+    usize idx_start, usize idx_end, Fn fn, T* dst) noexcept
+  {
+    if (std::is_constant_evaluated()) {
+      for (usize i = idx_start; i < idx_end; i++) {
+        std::construct_at(
+          dst + i, Generator([fn = std::move(fn), i] { return std::invoke(fn, i); }));
+      }
+    } else {
+      for (usize i = idx_start; i < idx_end; i++) {
+        new (dst + i) T(std::invoke(fn, i));
+      }
+    }
+  }
+
   template <typename T>
   inline constexpr void uninitialized_value_construct_n(T* dst, size_t size)
   {

@@ -188,7 +188,7 @@ namespace soul::gpu::impl
     };
 
     const auto buffer_image_copies =
-      Vector<VkBufferImageCopy>::transform(command.regions, get_buffer_image_copy, scope_allocator);
+      Vector<VkBufferImageCopy>::Transform(command.regions, get_buffer_image_copy, scope_allocator);
 
     vkCmdCopyBufferToImage(
       command_buffer_,
@@ -220,7 +220,7 @@ namespace soul::gpu::impl
         .extent = get_vk_extent_3d(copy_region.extent)};
     };
     const auto image_copies =
-      Vector<VkImageCopy>::transform(command.regions, to_vk_image_copy, scope_allocator);
+      Vector<VkImageCopy>::Transform(command.regions, to_vk_image_copy, scope_allocator);
 
     vkCmdCopyImage(
       command_buffer_,
@@ -273,7 +273,7 @@ namespace soul::gpu::impl
     const auto src_buffer = gpu_system_->get_buffer(command.src_buffer);
     const auto dst_buffer = gpu_system_->get_buffer(command.dst_buffer);
 
-    const auto region_copies = Vector<VkBufferCopy>::transform(
+    const auto region_copies = Vector<VkBufferCopy>::Transform(
       command.regions,
       [](BufferRegionCopy region_copy) -> VkBufferCopy {
         return {
@@ -371,7 +371,7 @@ namespace soul::gpu::impl
     const auto& dst_blas = gpu_system_->get_blas(command.dst_blas_id);
     const auto& build_desc = command.build_desc;
 
-    auto as_geometries = Vector<VkAccelerationStructureGeometryKHR>::with_size(
+    auto as_geometries = Vector<VkAccelerationStructureGeometryKHR>::WithSize(
       build_desc.geometry_count, scope_allocator);
     auto build_info =
       compute_as_geometry_info(build_desc, command.build_mode, as_geometries.data());
@@ -402,7 +402,7 @@ namespace soul::gpu::impl
     build_info.dstAccelerationStructure = dst_blas.vk_handle;
     build_info.scratchData.deviceAddress = scratch_buffer_address.id;
 
-    const auto build_ranges = Vector<VkAccelerationStructureBuildRangeInfoKHR>::transform(
+    const auto build_ranges = Vector<VkAccelerationStructureBuildRangeInfoKHR>::Transform(
       max_primitives_counts,
       [](u32 count) -> VkAccelerationStructureBuildRangeInfoKHR {
         return {.primitiveCount = count};
@@ -433,7 +433,7 @@ namespace soul::gpu::impl
     for (const auto& blas_build : command.builds) {
       const auto& build_desc = blas_build.build_desc;
       as_geometry_list_vec.generate_back(
-        [&] { return ASGeometryList::with_size(build_desc.geometry_count, scope_allocator); });
+        [&] { return ASGeometryList::WithSize(build_desc.geometry_count, scope_allocator); });
       auto build_info = compute_as_geometry_info(
         build_desc, blas_build.build_mode, as_geometry_list_vec.back().data());
 

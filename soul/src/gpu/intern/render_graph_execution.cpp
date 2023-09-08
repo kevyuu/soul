@@ -98,9 +98,9 @@ namespace soul::gpu::impl
   PassDependencyGraph::PassDependencyGraph(
     usize pass_node_count, std::span<const ResourceNode> resource_nodes)
       : pass_node_count_(pass_node_count),
-        dependencies_(Vector<NodeList>::with_size(pass_node_count)),
-        dependants_(Vector<NodeList>::with_size(pass_node_count)),
-        dependency_levels_(Vector<usize>::with_size(pass_node_count))
+        dependencies_(Vector<NodeList>::WithSize(pass_node_count)),
+        dependants_(Vector<NodeList>::WithSize(pass_node_count)),
+        dependency_levels_(Vector<usize>::WithSize(pass_node_count))
   {
     for (auto& dependency_matrix : dependency_matrixes_) {
       dependency_matrix.resize(pass_node_count * pass_node_count);

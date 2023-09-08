@@ -13,28 +13,6 @@
 namespace soul
 {
 
-  struct vector_construct {
-    struct with_size_t {
-    };
-    struct with_capacity_t {
-    };
-    struct from_t {
-    };
-    struct fill_n_t {
-    };
-    struct generate_n_t {
-    };
-    struct transform_t {
-    };
-
-    static constexpr auto with_size = with_size_t{};
-    static constexpr auto with_capacity = with_capacity_t{};
-    static constexpr auto from = from_t{};
-    static constexpr auto fill_n = fill_n_t{};
-    static constexpr auto transform = transform_t{};
-    static constexpr auto generate_n = generate_n_t{};
-  };
-
   template <
     typename T,
     memory::allocator_type AllocatorT = memory::Allocator,
@@ -61,32 +39,40 @@ namespace soul
     ~Vector();
 
     [[nodiscard]]
-    static auto with_size(usize size, AllocatorT& allocator = *get_default_allocator())
-      -> this_type;
+    static auto WithSize(usize size, AllocatorT& allocator = *get_default_allocator()) -> this_type;
 
     [[nodiscard]]
-    static auto with_capacity(usize capacity, AllocatorT& allocator = *get_default_allocator())
+    static auto WithCapacity(usize capacity, AllocatorT& allocator = *get_default_allocator())
       -> this_type;
 
     template <std::ranges::input_range RangeT>
     [[nodiscard]]
-    static auto from(RangeT&& range, AllocatorT& allocator = *get_default_allocator()) -> this_type;
+    static auto From(RangeT&& range, NotNull<AllocatorT*> allocator = get_default_allocator())
+      -> this_type;
 
     [[nodiscard]]
-    static auto fill_n(
+    static auto FillN(
       usize size, const value_type& val, AllocatorT& allocator = *get_default_allocator())
       -> this_type
       requires ts_copy<T>;
 
     template <ts_generate_fn<T> Fn>
     [[nodiscard]]
-    static auto generate_n(Fn fn, usize size, AllocatorT& allocator = *get_default_allocator())
+    static auto GenerateN(Fn fn, usize size, AllocatorT& allocator = *get_default_allocator())
       -> this_type;
 
     template <std::ranges::input_range RangeT, typename Fn>
     [[nodiscard]]
-    static auto transform(RangeT&& range, Fn fn, AllocatorT& allocator = *get_default_allocator())
+    static auto Transform(RangeT&& range, Fn fn, AllocatorT& allocator = *get_default_allocator())
       -> this_type;
+
+    template <typename Fn>
+    [[nodiscard]]
+    static auto TransformIndex(
+      usize idx_start,
+      usize idx_end,
+      Fn fn,
+      NotNull<AllocatorT*> allocator = get_default_allocator()) -> this_type;
 
     [[nodiscard]]
     auto clone() const -> this_type;
@@ -147,6 +133,9 @@ namespace soul
 
     [[nodiscard]]
     auto size() const noexcept -> usize;
+
+    [[nodiscard]]
+    auto size_in_bytes() const noexcept -> usize;
 
     [[nodiscard]]
     auto empty() const noexcept -> b8;
@@ -236,41 +225,72 @@ namespace soul
 
     auto operator=(const Vector& rhs) -> Vector&;
 
-    explicit Vector(
-      vector_construct::with_size_t tag,
-      usize size,
-      AllocatorT& allocator = *get_default_allocator());
+    struct Construct {
+      struct WithSize {
+      };
+      struct WithCapacity {
+      };
+      struct From {
+      };
+      struct FillN {
+      };
+      struct GenerateN {
+      };
+      struct Transform {
+      };
+      struct TransformIndex {
+      };
+
+      static constexpr auto with_size = WithSize{};
+      static constexpr auto with_capacity = WithCapacity{};
+      static constexpr auto from = From{};
+      static constexpr auto fill_n = FillN{};
+      static constexpr auto generate_n = GenerateN{};
+      static constexpr auto transform = Transform{};
+      static constexpr auto transform_index = TransformIndex{};
+    };
 
     explicit Vector(
-      vector_construct::fill_n_t tag,
+      Construct::WithSize tag, usize size, AllocatorT& allocator = *get_default_allocator());
+
+    explicit Vector(
+      Construct::FillN tag,
       const value_type& val,
       usize size,
       AllocatorT& allocator = *get_default_allocator());
 
     template <ts_generate_fn<T> Fn>
     explicit Vector(
-      vector_construct::generate_n_t tag,
+      Construct::GenerateN tag,
       Fn fn,
       usize size,
       AllocatorT& allocator = *get_default_allocator());
 
     explicit Vector(
-      vector_construct::with_capacity_t tag,
+      Construct::WithCapacity tag,
       usize capacity,
       AllocatorT& allocator = *get_default_allocator());
 
     template <std::ranges::input_range RangeT>
     explicit Vector(
-      vector_construct::from_t tag,
+      Construct::From tag,
       RangeT&& range,
-      AllocatorT& allocator = *get_default_allocator());
+      NotNull<AllocatorT*> allocator = get_default_allocator());
 
     template <std::ranges::input_range RangeT, typename Fn>
     explicit Vector(
-      vector_construct::transform_t tag,
+      Construct::Transform tag,
       RangeT&& range,
       Fn fn,
       AllocatorT& allocator = *get_default_allocator());
+
+    template <typename Fn>
+    explicit Vector(
+      Construct::TransformIndex tag,
+      usize idx_start,
+      usize idx_end,
+      Fn fn,
+      NotNull<AllocatorT*> allocator = get_default_allocator());
 
     [[nodiscard]]
     static auto get_new_capacity(usize old_capacity) -> usize;
@@ -327,8 +347,7 @@ namespace soul
   }
 
   template <typename T, memory::allocator_type AllocatorT, usize N>
-  Vector<T, AllocatorT, N>::Vector(
-    vector_construct::with_size_t /*tag*/, usize size, AllocatorT& allocator)
+  Vector<T, AllocatorT, N>::Vector(Construct::WithSize /*tag*/, usize size, AllocatorT& allocator)
       : allocator_(&allocator), size_(size)
   {
     init_reserve(size);
@@ -337,7 +356,7 @@ namespace soul
 
   template <typename T, memory::allocator_type AllocatorT, usize N>
   Vector<T, AllocatorT, N>::Vector(
-    vector_construct::with_capacity_t /*tag*/, usize capacity, AllocatorT& allocator)
+    Construct::WithCapacity /*tag*/, usize capacity, AllocatorT& allocator)
       : allocator_(&allocator)
   {
     init_reserve(capacity);
@@ -345,7 +364,7 @@ namespace soul
 
   template <typename T, memory::allocator_type AllocatorT, usize N>
   Vector<T, AllocatorT, N>::Vector(
-    vector_construct::fill_n_t /*tag*/, const value_type& val, usize size, AllocatorT& allocator)
+    Construct::FillN /*tag*/, const value_type& val, usize size, AllocatorT& allocator)
       : allocator_(&allocator), size_(size)
   {
     init_reserve(size);
@@ -355,7 +374,7 @@ namespace soul
   template <typename T, memory::allocator_type AllocatorT, usize N>
   template <ts_generate_fn<T> Fn>
   Vector<T, AllocatorT, N>::Vector(
-    vector_construct::generate_n_t /*tag*/, Fn fn, usize size, AllocatorT& allocator)
+    Construct::GenerateN /*tag*/, Fn fn, usize size, AllocatorT& allocator)
       : allocator_(&allocator), size_(size)
   {
     init_reserve(size);
@@ -365,8 +384,8 @@ namespace soul
   template <typename T, memory::allocator_type AllocatorT, usize N>
   template <std::ranges::input_range RangeT>
   Vector<T, AllocatorT, N>::Vector(
-    vector_construct::from_t /*tag*/, RangeT&& range, AllocatorT& allocator)
-      : allocator_(&allocator)
+    Construct::From /*tag*/, RangeT&& range, NotNull<AllocatorT*> allocator)
+      : allocator_(allocator)
   {
     if constexpr (std::ranges::sized_range<RangeT> || std::ranges::forward_range<RangeT>) {
       const auto size = usize(std::ranges::distance(range));
@@ -383,7 +402,7 @@ namespace soul
   template <typename T, memory::allocator_type AllocatorT, usize N>
   template <std::ranges::input_range RangeT, typename Fn>
   Vector<T, AllocatorT, N>::Vector(
-    vector_construct::transform_t /*tag*/, RangeT&& range, Fn fn, AllocatorT& allocator)
+    Construct::Transform /*tag*/, RangeT&& range, Fn fn, AllocatorT& allocator)
       : allocator_(&allocator)
   {
     if constexpr (std::ranges::sized_range<RangeT> || std::ranges::forward_range<RangeT>) {
@@ -396,6 +415,21 @@ namespace soul
         transform_construct_at(buffer_, it, std::move(fn));
       }
     }
+  }
+
+  template <typename T, memory::allocator_type AllocatorT, usize N>
+  template <typename Fn>
+  Vector<T, AllocatorT, N>::Vector(
+    Construct::TransformIndex /*tag*/,
+    usize idx_start,
+    usize idx_end,
+    Fn fn,
+    NotNull<AllocatorT*> allocator)
+      : allocator_(allocator), size_(idx_end - idx_start)
+  {
+    SOUL_ASSERT(idx_end >= idx_start, "Index end must be larget than index start");
+    init_reserve(size_);
+    uninitialized_transform_index_construct(idx_start, idx_end, std::move(fn), buffer_);
   }
 
   template <typename T, memory::allocator_type AllocatorT, usize N>
@@ -424,24 +458,24 @@ namespace soul
   }
 
   template <typename T, memory::allocator_type AllocatorT, usize N>
-  auto Vector<T, AllocatorT, N>::with_size(usize size, AllocatorT& allocator) -> this_type
+  auto Vector<T, AllocatorT, N>::WithSize(usize size, AllocatorT& allocator) -> this_type
   {
-    return this_type(vector_construct::with_size, size, allocator);
+    return this_type(Construct::with_size, size, allocator);
   }
 
   template <typename T, memory::allocator_type AllocatorT, usize N>
-  auto Vector<T, AllocatorT, N>::fill_n(usize size, const value_type& val, AllocatorT& allocator)
+  auto Vector<T, AllocatorT, N>::FillN(usize size, const value_type& val, AllocatorT& allocator)
     -> this_type
     requires ts_copy<T>
   {
-    return this_type(vector_construct::fill_n, val, size, allocator);
+    return this_type(Construct::fill_n, val, size, allocator);
   }
 
   template <typename T, memory::allocator_type AllocatorT, usize N>
   template <ts_generate_fn<T> Fn>
-  auto Vector<T, AllocatorT, N>::generate_n(Fn fn, usize size, AllocatorT& allocator) -> this_type
+  auto Vector<T, AllocatorT, N>::GenerateN(Fn fn, usize size, AllocatorT& allocator) -> this_type
   {
-    return this_type(vector_construct::generate_n, fn, size, allocator);
+    return this_type(Construct::generate_n, fn, size, allocator);
   }
 
   template <typename T, memory::allocator_type AllocatorT, usize inline_element_count>
@@ -458,27 +492,35 @@ namespace soul
   }
 
   template <typename T, memory::allocator_type AllocatorT, usize N>
-  auto Vector<T, AllocatorT, N>::with_capacity(usize capacity, AllocatorT& allocator) -> this_type
+  auto Vector<T, AllocatorT, N>::WithCapacity(usize capacity, AllocatorT& allocator) -> this_type
   {
-    return this_type(vector_construct::with_capacity, capacity, allocator);
+    return this_type(Construct::with_capacity, capacity, allocator);
   }
 
   template <typename T, memory::allocator_type AllocatorT, usize N>
   template <std::ranges::input_range RangeT>
   [[nodiscard]]
-  auto Vector<T, AllocatorT, N>::from(RangeT&& range, AllocatorT& allocator) -> this_type
+  auto Vector<T, AllocatorT, N>::From(RangeT&& range, NotNull<AllocatorT*> allocator) -> this_type
   {
-    return this_type(vector_construct::from, std::forward<RangeT>(range), allocator);
+    return this_type(Construct::from, std::forward<RangeT>(range), allocator);
   }
 
   template <typename T, memory::allocator_type AllocatorT, usize N>
   template <std::ranges::input_range RangeT, typename Fn>
   [[nodiscard]]
-  auto Vector<T, AllocatorT, N>::transform(RangeT&& range, Fn fn, AllocatorT& allocator)
+  auto Vector<T, AllocatorT, N>::Transform(RangeT&& range, Fn fn, AllocatorT& allocator)
     -> this_type
   {
-    return this_type(
-      vector_construct::transform, std::forward<RangeT>(range), std::move(fn), allocator);
+    return this_type(Construct::transform, std::forward<RangeT>(range), std::move(fn), allocator);
+  }
+
+  template <typename T, memory::allocator_type AllocatorT, usize N>
+  template <typename Fn>
+  [[nodiscard]]
+  auto Vector<T, AllocatorT, N>::TransformIndex(
+    usize idx_start, usize idx_end, Fn fn, NotNull<AllocatorT*> allocator) -> this_type
+  {
+    return this_type(Construct::transform_index, idx_start, idx_end, std::move(fn), allocator);
   }
 
   template <typename T, memory::allocator_type AllocatorT, usize inline_element_count>
@@ -492,7 +534,7 @@ namespace soul
     requires ts_copy<T>
   {
     if (size > capacity_) {
-      this_type tmp(vector_construct::fill_n, value, size, *allocator_);
+      this_type tmp(Construct::fill_n, value, size, *allocator_);
       swap(tmp);
     } else if (size > size_) {
       std::fill_n(buffer_, size_, value);
@@ -675,6 +717,12 @@ namespace soul
   auto Vector<T, AllocatorT, inline_element_count>::size() const noexcept -> usize
   {
     return size_;
+  }
+
+  template <typename T, memory::allocator_type AllocatorT, usize inline_element_count>
+  auto Vector<T, AllocatorT, inline_element_count>::size_in_bytes() const noexcept -> usize
+  {
+    return size_ * sizeof(T);
   }
 
   template <typename T, memory::allocator_type AllocatorT, usize inline_element_count>

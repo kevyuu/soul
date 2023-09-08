@@ -2573,7 +2573,7 @@ namespace soul::gpu
     -> VkAccelerationStructureBuildSizesInfoKHR
   {
     auto as_geometries =
-      Vector<VkAccelerationStructureGeometryKHR>::with_size(build_desc.geometry_count);
+      Vector<VkAccelerationStructureGeometryKHR>::WithSize(build_desc.geometry_count);
     std::ranges::transform(
       build_desc.geometry_descs,
       build_desc.geometry_descs + build_desc.geometry_count,
@@ -2617,7 +2617,7 @@ namespace soul::gpu
       .pGeometries = as_geometries.data(),
     };
 
-    auto max_primitives_counts = Vector<u32>::with_size(build_desc.geometry_count);
+    auto max_primitives_counts = Vector<u32>::WithSize(build_desc.geometry_count);
     std::transform(
       build_desc.geometry_descs,
       build_desc.geometry_descs + build_desc.geometry_count,

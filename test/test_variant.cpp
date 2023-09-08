@@ -74,7 +74,7 @@ TEST(TestVariantConstruction, TestConstructionFromValue)
   }
 
   {
-    const auto test_variant = UntrivialVariant::from(ListTestObject::from(
+    const auto test_variant = UntrivialVariant::from(ListTestObject::From(
       std::views::iota(0, 10) | std::views::transform([](int i) { return TestObject(i); })));
     SOUL_TEST_ASSERT_EQ(test_variant.ref<ListTestObject>().size(), 10);
     for (int i = 0; i < 10; i++) {
@@ -113,7 +113,7 @@ TEST(TestVariantConstructor, TestCopyConstructor)
 TEST(TestVariantConstruction, TestClone)
 {
   {
-    const auto test_variant_src = UntrivialVariant::from(ListTestObject::from(
+    const auto test_variant_src = UntrivialVariant::from(ListTestObject::From(
       std::views::iota(0, 10) | std::views::transform([](int i) { return TestObject(i); })));
     const auto test_variant_dst = test_variant_src.clone();
     SOUL_TEST_ASSERT_EQ(test_variant_dst.ref<ListTestObject>().size(), 10);
@@ -147,9 +147,9 @@ TEST(TestVariantAssignmentOperator, TestCopyAssignment)
 TEST(TestVariantAssignmentOperator, TestMoveAssignment)
 {
   {
-    auto test_variant_src = UntrivialVariant::from(ListTestObject::from(
+    auto test_variant_src = UntrivialVariant::from(ListTestObject::From(
       std::views::iota(0, 10) | std::views::transform([](int i) { return TestObject(i); })));
-    auto test_variant_dst = UntrivialVariant::from(ListTestObject::from(
+    auto test_variant_dst = UntrivialVariant::from(ListTestObject::From(
       std::views::iota(3, 10) | std::views::transform([](int i) { return TestObject(i); })));
     auto test_variant_src2 = UntrivialVariant::from(u8(3));
     test_variant_dst = std::move(test_variant_src);
@@ -166,9 +166,9 @@ TEST(TestVariantAssignmentOperator, TestMoveAssignment)
 TEST(TestVariantCloneFrom, TestCloneFrom)
 {
   {
-    auto test_variant_src = UntrivialVariant::from(ListTestObject::from(
+    auto test_variant_src = UntrivialVariant::from(ListTestObject::From(
       std::views::iota(0, 10) | std::views::transform([](int i) { return TestObject(i); })));
-    auto test_variant_dst = UntrivialVariant::from(ListTestObject::from(
+    auto test_variant_dst = UntrivialVariant::from(ListTestObject::From(
       std::views::iota(3, 10) | std::views::transform([](int i) { return TestObject(i); })));
     test_variant_dst.clone_from(test_variant_src);
     SOUL_TEST_ASSERT_EQ(test_variant_dst.ref<ListTestObject>().size(), 10);
@@ -205,9 +205,9 @@ TEST(TestVariantAssign, TestAssign)
   }
 
   {
-    auto test_list_obj_src = ListTestObject::from(
+    auto test_list_obj_src = ListTestObject::From(
       std::views::iota(0, 10) | std::views::transform([](int i) { return TestObject(i); }));
-    auto test_variant_dst = UntrivialVariant::from(ListTestObject::from(
+    auto test_variant_dst = UntrivialVariant::from(ListTestObject::From(
       std::views::iota(3, 10) | std::views::transform([](int i) { return TestObject(i); })));
     test_variant_dst.assign(std::move(test_list_obj_src));
     SOUL_TEST_ASSERT_EQ(test_variant_dst.ref<ListTestObject>().size(), 10);
@@ -268,14 +268,14 @@ TEST(TestVariantVisit, TestVisit)
       },
       [&x](TestObject&& val) {
         x += val.x;
-        return VisitResult{ListTestObject::with_capacity(5), UntrivialKind::TEST_OBJECT};
+        return VisitResult{ListTestObject::WithCapacity(5), UntrivialKind::TEST_OBJECT};
       },
       [&x](u8 val) {
         x += val;
-        return VisitResult{ListTestObject::with_size(10), UntrivialKind::UINT8};
+        return VisitResult{ListTestObject::WithSize(10), UntrivialKind::UINT8};
       },
     };
-    auto test_list_obj = ListTestObject::from(
+    auto test_list_obj = ListTestObject::From(
       std::views::iota(3, 6) | std::views::transform([](int val) { return TestObject(val); }));
     auto test_list_obj_copy = test_list_obj.clone();
     const auto visit_result = UntrivialVariant::from(std::move(test_list_obj)).visit(visitor_set);
@@ -295,7 +295,7 @@ TEST(TestVariantUnwrap, TestUnwrap)
 
     const auto unwrap_result =
       UntrivialVariant::from(
-        ListTestObject::from(
+        ListTestObject::From(
           std::views::iota(0, 10) | std::views::transform([](int i) { return TestObject(i); })))
         .unwrap<ListTestObject>();
 
@@ -308,7 +308,7 @@ TEST(TestVariantUnwrap, TestUnwrap)
 TEST(TestVariantSwap, TestSwap)
 {
   {
-    auto test_variant1 = UntrivialVariant::from(ListTestObject::from(
+    auto test_variant1 = UntrivialVariant::from(ListTestObject::From(
       std::views::iota(0, 10) | std::views::transform([](int i) { return TestObject(i); })));
     auto test_variant2 = UntrivialVariant::from(u8(10));
     swap(test_variant1, test_variant2);

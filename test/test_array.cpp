@@ -80,7 +80,7 @@ TEST(TestArrayConstruction, TestInitGenerateConstruction)
   SOUL_TEST_RUN(
     SOUL_SINGLE_ARG(test_init_generate_construction.operator()<TestObject, 4>(test_obj_gen_fn)));
 
-  auto list_test_obj_gen_fn = [] { return ListTestObject::with_size(5); };
+  auto list_test_obj_gen_fn = [] { return ListTestObject::WithSize(5); };
   SOUL_TEST_RUN(SOUL_SINGLE_ARG(
     test_init_generate_construction.operator()<ListTestObject, 0>(list_test_obj_gen_fn)));
   SOUL_TEST_RUN(SOUL_SINGLE_ARG(
@@ -102,7 +102,7 @@ TEST(TestArrayConstruction, TestInitIndexTransformConstruction)
   SOUL_TEST_RUN(SOUL_SINGLE_ARG(
     test_init_index_transform_construction.operator()<TestObject, 4>(test_obj_gen_fn)));
 
-  auto list_test_obj_gen_fn = [](usize index) { return ListTestObject::with_size(index); };
+  auto list_test_obj_gen_fn = [](usize index) { return ListTestObject::WithSize(index); };
   SOUL_TEST_RUN(SOUL_SINGLE_ARG(
     test_init_index_transform_construction.operator()<ListTestObject, 0>(list_test_obj_gen_fn)));
   SOUL_TEST_RUN(SOUL_SINGLE_ARG(

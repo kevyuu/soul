@@ -274,7 +274,7 @@ class BufferTransferCommandSample final : public App
         const auto push_constants_count =
           transforms_q1_.size() + transforms_q2_.size() + transient_transforms_.size();
         const auto push_constant_indexes = std::views::iota(usize(0), push_constants_count);
-        auto push_constants = Vector<PushConstant>::transform(
+        auto push_constants = Vector<PushConstant>::Transform(
           push_constant_indexes, [=](usize push_constant_idx) -> PushConstant {
             return {
               .transform_descriptor_id = transform_buffer_descriptor_id,

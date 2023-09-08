@@ -52,7 +52,7 @@ template <typename T, usize N>
 auto generate_random_sbo_vector(const usize size) -> soul::SBOVector<T, N>
 {
   const auto sequence = generate_random_sequence<T>(size);
-  return soul::SBOVector<T, N>::from(sequence | soul::views::duplicate<T>());
+  return soul::SBOVector<T, N>::From(sequence | soul::views::duplicate<T>());
 }
 
 template <typename T, usize N, std::ranges::input_range RangeT>
@@ -77,14 +77,14 @@ auto verify_sbo_vector(const soul::SBOVector<T, VecSize>& vec, const std::array<
 template <typename T, usize N>
 auto create_vector_from_sequence(const Sequence<T>& sequence) -> soul::SBOVector<T, N>
 {
-  return soul::SBOVector<T, N>::from(sequence | soul::views::duplicate<T>());
+  return soul::SBOVector<T, N>::From(sequence | soul::views::duplicate<T>());
 }
 
 template <typename T, usize N>
 auto create_vector_from_sequence(const Sequence<T>& sequence, soul::memory::Allocator& allocator)
   -> soul::SBOVector<T, N>
 {
-  return soul::SBOVector<T, N>::from(sequence | soul::views::duplicate<T>(), allocator);
+  return soul::SBOVector<T, N>::From(sequence | soul::views::duplicate<T>(), &allocator);
 }
 
 template <typename T, usize N = soul::get_sbo_vector_default_inline_element_count<T>()>
@@ -131,7 +131,7 @@ TEST(TestSBOVectorConstruction, TestCustomAllocatorConstructor)
 template <typename T, usize N = soul::get_sbo_vector_default_inline_element_count<T>()>
 void test_construction_with_size(const usize size)
 {
-  const auto vector = soul::SBOVector<T, N>::with_size(size);
+  const auto vector = soul::SBOVector<T, N>::WithSize(size);
   SOUL_TEST_ASSERT_EQ(vector.size(), size);
   SOUL_TEST_ASSERT_TRUE(all_equal(vector, T()));
 }
@@ -156,7 +156,7 @@ TEST(TestSBOVectorConstruction, TestConstructorWithSize)
 template <typename T, usize N = soul::get_sbo_vector_default_inline_element_count<T>()>
 void test_construction_with_capacity(const usize capacity)
 {
-  const auto vector = soul::Vector<T>::with_capacity(capacity);
+  const auto vector = soul::Vector<T>::WithCapacity(capacity);
   SOUL_TEST_ASSERT_EQ(vector.size(), 0);
   SOUL_TEST_ASSERT_GE(vector.capacity(), capacity);
 }
@@ -183,7 +183,7 @@ TEST(TestSBOVectorConstruction, TestConstructionWithCapacity)
 template <typename T, usize N = soul::get_sbo_vector_default_inline_element_count<T>()>
 void test_construction_fill_n(const usize size, const T& val)
 {
-  const auto vector = soul::SBOVector<T, N>::fill_n(size, val);
+  const auto vector = soul::SBOVector<T, N>::FillN(size, val);
   SOUL_TEST_ASSERT_EQ(vector.size(), size);
   SOUL_TEST_ASSERT_TRUE(all_equal(vector, val));
   SOUL_TEST_ASSERT_EQ(vector.empty(), size == 0);
@@ -203,7 +203,7 @@ template <typename T, usize N = soul::get_sbo_vector_default_inline_element_coun
 void test_construction_generate_n(const usize size, soul::ts_generate_fn<T> auto fn)
 {
   T val = std::invoke(fn);
-  const auto vector = soul::SBOVector<T, N>::generate_n(fn, size);
+  const auto vector = soul::SBOVector<T, N>::GenerateN(fn, size);
   SOUL_TEST_ASSERT_EQ(vector.size(), size);
   SOUL_TEST_ASSERT_TRUE(all_equal(vector, val));
 }
@@ -218,13 +218,13 @@ TEST(TestSBOVectorConstruction, TestConstructionGenerateN)
   SOUL_TEST_RUN(
     test_construction_generate_n<TestObject>(CONSTRUCTOR_VECTOR_SIZE, test_object_factory));
   SOUL_TEST_RUN(test_construction_generate_n<ListTestObject>(CONSTRUCTOR_VECTOR_SIZE, [] {
-    return ListTestObject::generate_n(test_object_factory, CONSTRUCTOR_VECTOR_SIZE);
+    return ListTestObject::GenerateN(test_object_factory, CONSTRUCTOR_VECTOR_SIZE);
   }));
 }
 
 TEST(TestVectorConstruction, TestVectorConstructionFromTransform)
 {
-  const auto vector = soul::SBOVector<TestObject>::transform(
+  const auto vector = soul::SBOVector<TestObject>::Transform(
     std::views::iota(0, 10), [](int val) { return TestObject(val); });
 
   SOUL_TEST_ASSERT_EQ(vector.size(), 10);
@@ -237,11 +237,11 @@ class TestSBOVectorConstructionWithSourceData : public testing::Test
 {
 public:
   VectorInt vector_int_src =
-    VectorInt::fill_n(CONSTRUCTOR_VECTOR_SIZE, CONSTRUCTOR_VECTOR_DEFAULT_VALUE);
-  VectorObj vector_to_src = VectorObj::generate_n(
+    VectorInt::FillN(CONSTRUCTOR_VECTOR_SIZE, CONSTRUCTOR_VECTOR_DEFAULT_VALUE);
+  VectorObj vector_to_src = VectorObj::GenerateN(
     soul::clone_fn(TestObject(CONSTRUCTOR_VECTOR_DEFAULT_VALUE)), CONSTRUCTOR_VECTOR_SIZE);
-  VectorListObj vector_list_to_src = VectorListObj::generate_n(
-    soul::clone_fn(ListTestObject::generate_n(
+  VectorListObj vector_list_to_src = VectorListObj::GenerateN(
+    soul::clone_fn(ListTestObject::GenerateN(
       soul::clone_fn(TestObject(CONSTRUCTOR_VECTOR_DEFAULT_VALUE)), CONSTRUCTOR_VECTOR_SIZE)),
     CONSTRUCTOR_VECTOR_SIZE);
 };
@@ -294,7 +294,7 @@ TEST_F(TestSBOVectorConstructionWithSourceData, TestConstructionFromRanges)
 {
   auto test_construction_from_ranges =
     []<typename T, usize N>(const soul::SBOVector<T, N>& vector_src) {
-      const auto vector_dst = soul::SBOVector<T, N>::from(vector_src | soul::views::duplicate<T>());
+      const auto vector_dst = soul::SBOVector<T, N>::From(vector_src | soul::views::duplicate<T>());
       verify_sbo_vector(vector_dst, vector_src);
     };
 
@@ -310,7 +310,7 @@ TEST_F(TestSBOVectorConstructionWithSourceData, TestConstructionFromRangesWithCu
       TestAllocator test_allocator;
 
       const auto vector_dst =
-        soul::SBOVector<T, N>::from(vector_src | soul::views::duplicate<T>(), test_allocator);
+        soul::SBOVector<T, N>::From(vector_src | soul::views::duplicate<T>(), &test_allocator);
       verify_sbo_vector(vector_dst, vector_src);
       SOUL_TEST_ASSERT_EQ(test_allocator.allocCount, 1);
     };
@@ -730,7 +730,7 @@ TEST(TestSBOVectorPushback, TestSBOVectorPushBack)
   auto type_set_test = []<typename T>() {
     const T val = []() {
       if constexpr (std::same_as<T, ListTestObject>) {
-        return ListTestObject::generate_n(soul::clone_fn(TestObject(5)), 10);
+        return ListTestObject::GenerateN(soul::clone_fn(TestObject(5)), 10);
       } else {
         return T(5);
       }
@@ -768,7 +768,7 @@ TEST(TestSBOVectorGenerateBack, TestSBOVectorGenerateBack)
   auto type_set_test = []<typename T>() {
     auto val_fn = []() -> T {
       if constexpr (std::same_as<T, ListTestObject>) {
-        return ListTestObject::generate_n(soul::clone_fn(TestObject(5)), 10);
+        return ListTestObject::GenerateN(soul::clone_fn(TestObject(5)), 10);
       } else {
         return T(5);
       }

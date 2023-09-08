@@ -65,7 +65,7 @@ auto test_construction_err(const T& err_src)
 
 TEST(TestResultConstruction, TestErrConstruction)
 {
-  const auto dummy_nontrivial_err = NontrivialErr::from(
+  const auto dummy_nontrivial_err = NontrivialErr::From(
     std::views::iota(3, 10) | std::views::transform([](i32 val) { return TestObject(val); }));
 
   test_construction_err<TrivialResult>(TrivialErr(3));
@@ -108,7 +108,7 @@ auto test_construction_generate_err(Fn fn)
 
 TEST(TestResultConstruction, TestConstructionGenerateErr)
 {
-  const auto dummy_nontrivial_err = NontrivialErr::from(
+  const auto dummy_nontrivial_err = NontrivialErr::From(
     std::views::iota(3, 10) | std::views::transform([](i32 val) { return TestObject(val); }));
 
   test_construction_generate_err<TrivialResult>(duplicate_fn(TrivialErr(3)));
@@ -137,7 +137,7 @@ TEST(TestResultConstruction, TestCopyConstructor)
 
 TEST(TestResultConstruction, TestClone)
 {
-  const auto dummy_nontrivial_err = NontrivialErr::from(
+  const auto dummy_nontrivial_err = NontrivialErr::From(
     std::views::iota(3, 10) | std::views::transform([](i32 val) { return TestObject(val); }));
 
   test_clone(TrivialOkResult::ok(TrivialOk{.x = 3, .y = 10}));
@@ -151,7 +151,7 @@ TEST(TestResultConstruction, TestClone)
 
 TEST(TestResultConstruction, TestMoveConstructor)
 {
-  const auto dummy_nontrivial_err = NontrivialErr::from(
+  const auto dummy_nontrivial_err = NontrivialErr::From(
     std::views::iota(3, 10) | std::views::transform([](i32 val) { return TestObject(val); }));
 
   test_move_constructor(TrivialResult::ok(TrivialOk{.x = 3, .y = 10}));
@@ -176,9 +176,9 @@ public:
   TestObject test_obj = TestObject(10);
   TestObject test_obj2 = TestObject(7);
 
-  NontrivialErr nontrivial_err = NontrivialErr::from(
+  NontrivialErr nontrivial_err = NontrivialErr::From(
     std::views::iota(3, 10) | std::views::transform([](i32 val) { return TestObject(val); }));
-  NontrivialErr nontrivial_err2 = NontrivialErr::from(
+  NontrivialErr nontrivial_err2 = NontrivialErr::From(
     std::views::iota(3, 7) | std::views::transform([](i32 val) { return TestObject(val); }));
 
   TrivialResult trivial_result_ok = TrivialResult::ok(trivial_ok);

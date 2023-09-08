@@ -283,7 +283,7 @@ class DrawIndexedIndirectSampleApp final : public App
       stbi_image_free(texture_pixels);
     }
 
-    const auto gpu_materials = soul::SBOVector<WavefrontMaterial>::transform(
+    const auto gpu_materials = soul::SBOVector<WavefrontMaterial>::Transform(
       obj_loader.materials, [this](const auto& material) {
         return WavefrontMaterial{
           .ambient = material.ambient,

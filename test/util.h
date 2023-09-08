@@ -285,7 +285,7 @@ static auto generate_random_sequence(const usize size) -> Sequence<T>
   Sequence<T> result(size);
   if constexpr (std::same_as<T, ListTestObject>) {
     std::generate(result.begin(), result.end(), [&]() {
-      return ListTestObject::generate_n(soul::clone_fn(TestObject(dist(random_engine))), 10);
+      return ListTestObject::GenerateN(soul::clone_fn(TestObject(dist(random_engine))), 10);
     });
   } else {
     std::generate(result.begin(), result.end(), [&]() { return T(dist(random_engine)); });
