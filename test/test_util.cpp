@@ -98,3 +98,13 @@ TEST(TestCoreUtil, TestForEachOneBitPos)
   SOUL_TEST_RUN(
     test_for_each_one_bit_pos(u64{0x4F000200}, std::vector<u32>({9, 24, 25, 26, 27, 30})));
 }
+
+TEST(TestCoreUtil, TestDigitCount)
+{
+  SOUL_TEST_ASSERT_EQ(soul::util::digit_count(100), 3);
+  SOUL_TEST_ASSERT_EQ(soul::util::digit_count(100, 10), 3);
+  SOUL_TEST_ASSERT_EQ(soul::util::digit_count(3), 1);
+  SOUL_TEST_ASSERT_EQ(soul::util::digit_count(0), 1);
+  SOUL_TEST_ASSERT_EQ(soul::util::digit_count(0xF3, 16), 2);
+  SOUL_TEST_ASSERT_EQ(soul::util::digit_count(0x0, 16), 1);
+}

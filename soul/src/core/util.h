@@ -222,4 +222,18 @@ namespace soul::util
     return Integral((x + (Integral(a) - 1)) & ~Integral(a - 1));
   }
 
+  // All leading zero will not be count as digit, '0' will have 1 digit count
+  constexpr auto digit_count(usize val, usize base = 10) -> usize
+  {
+    if (val == 0) {
+      return 1;
+    }
+    usize number_of_digits = 0;
+
+    while (val != 0) {
+      number_of_digits++;
+      val /= base;
+    }
+    return number_of_digits;
+  }
 }; // namespace soul::util
