@@ -41,6 +41,7 @@ namespace soul::impl
     {
       auto& log_buffers = get_log_buffers();
       get_output_stream(log_level) << log_buffers[log_level].buffer.data();
+      log_buffers[log_level].buffer.clear();
     }
   } // namespace
 
