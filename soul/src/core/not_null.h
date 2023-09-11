@@ -8,11 +8,6 @@ namespace soul
 
   namespace impl
   {
-    struct NotNullConstruct {
-      struct NewUnchecked {
-      };
-      static constexpr auto new_unchecked = NewUnchecked{};
-    };
   } // namespace impl
 
   template <ts_pointer T>
@@ -64,9 +59,9 @@ namespace soul
 
     friend constexpr void swap(NotNull& lhs, NotNull& rhs) { lhs.swap(rhs); }
 
-    constexpr static auto new_unchecked(T ptr) -> NotNull<T>
+    constexpr static auto NewUnchecked(T ptr) -> NotNull<T>
     {
-      return NotNull(impl::NotNullConstruct::new_unchecked, ptr);
+      return NotNull(Construct::new_unchecked, ptr);
     }
     constexpr auto get_unchecked() const -> T { return ptr_; }
     constexpr auto set_unchecked(T ptr) { ptr_ = ptr; }
@@ -74,6 +69,7 @@ namespace soul
     constexpr operator T() const { return ptr_; } // NOLINT
     constexpr auto operator*() const -> std::remove_pointer_t<T>& { return *ptr_; }
     constexpr auto operator->() const -> T { return ptr_; }
+    constexpr auto get() const -> T { return ptr_; }
 
     // prevents compilation when someone attempts to assign a null pointer constant
     NotNull(std::nullptr_t) = delete;
@@ -88,14 +84,19 @@ namespace soul
     void operator[](std::ptrdiff_t) const = delete;
 
   private:
-    constexpr explicit NotNull(impl::NotNullConstruct::NewUnchecked /* tag */, T val) : ptr_(val) {}
+    struct Construct {
+      struct NewUnchecked {
+      };
+      static constexpr auto new_unchecked = NewUnchecked{};
+    };
+    constexpr explicit NotNull(Construct::NewUnchecked /* tag */, T val) : ptr_(val) {}
     T ptr_;
   };
 
   template <typename T>
   constexpr auto ptrof(T&& obj) -> NotNull<std::remove_reference_t<T>*>
   {
-    return NotNull<std::remove_reference_t<T>*>::new_unchecked(std::addressof(obj));
+    return NotNull<std::remove_reference_t<T>*>::NewUnchecked(std::addressof(obj));
   }
 
   // more unwanted operators

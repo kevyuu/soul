@@ -27,6 +27,7 @@ TEST(TestNotNullConstruction, TestConstructionFromRawPointer)
   SOUL_TEST_ASSERT_EQ(not_null_test_obj, &test_obj);
   SOUL_TEST_ASSERT_EQ(not_null_test_obj->x, test_obj.x);
   SOUL_TEST_ASSERT_EQ((*not_null_test_obj).x, test_obj.x);
+  SOUL_TEST_ASSERT_EQ(not_null_test_obj.get(), &test_obj);
 }
 
 TEST(TestNotNullConstruction, TestPtrOf)
@@ -37,6 +38,7 @@ TEST(TestNotNullConstruction, TestPtrOf)
   SOUL_TEST_ASSERT_EQ(not_null_test_obj, &test_obj);
   SOUL_TEST_ASSERT_EQ(not_null_test_obj->x, test_obj.x);
   SOUL_TEST_ASSERT_EQ((*not_null_test_obj).x, test_obj.x);
+  SOUL_TEST_ASSERT_EQ(not_null_test_obj.get(), &test_obj);
 }
 
 TEST(TestNotNullConstruction, TestCopyConstructor)
@@ -49,6 +51,7 @@ TEST(TestNotNullConstruction, TestCopyConstructor)
   SOUL_TEST_ASSERT_EQ(not_null_test_obj2, &test_obj);
   SOUL_TEST_ASSERT_EQ(not_null_test_obj2->x, test_obj.x);
   SOUL_TEST_ASSERT_EQ((*not_null_test_obj2).x, test_obj.x);
+  SOUL_TEST_ASSERT_EQ(not_null_test_obj2.get(), &test_obj);
 
   SOUL_TEST_ASSERT_EQ(not_null_test_obj, not_null_test_obj2);
 }
@@ -65,6 +68,7 @@ TEST(TestNotNullAssignment, TestAssignment)
   SOUL_TEST_ASSERT_EQ(not_null_test_obj, &test_obj2);
   SOUL_TEST_ASSERT_EQ(not_null_test_obj->x, test_obj2.x);
   SOUL_TEST_ASSERT_EQ((*not_null_test_obj).x, test_obj2.x);
+  SOUL_TEST_ASSERT_EQ(not_null_test_obj.get(), &test_obj2);
 }
 
 TEST(TestNotNullSwap, TestSwap)
@@ -81,11 +85,13 @@ TEST(TestNotNullSwap, TestSwap)
   SOUL_TEST_ASSERT_EQ(not_null_test_obj, &test_obj2);
   SOUL_TEST_ASSERT_EQ(not_null_test_obj->x, test_obj2.x);
   SOUL_TEST_ASSERT_EQ((*not_null_test_obj).x, test_obj2.x);
+  SOUL_TEST_ASSERT_EQ(not_null_test_obj.get(), &test_obj2);
 
   SOUL_TEST_ASSERT_EQ(*not_null_test_obj2, test_obj);
   SOUL_TEST_ASSERT_EQ(not_null_test_obj2, &test_obj);
   SOUL_TEST_ASSERT_EQ(not_null_test_obj2->x, test_obj.x);
   SOUL_TEST_ASSERT_EQ((*not_null_test_obj2).x, test_obj.x);
+  SOUL_TEST_ASSERT_EQ(not_null_test_obj2.get(), &test_obj);
 }
 
 static_assert(!soul::is_not_null_v<int*>);

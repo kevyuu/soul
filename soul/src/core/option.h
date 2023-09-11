@@ -472,11 +472,11 @@ namespace soul
     using some_type = NotNull<T>;
     using ptr_type = T;
 
-    constexpr Option() : not_null_ptr_(NotNull<T>::new_unchecked(nullptr)) {}
+    constexpr Option() : not_null_ptr_(NotNull<T>::NewUnchecked(nullptr)) {}
 
-    constexpr Option(NilOpt none) : not_null_ptr_(NotNull<T>::new_unchecked(nullptr)) {} // NOLINT
+    constexpr Option(NilOpt none) : not_null_ptr_(NotNull<T>::NewUnchecked(nullptr)) {} // NOLINT
 
-    constexpr Option(T ptr) : not_null_ptr_(NotNull<T>::new_unchecked(ptr)) {} // NOLINT
+    constexpr Option(T ptr) : not_null_ptr_(NotNull<T>::NewUnchecked(ptr)) {} // NOLINT
 
     constexpr Option(NotNull<T>) = delete;
 
