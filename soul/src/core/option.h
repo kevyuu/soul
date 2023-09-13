@@ -6,7 +6,6 @@
 #include "core/type.h"
 #include "core/type_traits.h"
 #include "core/uninitialized.h"
-#include "core/util.h"
 
 namespace soul
 {
