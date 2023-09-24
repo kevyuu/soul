@@ -53,7 +53,6 @@ set(SOUL_SOURCES
     src/core/log.cpp
     src/core/panic.cpp
     src/core/panic_lite.cpp
-    src/core/cstring.cpp
     src/gpu/intern/common.cpp
     src/gpu/intern/glfw_wsi.cpp
     src/gpu/intern/gpu_system.cpp

@@ -1102,9 +1102,7 @@ namespace soul::gpu
     }
 
     if (desc.name != nullptr) {
-      runtime::ScopeAllocator scope_allocator("Texture name");
-      const auto tex_name = CString::with_capacity_then_format(
-        1024, &scope_allocator, "{}({})", desc.name, _db.frame_counter);
+      const auto tex_name = CString::Format("{}({})", desc.name, _db.frame_counter);
       const VkDebugUtilsObjectNameInfoEXT image_name_info = {
         VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
         nullptr,
@@ -2090,7 +2088,7 @@ namespace soul::gpu
       program.shaders.push_back(Shader{
         .stage = stage,
         .vk_handle = shader_module,
-        .entry_point = CString::from(entry_point.name),
+        .entry_point = CString::From(entry_point.name),
       });
     }
 

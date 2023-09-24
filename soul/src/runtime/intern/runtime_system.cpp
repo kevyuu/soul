@@ -29,8 +29,7 @@ namespace soul::runtime
   {
     Database::g_thread_context = thread_context;
 
-    const auto thread_name = CString::with_capacity_then_format(
-      512, get_default_allocator(), "Worker Thread = {}", get_thread_id());
+    const auto thread_name = CString::Format("Worker Thread = {}", get_thread_id());
     SOUL_PROFILE_THREAD_SET_NAME(thread_name.data());
 
     char temp_allocator_name[512];

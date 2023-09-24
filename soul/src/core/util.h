@@ -165,7 +165,7 @@ namespace soul::util
     const auto fsize = ftell(file);
     fseek(file, 0, SEEK_SET); /* same as rewind(f); */
 
-    auto string = CString::with_size(fsize, &allocator);
+    auto string = CString::WithSize(fsize, &allocator);
     fread(string.data(), 1, fsize, file);
 
     return string;
@@ -236,4 +236,5 @@ namespace soul::util
     }
     return number_of_digits;
   }
+
 }; // namespace soul::util
