@@ -557,6 +557,10 @@ namespace soul
 
   using CString = BasicCString<memory::Allocator, 64>;
 
+  inline auto operator""_str(const char* str, std::size_t /* len */) noexcept -> CString
+  {
+    return CString::From(str);
+  }
 } // namespace soul
 
 template <soul::memory::allocator_type AllocatorT, soul::usize InlineCapacityV>

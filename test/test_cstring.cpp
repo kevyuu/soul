@@ -70,13 +70,15 @@ auto construct_cstring(const T& src) -> TestString
   }
 }
 
-void verify_equal(const TestString& result_str, const char* expected_str)
+template <typename StringT>
+void verify_equal(const StringT& result_str, const char* expected_str)
 {
   SOUL_TEST_ASSERT_STREQ(result_str.data(), expected_str);
   SOUL_TEST_ASSERT_EQ(result_str.size(), strlen(expected_str));
 }
 
-void verify_equal(const TestString& result_str, const TestString& expected_str)
+template <typename StringT>
+void verify_equal(const StringT& result_str, const StringT& expected_str)
 {
   SOUL_TEST_ASSERT_EQ(result_str, expected_str);
   SOUL_TEST_ASSERT_EQ(result_str.size(), expected_str.size());
@@ -116,6 +118,12 @@ TEST(TestCStringConstruction, TestConstructFromCharArray)
   SOUL_TEST_RUN(test_construction_from(TEST_SHORT_STR));
   SOUL_TEST_RUN(test_construction_from(TEST_MAX_INLINE_STR));
   SOUL_TEST_RUN(test_construction_from(TEST_LONG_STR));
+}
+
+TEST(TestCStringConstruction, TestCStringConstructionFromLiteral)
+{
+  const auto literal_str = "abcdef"_str;
+  SOUL_TEST_RUN(verify_equal(literal_str, CString::From("abcdef")));
 }
 
 TEST(TestCStringConstruction, TestConstructionWithSize)
