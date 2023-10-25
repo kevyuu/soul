@@ -245,5 +245,9 @@ namespace soul
   inline b8 constexpr is_specialization_v = is_specialization<T, Template>::value;
 
   template <typename T>
+  inline b8 constexpr has_unique_object_representations_v =
+    std::has_unique_object_representations_v<T>;
+
+  template <typename T>
   using remove_pointer_t = std::remove_pointer_t<T>;
 } // namespace soul
