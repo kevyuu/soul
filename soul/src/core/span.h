@@ -10,7 +10,7 @@ namespace soul
   };
   constexpr auto nilspan = NilSpan{};
 
-  template <ts_pointer T, ts_unsigned_integral SizeT>
+  template <ts_pointer T, ts_unsigned_integral SizeT = usize>
   class Span
   {
   public:
@@ -27,7 +27,7 @@ namespace soul
 
     Span() = delete;
 
-    Span(MaybeNull<pointer> data, size_type size) : data_(data), size_(size)
+    constexpr Span(MaybeNull<pointer> data, size_type size) : data_(data), size_(size)
     {
       SOUL_ASSERT(
         0,
@@ -35,12 +35,12 @@ namespace soul
         "Non zero size cannot hold nullptr, and zero size must be nullptr");
     }
 
-    Span(NotNull<pointer> data, size_type size) : data_(data), size_(size)
+    constexpr Span(NotNull<pointer> data, size_type size) : data_(data), size_(size)
     {
       SOUL_ASSERT(0, size != 0, "Span from not null cannot have zero count");
     }
 
-    Span(pointer data, size_type size) : data_(data), size_(size)
+    constexpr Span(pointer data, size_type size) : data_(data), size_(size)
     {
       SOUL_ASSERT(
         0,
@@ -49,87 +49,87 @@ namespace soul
     }
 
     template <typename U>
-    Span(Span<U, SizeT> other) // NOLINT
+    constexpr Span(Span<U, SizeT> other) // NOLINT
       requires(can_convert_v<U, T>)
         : data_(other.begin()), size_(other.size())
     {
     }
 
-    Span(NilSpan /* nil */) : Span(nullptr, 0) {} // NOLINT
+    constexpr Span(NilSpan /* nil */) : Span(nullptr, 0) {} // NOLINT
 
     [[nodiscard]]
-    auto begin() -> iterator
+    constexpr auto begin() -> iterator
     {
       return data_;
     }
 
     [[nodiscard]]
-    auto begin() const -> const_iterator
+    constexpr auto begin() const -> const_iterator
     {
       return data_;
     }
 
     [[nodiscard]]
-    auto cbegin() const -> const_iterator
+    constexpr auto cbegin() const -> const_iterator
     {
       return data_;
     }
 
     [[nodiscard]]
-    auto end() -> iterator
+    constexpr auto end() -> iterator
     {
       return data_ + size_;
     }
 
     [[nodiscard]]
-    auto end() const -> const_iterator
+    constexpr auto end() const -> const_iterator
     {
       return data_ + size_;
     }
 
     [[nodiscard]]
-    auto cend() const -> const_iterator
+    constexpr auto cend() const -> const_iterator
     {
       return data_ + size_;
     }
 
     [[nodiscard]]
-    auto rbegin() -> reverse_iterator
+    constexpr auto rbegin() -> reverse_iterator
     {
       return reverse_iterator(end());
     }
 
     [[nodiscard]]
-    auto rbegin() const -> const_reverse_iterator
+    constexpr auto rbegin() const -> const_reverse_iterator
     {
       return const_reverse_iterator(cend());
     }
 
     [[nodiscard]]
-    auto crbegin() const -> const_reverse_iterator
+    constexpr auto crbegin() const -> const_reverse_iterator
     {
       return const_reverse_iterator(cend());
     }
 
     [[nodiscard]]
-    auto rend() -> reverse_iterator
+    constexpr auto rend() -> reverse_iterator
     {
       return reverse_iterator(begin());
     }
 
     [[nodiscard]]
-    auto rend() const -> const_reverse_iterator
+    constexpr auto rend() const -> const_reverse_iterator
     {
       return const_reverse_iterator(cbegin());
     }
 
     [[nodiscard]]
-    auto crend() const -> const_reverse_iterator
+    constexpr auto crend() const -> const_reverse_iterator
     {
       return const_reverse_iterator(cbegin());
     }
 
-    auto operator[](usize idx) -> reference
+    constexpr auto operator[](usize idx) -> reference
     {
       SOUL_ASSERT(
         0,
@@ -140,7 +140,7 @@ namespace soul
       return data_[idx];
     }
 
-    auto operator[](usize idx) const -> const_reference
+    constexpr auto operator[](usize idx) const -> const_reference
     {
       SOUL_ASSERT(
         0,
@@ -152,21 +152,27 @@ namespace soul
     }
 
     [[nodiscard]]
-    auto data() noexcept -> MaybeNull<pointer>
+    constexpr auto data() noexcept -> MaybeNull<pointer>
     {
       return data_;
     }
 
     [[nodiscard]]
-    auto data() const noexcept -> MaybeNull<const_pointer>
+    constexpr auto data() const noexcept -> MaybeNull<const_pointer>
     {
       return data_;
     }
 
     [[nodiscard]]
-    auto size() const noexcept -> size_type
+    constexpr auto size() const noexcept -> size_type
     {
       return size_;
+    }
+
+    [[nodiscard]]
+    constexpr auto size_in_bytes() const noexcept -> size_type
+    {
+      return size_ * sizeof(remove_pointer_t<pointer>);
     }
 
   private:
@@ -174,170 +180,181 @@ namespace soul
     size_type size_;
   };
 
+  template <typename T, typename PointerT = match_any, typename SizeT = match_any>
+  inline constexpr b8 is_span_v = [] {
+    if constexpr (is_specialization_v<T, Span>) {
+      return is_match_v<PointerT, typename T::pointer> && is_match_v<SizeT, typename T::size_type>;
+    }
+    return false;
+  }();
+
+  template <typename T, typename PointerT = match_any, typename SizeT = match_any>
+  concept ts_span = is_span_v<T, PointerT, SizeT>;
+
   template <typename T>
   [[nodiscard]]
-  auto u8span(T* data, u8 size) -> Span<T*, u8>
+  constexpr auto u8span(T* data, u8 size) -> Span<T*, u8>
   {
     return {data, size};
   }
 
   template <typename T>
   [[nodiscard]]
-  auto u16span(T* data, u16 size) -> Span<T*, u16>
+  constexpr auto u16span(T* data, u16 size) -> Span<T*, u16>
   {
     return {data, size};
   }
 
   template <typename T>
   [[nodiscard]]
-  auto u32span(T* data, u32 size) -> Span<T*, u32>
+  constexpr auto u32span(T* data, u32 size) -> Span<T*, u32>
   {
     return {data, size};
   }
 
   template <typename T>
   [[nodiscard]]
-  auto u64span(T* data, u64 size) -> Span<T*, u64>
+  constexpr auto u64span(T* data, u64 size) -> Span<T*, u64>
   {
     return {data, size};
   }
 
   template <typename T>
   [[nodiscard]]
-  auto u8span(NotNull<T*> data, u8 size) -> Span<T*, u8>
+  constexpr auto u8span(NotNull<T*> data, u8 size) -> Span<T*, u8>
   {
     return {data, size};
   }
 
   template <typename T>
   [[nodiscard]]
-  auto u16span(NotNull<T*> data, u16 size) -> Span<T*, u16>
+  constexpr auto u16span(NotNull<T*> data, u16 size) -> Span<T*, u16>
   {
     return {data, size};
   }
 
   template <typename T>
   [[nodiscard]]
-  auto u32span(NotNull<T*> data, u32 size) -> Span<T*, u32>
+  constexpr auto u32span(NotNull<T*> data, u32 size) -> Span<T*, u32>
   {
     return {data, size};
   }
 
   template <typename T>
   [[nodiscard]]
-  auto u64span(NotNull<T*> data, u64 size) -> Span<T*, u64>
+  constexpr auto u64span(NotNull<T*> data, u64 size) -> Span<T*, u64>
   {
     return {data, size};
   }
 
   template <typename T>
   [[nodiscard]]
-  auto u8span(MaybeNull<T*> data, u8 size) -> Span<T*, u8>
+  constexpr auto u8span(MaybeNull<T*> data, u8 size) -> Span<T*, u8>
   {
     return {data, size};
   }
 
   template <typename T>
   [[nodiscard]]
-  auto u16span(MaybeNull<T*> data, u16 size) -> Span<T*, u16>
+  constexpr auto u16span(MaybeNull<T*> data, u16 size) -> Span<T*, u16>
   {
     return {data, size};
   }
 
   template <typename T>
   [[nodiscard]]
-  auto u32span(MaybeNull<T*> data, u32 size) -> Span<T*, u32>
+  constexpr auto u32span(MaybeNull<T*> data, u32 size) -> Span<T*, u32>
   {
     return {data, size};
   }
 
   template <typename T>
   [[nodiscard]]
-  auto u64span(MaybeNull<T*> data, u64 size) -> Span<T*, u64>
+  constexpr auto u64span(MaybeNull<T*> data, u64 size) -> Span<T*, u64>
   {
     return {data, size};
   }
 
   template <typename T>
   [[nodiscard]]
-  auto u8cspan(T* data, u8 size) -> Span<const T*, u8>
+  constexpr auto u8cspan(T* data, u8 size) -> Span<const T*, u8>
   {
     return {data, size};
   }
 
   template <typename T>
   [[nodiscard]]
-  auto u16cspan(T* data, u16 size) -> Span<const T*, u16>
+  constexpr auto u16cspan(T* data, u16 size) -> Span<const T*, u16>
   {
     return {data, size};
   }
 
   template <typename T>
   [[nodiscard]]
-  auto u32cspan(T* data, u32 size) -> Span<const T*, u32>
+  constexpr auto u32cspan(T* data, u32 size) -> Span<const T*, u32>
   {
     return {data, size};
   }
 
   template <typename T>
   [[nodiscard]]
-  auto u64cspan(T* data, u64 size) -> Span<const T*, u64>
+  constexpr auto u64cspan(T* data, u64 size) -> Span<const T*, u64>
   {
     return {data, size};
   }
 
   template <typename T>
   [[nodiscard]]
-  auto u8cspan(NotNull<T*> data, u8 size) -> Span<const T*, u8>
+  constexpr auto u8cspan(NotNull<T*> data, u8 size) -> Span<const T*, u8>
   {
     return {data, size};
   }
 
   template <typename T>
   [[nodiscard]]
-  auto u16cspan(NotNull<T*> data, u16 size) -> Span<const T*, u16>
+  constexpr auto u16cspan(NotNull<T*> data, u16 size) -> Span<const T*, u16>
   {
     return {data, size};
   }
 
   template <typename T>
   [[nodiscard]]
-  auto u32cspan(NotNull<T*> data, u32 size) -> Span<const T*, u32>
+  constexpr auto u32cspan(NotNull<T*> data, u32 size) -> Span<const T*, u32>
   {
     return {data, size};
   }
 
   template <typename T>
   [[nodiscard]]
-  auto u64cspan(NotNull<T*> data, u64 size) -> Span<const T*, u64>
+  constexpr auto u64cspan(NotNull<T*> data, u64 size) -> Span<const T*, u64>
   {
     return {data, size};
   }
 
   template <typename T>
   [[nodiscard]]
-  auto u8cspan(MaybeNull<T*> data, u8 size) -> Span<const T*, u8>
+  constexpr auto u8cspan(MaybeNull<T*> data, u8 size) -> Span<const T*, u8>
   {
     return {data, size};
   }
 
   template <typename T>
   [[nodiscard]]
-  auto u16cspan(MaybeNull<T*> data, u16 size) -> Span<const T*, u16>
+  constexpr auto u16cspan(MaybeNull<T*> data, u16 size) -> Span<const T*, u16>
   {
     return {data, size};
   }
 
   template <typename T>
   [[nodiscard]]
-  auto u32cspan(MaybeNull<T*> data, u32 size) -> Span<const T*, u32>
+  constexpr auto u32cspan(MaybeNull<T*> data, u32 size) -> Span<const T*, u32>
   {
     return {data, size};
   }
 
   template <typename T>
   [[nodiscard]]
-  auto u64cspan(MaybeNull<T*> data, u64 size) -> Span<const T*, u64>
+  constexpr auto u64cspan(MaybeNull<T*> data, u64 size) -> Span<const T*, u64>
   {
     return {data, size};
   }
