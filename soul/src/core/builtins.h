@@ -18,7 +18,9 @@ namespace soul
   using u64 = std::uint64_t;
 
   using f32 = float;
+  static_assert(sizeof(f32) == 4);
   using f64 = double;
+  static_assert(sizeof(f64) == 8);
 
   using iptr = std::intptr_t;
   using uptr = std::uintptr_t;
