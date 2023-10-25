@@ -5,7 +5,8 @@
 namespace soul
 {
   enum class Compiler : uint8_t { MSVC, COUNT };
-}
+  enum class Endianess : uint8_t { BIG, LITTLE, COUNT };
+} // namespace soul
 
 #if defined(_MSC_VER)
 #  include <intrin.h>
@@ -93,8 +94,29 @@ namespace soul
 #  define SOUL_NO_UNIQUE_ADDRESS
 #endif
 
+#if (                                                                                              \
+  defined(__BYTE_ORDER__) && defined(__ORDER_LITTLE_ENDIAN__) &&                                   \
+  __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__)
+#  define SOUL_IS_LITTLE_ENDIAN 1
+#elif defined(__BYTE_ORDER__) && defined(__ORDER_BIG_ENDIAN__) &&                                  \
+  __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
+#  define SOUL_IS_BIG_ENDIAN 1
+#elif defined(_WIN32)
+#  define SOUL_IS_LITTLE_ENDIAN 1
+#else
+#  error "absl endian detection needs to be set up for your compiler"
+#endif
+
 namespace soul
 {
+  constexpr auto get_endianess() -> Endianess
+  {
+#if defined SOUL_IS_LITTLE_ENDIAN
+    return Endianess::LITTLE;
+#else
+    return Endianess::BIG;
+#endif
+  }
 
   inline auto pop_count_16(const uint16_t val) -> size_t
   {
