@@ -6,7 +6,6 @@
 #include <xtr1common>
 
 #include "core/compiler.h"
-#include "core/cstring.h"
 #include "core/type.h"
 #include "core/type_traits.h"
 
@@ -151,27 +150,6 @@ namespace soul::util
 #define DO_STRING_JOIN2(arg1, arg2) arg1##arg2
 #define SCOPE_EXIT(code)                                                                           \
   auto STRING_JOIN2(scope_exit_, __LINE__) = soul::util::make_scope_exit([=]() { code; })
-
-  // NOLINTBEGIN(cert-err33-c)
-  inline auto load_file(const char* filepath, memory::Allocator& allocator) -> CString
-  {
-    FILE* file = nullptr;
-    const auto err = fopen_s(&file, filepath, "rb");
-    if (err != 0) {
-      SOUL_PANIC("Fail to open file %s", filepath);
-    }
-    SCOPE_EXIT(fclose(file));
-
-    fseek(file, 0, SEEK_END);
-    const auto fsize = ftell(file);
-    fseek(file, 0, SEEK_SET); /* same as rewind(f); */
-
-    auto string = CString::WithSize(fsize, &allocator);
-    fread(string.data(), 1, fsize, file);
-
-    return string;
-  }
-  // NOLINTEND(cert-err33-c)
 
   constexpr auto hash_fnv1_bytes(
     const u8* data, const usize size, const u64 initial = 0xcbf29ce484222325ull) -> u64

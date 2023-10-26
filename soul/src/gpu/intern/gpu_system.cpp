@@ -269,6 +269,27 @@ namespace soul::gpu
       }
       return VK_FALSE;
     }
+
+    // NOLINTBEGIN(cert-err33-c)
+    inline auto load_file(const char* filepath, memory::Allocator& allocator) -> CString
+    {
+      FILE* file = nullptr;
+      const auto err = fopen_s(&file, filepath, "rb");
+      if (err != 0) {
+        SOUL_PANIC("Fail to open file %s", filepath);
+      }
+      SCOPE_EXIT(fclose(file));
+
+      fseek(file, 0, SEEK_END);
+      const auto fsize = ftell(file);
+      fseek(file, 0, SEEK_SET); /* same as rewind(f); */
+
+      auto string = CString::WithSize(fsize, &allocator);
+      fread(string.data(), 1, fsize, file);
+
+      return string;
+    }
+    // NOLINTEND(cert-err33-c)
   } // namespace
 
   auto create_dxc_session() -> DxcSession
@@ -1949,7 +1970,7 @@ namespace soul::gpu
           return "";
         }();
         auto full_path_str = full_path.string();
-        shader_file_sources.push_back(util::load_file(full_path_str.c_str(), scope_allocator));
+        shader_file_sources.push_back(load_file(full_path_str.c_str(), scope_allocator));
         shader_sources.push_back(&shader_file_sources.back());
       } else {
         const auto& shader_string = std::get<ShaderString>(source);

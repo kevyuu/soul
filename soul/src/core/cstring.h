@@ -2,11 +2,12 @@
 
 #include <format>
 #include <iterator>
-#include <xtr1common>
 
 #include "core/compiler.h"
 #include "core/config.h"
+#include "core/hash.h"
 #include "core/not_null.h"
+#include "core/span.h"
 #include "core/type.h"
 
 #include "memory/allocator.h"
@@ -289,6 +290,24 @@ namespace soul
       } else {
         return storage_.data;
       }
+    }
+
+    [[nodiscard]]
+    constexpr auto span() -> Span<pointer>
+    {
+      return {data(), size()};
+    }
+
+    [[nodiscard]]
+    constexpr auto span() const -> Span<const_pointer>
+    {
+      return {data(), size()};
+    }
+
+    [[nodiscard]]
+    constexpr auto cspan() const -> Span<const_pointer>
+    {
+      return {data(), size()};
     }
 
     constexpr friend auto operator==(const BasicCString& lhs, const BasicCString& rhs) -> b8
@@ -575,11 +594,10 @@ struct std::formatter<soul::BasicCString<AllocatorT, InlineCapacityV>> // NOLINT
 };
 
 template <soul::memory::allocator_type AllocatorT, soul::usize InlineCapacityV>
-struct std::hash<soul::BasicCString<AllocatorT, InlineCapacityV>> { // NOLINT
-  auto operator()(const soul::BasicCString<AllocatorT, InlineCapacityV>& string) const noexcept
-    -> std::size_t
+struct soul::HashTrait<soul::BasicCString<AllocatorT, InlineCapacityV>> {
+  static constexpr void combine(
+    soul::Hasher& hasher, const soul::BasicCString<AllocatorT, InlineCapacityV>& val)
   {
-    std::hash<std::string_view> hasher;
-    return hasher(std::string_view(string.data(), string.size()));
+    hasher.combine_span(val.cspan());
   }
 };

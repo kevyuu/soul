@@ -584,8 +584,6 @@ TEST(TestCStringFormat, TestCStringFormat)
 
 TEST(TestCStringHash, TestCStringHash)
 {
-  std::hash<TestString> hasher;
-
   TestString test_const_segment_string = TestString::From(TEST_SHORT_STR);
   TestString test_const_segment_string2 = TestString::From(TEST_LONG_STR);
 
@@ -598,19 +596,20 @@ TEST(TestCStringHash, TestCStringHash)
   TestString test_long_string = TestString::UnsharedFrom(TEST_LONG_STR);
   TestString test_long_string2 = TestString::UnsharedFrom(TEST_LONG_STR2);
 
-  SOUL_TEST_ASSERT_EQ(hasher(test_const_segment_string), hasher(test_const_segment_string));
-  SOUL_TEST_ASSERT_NE(hasher(test_const_segment_string), hasher(test_const_segment_string2));
-  SOUL_TEST_ASSERT_EQ(hasher(test_const_segment_string), hasher(test_short_string));
+  SOUL_TEST_ASSERT_EQ(soul::hash(test_const_segment_string), soul::hash(test_const_segment_string));
+  SOUL_TEST_ASSERT_NE(
+    soul::hash(test_const_segment_string), soul::hash(test_const_segment_string2));
+  SOUL_TEST_ASSERT_EQ(soul::hash(test_const_segment_string), soul::hash(test_short_string));
 
-  SOUL_TEST_ASSERT_EQ(hasher(test_short_string), hasher(test_short_string));
-  SOUL_TEST_ASSERT_NE(hasher(test_short_string), hasher(test_short_string2));
-  SOUL_TEST_ASSERT_NE(hasher(test_short_string), hasher(test_max_inline_string));
-  SOUL_TEST_ASSERT_NE(hasher(test_short_string), hasher(test_long_string));
+  SOUL_TEST_ASSERT_EQ(soul::hash(test_short_string), soul::hash(test_short_string));
+  SOUL_TEST_ASSERT_NE(soul::hash(test_short_string), soul::hash(test_short_string2));
+  SOUL_TEST_ASSERT_NE(soul::hash(test_short_string), soul::hash(test_max_inline_string));
+  SOUL_TEST_ASSERT_NE(soul::hash(test_short_string), soul::hash(test_long_string));
 
-  SOUL_TEST_ASSERT_EQ(hasher(test_max_inline_string), hasher(test_max_inline_string));
-  SOUL_TEST_ASSERT_NE(hasher(test_max_inline_string), hasher(test_max_inline_string2));
-  SOUL_TEST_ASSERT_NE(hasher(test_max_inline_string), hasher(test_long_string));
+  SOUL_TEST_ASSERT_EQ(soul::hash(test_max_inline_string), soul::hash(test_max_inline_string));
+  SOUL_TEST_ASSERT_NE(soul::hash(test_max_inline_string), soul::hash(test_max_inline_string2));
+  SOUL_TEST_ASSERT_NE(soul::hash(test_max_inline_string), soul::hash(test_long_string));
 
-  SOUL_TEST_ASSERT_EQ(hasher(test_long_string), hasher(test_long_string));
-  SOUL_TEST_ASSERT_NE(hasher(test_long_string), hasher(test_long_string2));
+  SOUL_TEST_ASSERT_EQ(soul::hash(test_long_string), soul::hash(test_long_string));
+  SOUL_TEST_ASSERT_NE(soul::hash(test_long_string), soul::hash(test_long_string2));
 }
