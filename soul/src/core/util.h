@@ -3,6 +3,7 @@
 #include <limits>
 #include <optional>
 #include <random>
+#include <xtr1common>
 
 #include "core/compiler.h"
 #include "core/cstring.h"
@@ -235,6 +236,59 @@ namespace soul::util
       val /= base;
     }
     return number_of_digits;
+  }
+
+  constexpr void mul128_nonbuiltin(u64* a, u64* b)
+  {
+    u64 ha = *a >> 32U;
+    u64 hb = *b >> 32U;
+    u64 la = static_cast<u32>(*a);
+    u64 lb = static_cast<u32>(*b);
+    u64 hi{};
+    u64 lo{};
+    u64 rh = ha * hb;
+    u64 rm0 = ha * lb;
+    u64 rm1 = hb * la;
+    u64 rl = la * lb;
+    u64 t = rl + (rm0 << 32U);
+    auto c = static_cast<u64>(t < rl);
+    lo = t + (rm1 << 32U);
+    c += static_cast<u64>(lo < t);
+    hi = rh + (rm0 >> 32U) + (rm1 >> 32U) + c;
+    *a = lo;
+    *b = hi;
+  }
+
+  constexpr void mul128(u64* a, u64* b)
+  {
+    if (std::is_constant_evaluated()) {
+      mul128_nonbuiltin(a, b);
+    } else {
+#if defined(__SIZEOF_INT128__)
+      __uint128_t r = *a;
+      r *= *b;
+      *a = static_cast<u64>(r);
+      *b = static_cast<u64>(r >> 64U);
+#elif defined(_MSC_VER) && defined(_M_X64)
+      *a = _umul128(*a, *b, b);
+#else
+      mul128_nonbuiltin(a, b);
+#endif
+    }
+  }
+
+  [[nodiscard]]
+  constexpr auto unaligned_load32(const byte* p) -> u64
+  {
+    const byte val[4] = {p[0], p[1], p[2], p[3]};
+    return std::bit_cast<u32>(val);
+  }
+
+  [[nodiscard]]
+  constexpr auto unaligned_load64(const byte* p) -> u64
+  {
+    const byte val[8] = {p[0], p[1], p[2], p[3], p[4], p[5], p[6], p[7]};
+    return std::bit_cast<u64>(val);
   }
 
 }; // namespace soul::util

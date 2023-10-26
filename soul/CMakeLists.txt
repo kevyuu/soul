@@ -6,6 +6,7 @@ set(SOUL_HEADERS
     src/core/config.h
     src/core/panic.h
     src/core/uint64_hash_map.h
+    src/core/hash.h
     src/core/hash_map.h
     src/core/log.h
     src/core/math.h

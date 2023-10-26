@@ -108,3 +108,43 @@ TEST(TestCoreUtil, TestDigitCount)
   SOUL_TEST_ASSERT_EQ(soul::util::digit_count(0xF3, 16), 2);
   SOUL_TEST_ASSERT_EQ(soul::util::digit_count(0x0, 16), 1);
 }
+
+TEST(TestCoreUtil, TestUnalignedLoad)
+{
+  {
+    u32 test = 623413;
+    SOUL_TEST_ASSERT_EQ(
+      soul::util::unaligned_load32(reinterpret_cast<const soul::byte*>(&test)), test);
+
+    const auto* test_bytes = reinterpret_cast<const soul::byte*>(&test);
+    const soul::byte test_unaligned_bytes[5] = {
+      0,
+      test_bytes[0],
+      test_bytes[1],
+      test_bytes[2],
+      test_bytes[3],
+    };
+    SOUL_TEST_ASSERT_EQ(
+      soul::util::unaligned_load32(reinterpret_cast<const soul::byte*>(&test)), test);
+  }
+
+  {
+    u64 test = 647384999425089;
+    SOUL_TEST_ASSERT_EQ(
+      soul::util::unaligned_load64(reinterpret_cast<const soul::byte*>(&test)), test);
+
+    const auto* test_bytes = reinterpret_cast<const soul::byte*>(&test);
+    const soul::byte test_unaligned_bytes[9] = {
+      0,
+      test_bytes[0],
+      test_bytes[1],
+      test_bytes[2],
+      test_bytes[3],
+      test_bytes[4],
+      test_bytes[5],
+      test_bytes[6],
+      test_bytes[7],
+    };
+    SOUL_TEST_ASSERT_EQ(soul::util::unaligned_load64(test_unaligned_bytes + 1), test);
+  }
+}

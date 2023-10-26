@@ -1,6 +1,10 @@
 #pragma once
 
+#include "core/array.h"
+#include "core/hash.h"
 #include "core/type.h"
+
+#include "util.h"
 
 using namespace soul;
 
@@ -59,4 +63,32 @@ auto test_swap(const T& sample_lhs, const T& sample_rhs)
   swap(lhs, rhs);
   verify_equal(rhs, sample_lhs);
   verify_equal(lhs, sample_rhs);
+}
+
+template <typename T, usize ArrSizeV>
+auto test_hash_implementation(const soul::Array<T, ArrSizeV>& vals)
+{
+  for (usize idx1 = 0; idx1 < vals.size(); idx1++) {
+    for (usize idx2 = 0; idx2 < vals.size(); idx2++) {
+      if (idx1 == idx2) {
+        SOUL_TEST_ASSERT_EQ(soul::hash(vals[idx1]), soul::hash(vals[idx2]));
+      } else {
+        SOUL_TEST_ASSERT_NE(soul::hash(vals[idx1]), soul::hash(vals[idx2]));
+      }
+    }
+  }
+}
+
+template <typename T, usize ArrSizeV>
+auto test_hash_span_implementation(const soul::Array<T, ArrSizeV>& vals)
+{
+  for (usize idx1 = 0; idx1 < vals.size(); idx1++) {
+    for (usize idx2 = 0; idx2 < vals.size(); idx2++) {
+      if (idx1 == idx2) {
+        SOUL_TEST_ASSERT_EQ(soul::hash_span(vals[idx1]), soul::hash_span(vals[idx2]));
+      } else {
+        SOUL_TEST_ASSERT_NE(soul::hash_span(vals[idx1]), soul::hash_span(vals[idx2]));
+      }
+    }
+  }
 }
