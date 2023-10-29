@@ -65,6 +65,16 @@ auto test_swap(const T& sample_lhs, const T& sample_rhs)
   verify_equal(lhs, sample_rhs);
 }
 
+template <typeset T>
+auto test_reserve(const T& sample, usize new_capacity)
+{
+  auto test = duplicate(sample);
+  auto initial_capacity = test.capacity();
+  test.reserve(new_capacity);
+  SOUL_TEST_ASSERT_GE(test.capacity(), initial_capacity);
+  SOUL_TEST_ASSERT_GE(test.capacity(), new_capacity);
+}
+
 template <typename T, usize ArrSizeV>
 auto test_hash_implementation(const soul::Array<T, ArrSizeV>& vals)
 {

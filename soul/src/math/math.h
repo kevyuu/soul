@@ -21,6 +21,16 @@ namespace soul::math
     return static_cast<f32>(a) / static_cast<f32>(b);
   }
 
+  [[nodiscard]]
+  inline auto floor_log2(u64 val) -> u64
+  {
+    u32 level = 0;
+    while ((val >>= 1) != 0u) {
+      ++level;
+    }
+    return level;
+  }
+
   template <usize D1, usize D2, usize D3, typename T>
   SOUL_ALWAYS_INLINE auto mul(const matrix<D1, D2, T>& a, const matrix<D2, D3, T>& b) -> mat4f
   {
