@@ -7,6 +7,12 @@
 namespace soul::views
 {
   template <typename T>
+  auto move()
+  {
+    return std::views::transform([](T& val) -> T&& { return std::move(val); });
+  }
+
+  template <typename T>
   auto clone()
   {
     return std::views::transform([](const T& val) -> T { return val.clone(); });
