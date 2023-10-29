@@ -424,6 +424,20 @@ namespace soul
     }
 
     [[nodiscard]]
+    constexpr auto
+    operator[](usize /* idx */) -> reference
+    {
+      return *data();
+    }
+
+    [[nodiscard]]
+    constexpr auto
+    operator[](usize /* idx */) const -> const_reference
+    {
+      return *data();
+    }
+
+    [[nodiscard]]
     constexpr auto size() const -> usize
     {
       return 0;
