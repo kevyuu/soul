@@ -20,6 +20,7 @@ namespace soul
     }
     constexpr auto const_ref() -> const T& { return ref_; }
     constexpr auto forward() -> OwnRef<T, swappable>&& { return std::move(*this); }
+    constexpr auto forward_ref() -> T&& { return std::move(ref_); }
 
     constexpr operator T() { return std::move(ref_); } // NOLINT
 
@@ -30,6 +31,9 @@ namespace soul
   template <ts_copy T, b8 swappable>
   class OwnRef<T, swappable>
   {
+  private:
+    using ref_type = std::conditional_t<swappable, T, const T&>;
+
   public:
     constexpr OwnRef(const T& ref) : ref_(ref) {} // NOLINT
     constexpr void store_at(T* location) { soul::construct_at(location, ref_); }
@@ -42,10 +46,10 @@ namespace soul
     }
     constexpr auto const_ref() -> const T& { return ref_; }
     constexpr auto forward() -> OwnRef<T, swappable> { return *this; }
+    constexpr auto forward_ref() -> ref_type { return ref_; }
     constexpr operator T() { return ref_; } // NOLINT
 
   private:
-    using ref_type = std::conditional_t<swappable, T, const T&>;
     ref_type ref_;
   };
 
