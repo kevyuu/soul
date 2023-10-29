@@ -27,6 +27,7 @@ set(SOUL_HEADERS
     src/core/geometry.h
     src/core/cstring.h
     src/core/thread.h
+    src/core/tuple.h
     src/gpu/type.h
     src/gpu/system.h
     src/gpu/render_graph.h
