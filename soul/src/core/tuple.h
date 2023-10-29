@@ -3,6 +3,7 @@
 #include "core/builtins.h"
 #include "core/meta.h"
 #include "core/objops.h"
+#include "core/own_ref.h"
 #include "core/type_traits.h"
 
 namespace soul
@@ -195,13 +196,9 @@ namespace soul
   public:
     constexpr Tuple() = default;
 
-    template <typename Arg, typename... Args>
-    constexpr Tuple(Arg&& arg, Args&&... args) // NOLINT
-      requires(can_convert_v<Arg, T> && (can_convert_v<Args, Ts> && ...))
+    constexpr Tuple(OwnRef<T> arg, OwnRef<Ts>... args) // NOLINT
         : storage_(
-            std::make_index_sequence<sizeof...(Ts) + 1>(),
-            std::forward<Arg>(arg),
-            std::forward<Args>(args)...)
+            std::make_index_sequence<sizeof...(Ts) + 1>(), arg.forward_ref(), args.forward_ref()...)
     {
     }
 
