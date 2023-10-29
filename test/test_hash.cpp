@@ -6,9 +6,11 @@
 #include "core/config.h"
 #include "core/cstring.h"
 #include "core/hash.h"
+#include "core/type_traits.h"
 #include "memory/allocator.h"
 
 #include "util.h"
+#include <type_traits>
 
 TEST(TestHash, TestHashIntegral)
 {
@@ -31,6 +33,25 @@ TEST(TestHash, TestHashFloatingPoint)
     1.0,
     3.14,
     281314585773.3209,
+  }));
+}
+
+TEST(TestHah, TestHashScopedEnum)
+{
+  enum class TestEnum : u32 {
+    ONE,
+    TWO,
+    THREE,
+    FOUR,
+    COUNT,
+  };
+
+  SOUL_TEST_RUN(test_hash_implementation(soul::Array{
+    TestEnum::ONE,
+    TestEnum::TWO,
+    TestEnum::THREE,
+    TestEnum::FOUR,
+    TestEnum::COUNT,
   }));
 }
 

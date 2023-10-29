@@ -5,6 +5,7 @@
 #include "core/builtins.h"
 #include "core/compiler.h"
 #include "core/span.h"
+#include "core/type.h"
 #include "core/type_traits.h"
 #include "core/util.h"
 
@@ -194,6 +195,8 @@ namespace soul
   {
     if constexpr (ts_integral<T>) {
       hasher.combine_u64(static_cast<u64>(val));
+    } else if constexpr (ts_scoped_enum<T>) {
+      hasher.combine_u64(static_cast<u64>(to_underlying(val)));
     } else {
       hasher.combine_bytes({reinterpret_cast<const byte*>(val), sizeof(val)});
     }
