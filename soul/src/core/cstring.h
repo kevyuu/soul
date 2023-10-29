@@ -572,6 +572,11 @@ namespace soul
       capacity_ = get_new_capacity(min_capacity);
       init_reserve(capacity_);
     }
+
+    friend constexpr void soul_op_hash_combine(Hasher& hasher, const BasicCString& val)
+    {
+      hasher.combine_span(val.cspan());
+    }
   };
 
   using CString = BasicCString<memory::Allocator, 64>;
@@ -590,14 +595,5 @@ struct std::formatter<soul::BasicCString<AllocatorT, InlineCapacityV>> // NOLINT
   {
     return std::formatter<std::string_view>::format(
       std::string_view(string.data(), string.size()), ctx);
-  }
-};
-
-template <soul::memory::allocator_type AllocatorT, soul::usize InlineCapacityV>
-struct soul::HashTrait<soul::BasicCString<AllocatorT, InlineCapacityV>> {
-  static constexpr void combine(
-    soul::Hasher& hasher, const soul::BasicCString<AllocatorT, InlineCapacityV>& val)
-  {
-    hasher.combine_span(val.cspan());
   }
 };

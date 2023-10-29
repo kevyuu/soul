@@ -53,29 +53,22 @@ struct TestCombineObj {
   u32 x;
   u64 y;
 };
-
-static_assert(ts_integral<u32>);
-template <>
-struct soul::HashTrait<TestCombineObj> {
-  static void constexpr combine(soul::Hasher& hasher, const TestCombineObj& val)
-  {
-    hasher.combine(val.x);
-    hasher.combine(val.y);
-  }
-};
+constexpr void soul_op_hash_combine(soul::Hasher& hasher, const TestCombineObj& val)
+{
+  hasher.combine(val.x);
+  hasher.combine(val.y);
+}
+static_assert(soul::impl_soul_op_hash_combine_v<TestCombineObj>);
 
 struct TestCombineObj2 {
   u32 x;
   u64 y;
 };
-
-template <>
-struct soul::HashTrait<TestCombineObj2> {
-  static void constexpr combine(soul::Hasher& hasher, const TestCombineObj2& val)
-  {
-    hasher.combine(val.x);
-  }
-};
+constexpr void soul_op_hash_combine(soul::Hasher& hasher, const TestCombineObj2& val)
+{
+  hasher.combine(val.x);
+}
+static_assert(soul::impl_soul_op_hash_combine_v<TestCombineObj2>);
 
 TEST(TestHash, TestCustomCombine)
 {

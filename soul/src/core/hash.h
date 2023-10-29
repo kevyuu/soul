@@ -78,12 +78,9 @@ namespace soul
   class Hasher;
 
   template <typename T>
-  struct HashTrait;
-
-  template <typename T>
-  inline constexpr b8 impl_hash_trait_v = requires(Hasher& h, const T& val) {
+  inline constexpr b8 impl_soul_op_hash_combine_v = requires(Hasher& h, const T& val) {
     {
-      soul::HashTrait<T>::combine(h, val)
+      soul_op_hash_combine(h, val)
     } -> same_as<void>;
   };
 
@@ -168,20 +165,20 @@ namespace soul
       } else {
         combine_u64(span.size());
         for (const T& val : span) {
-          state_ = HashTrait<T>::combine(*this, val);
+          soul_op_hash_combine(*this, val);
         }
       }
     }
 
     template <typename T>
-      requires(impl_hash_trait_v<T>)
+      requires(impl_soul_op_hash_combine_v<T>)
     constexpr void combine(const T& val)
     {
-      HashTrait<T>::combine(*this, val);
+      soul_op_hash_combine(*this, val);
     }
 
     template <typename T, typename... Ts>
-      requires(impl_hash_trait_v<T> && conjunction_v<impl_hash_trait_v<Ts>...>)
+      requires(impl_soul_op_hash_combine_v<T> && conjunction_v<impl_soul_op_hash_combine_v<Ts>...>)
     constexpr void combine(const T& val, const Ts&... args)
     {
       combine(val);
@@ -193,51 +190,49 @@ namespace soul
 
   template <typename T>
     requires(has_unique_object_representations_v<T>)
-  struct HashTrait<T> {
-    static constexpr void combine(Hasher& hasher, const T& val)
-    {
-      if constexpr (ts_integral<T>) {
-        hasher.combine_u64(static_cast<u64>(val));
-      } else {
-        hasher.combine_bytes({reinterpret_cast<const byte*>(val), sizeof(val)});
-      }
+  constexpr void soul_op_hash_combine(Hasher& hasher, const T& val)
+  {
+    if constexpr (ts_integral<T>) {
+      hasher.combine_u64(static_cast<u64>(val));
+    } else {
+      hasher.combine_bytes({reinterpret_cast<const byte*>(val), sizeof(val)});
     }
-  };
+  }
 
-  template <>
-  struct HashTrait<f32> {
-    static constexpr void combine(Hasher& hasher, f32 val)
-    {
-      u64 val64 = val == 0 ? 0 : std::bit_cast<u32>(val);
-      hasher.combine_u64(val64);
-    }
-  };
+  constexpr void soul_op_hash_combine(Hasher& hasher, f32 val)
+  {
+    const u64 val64 = val == 0 ? 0 : std::bit_cast<u32>(val);
+    hasher.combine_u64(val64);
+  }
 
-  template <>
-  struct HashTrait<f64> {
-    static constexpr void combine(Hasher& hasher, f64 val)
-    {
-      u64 val64 = val == 0 ? 0 : std::bit_cast<u64>(val);
-      hasher.combine_u64(val64);
-    }
-  };
+  constexpr void soul_op_hash_combine(Hasher& hasher, f64 val)
+  {
+    const u64 val64 = val == 0 ? 0 : std::bit_cast<u64>(val);
+    hasher.combine_u64(val64);
+  }
 
-  template <>
-  struct HashTrait<b8> {
-    static constexpr void combine(Hasher& hasher, b8 val)
+  constexpr void soul_op_hash_combine(Hasher& hasher, b8 val)
+  {
+    const u64 val64 = val ? 1 : 0;
+    hasher.combine_u64(val64);
+  }
+
+  template <typename T>
+    requires(impl_soul_op_hash_combine_v<T>)
+  struct HashOp {
+    auto operator()(const T& val) const -> u64
     {
-      u64 val64 = val ? 1 : 0;
-      hasher.combine_u64(val64);
+      Hasher hasher;
+      hasher.combine(val);
+      return hasher.finish();
     }
   };
 
   template <typename T>
-    requires(impl_hash_trait_v<T>)
+    requires(impl_soul_op_hash_combine_v<T>)
   constexpr auto hash(const T& val) -> u64
   {
-    Hasher hasher;
-    hasher.combine(val);
-    return hasher.finish();
+    return HashOp<T>()(val);
   }
 
   template <typename T>
