@@ -1,5 +1,7 @@
 #pragma once
 
+#include <algorithm>
+
 #include "core/span.h"
 #include "core/type.h"
 #include "core/type_traits.h"
@@ -523,4 +525,11 @@ namespace soul
   };
   template <class T, class... U>
   Array(T, U...) -> Array<T, 1 + sizeof...(U)>;
+
+  template <typename T, usize ArrSizeV>
+  constexpr auto operator==(const Array<T, ArrSizeV>& lhs, const Array<T, ArrSizeV>& rhs) -> b8
+  {
+    return std::ranges::equal(lhs, rhs);
+  }
+
 } // namespace soul
