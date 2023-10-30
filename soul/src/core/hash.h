@@ -1,7 +1,6 @@
 #pragma once
 
 #include <concepts>
-#include "core/array.h"
 #include "core/builtins.h"
 #include "core/compiler.h"
 #include "core/span.h"
@@ -15,7 +14,7 @@ namespace soul
   [[nodiscard]]
   constexpr auto hash_wy_bytes(Span<const byte*, usize> bytes) -> u64
   {
-    constexpr auto SECRETS = Array{
+    constexpr u64 SECRETS[] = {
       UINT64_C(0xa0761d6478bd642f),
       UINT64_C(0xe7037ed1a0b428db),
       UINT64_C(0x8ebc6af09c88c6e3),
@@ -189,17 +188,14 @@ namespace soul
     constexpr auto finish() -> u64 { return state_; }
   };
 
-  template <typename T>
-    requires(has_unique_object_representations_v<T>)
-  constexpr void soul_op_hash_combine(Hasher& hasher, const T& val)
+  constexpr void soul_op_hash_combine(Hasher& hasher, ts_integral auto val)
   {
-    if constexpr (ts_integral<T>) {
-      hasher.combine_u64(static_cast<u64>(val));
-    } else if constexpr (ts_scoped_enum<T>) {
-      hasher.combine_u64(static_cast<u64>(to_underlying(val)));
-    } else {
-      hasher.combine_bytes({reinterpret_cast<const byte*>(val), sizeof(val)});
-    }
+    hasher.combine_u64(static_cast<u64>(val));
+  }
+
+  constexpr void soul_op_hash_combine(Hasher& hasher, ts_enum auto val)
+  {
+    hasher.combine_u64(static_cast<u64>(val));
   }
 
   constexpr void soul_op_hash_combine(Hasher& hasher, f32 val)

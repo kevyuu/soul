@@ -211,6 +211,9 @@ namespace soul
   template <typename T1, typename T2>
   concept ts_convertible_to = typeset<T1> && can_convert_v<T1, T2>;
 
+  template <typename T>
+  concept ts_enum = std::is_enum_v<T>;
+
   // simplified from https://en.cppreference.com/w/cpp/types/is_scoped_enum
   template <typename T>
   concept ts_scoped_enum =

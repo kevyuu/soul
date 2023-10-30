@@ -5,7 +5,6 @@
 
 #include "core/compiler.h"
 #include "core/config.h"
-#include "core/hash.h"
 #include "core/not_null.h"
 #include "core/span.h"
 #include "core/type.h"
@@ -573,7 +572,7 @@ namespace soul
       init_reserve(capacity_);
     }
 
-    friend constexpr void soul_op_hash_combine(Hasher& hasher, const BasicCString& val)
+    friend constexpr void soul_op_hash_combine(auto& hasher, const BasicCString& val)
     {
       hasher.combine_span(val.cspan());
     }

@@ -274,6 +274,8 @@ namespace soul
     }
 
     static constexpr auto null() -> ID { return ID(NullValue); }
+
+    friend void soul_op_hash_combine(auto& hasher, const ID& val) { hasher.combine(val.id); }
   };
 
   template <ts_flag Flag>

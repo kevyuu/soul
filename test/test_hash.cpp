@@ -38,6 +38,8 @@ TEST(TestHash, TestHashFloatingPoint)
 
 TEST(TestHah, TestHashScopedEnum)
 {
+  enum TestEnum2 { ONE, TWO };
+
   enum class TestEnum : u32 {
     ONE,
     TWO,
@@ -74,7 +76,7 @@ struct TestCombineObj {
   u32 x;
   u64 y;
 };
-constexpr void soul_op_hash_combine(soul::Hasher& hasher, const TestCombineObj& val)
+constexpr void soul_op_hash_combine(auto& hasher, const TestCombineObj& val)
 {
   hasher.combine(val.x);
   hasher.combine(val.y);
@@ -85,7 +87,7 @@ struct TestCombineObj2 {
   u32 x;
   u64 y;
 };
-constexpr void soul_op_hash_combine(soul::Hasher& hasher, const TestCombineObj2& val)
+constexpr void soul_op_hash_combine(auto& hasher, const TestCombineObj2& val)
 {
   hasher.combine(val.x);
 }
