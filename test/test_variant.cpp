@@ -2,6 +2,7 @@
 
 #include <variant>
 #include "core/config.h"
+#include "core/hash.h"
 #include "core/meta.h"
 #include "core/objops.h"
 #include "core/panic.h"
@@ -10,6 +11,7 @@
 #include "core/views.h"
 #include "memory/allocator.h"
 
+#include "common_test.h"
 #include "util.h"
 
 namespace soul
@@ -26,6 +28,10 @@ struct TrivialObj {
   u8 y;
 
   friend constexpr auto operator<=>(const TrivialObj& lhs, const TrivialObj& rhs) = default;
+  friend constexpr void soul_op_hash_combine(auto& hasher, const TrivialObj& obj)
+  {
+    hasher.combine(obj.x, obj.y);
+  }
 };
 
 struct MoveOnlyObj {
@@ -317,4 +323,16 @@ TEST(TestVariantSwap, TestSwap)
       SOUL_TEST_ASSERT_EQ(test_variant2.ref<ListTestObject>()[i], TestObject(i));
     }
   }
+}
+
+TEST(TestVariantHash, TestHash)
+{
+  SOUL_TEST_RUN(test_hash_implementation(Array{
+    TrivialVariant::from(u16(20)),
+    TrivialVariant::from(u16(2)),
+    TrivialVariant::from(u8(2)),
+    TrivialVariant::from(u8(20)),
+    TrivialVariant::from(TrivialObj{3, 4}),
+    TrivialVariant::from(TrivialObj{2, 0}),
+  }));
 }

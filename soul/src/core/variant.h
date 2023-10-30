@@ -1,5 +1,6 @@
 #pragma once
 
+#include "core/hash.h"
 #include "core/meta.h"
 #include "core/own_ref.h"
 #include "core/type.h"
@@ -131,6 +132,7 @@ namespace soul
       !can_variant_trivial_move && (can_move_v<Ts> && ...);
     static constexpr b8 can_variant_trivial_destruct = (can_trivial_destruct_v<Ts> && ...);
     static constexpr b8 can_variant_nontrivial_destruct = (can_nontrivial_destruct_v<Ts> || ...);
+    static constexpr b8 can_variant_hash_combine = (impl_soul_op_hash_combine_v<Ts> && ...);
 
     template <typeset T>
     static inline b8 constexpr is_variant_alt_v = get_type_count_v<T, Ts...> == 1;
@@ -446,6 +448,12 @@ namespace soul
              lhs.visit([&rhs]<typeset VariantAltT>(const VariantAltT& lhs_val) {
                return lhs_val == rhs.ref<VariantAltT>();
              });
+    }
+
+    friend constexpr void soul_op_hash_combine(auto& hasher, const Variant& variant)
+    {
+      hasher.combine(variant.active_index_);
+      variant.visit([&hasher](const auto& val) { hasher.combine(val); });
     }
   };
 
