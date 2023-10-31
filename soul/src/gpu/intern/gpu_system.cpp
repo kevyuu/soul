@@ -1286,6 +1286,11 @@ namespace soul::gpu
     return get_texture(texture_id).view;
   }
 
+  auto System::texture_desc_ref(TextureID texture_id) const -> const TextureDesc&
+  {
+    return get_texture(texture_id).desc;
+  }
+
   auto System::get_blas_size_requirement(const BlasBuildDesc& build_desc) -> usize
   {
     const auto size_info = get_as_build_size_info(build_desc);
@@ -1676,6 +1681,11 @@ namespace soul::gpu
     };
 
     return GPUAddress(vkGetBufferDeviceAddress(_db.device, &addr_info));
+  }
+
+  auto System::buffer_desc_ref(BufferID buffer_id) const -> const BufferDesc&
+  {
+    return get_buffer(buffer_id).desc;
   }
 
   auto System::get_frame_context() -> FrameContext&

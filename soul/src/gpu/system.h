@@ -61,6 +61,7 @@ namespace soul::gpu
     auto get_buffer(BufferID buffer_id) -> impl::Buffer&;
     auto get_buffer(BufferID buffer_id) const -> const impl::Buffer&;
     auto get_gpu_address(BufferID buffer_id) const -> GPUAddress;
+    auto buffer_desc_ref(BufferID buffer_id) const -> const BufferDesc&;
 
     auto create_texture(const TextureDesc& desc) -> TextureID;
     auto create_texture(const TextureDesc& desc, const TextureLoadDesc& load_desc) -> TextureID;
@@ -77,6 +78,7 @@ namespace soul::gpu
       -> impl::TextureView;
     auto get_texture_view(TextureID texture_id, std::optional<SubresourceIndex> subresource)
       -> impl::TextureView;
+    auto texture_desc_ref(TextureID texture_id) const -> const TextureDesc&;
 
     auto get_blas_size_requirement(const BlasBuildDesc& build_desc) -> usize;
     auto create_blas(const BlasDesc& desc, BlasGroupID blas_group_id = BlasGroupID::null())
