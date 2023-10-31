@@ -488,7 +488,7 @@ public:
   explicit RTBasicSampleApp(const AppConfig& app_config)
       : App(app_config), texture_2d_pass(gpu_system_)
   {
-    gpu::ShaderSource shader_source = gpu::ShaderFile("rt_basic_sample.hlsl");
+    const auto shader_source = gpu::ShaderSource::from(gpu::ShaderFile("rt_basic_sample.hlsl"));
     std::filesystem::path search_path = "./";
     const auto entry_points = soul::Array{
       gpu::ShaderEntryPoint{gpu::ShaderStage::RAYGEN, "rgen_main"},

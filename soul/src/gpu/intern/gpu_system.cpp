@@ -7,7 +7,6 @@
 #include <random>
 #include <span>
 #include <string>
-#include <variant>
 
 #include "core/cstring.h"
 #include "core/log.h"
@@ -1961,8 +1960,8 @@ namespace soul::gpu
     shader_file_sources.reserve(program_desc.sources.size());
 
     for (const auto& source : program_desc.sources) {
-      if (std::holds_alternative<ShaderFile>(source)) {
-        const auto& shader_file = std::get<ShaderFile>(source);
+      if (source.has_value<ShaderFile>()) {
+        const auto& shader_file = source.ref<ShaderFile>();
         const std::filesystem::path& path = shader_file.path;
         const std::filesystem::path full_path = [&path, &program_desc]() -> std::filesystem::path {
           if (path.is_absolute()) {
@@ -1983,7 +1982,7 @@ namespace soul::gpu
         shader_file_sources.push_back(load_file(full_path_str.c_str(), scope_allocator));
         shader_sources.push_back(&shader_file_sources.back());
       } else {
-        const auto& shader_string = std::get<ShaderString>(source);
+        const auto& shader_string = source.ref<ShaderString>();
         shader_sources.push_back(&shader_string.source);
       }
     }
@@ -2718,11 +2717,7 @@ namespace soul::gpu
 
   auto CommandQueue::wait(Semaphore semaphore, VkPipelineStageFlags wait_stages) -> void
   {
-    if (std::holds_alternative<BinarySemaphore*>(semaphore)) {
-      wait(std::get<BinarySemaphore*>(semaphore), wait_stages);
-    } else {
-      wait(std::get<TimelineSemaphore>(semaphore), wait_stages);
-    }
+    semaphore.visit([this, wait_stages](auto& val) { wait(val, wait_stages); });
   }
 
   auto CommandQueue::wait(BinarySemaphore* semaphore, const VkPipelineStageFlags wait_stages)

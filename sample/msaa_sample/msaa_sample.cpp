@@ -192,7 +192,7 @@ class MSAASample final : public App
 public:
   explicit MSAASample(const AppConfig& app_config) : App(app_config), texture_2d_pass_(gpu_system_)
   {
-    gpu::ShaderSource shader_source = gpu::ShaderFile("msaa_sample.hlsl");
+    const auto shader_source = gpu::ShaderSource::from(gpu::ShaderFile("msaa_sample.hlsl"));
     std::filesystem::path search_path = "shaders/";
     constexpr auto entry_points = soul::Array{
       gpu::ShaderEntryPoint{

@@ -36,7 +36,7 @@ namespace soul::gpu::impl
     BufferID buffer_id;
 
     VkEvent pending_event = VK_NULL_HANDLE;
-    Semaphore pending_semaphore = TimelineSemaphore::null();
+    Semaphore pending_semaphore = Semaphore::from(TimelineSemaphore::null());
     ResourceCacheState cache_state;
 
     Vector<PassNodeID> passes;
@@ -45,7 +45,7 @@ namespace soul::gpu::impl
 
   struct TextureViewExecInfo {
     VkEvent pending_event = VK_NULL_HANDLE;
-    Semaphore pending_semaphore = TimelineSemaphore::null();
+    Semaphore pending_semaphore = Semaphore::from(TimelineSemaphore::null());
     ResourceCacheState cache_state;
     Vector<PassNodeID> passes;
     u32 pass_counter = 0;
@@ -87,7 +87,7 @@ namespace soul::gpu::impl
     QueueFlags queue_flags;
 
     VkEvent pending_event = VK_NULL_HANDLE;
-    Semaphore pending_semaphore = TimelineSemaphore::null();
+    Semaphore pending_semaphore = Semaphore::from(TimelineSemaphore::null());
     ResourceCacheState cache_state;
 
     Vector<PassNodeID> passes;

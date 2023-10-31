@@ -719,8 +719,8 @@ namespace soul::gpu::impl
             view_info.cache_state = texture.cache_state;
             if (gpu_system_->is_owned_by_presentation_engine(texture_id)) {
               view_info.pending_event = VK_NULL_HANDLE;
-              view_info.pending_semaphore =
-                &gpu_system_->get_frame_context().image_available_semaphore;
+              view_info.pending_semaphore.assign(
+                &gpu_system_->get_frame_context().image_available_semaphore);
             } else if (external_queue_type == first_queue_type) {
               if (
                 texture.cache_state.unavailable_pipeline_stages.none() &&
@@ -732,13 +732,13 @@ namespace soul::gpu::impl
                 external_event = gpu_system_->create_event();
               }
               view_info.pending_event = external_event;
-              view_info.pending_semaphore = TimelineSemaphore::null();
+              view_info.pending_semaphore.assign(TimelineSemaphore::null());
               external_events_stage_flags_[first_queue_type] |=
                 texture.cache_state.unavailable_pipeline_stages;
             } else if (external_queue_type != QueueType::NONE) {
               view_info.pending_event = VK_NULL_HANDLE;
-              view_info.pending_semaphore =
-                command_queues_->ref(external_queue_type).get_timeline_semaphore();
+              view_info.pending_semaphore.assign(
+                command_queues_->ref(external_queue_type).get_timeline_semaphore());
             }
           }
         });
@@ -772,11 +772,11 @@ namespace soul::gpu::impl
           resource_exec_info.pending_event = external_event;
           external_events_stage_flags_[first_queue_type] |=
             external_cache_state.unavailable_pipeline_stages;
-          resource_exec_info.pending_semaphore = TimelineSemaphore::null();
+          resource_exec_info.pending_semaphore.assign(TimelineSemaphore::null());
         } else if (external_queue_type != QueueType::COUNT) {
           resource_exec_info.pending_event = VK_NULL_HANDLE;
-          resource_exec_info.pending_semaphore =
-            command_queues_->ref(external_queue_type).get_timeline_semaphore();
+          resource_exec_info.pending_semaphore.assign(
+            command_queues_->ref(external_queue_type).get_timeline_semaphore());
         }
       };
 
@@ -954,7 +954,7 @@ namespace soul::gpu::impl
         if (is_semaphore_valid(resource_info.pending_semaphore)) {
           command_queues_->ref(current_queue_type)
             .wait(resource_info.pending_semaphore, vk_cast(barrier.stage_flags));
-          resource_info.pending_semaphore = TimelineSemaphore::null();
+          resource_info.pending_semaphore.assign(TimelineSemaphore::null());
           resource_info.cache_state.commit_wait_semaphore(
             queue_owner, current_queue_type, barrier.stage_flags);
         } else {
@@ -1003,7 +1003,7 @@ namespace soul::gpu::impl
         if (is_semaphore_valid(buffer_info.pending_semaphore)) {
           command_queues_->ref(current_queue_type)
             .wait(buffer_info.pending_semaphore, vk_cast(barrier.stage_flags));
-          buffer_info.pending_semaphore = TimelineSemaphore::null();
+          buffer_info.pending_semaphore.assign(TimelineSemaphore::null());
           buffer_info.cache_state.commit_wait_semaphore(
             buffer_info.cache_state.queue_owner, current_queue_type, barrier.stage_flags);
         } else {
@@ -1083,7 +1083,7 @@ namespace soul::gpu::impl
 
         if (is_semaphore_valid(view_info.pending_semaphore)) {
           command_queue.wait(view_info.pending_semaphore, vk_cast(barrier.stage_flags));
-          view_info.pending_semaphore = TimelineSemaphore::null();
+          view_info.pending_semaphore.assign(TimelineSemaphore::null());
           view_info.cache_state.commit_wait_semaphore(
             queue_owner, current_queue_type, barrier.stage_flags);
 
@@ -1288,7 +1288,7 @@ namespace soul::gpu::impl
       command_queue.submit(cmd_buffer);
 
       for (Semaphore* pending_semaphore : pending_semaphores) {
-        *pending_semaphore = command_queue.get_timeline_semaphore();
+        pending_semaphore->assign(command_queue.get_timeline_semaphore());
       }
 
       // Update unsync stage

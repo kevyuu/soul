@@ -1,12 +1,12 @@
 #pragma once
 
 #include <filesystem>
-#include <variant>
 
 #include "core/cstring.h"
 #include "core/flag_map.h"
 #include "core/flag_set.h"
 #include "core/hash_map.h"
+#include "core/path.h"
 #include "core/pool.h"
 #include "core/sbo_vector.h"
 #include "core/type.h"
@@ -840,8 +840,7 @@ namespace soul::gpu
   };
 
   struct ShaderFile {
-    std::filesystem::path path;
-    ShaderFile() = default;
+    Path path;
 
     explicit ShaderFile(std::filesystem::path path) : path(std::move(path)) {}
   };
@@ -859,7 +858,7 @@ namespace soul::gpu
     }
   };
 
-  using ShaderSource = std::variant<ShaderFile, ShaderString>;
+  using ShaderSource = Variant<ShaderFile, ShaderString>;
 
   struct ShaderEntryPoint {
     ShaderStage stage;
@@ -1424,24 +1423,26 @@ namespace soul::gpu
       }
     };
 
-    using Semaphore = std::variant<BinarySemaphore*, TimelineSemaphore>;
+    using Semaphore = Variant<BinarySemaphore*, TimelineSemaphore>;
 
     [[nodiscard]]
     inline auto is_semaphore_valid(Semaphore semaphore) -> b8
     {
-      if (std::holds_alternative<BinarySemaphore*>(semaphore)) {
-        return std::get<BinarySemaphore*>(semaphore)->is_valid();
-      }
-      return std::get<TimelineSemaphore>(semaphore).is_valid();
+      const auto visitor_set = VisitorSet{
+        [](BinarySemaphore* semaphore) { return semaphore->is_valid(); },
+        [](const TimelineSemaphore& semaphore) { return semaphore.is_valid(); },
+      };
+      return semaphore.visit(visitor_set);
     }
 
     [[nodiscard]]
     inline auto is_semaphore_null(Semaphore semaphore) -> b8
     {
-      if (std::holds_alternative<BinarySemaphore*>(semaphore)) {
-        return std::get<BinarySemaphore*>(semaphore)->is_null();
-      }
-      return std::get<TimelineSemaphore>(semaphore).is_null();
+      const auto visitor_set = VisitorSet{
+        [](BinarySemaphore* semaphore) { return semaphore->is_null(); },
+        [](const TimelineSemaphore& semaphore) { return semaphore.is_null(); },
+      };
+      return semaphore.visit(visitor_set);
     }
 
     class CommandQueue

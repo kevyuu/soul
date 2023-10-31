@@ -1,6 +1,5 @@
 #include <gtest/gtest.h>
 
-#include <variant>
 #include "core/config.h"
 #include "core/hash.h"
 #include "core/meta.h"
