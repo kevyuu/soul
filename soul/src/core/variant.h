@@ -94,7 +94,7 @@ namespace soul
 
     template <typename... Ts>
     static inline b8 constexpr assert_can_variant_clone_v = [] {
-      constexpr b8 can_variant_trivial_copy = conjunction_v<can_trivial_copy_v<Ts>...>;
+      constexpr b8 can_variant_trivial_copy = (can_trivial_copy_v<Ts> && ...);
       static_assert(
         !can_variant_trivial_copy,
         "Variant is a trivial copy type since all variant alternative types is a trivial copy "
@@ -442,7 +442,7 @@ namespace soul
     [[nodiscard]]
     friend constexpr auto
     operator==(const Variant& lhs, const Variant& rhs) -> b8
-      requires(conjunction_v<can_compare_equality_v<Ts>...>)
+      requires(can_compare_equality_v<Ts> && ...)
     {
       return (lhs.active_index_ == rhs.active_index_) &&
              lhs.visit([&rhs]<typeset VariantAltT>(const VariantAltT& lhs_val) {

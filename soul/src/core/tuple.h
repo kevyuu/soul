@@ -179,7 +179,7 @@ namespace soul
       [[nodiscard]]
       friend constexpr auto
       operator==(const TupleStorage& lhs, const TupleStorage& rhs) -> b8
-        requires(conjunction_v<can_compare_equality_v<Ts>...>)
+        requires(can_compare_equality_v<Ts> && ...)
       {
         return ((lhs.ref<IndexVs>() == rhs.ref<IndexVs>()) && ...);
       }

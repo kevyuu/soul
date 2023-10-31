@@ -153,6 +153,18 @@
       ]
     },
     {
+      "name": "x64-Debug-Clang-Asan",
+      "description": "x64(Debug) with Clang and Asan",
+      "inherits": [
+        "base",
+        "x64",
+        "Debug",
+        "Clang",
+        "VCPKG",
+        "Asan"
+      ]
+    },
+    {
       "name": "x64-Debug-MSVC",
       "description": "x64(Debug) with MSVC",
       "inherits": [
@@ -161,6 +173,18 @@
         "Debug",
         "MSVC",
         "VCPKG"
+      ]
+    },
+    {
+      "name": "x64-Debug-MSVC-Asan",
+      "description": "x64(Debug) with MSVC and Asan",
+      "inherits": [
+        "base",
+        "x64",
+        "Debug",
+        "MSVC",
+        "VCPKG",
+        "Asan"
       ]
     },
     {

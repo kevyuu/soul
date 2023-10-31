@@ -45,36 +45,6 @@ namespace soul
   template <typename T>
   using remove_cv_t = std::remove_cv_t<T>;
 
-  template <b8... boolean_values>
-  constexpr auto conjunction() -> b8
-  {
-    b8 values[] = {boolean_values...};
-    for (int i = 0; i < sizeof...(boolean_values); i++) {
-      if (!values[i]) {
-        return false;
-      }
-    }
-    return true;
-  }
-
-  template <b8... boolean_values>
-  inline b8 constexpr conjunction_v = conjunction<boolean_values...>();
-
-  template <b8... boolean_values>
-  constexpr auto disjunction() -> b8
-  {
-    b8 values[] = {boolean_values...};
-    for (int i = 0; i < sizeof...(boolean_values); i++) {
-      if (values[i]) {
-        return true;
-      }
-    }
-    return false;
-  }
-
-  template <b8... boolean_values>
-  inline b8 constexpr disjunction_v = disjunction<boolean_values...>();
-
   template <typename T>
   inline constexpr b8 can_default_construct_v = std::is_default_constructible_v<T>;
 

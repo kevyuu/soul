@@ -178,7 +178,7 @@ namespace soul
     }
 
     template <typename T, typename... Ts>
-      requires(impl_soul_op_hash_combine_v<T> && conjunction_v<impl_soul_op_hash_combine_v<Ts>...>)
+      requires(impl_soul_op_hash_combine_v<T> && (impl_soul_op_hash_combine_v<Ts> && ...))
     constexpr void combine(const T& val, const Ts&... args)
     {
       combine(val);
