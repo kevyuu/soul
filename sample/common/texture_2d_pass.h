@@ -11,7 +11,7 @@ public:
     soul::gpu::TextureNodeID render_target;
   };
 
-  Texture2DRGPass(soul::gpu::System* gpu_system);
+  explicit Texture2DRGPass(soul::gpu::System* gpu_system);
   ~Texture2DRGPass();
   auto add_pass(const Parameter& parameter, soul::gpu::RenderGraph& render_graph)
     -> soul::gpu::TextureNodeID;
