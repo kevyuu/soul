@@ -85,6 +85,14 @@ namespace soul::memory
       return allocation.addr ? new (allocation.addr) Type(std::forward<Args>(args)...) : nullptr;
     }
 
+    template <typename Fn, typename T = std::invoke_result_t<Fn>>
+    [[nodiscard]]
+    auto generate(Fn fn) -> MaybeNull<T*>
+    {
+      Allocation allocation = try_allocate(sizeof(T), alignof(T), "untagged");
+      return allocation.addr ? new (allocation.addr) T(std::invoke(fn)) : nullptr;
+    }
+
     template <typename Type>
     void destroy(NotNull<Type*> ptr)
     {
