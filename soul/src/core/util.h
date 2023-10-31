@@ -1,10 +1,10 @@
 #pragma once
 
 #include <limits>
-#include <optional>
 #include <random>
 
 #include "core/compiler.h"
+#include "core/option.h"
 #include "core/type.h"
 #include "core/type_traits.h"
 
@@ -12,10 +12,10 @@ namespace soul::util
 {
 
   template <std::unsigned_integral T>
-  constexpr auto get_first_one_bit_pos(T x) noexcept -> std::optional<u32>
+  constexpr auto get_first_one_bit_pos(T x) noexcept -> Option<u32>
   {
     if (x == 0) {
-      return std::nullopt;
+      return nilopt;
     }
     constexpr u32 bit_count = sizeof(T) * 8;
     static_assert(bit_count <= 64);
@@ -48,13 +48,13 @@ namespace soul::util
         x >>= 2;
       }
 
-      return (n - (static_cast<u32>(x) & 1u));
+      return Option<u32>::some(n - (static_cast<u32>(x) & 1u));
     }
-    return std::nullopt;
+    return nilopt;
   }
 
   template <std::unsigned_integral T>
-  constexpr auto get_last_one_bit_pos(T x) noexcept -> std::optional<u32>
+  constexpr auto get_last_one_bit_pos(T x) noexcept -> Option<u32>
   {
     constexpr u32 bit_count = sizeof(T) * 8;
     static_assert(bit_count <= 64);
@@ -89,9 +89,9 @@ namespace soul::util
       if (x & 0xFFFE) {
         n += 1;
       }
-      return n;
+      return Option<u32>::some(n);
     }
-    return std::nullopt;
+    return nilopt;
   }
 
   template <std::unsigned_integral T>
@@ -100,7 +100,7 @@ namespace soul::util
     if (std::is_constant_evaluated()) {
       usize count = 0;
       while (x) {
-        auto bit_pos = *get_first_one_bit_pos(x);
+        auto bit_pos = get_first_one_bit_pos(x).unwrap();
         count++;
         x &= ~(static_cast<T>(1) << bit_pos);
       }
@@ -121,7 +121,7 @@ namespace soul::util
   auto for_each_one_bit_pos(Integral value, const Fn& func) -> void
   {
     while (value) {
-      auto bit_pos = *get_first_one_bit_pos(value);
+      auto bit_pos = get_first_one_bit_pos(value).unwrap();
       func(bit_pos);
       value &= ~(static_cast<Integral>(1) << bit_pos);
     }

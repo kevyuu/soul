@@ -14,49 +14,50 @@ TEST(TestCoreUtil, TestNextPowerOfTwo)
 
 TEST(TestCoreUtil, TestGetFirstOneBitPos)
 {
-  SOUL_TEST_ASSERT_EQ(soul::util::get_first_one_bit_pos(u8{0b1000'0000}).value(), 7);
-  SOUL_TEST_ASSERT_EQ(soul::util::get_first_one_bit_pos(u8{0b0100'0001}).value(), 0);
-  SOUL_TEST_ASSERT_FALSE(soul::util::get_first_one_bit_pos(u8{0}));
+  SOUL_TEST_ASSERT_EQ(soul::util::get_first_one_bit_pos(u8{0b1000'0000}).some_ref(), 7);
+  SOUL_TEST_ASSERT_EQ(soul::util::get_first_one_bit_pos(u8{0b0100'0001}).some_ref(), 0);
+  SOUL_TEST_ASSERT_FALSE(soul::util::get_first_one_bit_pos(u8{0}).is_some());
 
-  SOUL_TEST_ASSERT_EQ(soul::util::get_first_one_bit_pos(u16{0b1000'0000'0000'0000}).value(), 15);
-  SOUL_TEST_ASSERT_EQ(soul::util::get_first_one_bit_pos(u16{0b0100'0100'0100'0001}).value(), 0);
-  SOUL_TEST_ASSERT_EQ(soul::util::get_first_one_bit_pos(static_cast<u16>(~u16{0})).value(), 0);
-  SOUL_TEST_ASSERT_FALSE(soul::util::get_first_one_bit_pos(u16{0}));
+  SOUL_TEST_ASSERT_EQ(soul::util::get_first_one_bit_pos(u16{0b1000'0000'0000'0000}).some_ref(), 15);
+  SOUL_TEST_ASSERT_EQ(soul::util::get_first_one_bit_pos(u16{0b0100'0100'0100'0001}).some_ref(), 0);
+  SOUL_TEST_ASSERT_EQ(soul::util::get_first_one_bit_pos(static_cast<u16>(~u16{0})).some_ref(), 0);
+  SOUL_TEST_ASSERT_FALSE(soul::util::get_first_one_bit_pos(u16{0}).is_some());
 
-  SOUL_TEST_ASSERT_EQ(soul::util::get_first_one_bit_pos(u32{1}).value(), 0);
-  SOUL_TEST_ASSERT_EQ(soul::util::get_first_one_bit_pos(u32{0x80000000}).value(), 31);
-  SOUL_TEST_ASSERT_EQ(soul::util::get_first_one_bit_pos(u32{0x40000000}).value(), 30);
-  SOUL_TEST_ASSERT_EQ(soul::util::get_first_one_bit_pos(~u32{0}).value(), 0);
-  SOUL_TEST_ASSERT_FALSE(soul::util::get_first_one_bit_pos(u32{0}));
+  SOUL_TEST_ASSERT_EQ(soul::util::get_first_one_bit_pos(u32{1}).some_ref(), 0);
+  SOUL_TEST_ASSERT_EQ(soul::util::get_first_one_bit_pos(u32{0x80000000}).some_ref(), 31);
+  SOUL_TEST_ASSERT_EQ(soul::util::get_first_one_bit_pos(u32{0x40000000}).some_ref(), 30);
+  SOUL_TEST_ASSERT_EQ(soul::util::get_first_one_bit_pos(~u32{0}).some_ref(), 0);
+  SOUL_TEST_ASSERT_FALSE(soul::util::get_first_one_bit_pos(u32{0}).is_some());
 
-  SOUL_TEST_ASSERT_EQ(soul::util::get_first_one_bit_pos(u64{1}).value(), 0);
-  SOUL_TEST_ASSERT_FALSE(soul::util::get_first_one_bit_pos(u64{0}));
-  SOUL_TEST_ASSERT_EQ(soul::util::get_first_one_bit_pos(~u64{0}).value(), 0);
-  SOUL_TEST_ASSERT_EQ(soul::util::get_first_one_bit_pos(u64{0x40000000}).value(), 30);
-  SOUL_TEST_ASSERT_EQ(soul::util::get_first_one_bit_pos(u64{18446744069414584320llu}).value(), 32);
+  SOUL_TEST_ASSERT_EQ(soul::util::get_first_one_bit_pos(u64{1}).some_ref(), 0);
+  SOUL_TEST_ASSERT_FALSE(soul::util::get_first_one_bit_pos(u64{0}).is_some());
+  SOUL_TEST_ASSERT_EQ(soul::util::get_first_one_bit_pos(~u64{0}).some_ref(), 0);
+  SOUL_TEST_ASSERT_EQ(soul::util::get_first_one_bit_pos(u64{0x40000000}).some_ref(), 30);
+  SOUL_TEST_ASSERT_EQ(
+    soul::util::get_first_one_bit_pos(u64{18446744069414584320llu}).some_ref(), 32);
 }
 
 TEST(TestCoreUtil, TestGetLastOneBitPos)
 {
-  SOUL_TEST_ASSERT_EQ(soul::util::get_last_one_bit_pos(u8{0b1000'0000}).value(), 7);
-  SOUL_TEST_ASSERT_EQ(soul::util::get_last_one_bit_pos(u8{0b0100'0001}).value(), 6);
-  SOUL_TEST_ASSERT_FALSE(soul::util::get_last_one_bit_pos(u8{0}));
+  SOUL_TEST_ASSERT_EQ(soul::util::get_last_one_bit_pos(u8{0b1000'0000}).some_ref(), 7);
+  SOUL_TEST_ASSERT_EQ(soul::util::get_last_one_bit_pos(u8{0b0100'0001}).some_ref(), 6);
+  SOUL_TEST_ASSERT_FALSE(soul::util::get_last_one_bit_pos(u8{0}).is_some());
 
-  SOUL_TEST_ASSERT_EQ(soul::util::get_last_one_bit_pos(u16{0b1000'0000'0000'0000}).value(), 15);
-  SOUL_TEST_ASSERT_EQ(soul::util::get_last_one_bit_pos(u16{0b0100'0100'0100'0001}).value(), 14);
-  SOUL_TEST_ASSERT_EQ(soul::util::get_last_one_bit_pos(static_cast<u16>(~u16{0})).value(), 15);
-  SOUL_TEST_ASSERT_FALSE(soul::util::get_last_one_bit_pos(u16{0}));
+  SOUL_TEST_ASSERT_EQ(soul::util::get_last_one_bit_pos(u16{0b1000'0000'0000'0000}).some_ref(), 15);
+  SOUL_TEST_ASSERT_EQ(soul::util::get_last_one_bit_pos(u16{0b0100'0100'0100'0001}).some_ref(), 14);
+  SOUL_TEST_ASSERT_EQ(soul::util::get_last_one_bit_pos(static_cast<u16>(~u16{0})).some_ref(), 15);
+  SOUL_TEST_ASSERT_FALSE(soul::util::get_last_one_bit_pos(u16{0}).is_some());
 
-  SOUL_TEST_ASSERT_EQ(soul::util::get_last_one_bit_pos(u32{1}).value(), 0);
-  SOUL_TEST_ASSERT_EQ(soul::util::get_last_one_bit_pos(u32{0x80000000}).value(), 31);
-  SOUL_TEST_ASSERT_EQ(soul::util::get_last_one_bit_pos(u32{0x400F0200}).value(), 30);
-  SOUL_TEST_ASSERT_EQ(soul::util::get_last_one_bit_pos(~u32{0}).value(), 31);
-  SOUL_TEST_ASSERT_FALSE(soul::util::get_last_one_bit_pos(u32{0}));
+  SOUL_TEST_ASSERT_EQ(soul::util::get_last_one_bit_pos(u32{1}).some_ref(), 0);
+  SOUL_TEST_ASSERT_EQ(soul::util::get_last_one_bit_pos(u32{0x80000000}).some_ref(), 31);
+  SOUL_TEST_ASSERT_EQ(soul::util::get_last_one_bit_pos(u32{0x400F0200}).some_ref(), 30);
+  SOUL_TEST_ASSERT_EQ(soul::util::get_last_one_bit_pos(~u32{0}).some_ref(), 31);
+  SOUL_TEST_ASSERT_FALSE(soul::util::get_last_one_bit_pos(u32{0}).is_some());
 
-  SOUL_TEST_ASSERT_EQ(soul::util::get_last_one_bit_pos(u64{1}).value(), 0);
-  SOUL_TEST_ASSERT_FALSE(soul::util::get_last_one_bit_pos(u64{0}));
-  SOUL_TEST_ASSERT_EQ(soul::util::get_last_one_bit_pos(~u64{0}).value(), 63);
-  SOUL_TEST_ASSERT_EQ(soul::util::get_last_one_bit_pos(u64{0x4F000200}).value(), 30);
+  SOUL_TEST_ASSERT_EQ(soul::util::get_last_one_bit_pos(u64{1}).some_ref(), 0);
+  SOUL_TEST_ASSERT_FALSE(soul::util::get_last_one_bit_pos(u64{0}).is_some());
+  SOUL_TEST_ASSERT_EQ(soul::util::get_last_one_bit_pos(~u64{0}).some_ref(), 63);
+  SOUL_TEST_ASSERT_EQ(soul::util::get_last_one_bit_pos(u64{0x4F000200}).some_ref(), 30);
 }
 
 TEST(TestCoreUtil, TestGetOneBitCount)
