@@ -263,7 +263,7 @@ namespace soul
     SOUL_ASSERT(
       0,
       idx < element_count,
-      "Out of bound access to array detected. idx = %llu, _size = %llu",
+      "Out of bound access to array detected. idx = {}, _size = ",
       idx,
       element_count);
     return buffer_[idx];
@@ -275,7 +275,7 @@ namespace soul
     SOUL_ASSERT(
       0,
       idx < element_count,
-      "Out of bound access to array detected. idx = %llu, _size=%llu",
+      "Out of bound access to array detected. idx = {}, _size={}",
       idx,
       element_count);
     return buffer_[idx];
