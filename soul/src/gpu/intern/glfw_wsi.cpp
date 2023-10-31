@@ -22,7 +22,7 @@ namespace soul::gpu
   {
     int width, height; // NOLINT
     glfwGetFramebufferSize(window_, &width, &height);
-    return {width, height};
+    return {cast<u32>(width), cast<u32>(height)};
   }
 
 } // namespace soul::gpu
