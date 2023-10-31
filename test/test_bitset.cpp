@@ -12,16 +12,16 @@ auto verify_empty_bitset(const soul::Bitset<BitCount, BlockT> bitset) -> void
   SOUL_TEST_ASSERT_FALSE(bitset.all());
   SOUL_TEST_ASSERT_TRUE(bitset.none());
   SOUL_TEST_ASSERT_EQ(bitset.count(), 0);
-  SOUL_TEST_ASSERT_FALSE(bitset.find_first());
-  SOUL_TEST_ASSERT_FALSE(bitset.find_last());
+  SOUL_TEST_ASSERT_FALSE(bitset.find_first().is_some());
+  SOUL_TEST_ASSERT_FALSE(bitset.find_last().is_some());
   SOUL_TEST_ASSERT_EQ(bitset.size(), BitCount);
   for (usize i = 0; i < bitset.size(); i++) {
     SOUL_TEST_ASSERT_FALSE(bitset.test(i)) << ", Index : " << i;
     SOUL_TEST_ASSERT_FALSE(bitset[i]) << ", Index : " << i;
   }
   for (usize i = 0; i < BitCount; i++) {
-    SOUL_TEST_ASSERT_FALSE(bitset.find_next(i));
-    SOUL_TEST_ASSERT_FALSE(bitset.find_prev(i));
+    SOUL_TEST_ASSERT_FALSE(bitset.find_next(i).is_some());
+    SOUL_TEST_ASSERT_FALSE(bitset.find_prev(i).is_some());
   }
 }
 
@@ -38,14 +38,14 @@ auto verify_full_bitset(const soul::Bitset<BitCount, BlockT> bitset) -> void
     SOUL_TEST_ASSERT_TRUE(bitset[i]) << ", Index : " << i;
   }
 
-  SOUL_TEST_ASSERT_EQ(*bitset.find_first(), 0);
-  SOUL_TEST_ASSERT_EQ(*bitset.find_last(), BitCount - 1);
+  SOUL_TEST_ASSERT_EQ(bitset.find_first().unwrap(), 0);
+  SOUL_TEST_ASSERT_EQ(bitset.find_last().unwrap(), BitCount - 1);
   for (usize i = 0; i < BitCount - 1; i++) {
-    SOUL_TEST_ASSERT_EQ(*bitset.find_next(i), i + 1) << ", Index : " << i;
-    SOUL_TEST_ASSERT_EQ(*bitset.find_prev(i + 1), i) << ", Index : " << i;
+    SOUL_TEST_ASSERT_EQ(bitset.find_next(i).unwrap(), i + 1) << ", Index : " << i;
+    SOUL_TEST_ASSERT_EQ(bitset.find_prev(i + 1).unwrap(), i) << ", Index : " << i;
   }
-  SOUL_TEST_ASSERT_FALSE(bitset.find_next(BitCount - 1));
-  SOUL_TEST_ASSERT_FALSE(bitset.find_prev(0));
+  SOUL_TEST_ASSERT_FALSE(bitset.find_next(BitCount - 1).is_some());
+  SOUL_TEST_ASSERT_FALSE(bitset.find_prev(0).is_some());
 }
 
 template <usize BitCount, soul::ts_bit_block BlockT>
@@ -181,10 +181,10 @@ TEST_F(TestBitsetManipulation, TestBitsetSetFalse)
   };
 
   SOUL_TEST_RUN(test_set_false(empty_bitset, {1u, 3u, 5u, 999u}));
-  SOUL_TEST_RUN(test_set_false(filled_bitset1, {*filled_bitset1.find_first()}));
-  SOUL_TEST_RUN(test_set_false(filled_bitset1, {*filled_bitset1.find_last()}));
-  SOUL_TEST_RUN(test_set_false(filled_bitset2, {*filled_bitset2.find_first(), 3u, 6u}));
-  SOUL_TEST_RUN(test_set_false(filled_bitset3, {*filled_bitset3.find_first(), 3u, 6u}));
+  SOUL_TEST_RUN(test_set_false(filled_bitset1, {filled_bitset1.find_first().unwrap()}));
+  SOUL_TEST_RUN(test_set_false(filled_bitset1, {filled_bitset1.find_last().unwrap()}));
+  SOUL_TEST_RUN(test_set_false(filled_bitset2, {filled_bitset2.find_first().unwrap(), 3u, 6u}));
+  SOUL_TEST_RUN(test_set_false(filled_bitset3, {filled_bitset3.find_first().unwrap(), 3u, 6u}));
 }
 
 TEST_F(TestBitsetManipulation, TestBitsetSetAll)
@@ -375,9 +375,9 @@ TEST(TestBitSetFindIf, TestBitSetFindIf)
     for (auto position : test_positions) {
       const auto find_result = bitset.find_if([position](usize bit) { return bit == position; });
       if (position < BitCount && bitset.test(position)) {
-        SOUL_TEST_ASSERT_EQ(find_result.value(), position);
+        SOUL_TEST_ASSERT_EQ(find_result.unwrap(), position);
       } else {
-        SOUL_TEST_ASSERT_FALSE(find_result.has_value());
+        SOUL_TEST_ASSERT_FALSE(find_result.is_some());
       }
     }
   };

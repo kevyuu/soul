@@ -426,14 +426,20 @@ TEST(TestFlagSetFindIf, TestFlagSetFindIf)
       .find_if([val_to_find = Uint8TestEnum::THREE](const Uint8TestEnum val) {
         return val == val_to_find;
       })
-      .value(),
+      .unwrap(),
     Uint8TestEnum::THREE);
-  SOUL_TEST_ASSERT_FALSE(test_filled_flag_set.find_if(
-    [val_to_find = Uint8TestEnum::TWO](const Uint8TestEnum val) { return val == val_to_find; }));
+  SOUL_TEST_ASSERT_FALSE(test_filled_flag_set
+                           .find_if([val_to_find = Uint8TestEnum::TWO](const Uint8TestEnum val) {
+                             return val == val_to_find;
+                           })
+                           .is_some());
 
   const Uint8FlagSet test_empty_flag_set;
-  SOUL_TEST_ASSERT_FALSE(test_empty_flag_set.find_if(
-    [val_to_find = Uint8TestEnum::THREE](const Uint8TestEnum val) { return val == val_to_find; }));
+  SOUL_TEST_ASSERT_FALSE(test_empty_flag_set
+                           .find_if([val_to_find = Uint8TestEnum::THREE](const Uint8TestEnum val) {
+                             return val == val_to_find;
+                           })
+                           .is_some());
 }
 
 TEST(TestFlagSetToUint, TestFlagSetToUint)

@@ -1300,7 +1300,7 @@ namespace soul::gpu
           .find_if([this, accesses](const PipelineStage pipeline_stage) {
             return accesses.test_any(~visible_access_matrix[pipeline_stage]);
           })
-          .has_value();
+          .is_some();
       }
 
       auto join(const ResourceCacheState& other) -> void

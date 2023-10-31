@@ -125,7 +125,7 @@ namespace soul
     constexpr auto for_each(T func) const -> void;
 
     template <ts_fn<b8, Flag> T>
-    constexpr auto find_if(T func) const -> std::optional<Flag>;
+    constexpr auto find_if(T func) const -> Option<Flag>;
 
     store_type flags_;
 
@@ -205,9 +205,9 @@ namespace soul
     std::remove_cv_t<DstFlags> dst_flags{};
     store_type flags = flags_;
     auto pos = flags_.find_first();
-    while (pos) {
-      dst_flags |= mapping[*pos];
-      pos = flags_.find_next(*pos);
+    while (pos.is_some()) {
+      dst_flags |= mapping[pos.unwrap()];
+      pos = flags_.find_next(pos.unwrap());
     }
     return dst_flags;
   }
@@ -222,14 +222,11 @@ namespace soul
 
   template <ts_flag Flag>
   template <ts_fn<b8, Flag> T>
-  constexpr auto FlagSet<Flag>::find_if(T func) const -> std::optional<Flag>
+  constexpr auto FlagSet<Flag>::find_if(T func) const -> Option<Flag>
   {
     auto new_func = [func = std::move(func)](usize bit) -> b8 { return func(flag_type(bit)); };
-    const auto find_result = flags_.find_if(new_func);
-    if (find_result) {
-      return static_cast<Flag>(find_result.value());
-    }
-    return std::nullopt;
+    return flags_.find_if(new_func).transform(
+      [](usize position) { return static_cast<Flag>(position); });
   }
 
   template <ts_flag Flag>
