@@ -2,6 +2,16 @@
 
 #include "util.h"
 
+TEST(TestCoreUtil, TestNextPowerOfTwo)
+{
+  SOUL_TEST_ASSERT_EQ(soul::util::next_power_of_two(0), 1);
+  SOUL_TEST_ASSERT_EQ(soul::util::next_power_of_two(1), 2);
+  SOUL_TEST_ASSERT_EQ(soul::util::next_power_of_two(2), 4);
+  SOUL_TEST_ASSERT_EQ(soul::util::next_power_of_two(3), 4);
+  SOUL_TEST_ASSERT_EQ(soul::util::next_power_of_two((1 << 8) - 1), (1 << 8));
+  SOUL_TEST_ASSERT_EQ(soul::util::next_power_of_two((1LLU << 60) + 2), (1LLU << 61));
+}
+
 TEST(TestCoreUtil, TestGetFirstOneBitPos)
 {
   SOUL_TEST_ASSERT_EQ(soul::util::get_first_one_bit_pos(u8{0b1000'0000}).value(), 7);

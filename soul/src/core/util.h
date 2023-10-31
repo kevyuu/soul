@@ -3,7 +3,6 @@
 #include <limits>
 #include <optional>
 #include <random>
-#include <xtr1common>
 
 #include "core/compiler.h"
 #include "core/type.h"
@@ -126,6 +125,18 @@ namespace soul::util
       func(bit_pos);
       value &= ~(static_cast<Integral>(1) << bit_pos);
     }
+  }
+
+  inline auto next_power_of_two(usize i) -> usize
+  {
+    i |= i >> 1;
+    i |= i >> 2;
+    i |= i >> 4;
+    i |= i >> 8;
+    i |= i >> 16;
+    i |= i >> 32;
+    ++i;
+    return i;
   }
 
   template <ts_fn<void> Fn>
