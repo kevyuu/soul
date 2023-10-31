@@ -49,8 +49,8 @@ namespace
     SOUL_ASSERT(0, glfwVulkanSupported(), "Vulkan is not supported by glfw");
 
     auto window = [&app_config]() -> NotNull<GLFWwindow*> {
-      if (app_config.screen_dimension) {
-        const ScreenDimension screen_dimension = *app_config.screen_dimension;
+      if (app_config.screen_dimension.is_some()) {
+        const ScreenDimension screen_dimension = app_config.screen_dimension.unwrap();
         return glfwCreateWindow(
           screen_dimension.width, screen_dimension.height, "Vulkan", nullptr, nullptr);
       } else {

@@ -258,7 +258,7 @@ auto main(int /* argc */, char* /* argv */[]) -> int
 {
   stbi_set_flip_vertically_on_load(true);
   const ScreenDimension screen_dimension = {.width = 800, .height = 600};
-  Texture3DSampleApp app({.screen_dimension = screen_dimension});
+  Texture3DSampleApp app({.screen_dimension = soul::Option<ScreenDimension>::some(screen_dimension)});
   app.run();
 
   return 0;

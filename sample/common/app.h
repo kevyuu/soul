@@ -1,6 +1,5 @@
 #pragma once
 #include <filesystem>
-#include <optional>
 
 #include "gpu/render_graph.h"
 #include "runtime/data.h"
@@ -26,7 +25,7 @@ struct ScreenDimension {
 };
 
 struct AppConfig {
-  std::optional<ScreenDimension> screen_dimension = std::nullopt;
+  soul::Option<ScreenDimension> screen_dimension = soul::nilopt;
   bool enable_imgui = false;
 };
 
