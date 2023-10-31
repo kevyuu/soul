@@ -38,45 +38,71 @@ namespace soul
 
     // Default constructor (all 0s)
     constexpr FlagSet() noexcept = default;
+
     constexpr FlagSet(const FlagSet& other) noexcept = default;
+
     constexpr auto operator=(const FlagSet& other) noexcept -> FlagSet& = default;
+
     constexpr FlagSet(FlagSet&& other) noexcept = default;
+
     constexpr auto operator=(FlagSet&& other) noexcept -> FlagSet& = default;
+
     constexpr ~FlagSet() noexcept = default;
 
     // Initializer list constructor
     constexpr FlagSet(std::initializer_list<flag_type> init_list);
 
     constexpr auto set() -> FlagSet&;
+
     constexpr auto set(flag_type bit, b8 value = true) -> FlagSet&;
+
     constexpr auto reset() -> FlagSet&;
+
     constexpr auto reset(flag_type bit) -> FlagSet&;
+
     constexpr auto flip() -> FlagSet&;
+
     constexpr auto flip(flag_type bit) -> FlagSet&;
 
     [[nodiscard]]
     constexpr auto
     operator[](flag_type bit) const -> b8;
+
     constexpr auto operator|=(FlagSet flag) -> FlagSet&;
+
     constexpr auto operator&=(FlagSet flag) -> FlagSet&;
+
     constexpr auto operator^=(FlagSet flag) -> FlagSet&;
+
     [[nodiscard]]
     constexpr auto
     operator~() const -> FlagSet;
+
     constexpr auto operator==(const FlagSet& other) const -> bool = default;
+
+    friend constexpr auto soul_op_hash_combine(auto& hasher, const FlagSet& set)
+    {
+      hasher.combine(set.flags_);
+    }
 
     [[nodiscard]]
     constexpr auto count() const -> size_t;
+
     [[nodiscard]]
     constexpr auto size() const -> size_t;
+
     [[nodiscard]]
     constexpr auto test(flag_type bit) const -> b8;
+
     [[nodiscard]]
     constexpr auto test_any(FlagSet other) const -> b8;
+
     [[nodiscard]]
     constexpr auto test_any(std::initializer_list<flag_type> other) const -> b8;
+
     [[nodiscard]]
     constexpr auto any() const -> b8;
+
     [[nodiscard]]
     constexpr auto none() const -> b8;
 
@@ -107,6 +133,7 @@ namespace soul
     explicit constexpr FlagSet(store_type flags) : flags_(flags) {}
 
     constexpr auto flags_from_init_list(std::initializer_list<flag_type> init_list) -> store_type;
+
     static constexpr usize MASK = (1u << FLAG_COUNT) - 1;
   };
 

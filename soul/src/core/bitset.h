@@ -2,6 +2,7 @@
 
 #include <optional>
 
+#include "core/array.h"
 #include "core/bit_ref.h"
 #include "core/type.h"
 #include "core/util.h"
@@ -20,19 +21,25 @@ namespace soul
 
       [[nodiscard]]
       constexpr auto any() const -> b8;
+
       [[nodiscard]]
       constexpr auto none() const -> b8;
+
       [[nodiscard]]
       constexpr auto count() const -> usize;
 
       [[nodiscard]]
       constexpr auto find_first() const -> std::optional<usize>;
+
       [[nodiscard]]
       constexpr auto find_next(usize last_find_index) const -> std::optional<usize>;
+
       [[nodiscard]]
       constexpr auto find_last() const -> std::optional<usize>;
+
       [[nodiscard]]
       constexpr auto find_prev(usize last_find_index) const -> std::optional<usize>;
+
       template <ts_fn<b8, usize> Fn>
       [[nodiscard]]
       constexpr auto find_if(Fn fn) const -> std::optional<usize>;
@@ -50,15 +57,19 @@ namespace soul
       [[nodiscard]]
       constexpr auto to_uint64() const -> u64;
 
-      BlockType blocks_[BlockCount] = {};
+      Array<BlockType, BlockCount> blocks_ = {};
 
     protected:
       constexpr auto operator&=(const this_type& rhs) -> void;
+
       constexpr auto operator|=(const this_type& rhs) -> void;
+
       constexpr auto operator^=(const this_type& rhs) -> void;
 
       constexpr auto flip() -> void;
+
       constexpr auto set() -> void;
+
       constexpr auto set(usize index, b8 val) -> void;
 
       constexpr auto operator==(const this_type& x) const -> b8;
@@ -68,7 +79,9 @@ namespace soul
       static constexpr usize BLOCK_COUNT = BlockCount;
 
       static constexpr auto get_block_index(usize index) -> usize;
+
       static constexpr auto get_block_offset(usize index) -> BlockType;
+
       static constexpr auto get_block_one_mask(usize index) -> BlockType;
     };
 
@@ -348,33 +361,47 @@ namespace soul
     using reference_type = BitRef<BlockType>;
 
     constexpr auto operator[](usize index) const -> value_type;
+
     constexpr auto operator[](usize index) -> reference_type;
 
     constexpr auto operator&=(const this_type& rhs) -> this_type&;
+
     constexpr auto operator|=(const this_type& rhs) -> this_type&;
+
     constexpr auto operator^=(const this_type& rhs) -> this_type&;
 
     constexpr auto set() -> this_type&;
+
     constexpr auto set(usize index, b8 val = true) -> this_type&;
 
     constexpr auto flip() -> this_type&;
+
     constexpr auto flip(usize index) -> this_type&;
 
     constexpr auto operator~() const -> this_type;
 
     constexpr auto operator==(const this_type& rhs) const -> b8;
 
+    friend constexpr void soul_op_hash_combine(auto& hasher, const Bitset& bitset)
+    {
+      hasher.combine_span(bitset.blocks_.template cspan<u64>());
+    }
+
     [[nodiscard]]
     constexpr auto test(usize index) const -> b8;
+
     [[nodiscard]]
     constexpr auto all() const -> b8;
+
     [[nodiscard]]
     constexpr auto size() const -> usize;
 
   private:
     constexpr auto get_block(usize bit_index) -> BlockType&;
+
     [[nodiscard]]
     constexpr auto get_block(usize bit_index) const -> BlockType;
+
     constexpr auto clear_unused_bits() -> void;
   };
 

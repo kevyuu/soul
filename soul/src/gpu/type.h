@@ -58,6 +58,11 @@ namespace soul::gpu
     Extent2D extent;
 
     auto operator==(const Rect2D& other) const -> bool = default;
+
+    friend void soul_op_hash_combine(auto& hasher, const Rect2D& rect)
+    {
+      hasher.combine(rect.offset, rect.extent);
+    }
   };
 
   struct Viewport {
@@ -967,6 +972,7 @@ namespace soul::gpu
     } input_attributes[MAX_INPUT_PER_SHADER];
 
     Viewport viewport;
+
     Rect2D scissor = {};
 
     struct RasterDesc {
@@ -1011,7 +1017,6 @@ namespace soul::gpu
           desc.alpha_blend_op);
       }
     };
-
     ColorAttachmentDesc color_attachments[MAX_COLOR_ATTACHMENT_PER_SHADER];
 
     struct DepthStencilAttachmentDesc {
@@ -1056,6 +1061,9 @@ namespace soul::gpu
         desc.color_attachment_count,
         desc.depth_stencil_attachment,
         desc.depth_bias);
+      hasher.combine_span(u64cspan(desc.input_bindings, MAX_INPUT_BINDING_PER_SHADER));
+      hasher.combine_span(u64cspan(desc.input_attributes, MAX_INPUT_PER_SHADER));
+      hasher.combine_span(u64cspan(desc.color_attachments, MAX_COLOR_ATTACHMENT_PER_SHADER));
     }
   };
 
@@ -1089,6 +1097,11 @@ namespace soul::gpu
       GraphicPipelineStateDesc desc;
       TextureSampleCount sample_count = TextureSampleCount::COUNT_1;
       auto operator==(const GraphicPipelineStateKey&) const -> bool = default;
+
+      friend void soul_op_hash_combine(auto& hasher, const GraphicPipelineStateKey& key)
+      {
+        hasher.combine(key.desc, key.sample_count);
+      }
     };
 
     struct ComputePipelineStateKey {
