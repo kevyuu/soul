@@ -1689,7 +1689,7 @@ namespace soul::gpu
     const TextureSampleCount sample_count) -> PipelineStateID
   {
     // TODO(kevinyu): Do we need to hash renderPass as well?
-    const PipelineStateKey key(GraphicPipelineStateKey{desc, sample_count});
+    const auto key = PipelineStateKey::From(GraphicPipelineStateKey{desc, sample_count});
     if (const auto id = _db.pipeline_state_cache.find(key); id != PipelineStateCache::NULLVAL) {
       return PipelineStateID(id);
     }
@@ -1882,7 +1882,7 @@ namespace soul::gpu
 
   auto System::request_pipeline_state(const ComputePipelineStateDesc& desc) -> PipelineStateID
   {
-    const PipelineStateKey key(ComputePipelineStateKey{desc});
+    const auto key = PipelineStateKey::From(ComputePipelineStateKey{desc});
     if (const auto id = _db.pipeline_state_cache.find(key); id != PipelineStateCache::NULLVAL) {
       return PipelineStateID(id);
     }

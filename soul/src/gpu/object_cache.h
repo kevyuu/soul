@@ -1,5 +1,6 @@
 #pragma once
 
+#include "core/hash.h"
 #include "core/hash_map.h"
 #include "core/intrusive_list.h"
 #include "core/mutex.h"
@@ -13,7 +14,7 @@ namespace soul::gpu
     typename KeyType,
     typename ValType,
     is_shared_lockable_v SharedLockable = RWSpinMutex,
-    typename Hash = DefaultHashOperator<KeyType>,
+    typename Hash = HashOp<KeyType>,
     typename KeyEqual = std::equal_to<KeyType>>
   class ConcurrentObjectCache
   {

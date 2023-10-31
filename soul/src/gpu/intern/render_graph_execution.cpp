@@ -635,11 +635,11 @@ namespace soul::gpu::impl
 
     std::ranges::transform(
       render_target.color_attachments,
-      render_pass_key.color_attachments,
+      render_pass_key.color_attachments.begin(),
       get_render_pass_attachment);
     std::ranges::transform(
       render_target.resolve_attachments,
-      render_pass_key.resolve_attachments,
+      render_pass_key.resolve_attachments.begin(),
       get_render_pass_attachment);
 
     if (render_target.depth_stencil_attachment.out_node_id.id.is_valid()) {

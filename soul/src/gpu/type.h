@@ -1,6 +1,7 @@
 #pragma once
 
 #include <filesystem>
+#include <variant>
 
 #include "core/cstring.h"
 #include "core/flag_map.h"
@@ -10,14 +11,17 @@
 #include "core/sbo_vector.h"
 #include "core/type.h"
 #include "core/uint64_hash_map.h"
+#include "core/variant.h"
 #include "core/vector.h"
+
+#include "memory/allocators/proxy_allocator.h"
+#include "runtime/runtime.h"
+
 #include "gpu/constant.h"
 #include "gpu/id.h"
 #include "gpu/intern/bindless_descriptor_allocator.h"
 #include "gpu/object_cache.h"
 #include "gpu/object_pool.h"
-#include "memory/allocators/proxy_allocator.h"
-#include "runtime/runtime.h"
 
 namespace soul::gpu
 {
@@ -52,6 +56,7 @@ namespace soul::gpu
   struct Rect2D {
     Offset2D offset;
     Extent2D extent;
+
     auto operator==(const Rect2D& other) const -> bool = default;
   };
 
@@ -60,7 +65,13 @@ namespace soul::gpu
     f32 y = 0;
     f32 width = 0;
     f32 height = 0;
+
     auto operator==(const Viewport& other) const -> bool = default;
+
+    friend void soul_op_hash_combine(auto& hasher, const Viewport& viewport)
+    {
+      hasher.combine(viewport.x, viewport.y, viewport.width, viewport.height);
+    }
   };
 
   using Offset3D = vec3i32;
@@ -474,15 +485,7 @@ namespace soul::gpu
         return t;
       }
 
-      auto operator==(const ConstIterator& rhs) const -> b8
-      {
-        return (mip_ == rhs.mip_ && layer_ == rhs.layer_ && mip_end_ == rhs.mip_end_);
-      }
-
-      auto operator!=(const ConstIterator& rhs) const -> b8
-      {
-        return (mip_ != rhs.mip_ || layer_ != rhs.layer_ || mip_end_ != rhs.mip_end_);
-      }
+      auto operator==(const ConstIterator& rhs) const -> bool = default;
     };
 
     using const_iterator = ConstIterator;
@@ -721,11 +724,11 @@ namespace soul::gpu
   };
 
   struct DrawIndexedIndirectCommand {
-    u32 index_count = 0;
-    u32 instance_count = 0;
-    u32 first_index = 0;
-    i32 vertex_offset = 0;
-    u32 first_instance = 0;
+    u32 index_count = 0;    ///< number of vertices to draw.
+    u32 instance_count = 0; ///< number of instances to draw.
+    u32 first_index = 0;    ///< base index within the index_buffer.
+    i32 vertex_offset = 0;  ///< value added to the vertex index before indesing into vertex buffer.
+    u32 first_instance = 0; ///< instance ID of the first instance to draw.
   };
 
   enum class RTBuildMode : u8 { REBUILD, UPDATE, COUNT };
@@ -911,11 +914,24 @@ namespace soul::gpu
     TextureSampleCount sampleCount;
     AttachmentFlags flags;
     auto operator==(const Attachment&) const -> bool = default;
+
+    friend void soul_op_hash_combine(auto& hasher, const Attachment& val)
+    {
+      hasher.combine(val.format);
+      hasher.combine(val.sampleCount);
+      hasher.combine(val.flags);
+    }
   };
 
   struct InputLayoutDesc {
     Topology topology = Topology::TRIANGLE_LIST;
+
     auto operator==(const InputLayoutDesc&) const -> bool = default;
+
+    friend void soul_op_hash_combine(auto& hasher, const InputLayoutDesc& val)
+    {
+      hasher.combine(val.topology);
+    }
   };
 
   struct GraphicPipelineStateDesc {
@@ -925,7 +941,14 @@ namespace soul::gpu
 
     struct InputBindingDesc {
       u32 stride = 0;
+
       auto operator==(const InputBindingDesc&) const -> bool = default;
+
+      friend void soul_op_hash_combine(auto& hasher, const InputBindingDesc& desc)
+      {
+        hasher.combine(desc.stride);
+      }
+
     } input_bindings[MAX_INPUT_BINDING_PER_SHADER];
 
     struct InputAttrDesc {
@@ -933,7 +956,14 @@ namespace soul::gpu
       u32 offset = 0;
       VertexElementType type = VertexElementType::DEFAULT;
       VertexElementFlags flags = 0;
+
       auto operator==(const InputAttrDesc&) const -> bool = default;
+
+      friend void soul_op_hash_combine(auto& hasher, const InputAttrDesc& val)
+      {
+        hasher.combine(val.binding, val.offset, val.type, val.flags);
+      }
+
     } input_attributes[MAX_INPUT_PER_SHADER];
 
     Viewport viewport;
@@ -944,7 +974,14 @@ namespace soul::gpu
       PolygonMode polygon_mode = PolygonMode::FILL;
       CullModeFlags cull_mode = {};
       FrontFace front_face = FrontFace::CLOCKWISE;
+
       auto operator==(const RasterDesc&) const -> bool = default;
+
+      friend void soul_op_hash_combine(auto& hasher, const RasterDesc& desc)
+      {
+        hasher.combine(desc.line_width, desc.polygon_mode, desc.cull_mode, desc.front_face);
+      }
+
     } raster;
 
     u8 color_attachment_count = 0;
@@ -958,7 +995,21 @@ namespace soul::gpu
       BlendFactor src_alpha_blend_factor = BlendFactor::ZERO;
       BlendFactor dst_alpha_blend_factor = BlendFactor::ZERO;
       BlendOp alpha_blend_op = BlendOp::ADD;
+
       auto operator==(const ColorAttachmentDesc&) const -> bool = default;
+
+      friend void soul_op_hash_combine(auto& hasher, const ColorAttachmentDesc& desc)
+      {
+        hasher.combine(
+          desc.blend_enable,
+          desc.color_write,
+          desc.src_color_blend_factor,
+          desc.dst_color_blend_factor,
+          desc.color_blend_op,
+          desc.src_alpha_blend_factor,
+          desc.dst_alpha_blend_factor,
+          desc.alpha_blend_op);
+      }
     };
 
     ColorAttachmentDesc color_attachments[MAX_COLOR_ATTACHMENT_PER_SHADER];
@@ -967,7 +1018,13 @@ namespace soul::gpu
       b8 depth_test_enable = false;
       b8 depth_write_enable = false;
       CompareOp depth_compare_op = CompareOp::NEVER;
+
       auto operator==(const DepthStencilAttachmentDesc&) const -> bool = default;
+
+      friend void soul_op_hash_combine(auto& hasher, const DepthStencilAttachmentDesc& desc)
+      {
+        hasher.combine(desc.depth_test_enable, desc.depth_write_enable, desc.depth_compare_op);
+      }
     };
 
     DepthStencilAttachmentDesc depth_stencil_attachment;
@@ -975,20 +1032,41 @@ namespace soul::gpu
     struct DepthBiasDesc {
       f32 constant = 0.0f;
       f32 slope = 0.0f;
+
       auto operator==(const DepthBiasDesc&) const -> bool = default;
+
+      friend void soul_op_hash_combine(auto& hasher, const DepthBiasDesc& desc)
+      {
+        hasher.combine(desc.constant, desc.slope);
+      }
     };
 
     DepthBiasDesc depth_bias;
 
     auto operator==(const GraphicPipelineStateDesc& other) const -> bool = default;
+
+    friend void soul_op_hash_combine(auto& hasher, const GraphicPipelineStateDesc& desc)
+    {
+      hasher.combine(
+        desc.program_id,
+        desc.input_layout,
+        desc.viewport,
+        desc.scissor,
+        desc.raster,
+        desc.color_attachment_count,
+        desc.depth_stencil_attachment,
+        desc.depth_bias);
+    }
   };
 
   struct ComputePipelineStateDesc {
     ProgramID program_id;
 
-    auto operator==(const ComputePipelineStateDesc& other) const -> b8
+    auto operator==(const ComputePipelineStateDesc& other) const -> bool = default;
+
+    friend void soul_op_hash_combine(auto& hasher, const ComputePipelineStateDesc& val)
     {
-      return (memcmp(this, &other, sizeof(ComputePipelineStateDesc)) == 0);
+      hasher.combine(val.program_id);
     }
   };
 
@@ -1016,6 +1094,33 @@ namespace soul::gpu
     struct ComputePipelineStateKey {
       ComputePipelineStateDesc desc;
       auto operator==(const ComputePipelineStateKey&) const -> bool = default;
+      friend void soul_op_hash_combine(auto& hasher, const ComputePipelineStateKey& key)
+      {
+        hasher.combine(key.desc);
+      }
+    };
+
+    struct PipelineStateKey {
+
+      using variant = Variant<GraphicPipelineStateKey, ComputePipelineStateKey>;
+      variant var;
+
+      static auto From(const GraphicPipelineStateKey& key) -> PipelineStateKey
+      {
+        return {.var = variant::from(key)};
+      }
+
+      static auto From(const ComputePipelineStateKey& key) -> PipelineStateKey
+      {
+        return {.var = variant::from(key)};
+      }
+
+      auto operator==(const PipelineStateKey&) const -> bool = default;
+
+      friend void soul_op_hash_combine(auto& hasher, const PipelineStateKey& key)
+      {
+        soul_op_hash_combine(hasher, key.var);
+      }
     };
 
     struct PipelineState {
@@ -1032,19 +1137,19 @@ namespace soul::gpu
     };
 
     struct RenderPassKey {
-      Attachment color_attachments[MAX_COLOR_ATTACHMENT_PER_SHADER];
-      Attachment resolve_attachments[MAX_COLOR_ATTACHMENT_PER_SHADER];
-      Attachment input_attachments[MAX_INPUT_ATTACHMENT_PER_SHADER];
+      Array<Attachment, MAX_COLOR_ATTACHMENT_PER_SHADER> color_attachments;
+      Array<Attachment, MAX_COLOR_ATTACHMENT_PER_SHADER> resolve_attachments;
+      Array<Attachment, MAX_INPUT_ATTACHMENT_PER_SHADER> input_attachments;
       Attachment depth_attachment;
 
-      auto operator==(const RenderPassKey& other) const -> b8
-      {
-        return (memcmp(this, &other, sizeof(RenderPassKey)) == 0);
-      }
+      auto operator==(const RenderPassKey& other) const -> bool = default;
 
-      auto operator!=(const RenderPassKey& other) const -> b8
+      friend void soul_op_hash_combine(auto& hasher, const RenderPassKey& val)
       {
-        return (memcmp(this, &other, sizeof(RenderPassKey)) != 0);
+        hasher.combine_span(val.color_attachments.cspan<u64>());
+        hasher.combine_span(val.resolve_attachments.cspan<u64>());
+        hasher.combine_span(val.input_attachments.cspan<u64>());
+        hasher.combine(val.depth_attachment);
       }
     };
 
@@ -1068,21 +1173,23 @@ namespace soul::gpu
       VkDescriptorType descriptor_type;
       u32 descriptor_count;
       VkShaderStageFlags stage_flags;
+
+      friend void soul_op_hash_combine(auto& hasher, const DescriptorSetLayoutBinding& binding)
+      {
+        hasher.combine(binding.descriptor_type);
+        hasher.combine(binding.descriptor_count);
+        hasher.combine(binding.stage_flags);
+      }
     };
+    static_assert(soul::impl_soul_op_hash_combine_v<DescriptorSetLayoutBinding>);
 
     struct DescriptorSetLayoutKey {
-      DescriptorSetLayoutBinding bindings[MAX_BINDING_PER_SET];
+      Array<DescriptorSetLayoutBinding, MAX_BINDING_PER_SET> bindings;
 
-      auto operator==(const DescriptorSetLayoutKey& other) const -> b8
-      {
-        return (memcmp(this, &other, sizeof(DescriptorSetLayoutKey)) == 0);
-      }
-
-      auto operator!=(const DescriptorSetLayoutKey& other) const -> b8
-      {
-        return (memcmp(this, &other, sizeof(DescriptorSetLayoutKey)) != 0);
-      }
+      auto operator==(const DescriptorSetLayoutKey& other) const -> bool = default;
+      friend void soul_op_hash_combine(auto& hasher, const DescriptorSetLayoutKey& key) {}
     };
+    static_assert(soul::impl_soul_op_hash_combine_v<gpu::impl::DescriptorSetLayoutKey>);
 
     struct ShaderDescriptorBinding {
       u8 count = 0;
@@ -1629,7 +1736,7 @@ namespace soul::gpu
       Pool<Program> programs;
       ShaderTablePool shader_table_pool;
 
-      HashMap<RenderPassKey, VkRenderPass> render_pass_maps;
+      HashMap<RenderPassKey, VkRenderPass, HashOp<RenderPassKey>> render_pass_maps;
 
       UInt64HashMap<SamplerID> sampler_map;
       BindlessDescriptorAllocator descriptor_allocator;

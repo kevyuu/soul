@@ -1,7 +1,5 @@
 #pragma once
 
-#include <variant>
-
 // TODO: Figure out how to do it without single header library
 #define VMA_STATIC_VULKAN_FUNCTIONS 0
 #define VMA_DYNAMIC_VULKAN_FUNCTIONS 0
@@ -11,6 +9,7 @@
 #pragma warning(pop)
 
 #include "core/type.h"
+#include "core/type_traits.h"
 
 #include "object_cache.h"
 #include "object_pool.h"
@@ -29,16 +28,19 @@ namespace soul::gpu::impl
   struct Program;
   struct BinarySemaphore;
   struct Database;
-  struct GraphicPipelineStateKey;
-  struct ComputePipelineStateKey;
-  using PipelineStateKey = std::variant<GraphicPipelineStateKey, ComputePipelineStateKey>;
   struct PipelineState;
   struct ShaderArgSet;
   struct Shader;
   struct Program;
   struct ShaderTable;
   struct BinarySemaphore;
+
+  struct PipelineStateKey;
+  void soul_op_hash_combine(auto& hasher, const PipelineStateKey& key);
+
   struct DescriptorSetLayoutKey;
+  void soul_op_hash_combine(auto& hasher, const DescriptorSetLayoutKey& key);
+
 } // namespace soul::gpu::impl
 
 namespace soul::gpu
