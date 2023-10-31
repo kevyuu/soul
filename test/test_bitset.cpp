@@ -19,9 +19,9 @@ auto verify_empty_bitset(const soul::Bitset<BitCount, BlockT> bitset) -> void
     SOUL_TEST_ASSERT_FALSE(bitset.test(i)) << ", Index : " << i;
     SOUL_TEST_ASSERT_FALSE(bitset[i]) << ", Index : " << i;
   }
-  for (usize i = 0; i < BitCount - 1; i++) {
+  for (usize i = 0; i < BitCount; i++) {
     SOUL_TEST_ASSERT_FALSE(bitset.find_next(i));
-    SOUL_TEST_ASSERT_FALSE(bitset.find_prev(BitCount - i));
+    SOUL_TEST_ASSERT_FALSE(bitset.find_prev(i));
   }
 }
 
@@ -42,7 +42,7 @@ auto verify_full_bitset(const soul::Bitset<BitCount, BlockT> bitset) -> void
   SOUL_TEST_ASSERT_EQ(*bitset.find_last(), BitCount - 1);
   for (usize i = 0; i < BitCount - 1; i++) {
     SOUL_TEST_ASSERT_EQ(*bitset.find_next(i), i + 1) << ", Index : " << i;
-    SOUL_TEST_ASSERT_EQ(*bitset.find_prev(BitCount - i), BitCount - i - 1) << ", Index : " << i;
+    SOUL_TEST_ASSERT_EQ(*bitset.find_prev(i + 1), i) << ", Index : " << i;
   }
   SOUL_TEST_ASSERT_FALSE(bitset.find_next(BitCount - 1));
   SOUL_TEST_ASSERT_FALSE(bitset.find_prev(0));
