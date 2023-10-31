@@ -2,6 +2,7 @@
 
 #include "gpu/intern/render_compiler.h"
 #include "gpu/system.h"
+#include "gpu/type.h"
 #include <vulkan/vulkan_core.h>
 
 namespace soul::gpu
@@ -135,4 +136,5 @@ namespace soul::gpu
     }
   };
 
+  using RasterCommandList = CommandList<PIPELINE_FLAGS_RASTER>;
 } // namespace soul::gpu
