@@ -211,13 +211,13 @@ namespace soul
 
     private:
       [[nodiscard]]
-      auto get_option() -> Option<T>&
+      constexpr auto get_option() -> Option<T>&
       {
         return static_cast<Option<T>&>(*this);
       }
 
       [[nodiscard]]
-      auto get_option() const -> const Option<T>&
+      constexpr auto get_option() const -> const Option<T>&
       {
         return static_cast<const Option<T>&>(*this);
       }
