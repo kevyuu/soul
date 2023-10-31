@@ -15,6 +15,7 @@ Checks: "
         -cert-oop54-cpp
 
         -cppcoreguidelines-avoid-c-arrays,
+        -cppcoreguidelines-avoid-do-while,
         -cppcoreguidelines-avoid-magic-numbers,
         -cppcoreguidelines-pro-bounds-pointer-arithmetic,
         -cppcoreguidelines-non-private-member-variables-in-classes,
