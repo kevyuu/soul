@@ -3,6 +3,7 @@
 #include <functional>
 
 #include "core/config.h"
+#include "core/hash.h"
 #include "core/own_ref.h"
 #include "core/panic.h"
 #include "core/type.h"
@@ -31,7 +32,7 @@ namespace soul
   template <
     typename KeyT,
     typename ValT,
-    typename Hash = DefaultHashOperator<KeyT>,
+    typename Hash = HashOp<KeyT>,
     typename KeyEqual = std::equal_to<KeyT>,
     memory::allocator_type AllocatorT = memory::Allocator>
   class HashMap
@@ -74,6 +75,18 @@ namespace soul
     [[nodiscard]]
     auto
     operator[](const KeyT& key) const -> const ValT&;
+
+    [[nodiscard]]
+    auto ref(const KeyT& key) -> ValT&
+    {
+      return operator[](key);
+    }
+
+    [[nodiscard]]
+    auto ref(const KeyT& key) const -> const ValT&
+    {
+      return operator[](key);
+    }
 
     [[nodiscard]]
     auto size() const -> usize;
@@ -213,7 +226,7 @@ namespace soul
       if constexpr (can_nontrivial_destruct_v<ValT>) {
         for (usize i = 0; i < capacity_; ++i) {
           if (indexes_[i].dib != 0) {
-            values_[i].~U();
+            values_[i].~ValT();
           }
         }
       }
