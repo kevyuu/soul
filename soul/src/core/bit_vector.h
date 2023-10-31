@@ -1,7 +1,6 @@
 #pragma once
 
 #include <iostream>
-#include <optional>
 #include <ranges>
 
 #include "core/bit_ref.h"
