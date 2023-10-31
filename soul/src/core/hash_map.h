@@ -14,21 +14,6 @@
 namespace soul
 {
 
-  template <typename T>
-  concept is_std_hash_implemented_v = can_default_construct_v<std::hash<T>>;
-
-  template <typename T>
-  struct DefaultHashOperator {
-    auto operator()(const T& t) const noexcept -> std::size_t { return util::hash_fnv1<T>(&t); }
-  };
-
-  template <is_std_hash_implemented_v T>
-  struct DefaultHashOperator<T> {
-    std::hash<T> hash;
-
-    auto operator()(const T& t) const noexcept -> std::size_t { return hash(t); }
-  };
-
   template <
     typename KeyT,
     typename ValT,

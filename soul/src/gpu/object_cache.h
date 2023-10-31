@@ -85,7 +85,7 @@ namespace soul::gpu
     typename ValType,
     std::size_t RingSize,
     typename ValDeleter,
-    typename Hash = DefaultHashOperator<KeyType>,
+    typename Hash = HashOp<KeyType>,
     typename KeyEqual = std::equal_to<KeyType>>
   class RingCache
   {
