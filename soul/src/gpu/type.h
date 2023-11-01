@@ -1428,21 +1428,19 @@ namespace soul::gpu
     [[nodiscard]]
     inline auto is_semaphore_valid(Semaphore semaphore) -> b8
     {
-      const auto visitor_set = VisitorSet{
+      return semaphore.visit(VisitorSet{
         [](BinarySemaphore* semaphore) { return semaphore->is_valid(); },
         [](const TimelineSemaphore& semaphore) { return semaphore.is_valid(); },
-      };
-      return semaphore.visit(visitor_set);
+      });
     }
 
     [[nodiscard]]
     inline auto is_semaphore_null(Semaphore semaphore) -> b8
     {
-      const auto visitor_set = VisitorSet{
+      return semaphore.visit(VisitorSet{
         [](BinarySemaphore* semaphore) { return semaphore->is_null(); },
         [](const TimelineSemaphore& semaphore) { return semaphore.is_null(); },
-      };
-      return semaphore.visit(visitor_set);
+      });
     }
 
     class CommandQueue
