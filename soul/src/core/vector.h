@@ -427,7 +427,7 @@ namespace soul
     NotNull<AllocatorT*> allocator)
       : allocator_(allocator), size_(idx_end - idx_start)
   {
-    SOUL_ASSERT(idx_end >= idx_start, "Index end must be larget than index start");
+    SOUL_ASSERT(0, idx_end >= idx_start, "Index end must be larget than index start");
     init_reserve(size_);
     uninitialized_transform_index_construct(idx_start, idx_end, std::move(fn), buffer_);
   }
