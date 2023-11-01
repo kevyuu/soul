@@ -129,15 +129,18 @@ namespace soul::gpu
   ResourceNodeID RenderGraph::write_resource_node(
     ResourceNodeID resource_node_id, PassNodeID pass_node_id)
   {
-    auto& src_resource_node = get_resource_node(resource_node_id);
-    if (src_resource_node.writer.is_null()) {
-      src_resource_node.writer = pass_node_id;
+    auto resource_node_ref = [this, resource_node_id]() -> ResourceNode& {
+      return get_resource_node(resource_node_id);
+    };
+
+    if (resource_node_ref().writer.is_null()) {
       const auto dst_resource_node_id = ResourceNodeID(resource_nodes_.add(ResourceNode(
-        src_resource_node.resource_type, src_resource_node.resource_id, pass_node_id)));
-      src_resource_node.write_target_node = dst_resource_node_id;
+        resource_node_ref().resource_type, resource_node_ref().resource_id, pass_node_id)));
+      resource_node_ref().writer = pass_node_id;
+      resource_node_ref().write_target_node = dst_resource_node_id;
     }
 
-    return src_resource_node.write_target_node;
+    return resource_node_ref().write_target_node;
   }
 
   const impl::ResourceNode& RenderGraph::get_resource_node(ResourceNodeID node_id) const
