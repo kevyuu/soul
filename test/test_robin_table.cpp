@@ -201,7 +201,7 @@ auto generate_random_entries(usize count) -> soul::Vector<TestEntry>
   std::random_device rd;
   std::mt19937 generator(rd());
 
-  auto generate_random_string = [&generator](usize length, int suffix_id) -> soul::CString {
+  auto generate_random_string = [&generator](usize length, usize suffix_id) -> soul::CString {
     const char* char_samples =
       "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ!@#$%^&*()`~-_=+"
       "[{]{|;:'\",<.>/?";
@@ -224,7 +224,7 @@ auto generate_random_entries(usize count) -> soul::Vector<TestEntry>
   };
 
   return soul::Vector<TestEntry>::TransformIndex(
-    0, count, [&generator, &generate_random_string](int index) -> TestEntry {
+    0, count, [&generator, &generate_random_string](usize index) -> TestEntry {
       return {
         .name = generate_random_string(10, index),
         .test_obj = TestObject(static_cast<int>(generator())),
