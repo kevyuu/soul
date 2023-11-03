@@ -79,9 +79,9 @@ namespace soul
     {
       SOUL_ASSERT(0, other.state_ != State::VALUELESS, "Cannot move from a valueless object");
       if (state_ == State::OK) {
-        construct_at(&ok_val_, std::move(other.ok_val_));
+        relocate_at(&ok_val_, std::move(other.ok_val_));
       } else if (state_ == State::ERR) {
-        construct_at(&err_val_, std::move(other.err_val_));
+        relocate_at(&err_val_, std::move(other.err_val_));
       }
       other.state_ = State::VALUELESS;
     }
@@ -105,13 +105,14 @@ namespace soul
         } else {
           err_val_ = std::move(other.err_val_);
         }
+        other.cleanup_for_not_valueless();
       } else {
         cleanup_for_not_valueless();
         state_ = other.state_;
         if (other.state_ == State::OK) {
-          construct_at(&ok_val_, std::move(other.ok_val_));
+          relocate_at(&ok_val_, std::move(other.ok_val_));
         } else if (other.state_ == State::ERR) {
-          construct_at(&err_val_, std::move(other.err_val_));
+          relocate_at(&err_val_, std::move(other.err_val_));
         }
       }
       other.state_ = State::VALUELESS;
@@ -147,11 +148,13 @@ namespace soul
       } else {
         if (lhs.state_ == State::OK) {
           OkT ok_val_tmp = std::move(lhs.ok_val_);
-          construct_at(&lhs.err_val_, std::move(rhs.err_val_));
+          destroy_at(&lhs.ok_val_);
+          relocate_at(&lhs.err_val_, std::move(rhs.err_val_));
           construct_at(&rhs.ok_val_, std::move(ok_val_tmp));
         } else {
           ErrT err_val_tmp = std::move(lhs.err_val_);
-          construct_at(&lhs.ok_val_, std::move(rhs.ok_val_));
+          destroy_at(&lhs.err_val_);
+          relocate_at(&lhs.ok_val_, std::move(rhs.ok_val_));
           construct_at(&rhs.err_val_, std::move(err_val_tmp));
         }
         swap(lhs.state_, rhs.state_);

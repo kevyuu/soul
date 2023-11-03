@@ -343,7 +343,7 @@ namespace soul
       : is_some_(other.is_some_)
   {
     if (other.is_some_) {
-      construct_at(&value_, std::move(other.value_));
+      relocate_at(&value_, std::move(other.value_));
       other.is_some_ = false;
     }
   }

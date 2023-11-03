@@ -160,7 +160,7 @@ namespace soul
       using difference_type = std::ptrdiff_t;
       using pointer = IterEntryT*;
 
-      explicit Iterator() {}
+      explicit Iterator() = default;
 
       template <b8 IsOtherConstV>
         requires(!IsConstV && !IsOtherConstV)
@@ -344,6 +344,7 @@ namespace soul
         for (usize bucket_index = 0; bucket_index < old_slot_count; bucket_index++) {
           if (!old_metadatas[bucket_index].is_empty()) {
             do_insert(std::move(old_entries[bucket_index]));
+            destroy_at(&old_entries[bucket_index]);
           }
         }
         allocator_->deallocate_array(old_metadatas, old_slot_count + 1);
@@ -362,7 +363,7 @@ namespace soul
       while (!metadatas_[bucket_index].is_empty()) {
         auto& current_entry = entries_[bucket_index];
         if (metadata == metadatas_[bucket_index] && key == get_key_fn_(current_entry)) {
-          entry.swap_at(&current_entry);
+          current_entry = entry.forward_ref();
           return;
         } else if (metadatas_[bucket_index] < metadata) {
           entry.swap_at(&current_entry);
@@ -380,7 +381,6 @@ namespace soul
           metadata.get_psl(),
           expected_max_psl);
       }
-
       entry.store_at(&entries_[bucket_index]);
       metadatas_[bucket_index] = metadata;
       size_++;
@@ -430,7 +430,7 @@ namespace soul
       if constexpr (can_nontrivial_destruct_v<EntryT>) {
         for (usize slot_index = 0; slot_index < slot_count(); ++slot_index) {
           if (!metadatas_[slot_index].is_empty()) {
-            entries_[slot_index].~EntryT();
+            destroy_at(&entries_[slot_index]);
           }
         }
       }
@@ -602,6 +602,7 @@ namespace soul
           for (usize bucket_index = 0; bucket_index < old_slot_count; bucket_index++) {
             if (!old_metadatas[bucket_index].is_empty()) {
               do_insert(std::move(old_entries[bucket_index]));
+              destroy_at(&old_entries[bucket_index]);
             }
           }
           do_insert(entry.forward());
@@ -665,6 +666,7 @@ namespace soul
         bucket_index = next_bucket_index(bucket_index);
       }
       metadatas_[prev_bucket_index] = Metadata::Empty();
+      destroy_at(&entries_[prev_bucket_index]);
       size_--;
     }
   };

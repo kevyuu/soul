@@ -65,7 +65,7 @@ namespace soul
     if constexpr (!std::is_trivially_destructible_v<T>) {
       if constexpr (std::is_array_v<T>) {
         for (auto& elem : *p) {
-          (destroy_at)(std::addressof(elem));
+          std::destroy_at(std::addressof(elem));
         }
       } else {
         p->~T();
@@ -80,6 +80,36 @@ namespace soul
       std::construct_at(location, std::forward<Args>(args)...);
     } else {
       new (location) T(std::forward<Args>(args)...);
+    }
+  }
+
+  template <typename T>
+    requires(!is_lvalue_reference_v<T>)
+  inline constexpr void relocate_at(T* const location, T&& src) noexcept
+  {
+    if (std::is_constant_evaluated()) {
+      std::construct_at(location, std::move(src)); // NOLINT
+    } else {
+      new (location) T(std::move(src)); // NOLINT
+    }
+    soul::destroy_at(&src);
+  }
+
+  template <typename T, std::input_iterator IteratorT>
+  inline constexpr void uninitialized_relocate_n(IteratorT src_it, usize size, T* dst) noexcept
+  {
+    if (std::is_constant_evaluated()) {
+      for (; size != 0; ++src_it, ++dst, (void)--size) {
+        std::construct_at(dst, std::move(*src_it));
+        const T* src_ptr = src_it;
+        soul::destroy_at(src_ptr);
+      }
+    } else {
+      std::uninitialized_move_n(std::move(src_it), size, dst);
+      for (; size != 0; ++src_it, ++dst, (void)--size) {
+        const T* src_ptr = src_it;
+        soul::destroy_at(src_ptr);
+      }
     }
   }
 

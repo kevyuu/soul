@@ -108,7 +108,6 @@ TEST(TestSBOVectorConstruction, TestDefaultConstructor)
 
 TEST(TestSBOVectorConstruction, TestCustomAllocatorConstructor)
 {
-  TestObject::reset();
   TestAllocator::reset_all();
   TestAllocator test_allocator;
 
@@ -575,15 +574,14 @@ void test_resize(const usize vec_size, const usize resize_size)
     return generate_sequence<T>(original_sequence.begin(), original_sequence.begin() + resize_size);
   }();
 
-  if constexpr (std::same_as<T, TestObject> || std::same_as<T, ListTestObject>) {
-    TestObject::reset();
-  }
+  const auto start_diagnostic = TestObject::s_diagnostic;
   vector.resize(resize_size);
   verify_sbo_vector(vector, resize_sequence);
   if (vec_size > resize_size) {
     if constexpr (std::same_as<T, TestObject>) {
+      const auto diff_diagnostic = TestObject::s_diagnostic - start_diagnostic;
       SOUL_TEST_ASSERT_EQ(
-        TestObject::sTODtorCount - TestObject::sTOCtorCount, vec_size - resize_size);
+        diff_diagnostic.dtor_count - diff_diagnostic.ctor_count, vec_size - resize_size);
     }
     if constexpr (std::same_as<T, ListTestObject>) {
       const auto destructed_objects_count = std::accumulate(
@@ -591,8 +589,9 @@ void test_resize(const usize vec_size, const usize resize_size)
         original_sequence.end(),
         usize(0),
         [](const usize prev, const ListTestObject& curr) { return prev + curr.size(); });
+      const auto diff_diagnostic = TestObject::s_diagnostic - start_diagnostic;
       SOUL_TEST_ASSERT_EQ(
-        TestObject::sTODtorCount - TestObject::sTOCtorCount, destructed_objects_count);
+        diff_diagnostic.dtor_count - diff_diagnostic.ctor_count, destructed_objects_count);
     }
   }
 }
@@ -791,13 +790,12 @@ void test_pop_back(const usize vec_size)
 {
   const auto sequence = generate_random_sequence<T>(vec_size);
   auto vector = create_vector_from_sequence<T, N>(sequence);
-  if constexpr (std::same_as<T, TestObject>) {
-    TestObject::reset();
-  }
+  const auto start_diagnostic = TestObject::s_diagnostic;
   vector.pop_back();
   verify_sbo_vector(vector, generate_sequence<T>(sequence.begin(), sequence.end() - 1));
   if constexpr (std::same_as<T, TestObject>) {
-    SOUL_TEST_ASSERT_EQ(TestObject::sTODtorCount - TestObject::sTOCtorCount, 1);
+    const auto diff_diagnostic = TestObject::s_diagnostic - start_diagnostic;
+    SOUL_TEST_ASSERT_EQ(diff_diagnostic.dtor_count - diff_diagnostic.ctor_count, 1);
   }
 }
 
@@ -806,13 +804,12 @@ void test_pop_back_with_size(const usize vec_size, const usize pop_back_size)
 {
   const auto sequence = generate_random_sequence<T>(vec_size);
   auto vector = create_vector_from_sequence<T, N>(sequence);
-  if constexpr (std::same_as<T, TestObject>) {
-    TestObject::reset();
-  }
+  const auto start_diagnostic = TestObject::s_diagnostic;
   vector.pop_back(pop_back_size);
   verify_sbo_vector(vector, generate_sequence<T>(sequence.begin(), sequence.end() - pop_back_size));
   if constexpr (std::same_as<T, TestObject>) {
-    SOUL_TEST_ASSERT_EQ(TestObject::sTODtorCount - TestObject::sTOCtorCount, pop_back_size);
+    const auto diff_diagnostic = TestObject::s_diagnostic - start_diagnostic;
+    SOUL_TEST_ASSERT_EQ(diff_diagnostic.dtor_count - diff_diagnostic.ctor_count, pop_back_size);
   }
 }
 
@@ -920,14 +917,13 @@ void test_clear(const usize size)
 
   const usize old_capacity = vector.capacity();
   const usize old_size = vector.size();
-  if constexpr (std::same_as<T, TestObject>) {
-    TestObject::reset();
-  }
+  const auto start_diagnostic = TestObject::s_diagnostic;
   vector.clear();
   SOUL_TEST_ASSERT_EQ(vector.size(), 0);
   SOUL_TEST_ASSERT_EQ(vector.capacity(), old_capacity);
   if constexpr (std::same_as<T, TestObject>) {
-    SOUL_TEST_ASSERT_EQ(TestObject::sTODtorCount - TestObject::sTOCtorCount, old_size);
+    const auto diff_diagnostic = TestObject::s_diagnostic - start_diagnostic;
+    SOUL_TEST_ASSERT_EQ(diff_diagnostic.dtor_count - diff_diagnostic.ctor_count, old_size);
   }
 }
 
@@ -953,14 +949,13 @@ void test_cleanup(const usize size)
 
   const usize old_size = vector.size();
   using VecType = soul::SBOVector<T, N>;
-  if constexpr (std::same_as<T, TestObject>) {
-    TestObject::reset();
-  }
+  const auto start_diagnostic = TestObject::s_diagnostic;
   vector.cleanup();
   SOUL_TEST_ASSERT_EQ(vector.size(), 0);
   SOUL_TEST_ASSERT_EQ(vector.capacity(), VecType::INLINE_ELEMENT_COUNT);
   if constexpr (std::same_as<T, TestObject>) {
-    SOUL_TEST_ASSERT_EQ(TestObject::sTODtorCount - TestObject::sTOCtorCount, old_size);
+    const auto diff_diagnostic = TestObject::s_diagnostic - start_diagnostic;
+    SOUL_TEST_ASSERT_EQ(diff_diagnostic.dtor_count - diff_diagnostic.ctor_count, old_size);
   }
 }
 

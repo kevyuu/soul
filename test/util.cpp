@@ -1,15 +1,6 @@
 #include "util.h"
 
-int64_t TestObject::sTOCount = 0;
-int64_t TestObject::sTOCtorCount = 0;
-int64_t TestObject::sTODtorCount = 0;
-int64_t TestObject::sTODefaultCtorCount = 0;
-int64_t TestObject::sTOArgCtorCount = 0;
-int64_t TestObject::sTOCopyCtorCount = 0;
-int64_t TestObject::sTOMoveCtorCount = 0;
-int64_t TestObject::sTOCopyAssignCount = 0;
-int64_t TestObject::sTOMoveAssignCount = 0;
-int TestObject::sMagicErrorCount = 0;
+TestObject::Diagnostic TestObject::s_diagnostic = TestObject::Diagnostic();
 
 int TestAllocator::allocCountAll = 0;
 int TestAllocator::freeCountAll = 0;

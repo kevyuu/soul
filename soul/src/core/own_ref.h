@@ -15,7 +15,7 @@ namespace soul
       requires swappable
     {
       T tmp = std::move(*location);
-      soul::construct_at(location, std::move(ref_));
+      *location = std::move(ref_);
       ref_ = std::move(tmp);
     }
     constexpr auto const_ref() -> const T& { return ref_; }

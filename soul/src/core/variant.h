@@ -160,7 +160,7 @@ namespace soul
     {
       other.visit([this]<typeset VariantAltT>(VariantAltT& val) -> void {
         static_assert(get_type_count_v<VariantAltT, Ts...> == 1, "Variant type is not found");
-        std::construct_at(&this->ref<VariantAltT>(), std::move(val));
+        relocate_at(&this->ref<VariantAltT>(), std::move(val));
       });
       other.active_index_ = none_index;
     }

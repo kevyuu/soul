@@ -19,7 +19,6 @@
 
 #include "common_test.h"
 #include "util.h"
-#include <__msvc_iter_core.hpp>
 
 namespace soul
 {
@@ -33,6 +32,7 @@ namespace soul
 struct TestEntry {
   soul::CString name;
   TestObject test_obj;
+  using object_type = TestObject;
 
   [[nodiscard]]
   auto clone() const -> TestEntry
@@ -51,6 +51,7 @@ struct TestEntry {
     auto operator()(const TestEntry& entry) const -> const soul::CString& { return entry.name; }
   };
 };
+static_assert(can_nontrivial_destruct_v<TestEntry>);
 
 using TestTable = soul::RobinTable<soul::CString, TestEntry, TestEntry::GetKeyOp>;
 static_assert(ts_clone<TestTable>);
@@ -115,8 +116,8 @@ TEST(TestRobinTableConstruction, TestConstructionWithCapacity)
 template <usize ArrSizeV>
 auto test_construction_from_array(Array<TestEntry, ArrSizeV>&& entries)
 {
-  auto entry_vector =
-    soul::Vector<TestEntry>::From(soul::views::clone_span(entries.data(), entries.size()));
+  auto entry_vector = soul::Vector<TestEntry>::From(entries | soul::views::clone<TestEntry>());
+
   std::ranges::sort(entry_vector, [](const TestEntry& a, const TestEntry& b) {
     return std::ranges::lexicographical_compare(a.name.cspan(), b.name.cspan());
   });
@@ -324,13 +325,13 @@ TEST_F(TestRobinTableManipulation, TestCleanup)
 
 TEST_F(TestRobinTableManipulation, TestReserve)
 {
-  test_reserve(TestTable(), 10);
-  test_reserve(test_table1, 0);
-  test_reserve(test_table1, 10);
-  test_reserve(test_table2, 0);
-  test_reserve(test_table2, 1);
-  test_reserve(test_table2, test_table2.size() / 2);
-  test_reserve(test_table2, test_table2.size() * 2);
+  SOUL_TEST_RUN(test_reserve(TestTable(), 10));
+  SOUL_TEST_RUN(test_reserve(test_table1, 0));
+  SOUL_TEST_RUN(test_reserve(test_table1, 10));
+  SOUL_TEST_RUN(test_reserve(test_table2, 0));
+  SOUL_TEST_RUN(test_reserve(test_table2, 1));
+  SOUL_TEST_RUN(test_reserve(test_table2, test_table2.size() / 2));
+  SOUL_TEST_RUN(test_reserve(test_table2, test_table2.size() * 2));
 }
 
 TEST_F(TestRobinTableManipulation, TestInsert)

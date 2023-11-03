@@ -341,7 +341,7 @@ namespace soul
       buffer_ = std::exchange(other.buffer_, other.stack_storage_.data());
       capacity_ = std::exchange(other.capacity_, N);
     } else {
-      uninitialized_move_n(other.buffer_, other.size_, buffer_);
+      uninitialized_relocate_n(other.buffer_, other.size_, buffer_);
     }
     size_ = std::exchange(other.size_, 0);
   }
@@ -617,18 +617,18 @@ namespace soul
         0, allocator_ == other.allocator_, "Cannot swap container with different allocator");
       swap(buffer_, other.buffer_);
     } else if (is_using_stack_storage() && !other.is_using_stack_storage()) {
-      uninitialized_move_n(buffer_, size_, other.stack_storage_.data());
+      uninitialized_relocate_n(buffer_, size_, other.stack_storage_.data());
       buffer_ = other.buffer_;
       other.buffer_ = other.stack_storage_.data();
     } else if (!is_using_stack_storage() && other.is_using_stack_storage()) {
-      uninitialized_move_n(other.buffer_, other.size_, stack_storage_.data());
+      uninitialized_relocate_n(other.buffer_, other.size_, stack_storage_.data());
       other.buffer_ = buffer_;
       buffer_ = stack_storage_.data();
     } else {
       RawBuffer<T, N> temp;
-      uninitialized_move_n(other.buffer_, other.size_, temp.data());
-      uninitialized_move_n(buffer_, size_, other.buffer_);
-      uninitialized_move_n(temp.data(), other.size_, buffer_);
+      uninitialized_relocate_n(other.buffer_, other.size_, temp.data());
+      uninitialized_relocate_n(buffer_, size_, other.buffer_);
+      uninitialized_relocate_n(temp.data(), other.size_, buffer_);
     }
 
     swap(size_, other.size_);
@@ -736,7 +736,7 @@ namespace soul
   {
     if (buffer_ != stack_storage_.data()) {
       T* buffer = allocator.template allocate_array<T>(size_);
-      uninitialized_move_n(buffer_, size_, buffer);
+      uninitialized_relocate_n(buffer_, size_, buffer);
       allocator_->deallocate_array(buffer_, capacity_);
       buffer_ = buffer;
     }
@@ -772,7 +772,7 @@ namespace soul
     if (!IS_SBO || capacity > N) {
       T* old_buffer = buffer_;
       buffer_ = allocator_->template allocate_array<T>(capacity);
-      uninitialized_move_n(old_buffer, size_, buffer_);
+      uninitialized_relocate_n(old_buffer, size_, buffer_);
       if (old_buffer != stack_storage_.data()) {
         allocator_->deallocate_array(old_buffer, capacity_);
       }
@@ -806,7 +806,7 @@ namespace soul
       T* old_buffer = buffer_;
       buffer_ = allocator_->template allocate_array<T>(new_capacity);
       item.store_at(buffer_ + size_);
-      uninitialized_move_n(old_buffer, size_, buffer_);
+      uninitialized_relocate_n(old_buffer, size_, buffer_);
       if (old_buffer != stack_storage_.data()) {
         allocator_->deallocate_array(old_buffer, capacity_);
       }
@@ -825,7 +825,7 @@ namespace soul
       T* old_buffer = buffer_;
       buffer_ = allocator_->template allocate_array<T>(new_capacity);
       generate_at(buffer_ + size_, fn);
-      uninitialized_move_n(old_buffer, size_, buffer_);
+      uninitialized_relocate_n(old_buffer, size_, buffer_);
       if (old_buffer != stack_storage_.data()) {
         allocator_->deallocate_array(old_buffer, capacity_);
       }
@@ -866,7 +866,7 @@ namespace soul
       buffer_ = stack_storage_.data();
       capacity_ = inline_element_count;
     }
-    uninitialized_move_n(old_buffer, size_, buffer_);
+    uninitialized_relocate_n(old_buffer, size_, buffer_);
     allocator_->deallocate_array(old_buffer, old_capacity);
   }
 
@@ -886,7 +886,7 @@ namespace soul
       T* old_buffer = buffer_;
       buffer_ = allocator_->template allocate_array<T>(new_capacity);
       soul::construct_at(buffer_ + size_, std::forward<Args>(args)...);
-      uninitialized_move_n(old_buffer, size_, buffer_);
+      uninitialized_relocate_n(old_buffer, size_, buffer_);
       if (old_buffer != stack_storage_.data()) {
         allocator_->deallocate_array(old_buffer, capacity_);
       }
@@ -910,7 +910,7 @@ namespace soul
         T* old_buffer = buffer_;
         buffer_ = allocator_->template allocate_array<T>(new_capacity);
         uninitialized_copy_n(std::ranges::begin(range), range_size, buffer_ + size_);
-        uninitialized_move_n(old_buffer, size_, buffer_);
+        uninitialized_relocate_n(old_buffer, size_, buffer_);
         if (old_buffer != stack_storage_.data()) {
           allocator_->deallocate_array(old_buffer, capacity_);
         }

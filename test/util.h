@@ -4,10 +4,12 @@
 #include <numeric>
 #include <random>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include <gtest/gtest.h>
 
+#include "core/log.h"
 #include "core/panic.h"
 #include "core/type_traits.h"
 #include "core/vector.h"
@@ -70,63 +72,99 @@ struct SoulTestMessageScope {
 #define SOUL_TEST_ASSERT_TRUE(expr) ASSERT_TRUE(expr) << "Case : " << get_soul_test_message()
 #define SOUL_TEST_ASSERT_FALSE(expr) ASSERT_FALSE(expr) << "Case : " << get_soul_test_message()
 
-constexpr uint32_t K_MAGIC_VALUE = 0x01f1cbe8;
-
 struct TestObject {
   int x;          // Value for the TestObject.
   b8 throwOnCopy; // Throw an exception of this object is copied, moved, or assigned to another.
   int64_t id;
   // Unique id for each object, equal to its creation number. This value is not coped from other
   // TestObjects during any operations, including moves.
-  uint32_t magicValue;
-  // Used to verify that an instance is valid and that it is not corrupted. It should always be
-  // kMagicValue.
-  static int64_t sTOCount;            // Count of all current existing TestObjects.
-  static int64_t sTOCtorCount;        // Count of times any ctor was called.
-  static int64_t sTODtorCount;        // Count of times dtor was called.
-  static int64_t sTODefaultCtorCount; // Count of times the default ctor was called.
-  static int64_t sTOArgCtorCount;     // Count of times the x0,x1,x2 ctor was called.
-  static int64_t sTOCopyCtorCount;    // Count of times copy ctor was called.
-  static int64_t sTOMoveCtorCount;    // Count of times move ctor was called.
-  static int64_t sTOCopyAssignCount;  // Count of times copy assignment was called.
-  static int64_t sTOMoveAssignCount;  // Count of times move assignment was called.
-  static int sMagicErrorCount;        // Number of magic number mismatch errors.
+  uint32_t state_value;
+
+  static constexpr u32 K_CONSTRUCTED_STATE = 0x01f1cbe8;
+  static constexpr u32 K_MOVED_FROM_STATE = 3;
+  static constexpr u32 K_DESTRUCTED_STATE = 0;
+
+  static auto StateStr(u32 state) -> const char*
+  {
+    if (state == K_CONSTRUCTED_STATE) {
+      return "constructed_state";
+    } else if (state == K_MOVED_FROM_STATE) {
+      return "moved_from_state";
+    } else if (state == K_DESTRUCTED_STATE) {
+      return "destructed_state";
+    }
+    return "invalid_state";
+  }
+
+  struct Diagnostic {
+    i64 obj_count = 0;          // Count of all current existing TestObjects.
+    i64 ctor_count = 0;         // Count of times any ctor was called.
+    i64 dtor_count = 0;         // Count of times dtor was called.
+    i64 default_ctor_count = 0; // Count of times the default ctor was called.
+    i64 arg_ctor_count = 0;     // Count of times the x0,x1,x2 ctor was called.
+    i64 copy_ctor_count = 0;    // Count of times copy ctor was called.
+    i64 move_ctor_count = 0;    // Count of times move ctor was called.
+    i64 copy_assign_count = 0;  // Count of times copy assignment was called.
+    i64 move_assign_count = 0;  // Count of times move assignment was called.
+    i32 magic_error_count = 0;  // Number of magic number mismatch errors.
+
+    [[nodiscard]]
+    auto
+    operator-(const Diagnostic& other) const -> Diagnostic
+    {
+      return {
+        obj_count - other.obj_count,
+        ctor_count - other.ctor_count,
+        dtor_count - other.dtor_count,
+        default_ctor_count - other.default_ctor_count,
+        arg_ctor_count - other.arg_ctor_count,
+        copy_ctor_count - other.copy_ctor_count,
+        move_ctor_count - other.move_ctor_count,
+        copy_assign_count - other.copy_assign_count,
+        move_assign_count - other.move_assign_count,
+        magic_error_count - other.magic_error_count};
+    }
+  };
+
+  static Diagnostic s_diagnostic;
 
   explicit TestObject(int x = 0, b8 bThrowOnCopy = false)
-      : x(x), throwOnCopy(bThrowOnCopy), magicValue(K_MAGIC_VALUE)
+      : x(x), throwOnCopy(bThrowOnCopy), state_value(K_CONSTRUCTED_STATE)
   {
-    ++sTOCount;
-    ++sTOCtorCount;
-    ++sTODefaultCtorCount;
-    id = sTOCtorCount;
+    ++s_diagnostic.obj_count;
+    ++s_diagnostic.ctor_count;
+    ++s_diagnostic.default_ctor_count;
+    id = s_diagnostic.ctor_count;
   }
 
   // This constructor exists for the purpose of testing variadiac template arguments, such as with
   // the emplace container functions.
   TestObject(int x0, int x1, int x2, const b8 throw_on_copy = false)
-      : x(x0 + x1 + x2), throwOnCopy(throw_on_copy), magicValue(K_MAGIC_VALUE)
+      : x(x0 + x1 + x2), throwOnCopy(throw_on_copy), state_value(K_CONSTRUCTED_STATE)
   {
-    ++sTOCount;
-    ++sTOCtorCount;
-    ++sTOArgCtorCount;
-    id = sTOCtorCount;
+    ++s_diagnostic.obj_count;
+    ++s_diagnostic.ctor_count;
+    ++s_diagnostic.arg_ctor_count;
+    id = s_diagnostic.ctor_count;
   }
 
   // Due to the nature of TestObject, there isn't much special for us to
   // do in our move constructor. A move constructor swaps its contents with
   // the other object, whhich is often a default-constructed object.
   // ReSharper disable once CppSpecialFunctionWithoutNoexceptSpecification
-  TestObject(TestObject&& test_object)
-      : x(test_object.x), throwOnCopy(test_object.throwOnCopy), magicValue(test_object.magicValue)
+  TestObject(TestObject&& test_object) : x(test_object.x), throwOnCopy(test_object.throwOnCopy)
   {
-    ++sTOCount;
-    ++sTOCtorCount;
-    ++sTOMoveCtorCount;
-    id = sTOCtorCount; // testObject keeps its mId, and we assign ours anew.
-    test_object.x =
-      0; // We are swapping our contents with the TestObject, so give it our "previous" value.
+    SOUL_ASSERT(
+      0,
+      test_object.state_value == K_CONSTRUCTED_STATE,
+      "Moving {} object with x : {}",
+      StateStr(test_object.state_value),
+      x);
+    state_value = std::exchange(test_object.state_value, K_MOVED_FROM_STATE);
+    ++s_diagnostic.ctor_count;
+    ++s_diagnostic.move_ctor_count;
+    id = s_diagnostic.ctor_count; // testObject keeps its mId, and we assign ours anew.
     if (throwOnCopy) {
-      std::cout << "Disallowd TestObject copy" << std::endl;
       SOUL_PANIC("Disallowed TestObject copy");
     }
   }
@@ -134,12 +172,12 @@ struct TestObject {
   // ReSharper disable once CppSpecialFunctionWithoutNoexceptSpecification
   auto operator=(TestObject&& testObject) -> TestObject&
   {
-    ++sTOMoveAssignCount;
+    ++s_diagnostic.move_assign_count;
 
     if (&testObject != this) {
       std::swap(x, testObject.x);
-      // Leave mId alone.
-      std::swap(magicValue, testObject.magicValue);
+      // Leave id alone.
+      std::swap(state_value, testObject.state_value);
       std::swap(throwOnCopy, testObject.throwOnCopy);
 
       if (throwOnCopy) {
@@ -151,45 +189,47 @@ struct TestObject {
 
   ~TestObject()
   {
-    if (magicValue != K_MAGIC_VALUE) {
-      SOUL_PANIC("MagicValue is wrong");
-      ++sMagicErrorCount;
+    if (state_value != K_CONSTRUCTED_STATE && state_value != K_MOVED_FROM_STATE) {
+      SOUL_PANIC("state value is wrong. state_value : {}", StateStr(state_value));
+      ++s_diagnostic.magic_error_count;
     }
-    magicValue = 0;
-    --sTOCount;
-    ++sTODtorCount;
+    if (state_value == K_CONSTRUCTED_STATE) {
+      s_diagnostic.obj_count--;
+    }
+    state_value = 0;
+    ++s_diagnostic.dtor_count;
   }
 
   static auto reset() -> void
   {
-    sTOCount = 0;
-    sTOCtorCount = 0;
-    sTODtorCount = 0;
-    sTODefaultCtorCount = 0;
-    sTOArgCtorCount = 0;
-    sTOCopyCtorCount = 0;
-    sTOMoveCtorCount = 0;
-    sTOCopyAssignCount = 0;
-    sTOMoveAssignCount = 0;
-    sMagicErrorCount = 0;
+    s_diagnostic.obj_count = 0;
+    s_diagnostic.ctor_count = 0;
+    s_diagnostic.dtor_count = 0;
+    s_diagnostic.default_ctor_count = 0;
+    s_diagnostic.arg_ctor_count = 0;
+    s_diagnostic.copy_ctor_count = 0;
+    s_diagnostic.move_ctor_count = 0;
+    s_diagnostic.copy_assign_count = 0;
+    s_diagnostic.move_assign_count = 0;
+    s_diagnostic.magic_error_count = 0;
   }
 
-  static auto is_clear() -> b8
+  static auto IsClear() -> b8
   // Returns true if there are no existing TestObjects and the sanity checks related to that test
   // OK.
-
   {
-    return (sTOCount == 0) && (sTODtorCount == sTOCtorCount) && (sMagicErrorCount == 0);
+    return (s_diagnostic.obj_count == 0) && (s_diagnostic.dtor_count == s_diagnostic.ctor_count) &&
+           (s_diagnostic.magic_error_count == 0);
   }
 
 protected:
   TestObject(const TestObject& test_object)
-      : x(test_object.x), throwOnCopy(test_object.throwOnCopy), magicValue(test_object.magicValue)
+      : x(test_object.x), throwOnCopy(test_object.throwOnCopy), state_value(test_object.state_value)
   {
-    ++sTOCount;
-    ++sTOCtorCount;
-    ++sTOCopyCtorCount;
-    id = sTOCtorCount;
+    ++s_diagnostic.obj_count;
+    ++s_diagnostic.ctor_count;
+    ++s_diagnostic.copy_ctor_count;
+    id = s_diagnostic.ctor_count;
     if (throwOnCopy) {
       SOUL_PANIC("Disallowed TestObject copy");
     }
@@ -197,12 +237,12 @@ protected:
 
   auto operator=(const TestObject& testObject) -> TestObject&
   {
-    ++sTOCopyAssignCount;
+    ++s_diagnostic.copy_assign_count;
 
     if (&testObject != this) {
       x = testObject.x;
       // Leave mId alone.
-      magicValue = testObject.magicValue;
+      state_value = testObject.state_value;
       throwOnCopy = testObject.throwOnCopy;
       if (throwOnCopy) {
         SOUL_PANIC("Disallowed TestObject copy");
@@ -319,3 +359,29 @@ static auto generate_sequence(const Sequence<T>& sequence1, const Sequence<T>& s
   sequence.insert(sequence.end(), range2.begin(), range2.end());
   return sequence;
 }
+
+struct ProgramExitCheck {
+  ProgramExitCheck() = default;
+  ProgramExitCheck(const ProgramExitCheck&) = default;
+  ProgramExitCheck(ProgramExitCheck&&) = delete;
+  ProgramExitCheck& operator=(const ProgramExitCheck&) = default;
+  ProgramExitCheck& operator=(ProgramExitCheck&&) = delete;
+  ~ProgramExitCheck()
+  {
+    SOUL_ASSERT(
+      0,
+      TestObject::IsClear(),
+      "Test Object not being cleaned up properly!\n"
+      "obj_count : {},\n"
+      "ctor_count : {},\n"
+      "move_ctor_count : {}\n"
+      "dtor_count : {},\n"
+      "magic_error_count : {}\n",
+      TestObject::s_diagnostic.obj_count,
+      TestObject::s_diagnostic.ctor_count,
+      TestObject::s_diagnostic.move_ctor_count,
+      TestObject::s_diagnostic.dtor_count,
+      TestObject::s_diagnostic.magic_error_count);
+  }
+};
+const auto test_object_exist_assert = ProgramExitCheck();
