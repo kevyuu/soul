@@ -26,17 +26,17 @@ namespace soul
     using const_reverse_iterator = std::reverse_iterator<const_iterator>;
 
     [[nodiscard]]
-    static constexpr auto init_fill(const T& val) -> this_type
+    static constexpr auto Fill(const T& val) -> this_type
       requires(element_count <= MAX_BRACE_INIT_SIZE);
 
     template <ts_generate_fn<T> Fn>
     [[nodiscard]]
-    static constexpr auto init_generate(Fn fn) -> this_type
+    static constexpr auto Generate(Fn fn) -> this_type
       requires(element_count <= MAX_BRACE_INIT_SIZE);
 
     template <ts_fn<T, usize> Fn>
     [[nodiscard]]
-    static constexpr auto init_index_transform(Fn fn) -> this_type
+    static constexpr auto TransformIndex(Fn fn) -> this_type
       requires(element_count <= MAX_BRACE_INIT_SIZE);
 
     constexpr void swap(this_type& other) noexcept;
@@ -135,7 +135,7 @@ namespace soul
 
   template <typename T, usize element_count>
   [[nodiscard]]
-  constexpr auto Array<T, element_count>::init_fill(const T& val) -> this_type
+  constexpr auto Array<T, element_count>::Fill(const T& val) -> this_type
     requires(element_count <= MAX_BRACE_INIT_SIZE)
   {
     const auto create_array =
@@ -148,7 +148,7 @@ namespace soul
   template <typename T, usize element_count>
   template <ts_generate_fn<T> Fn>
   [[nodiscard]]
-  constexpr auto Array<T, element_count>::init_generate(Fn fn) -> this_type
+  constexpr auto Array<T, element_count>::Generate(Fn fn) -> this_type
     requires(element_count <= MAX_BRACE_INIT_SIZE)
   {
     const auto create_array = []<usize... idx>(std::index_sequence<idx...>, Fn fn) -> this_type {
@@ -160,7 +160,7 @@ namespace soul
   template <typename T, usize element_count>
   template <ts_fn<T, usize> Fn>
   [[nodiscard]]
-  constexpr auto Array<T, element_count>::init_index_transform(Fn fn) -> this_type
+  constexpr auto Array<T, element_count>::TransformIndex(Fn fn) -> this_type
     requires(element_count <= MAX_BRACE_INIT_SIZE)
   {
     static_assert(element_count <= MAX_BRACE_INIT_SIZE);
@@ -382,21 +382,21 @@ namespace soul
     using const_reverse_iterator = std::reverse_iterator<const_iterator>;
 
     [[nodiscard]]
-    static constexpr auto init_fill(const T& /* val */) -> this_type
+    static constexpr auto Fill(const T& /* val */) -> this_type
     {
       return this_type();
     }
 
     template <ts_generate_fn<T> Fn>
     [[nodiscard]]
-    static constexpr auto init_generate(Fn /* fn */) -> this_type
+    static constexpr auto Generate(Fn /* fn */) -> this_type
     {
       return this_type();
     }
 
     template <ts_fn<T, usize> Fn>
     [[nodiscard]]
-    static constexpr auto init_index_transform(Fn /* fn */) -> this_type
+    static constexpr auto TransformIndex(Fn /* fn */) -> this_type
     {
       return this_type();
     }

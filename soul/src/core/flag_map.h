@@ -33,14 +33,14 @@ namespace soul
     [[nodiscard]]
     static constexpr auto init_fill(const ValT& val) -> this_type
     {
-      return {Array<ValT, COUNT>::init_fill(val)};
+      return {Array<ValT, COUNT>::Fill(val)};
     }
 
     template <ts_generate_fn<ValT> Fn>
     [[nodiscard]]
     static constexpr auto init_generate(Fn fn) -> this_type
     {
-      return {Array<ValT, COUNT>::init_generate(fn)};
+      return {Array<ValT, COUNT>::Generate(fn)};
     }
 
     template <ts_fn<ValT, usize> Fn>

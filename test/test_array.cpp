@@ -55,7 +55,7 @@ TEST(TestArrayConstruction, TestDefaultConstructor)
 TEST(TestArrayConstruction, TestInitFillConstruction)
 {
   auto test_init_fill_construction = []<typename T, usize element_count>(const T& val) {
-    const auto arr = soul::Array<T, element_count>::init_fill(val);
+    const auto arr = soul::Array<T, element_count>::Fill(val);
     verify_array<T, element_count>(arr, generate_sequence(element_count, val));
   };
 
@@ -67,7 +67,7 @@ TEST(TestArrayConstruction, TestInitGenerateConstruction)
 {
   auto test_init_generate_construction =
     []<typename T, usize element_count>(soul::ts_generate_fn<T> auto fn) {
-      const auto arr = soul::Array<T, element_count>::init_generate(fn);
+      const auto arr = soul::Array<T, element_count>::Generate(fn);
       const auto range =
         std::views::iota(usize(0), element_count) |
         std::views::transform([fn](usize /* idx */) -> T { return std::invoke(fn); });
@@ -91,7 +91,7 @@ TEST(TestArrayConstruction, TestInitIndexTransformConstruction)
 {
   auto test_init_index_transform_construction =
     []<typename T, usize element_count>(soul::ts_fn<T, usize> auto fn) {
-      const auto arr = soul::Array<T, element_count>::init_index_transform(fn);
+      const auto arr = soul::Array<T, element_count>::TransformIndex(fn);
       const auto range = std::views::iota(usize(0), element_count) | std::views::transform(fn);
       verify_array<T, element_count>(arr, range);
     };
