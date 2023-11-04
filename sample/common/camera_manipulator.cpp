@@ -9,7 +9,7 @@ CameraManipulator::CameraManipulator(
     : position_(position),
       target_(target),
       up_(up),
-      distance_(length(target_ - position_)),
+      distance_(soul::math::length(target_ - position_)),
       min_distance_(0.1f),
       config_(config)
 {
@@ -22,7 +22,7 @@ auto CameraManipulator::set_camera(
   position_ = camera_position;
   target_ = camera_target;
   up_ = camera_up;
-  distance_ = length(target_ - position_);
+  distance_ = soul::math::length(target_ - position_);
 }
 
 auto CameraManipulator::get_camera(
@@ -46,10 +46,10 @@ auto CameraManipulator::zoom(float delta) -> void
   const soul::vec3f movement = look_dir * delta * config_.zoom_speed;
   position_ += movement;
 
-  if (dot(look_dir, target_ - position_) < min_distance_) {
+  if (soul::math::dot(look_dir, target_ - position_) < min_distance_) {
     position_ = target_ - (look_dir * min_distance_);
   }
-  distance_ = length(target_ - position_);
+  distance_ = soul::math::length(target_ - position_);
 
   recalculate_up_vector();
 }
@@ -77,7 +77,8 @@ auto CameraManipulator::orbit(float dx, float dy) -> void
 auto CameraManipulator::pan(float dx, float dy) -> void
 {
   const soul::vec3f camera_dir = soul::math::normalize(target_ - position_);
-  const soul::vec3f camera_right = soul::math::normalize(cross(camera_dir, config_.up_axis));
+  const soul::vec3f camera_right =
+    soul::math::normalize(soul::math::cross(camera_dir, config_.up_axis));
 
   const soul::vec3f movement = 0.001f * (-dx * camera_right + dy * up_);
   target_ += movement;
@@ -87,8 +88,9 @@ auto CameraManipulator::pan(float dx, float dy) -> void
 auto CameraManipulator::recalculate_up_vector() -> void
 {
   const soul::vec3f camera_dir = soul::math::normalize(target_ - position_);
-  const soul::vec3f camera_right = soul::math::normalize(cross(camera_dir, config_.up_axis));
-  up_ = soul::math::normalize(cross(camera_right, camera_dir));
+  const soul::vec3f camera_right =
+    soul::math::normalize(soul::math::cross(camera_dir, config_.up_axis));
+  up_ = soul::math::normalize(soul::math::cross(camera_right, camera_dir));
 }
 
 auto CameraManipulator::get_view_matrix() const -> soul::mat4f

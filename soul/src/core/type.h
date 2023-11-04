@@ -4,6 +4,8 @@
 #include <cstdint>
 #include <limits>
 
+#include "glm/mat4x3.hpp"
+#include "glm/mat4x4.hpp"
 #include "glm/vec2.hpp"
 #include "glm/vec3.hpp"
 #include "glm/vec4.hpp"
@@ -11,6 +13,7 @@
 #include "core/builtins.h"
 #include "core/panic.h"
 #include "core/type_traits.h"
+#include <glm/detail/qualifier.hpp>
 
 namespace soul
 {
@@ -38,8 +41,347 @@ namespace soul
     auto data() const -> const T* { return nullptr; }
   };
 
-  template <usize Dim, typename T>
-  using vec = glm::vec<Dim, T, glm::defaultp>;
+  template <usize dimension, typename T>
+  struct vec;
+
+  namespace impl
+  {
+    template <usize dimension, typename T>
+    struct VecBase {
+
+      constexpr auto operator+=(const vec<dimension, T>& other) -> vec<dimension, T>&
+      {
+        auto& vec = get_vec();
+        vec.storage += other.storage;
+        return vec;
+      }
+
+      constexpr auto operator-=(const vec<dimension, T>& other) -> vec<dimension, T>&
+      {
+        auto& vec = get_vec();
+        vec.storage -= other.storage;
+        return vec;
+      }
+
+      constexpr auto operator*=(const vec<dimension, T>& other) -> vec<dimension, T>&
+      {
+        auto& vec = get_vec();
+        vec.storage *= other.storage;
+        return vec;
+      }
+
+      constexpr auto operator*=(const T other) -> vec<dimension, T>&
+      {
+        auto& vec = get_vec();
+        vec.storage *= other;
+        return vec;
+      }
+
+      constexpr auto operator/=(const vec<dimension, T>& other) -> vec<dimension, T>&
+      {
+        auto& vec = get_vec();
+        vec.storage /= other.storage_ref();
+        return vec;
+      }
+
+      constexpr auto operator/=(const T other) -> vec<dimension, T>&
+      {
+        auto& vec = get_vec();
+        vec.storage /= other;
+        return vec;
+      }
+
+      [[nodiscard]]
+      constexpr auto
+      operator[](u8 index) const -> const T&
+      {
+        return get_vec().storage[index];
+      }
+
+      [[nodiscard]]
+      constexpr auto
+      operator[](u8 index) -> T&
+      {
+        return get_vec().storage[index];
+      }
+
+    private:
+      [[nodiscard]]
+      constexpr auto get_vec() -> vec<dimension, T>&
+      {
+        return static_cast<vec<dimension, T>&>(*this);
+      }
+
+      [[nodiscard]]
+      constexpr auto get_vec() const -> const vec<dimension, T>&
+      {
+        return static_cast<const vec<dimension, T>&>(*this);
+      }
+    };
+  } // namespace impl
+
+  template <usize dimension, typename T>
+  struct vec : public impl::VecBase<dimension, T> {
+    using storage_type = glm::vec<dimension, T>;
+
+    storage_type storage;
+
+    constexpr vec() : storage() {}
+
+    [[nodiscard]]
+    static constexpr auto Zero() -> vec
+    {
+      return vec(Construct::from_storage, storage_type());
+    }
+
+    [[nodiscard]]
+    static constexpr auto FromStorage(const storage_type& storage) -> vec
+    {
+      return vec(Construct::from_storage, storage);
+    }
+
+    [[nodiscard]]
+    static constexpr auto FromData(const T* data) -> vec
+    {
+      const auto result = vec::Zero();
+      for (usize idx = 0; idx < dimension; idx++) {
+        result[idx] = data[idx];
+      }
+      return result;
+    }
+
+  private:
+    struct Construct {
+      struct FromStorage {
+      };
+      static constexpr auto from_storage = FromStorage{};
+    };
+    explicit vec(Construct::FromStorage /* tag */, const storage_type& storage) : storage(storage)
+    {
+    }
+  };
+
+  template <typename T>
+  struct vec<2, T> : public impl::VecBase<2, T> {
+    using storage_type = glm::vec<2, T>;
+
+    union {
+      storage_type storage;
+      struct {
+        T x, y;
+      };
+    };
+
+    constexpr vec() : storage() {}
+    constexpr vec(T x_in, T y_in) : storage(x_in, y_in) {}
+
+    [[nodiscard]]
+    static constexpr auto Zero() -> vec
+    {
+      return vec(Construct::from_storage, storage_type());
+    }
+
+    [[nodiscard]]
+    static constexpr auto Fill(T val) -> vec
+    {
+      return vec(Construct::from_storage, storage_type(val));
+    }
+
+    [[nodiscard]]
+    static constexpr auto FromStorage(const storage_type& storage) -> vec
+    {
+      return vec(Construct::from_storage, storage);
+    }
+
+    [[nodiscard]]
+    static constexpr auto FromData(const T* data) -> vec
+    {
+      return vec(data[0], data[1]);
+    }
+
+  private:
+    struct Construct {
+      struct FromStorage {
+      };
+      static constexpr auto from_storage = FromStorage{};
+    };
+    explicit vec(Construct::FromStorage /* tag */, const storage_type& storage) : storage(storage)
+    {
+    }
+  };
+
+  template <typename T>
+  struct vec<3, T> : public impl::VecBase<3, T> {
+    using storage_type = glm::vec<3, T>;
+
+    union {
+      storage_type storage;
+      struct {
+        T x, y, z;
+      };
+      vec<2, T> xy;
+    };
+
+    constexpr vec() : storage() {}
+    constexpr vec(T x_in, T y_in, T z_in) : storage(x_in, y_in, z_in) {}
+    constexpr vec(vec<2, T> xy_in, T z_in) : storage(xy_in.x, xy_in.y, z_in) {}
+
+    [[nodiscard]]
+    static constexpr auto Zero() -> vec
+    {
+      return vec(Construct::from_storage, storage_type());
+    }
+
+    [[nodiscard]]
+    static constexpr auto Fill(T val) -> vec
+    {
+      return vec(Construct::from_storage, storage_type(val));
+    }
+
+    [[nodiscard]]
+    static constexpr auto FromStorage(const storage_type& storage) -> vec
+    {
+      return vec(Construct::from_storage, storage);
+    }
+
+    [[nodiscard]]
+    static constexpr auto FromData(const T* data) -> vec
+    {
+      return vec(data[0], data[1], data[2]);
+    }
+
+  private:
+    struct Construct {
+      struct FromStorage {
+      };
+      static constexpr auto from_storage = FromStorage{};
+    };
+    constexpr explicit vec(Construct::FromStorage /* tag */, const storage_type& storage)
+        : storage(storage)
+    {
+    }
+  };
+
+  template <typename T>
+  struct vec<4, T> : public impl::VecBase<4, T> {
+    using storage_type = glm::vec<4, T>;
+
+    union {
+      storage_type storage;
+      struct {
+        T x, y, z, w;
+      };
+      vec<3, T> xyz;
+      vec<2, T> xy;
+    };
+
+    constexpr vec() : storage() {}
+    constexpr vec(T x_in, T y_in, T z_in, T w_in) : storage(x_in, y_in, z_in, w_in) {}
+    constexpr vec(vec<2, T> xy_in, T z_in, T w_in) : storage(xy_in.x, xy_in.y, z_in, w_in) {}
+    constexpr vec(vec<3, T> xyz_in, T w_in) : storage(xyz_in.x, xyz_in.y, xyz_in.z, w_in) {}
+
+    [[nodiscard]]
+    static constexpr auto Zero() -> vec
+    {
+      return vec(Construct::Zero);
+    }
+
+    [[nodiscard]]
+    static constexpr auto Fill(T val) -> vec
+    {
+      return vec(Construct::from_storage, storage_type(val));
+    }
+
+    [[nodiscard]]
+    static constexpr auto FromStorage(const storage_type& storage) -> vec
+    {
+      return vec(Construct::from_storage, storage);
+    }
+
+    [[nodiscard]]
+    static constexpr auto FromData(const T* data) -> vec
+    {
+      return vec(data[0], data[1], data[2]);
+    }
+
+  private:
+    struct Construct {
+      struct FromStorage {
+      };
+      static constexpr auto from_storage = FromStorage{};
+    };
+    constexpr explicit vec(Construct::FromStorage /* tag */, const storage_type& storage)
+        : storage(storage)
+    {
+    }
+  };
+
+  template <usize dimension, typename T>
+  constexpr auto operator==(const vec<dimension, T>& lhs, const vec<dimension, T>& rhs) -> b8
+  {
+    return lhs.storage == rhs.storage;
+  }
+
+  template <usize dimension, typename T>
+  constexpr auto operator+(const vec<dimension, T>& lhs, const vec<dimension, T>& rhs)
+    -> vec<dimension, T>
+  {
+    return vec<dimension, T>::FromStorage(lhs.storage + rhs.storage);
+  }
+
+  template <usize dimension, typename T>
+  constexpr auto operator-(const vec<dimension, T>& lhs, const vec<dimension, T>& rhs)
+    -> vec<dimension, T>
+  {
+    return vec<dimension, T>::FromStorage(lhs.storage - rhs.storage);
+  }
+
+  template <usize dimension, typename T>
+  constexpr auto operator*(const vec<dimension, T>& lhs, const vec<dimension, T>& rhs)
+    -> vec<dimension, T>
+  {
+    return vec<dimension, T>::FromStorage(lhs.storage * rhs.storage);
+  }
+
+  template <usize dimension, typename T>
+  constexpr auto operator/(const vec<dimension, T>& lhs, const vec<dimension, T>& rhs)
+    -> vec<dimension, T>
+  {
+    return vec<dimension, T>::FromStorage(lhs.storage / rhs.storage);
+  }
+
+  template <usize dimension, typename T>
+  constexpr auto operator*(const vec<dimension, T>& lhs, T rhs) -> vec<dimension, T>
+  {
+    return vec<dimension, T>::FromStorage(lhs.storage * rhs);
+  }
+
+  template <usize dimension, typename T>
+  constexpr auto operator/(const vec<dimension, T>& lhs, T rhs) -> vec<dimension, T>
+  {
+    return vec<dimension, T>::FromStorage(lhs.storage / rhs);
+  }
+
+  template <usize dimension, typename T>
+  constexpr auto operator*(T lhs, const vec<dimension, T>& rhs) -> vec<dimension, T>
+  {
+    return vec<dimension, T>::FromStorage(lhs * rhs.storage);
+  }
+
+  template <usize dimension, typename T>
+  constexpr auto operator/(T lhs, const vec<dimension, T>& rhs) -> vec<dimension, T>
+  {
+    return vec<dimension, T>::FromStorage(lhs / rhs.storage);
+  }
+
+  template <usize dimension, typename T>
+  constexpr void soul_op_hash_combine(auto& hasher, const vec<dimension, T>& val)
+  {
+    const auto hash_combine = [&hasher, &val]<usize... idx>(std::index_sequence<idx...>) {
+      ((hasher.combine(val[idx])), ...);
+    };
+    return hash_combine(std::make_index_sequence<dimension>());
+  }
 
   template <typename T>
   using vec2 = vec<2, T>;
@@ -70,45 +412,8 @@ namespace soul
   using vec3i32 = vec3<i32>;
   using vec4i32 = vec4<i32>;
 
-  // A matrix to represent multiplication with column vector
-  // Read this article if you are confused.
-  // https://fgiesen.wordpress.com/2012/02/12/row-major-vs-column-major-row-vectors-vs-column-vectors/
-  // Internally we use glm to store the matrix, glm use column major ordering
-  // and multiply column vector (used by gilbert strang lecture).
-  // This struct provide and accessor m(row, column) both row and column refer
-  // to the row and column of matrix, not the c++ 2d array that represent it
-  // This is done to be consistent with our shader.
-  template <usize Row, usize Column, typename T>
-  struct matrix {
-    using this_type = matrix<Column, Row, T>;
-    using store_type = glm::mat<Column, Row, T, glm::defaultp>;
-    store_type mat;
-
-    constexpr matrix() = default;
-
-    constexpr explicit matrix(T val) : mat(val) {}
-
-    constexpr explicit matrix(store_type mat) : mat(mat) {}
-
-    [[nodiscard]]
-    SOUL_ALWAYS_INLINE auto m(const u8 row, const u8 column) const -> f32
-    {
-      return mat[column][row];
-    }
-
-    SOUL_ALWAYS_INLINE auto m(const u8 row, const u8 column) -> f32& { return mat[column][row]; }
-
-    static constexpr auto identity() -> this_type { return this_type(store_type(1)); }
-  };
-
-  template <typename T>
-  using matrix4x4 = matrix<4, 4, T>;
-
-  using mat3f = matrix<3, 3, f32>;
-  using mat4f = matrix<4, 4, f32>;
-
   template <ts_arithmetic T>
-  struct Quaternion {
+  struct quat {
     union {
       struct {
         T x, y, z, w;
@@ -126,29 +431,158 @@ namespace soul
       T mem[4];
     };
 
-    constexpr Quaternion() noexcept : x(0), y(0), z(0), w(1) {}
+    constexpr quat() noexcept : x(0), y(0), z(0), w(1) {}
 
-    constexpr Quaternion(T x, T y, T z, T w) noexcept : x(x), y(y), z(z), w(w) {}
+    constexpr quat(T x, T y, T z, T w) noexcept : x(x), y(y), z(z), w(w) {}
 
-    constexpr Quaternion(vec3<T> xyz, T w) noexcept : x(xyz.x), y(xyz.y), z(xyz.z), w(w) {}
+    constexpr quat(vec3<T> xyz, T w) noexcept : x(xyz.x), y(xyz.y), z(xyz.z), w(w) {}
 
-    constexpr explicit Quaternion(const T* val) noexcept
-        : x(val[0]), y(val[1]), z(val[2]), w(val[3])
+    [[nodiscard]]
+    constexpr static auto FromData(const T* val) -> quat
     {
+      return quat(val[0], val[1], val[2], val[3]);
+    };
+  };
+
+  using quatf = quat<f32>;
+
+  // A matrix to represent multiplication with column vector
+  // Read this article if you are confused.
+  // https://fgiesen.wordpress.com/2012/02/12/row-major-vs-column-major-row-vectors-vs-column-vectors/
+  // Internally we use glm to store the matrix, glm use column major ordering
+  // and multiply column vector (used by gilbert strang lecture).
+  // This struct provide and accessor m(row, column) both row and column refer
+  // to the row and column of matrix, not the c++ 2d array that represent it
+  // This is done to be consistent with our shader.
+  template <usize Row, usize Column, typename T>
+  struct matrix {
+    using this_type = matrix<Column, Row, T>;
+    using storage_type = glm::mat<Column, Row, T, glm::defaultp>;
+    storage_type storage;
+
+    constexpr matrix() = default;
+
+    constexpr explicit matrix(T val) : storage(val) {}
+
+    constexpr explicit matrix(storage_type mat) : storage(mat) {}
+
+    [[nodiscard]]
+    SOUL_ALWAYS_INLINE auto m(const usize row, const usize column) const -> T
+    {
+      return storage[column][row];
+    }
+
+    SOUL_ALWAYS_INLINE auto m(const usize row, const usize column) -> T&
+    {
+      return storage[column][row];
+    }
+
+    SOUL_ALWAYS_INLINE void set_column(usize column, const vec<Row, T>& vec)
+    {
+      for (usize i = 0; i < Row; i++) {
+        storage[column][i] = vec[i];
+      }
+    }
+
+    [[nodiscard]]
+    static constexpr auto identity() -> this_type
+    {
+      return this_type(storage_type(1));
+    }
+
+    template <typename... VecT>
+    [[nodiscard]]
+    static auto FromColumns(const VecT&... column_vecs) -> matrix
+    {
+      static_assert((is_same_v<VecT, vec<Row, T>> && ...), "Vector type mismatch");
+      static_assert(sizeof...(VecT) == Column, "Number of column mismatch");
+      matrix mat;
+      u8 column_idx = 0;
+      (mat.set_column(column_idx++, column_vecs), ...);
+      return mat;
+    }
+
+    [[nodiscard]]
+    static auto FromRowMajorData(const T* data)
+    {
+      matrix mat;
+      for (usize row_idx = 0; row_idx < Row; row_idx++) {
+        for (usize col_idx = 0; col_idx < Column; col_idx++) {
+          mat.m(row_idx, col_idx) = data[row_idx * Column + col_idx];
+        }
+      }
+      return mat;
+    };
+
+    [[nodiscard]]
+    static auto FromColumnMajorData(const T* data) -> matrix
+    {
+      matrix mat;
+      for (usize col_idx = 0; col_idx < Column; col_idx++) {
+        for (usize row_idx = 0; row_idx < Row; row_idx++) {
+          mat.m(row_idx, col_idx) = data[col_idx * Row + row_idx];
+        }
+      }
+      return mat;
+    }
+
+    [[nodiscard]]
+    static auto ComposeTransform(
+      const vec3<T>& translation, const quat<T>& rotation, const vec3<T>& scale)
+      requires(Row == 4 && Column == 4)
+    {
+      const T tx = translation.x;
+      const T ty = translation.y;
+      const T tz = translation.z;
+      const T qx = rotation.x;
+      const T qy = rotation.y;
+      const T qz = rotation.z;
+      const T qw = rotation.w;
+      const T sx = scale.x;
+      const T sy = scale.y;
+      const T sz = scale.z;
+
+      const vec4<T> column0 = {
+        (1 - 2 * qy * qy - 2 * qz * qz) * sx,
+        (2 * qx * qy + 2 * qz * qw) * sx,
+        (2 * qx * qz - 2 * qy * qw) * sx,
+        0.f,
+      };
+
+      const vec4<T> column1 = {
+        (2 * qx * qy - 2 * qz * qw) * sy,
+        (1 - 2 * qx * qx - 2 * qz * qz) * sy,
+        (2 * qy * qz + 2 * qx * qw) * sy,
+        0.f,
+      };
+
+      const vec4<T> column2 = {
+        (2 * qx * qz + 2 * qy * qw) * sz,
+        (2 * qy * qz - 2 * qx * qw) * sz,
+        (1 - 2 * qx * qx - 2 * qy * qy) * sz,
+        0.f,
+      };
+
+      const vec4<T> column3 = {
+        tx,
+        ty,
+        tz,
+        1.f,
+      };
+
+      return matrix::FromColumns(column0, column1, column2, column3);
     }
   };
 
-  using Quaternionf = Quaternion<f32>;
+  template <typename T>
+  using matrix4x4 = matrix<4, 4, T>;
 
-  struct Transformf {
-    vec3f position;
-    vec3f scale;
-    Quaternionf rotation;
-  };
+  using mat3f = matrix<3, 3, f32>;
+  using mat4f = matrix<4, 4, f32>;
 
   struct AABB {
-    vec3f min = vec3f(std::numeric_limits<f32>::max());
-    vec3f max = vec3f(std::numeric_limits<f32>::lowest());
+    vec3f min = vec3f::Fill(std::numeric_limits<f32>::max());
+    vec3f max = vec3f::Fill(std::numeric_limits<f32>::lowest());
 
     AABB() = default;
 
@@ -258,10 +692,8 @@ namespace soul
     {
     }
 
-    auto operator==(const ID& other) const -> bool { return other.id == id; }
-    auto operator!=(const ID& other) const -> bool { return other.id != id; }
-    auto operator<(const ID& other) const -> bool { return id < other.id; }
-    auto operator<=(const ID& other) const -> bool { return id <= other.id; }
+    friend auto operator<=>(const ID& lhs, const ID& rhs) = default;
+
     [[nodiscard]]
     auto is_null() const -> bool
     {
@@ -295,10 +727,8 @@ namespace soul
         return *this;
       }
 
-      constexpr auto operator!=(const Iterator& other) const -> bool
-      {
-        return index_ != other.index_;
-      }
+      constexpr auto operator==(const Iterator& other) const -> bool = default;
+
       constexpr auto operator*() const -> Flag { return Flag(index_); }
 
     private:

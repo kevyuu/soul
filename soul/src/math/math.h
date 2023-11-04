@@ -34,33 +34,33 @@ namespace soul::math
   template <usize D1, usize D2, usize D3, typename T>
   SOUL_ALWAYS_INLINE auto mul(const matrix<D1, D2, T>& a, const matrix<D2, D3, T>& b) -> mat4f
   {
-    return matrix<D1, D2, T>(a.mat * b.mat);
+    return matrix<D1, D2, T>(a.storage * b.storage);
   }
 
   template <typename T>
   SOUL_ALWAYS_INLINE auto translate(const matrix4x4<T>& m, const vec3<T>& v) -> matrix4x4<T>
   {
-    return matrix4x4<T>(glm::translate(m.mat, v));
+    return matrix4x4<T>(glm::translate(m.storage, v.storage));
   }
 
   template <typename T>
   SOUL_ALWAYS_INLINE auto rotate(const matrix4x4<T>& m, T angle, const vec3<T>& axis)
     -> matrix4x4<T>
   {
-    return matrix4x4<T>(glm::rotate(m.mat, angle, axis));
+    return matrix4x4<T>(glm::rotate(m.storage, angle, axis.storage));
   }
 
   template <typename T>
   SOUL_ALWAYS_INLINE auto scale(const matrix4x4<T>& m, const vec3<T>& scale) -> matrix4x4<T>
   {
-    return matrix4x4<T>(glm::scale(m.mat, scale));
+    return matrix4x4<T>(glm::scale(m.storage, scale.storage));
   }
 
   template <typename T>
   SOUL_ALWAYS_INLINE auto look_at(const vec3<T>& eye, const vec3<T>& center, const vec3<T>& up)
     -> matrix4x4<T>
   {
-    return mat4f(glm::lookAt(eye, center, up));
+    return matrix4x4<T>(glm::lookAt(eye.storage, center.storage, up.storage));
   }
 
   template <typename T>
@@ -102,13 +102,13 @@ namespace soul::math
   template <usize Row, usize Column, typename T>
   SOUL_ALWAYS_INLINE auto inverse(const matrix<Row, Column, T>& mat) -> matrix<Row, Column, T>
   {
-    return matrix<Row, Column, T>(glm::inverse(mat.mat));
+    return matrix<Row, Column, T>(glm::inverse(mat.storage));
   }
 
   template <usize Row, usize Column, typename T>
   SOUL_ALWAYS_INLINE auto transpose(const matrix<Row, Column, T>& mat) -> matrix<Row, Column, T>
   {
-    return matrix<Row, Column, T>(glm::transpose(mat.mat));
+    return matrix<Row, Column, T>(glm::transpose(mat.storage));
   }
 
   template <typename T>
@@ -118,33 +118,85 @@ namespace soul::math
   }
 
   template <usize Dim, typename T>
+  SOUL_ALWAYS_INLINE auto length(const vec<Dim, T>& x) -> T
+  {
+    return glm::length(x.storage);
+  }
+
+  template <usize Dim, typename T>
   SOUL_ALWAYS_INLINE auto normalize(const vec<Dim, T>& x) -> vec<Dim, T>
   {
-    return glm::normalize(x);
+    return vec<3, T>::FromStorage(glm::normalize(x.storage));
   }
 
   template <typename T>
   SOUL_ALWAYS_INLINE auto cross(const vec<3, T>& x, const vec<3, T>& y) -> vec<3, T>
   {
-    return glm::cross(x, y);
+    return vec<3, T>::FromStorage(glm::cross(x.storage, y.storage));
   }
 
   template <usize Dim, typename T>
   SOUL_ALWAYS_INLINE auto dot(const vec<Dim, T>& x, const vec<Dim, T>& y) -> T
   {
-    return glm::dot(x, y);
+    return glm::dot(x.storage, y.storage);
   }
 
-  template <typename T>
-  SOUL_ALWAYS_INLINE auto min(T x, T y) -> T
+  template <usize dim, typename T>
+  SOUL_ALWAYS_INLINE auto min(vec<dim, T> x, vec<dim, T> y) -> vec<dim, T>
   {
-    return glm::min(x, y);
+    return vec<dim, T>::FromStorage(glm::min(x.storage, y.storage));
   }
 
-  template <typename T>
-  SOUL_ALWAYS_INLINE auto max(T x, T y) -> T
+  template <usize dim, typename T>
+  SOUL_ALWAYS_INLINE auto max(vec<dim, T> x, vec<dim, T> y) -> vec<dim, T>
   {
-    return glm::max(x, y);
+    return vec<dim, T>::FromStorage(glm::max(x.storage, y.storage));
+  }
+
+  template <usize dimension, typename T>
+  constexpr auto less_than(const vec<dimension, T>& lhs, const vec<dimension, T>& rhs)
+    -> vec<dimension, bool>
+  {
+    return vec<dimension, b8>::FromStorage(glm::lessThan(lhs.storage, rhs.storage));
+  }
+
+  template <usize dimension, typename T>
+  constexpr auto greater_than(const vec<dimension, T>& lhs, const vec<dimension, T>& rhs)
+    -> vec<dimension, bool>
+  {
+    return vec<dimension, b8>::FromStorage(glm::greaterThan(lhs.storage, rhs.storage));
+  }
+
+  template <usize dimension, typename T>
+  constexpr auto not_equal(const vec<dimension, T>& lhs, const vec<dimension, T>& rhs)
+    -> vec<dimension, b8>
+  {
+    return vec<dimension, b8>::FromStorage(glm::notEqual(lhs.storage, rhs.storage));
+  }
+
+  template <usize dimension, typename T>
+  constexpr auto equal(const vec<dimension, T>& lhs, const vec<dimension, T>& rhs)
+    -> vec<dimension, b8>
+  {
+    return vec<dimension, b8>::FromStorage(glm::equal(lhs.storage, rhs.storage));
+  }
+
+  template <usize dim>
+  SOUL_ALWAYS_INLINE auto any(const vec<dim, b8>& bool_vec) -> b8
+  {
+    return glm::any(bool_vec.storage);
+  }
+
+  template <usize dim>
+  SOUL_ALWAYS_INLINE auto all(const vec<dim, b8>& bool_vec) -> b8
+  {
+    return glm::all(bool_vec.storage);
+  }
+
+  template <usize dim, typename T>
+  SOUL_ALWAYS_INLINE auto abs(const vec<dim, T>& val) -> vec<dim, T>
+  {
+    return vec<dim, T>::FromStorage(glm::abs(val.storage));
   }
 
   SOUL_ALWAYS_INLINE auto combine(const AABB aabb, const vec3f point) -> AABB
