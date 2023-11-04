@@ -350,7 +350,7 @@ public:
   explicit DrawIndexedIndirectSampleApp(const AppConfig& app_config)
       : App(app_config), texture_2d_pass(gpu_system_)
   {
-    const auto shader_source = gpu::ShaderSource::from(gpu::ShaderFile("shaders/draw_indexed_indirect_sample.hlsl"));
+    const auto shader_source = gpu::ShaderSource::From(gpu::ShaderFile("shaders/draw_indexed_indirect_sample.hlsl"));
     std::filesystem::path search_path = "./";
     constexpr auto entry_points = soul::Array{
       gpu::ShaderEntryPoint{gpu::ShaderStage::VERTEX, "vs_main"},

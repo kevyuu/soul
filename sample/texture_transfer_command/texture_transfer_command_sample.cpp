@@ -196,7 +196,7 @@ public:
       : App(app_config), width_(0), height_(0), channel_count_(0)
   {
     const auto shader_source =
-      gpu::ShaderSource::from(gpu::ShaderFile("texture_transfer_command_sample.hlsl"));
+      gpu::ShaderSource::From(gpu::ShaderFile("texture_transfer_command_sample.hlsl"));
     std::filesystem::path search_path = "shaders/";
     constexpr auto entry_points = soul::Array{
       gpu::ShaderEntryPoint{gpu::ShaderStage::VERTEX, "vsMain"},

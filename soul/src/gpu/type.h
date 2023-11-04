@@ -1119,12 +1119,12 @@ namespace soul::gpu
 
       static auto From(const GraphicPipelineStateKey& key) -> PipelineStateKey
       {
-        return {.var = variant::from(key)};
+        return {.var = variant::From(key)};
       }
 
       static auto From(const ComputePipelineStateKey& key) -> PipelineStateKey
       {
-        return {.var = variant::from(key)};
+        return {.var = variant::From(key)};
       }
 
       auto operator==(const PipelineStateKey&) const -> bool = default;

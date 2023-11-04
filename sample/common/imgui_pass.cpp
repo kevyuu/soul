@@ -67,7 +67,7 @@ PSOutput psMain(VSOutput input)
 ImGuiRenderGraphPass::ImGuiRenderGraphPass(soul::gpu::System* gpu_system) : gpu_system_(gpu_system)
 {
 
-  const auto shader_source = gpu::ShaderSource::from(gpu::ShaderString(CString::From(IMGUI_HLSL)));
+  const auto shader_source = gpu::ShaderSource::From(gpu::ShaderString(CString::From(IMGUI_HLSL)));
   std::filesystem::path search_path = "shaders/";
   constexpr auto entry_points = soul::Array{
     gpu::ShaderEntryPoint{gpu::ShaderStage::VERTEX, "vsMain"},

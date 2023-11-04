@@ -84,14 +84,6 @@ namespace soul
       }
     };
 
-    struct VariantConstruct {
-      struct From {
-      };
-      static constexpr auto from = From{};
-      struct Clone {
-      };
-    };
-
     template <typename... Ts>
     static inline b8 constexpr assert_can_variant_clone_v = [] {
       constexpr b8 can_variant_trivial_copy = (can_trivial_copy_v<Ts> && ...);
@@ -196,20 +188,28 @@ namespace soul
       }
     }
 
+    struct Construct {
+      struct From {
+      };
+      static constexpr auto from = From{};
+      struct Clone {
+      };
+    };
+
     template <typeset T>
     [[nodiscard]]
-    static constexpr auto from(const T& val) -> Variant
+    static constexpr auto From(const T& val) -> Variant
       requires(can_trivial_copy_v<T> && assert_is_variant_alt_v<T>)
     {
-      return Variant(impl::VariantConstruct::from, OwnRef<T>(val));
+      return Variant(Construct::from, OwnRef<T>(val));
     }
 
     template <typeset T>
     [[nodiscard]]
-    static constexpr auto from(T&& val) -> Variant
+    static constexpr auto From(T&& val) -> Variant
       requires(assert_is_variant_alt_v<T>)
     {
-      return Variant(impl::VariantConstruct::from, OwnRef<T>(std::move(val))); // NOLINT
+      return Variant(Construct::from, OwnRef<T>(std::move(val))); // NOLINT
     }
 
     constexpr auto swap(Variant& other) noexcept
@@ -346,7 +346,7 @@ namespace soul
     }
 
     template <typeset T>
-    constexpr explicit Variant(impl::VariantConstruct::From /* tag */, OwnRef<T> val)
+    constexpr explicit Variant(Construct::From /* tag */, OwnRef<T> val)
       requires(is_variant_alt_v<T>)
         : storage_(val.forward()), active_index_(get_type_index_v<T, Ts...>)
     {

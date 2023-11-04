@@ -155,7 +155,7 @@ public:
   explicit TextureCubeSampleApp(const AppConfig& app_config) : App(app_config)
   {
     runtime::ScopeAllocator scope_allocator("Texture Cube Sample App");
-    const auto shader_source = gpu::ShaderSource::from(gpu::ShaderFile("texture_cube_sample.hlsl"));
+    const auto shader_source = gpu::ShaderSource::From(gpu::ShaderFile("texture_cube_sample.hlsl"));
     std::filesystem::path search_path = "shaders/";
     constexpr auto entry_points = soul::Array{
       gpu::ShaderEntryPoint{gpu::ShaderStage::VERTEX, "vsMain"},

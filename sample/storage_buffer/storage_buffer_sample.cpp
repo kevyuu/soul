@@ -104,7 +104,7 @@ public:
   explicit StorageBufferSampleApp(const AppConfig& app_config) : App(app_config)
   {
     const auto shader_source =
-      gpu::ShaderSource::from(gpu::ShaderFile("storage_buffer_sample.hlsl"));
+      gpu::ShaderSource::From(gpu::ShaderFile("storage_buffer_sample.hlsl"));
     std::filesystem::path search_path = "shaders/";
     constexpr auto entry_points = soul::Array{
       gpu::ShaderEntryPoint{gpu::ShaderStage::VERTEX, "vsMain"},

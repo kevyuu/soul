@@ -54,7 +54,7 @@ class TriangleSampleApp final : public App
 public:
   explicit TriangleSampleApp(const AppConfig& app_config) : App(app_config)
   {
-    const auto shader_source = gpu::ShaderSource::from(gpu::ShaderFile("triangle_sample.hlsl"));
+    const auto shader_source = gpu::ShaderSource::From(gpu::ShaderFile("triangle_sample.hlsl"));
     const std::filesystem::path search_path = "shaders/";
     const auto entry_points = soul::Array{
       gpu::ShaderEntryPoint{gpu::ShaderStage::VERTEX, "vsMain"},

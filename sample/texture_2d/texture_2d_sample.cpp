@@ -115,7 +115,7 @@ class Texture2DSampleApp final : public App
 public:
   explicit Texture2DSampleApp(const AppConfig& app_config) : App(app_config)
   {
-    const auto shader_source = gpu::ShaderSource::from(gpu::ShaderFile("texture_2d_sample.hlsl"));
+    const auto shader_source = gpu::ShaderSource::From(gpu::ShaderFile("texture_2d_sample.hlsl"));
     std::filesystem::path search_path = "shaders/";
     constexpr auto entry_points = soul::Array{
       gpu::ShaderEntryPoint{gpu::ShaderStage::VERTEX, "vsMain"},

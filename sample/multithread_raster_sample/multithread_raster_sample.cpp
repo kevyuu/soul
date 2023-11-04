@@ -127,7 +127,7 @@ class MultiThreadRasterSample final : public App
 public:
   explicit MultiThreadRasterSample(const AppConfig& app_config) : App(app_config)
   {
-    const auto shader_source = gpu::ShaderSource::from(gpu::ShaderFile("multithread_raster_sample.hlsl"));
+    const auto shader_source = gpu::ShaderSource::From(gpu::ShaderFile("multithread_raster_sample.hlsl"));
     std::filesystem::path search_path = "shaders/";
     constexpr auto entry_points = soul::Array{
       gpu::ShaderEntryPoint{gpu::ShaderStage::VERTEX, "vs_main"},
