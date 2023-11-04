@@ -8,23 +8,6 @@
 
 namespace soul
 {
-  namespace impl
-  {
-    struct ResultConstruct {
-      struct Ok {
-      };
-      struct Err {
-      };
-      struct InitGenerate {
-      };
-      struct InitGenerateErr {
-      };
-      static constexpr auto ok = Ok{};
-      static constexpr auto err = Err{};
-      static constexpr auto init_generate = InitGenerate{};
-      static constexpr auto init_generate_err = InitGenerateErr{};
-    };
-  } // namespace impl
 
   template <typeset OkT, typeset ErrT>
   class Result;
@@ -175,29 +158,29 @@ namespace soul
     }
 
     [[nodiscard]]
-    static constexpr auto ok(OwnRef<OkT> val) noexcept -> Result
+    static constexpr auto Ok(OwnRef<OkT> val) noexcept -> Result
     {
-      return Result(impl::ResultConstruct::ok, val.forward());
+      return Result(Construct::ok, val.forward());
     }
 
     [[nodiscard]]
-    static constexpr auto err(OwnRef<ErrT> val) noexcept -> Result
+    static constexpr auto Err(OwnRef<ErrT> val) noexcept -> Result
     {
-      return Result(impl::ResultConstruct::err, val.forward());
+      return Result(Construct::err, val.forward());
     }
 
     template <ts_generate_fn<OkT> Fn>
     [[nodiscard]]
-    static constexpr auto init_generate(Fn fn) -> Result
+    static constexpr auto Generate(Fn fn) -> Result
     {
-      return Result(impl::ResultConstruct::init_generate, fn);
+      return Result(Construct::init_generate, fn);
     }
 
     template <ts_generate_fn<ErrT> Fn>
     [[nodiscard]]
-    static constexpr auto init_generate_err(Fn fn) -> Result
+    static constexpr auto GenerateErr(Fn fn) -> Result
     {
-      return Result(impl::ResultConstruct::init_generate_err, fn);
+      return Result(Construct::init_generate_err, fn);
     }
 
     [[nodiscard]]
@@ -296,7 +279,7 @@ namespace soul
       if (is_ok()) {
         return std::invoke(fn, ok_val_);
       }
-      return FnReturnT::err(err_val_);
+      return FnReturnT::Err(err_val_);
     }
 
     template <ts_invocable<const OkT&> Fn, typename FnReturnT = invoke_result_t<Fn, const OkT&>>
@@ -310,7 +293,7 @@ namespace soul
       if (is_ok()) {
         return std::invoke(fn, ok_val_);
       }
-      return FnReturnT::err(err_val_);
+      return FnReturnT::Err(err_val_);
     }
 
     template <ts_invocable<OkT&&> Fn, typename FnReturnT = invoke_result_t<Fn, OkT&&>>
@@ -321,7 +304,7 @@ namespace soul
       if (is_ok()) {
         return std::invoke(fn, std::move(ok_val_));
       }
-      return FnReturnT::err(std::move(err_val_));
+      return FnReturnT::Err(std::move(err_val_));
     }
 
     template <typename Fn>
@@ -337,9 +320,9 @@ namespace soul
         "Error type must be trivially copyable to use transform on lvalue reference");
       using ReturnT = Result<FnReturnT, ErrT>;
       if (is_ok()) {
-        return ReturnT::init_generate([&, this] { return std::invoke(fn, ok_val_); });
+        return ReturnT::Generate([&, this] { return std::invoke(fn, ok_val_); });
       }
-      return ReturnT::err(err_val_);
+      return ReturnT::Err(err_val_);
     }
 
     template <ts_invocable<const OkT&> Fn, typename FnReturnT = invoke_result_t<Fn, const OkT&>>
@@ -351,9 +334,9 @@ namespace soul
         "Error type must be trivially copyable to use transform on lvalue reference");
       using ReturnT = Result<FnReturnT, ErrT>;
       if (is_ok()) {
-        return ReturnT::init_generate([&, this] { return std::invoke(fn, ok_val_); });
+        return ReturnT::Generate([&, this] { return std::invoke(fn, ok_val_); });
       }
-      return ReturnT::err(err_val_);
+      return ReturnT::Err(err_val_);
     }
 
     template <ts_invocable<OkT&&> Fn, typename FnReturnT = invoke_result_t<Fn, OkT&&>>
@@ -362,9 +345,9 @@ namespace soul
     {
       using ReturnT = Result<FnReturnT, ErrT>;
       if (is_ok()) {
-        return ReturnT::init_generate([&, this] { return std::invoke(fn, std::move(ok_val_)); });
+        return ReturnT::Generate([&, this] { return std::invoke(fn, std::move(ok_val_)); });
       }
-      return ReturnT::err(std::move(err_val_));
+      return ReturnT::Err(std::move(err_val_));
     }
 
     template <typename Fn>
@@ -379,7 +362,7 @@ namespace soul
         can_trivial_copy_v<OkT>,
         "Ok type must be trivially copyable to use this method on lvalue reference");
       if (is_ok()) {
-        return FnReturnT::ok(ok_val_);
+        return FnReturnT::Ok(ok_val_);
       }
       return std::invoke(fn, err_val_);
     }
@@ -392,7 +375,7 @@ namespace soul
         can_trivial_copy_v<OkT>,
         "Ok type must be trivially copyable to use this method on lvalue reference");
       if (is_ok()) {
-        return FnReturnT::ok(ok_val_);
+        return FnReturnT::Ok(ok_val_);
       }
       return std::invoke(fn, err_val_);
     }
@@ -402,7 +385,7 @@ namespace soul
     constexpr auto or_else(Fn fn) && -> FnReturnT
     {
       if (is_ok()) {
-        return FnReturnT::ok(std::move(ok_val_));
+        return FnReturnT::Ok(std::move(ok_val_));
       }
       return std::invoke(fn, std::move(err_val_));
     }
@@ -445,26 +428,39 @@ namespace soul
     enum class State : u8 { OK, ERR, VALUELESS, COUNT };
     State state_;
 
-    constexpr explicit Result(impl::ResultConstruct::Ok /* tag */, OwnRef<OkT> ok_val)
+    struct Construct {
+      struct Ok {
+      };
+      struct Err {
+      };
+      struct InitGenerate {
+      };
+      struct InitGenerateErr {
+      };
+      static constexpr auto ok = Ok{};
+      static constexpr auto err = Err{};
+      static constexpr auto init_generate = InitGenerate{};
+      static constexpr auto init_generate_err = InitGenerateErr{};
+    };
+
+    constexpr explicit Result(Construct::Ok /* tag */, OwnRef<OkT> ok_val)
         : ok_val_(ok_val), state_(State::OK)
     {
     }
 
-    constexpr explicit Result(impl::ResultConstruct::Err /* tag */, OwnRef<ErrT> err_val)
+    constexpr explicit Result(Construct::Err /* tag */, OwnRef<ErrT> err_val)
         : err_val_(err_val), state_(State::ERR)
     {
     }
 
     template <ts_generate_fn<OkT> Fn>
-    constexpr explicit Result(impl::ResultConstruct::InitGenerate /* tag */, Fn fn)
-        : state_(State::OK)
+    constexpr explicit Result(Construct::InitGenerate /* tag */, Fn fn) : state_(State::OK)
     {
       generate_at(&ok_val_, fn);
     }
 
     template <ts_generate_fn<ErrT> Fn>
-    constexpr explicit Result(impl::ResultConstruct::InitGenerateErr /* tag */, Fn fn)
-        : state_(State::ERR)
+    constexpr explicit Result(Construct::InitGenerateErr /* tag */, Fn fn) : state_(State::ERR)
     {
       generate_at(&err_val_, fn);
     }

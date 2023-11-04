@@ -2122,7 +2122,7 @@ namespace soul::gpu
       });
     }
 
-    return Result<ProgramID, Error>::ok(program_id);
+    return Result<ProgramID, Error>::Ok(program_id);
   }
 
   auto System::get_program(ProgramID program_id) const -> const Program&

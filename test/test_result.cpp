@@ -36,7 +36,7 @@ using NontrivialResult = soul::Result<TestObject, ListTestObject>;
 template <soul::typeset ResultT, soul::typeset T>
 auto test_construction_ok(const T& ok_src)
 {
-  auto result = ResultT::ok(duplicate(ok_src));
+  auto result = ResultT::Ok(duplicate(ok_src));
   SOUL_TEST_ASSERT_EQ(result.ok_ref(), ok_src);
   SOUL_TEST_ASSERT_TRUE(result.is_ok());
   SOUL_TEST_ASSERT_FALSE(result.is_err());
@@ -57,7 +57,7 @@ TEST(TestResultConstruction, TestOkConstruction)
 template <soul::typeset ResultT, soul::typeset T>
 auto test_construction_err(const T& err_src)
 {
-  auto result = ResultT::err(duplicate(err_src));
+  auto result = ResultT::Err(duplicate(err_src));
   SOUL_TEST_ASSERT_EQ(result.err_ref(), err_src);
   SOUL_TEST_ASSERT_FALSE(result.is_ok());
   SOUL_TEST_ASSERT_TRUE(result.is_err());
@@ -78,7 +78,7 @@ template <soul::typeset ResultT, soul::typeset Fn>
 auto test_construction_generate(Fn fn)
 {
   auto ok_src = std::invoke(fn);
-  auto result = ResultT::init_generate(fn);
+  auto result = ResultT::Generate(fn);
   SOUL_TEST_ASSERT_EQ(result.ok_ref(), ok_src);
   SOUL_TEST_ASSERT_TRUE(result.is_ok());
   SOUL_TEST_ASSERT_FALSE(result.is_err());
@@ -100,7 +100,7 @@ template <soul::typeset ResultT, soul::typeset Fn>
 auto test_construction_generate_err(Fn fn)
 {
   auto err_src = std::invoke(fn);
-  auto result = ResultT::init_generate_err(fn);
+  auto result = ResultT::GenerateErr(fn);
   SOUL_TEST_ASSERT_EQ(result.err_ref(), err_src);
   SOUL_TEST_ASSERT_FALSE(result.is_ok());
   SOUL_TEST_ASSERT_TRUE(result.is_err());
@@ -131,8 +131,8 @@ void verify_equal(const ResultT& lhs, const ResultT& rhs)
 
 TEST(TestResultConstruction, TestCopyConstructor)
 {
-  test_copy_constructor(TrivialResult::ok(TrivialOk{.x = 3, .y = 4}));
-  test_copy_constructor(TrivialResult::err(TrivialErr(3)));
+  test_copy_constructor(TrivialResult::Ok(TrivialOk{.x = 3, .y = 4}));
+  test_copy_constructor(TrivialResult::Err(TrivialErr(3)));
 }
 
 TEST(TestResultConstruction, TestClone)
@@ -140,13 +140,13 @@ TEST(TestResultConstruction, TestClone)
   const auto dummy_nontrivial_err = NontrivialErr::From(
     std::views::iota(3, 10) | std::views::transform([](i32 val) { return TestObject(val); }));
 
-  test_clone(TrivialOkResult::ok(TrivialOk{.x = 3, .y = 10}));
-  test_clone(TrivialErrResult::ok(TestObject(10)));
-  test_clone(NontrivialResult::ok(TestObject(10)));
+  test_clone(TrivialOkResult::Ok(TrivialOk{.x = 3, .y = 10}));
+  test_clone(TrivialErrResult::Ok(TestObject(10)));
+  test_clone(NontrivialResult::Ok(TestObject(10)));
 
-  test_clone(TrivialOkResult::err(TestObject(10)));
-  test_clone(TrivialErrResult::err(TrivialErr(4)));
-  test_clone(NontrivialResult::err(dummy_nontrivial_err.clone()));
+  test_clone(TrivialOkResult::Err(TestObject(10)));
+  test_clone(TrivialErrResult::Err(TrivialErr(4)));
+  test_clone(NontrivialResult::Err(dummy_nontrivial_err.clone()));
 }
 
 TEST(TestResultConstruction, TestMoveConstructor)
@@ -154,15 +154,15 @@ TEST(TestResultConstruction, TestMoveConstructor)
   const auto dummy_nontrivial_err = NontrivialErr::From(
     std::views::iota(3, 10) | std::views::transform([](i32 val) { return TestObject(val); }));
 
-  test_move_constructor(TrivialResult::ok(TrivialOk{.x = 3, .y = 10}));
-  test_move_constructor(TrivialOkResult::ok(TrivialOk{.x = 3, .y = 10}));
-  test_move_constructor(TrivialErrResult::ok(TestObject(10)));
-  test_move_constructor(NontrivialResult::ok(TestObject(10)));
+  test_move_constructor(TrivialResult::Ok(TrivialOk{.x = 3, .y = 10}));
+  test_move_constructor(TrivialOkResult::Ok(TrivialOk{.x = 3, .y = 10}));
+  test_move_constructor(TrivialErrResult::Ok(TestObject(10)));
+  test_move_constructor(NontrivialResult::Ok(TestObject(10)));
 
-  test_move_constructor(TrivialResult::err(TrivialErr(9)));
-  test_move_constructor(TrivialOkResult::err(TestObject(10)));
-  test_move_constructor(TrivialErrResult::err(TrivialErr(4)));
-  test_move_constructor(NontrivialResult::err(dummy_nontrivial_err.clone()));
+  test_move_constructor(TrivialResult::Err(TrivialErr(9)));
+  test_move_constructor(TrivialOkResult::Err(TestObject(10)));
+  test_move_constructor(TrivialErrResult::Err(TrivialErr(4)));
+  test_move_constructor(NontrivialResult::Err(dummy_nontrivial_err.clone()));
 }
 
 class TestResultManipulation : public testing::Test
@@ -181,25 +181,25 @@ public:
   NontrivialErr nontrivial_err2 = NontrivialErr::From(
     std::views::iota(3, 7) | std::views::transform([](i32 val) { return TestObject(val); }));
 
-  TrivialResult trivial_result_ok = TrivialResult::ok(trivial_ok);
-  TrivialResult trivial_result_ok2 = TrivialResult::ok(trivial_ok2);
-  TrivialResult trivial_result_err = TrivialResult::err(trivial_err);
-  TrivialResult trivial_result_err2 = TrivialResult::err(trivial_err2);
+  TrivialResult trivial_result_ok = TrivialResult::Ok(trivial_ok);
+  TrivialResult trivial_result_ok2 = TrivialResult::Ok(trivial_ok2);
+  TrivialResult trivial_result_err = TrivialResult::Err(trivial_err);
+  TrivialResult trivial_result_err2 = TrivialResult::Err(trivial_err2);
 
-  TrivialOkResult trivial_ok_result_ok = TrivialOkResult::ok(trivial_ok);
-  TrivialOkResult trivial_ok_result_ok2 = TrivialOkResult::ok(trivial_ok2);
-  TrivialOkResult trivial_ok_result_err = TrivialOkResult::err(test_obj.clone());
-  TrivialOkResult trivial_ok_result_err2 = TrivialOkResult::err(test_obj2.clone());
+  TrivialOkResult trivial_ok_result_ok = TrivialOkResult::Ok(trivial_ok);
+  TrivialOkResult trivial_ok_result_ok2 = TrivialOkResult::Ok(trivial_ok2);
+  TrivialOkResult trivial_ok_result_err = TrivialOkResult::Err(test_obj.clone());
+  TrivialOkResult trivial_ok_result_err2 = TrivialOkResult::Err(test_obj2.clone());
 
-  TrivialErrResult trivial_err_result_ok = TrivialErrResult::ok(test_obj.clone());
-  TrivialErrResult trivial_err_result_ok2 = TrivialErrResult::ok(test_obj2.clone());
-  TrivialErrResult trivial_err_result_err = TrivialErrResult::err(trivial_err);
-  TrivialErrResult trivial_err_result_err2 = TrivialErrResult::err(trivial_err2);
+  TrivialErrResult trivial_err_result_ok = TrivialErrResult::Ok(test_obj.clone());
+  TrivialErrResult trivial_err_result_ok2 = TrivialErrResult::Ok(test_obj2.clone());
+  TrivialErrResult trivial_err_result_err = TrivialErrResult::Err(trivial_err);
+  TrivialErrResult trivial_err_result_err2 = TrivialErrResult::Err(trivial_err2);
 
-  NontrivialResult nontrivial_result_ok = NontrivialResult::ok(test_obj.clone());
-  NontrivialResult nontrivial_result_ok2 = NontrivialResult::ok(test_obj2.clone());
-  NontrivialResult nontrivial_result_err = NontrivialResult::err(nontrivial_err.clone());
-  NontrivialResult nontrivial_result_err2 = NontrivialResult::err(nontrivial_err2.clone());
+  NontrivialResult nontrivial_result_ok = NontrivialResult::Ok(test_obj.clone());
+  NontrivialResult nontrivial_result_ok2 = NontrivialResult::Ok(test_obj2.clone());
+  NontrivialResult nontrivial_result_err = NontrivialResult::Err(nontrivial_err.clone());
+  NontrivialResult nontrivial_result_err2 = NontrivialResult::Err(nontrivial_err2.clone());
 };
 
 TEST_F(TestResultManipulation, TestCopyAssignment)
@@ -316,40 +316,40 @@ TEST_F(TestResultManipulation, TestAndThen)
 {
   {
     const auto and_then_fn = [&](const TrivialOk& val) {
-      return Result<int, TrivialErr>::ok(val.x);
+      return Result<int, TrivialErr>::Ok(val.x);
     };
     const auto expected_when_ok = and_then_fn(trivial_ok);
-    const auto expected_when_err = Result<int, TrivialErr>::err(trivial_err);
+    const auto expected_when_err = Result<int, TrivialErr>::Err(trivial_err);
     SOUL_TEST_ASSERT_EQ(trivial_result_ok.and_then(and_then_fn), expected_when_ok);
     SOUL_TEST_ASSERT_EQ(trivial_result_err.and_then(and_then_fn), expected_when_err);
   }
 
   {
     const auto and_then_fn = [&](const TrivialOk& val) {
-      return Result<int, TestObject>::ok(val.x);
+      return Result<int, TestObject>::Ok(val.x);
     };
     const auto expected_when_ok = and_then_fn(trivial_ok);
-    const auto expected_when_err = Result<int, TestObject>::err(test_obj.clone());
+    const auto expected_when_err = Result<int, TestObject>::Err(test_obj.clone());
     SOUL_TEST_ASSERT_EQ(trivial_ok_result_ok.clone().and_then(and_then_fn), expected_when_ok);
     SOUL_TEST_ASSERT_EQ(trivial_ok_result_err.clone().and_then(and_then_fn), expected_when_err);
   }
 
   {
     const auto and_then_fn = [&](const TestObject& val) {
-      return Result<int, TrivialErr>::ok(val.x);
+      return Result<int, TrivialErr>::Ok(val.x);
     };
     const auto expected_when_ok = and_then_fn(test_obj);
-    const auto expected_when_err = Result<int, TrivialErr>::err(trivial_err);
+    const auto expected_when_err = Result<int, TrivialErr>::Err(trivial_err);
     SOUL_TEST_ASSERT_EQ(trivial_err_result_ok.and_then(and_then_fn), expected_when_ok);
     SOUL_TEST_ASSERT_EQ(trivial_err_result_err.clone().and_then(and_then_fn), expected_when_err);
   }
 
   {
     const auto and_then_fn = [&](const TestObject& val) {
-      return Result<int, NontrivialErr>::ok(val.x);
+      return Result<int, NontrivialErr>::Ok(val.x);
     };
     const auto expected_when_ok = and_then_fn(test_obj);
-    const auto expected_when_err = Result<int, NontrivialErr>::err(nontrivial_err.clone());
+    const auto expected_when_err = Result<int, NontrivialErr>::Err(nontrivial_err.clone());
     SOUL_TEST_ASSERT_EQ(nontrivial_result_ok.clone().and_then(and_then_fn), expected_when_ok);
     SOUL_TEST_ASSERT_EQ(nontrivial_result_err.clone().and_then(and_then_fn), expected_when_err);
   }
@@ -360,8 +360,8 @@ TEST_F(TestResultManipulation, TestTransform)
   {
     using ExpectedResult = Result<int, TrivialErr>;
     const auto transform_fn = [&](const TrivialOk& val) { return val.x; };
-    const auto expected_when_ok = ExpectedResult::ok(transform_fn(trivial_ok));
-    const auto expected_when_err = ExpectedResult::err(trivial_err);
+    const auto expected_when_ok = ExpectedResult::Ok(transform_fn(trivial_ok));
+    const auto expected_when_err = ExpectedResult::Err(trivial_err);
     SOUL_TEST_ASSERT_EQ(trivial_result_ok.transform(transform_fn), expected_when_ok);
     SOUL_TEST_ASSERT_EQ(trivial_result_err.transform(transform_fn), expected_when_err);
   }
@@ -369,8 +369,8 @@ TEST_F(TestResultManipulation, TestTransform)
   {
     using ExpectedResult = Result<int, TestObject>;
     const auto transform_fn = [&](const TrivialOk& val) { return val.x; };
-    const auto expected_when_ok = ExpectedResult::ok(transform_fn(trivial_ok));
-    const auto expected_when_err = ExpectedResult::err(test_obj.clone());
+    const auto expected_when_ok = ExpectedResult::Ok(transform_fn(trivial_ok));
+    const auto expected_when_err = ExpectedResult::Err(test_obj.clone());
     SOUL_TEST_ASSERT_EQ(trivial_ok_result_ok.clone().transform(transform_fn), expected_when_ok);
     SOUL_TEST_ASSERT_EQ(trivial_ok_result_err.clone().transform(transform_fn), expected_when_err);
   }
@@ -378,8 +378,8 @@ TEST_F(TestResultManipulation, TestTransform)
   {
     using ExpectedResult = Result<int, TrivialErr>;
     const auto transform_fn = [&](const TestObject& val) { return val.x; };
-    const auto expected_when_ok = ExpectedResult::ok(transform_fn(test_obj));
-    const auto expected_when_err = Result<int, TrivialErr>::err(trivial_err);
+    const auto expected_when_ok = ExpectedResult::Ok(transform_fn(test_obj));
+    const auto expected_when_err = Result<int, TrivialErr>::Err(trivial_err);
     SOUL_TEST_ASSERT_EQ(trivial_err_result_ok.transform(transform_fn), expected_when_ok);
     SOUL_TEST_ASSERT_EQ(trivial_err_result_err.clone().transform(transform_fn), expected_when_err);
   }
@@ -387,8 +387,8 @@ TEST_F(TestResultManipulation, TestTransform)
   {
     using ExpectedResult = Result<int, NontrivialErr>;
     const auto transform_fn = [&](const TestObject& val) { return val.x; };
-    const auto expected_when_ok = ExpectedResult::ok(transform_fn(test_obj));
-    const auto expected_when_err = ExpectedResult::err(nontrivial_err.clone());
+    const auto expected_when_ok = ExpectedResult::Ok(transform_fn(test_obj));
+    const auto expected_when_err = ExpectedResult::Err(nontrivial_err.clone());
     SOUL_TEST_ASSERT_EQ(nontrivial_result_ok.clone().transform(transform_fn), expected_when_ok);
     SOUL_TEST_ASSERT_EQ(nontrivial_result_err.clone().transform(transform_fn), expected_when_err);
   }
@@ -405,9 +405,9 @@ TEST_F(TestResultManipulation, TestOrElse)
   {
     using ExpectedResult = Result<TrivialOk, OrElseError>;
     const auto or_else_fn = [&](const TrivialErr& val) {
-      return ExpectedResult::err(OrElseError{val, val});
+      return ExpectedResult::Err(OrElseError{val, val});
     };
-    const auto expected_when_ok = ExpectedResult::ok(trivial_ok);
+    const auto expected_when_ok = ExpectedResult::Ok(trivial_ok);
     const auto expected_when_err = or_else_fn(trivial_err);
     SOUL_TEST_ASSERT_EQ(trivial_result_ok.or_else(or_else_fn), expected_when_ok);
     SOUL_TEST_ASSERT_EQ(trivial_result_err.or_else(or_else_fn), expected_when_err);
@@ -416,9 +416,9 @@ TEST_F(TestResultManipulation, TestOrElse)
   {
     using ExpectedResult = Result<TestObject, OrElseError>;
     const auto or_else_fn = [&](const NontrivialErr& val) {
-      return ExpectedResult::err(OrElseError{val.size(), val.size()});
+      return ExpectedResult::Err(OrElseError{val.size(), val.size()});
     };
-    const auto expected_when_ok = ExpectedResult::ok(test_obj.clone());
+    const auto expected_when_ok = ExpectedResult::Ok(test_obj.clone());
     const auto expected_when_err = or_else_fn(nontrivial_err);
     SOUL_TEST_ASSERT_EQ(nontrivial_result_ok.clone().or_else(or_else_fn), expected_when_ok);
     SOUL_TEST_ASSERT_EQ(nontrivial_result_err.clone().or_else(or_else_fn), expected_when_err);
@@ -428,33 +428,33 @@ TEST_F(TestResultManipulation, TestOrElse)
 TEST(TestResultGetter, TestIsOkAnd)
 {
   SOUL_TEST_ASSERT_TRUE(
-    TrivialResult::ok(TrivialOk{.x = 7, .y = 6}).is_ok_and([](const TrivialOk& trivial_ok) {
+    TrivialResult::Ok(TrivialOk{.x = 7, .y = 6}).is_ok_and([](const TrivialOk& trivial_ok) {
       return trivial_ok.x == 7;
     }));
 
   SOUL_TEST_ASSERT_FALSE(
-    TrivialResult::ok(TrivialOk{.x = 7, .y = 6}).is_ok_and([](const TrivialOk& trivial_ok) {
+    TrivialResult::Ok(TrivialOk{.x = 7, .y = 6}).is_ok_and([](const TrivialOk& trivial_ok) {
       return trivial_ok.x == 5;
     }));
 
-  SOUL_TEST_ASSERT_FALSE(TrivialResult::err(10).is_ok_and(
+  SOUL_TEST_ASSERT_FALSE(TrivialResult::Err(10).is_ok_and(
     [](const TrivialOk& trivial_ok) -> b8 { return trivial_ok.x == 5; }));
 }
 
 TEST(TestResultGetter, TestIsErrAnd)
 {
   SOUL_TEST_ASSERT_FALSE(
-    TrivialResult::ok(TrivialOk{.x = 7, .y = 6}).is_err_and([](const TrivialErr trivial_err) {
+    TrivialResult::Ok(TrivialOk{.x = 7, .y = 6}).is_err_and([](const TrivialErr trivial_err) {
       return trivial_err == 7;
     }));
 
   SOUL_TEST_ASSERT_FALSE(
-    TrivialResult::err(TrivialErr(5)).is_err_and([](const TrivialErr& trivial_err) {
+    TrivialResult::Err(TrivialErr(5)).is_err_and([](const TrivialErr& trivial_err) {
       return trivial_err == 8;
     }));
 
   SOUL_TEST_ASSERT_TRUE(
-    TrivialResult::err(TrivialErr(5)).is_err_and([](const TrivialErr& trivial_err) {
+    TrivialResult::Err(TrivialErr(5)).is_err_and([](const TrivialErr& trivial_err) {
       return trivial_err == 5;
     }));
 }
