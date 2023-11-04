@@ -19,7 +19,7 @@ namespace soul
     }
 
     [[nodiscard]]
-    static auto from(const char* str) -> Path
+    static auto From(const char* str) -> Path
     {
       return std::filesystem::path(str);
     }
