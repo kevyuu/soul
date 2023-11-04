@@ -76,11 +76,11 @@ namespace soul
       static constexpr usize BITS_PER_BLOCK_MASK = BITS_PER_BLOCK - 1;
       static constexpr usize BLOCK_COUNT = BlockCount;
 
-      static constexpr auto get_block_index(usize index) -> usize;
+      static constexpr auto GetBlockIndex(usize index) -> usize;
 
-      static constexpr auto get_block_offset(usize index) -> BlockType;
+      static constexpr auto GetBlockOffset(usize index) -> BlockType;
 
-      static constexpr auto get_block_one_mask(usize index) -> BlockType;
+      static constexpr auto GetBlockOneMask(usize index) -> BlockType;
     };
 
     template <size_t BlockCount, ts_bit_block BlockType>
@@ -163,9 +163,9 @@ namespace soul
     constexpr auto BitsetImpl<BlockCount, BlockType>::set(const usize index, const b8 val) -> void
     {
       if (val) {
-        blocks_[get_block_index(index)] |= get_block_one_mask(index);
+        blocks_[GetBlockIndex(index)] |= GetBlockOneMask(index);
       } else {
-        blocks_[get_block_index(index)] &= ~get_block_one_mask(index);
+        blocks_[GetBlockIndex(index)] &= ~GetBlockOneMask(index);
       }
     }
 
@@ -232,8 +232,8 @@ namespace soul
       -> Option<usize>
     {
       const auto start_find_index = last_find_index + 1;
-      auto block_index = get_block_index(start_find_index);
-      const usize block_offset = get_block_offset(start_find_index);
+      auto block_index = GetBlockIndex(start_find_index);
+      const usize block_offset = GetBlockOffset(start_find_index);
       if (block_index < BlockCount) {
         const auto mask = static_cast<BlockType>(~cast<BlockType>(0) << block_offset);
         BlockType block = blocks_[block_index] & mask;
@@ -271,8 +271,8 @@ namespace soul
       -> Option<usize>
     {
       if (last_find_index > 0) {
-        auto block_index = get_block_index(last_find_index);
-        usize block_offset = get_block_offset(last_find_index);
+        auto block_index = GetBlockIndex(last_find_index);
+        usize block_offset = GetBlockOffset(last_find_index);
 
         BlockType block = blocks_[block_index] & ((cast<BlockType>(1) << block_offset) - 1);
         while (true) {
@@ -315,23 +315,22 @@ namespace soul
     }
 
     template <size_t BlockCount, ts_bit_block BlockType>
-    constexpr auto BitsetImpl<BlockCount, BlockType>::get_block_index(const usize index) -> usize
+    constexpr auto BitsetImpl<BlockCount, BlockType>::GetBlockIndex(const usize index) -> usize
     {
       return index / BITS_PER_BLOCK;
     }
 
     template <size_t BlockCount, ts_bit_block BlockType>
-    constexpr auto BitsetImpl<BlockCount, BlockType>::get_block_offset(const usize index)
-      -> BlockType
+    constexpr auto BitsetImpl<BlockCount, BlockType>::GetBlockOffset(const usize index) -> BlockType
     {
       return index & BITS_PER_BLOCK_MASK;
     }
 
     template <size_t BlockCount, ts_bit_block BlockType>
-    constexpr auto BitsetImpl<BlockCount, BlockType>::get_block_one_mask(const usize index)
+    constexpr auto BitsetImpl<BlockCount, BlockType>::GetBlockOneMask(const usize index)
       -> BlockType
     {
-      return static_cast<BlockType>(cast<BlockType>(1) << get_block_offset(index));
+      return static_cast<BlockType>(cast<BlockType>(1) << GetBlockOffset(index));
     }
 
     constexpr auto get_block_count(usize bit_count, usize block_size) -> usize
@@ -412,7 +411,7 @@ namespace soul
   template <usize BitCount, ts_bit_block BlockType>
   constexpr auto Bitset<BitCount, BlockType>::operator[](const usize index) -> reference_type
   {
-    return reference_type(&get_block(index), base_type::get_block_offset(index));
+    return reference_type(&get_block(index), base_type::GetBlockOffset(index));
   }
 
   template <usize BitCount, ts_bit_block BlockType>
@@ -464,7 +463,7 @@ namespace soul
   constexpr auto Bitset<BitCount, BlockType>::flip(const usize index) -> this_type&
   {
     SOUL_ASSERT(0, index < BitCount, "");
-    get_block(index) ^= base_type::get_block_one_mask(index);
+    get_block(index) ^= base_type::GetBlockOneMask(index);
     return *this;
   }
 
@@ -485,7 +484,7 @@ namespace soul
   {
     SOUL_ASSERT(0, index < BitCount, "");
     BlockType block = get_block(index);
-    return (block & base_type::get_block_one_mask(index));
+    return (block & base_type::GetBlockOneMask(index));
   }
 
   template <usize BitCount, ts_bit_block BlockType>
@@ -503,13 +502,13 @@ namespace soul
   template <usize BitCount, ts_bit_block BlockType>
   constexpr auto Bitset<BitCount, BlockType>::get_block(usize bit_index) -> BlockType&
   {
-    return base_type::blocks_[base_type::get_block_index(bit_index)];
+    return base_type::blocks_[base_type::GetBlockIndex(bit_index)];
   }
 
   template <usize BitCount, ts_bit_block BlockType>
   constexpr auto Bitset<BitCount, BlockType>::get_block(usize bit_index) const -> BlockType
   {
-    return base_type::blocks_[base_type::get_block_index(bit_index)];
+    return base_type::blocks_[base_type::GetBlockIndex(bit_index)];
   }
 
   template <usize BitCount, ts_bit_block BlockType>
