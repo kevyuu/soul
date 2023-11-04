@@ -221,7 +221,7 @@ namespace soul
       for (usize block_index = 0; block_index < BlockCount; block_index++) {
         const auto pos = util::get_first_one_bit_pos(blocks_[block_index]);
         if (pos.is_some()) {
-          return Option<usize>::some((block_index * BITS_PER_BLOCK) + pos.unwrap());
+          return Option<usize>::Some((block_index * BITS_PER_BLOCK) + pos.unwrap());
         }
       }
       return nilopt;
@@ -240,7 +240,7 @@ namespace soul
         while (true) {
           const auto next_bit = util::get_first_one_bit_pos(block);
           if (next_bit.is_some()) {
-            return Option<usize>::some((block_index * BITS_PER_BLOCK) + next_bit.unwrap());
+            return Option<usize>::Some((block_index * BITS_PER_BLOCK) + next_bit.unwrap());
           }
 
           block_index += 1;
@@ -260,7 +260,7 @@ namespace soul
       for (auto block_index = BlockCount; block_index > 0; --block_index) {
         const auto last_bit = util::get_last_one_bit_pos(blocks_[block_index - 1]);
         if (last_bit.is_some()) {
-          return Option<usize>::some((block_index - 1) * BITS_PER_BLOCK + last_bit.unwrap());
+          return Option<usize>::Some((block_index - 1) * BITS_PER_BLOCK + last_bit.unwrap());
         }
       }
       return nilopt;
@@ -278,7 +278,7 @@ namespace soul
         while (true) {
           const auto last_bit = util::get_last_one_bit_pos(block);
           if (last_bit.is_some()) {
-            return Option<usize>::some((block_index * BITS_PER_BLOCK) + last_bit.unwrap());
+            return Option<usize>::Some((block_index * BITS_PER_BLOCK) + last_bit.unwrap());
           }
           if (block_index == 0) {
             break;
@@ -305,7 +305,7 @@ namespace soul
         const auto block_start_index = block_index * BITS_PER_BLOCK;
         while (pos.is_some()) {
           if (fn(block_start_index + static_cast<usize>(pos.unwrap()))) {
-            return Option<usize>::some(block_start_index + static_cast<usize>(pos.unwrap()));
+            return Option<usize>::Some(block_start_index + static_cast<usize>(pos.unwrap()));
           }
           block = get_next_block(block, pos.unwrap());
           pos = util::get_first_one_bit_pos(block);

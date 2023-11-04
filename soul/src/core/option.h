@@ -30,14 +30,6 @@ namespace soul
 
   namespace impl
   {
-    struct OptionConstruct {
-      struct Some {
-      };
-      struct InitGenerate {
-      };
-      static constexpr auto some = Some{};
-      static constexpr auto init_generate = InitGenerate{};
-    };
 
     template <typename T>
     class OptionBase
@@ -152,8 +144,7 @@ namespace soul
       {
         auto& opt = get_option();
         if (opt.is_some()) {
-          return Option<FnReturnT>::init_generate(
-            [&, this] { return std::invoke(fn, opt.some_ref()); });
+          return Option<FnReturnT>::Generate([&, this] { return std::invoke(fn, opt.some_ref()); });
         }
         return Option<FnReturnT>();
       }
@@ -164,8 +155,7 @@ namespace soul
       {
         const auto& opt = get_option();
         if (opt.is_some()) {
-          return Option<FnReturnT>::init_generate(
-            [&, this] { return std::invoke(fn, opt.some_ref()); });
+          return Option<FnReturnT>::Generate([&, this] { return std::invoke(fn, opt.some_ref()); });
         }
         return Option<FnReturnT>();
       }
@@ -176,7 +166,7 @@ namespace soul
       {
         auto& opt = get_option();
         if (opt.is_some()) {
-          return Option<FnReturnT>::init_generate(
+          return Option<FnReturnT>::Generate(
             [&, this] { return std::invoke(fn, std::move(opt.some_ref())); });
         }
         return Option<FnReturnT>();
@@ -275,11 +265,11 @@ namespace soul
       requires(can_nontrivial_destruct_v<T>);
 
     [[nodiscard]]
-    static constexpr auto some(OwnRef<T> val) noexcept -> Option;
+    static constexpr auto Some(OwnRef<T> val) noexcept -> Option;
 
     template <ts_generate_fn<T> Fn>
     [[nodiscard]]
-    static constexpr auto init_generate(Fn fn) noexcept -> Option;
+    static constexpr auto Generate(Fn fn) noexcept -> Option;
 
     constexpr void swap(Option& other) noexcept
       requires(can_move_v<T> && can_swap_v<T>);
@@ -325,13 +315,22 @@ namespace soul
       return *this;
     }
 
-    constexpr explicit Option(impl::OptionConstruct::Some /* tag */, OwnRef<T> val) : is_some_(true)
+    struct Construct {
+      struct Some {
+      };
+      struct InitGenerate {
+      };
+      static constexpr auto some = Some{};
+      static constexpr auto init_generate = InitGenerate{};
+    };
+
+    constexpr explicit Option(Construct::Some /* tag */, OwnRef<T> val) : is_some_(true)
     {
       val.store_at(&value_);
     }
 
     template <ts_generate_fn<T> Fn>
-    constexpr explicit Option(impl::OptionConstruct::InitGenerate /* tag */, Fn fn) : is_some_(true)
+    constexpr explicit Option(Construct::InitGenerate /* tag */, Fn fn) : is_some_(true)
     {
       generate_at(&value_, fn);
     }
@@ -376,17 +375,17 @@ namespace soul
 
   template <typeset T>
   [[nodiscard]]
-  constexpr auto Option<T>::some(OwnRef<T> val) noexcept -> Option
+  constexpr auto Option<T>::Some(OwnRef<T> val) noexcept -> Option
   {
-    return Option(impl::OptionConstruct::some, val.forward());
+    return Option(Construct::some, val.forward());
   }
 
   template <typeset T>
   template <ts_generate_fn<T> Fn>
   [[nodiscard]]
-  constexpr auto Option<T>::init_generate(Fn fn) noexcept -> Option
+  constexpr auto Option<T>::Generate(Fn fn) noexcept -> Option
   {
-    return Option(impl::OptionConstruct::init_generate, fn);
+    return Option(Construct::init_generate, fn);
   }
 
   template <typeset T>
@@ -455,13 +454,13 @@ namespace soul
   template <typeset T>
   constexpr auto someopt(const T& val) -> Option<T>
   {
-    return Option<T>::some(val);
+    return Option<T>::Some(val);
   };
 
   template <typeset T>
   constexpr auto someopt(T&& val) -> Option<T>
   {
-    return Option<T>::some(std::move(val)); // NOLINT
+    return Option<T>::Some(std::move(val)); // NOLINT
   };
 
   template <ts_pointer T>
@@ -496,7 +495,7 @@ namespace soul
     constexpr void swap(Option& other) { not_null_ptr_.swap(other.not_null_ptr_); }
 
     [[nodiscard]]
-    static constexpr auto some(NotNull<T> not_null_ptr) noexcept -> Option
+    static constexpr auto Some(NotNull<T> not_null_ptr) noexcept -> Option
     {
       T ptr = not_null_ptr;
       return Option(ptr);
@@ -504,9 +503,9 @@ namespace soul
 
     template <ts_fn<NotNull<T>> Fn>
     [[nodiscard]]
-    static constexpr auto init_generate(Fn fn) noexcept -> Option
+    static constexpr auto Generate(Fn fn) noexcept -> Option
     {
-      return Option::some(std::invoke(fn));
+      return Option::Some(std::invoke(fn));
     }
 
     [[nodiscard]]

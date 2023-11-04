@@ -303,7 +303,8 @@ class BufferTransferCommandSample final : public App
 public:
   explicit BufferTransferCommandSample(const AppConfig& app_config) : App(app_config)
   {
-    const auto shader_source = gpu::ShaderSource::from(gpu::ShaderFile("buffer_transfer_command_sample.hlsl"));
+    const auto shader_source =
+      gpu::ShaderSource::from(gpu::ShaderFile("buffer_transfer_command_sample.hlsl"));
     std::filesystem::path search_path = "shaders/";
     constexpr auto entry_points = soul::Array{
       gpu::ShaderEntryPoint{gpu::ShaderStage::VERTEX, "vsMain"},
@@ -372,7 +373,8 @@ public:
 auto main(int /* argc */, char* /* argv */[]) -> int
 {
   const ScreenDimension screen_dimension = {.width = 800, .height = 600};
-  BufferTransferCommandSample app({.screen_dimension = soul::Option<ScreenDimension>::some(screen_dimension)});
+  BufferTransferCommandSample app(
+    {.screen_dimension = soul::Option<ScreenDimension>::Some(screen_dimension)});
   app.run();
 
   return 0;

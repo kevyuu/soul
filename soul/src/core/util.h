@@ -48,7 +48,7 @@ namespace soul::util
         x >>= 2;
       }
 
-      return Option<u32>::some(n - (static_cast<u32>(x) & 1u));
+      return Option<u32>::Some(n - (static_cast<u32>(x) & 1u));
     }
     return nilopt;
   }
@@ -89,7 +89,7 @@ namespace soul::util
       if (x & 0xFFFE) {
         n += 1;
       }
-      return Option<u32>::some(n);
+      return Option<u32>::Some(n);
     }
     return nilopt;
   }

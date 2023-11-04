@@ -47,7 +47,7 @@ TEST(TestMaybeNullConstruction, TestConstruction)
 
   {
     const auto test_not_null = ptrof(test_int);
-    const auto test_maybe_null = MaybeNull<i32*>::some(test_not_null);
+    const auto test_maybe_null = MaybeNull<i32*>::Some(test_not_null);
     SOUL_TEST_ASSERT_EQ(test_maybe_null.unwrap(), ptrof(test_int));
     SOUL_TEST_ASSERT_EQ(test_maybe_null.some_ref(), ptrof(test_int));
     SOUL_TEST_ASSERT_TRUE(test_maybe_null.is_some());
@@ -58,10 +58,10 @@ TEST(TestMaybeNullConstruction, TestConstruction)
     SOUL_TEST_ASSERT_EQ(test_maybe_null, nullptr);
   }
 
-  test_copy_constructor(MaybeNull<i32*>::some(ptrof(test_int)));
+  test_copy_constructor(MaybeNull<i32*>::Some(ptrof(test_int)));
   test_copy_constructor(MaybeNull<i32*>(nilopt));
 
-  test_move_constructor(MaybeNull<i32*>::some(ptrof(test_int)));
+  test_move_constructor(MaybeNull<i32*>::Some(ptrof(test_int)));
   test_move_constructor(MaybeNull<i32*>(nilopt));
 }
 
@@ -69,8 +69,8 @@ TEST(TestMaybeNullManipulation, TestManipulation)
 {
   i32 test_int = 3;
   i32 test_int2 = 5;
-  const auto test_maybe_null_some = MaybeNull<i32*>::some(ptrof(test_int));
-  const auto test_maybe_null_some2 = MaybeNull<i32*>::some(ptrof(test_int2));
+  const auto test_maybe_null_some = MaybeNull<i32*>::Some(ptrof(test_int));
+  const auto test_maybe_null_some2 = MaybeNull<i32*>::Some(ptrof(test_int2));
   const auto test_maybe_null_none = MaybeNull<i32*>();
 
   test_copy_assignment(test_maybe_null_some, test_maybe_null_some2);
@@ -93,8 +93,8 @@ TEST(TestMaybeNullMonadic, TestMonadic)
 {
   i32 test_int = 3;
   i32 test_int2 = 5;
-  const auto test_maybe_null_some = MaybeNull<i32*>::some(ptrof(test_int));
-  const auto test_maybe_null_some2 = MaybeNull<i32*>::some(ptrof(test_int2));
+  const auto test_maybe_null_some = MaybeNull<i32*>::Some(ptrof(test_int));
+  const auto test_maybe_null_some2 = MaybeNull<i32*>::Some(ptrof(test_int2));
   const auto test_maybe_null_none = MaybeNull<i32*>();
 
   {
@@ -117,7 +117,7 @@ TEST(TestMaybeNullMonadic, TestMonadic)
 
   {
     auto and_then_fn = [&test_int2](NotNull<i32*> /* val */) {
-      return MaybeNull<i32*>::some(&test_int2);
+      return MaybeNull<i32*>::Some(&test_int2);
     };
     SOUL_TEST_ASSERT_EQ(test_maybe_null_some.and_then(and_then_fn), ptrof(test_int2));
     SOUL_TEST_ASSERT_FALSE(test_maybe_null_none.and_then(and_then_fn).is_some());
@@ -130,7 +130,7 @@ TEST(TestMaybeNullMonadic, TestMonadic)
   }
 
   {
-    auto or_else_fn = [&test_int2]() { return MaybeNull<i32*>::some(&test_int2); };
+    auto or_else_fn = [&test_int2]() { return MaybeNull<i32*>::Some(&test_int2); };
     SOUL_TEST_ASSERT_EQ(test_maybe_null_some.or_else(or_else_fn), ptrof(test_int));
     SOUL_TEST_ASSERT_EQ(test_maybe_null_none.or_else(or_else_fn), ptrof(test_int2));
   }
@@ -139,7 +139,7 @@ TEST(TestMaybeNullMonadic, TestMonadic)
 TEST(TestMaybeNullReset, TestReset)
 {
   i32 test_int = 3;
-  auto test_maybe_null_some = MaybeNull<i32*>::some(ptrof(test_int));
+  auto test_maybe_null_some = MaybeNull<i32*>::Some(ptrof(test_int));
   test_maybe_null_some.reset();
   SOUL_TEST_ASSERT_FALSE(test_maybe_null_some.is_some());
 
