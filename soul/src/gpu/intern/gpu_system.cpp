@@ -713,7 +713,7 @@ namespace soul::gpu
       SOUL_LOG_INFO("Creating vulkan logical device");
 
       auto graphicsQueueCount = 1;
-      auto queueIndex = FlagMap<QueueType, u32>::init_fill(0);
+      auto queueIndex = FlagMap<QueueType, u32>::Fill(0);
 
       if (queue_family_indices[QueueType::COMPUTE] == queue_family_indices[QueueType::GRAPHIC]) {
         graphicsQueueCount++;
@@ -1726,7 +1726,7 @@ namespace soul::gpu
         shader_stage_infos.push_back(shader_stage_info);
       }
 
-      static auto PRIMITIVE_TOPOLOGY_MAP = FlagMap<Topology, VkPrimitiveTopology>::from_val_list(
+      static auto PRIMITIVE_TOPOLOGY_MAP = FlagMap<Topology, VkPrimitiveTopology>::FromValues(
         {VK_PRIMITIVE_TOPOLOGY_POINT_LIST,
          VK_PRIMITIVE_TOPOLOGY_LINE_LIST,
          VK_PRIMITIVE_TOPOLOGY_LINE_STRIP,
@@ -2053,7 +2053,7 @@ namespace soul::gpu
       arguments.push_back(L"-E");
       arguments.push_back(entry_point_wide_chars);
 
-      static constexpr auto target_profile_map = FlagMap<ShaderStage, LPCWSTR>::from_key_val_list({
+      static constexpr auto target_profile_map = FlagMap<ShaderStage, LPCWSTR>::FromKeyValues({
         {ShaderStage::VERTEX, L"vs_6_5"},
         {ShaderStage::FRAGMENT, L"ps_6_5"},
         {ShaderStage::COMPUTE, L"cs_6_5"},
@@ -2242,10 +2242,10 @@ namespace soul::gpu
     group_counts[ShaderGroup::HIT] = shader_table_desc.hit_groups.size();
     group_counts[ShaderGroup::CALLABLE] = 0;
 
-    auto strides = FlagMap<ShaderGroup, usize>::init_fill(handle_size_aligned);
+    auto strides = FlagMap<ShaderGroup, usize>::Fill(handle_size_aligned);
     strides[ShaderGroup::RAYGEN] = util::align_up(handle_size_aligned, handle_base_alignment);
 
-    const auto group_names = FlagMap<ShaderGroup, const char*>::from_key_val_list({
+    const auto group_names = FlagMap<ShaderGroup, const char*>::FromKeyValues({
       {ShaderGroup::RAYGEN, "raygen"},
       {ShaderGroup::MISS, "miss"},
       {ShaderGroup::HIT, "hit"},
@@ -3771,7 +3771,7 @@ namespace soul::gpu
       .unavailable_pipeline_stages = {PipelineStage::FRAGMENT_SHADER},
       .unavailable_accesses = {},
       .sync_stages = {PipelineStage::FRAGMENT_SHADER},
-      .visible_access_matrix = VisibleAccessMatrix::init_fill(AccessFlags{AccessType::SHADER_READ}),
+      .visible_access_matrix = VisibleAccessMatrix::Fill(AccessFlags{AccessType::SHADER_READ}),
     };
   }
 
@@ -3843,7 +3843,7 @@ namespace soul::gpu
 
     static auto get_finalize_layout = [](TextureUsageFlags usage) -> VkImageLayout {
       VkImageLayout result = VK_IMAGE_LAYOUT_UNDEFINED;
-      static constexpr auto USAGE_LAYOUT_MAP = FlagMap<TextureUsage, VkImageLayout>::from_val_list({
+      static constexpr auto USAGE_LAYOUT_MAP = FlagMap<TextureUsage, VkImageLayout>::FromValues({
         VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
         VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
         VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
@@ -3906,7 +3906,7 @@ namespace soul::gpu
     runtime::ScopeAllocator scope_allocator("Resource Finalizer Flush");
 
     auto command_buffers =
-      FlagMap<QueueType, PrimaryCommandBuffer>::init_fill(PrimaryCommandBuffer(VK_NULL_HANDLE));
+      FlagMap<QueueType, PrimaryCommandBuffer>::Fill(PrimaryCommandBuffer(VK_NULL_HANDLE));
 
     // create command buffer and create semaphore
     for (auto queue_type : FlagIter<QueueType>()) {
@@ -3970,7 +3970,7 @@ namespace soul::gpu
       for (auto& image_barrier_list : context.image_barriers_) {
         image_barrier_list.resize(0);
       }
-      context.sync_dst_queues_ = FlagMap<QueueType, QueueFlags>::init_fill(QueueFlags());
+      context.sync_dst_queues_ = FlagMap<QueueType, QueueFlags>::Fill(QueueFlags());
     }
   }
 

@@ -24,7 +24,7 @@ namespace soul::impl
     {
       static memory::MallocAllocator malloc_allocator("malloc allocator");
       static auto log_buffers =
-        LogBuffers::init_generate([] { return LogBuffer(&malloc_allocator); });
+        LogBuffers::Generate([] { return LogBuffer(&malloc_allocator); });
       return log_buffers;
     }
 

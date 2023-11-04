@@ -25,29 +25,29 @@ namespace soul
     using const_reverse_iterator = std::reverse_iterator<const_iterator>;
 
     template <std::size_t N>
-    static consteval auto from_val_list(const ValT (&list)[N]) noexcept -> this_type;
+    static consteval auto FromValues(const ValT (&list)[N]) noexcept -> this_type;
 
-    static constexpr auto from_key_val_list(
+    static constexpr auto FromKeyValues(
       std::initializer_list<std::pair<EnumT, ValT>> init_list) noexcept -> this_type;
 
     [[nodiscard]]
-    static constexpr auto init_fill(const ValT& val) -> this_type
+    static constexpr auto Fill(const ValT& val) -> this_type
     {
       return {Array<ValT, COUNT>::Fill(val)};
     }
 
     template <ts_generate_fn<ValT> Fn>
     [[nodiscard]]
-    static constexpr auto init_generate(Fn fn) -> this_type
+    static constexpr auto Generate(Fn fn) -> this_type
     {
       return {Array<ValT, COUNT>::Generate(fn)};
     }
 
     template <ts_fn<ValT, usize> Fn>
     [[nodiscard]]
-    static constexpr auto init_index_transform(Fn fn) -> this_type
+    static constexpr auto TransformIndex(Fn fn) -> this_type
     {
-      return {Array<ValT, COUNT>::init_index_transform(fn)};
+      return {Array<ValT, COUNT>::TransformIndex(fn)};
     }
 
     [[nodiscard]]
@@ -175,7 +175,7 @@ namespace soul
   };
 
   template <ts_flag EnumT, typename ValT>
-  constexpr auto FlagMap<EnumT, ValT>::from_key_val_list(
+  constexpr auto FlagMap<EnumT, ValT>::FromKeyValues(
     std::initializer_list<std::pair<EnumT, ValT>> init_list) noexcept -> this_type
   {
     FlagMap<EnumT, ValT> ret;
@@ -187,7 +187,7 @@ namespace soul
 
   template <ts_flag EnumT, typename ValT>
   template <std::size_t N>
-  consteval auto FlagMap<EnumT, ValT>::from_val_list(const ValT (&list)[N]) noexcept -> this_type
+  consteval auto FlagMap<EnumT, ValT>::FromValues(const ValT (&list)[N]) noexcept -> this_type
   {
     static_assert(N == COUNT);
     const auto create_array = [&]<usize... I>(std::index_sequence<I...>) -> this_type {

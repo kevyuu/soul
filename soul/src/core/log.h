@@ -20,7 +20,7 @@ namespace soul::impl
   // TODO(kevinyu) : Use cstring_view(pointer to char and length) after it is implemented
   auto log(LogLevel log_level, const CString& message) -> void;
   constexpr auto LOG_PREFIX =
-    FlagMap<LogLevel, const char*>::from_val_list({"FATAL", "WARN", "ERROR", "INFO", "DEBUG"});
+    FlagMap<LogLevel, const char*>::FromValues({"FATAL", "WARN", "ERROR", "INFO", "DEBUG"});
 
 #if defined(SOUL_LOG_LEVEL_FATAL)
   constexpr auto LOG_LEVEL = LogLevel::FATAL;

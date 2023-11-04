@@ -9,7 +9,7 @@ namespace soul::gpu
 {
   SOUL_ALWAYS_INLINE auto vk_cast(const PolygonMode polygon_mode) -> VkPolygonMode
   {
-    constexpr auto POLYGON_MODE_MAP = FlagMap<PolygonMode, VkPolygonMode>::from_val_list(
+    constexpr auto POLYGON_MODE_MAP = FlagMap<PolygonMode, VkPolygonMode>::FromValues(
       {VK_POLYGON_MODE_FILL, VK_POLYGON_MODE_LINE, VK_POLYGON_MODE_POINT});
     return POLYGON_MODE_MAP[polygon_mode];
   }
@@ -21,7 +21,7 @@ namespace soul::gpu
 
   SOUL_ALWAYS_INLINE auto vk_cast(const FrontFace front_face) -> VkFrontFace
   {
-    constexpr auto FRONT_FACE_MAP = FlagMap<FrontFace, VkFrontFace>::from_val_list(
+    constexpr auto FRONT_FACE_MAP = FlagMap<FrontFace, VkFrontFace>::FromValues(
       {VK_FRONT_FACE_CLOCKWISE, VK_FRONT_FACE_COUNTER_CLOCKWISE});
 
     return FRONT_FACE_MAP[front_face];
@@ -29,7 +29,7 @@ namespace soul::gpu
 
   SOUL_ALWAYS_INLINE auto vk_cast(const CompareOp compare_op) -> VkCompareOp
   {
-    constexpr auto COMPARE_OP_MAP = FlagMap<CompareOp, VkCompareOp>::from_val_list({
+    constexpr auto COMPARE_OP_MAP = FlagMap<CompareOp, VkCompareOp>::FromValues({
       VK_COMPARE_OP_NEVER,
       VK_COMPARE_OP_LESS,
       VK_COMPARE_OP_EQUAL,
@@ -45,7 +45,7 @@ namespace soul::gpu
 
   SOUL_ALWAYS_INLINE auto vk_cast(const TextureLayout layout) -> VkImageLayout
   {
-    constexpr auto IMAGE_LAYOUT_MAP = FlagMap<TextureLayout, VkImageLayout>::from_val_list({
+    constexpr auto IMAGE_LAYOUT_MAP = FlagMap<TextureLayout, VkImageLayout>::FromValues({
       VK_IMAGE_LAYOUT_UNDEFINED,
       VK_IMAGE_LAYOUT_UNDEFINED,
       VK_IMAGE_LAYOUT_GENERAL,
@@ -60,7 +60,7 @@ namespace soul::gpu
     return IMAGE_LAYOUT_MAP[layout];
   }
 
-  static constexpr auto FORMAT_MAP = FlagMap<TextureFormat, VkFormat>::from_val_list({
+  static constexpr auto FORMAT_MAP = FlagMap<TextureFormat, VkFormat>::FromValues({
     VK_FORMAT_R8_UNORM,
 
     VK_FORMAT_D16_UNORM,
@@ -92,7 +92,7 @@ namespace soul::gpu
     return FORMAT_MAP[format];
   }
 
-  static constexpr auto IMAGE_TYPE_MAP = FlagMap<TextureType, VkImageType>::from_val_list({
+  static constexpr auto IMAGE_TYPE_MAP = FlagMap<TextureType, VkImageType>::FromValues({
     VK_IMAGE_TYPE_1D,
     VK_IMAGE_TYPE_2D,
     VK_IMAGE_TYPE_2D,
@@ -108,7 +108,7 @@ namespace soul::gpu
   SOUL_ALWAYS_INLINE auto vk_cast_to_image_view_type(const TextureType type) -> VkImageViewType
   {
     static constexpr auto IMAGE_VIEW_TYPE_MAP =
-      FlagMap<TextureType, VkImageViewType>::from_val_list({
+      FlagMap<TextureType, VkImageViewType>::FromValues({
         VK_IMAGE_VIEW_TYPE_1D,
         VK_IMAGE_VIEW_TYPE_2D,
         VK_IMAGE_VIEW_TYPE_2D_ARRAY,
@@ -122,7 +122,7 @@ namespace soul::gpu
     -> VkImageAspectFlags
   {
     static constexpr auto IMAGE_ASPECT_FLAGS_MAP =
-      FlagMap<TextureFormat, VkImageAspectFlags>::from_val_list({
+      FlagMap<TextureFormat, VkImageAspectFlags>::FromValues({
         VK_IMAGE_ASPECT_COLOR_BIT,
 
         VK_IMAGE_ASPECT_DEPTH_BIT,
@@ -152,7 +152,7 @@ namespace soul::gpu
   }
 
   static constexpr auto FILTER_MAP =
-    FlagMap<TextureFilter, VkFilter>::from_val_list({VK_FILTER_NEAREST, VK_FILTER_LINEAR});
+    FlagMap<TextureFilter, VkFilter>::FromValues({VK_FILTER_NEAREST, VK_FILTER_LINEAR});
 
   SOUL_ALWAYS_INLINE auto vk_cast(const TextureFilter filter) -> VkFilter
   {
@@ -160,7 +160,7 @@ namespace soul::gpu
   }
 
   static constexpr auto MIPMAP_FILTER_MAP =
-    FlagMap<TextureFilter, VkSamplerMipmapMode>::from_val_list(
+    FlagMap<TextureFilter, VkSamplerMipmapMode>::FromValues(
       {VK_SAMPLER_MIPMAP_MODE_NEAREST, VK_SAMPLER_MIPMAP_MODE_LINEAR});
 
   SOUL_ALWAYS_INLINE auto vk_cast_mipmap_filter(const TextureFilter filter) -> VkSamplerMipmapMode
@@ -170,7 +170,7 @@ namespace soul::gpu
 
   SOUL_ALWAYS_INLINE auto vk_cast(const TextureWrap wrap) -> VkSamplerAddressMode
   {
-    static constexpr auto MAPPING = FlagMap<TextureWrap, VkSamplerAddressMode>::from_val_list({
+    static constexpr auto MAPPING = FlagMap<TextureWrap, VkSamplerAddressMode>::FromValues({
       VK_SAMPLER_ADDRESS_MODE_REPEAT,
       VK_SAMPLER_ADDRESS_MODE_MIRRORED_REPEAT,
       VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
@@ -182,7 +182,7 @@ namespace soul::gpu
 
   SOUL_ALWAYS_INLINE auto vk_cast(const BlendFactor blend_factor) -> VkBlendFactor
   {
-    static constexpr auto MAPPING = FlagMap<BlendFactor, VkBlendFactor>::from_val_list({
+    static constexpr auto MAPPING = FlagMap<BlendFactor, VkBlendFactor>::FromValues({
       VK_BLEND_FACTOR_ZERO,
       VK_BLEND_FACTOR_ONE,
       VK_BLEND_FACTOR_SRC_COLOR,
@@ -208,7 +208,7 @@ namespace soul::gpu
 
   SOUL_ALWAYS_INLINE auto vk_cast(const BlendOp blend_op) -> VkBlendOp
   {
-    static constexpr auto MAPPING = FlagMap<BlendOp, VkBlendOp>::from_val_list({
+    static constexpr auto MAPPING = FlagMap<BlendOp, VkBlendOp>::FromValues({
       VK_BLEND_OP_ADD,
       VK_BLEND_OP_SUBTRACT,
       VK_BLEND_OP_REVERSE_SUBTRACT,
@@ -299,7 +299,7 @@ namespace soul::gpu
 
   SOUL_ALWAYS_INLINE auto vk_cast(const ShaderStage shader_stage) noexcept -> VkShaderStageFlagBits
   {
-    static constexpr auto MAPPING = FlagMap<ShaderStage, VkShaderStageFlagBits>::from_val_list({
+    static constexpr auto MAPPING = FlagMap<ShaderStage, VkShaderStageFlagBits>::FromValues({
       VK_SHADER_STAGE_VERTEX_BIT,
       VK_SHADER_STAGE_GEOMETRY_BIT,
       VK_SHADER_STAGE_FRAGMENT_BIT,
@@ -410,7 +410,7 @@ namespace soul::gpu
 
   SOUL_ALWAYS_INLINE auto vk_cast(const TextureSampleCount sample_count) -> VkSampleCountFlagBits
   {
-    static constexpr auto MAP = FlagMap<TextureSampleCount, VkSampleCountFlagBits>::from_val_list({
+    static constexpr auto MAP = FlagMap<TextureSampleCount, VkSampleCountFlagBits>::FromValues({
       VK_SAMPLE_COUNT_1_BIT,
       VK_SAMPLE_COUNT_2_BIT,
       VK_SAMPLE_COUNT_4_BIT,
@@ -443,7 +443,7 @@ namespace soul::gpu
   SOUL_ALWAYS_INLINE auto vk_cast(const IndexType index_type) -> VkIndexType
   {
     static constexpr auto MAP =
-      FlagMap<IndexType, VkIndexType>::from_val_list({VK_INDEX_TYPE_UINT16, VK_INDEX_TYPE_UINT32});
+      FlagMap<IndexType, VkIndexType>::FromValues({VK_INDEX_TYPE_UINT16, VK_INDEX_TYPE_UINT32});
     return MAP[index_type];
   }
 
@@ -459,7 +459,7 @@ namespace soul::gpu
 
   SOUL_ALWAYS_INLINE auto vk_cast(const RTGeometryType type) -> VkGeometryTypeKHR
   {
-    static constexpr auto MAP = FlagMap<RTGeometryType, VkGeometryTypeKHR>::from_val_list(
+    static constexpr auto MAP = FlagMap<RTGeometryType, VkGeometryTypeKHR>::FromValues(
       {VK_GEOMETRY_TYPE_TRIANGLES_KHR, VK_GEOMETRY_TYPE_AABBS_KHR});
     return MAP[type];
   }
@@ -522,7 +522,7 @@ namespace soul::gpu
     -> VkBuildAccelerationStructureModeKHR
   {
     static constexpr auto MAP =
-      FlagMap<RTBuildMode, VkBuildAccelerationStructureModeKHR>::from_val_list({
+      FlagMap<RTBuildMode, VkBuildAccelerationStructureModeKHR>::FromValues({
         VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR,
         VK_BUILD_ACCELERATION_STRUCTURE_MODE_UPDATE_KHR,
       });
