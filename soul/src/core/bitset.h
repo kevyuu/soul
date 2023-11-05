@@ -381,7 +381,7 @@ namespace soul
 
     friend constexpr void soul_op_hash_combine(auto& hasher, const Bitset& bitset)
     {
-      hasher.combine_span(bitset.blocks_.template cspan<u64>());
+      hasher.combine_span(bitset.blocks_.template cspan());
     }
 
     [[nodiscard]]

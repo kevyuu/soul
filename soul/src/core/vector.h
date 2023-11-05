@@ -178,15 +178,15 @@ namespace soul
     [[nodiscard]]
     auto data() const noexcept -> const_pointer;
 
-    template <ts_unsigned_integral SpanSizeT>
+    template <ts_unsigned_integral SpanSizeT = usize>
     [[nodiscard]]
     auto span() -> Span<pointer, SpanSizeT>;
 
-    template <ts_unsigned_integral SpanSizeT>
+    template <ts_unsigned_integral SpanSizeT = usize>
     [[nodiscard]]
     auto span() const -> Span<const_pointer, SpanSizeT>;
 
-    template <ts_unsigned_integral SpanSizeT>
+    template <ts_unsigned_integral SpanSizeT = usize>
     [[nodiscard]]
     auto cspan() const -> Span<const_pointer, SpanSizeT>;
 

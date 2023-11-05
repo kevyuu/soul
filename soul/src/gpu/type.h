@@ -1158,9 +1158,9 @@ namespace soul::gpu
 
       friend void soul_op_hash_combine(auto& hasher, const RenderPassKey& val)
       {
-        hasher.combine_span(val.color_attachments.cspan<u64>());
-        hasher.combine_span(val.resolve_attachments.cspan<u64>());
-        hasher.combine_span(val.input_attachments.cspan<u64>());
+        hasher.combine_span(val.color_attachments.cspan());
+        hasher.combine_span(val.resolve_attachments.cspan());
+        hasher.combine_span(val.input_attachments.cspan());
         hasher.combine(val.depth_attachment);
       }
     };

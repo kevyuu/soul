@@ -291,22 +291,25 @@ namespace soul
       }
     }
 
+    template <ts_unsigned_integral SpanSizeT = usize>
     [[nodiscard]]
     constexpr auto span() -> Span<pointer>
     {
-      return {data(), size()};
+      return {data(), cast<SpanSizeT>(size())};
     }
 
+    template <ts_unsigned_integral SpanSizeT = usize>
     [[nodiscard]]
     constexpr auto span() const -> Span<const_pointer>
     {
-      return {data(), size()};
+      return {data(), cast<SpanSizeT>(size())};
     }
 
+    template <ts_unsigned_integral SpanSizeT = usize>
     [[nodiscard]]
     constexpr auto cspan() const -> Span<const_pointer>
     {
-      return {data(), size()};
+      return {data(), cast<SpanSizeT>(size())};
     }
 
     constexpr friend auto operator==(const BasicCString& lhs, const BasicCString& rhs) -> b8
