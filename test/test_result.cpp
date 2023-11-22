@@ -29,6 +29,7 @@ using TrivialErr = u64;
 using NontrivialErr = ListTestObject;
 
 using TrivialResult = soul::Result<TrivialOk, TrivialErr>;
+static_assert(ts_copy<TrivialResult>);
 using TrivialOkResult = soul::Result<TrivialOk, TestObject>;
 using TrivialErrResult = soul::Result<TestObject, TrivialErr>;
 using NontrivialResult = soul::Result<TestObject, ListTestObject>;

@@ -16,11 +16,11 @@ namespace soul
   template <
     typename T,
     memory::allocator_type AllocatorT = memory::Allocator,
-    usize inline_element_count = 0>
+    usize InlineSizeV = 0>
   class Vector
   {
   public:
-    using this_type = Vector<T, AllocatorT, inline_element_count>;
+    using this_type = Vector<T, AllocatorT, InlineSizeV>;
     using value_type = T;
     using pointer = T*;
     using const_pointer = const T*;
@@ -31,7 +31,7 @@ namespace soul
     using reverse_iterator = std::reverse_iterator<iterator>;
     using const_reverse_iterator = std::reverse_iterator<const_iterator>;
 
-    static constexpr usize INLINE_ELEMENT_COUNT = inline_element_count;
+    static constexpr usize INLINE_ELEMENT_COUNT = InlineSizeV;
 
     explicit Vector(AllocatorT* allocator = get_default_allocator());
     Vector(Vector&& other) noexcept;
@@ -211,13 +211,13 @@ namespace soul
     operator[](usize idx) const -> const_reference;
 
   private:
-    SOUL_NO_UNIQUE_ADDRESS RawBuffer<T, inline_element_count> stack_storage_;
+    SOUL_NO_UNIQUE_ADDRESS RawBuffer<T, InlineSizeV> stack_storage_;
     static constexpr usize GROWTH_FACTOR = 2;
-    static constexpr b8 IS_SBO = inline_element_count > 0;
+    static constexpr b8 IS_SBO = InlineSizeV > 0;
     AllocatorT* allocator_ = nullptr;
     T* buffer_ = stack_storage_.data();
     usize size_ = 0;
-    usize capacity_ = inline_element_count;
+    usize capacity_ = InlineSizeV;
 
     Vector(const Vector& other, AllocatorT& allocator);
 
@@ -478,15 +478,14 @@ namespace soul
     return this_type(Construct::generate_n, fn, size, allocator);
   }
 
-  template <typename T, memory::allocator_type AllocatorT, usize inline_element_count>
-  auto Vector<T, AllocatorT, inline_element_count>::clone() const -> this_type
+  template <typename T, memory::allocator_type AllocatorT, usize InlineSizeV>
+  auto Vector<T, AllocatorT, InlineSizeV>::clone() const -> this_type
   {
     return Vector(*this);
   }
 
-  template <typename T, memory::allocator_type AllocatorT, usize inline_element_count>
-  auto Vector<T, AllocatorT, inline_element_count>::clone(memory::Allocator& allocator) const
-    -> this_type
+  template <typename T, memory::allocator_type AllocatorT, usize InlineSizeV>
+  auto Vector<T, AllocatorT, InlineSizeV>::clone(memory::Allocator& allocator) const -> this_type
   {
     return Vector(*this, allocator);
   }
@@ -523,8 +522,8 @@ namespace soul
     return this_type(Construct::transform_index, idx_start, idx_end, std::move(fn), allocator);
   }
 
-  template <typename T, memory::allocator_type AllocatorT, usize inline_element_count>
-  void Vector<T, AllocatorT, inline_element_count>::clone_from(const this_type& other)
+  template <typename T, memory::allocator_type AllocatorT, usize InlineSizeV>
+  void Vector<T, AllocatorT, InlineSizeV>::clone_from(const this_type& other)
   {
     *this = other;
   }
@@ -635,98 +634,98 @@ namespace soul
     swap(capacity_, other.capacity_);
   }
 
-  template <typename T, memory::allocator_type AllocatorT, usize inline_element_count>
-  auto Vector<T, AllocatorT, inline_element_count>::begin() -> iterator
+  template <typename T, memory::allocator_type AllocatorT, usize InlineSizeV>
+  auto Vector<T, AllocatorT, InlineSizeV>::begin() -> iterator
   {
     return buffer_;
   }
 
-  template <typename T, memory::allocator_type AllocatorT, usize inline_element_count>
-  auto Vector<T, AllocatorT, inline_element_count>::begin() const -> const_iterator
+  template <typename T, memory::allocator_type AllocatorT, usize InlineSizeV>
+  auto Vector<T, AllocatorT, InlineSizeV>::begin() const -> const_iterator
   {
     return buffer_;
   }
 
-  template <typename T, memory::allocator_type AllocatorT, usize inline_element_count>
-  auto Vector<T, AllocatorT, inline_element_count>::cbegin() const -> const_iterator
+  template <typename T, memory::allocator_type AllocatorT, usize InlineSizeV>
+  auto Vector<T, AllocatorT, InlineSizeV>::cbegin() const -> const_iterator
   {
     return buffer_;
   }
 
-  template <typename T, memory::allocator_type AllocatorT, usize inline_element_count>
-  auto Vector<T, AllocatorT, inline_element_count>::end() -> iterator
+  template <typename T, memory::allocator_type AllocatorT, usize InlineSizeV>
+  auto Vector<T, AllocatorT, InlineSizeV>::end() -> iterator
   {
     return buffer_ + size_;
   }
 
-  template <typename T, memory::allocator_type AllocatorT, usize inline_element_count>
-  auto Vector<T, AllocatorT, inline_element_count>::end() const -> const_iterator
+  template <typename T, memory::allocator_type AllocatorT, usize InlineSizeV>
+  auto Vector<T, AllocatorT, InlineSizeV>::end() const -> const_iterator
   {
     return buffer_ + size_;
   }
 
-  template <typename T, memory::allocator_type AllocatorT, usize inline_element_count>
-  auto Vector<T, AllocatorT, inline_element_count>::cend() const -> const_iterator
+  template <typename T, memory::allocator_type AllocatorT, usize InlineSizeV>
+  auto Vector<T, AllocatorT, InlineSizeV>::cend() const -> const_iterator
   {
     return buffer_ + size_;
   }
 
-  template <typename T, memory::allocator_type AllocatorT, usize inline_element_count>
-  auto Vector<T, AllocatorT, inline_element_count>::rbegin() -> reverse_iterator
+  template <typename T, memory::allocator_type AllocatorT, usize InlineSizeV>
+  auto Vector<T, AllocatorT, InlineSizeV>::rbegin() -> reverse_iterator
   {
     return reverse_iterator(end());
   }
 
-  template <typename T, memory::allocator_type AllocatorT, usize inline_element_count>
-  auto Vector<T, AllocatorT, inline_element_count>::rbegin() const -> const_reverse_iterator
+  template <typename T, memory::allocator_type AllocatorT, usize InlineSizeV>
+  auto Vector<T, AllocatorT, InlineSizeV>::rbegin() const -> const_reverse_iterator
   {
     return const_reverse_iterator(cend());
   }
 
-  template <typename T, memory::allocator_type AllocatorT, usize inline_element_count>
-  auto Vector<T, AllocatorT, inline_element_count>::crbegin() const -> const_reverse_iterator
+  template <typename T, memory::allocator_type AllocatorT, usize InlineSizeV>
+  auto Vector<T, AllocatorT, InlineSizeV>::crbegin() const -> const_reverse_iterator
   {
     return const_reverse_iterator(cend());
   }
 
-  template <typename T, memory::allocator_type AllocatorT, usize inline_element_count>
-  auto Vector<T, AllocatorT, inline_element_count>::rend() -> reverse_iterator
+  template <typename T, memory::allocator_type AllocatorT, usize InlineSizeV>
+  auto Vector<T, AllocatorT, InlineSizeV>::rend() -> reverse_iterator
   {
     return reverse_iterator(begin());
   }
 
-  template <typename T, memory::allocator_type AllocatorT, usize inline_element_count>
-  auto Vector<T, AllocatorT, inline_element_count>::rend() const -> const_reverse_iterator
+  template <typename T, memory::allocator_type AllocatorT, usize InlineSizeV>
+  auto Vector<T, AllocatorT, InlineSizeV>::rend() const -> const_reverse_iterator
   {
     return const_reverse_iterator(cbegin());
   }
 
-  template <typename T, memory::allocator_type AllocatorT, usize inline_element_count>
-  auto Vector<T, AllocatorT, inline_element_count>::crend() const -> const_reverse_iterator
+  template <typename T, memory::allocator_type AllocatorT, usize InlineSizeV>
+  auto Vector<T, AllocatorT, InlineSizeV>::crend() const -> const_reverse_iterator
   {
     return const_reverse_iterator(cbegin());
   }
 
-  template <typename T, memory::allocator_type AllocatorT, usize inline_element_count>
-  auto Vector<T, AllocatorT, inline_element_count>::capacity() const noexcept -> usize
+  template <typename T, memory::allocator_type AllocatorT, usize InlineSizeV>
+  auto Vector<T, AllocatorT, InlineSizeV>::capacity() const noexcept -> usize
   {
     return capacity_;
   }
 
-  template <typename T, memory::allocator_type AllocatorT, usize inline_element_count>
-  auto Vector<T, AllocatorT, inline_element_count>::size() const noexcept -> usize
+  template <typename T, memory::allocator_type AllocatorT, usize InlineSizeV>
+  auto Vector<T, AllocatorT, InlineSizeV>::size() const noexcept -> usize
   {
     return size_;
   }
 
-  template <typename T, memory::allocator_type AllocatorT, usize inline_element_count>
-  auto Vector<T, AllocatorT, inline_element_count>::size_in_bytes() const noexcept -> usize
+  template <typename T, memory::allocator_type AllocatorT, usize InlineSizeV>
+  auto Vector<T, AllocatorT, InlineSizeV>::size_in_bytes() const noexcept -> usize
   {
     return size_ * sizeof(T);
   }
 
-  template <typename T, memory::allocator_type AllocatorT, usize inline_element_count>
-  auto Vector<T, AllocatorT, inline_element_count>::empty() const noexcept -> b8
+  template <typename T, memory::allocator_type AllocatorT, usize InlineSizeV>
+  auto Vector<T, AllocatorT, InlineSizeV>::empty() const noexcept -> b8
   {
     return size_ == 0;
   }
@@ -851,20 +850,20 @@ namespace soul
     std::destroy_n(buffer_ + size_, count);
   }
 
-  template <typename T, memory::allocator_type AllocatorT, usize inline_element_count>
-  void Vector<T, AllocatorT, inline_element_count>::shrink_to_fit()
+  template <typename T, memory::allocator_type AllocatorT, usize InlineSizeV>
+  void Vector<T, AllocatorT, InlineSizeV>::shrink_to_fit()
   {
     if (capacity_ == size_ || is_using_stack_storage()) {
       return;
     }
     T* old_buffer = buffer_;
     const auto old_capacity = capacity_;
-    if (size_ > inline_element_count) {
+    if (size_ > InlineSizeV) {
       buffer_ = allocator_->template allocate_array<T>(size_);
       capacity_ = size_;
     } else {
       buffer_ = stack_storage_.data();
-      capacity_ = inline_element_count;
+      capacity_ = InlineSizeV;
     }
     uninitialized_relocate_n(old_buffer, size_, buffer_);
     allocator_->deallocate_array(old_buffer, old_capacity);
@@ -926,69 +925,69 @@ namespace soul
     }
   }
 
-  template <typename T, memory::allocator_type AllocatorT, usize inline_element_count>
-  auto Vector<T, AllocatorT, inline_element_count>::data() noexcept -> pointer
+  template <typename T, memory::allocator_type AllocatorT, usize InlineSizeV>
+  auto Vector<T, AllocatorT, InlineSizeV>::data() noexcept -> pointer
   {
     return buffer_;
   }
 
-  template <typename T, memory::allocator_type AllocatorT, usize inline_element_count>
-  auto Vector<T, AllocatorT, inline_element_count>::data() const noexcept -> const_pointer
+  template <typename T, memory::allocator_type AllocatorT, usize InlineSizeV>
+  auto Vector<T, AllocatorT, InlineSizeV>::data() const noexcept -> const_pointer
   {
     return buffer_;
   }
 
-  template <typename T, memory::allocator_type AllocatorT, usize inline_element_count>
+  template <typename T, memory::allocator_type AllocatorT, usize InlineSizeV>
   template <ts_unsigned_integral SpanSizeT>
-  auto Vector<T, AllocatorT, inline_element_count>::span() -> Span<pointer, SpanSizeT>
+  auto Vector<T, AllocatorT, InlineSizeV>::span() -> Span<pointer, SpanSizeT>
   {
     return {data(), cast<SpanSizeT>(size())};
   }
 
-  template <typename T, memory::allocator_type AllocatorT, usize inline_element_count>
+  template <typename T, memory::allocator_type AllocatorT, usize InlineSizeV>
   template <ts_unsigned_integral SpanSizeT>
-  auto Vector<T, AllocatorT, inline_element_count>::span() const -> Span<const_pointer, SpanSizeT>
+  auto Vector<T, AllocatorT, InlineSizeV>::span() const -> Span<const_pointer, SpanSizeT>
   {
     return {data(), cast<SpanSizeT>(size())};
   }
 
-  template <typename T, memory::allocator_type AllocatorT, usize inline_element_count>
+  template <typename T, memory::allocator_type AllocatorT, usize InlineSizeV>
   template <ts_unsigned_integral SpanSizeT>
-  auto Vector<T, AllocatorT, inline_element_count>::cspan() const -> Span<const_pointer, SpanSizeT>
+  auto Vector<T, AllocatorT, InlineSizeV>::cspan() const -> Span<const_pointer, SpanSizeT>
   {
     return {data(), cast<SpanSizeT>(size())};
   }
 
-  template <typename T, memory::allocator_type AllocatorT, usize inline_element_count>
-  auto Vector<T, AllocatorT, inline_element_count>::front() -> reference
+  template <typename T, memory::allocator_type AllocatorT, usize InlineSizeV>
+  auto Vector<T, AllocatorT, InlineSizeV>::front() -> reference
   {
     SOUL_ASSERT(0, size_ != 0, "Vector cannot be empty when calling Vector::front()");
     return buffer_[0];
   }
 
-  template <typename T, memory::allocator_type AllocatorT, usize inline_element_count>
-  auto Vector<T, AllocatorT, inline_element_count>::front() const -> const_reference
+  template <typename T, memory::allocator_type AllocatorT, usize InlineSizeV>
+  auto Vector<T, AllocatorT, InlineSizeV>::front() const -> const_reference
   {
     SOUL_ASSERT(0, size_ != 0, "Vector cannot be empty when calling Vector::front()");
     return buffer_[0];
   }
 
-  template <typename T, memory::allocator_type AllocatorT, usize inline_element_count>
-  auto Vector<T, AllocatorT, inline_element_count>::back() noexcept -> reference
+  template <typename T, memory::allocator_type AllocatorT, usize InlineSizeV>
+  auto Vector<T, AllocatorT, InlineSizeV>::back() noexcept -> reference
   {
     SOUL_ASSERT(0, size_ != 0, "Vector cannot be empty when calling Vector::back()");
     return buffer_[size_ - 1];
   }
 
-  template <typename T, memory::allocator_type AllocatorT, usize inline_element_count>
-  auto Vector<T, AllocatorT, inline_element_count>::back() const noexcept -> const_reference
+  template <typename T, memory::allocator_type AllocatorT, usize InlineSizeV>
+  auto Vector<T, AllocatorT, InlineSizeV>::back() const noexcept -> const_reference
   {
     SOUL_ASSERT(0, size_ != 0, "Vector cannot be empty when calling Vector::back()");
     return buffer_[size_ - 1];
   }
 
-  template <typename T, memory::allocator_type AllocatorT, usize inline_element_count>
-  auto Vector<T, AllocatorT, inline_element_count>::operator[](usize idx) -> reference
+  template <typename T, memory::allocator_type AllocatorT, usize InlineSizeV>
+  auto Vector<T, AllocatorT, InlineSizeV>::operator[](usize idx) -> reference
   {
     SOUL_ASSERT(
       0,
@@ -999,8 +998,8 @@ namespace soul
     return buffer_[idx];
   }
 
-  template <typename T, memory::allocator_type AllocatorT, usize inline_element_count>
-  auto Vector<T, AllocatorT, inline_element_count>::operator[](usize idx) const -> const_reference
+  template <typename T, memory::allocator_type AllocatorT, usize InlineSizeV>
+  auto Vector<T, AllocatorT, InlineSizeV>::operator[](usize idx) const -> const_reference
   {
     SOUL_ASSERT(
       0, idx < size_, "Out of bound access to array detected. idx = %llu, _size=%llu", idx, size_);

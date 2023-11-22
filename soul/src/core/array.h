@@ -11,10 +11,10 @@ namespace soul
 
   static constexpr usize MAX_BRACE_INIT_SIZE = 32;
 
-  template <typename T, usize element_count>
+  template <typeset T, usize ArrSizeV>
   struct Array {
 
-    using this_type = Array<T, element_count>;
+    using this_type = Array<T, ArrSizeV>;
     using value_type = T;
     using pointer = T*;
     using const_pointer = const T*;
@@ -27,17 +27,17 @@ namespace soul
 
     [[nodiscard]]
     static constexpr auto Fill(const T& val) -> this_type
-      requires(element_count <= MAX_BRACE_INIT_SIZE);
+      requires(ArrSizeV <= MAX_BRACE_INIT_SIZE);
 
     template <ts_generate_fn<T> Fn>
     [[nodiscard]]
     static constexpr auto Generate(Fn fn) -> this_type
-      requires(element_count <= MAX_BRACE_INIT_SIZE);
+      requires(ArrSizeV <= MAX_BRACE_INIT_SIZE);
 
     template <ts_fn<T, usize> Fn>
     [[nodiscard]]
     static constexpr auto TransformIndex(Fn fn) -> this_type
-      requires(element_count <= MAX_BRACE_INIT_SIZE);
+      requires(ArrSizeV <= MAX_BRACE_INIT_SIZE);
 
     constexpr void swap(this_type& other) noexcept;
 
@@ -45,7 +45,7 @@ namespace soul
 
     [[nodiscard]]
     constexpr auto clone() const -> this_type
-      requires(ts_clone<T> && element_count <= MAX_BRACE_INIT_SIZE);
+      requires(ts_clone<T> && ArrSizeV <= MAX_BRACE_INIT_SIZE);
 
     constexpr void clone_from(const this_type& other)
       requires ts_clone<T>;
@@ -130,244 +130,244 @@ namespace soul
     [[nodiscard]]
     constexpr auto crend() const -> const_reverse_iterator;
 
-    T buffer_[element_count];
+    T buffer_[ArrSizeV];
   };
 
-  template <typename T, usize element_count>
+  template <typeset T, usize ArrSizeV>
   [[nodiscard]]
-  constexpr auto Array<T, element_count>::Fill(const T& val) -> this_type
-    requires(element_count <= MAX_BRACE_INIT_SIZE)
+  constexpr auto Array<T, ArrSizeV>::Fill(const T& val) -> this_type
+    requires(ArrSizeV <= MAX_BRACE_INIT_SIZE)
   {
     const auto create_array =
       []<usize... idx>(std::index_sequence<idx...>, const T& val) -> this_type {
       return {(static_cast<void>(idx), val)...};
     };
-    return create_array(std::make_index_sequence<element_count>(), val);
+    return create_array(std::make_index_sequence<ArrSizeV>(), val);
   }
 
-  template <typename T, usize element_count>
+  template <typeset T, usize ArrSizeV>
   template <ts_generate_fn<T> Fn>
   [[nodiscard]]
-  constexpr auto Array<T, element_count>::Generate(Fn fn) -> this_type
-    requires(element_count <= MAX_BRACE_INIT_SIZE)
+  constexpr auto Array<T, ArrSizeV>::Generate(Fn fn) -> this_type
+    requires(ArrSizeV <= MAX_BRACE_INIT_SIZE)
   {
     const auto create_array = []<usize... idx>(std::index_sequence<idx...>, Fn fn) -> this_type {
       return {(static_cast<void>(idx), std::invoke(fn))...};
     };
-    return create_array(std::make_index_sequence<element_count>(), fn);
+    return create_array(std::make_index_sequence<ArrSizeV>(), fn);
   }
 
-  template <typename T, usize element_count>
+  template <typeset T, usize ArrSizeV>
   template <ts_fn<T, usize> Fn>
   [[nodiscard]]
-  constexpr auto Array<T, element_count>::TransformIndex(Fn fn) -> this_type
-    requires(element_count <= MAX_BRACE_INIT_SIZE)
+  constexpr auto Array<T, ArrSizeV>::TransformIndex(Fn fn) -> this_type
+    requires(ArrSizeV <= MAX_BRACE_INIT_SIZE)
   {
-    static_assert(element_count <= MAX_BRACE_INIT_SIZE);
+    static_assert(ArrSizeV <= MAX_BRACE_INIT_SIZE);
     const auto create_array = []<usize... idx>(std::index_sequence<idx...>, Fn fn) -> this_type {
       return {(std::invoke(fn, idx))...};
     };
-    return create_array(std::make_index_sequence<element_count>(), fn);
+    return create_array(std::make_index_sequence<ArrSizeV>(), fn);
   }
 
-  template <typename T, usize element_count>
-  constexpr void Array<T, element_count>::swap(this_type& other) noexcept
+  template <typeset T, usize ArrSizeV>
+  constexpr void Array<T, ArrSizeV>::swap(this_type& other) noexcept
   {
     using std::swap;
-    for (usize i = 0; i < element_count; i++) {
+    for (usize i = 0; i < ArrSizeV; i++) {
       swap(buffer_[i], other.buffer_[i]);
     }
   }
 
-  template <typename T, usize element_count>
+  template <typeset T, usize ArrSizeV>
   [[nodiscard]]
-  constexpr auto Array<T, element_count>::clone() const -> this_type
-    requires(ts_clone<T> && element_count <= MAX_BRACE_INIT_SIZE)
+  constexpr auto Array<T, ArrSizeV>::clone() const -> this_type
+    requires(ts_clone<T> && ArrSizeV <= MAX_BRACE_INIT_SIZE)
   {
     const auto create_array =
       []<usize... idx>(std::index_sequence<idx...>, const this_type& original) -> this_type {
       return {original.buffer_[idx].clone()...};
     };
-    return create_array(std::make_index_sequence<element_count>(), *this);
+    return create_array(std::make_index_sequence<ArrSizeV>(), *this);
   }
 
-  template <typename T, usize element_count>
-  constexpr void Array<T, element_count>::clone_from(const this_type& other)
+  template <typeset T, usize ArrSizeV>
+  constexpr void Array<T, ArrSizeV>::clone_from(const this_type& other)
     requires ts_clone<T>
   {
-    for (usize i = 0; i < element_count; i++) {
+    for (usize i = 0; i < ArrSizeV; i++) {
       buffer_[i].clone_from(other.buffer[i]);
     }
   }
 
-  template <typename T, usize element_count>
-  constexpr auto Array<T, element_count>::data() noexcept -> pointer
+  template <typeset T, usize ArrSizeV>
+  constexpr auto Array<T, ArrSizeV>::data() noexcept -> pointer
   {
     return buffer_;
   }
 
-  template <typename T, usize element_count>
-  constexpr auto Array<T, element_count>::data() const noexcept -> const_pointer
+  template <typeset T, usize ArrSizeV>
+  constexpr auto Array<T, ArrSizeV>::data() const noexcept -> const_pointer
   {
     return buffer_;
   }
 
-  template <typename T, usize element_count>
+  template <typeset T, usize ArrSizeV>
   template <ts_unsigned_integral SpanSizeT>
-  auto Array<T, element_count>::span() -> Span<pointer, SpanSizeT>
+  auto Array<T, ArrSizeV>::span() -> Span<pointer, SpanSizeT>
   {
     return {data(), cast<SpanSizeT>(size())};
   }
 
-  template <typename T, usize element_count>
+  template <typeset T, usize ArrSizeV>
   template <ts_unsigned_integral SpanSizeT>
-  auto Array<T, element_count>::span() const -> Span<const_pointer, SpanSizeT>
+  auto Array<T, ArrSizeV>::span() const -> Span<const_pointer, SpanSizeT>
   {
     return {data(), cast<SpanSizeT>(size())};
   }
 
-  template <typename T, usize element_count>
+  template <typeset T, usize ArrSizeV>
   template <ts_unsigned_integral SpanSizeT>
-  auto Array<T, element_count>::cspan() const -> Span<const_pointer, SpanSizeT>
+  auto Array<T, ArrSizeV>::cspan() const -> Span<const_pointer, SpanSizeT>
   {
     return {data(), cast<SpanSizeT>(size())};
   }
 
-  template <typename T, usize element_count>
-  constexpr auto Array<T, element_count>::front() -> reference
+  template <typeset T, usize ArrSizeV>
+  constexpr auto Array<T, ArrSizeV>::front() -> reference
   {
     return buffer_[0];
   }
 
-  template <typename T, usize element_count>
-  constexpr auto Array<T, element_count>::front() const -> const_reference
+  template <typeset T, usize ArrSizeV>
+  constexpr auto Array<T, ArrSizeV>::front() const -> const_reference
   {
     return buffer_[0];
   }
 
-  template <typename T, usize element_count>
-  constexpr auto Array<T, element_count>::back() noexcept -> reference
+  template <typeset T, usize ArrSizeV>
+  constexpr auto Array<T, ArrSizeV>::back() noexcept -> reference
   {
-    return buffer_[element_count - 1];
+    return buffer_[ArrSizeV - 1];
   }
 
-  template <typename T, usize element_count>
-  constexpr auto Array<T, element_count>::back() const noexcept -> const_reference
+  template <typeset T, usize ArrSizeV>
+  constexpr auto Array<T, ArrSizeV>::back() const noexcept -> const_reference
   {
-    return buffer_[element_count - 1];
+    return buffer_[ArrSizeV - 1];
   }
 
-  template <typename T, usize element_count>
-  constexpr auto Array<T, element_count>::operator[](usize idx) -> reference
+  template <typeset T, usize ArrSizeV>
+  constexpr auto Array<T, ArrSizeV>::operator[](usize idx) -> reference
   {
     SOUL_ASSERT(
       0,
-      idx < element_count,
+      idx < ArrSizeV,
       "Out of bound access to array detected. idx = {}, _size = ",
       idx,
-      element_count);
+      ArrSizeV);
     return buffer_[idx];
   }
 
-  template <typename T, usize element_count>
-  constexpr auto Array<T, element_count>::operator[](usize idx) const -> const_reference
+  template <typeset T, usize ArrSizeV>
+  constexpr auto Array<T, ArrSizeV>::operator[](usize idx) const -> const_reference
   {
     SOUL_ASSERT(
       0,
-      idx < element_count,
+      idx < ArrSizeV,
       "Out of bound access to array detected. idx = {}, _size={}",
       idx,
-      element_count);
+      ArrSizeV);
     return buffer_[idx];
   }
 
-  template <typename T, usize element_count>
+  template <typeset T, usize ArrSizeV>
   [[nodiscard]]
-  constexpr auto Array<T, element_count>::size() const -> usize
+  constexpr auto Array<T, ArrSizeV>::size() const -> usize
   {
-    return element_count;
+    return ArrSizeV;
   }
 
-  template <typename T, usize element_count>
+  template <typeset T, usize ArrSizeV>
   [[nodiscard]]
-  constexpr auto Array<T, element_count>::empty() const -> b8
+  constexpr auto Array<T, ArrSizeV>::empty() const -> b8
   {
-    return element_count == 0;
+    return ArrSizeV == 0;
   }
 
-  template <typename T, usize element_count>
-  constexpr auto Array<T, element_count>::begin() -> iterator
-  {
-    return buffer_;
-  }
-
-  template <typename T, usize element_count>
-  constexpr auto Array<T, element_count>::begin() const -> const_iterator
+  template <typeset T, usize ArrSizeV>
+  constexpr auto Array<T, ArrSizeV>::begin() -> iterator
   {
     return buffer_;
   }
 
-  template <typename T, usize element_count>
-  constexpr auto Array<T, element_count>::cbegin() const -> const_iterator
+  template <typeset T, usize ArrSizeV>
+  constexpr auto Array<T, ArrSizeV>::begin() const -> const_iterator
   {
     return buffer_;
   }
 
-  template <typename T, usize element_count>
-  constexpr auto Array<T, element_count>::end() -> iterator
+  template <typeset T, usize ArrSizeV>
+  constexpr auto Array<T, ArrSizeV>::cbegin() const -> const_iterator
   {
-    return buffer_ + element_count;
+    return buffer_;
   }
 
-  template <typename T, usize element_count>
-  constexpr auto Array<T, element_count>::end() const -> const_iterator
+  template <typeset T, usize ArrSizeV>
+  constexpr auto Array<T, ArrSizeV>::end() -> iterator
   {
-    return buffer_ + element_count;
+    return buffer_ + ArrSizeV;
   }
 
-  template <typename T, usize element_count>
-  constexpr auto Array<T, element_count>::cend() const -> const_iterator
+  template <typeset T, usize ArrSizeV>
+  constexpr auto Array<T, ArrSizeV>::end() const -> const_iterator
   {
-    return buffer_ + element_count;
+    return buffer_ + ArrSizeV;
   }
 
-  template <typename T, usize element_count>
-  constexpr auto Array<T, element_count>::rbegin() -> reverse_iterator
+  template <typeset T, usize ArrSizeV>
+  constexpr auto Array<T, ArrSizeV>::cend() const -> const_iterator
+  {
+    return buffer_ + ArrSizeV;
+  }
+
+  template <typeset T, usize ArrSizeV>
+  constexpr auto Array<T, ArrSizeV>::rbegin() -> reverse_iterator
   {
     return reverse_iterator(end());
   }
 
-  template <typename T, usize element_count>
-  constexpr auto Array<T, element_count>::rbegin() const -> const_reverse_iterator
+  template <typeset T, usize ArrSizeV>
+  constexpr auto Array<T, ArrSizeV>::rbegin() const -> const_reverse_iterator
   {
     return const_reverse_iterator(cend());
   }
 
-  template <typename T, usize element_count>
-  constexpr auto Array<T, element_count>::crbegin() const -> const_reverse_iterator
+  template <typeset T, usize ArrSizeV>
+  constexpr auto Array<T, ArrSizeV>::crbegin() const -> const_reverse_iterator
   {
     return const_reverse_iterator(cend());
   }
 
-  template <typename T, usize element_count>
-  constexpr auto Array<T, element_count>::rend() -> reverse_iterator
+  template <typeset T, usize ArrSizeV>
+  constexpr auto Array<T, ArrSizeV>::rend() -> reverse_iterator
   {
     return reverse_iterator(begin());
   }
 
-  template <typename T, usize element_count>
-  constexpr auto Array<T, element_count>::rend() const -> const_reverse_iterator
+  template <typeset T, usize ArrSizeV>
+  constexpr auto Array<T, ArrSizeV>::rend() const -> const_reverse_iterator
   {
     return const_reverse_iterator(cbegin());
   }
 
-  template <typename T, usize element_count>
-  constexpr auto Array<T, element_count>::crend() const -> const_reverse_iterator
+  template <typeset T, usize ArrSizeV>
+  constexpr auto Array<T, ArrSizeV>::crend() const -> const_reverse_iterator
   {
     return const_reverse_iterator(cbegin());
   }
 
-  template <typename T>
+  template <typeset T>
   struct Array<T, 0> {
 
     using this_type = Array<T, 0>;
@@ -523,10 +523,11 @@ namespace soul
       return nullptr;
     }
   };
-  template <class T, class... U>
+
+  template <typeset T, typeset... U>
   Array(T, U...) -> Array<T, 1 + sizeof...(U)>;
 
-  template <typename T, usize ArrSizeV>
+  template <typeset T, usize ArrSizeV>
   constexpr auto operator==(const Array<T, ArrSizeV>& lhs, const Array<T, ArrSizeV>& rhs) -> b8
   {
     return std::ranges::equal(lhs, rhs);

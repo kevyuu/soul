@@ -20,8 +20,6 @@
     } while (1)
 #endif
 
-#include <span>
-
 namespace soul::gpu::impl
 {
   class RenderCompiler;

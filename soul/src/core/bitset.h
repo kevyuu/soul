@@ -9,11 +9,11 @@ namespace soul
 {
   namespace impl
   {
-    template <size_t BlockCount, ts_bit_block BlockType>
+    template <size_t BlockCountV, ts_bit_block BlockType>
     class BitsetImpl
     {
     public:
-      using this_type = BitsetImpl<BlockCount, BlockType>;
+      using this_type = BitsetImpl<BlockCountV, BlockType>;
 
       constexpr auto reset() -> void;
 
@@ -45,17 +45,17 @@ namespace soul
       template <ts_fn<void, usize> Fn>
       constexpr auto for_each(Fn fn) const -> void;
 
-      template <usize IBlockCount = BlockCount, ts_bit_block IBlockType = BlockType>
+      template <usize IBlockCount = BlockCountV, ts_bit_block IBlockType = BlockType>
         requires(IBlockCount == 1 && sizeof(BlockType) <= 4)
       [[nodiscard]]
       constexpr auto to_uint32() const -> u32;
 
-      template <usize IBlockCount = BlockCount, ts_bit_block IBlockType = BlockType>
+      template <usize IBlockCount = BlockCountV, ts_bit_block IBlockType = BlockType>
         requires(IBlockCount == 1 && sizeof(BlockType) <= 8)
       [[nodiscard]]
       constexpr auto to_uint64() const -> u64;
 
-      Array<BlockType, BlockCount> blocks_ = {};
+      Array<BlockType, BlockCountV> blocks_ = {};
 
     protected:
       constexpr auto operator&=(const this_type& rhs) -> void;
@@ -74,7 +74,7 @@ namespace soul
 
       static constexpr usize BITS_PER_BLOCK = sizeof(BlockType) * 8;
       static constexpr usize BITS_PER_BLOCK_MASK = BITS_PER_BLOCK - 1;
-      static constexpr usize BLOCK_COUNT = BlockCount;
+      static constexpr usize BLOCK_COUNT = BlockCountV;
 
       static constexpr auto GetBlockIndex(usize index) -> usize;
 
@@ -83,11 +83,11 @@ namespace soul
       static constexpr auto GetBlockOneMask(usize index) -> BlockType;
     };
 
-    template <size_t BlockCount, ts_bit_block BlockType>
+    template <size_t BlockCountV, ts_bit_block BlockType>
     template <ts_fn<void, usize> Fn>
-    constexpr auto BitsetImpl<BlockCount, BlockType>::for_each(Fn fn) const -> void
+    constexpr auto BitsetImpl<BlockCountV, BlockType>::for_each(Fn fn) const -> void
     {
-      for (usize block_index = 0; block_index < BlockCount; block_index++) {
+      for (usize block_index = 0; block_index < BlockCountV; block_index++) {
         auto block = blocks_[block_index];
         auto get_next_block = [](const BlockType prev_block, usize prev_pos) -> BlockType {
           const BlockType mask = ~static_cast<BlockType>(cast<BlockType>(1) << prev_pos);
@@ -103,64 +103,64 @@ namespace soul
       }
     }
 
-    template <size_t BlockCount, ts_bit_block BlockType>
-    template <usize IBlockCount, ts_bit_block IBlockType>
-      requires(IBlockCount == 1 && sizeof(BlockType) <= 4)
-    constexpr auto BitsetImpl<BlockCount, BlockType>::to_uint32() const -> u32
+    template <size_t BlockCountV, ts_bit_block BlockType>
+    template <usize IBlockCountV, ts_bit_block IBlockType>
+      requires(IBlockCountV == 1 && sizeof(BlockType) <= 4)
+    constexpr auto BitsetImpl<BlockCountV, BlockType>::to_uint32() const -> u32
     {
       return blocks_[0];
     }
 
-    template <size_t BlockCount, ts_bit_block BlockType>
-    template <usize IBlockCount, ts_bit_block IBlockType>
-      requires(IBlockCount == 1 && sizeof(BlockType) <= 8)
-    constexpr auto BitsetImpl<BlockCount, BlockType>::to_uint64() const -> u64
+    template <size_t BlockCountV, ts_bit_block BlockType>
+    template <usize IBlockCountV, ts_bit_block IBlockType>
+      requires(IBlockCountV == 1 && sizeof(BlockType) <= 8)
+    constexpr auto BitsetImpl<BlockCountV, BlockType>::to_uint64() const -> u64
     {
       return blocks_[0];
     }
 
-    template <size_t BlockCount, ts_bit_block BlockType>
-    constexpr auto BitsetImpl<BlockCount, BlockType>::operator&=(const this_type& rhs) -> void
+    template <size_t BlockCountV, ts_bit_block BlockType>
+    constexpr auto BitsetImpl<BlockCountV, BlockType>::operator&=(const this_type& rhs) -> void
     {
-      for (usize i = 0; i < BlockCount; i++) {
+      for (usize i = 0; i < BlockCountV; i++) {
         blocks_[i] &= rhs.blocks_[i];
       }
     }
 
-    template <size_t BlockCount, ts_bit_block BlockType>
-    constexpr auto BitsetImpl<BlockCount, BlockType>::operator|=(const this_type& rhs) -> void
+    template <size_t BlockCountV, ts_bit_block BlockType>
+    constexpr auto BitsetImpl<BlockCountV, BlockType>::operator|=(const this_type& rhs) -> void
     {
-      for (usize i = 0; i < BlockCount; i++) {
+      for (usize i = 0; i < BlockCountV; i++) {
         blocks_[i] |= rhs.blocks_[i];
       }
     }
 
-    template <size_t BlockCount, ts_bit_block BlockType>
-    constexpr auto BitsetImpl<BlockCount, BlockType>::operator^=(const this_type& rhs) -> void
+    template <size_t BlockCountV, ts_bit_block BlockType>
+    constexpr auto BitsetImpl<BlockCountV, BlockType>::operator^=(const this_type& rhs) -> void
     {
-      for (usize i = 0; i < BlockCount; i++) {
+      for (usize i = 0; i < BlockCountV; i++) {
         blocks_[i] ^= rhs.blocks_[i];
       }
     }
 
-    template <size_t BlockCount, ts_bit_block BlockType>
-    constexpr auto BitsetImpl<BlockCount, BlockType>::flip() -> void
+    template <size_t BlockCountV, ts_bit_block BlockType>
+    constexpr auto BitsetImpl<BlockCountV, BlockType>::flip() -> void
     {
-      for (usize i = 0; i < BlockCount; i++) {
+      for (usize i = 0; i < BlockCountV; i++) {
         blocks_[i] = ~blocks_[i];
       }
     }
 
-    template <size_t BlockCount, ts_bit_block BlockType>
-    constexpr auto BitsetImpl<BlockCount, BlockType>::set() -> void
+    template <size_t BlockCountV, ts_bit_block BlockType>
+    constexpr auto BitsetImpl<BlockCountV, BlockType>::set() -> void
     {
-      for (usize i = 0; i < BlockCount; i++) {
+      for (usize i = 0; i < BlockCountV; i++) {
         blocks_[i] = static_cast<BlockType>(~cast<BlockType>(0));
       }
     }
 
-    template <size_t BlockCount, ts_bit_block BlockType>
-    constexpr auto BitsetImpl<BlockCount, BlockType>::set(const usize index, const b8 val) -> void
+    template <size_t BlockCountV, ts_bit_block BlockType>
+    constexpr auto BitsetImpl<BlockCountV, BlockType>::set(const usize index, const b8 val) -> void
     {
       if (val) {
         blocks_[GetBlockIndex(index)] |= GetBlockOneMask(index);
@@ -169,18 +169,18 @@ namespace soul
       }
     }
 
-    template <size_t BlockCount, ts_bit_block BlockType>
-    constexpr auto BitsetImpl<BlockCount, BlockType>::reset() -> void
+    template <size_t BlockCountV, ts_bit_block BlockType>
+    constexpr auto BitsetImpl<BlockCountV, BlockType>::reset() -> void
     {
-      for (usize i = 0; i < BlockCount; i++) {
+      for (usize i = 0; i < BlockCountV; i++) {
         blocks_[i] = 0;
       }
     }
 
-    template <size_t BlockCount, ts_bit_block BlockType>
-    constexpr auto BitsetImpl<BlockCount, BlockType>::operator==(const this_type& x) const -> b8
+    template <size_t BlockCountV, ts_bit_block BlockType>
+    constexpr auto BitsetImpl<BlockCountV, BlockType>::operator==(const this_type& x) const -> b8
     {
-      for (usize i = 0; i < BlockCount; i++) {
+      for (usize i = 0; i < BlockCountV; i++) {
         if (blocks_[i] != x.blocks_[i]) {
           return false;
         }
@@ -188,10 +188,10 @@ namespace soul
       return true;
     }
 
-    template <size_t BlockCount, ts_bit_block BlockType>
-    constexpr auto BitsetImpl<BlockCount, BlockType>::any() const -> b8
+    template <size_t BlockCountV, ts_bit_block BlockType>
+    constexpr auto BitsetImpl<BlockCountV, BlockType>::any() const -> b8
     {
-      for (usize i = 0; i < BlockCount; i++) {
+      for (usize i = 0; i < BlockCountV; i++) {
         if (blocks_[i]) {
           return true;
         }
@@ -199,26 +199,26 @@ namespace soul
       return false;
     }
 
-    template <size_t BlockCount, ts_bit_block BlockType>
-    constexpr auto BitsetImpl<BlockCount, BlockType>::none() const -> b8
+    template <size_t BlockCountV, ts_bit_block BlockType>
+    constexpr auto BitsetImpl<BlockCountV, BlockType>::none() const -> b8
     {
       return !any();
     }
 
-    template <size_t BlockCount, ts_bit_block BlockType>
-    constexpr auto BitsetImpl<BlockCount, BlockType>::count() const -> usize
+    template <size_t BlockCountV, ts_bit_block BlockType>
+    constexpr auto BitsetImpl<BlockCountV, BlockType>::count() const -> usize
     {
       usize n = 0;
-      for (usize i = 0; i < BlockCount; i++) {
+      for (usize i = 0; i < BlockCountV; i++) {
         n += util::get_one_bit_count(blocks_[i]);
       }
       return n;
     }
 
-    template <size_t BlockCount, ts_bit_block BlockType>
-    constexpr auto BitsetImpl<BlockCount, BlockType>::find_first() const -> Option<usize>
+    template <size_t BlockCountV, ts_bit_block BlockType>
+    constexpr auto BitsetImpl<BlockCountV, BlockType>::find_first() const -> Option<usize>
     {
-      for (usize block_index = 0; block_index < BlockCount; block_index++) {
+      for (usize block_index = 0; block_index < BlockCountV; block_index++) {
         const auto pos = util::get_first_one_bit_pos(blocks_[block_index]);
         if (pos.is_some()) {
           return Option<usize>::Some((block_index * BITS_PER_BLOCK) + pos.unwrap());
@@ -227,14 +227,14 @@ namespace soul
       return nilopt;
     }
 
-    template <size_t BlockCount, ts_bit_block BlockType>
-    constexpr auto BitsetImpl<BlockCount, BlockType>::find_next(const usize last_find_index) const
+    template <size_t BlockCountV, ts_bit_block BlockType>
+    constexpr auto BitsetImpl<BlockCountV, BlockType>::find_next(const usize last_find_index) const
       -> Option<usize>
     {
       const auto start_find_index = last_find_index + 1;
       auto block_index = GetBlockIndex(start_find_index);
       const usize block_offset = GetBlockOffset(start_find_index);
-      if (block_index < BlockCount) {
+      if (block_index < BlockCountV) {
         const auto mask = static_cast<BlockType>(~cast<BlockType>(0) << block_offset);
         BlockType block = blocks_[block_index] & mask;
         while (true) {
@@ -244,7 +244,7 @@ namespace soul
           }
 
           block_index += 1;
-          if (block_index >= BlockCount) {
+          if (block_index >= BlockCountV) {
             break;
           }
           block = blocks_[block_index];
@@ -254,10 +254,10 @@ namespace soul
       return nilopt;
     }
 
-    template <size_t BlockCount, ts_bit_block BlockType>
-    constexpr auto BitsetImpl<BlockCount, BlockType>::find_last() const -> Option<usize>
+    template <size_t BlockCountV, ts_bit_block BlockType>
+    constexpr auto BitsetImpl<BlockCountV, BlockType>::find_last() const -> Option<usize>
     {
-      for (auto block_index = BlockCount; block_index > 0; --block_index) {
+      for (auto block_index = BlockCountV; block_index > 0; --block_index) {
         const auto last_bit = util::get_last_one_bit_pos(blocks_[block_index - 1]);
         if (last_bit.is_some()) {
           return Option<usize>::Some((block_index - 1) * BITS_PER_BLOCK + last_bit.unwrap());
@@ -266,8 +266,8 @@ namespace soul
       return nilopt;
     }
 
-    template <size_t BlockCount, ts_bit_block BlockType>
-    constexpr auto BitsetImpl<BlockCount, BlockType>::find_prev(const usize last_find_index) const
+    template <size_t BlockCountV, ts_bit_block BlockType>
+    constexpr auto BitsetImpl<BlockCountV, BlockType>::find_prev(const usize last_find_index) const
       -> Option<usize>
     {
       if (last_find_index > 0) {
@@ -291,11 +291,11 @@ namespace soul
       return nilopt;
     }
 
-    template <size_t BlockCount, ts_bit_block BlockType>
+    template <size_t BlockCountV, ts_bit_block BlockType>
     template <ts_fn<b8, usize> Fn>
-    constexpr auto BitsetImpl<BlockCount, BlockType>::find_if(Fn fn) const -> Option<usize>
+    constexpr auto BitsetImpl<BlockCountV, BlockType>::find_if(Fn fn) const -> Option<usize>
     {
-      for (usize block_index = 0; block_index < BlockCount; block_index++) {
+      for (usize block_index = 0; block_index < BlockCountV; block_index++) {
         auto block = blocks_[block_index];
         auto get_next_block = [](const BlockType prev_block, usize prev_pos) -> BlockType {
           const BlockType mask = ~static_cast<BlockType>(cast<BlockType>(1) << prev_pos);
@@ -314,20 +314,21 @@ namespace soul
       return nilopt;
     }
 
-    template <size_t BlockCount, ts_bit_block BlockType>
-    constexpr auto BitsetImpl<BlockCount, BlockType>::GetBlockIndex(const usize index) -> usize
+    template <size_t BlockCountV, ts_bit_block BlockType>
+    constexpr auto BitsetImpl<BlockCountV, BlockType>::GetBlockIndex(const usize index) -> usize
     {
       return index / BITS_PER_BLOCK;
     }
 
-    template <size_t BlockCount, ts_bit_block BlockType>
-    constexpr auto BitsetImpl<BlockCount, BlockType>::GetBlockOffset(const usize index) -> BlockType
+    template <size_t BlockCountV, ts_bit_block BlockType>
+    constexpr auto BitsetImpl<BlockCountV, BlockType>::GetBlockOffset(const usize index)
+      -> BlockType
     {
       return index & BITS_PER_BLOCK_MASK;
     }
 
-    template <size_t BlockCount, ts_bit_block BlockType>
-    constexpr auto BitsetImpl<BlockCount, BlockType>::GetBlockOneMask(const usize index)
+    template <size_t BlockCountV, ts_bit_block BlockType>
+    constexpr auto BitsetImpl<BlockCountV, BlockType>::GetBlockOneMask(const usize index)
       -> BlockType
     {
       return static_cast<BlockType>(cast<BlockType>(1) << GetBlockOffset(index));

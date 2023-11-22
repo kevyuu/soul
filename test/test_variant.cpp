@@ -40,15 +40,19 @@ struct MoveOnlyObj {
   MoveOnlyObj(const MoveOnlyObj& other) = delete;
   MoveOnlyObj(MoveOnlyObj&& other) = default;
   auto operator=(const MoveOnlyObj& other) = delete;
-  auto operator=(MoveOnlyObj&& other) noexcept -> MoveOnlyObj& = delete;
+  auto operator=(MoveOnlyObj&& other) noexcept -> MoveOnlyObj& = default;
   ~MoveOnlyObj() = default;
 };
 
 using TrivialVariant = soul::Variant<u8, u16, TrivialObj>;
+static_assert(can_trivial_move_v<TrivialVariant>);
+static_assert(std::is_trivially_copyable_v<TrivialVariant>);
 using ListTestObject = soul::Vector<TestObject>;
 using UntrivialVariant = soul::Variant<ListTestObject, TestObject, u8>;
+static_assert(ts_clone<UntrivialVariant>);
 
 using MoveOnlyVariant = soul::Variant<TestObject, u8, MoveOnlyObj>;
+static_assert(ts_move_only<MoveOnlyVariant>);
 
 TEST(TestVariantConstruction, TestConstructionFromValue)
 {
@@ -326,6 +330,8 @@ TEST(TestVariantSwap, TestSwap)
 
 TEST(TestVariantHash, TestHash)
 {
+  static_assert(typeset<TrivialVariant>);
+  static_assert(std::is_trivially_copyable_v<TrivialVariant>);
   SOUL_TEST_RUN(test_hash_implementation(Array{
     TrivialVariant::From(u16(20)),
     TrivialVariant::From(u16(2)),

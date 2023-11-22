@@ -9,7 +9,7 @@
 
 namespace soul
 {
-  template <typename... Ts> // (7)
+  template <typename... Ts>
   struct VisitorSet : Ts... {
     using Ts::operator()...;
   };
@@ -56,6 +56,7 @@ namespace soul
       constexpr ~RecursiveUnion()
         requires(can_all_trivial_destruct)
       = default;
+
       constexpr ~RecursiveUnion()
         requires(!can_all_trivial_destruct)
       {
@@ -172,10 +173,6 @@ namespace soul
       return *this;
     }
 
-    constexpr auto operator=(const Variant&& other) = delete;
-
-    constexpr auto operator=(const Variant& other) const = delete;
-
     constexpr ~Variant()
       requires(can_variant_trivial_destruct)
     = default;
@@ -248,13 +245,13 @@ namespace soul
 
     [[nodiscard]]
     constexpr auto clone() const -> Variant
-      requires(impl::assert_can_variant_clone_v<Ts...>)
+      requires(can_variant_clone)
     {
       return Variant(*this);
     }
 
     constexpr auto clone_from(const Variant& other)
-      requires(impl::assert_can_variant_clone_v<Ts...>)
+      requires(can_variant_clone)
     {
       *this = other;
     }

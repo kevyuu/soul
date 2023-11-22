@@ -1,6 +1,5 @@
 #pragma once
 
-#include <regex>
 #include "core/builtins.h"
 #include "core/option.h"
 #include "core/own_ref.h"
