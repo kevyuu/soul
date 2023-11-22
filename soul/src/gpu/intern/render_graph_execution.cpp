@@ -49,11 +49,11 @@ namespace soul::gpu::impl
     return SHADER_TEXTURE_WRITE_USAGE_MAP[usage];
   }
 
-  auto update_buffer_info(
+  void update_buffer_info(
     const QueueType queue_type,
     const BufferUsageFlags usage_flags,
     const PassNodeID pass_id,
-    BufferExecInfo* buffer_info) -> void
+    BufferExecInfo* buffer_info)
   {
     buffer_info->usage_flags |= usage_flags;
     buffer_info->queue_flags |= {queue_type};
@@ -64,12 +64,12 @@ namespace soul::gpu::impl
     buffer_info->passes.push_back(pass_id);
   };
 
-  auto update_texture_info(
+  void update_texture_info(
     const QueueType queue_type,
     const TextureUsageFlags usage_flags,
     const PassNodeID pass_id,
     const SubresourceIndexRange view_index_range,
-    TextureExecInfo* texture_info) -> void
+    TextureExecInfo* texture_info)
   {
     texture_info->usage_flags |= usage_flags;
     texture_info->queue_flags |= {queue_type};
@@ -84,8 +84,8 @@ namespace soul::gpu::impl
     SOUL_ASSERT(0, !texture_info->view->passes.empty(), "");
   };
 
-  auto update_resource_info(
-    const QueueType queue_type, const PassNodeID pass_id, ResourceExecInfo* resource_info) -> void
+  void update_resource_info(
+    const QueueType queue_type, const PassNodeID pass_id, ResourceExecInfo* resource_info)
   {
     resource_info->queue_flags |= {queue_type};
     if (resource_info->first_pass.is_null()) {
@@ -145,10 +145,10 @@ namespace soul::gpu::impl
     return dependency_flags;
   }
 
-  auto PassDependencyGraph::set_dependency(
+  void PassDependencyGraph::set_dependency(
     const PassNodeID src_node_id,
     const PassNodeID dst_node_id,
-    const DependencyType dependency_type) -> void
+    const DependencyType dependency_type)
   {
     if (get_dependency_flags(src_node_id, dst_node_id).none()) {
       dependencies_[dst_node_id.id].push_back(src_node_id);
@@ -179,7 +179,7 @@ namespace soul::gpu::impl
     return dependency_levels_[pass_node_id.id];
   }
 
-  auto RenderGraphExecution::init() -> void
+  void RenderGraphExecution::init()
   {
     SOUL_ASSERT_MAIN_THREAD();
     SOUL_PROFILE_ZONE_WITH_NAME("Render Graph Execution Init");
@@ -430,7 +430,7 @@ namespace soul::gpu::impl
           &texture_infos_[resource_info_index]);
 
         auto generate_invalidate_barrier =
-          [resource_info_index](SubresourceIndex view_index) -> TextureAccess {
+          [resource_info_index](SubresourceIndex /* view_index */) -> TextureAccess {
           return {
             .stage_flags = {PipelineStage::TRANSFER},
             .access_flags = {AccessType::TRANSFER_WRITE},
@@ -548,9 +548,8 @@ namespace soul::gpu::impl
     }
   }
 
-  auto traverse_recursive(
+  void traverse_recursive(
     BitVector<>& pass_node_bits, const PassNodeID pass_node_id, const PassDependencyGraph& adj_list)
-    -> void
   {
     if (pass_node_bits[pass_node_id.id]) {
       return;
@@ -564,7 +563,7 @@ namespace soul::gpu::impl
     }
   }
 
-  auto RenderGraphExecution::compute_active_passes() -> void
+  void RenderGraphExecution::compute_active_passes()
   {
     const auto& pass_nodes = render_graph_->get_pass_nodes();
 
@@ -576,7 +575,7 @@ namespace soul::gpu::impl
     }
   }
 
-  auto RenderGraphExecution::compute_pass_order() -> void
+  void RenderGraphExecution::compute_pass_order()
   {
     const auto& pass_nodes = render_graph_->get_pass_nodes();
 
@@ -696,7 +695,7 @@ namespace soul::gpu::impl
     return gpu_system_->create_framebuffer(framebuffer_info);
   }
 
-  auto RenderGraphExecution::sync_external() -> void
+  void RenderGraphExecution::sync_external()
   {
     for (VkEvent& event : external_events_) {
       event = VK_NULL_HANDLE;
@@ -817,8 +816,7 @@ namespace soul::gpu::impl
     }
   }
 
-  auto RenderGraphExecution::execute_pass(const u32 pass_index, PrimaryCommandBuffer command_buffer)
-    -> void
+  void RenderGraphExecution::execute_pass(const u32 pass_index, PrimaryCommandBuffer command_buffer)
   {
     SOUL_PROFILE_ZONE();
     const auto& pass_node = *render_graph_->get_pass_nodes()[pass_index];
@@ -880,7 +878,7 @@ namespace soul::gpu::impl
     pass_node.execute(&registry, &render_compiler, begin_info, command_pools_, gpu_system_);
   }
 
-  auto RenderGraphExecution::run() -> void
+  void RenderGraphExecution::run()
   {
     SOUL_ASSERT_MAIN_THREAD();
     SOUL_PROFILE_ZONE();
@@ -1442,7 +1440,7 @@ namespace soul::gpu::impl
            node.resource_id.get_index();
   }
 
-  auto RenderGraphExecution::cleanup() -> void
+  void RenderGraphExecution::cleanup()
   {
     for (const auto event : external_events_) {
       if (event != VK_NULL_HANDLE) {
@@ -1455,10 +1453,10 @@ namespace soul::gpu::impl
     }
   }
 
-  auto RenderGraphExecution::init_shader_buffers(
+  void RenderGraphExecution::init_shader_buffers(
     const std::span<const ShaderBufferReadAccess> access_list,
     PassNodeID pass_node_id,
-    const QueueType queue_type) -> void
+    const QueueType queue_type)
   {
     PassExecInfo& pass_info = pass_infos_[pass_node_id.id];
     for (const ShaderBufferReadAccess& shader_access : access_list) {
@@ -1482,10 +1480,10 @@ namespace soul::gpu::impl
     }
   }
 
-  auto RenderGraphExecution::init_shader_buffers(
+  void RenderGraphExecution::init_shader_buffers(
     std::span<const ShaderBufferWriteAccess> access_list,
     PassNodeID pass_node_id,
-    const QueueType queue_type) -> void
+    const QueueType queue_type)
   {
     PassExecInfo& pass_info = pass_infos_[pass_node_id.id];
     for (const auto& shader_access : access_list) {
@@ -1509,10 +1507,10 @@ namespace soul::gpu::impl
     }
   }
 
-  auto RenderGraphExecution::init_shader_textures(
+  void RenderGraphExecution::init_shader_textures(
     std::span<const ShaderTextureReadAccess> access_list,
     PassNodeID pass_node_id,
-    const QueueType queue_type) -> void
+    const QueueType queue_type)
   {
     PassExecInfo& pass_info = pass_infos_[pass_node_id.id];
     for (const auto& shader_access : access_list) {
@@ -1552,10 +1550,10 @@ namespace soul::gpu::impl
     }
   }
 
-  auto RenderGraphExecution::init_shader_textures(
+  void RenderGraphExecution::init_shader_textures(
     std::span<const ShaderTextureWriteAccess> access_list,
     PassNodeID pass_node_id,
-    const QueueType queue_type) -> void
+    const QueueType queue_type)
   {
     PassExecInfo& pass_info = pass_infos_[pass_node_id.id];
     for (const auto& shader_access : access_list) {
@@ -1585,10 +1583,10 @@ namespace soul::gpu::impl
     }
   }
 
-  auto RenderGraphExecution::init_shader_tlas_accesses(
+  void RenderGraphExecution::init_shader_tlas_accesses(
     const std::span<const ShaderTlasReadAccess> access_list,
     PassNodeID pass_node_id,
-    const QueueType queue_type) -> void
+    const QueueType queue_type)
   {
     PassExecInfo& pass_info = pass_infos_[pass_node_id.id];
     for (const ShaderTlasReadAccess& shader_access : access_list) {
@@ -1609,10 +1607,10 @@ namespace soul::gpu::impl
     }
   }
 
-  auto RenderGraphExecution::init_shader_blas_group_accesses(
+  void RenderGraphExecution::init_shader_blas_group_accesses(
     std::span<const ShaderBlasGroupReadAccess> access_list,
     PassNodeID pass_node_id,
-    QueueType queue_type) -> void
+    QueueType queue_type)
   {
     PassExecInfo& pass_info = pass_infos_[pass_node_id.id];
     for (const ShaderBlasGroupReadAccess& shader_access : access_list) {

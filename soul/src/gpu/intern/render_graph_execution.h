@@ -129,8 +129,8 @@ namespace soul::gpu::impl
       return dependency_levels_[node_id.id];
     }
 
-    auto set_dependency(
-      PassNodeID src_node_id, PassNodeID dst_node_id, DependencyType dependency_type) -> void;
+    void set_dependency(
+      PassNodeID src_node_id, PassNodeID dst_node_id, DependencyType dependency_type);
 
   private:
     usize pass_node_count_;
@@ -185,11 +185,11 @@ namespace soul::gpu::impl
 
     ~RenderGraphExecution() = default;
 
-    auto init() -> void;
+    void init();
 
-    auto run() -> void;
+    void run();
 
-    auto cleanup() -> void;
+    void cleanup();
 
     [[nodiscard]]
     auto is_external(const BufferExecInfo& info) const -> b8;
@@ -252,9 +252,9 @@ namespace soul::gpu::impl
     BitVector<> active_passes_;
     Vector<PassNodeID> pass_order_;
 
-    auto compute_active_passes() -> void;
+    void compute_active_passes();
 
-    auto compute_pass_order() -> void;
+    void compute_pass_order();
 
     [[nodiscard]]
     auto create_render_pass(u32 pass_index) -> VkRenderPass;
@@ -262,39 +262,39 @@ namespace soul::gpu::impl
     [[nodiscard]]
     auto create_framebuffer(u32 pass_index, VkRenderPass render_pass) -> VkFramebuffer;
 
-    auto sync_external() -> void;
+    void sync_external();
 
-    auto execute_pass(u32 pass_index, PrimaryCommandBuffer command_buffer) -> void;
+    void execute_pass(u32 pass_index, PrimaryCommandBuffer command_buffer);
 
-    auto init_shader_buffers(
+    void init_shader_buffers(
       std::span<const ShaderBufferReadAccess> access_list,
       PassNodeID pass_node_id,
-      QueueType queue_type) -> void;
+      QueueType queue_type);
 
-    auto init_shader_buffers(
+    void init_shader_buffers(
       std::span<const ShaderBufferWriteAccess> access_list,
       PassNodeID pass_node_id,
-      QueueType queue_type) -> void;
+      QueueType queue_type);
 
-    auto init_shader_textures(
+    void init_shader_textures(
       std::span<const ShaderTextureReadAccess> access_list,
       PassNodeID pass_node_id,
-      QueueType queue_type) -> void;
+      QueueType queue_type);
 
-    auto init_shader_textures(
+    void init_shader_textures(
       std::span<const ShaderTextureWriteAccess> access_list,
       PassNodeID pass_node_id,
-      QueueType queue_type) -> void;
+      QueueType queue_type);
 
-    auto init_shader_tlas_accesses(
+    void init_shader_tlas_accesses(
       std::span<const ShaderTlasReadAccess> access_list,
       PassNodeID pass_node_id,
-      QueueType queue_type) -> void;
+      QueueType queue_type);
 
-    auto init_shader_blas_group_accesses(
+    void init_shader_blas_group_accesses(
       std::span<const ShaderBlasGroupReadAccess> access_list,
       PassNodeID pass_node_id,
-      QueueType queue_type) -> void;
+      QueueType queue_type);
   };
 
 } // namespace soul::gpu::impl
