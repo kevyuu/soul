@@ -1079,6 +1079,7 @@ namespace soul::gpu
 
   namespace impl
   {
+
     class PrimaryCommandBuffer;
 
     struct GraphicPipelineStateKey {
@@ -1123,6 +1124,8 @@ namespace soul::gpu
         soul_op_hash_combine(hasher, key.var);
       }
     };
+
+    using PipelineStateCache = ConcurrentObjectCache<PipelineStateKey, PipelineState>;
 
     struct PipelineState {
       VkPipeline vk_handle = VK_NULL_HANDLE;
@@ -1191,6 +1194,9 @@ namespace soul::gpu
       friend void soul_op_hash_combine(auto& hasher, const DescriptorSetLayoutKey& key) {}
     };
     static_assert(soul::impl_soul_op_hash_combine_v<gpu::impl::DescriptorSetLayoutKey>);
+
+    using DescriptorSetLayoutCache =
+      ConcurrentObjectCache<DescriptorSetLayoutKey, VkDescriptorSetLayout>;
 
     struct ShaderDescriptorBinding {
       u8 count = 0;
@@ -1732,7 +1738,7 @@ namespace soul::gpu
       TlasPool tlas_pool;
       ShaderPool shaders;
 
-      PipelineStateCache pipeline_state_cache;
+      impl::PipelineStateCache pipeline_state_cache;
 
       Pool<Program> programs;
       ShaderTablePool shader_table_pool;
@@ -1760,6 +1766,11 @@ namespace soul::gpu
     };
 
   } // namespace impl
+
+  using PipelineStateID = ID<
+    struct pipeline_state_id_tag,
+    impl::PipelineStateCache::ID,
+    impl::PipelineStateCache::NULLVAL>;
 
   // Render Command API
   enum class RenderCommandType : u8 {

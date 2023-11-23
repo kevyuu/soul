@@ -35,12 +35,6 @@ namespace soul::gpu::impl
   struct ShaderTable;
   struct BinarySemaphore;
 
-  struct PipelineStateKey;
-  void soul_op_hash_combine(auto& hasher, const PipelineStateKey& key);
-
-  struct DescriptorSetLayoutKey;
-  void soul_op_hash_combine(auto& hasher, const DescriptorSetLayoutKey& key);
-
 } // namespace soul::gpu::impl
 
 namespace soul::gpu
@@ -59,11 +53,6 @@ namespace soul::gpu
   using TlasPool = ConcurrentObjectPool<impl::Tlas>;
   using ShaderPool = ConcurrentObjectPool<impl::Shader>;
   using ShaderTablePool = ConcurrentObjectPool<impl::ShaderTable>;
-
-  using PipelineStateCache = ConcurrentObjectCache<impl::PipelineStateKey, impl::PipelineState>;
-
-  using DescriptorSetLayoutCache =
-    ConcurrentObjectCache<impl::DescriptorSetLayoutKey, VkDescriptorSetLayout>;
 
   // ID
   using TextureID = ID<impl::Texture, TexturePool::ID, TexturePool::NULLVAL>;
@@ -92,8 +81,6 @@ namespace soul::gpu
     }
   };
 
-  using PipelineStateID =
-    ID<impl::PipelineState, PipelineStateCache::ID, PipelineStateCache::NULLVAL>;
   using ProgramID = ID<impl::Program, u16>;
   using ShaderTableID = ID<impl::ShaderTable, ShaderTablePool::ID, ShaderTablePool::NULLVAL>;
 
