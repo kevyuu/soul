@@ -81,8 +81,9 @@ public:
   explicit ComputeShaderSampleApp(const AppConfig& app_config)
       : App(app_config), texture_2d_pass(gpu_system_)
   {
-    const auto shader_source = gpu::ShaderSource::From(gpu::ShaderFile("compute_shader_sample.hlsl"));
-    std::filesystem::path search_path = "shaders/";
+    const auto shader_source = gpu::ShaderSource::From(
+      gpu::ShaderFile{.path = Path::From("compute_shader_sample.hlsl"_str)});
+    const auto search_path = Path::From("shaders/"_str);
     constexpr auto entry_points = soul::Array{
       gpu::ShaderEntryPoint{gpu::ShaderStage::COMPUTE, "csMain"},
     };

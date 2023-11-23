@@ -5,7 +5,7 @@
 #include "core/log.h"
 #include "math/math.h"
 
-auto ObjLoader::load_model(const std::filesystem::path& filepath) -> void
+auto ObjLoader::load_model(const soul::Path& filepath) -> void
 {
   tinyobj::ObjReader reader;
   reader.ParseFromFile(filepath.string());

@@ -841,21 +841,10 @@ namespace soul::gpu
 
   struct ShaderFile {
     Path path;
-
-    explicit ShaderFile(std::filesystem::path path) : path(std::move(path)) {}
   };
 
   struct ShaderString {
     CString source;
-    ShaderString() = default;
-
-    explicit ShaderString(CString str) : source(std::move(str)) {}
-
-    [[nodiscard]]
-    auto c_str() const -> const char*
-    {
-      return source.data();
-    }
   };
 
   using ShaderSource = Variant<ShaderFile, ShaderString>;
@@ -883,7 +872,7 @@ namespace soul::gpu
   };
 
   struct ProgramDesc {
-    Span<const std::filesystem::path*, u32> search_paths = nilspan;
+    Span<const Path*, u32> search_paths = nilspan;
     Span<const ShaderDefine*, u32> shader_defines = nilspan;
     Span<const ShaderSource*, u32> sources = nilspan;
     Span<const ShaderEntryPoint*, u32> entry_points = nilspan;

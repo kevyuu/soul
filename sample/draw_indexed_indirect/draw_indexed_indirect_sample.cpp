@@ -237,7 +237,7 @@ class DrawIndexedIndirectSampleApp final : public App
   }
 
   auto load_model(
-    const std::filesystem::path& model_path,
+    const Path& model_path,
     const mat4f transform = mat4f::identity(),
     soulsl::float3 debug_color = {1.0f, 0.0f, 0.0f}) -> void
   {
@@ -350,8 +350,9 @@ public:
   explicit DrawIndexedIndirectSampleApp(const AppConfig& app_config)
       : App(app_config), texture_2d_pass(gpu_system_)
   {
-    const auto shader_source = gpu::ShaderSource::From(gpu::ShaderFile("shaders/draw_indexed_indirect_sample.hlsl"));
-    std::filesystem::path search_path = "./";
+    const auto shader_source = gpu::ShaderSource::From(
+      gpu::ShaderFile{.path = Path::From("shaders/draw_indexed_indirect_sample.hlsl"_str)});
+    const auto search_path = Path::From("shaders/"_str);
     constexpr auto entry_points = soul::Array{
       gpu::ShaderEntryPoint{gpu::ShaderStage::VERTEX, "vs_main"},
       gpu::ShaderEntryPoint{gpu::ShaderStage::FRAGMENT, "ps_main"},

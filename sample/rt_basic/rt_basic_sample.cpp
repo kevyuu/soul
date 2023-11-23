@@ -317,8 +317,7 @@ class RTBasicSampleApp final : public App
     return texture_2d_pass.add_pass(texture_2d_parameter, render_graph);
   }
 
-  auto load_model(
-    const std::filesystem::path& model_path, const mat4f transform = mat4f::identity()) -> void
+  auto load_model(const Path& model_path, const mat4f transform = mat4f::identity()) -> void
   {
     instances_.push_back(
       ObjInstance{.transform = transform, .obj_index = soul::cast<u32>(models_.size())});
@@ -488,8 +487,9 @@ public:
   explicit RTBasicSampleApp(const AppConfig& app_config)
       : App(app_config), texture_2d_pass(gpu_system_)
   {
-    const auto shader_source = gpu::ShaderSource::From(gpu::ShaderFile("rt_basic_sample.hlsl"));
-    std::filesystem::path search_path = "./";
+    const auto shader_source =
+      gpu::ShaderSource::From(gpu::ShaderFile{.path = Path::From("rt_basic_sample.hlsl"_str)});
+    const auto search_path = Path::From("shaders"_str);
     const auto entry_points = soul::Array{
       gpu::ShaderEntryPoint{gpu::ShaderStage::RAYGEN, "rgen_main"},
       gpu::ShaderEntryPoint{gpu::ShaderStage::MISS, "rmiss_main"},

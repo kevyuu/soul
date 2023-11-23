@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <ranges>
 
 #include <volk.h>
@@ -5,6 +6,7 @@
 #include "gpu/intern/enum_mapping.h"
 #include "gpu/intern/render_compiler.h"
 #include "gpu/intern/render_graph_execution.h"
+#include "gpu/render_graph.h"
 #include "gpu/render_graph_registry.h"
 #include "gpu/system.h"
 #include "runtime/runtime.h"
@@ -1234,6 +1236,7 @@ namespace soul::gpu::impl
           const auto next_pass_idx = buffer_info.passes[buffer_info.pass_counter + 1].id;
           const auto next_queue_type =
             render_graph_->get_pass_nodes()[next_pass_idx]->get_queue_type();
+          const auto x = 0;
 
           if (current_queue_type != next_queue_type) {
             pending_semaphores.push_back(&buffer_info.pending_semaphore);

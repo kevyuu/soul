@@ -18,16 +18,12 @@
  */
 
 #pragma once
+#include "core/path.h"
 #include "core/type.h"
 #include "core/vector.h"
 #include "tiny_obj_loader.h"
 
 #include "builtins.h"
-
-namespace std::filesystem
-{
-  class path;
-}
 
 // Structure holding the material
 struct MaterialObj {
@@ -65,7 +61,7 @@ using MaterialIndexObj = i32;
 class ObjLoader
 {
 public:
-  auto load_model(const std::filesystem::path& filepath) -> void;
+  auto load_model(const soul::Path& filepath) -> void;
 
   soul::Vector<VertexObj> vertices;
   soul::Vector<IndexObj> indices;

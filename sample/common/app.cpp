@@ -202,7 +202,7 @@ auto App::get_elapsed_seconds() const -> float
 
 auto App::get_frame_index() const -> usize { return frame_index_; }
 
-auto App::get_exe_path() -> std::filesystem::path
+auto App::get_exe_path() -> soul::Path
 {
   static std::string s_exe_path;
   static auto s_exe_path_init = false;
@@ -213,10 +213,7 @@ auto App::get_exe_path() -> std::filesystem::path
     s_exe_path_init = true;
   }
 
-  return s_exe_path;
+  return Path::From(CString::From(s_exe_path.data()));
 }
 
-auto App::get_media_path() -> std::filesystem::path
-{
-  return get_exe_path().parent_path().parent_path() / "media";
-}
+auto App::get_media_path() -> Path { return get_exe_path().parent_path().parent_path() / "media"; }

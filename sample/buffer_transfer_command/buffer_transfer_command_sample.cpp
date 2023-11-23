@@ -303,9 +303,9 @@ class BufferTransferCommandSample final : public App
 public:
   explicit BufferTransferCommandSample(const AppConfig& app_config) : App(app_config)
   {
-    const auto shader_source =
-      gpu::ShaderSource::From(gpu::ShaderFile("buffer_transfer_command_sample.hlsl"));
-    std::filesystem::path search_path = "shaders/";
+    const auto shader_source = gpu::ShaderSource::From(
+      gpu::ShaderFile{.path = Path::From("buffer_transfer_command_sample.hlsl"_str)});
+    const auto search_path = Path::From("shaders/"_str);
     constexpr auto entry_points = soul::Array{
       gpu::ShaderEntryPoint{gpu::ShaderStage::VERTEX, "vsMain"},
       gpu::ShaderEntryPoint{gpu::ShaderStage::FRAGMENT, "psMain"},

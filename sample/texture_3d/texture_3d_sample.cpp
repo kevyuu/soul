@@ -359,8 +359,9 @@ public:
   explicit Texture3DSampleApp(const AppConfig& app_config) : App(app_config)
   {
     runtime::ScopeAllocator scope_allocator("Texture 3D Sample App");
-    const auto shader_source = gpu::ShaderSource::From(gpu::ShaderFile("texture_3d_sample.hlsl"));
-    std::filesystem::path search_path = "shaders/";
+    const auto shader_source =
+      gpu::ShaderSource::From(gpu::ShaderFile{.path = Path::From("texture_3d_sample.hlsl"_str)});
+    const auto search_path = Path::From("shaders/"_str);
     const auto entry_points = soul::Array{
       gpu::ShaderEntryPoint{gpu::ShaderStage::VERTEX, "vsMain"},
       gpu::ShaderEntryPoint{gpu::ShaderStage::FRAGMENT, "psMain"},

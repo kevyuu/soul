@@ -1,8 +1,8 @@
 #pragma once
 
 #include <filesystem>
+#include "core/cstring.h"
 #include "core/type_traits.h"
-#include <type_traits>
 
 namespace soul
 {
@@ -19,9 +19,9 @@ namespace soul
     }
 
     [[nodiscard]]
-    static auto From(const char* str) -> Path
+    static auto From(CString str) -> Path
     {
-      return std::filesystem::path(str);
+      return std::filesystem::path(str.data());
     }
 
     [[nodiscard]]

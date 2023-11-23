@@ -1962,8 +1962,8 @@ namespace soul::gpu
     for (const auto& source : program_desc.sources) {
       if (source.has_value<ShaderFile>()) {
         const auto& shader_file = source.ref<ShaderFile>();
-        const std::filesystem::path& path = shader_file.path;
-        const std::filesystem::path full_path = [&path, &program_desc]() -> std::filesystem::path {
+        const Path& path = shader_file.path;
+        const Path full_path = [&path, &program_desc]() -> Path {
           if (path.is_absolute()) {
             SOUL_ASSERT(
               0, std::filesystem::exists(path), "%s does not exist", path.string().c_str());
@@ -1976,7 +1976,7 @@ namespace soul::gpu
             }
           }
           SOUL_ASSERT(0, false, "Cannot find file {} in any search path", path.string().c_str());
-          return "";
+          return Path::From(""_str);
         }();
         auto full_path_str = full_path.string();
         shader_file_sources.push_back(load_file(full_path_str.c_str(), scope_allocator));

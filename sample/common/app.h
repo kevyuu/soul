@@ -51,8 +51,8 @@ public:
   auto get_elapsed_seconds() const -> float;
   auto get_frame_index() const -> usize;
 
-  static auto get_exe_path() -> std::filesystem::path;
-  static auto get_media_path() -> std::filesystem::path;
+  static auto get_exe_path() -> soul::Path;
+  static auto get_media_path() -> soul::Path;
 
 private:
   soul::memory::MallocAllocator malloc_allocator_;
