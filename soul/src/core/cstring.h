@@ -1,7 +1,6 @@
 #pragma once
 
 #include <format>
-#include <iterator>
 
 #include "core/comp_str.h"
 #include "core/compiler.h"
