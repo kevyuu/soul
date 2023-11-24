@@ -73,6 +73,13 @@ if(SOUL_ASAN_ENABLE)
   add_compile_definitions(_DISABLE_STRING_ANNOTATION)
 endif()
 
+option(SOUL_TIME_TRACE_ENABLE "Build this target with ftime-trace" ON)
+if(SOUL_TIME_TRACE_ENABLE)
+  if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+    add_compile_options(-ftime-trace)
+  endif()
+endif()
+
 # ==================================================================================================
 # Try to find vulkan
 # ==================================================================================================
