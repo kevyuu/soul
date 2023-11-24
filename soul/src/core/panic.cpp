@@ -1,4 +1,5 @@
 #include <iostream>
+#include <string_view>
 
 #include "panic.h"
 
@@ -10,5 +11,8 @@ uint32 GetOsThreadId() { return GetCurrentThreadId(); }
 
 namespace soul::impl
 {
-  auto output_panic_message(std::string_view str) -> void { std::cerr << str << std::endl; }
+  auto output_panic_message(const char* str, usize size) -> void
+  {
+    std::cerr << std::string_view(str, size) << std::endl;
+  }
 } // namespace soul::impl

@@ -2,6 +2,7 @@
 
 #include "core/not_null.h"
 #include "core/option.h"
+#include "core/panic.h"
 #include "core/type_traits.h"
 
 namespace soul
@@ -29,7 +30,7 @@ namespace soul
 
     constexpr Span(MaybeNull<pointer> data, size_type size) : data_(data), size_(size)
     {
-      SOUL_ASSERT(
+      SOUL_ASSERT_LITE(
         0,
         (size != 0 && data != nullptr) || (size == 0 && data == nullptr),
         "Non zero size cannot hold nullptr, and zero size must be nullptr");
@@ -37,12 +38,12 @@ namespace soul
 
     constexpr Span(NotNull<pointer> data, size_type size) : data_(data), size_(size)
     {
-      SOUL_ASSERT(0, size != 0, "Span from not null cannot have zero count");
+      SOUL_ASSERT_LITE(0, size != 0, "Span from not null cannot have zero count");
     }
 
     constexpr Span(pointer data, size_type size) : data_(data), size_(size)
     {
-      SOUL_ASSERT(
+      SOUL_ASSERT_LITE(
         0,
         (size != 0 && data != nullptr) || (size == 0 && data == nullptr),
         "Non zero size cannot hold nullptr, and zero size must be nullptr");

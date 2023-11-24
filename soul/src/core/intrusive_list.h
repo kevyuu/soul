@@ -1,5 +1,6 @@
 #pragma once
 
+#include "core/panic_lite.h"
 #include "core/type.h"
 
 namespace soul
@@ -384,14 +385,14 @@ namespace soul
   template <intrusive_node_type T>
   auto IntrusiveList<T>::pop_front() -> void
   {
-    SOUL_ASSERT(0, !empty(), "List cannot be empty for pop front");
+    SOUL_ASSERT_LITE(0, !empty(), "List cannot be empty for pop front");
     erase(const_iterator(static_cast<const T*>(anchor_.next)));
   }
 
   template <intrusive_node_type T>
   auto IntrusiveList<T>::pop_back() -> void
   {
-    SOUL_ASSERT(0, !empty(), "List cannot be empty for pop back");
+    SOUL_ASSERT_LITE(0, !empty(), "List cannot be empty for pop back");
     erase(const_iterator(static_cast<const T*>(anchor_.prev)));
   }
 

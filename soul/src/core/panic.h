@@ -3,7 +3,6 @@
 
 #include <format>
 #include <utility>
-#include <string_view>
 
 #include "compiler.h"
 #include "panic_lite.h"
@@ -20,7 +19,7 @@ namespace soul
 namespace soul::impl
 {
   constexpr size_t PANIC_OUTPUT_MAX_LENGTH = 5096;
-  auto output_panic_message(std::string_view str) -> void;
+  auto output_panic_message(const char* str, usize size) -> void;
 } // namespace soul::impl
 
 namespace soul
@@ -44,7 +43,7 @@ namespace soul
     result = std::format_to_n(
       result.out, std::size(str) - 1 - result.size, std::move(fmt), std::forward<Args>(args)...);
 
-    impl::output_panic_message(std::string_view(str, result.out - str));
+    impl::output_panic_message(str, result.out - str);
     SOUL_DEBUG_BREAK();
   }
 
@@ -69,7 +68,7 @@ namespace soul
     result = std::format_to_n(
       result.out, std::size(str) - 1 - result.size, std::move(fmt), std::forward<Args>(args)...);
 
-    impl::output_panic_message(std::string_view(str, result.out - str));
+    impl::output_panic_message(str, result.out - str);
     SOUL_DEBUG_BREAK();
   }
 } // namespace soul
