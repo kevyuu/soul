@@ -10,6 +10,7 @@
 #include <app.h>
 #include <imgui/imgui.h>
 
+#include <functional>
 #include <random>
 
 using namespace soul;

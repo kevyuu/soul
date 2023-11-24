@@ -1,7 +1,5 @@
 #pragma once
 
-#include <functional>
-
 #include "core/config.h"
 #include "core/hash.h"
 #include "core/own_ref.h"
