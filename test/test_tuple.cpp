@@ -65,7 +65,6 @@ static_assert(soul::ts_move_only<MoveOnlyObj>);
 struct EmptyObj {
 };
 static_assert(sizeof(soul::Tuple<u8, EmptyObj>) == sizeof(u8));
-#include <utility>
 
 template <typename TupleT>
 auto verify_equal(const TupleT& lhs, const TupleT& rhs)

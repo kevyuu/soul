@@ -2,7 +2,6 @@
 #pragma once
 
 #include <format>
-#include <utility>
 
 #include "compiler.h"
 #include "panic_lite.h"
