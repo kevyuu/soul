@@ -3,6 +3,7 @@
 #include <format>
 #include <iterator>
 
+#include "core/comp_str.h"
 #include "core/compiler.h"
 #include "core/config.h"
 #include "core/not_null.h"
@@ -87,12 +88,30 @@ namespace soul
       data()[0] = '\0';
     }
 
+    constexpr BasicCString( // NOLINT(hicpp-explicit-conversions)
+      CompStr str,
+      NotNull<memory::Allocator*> allocator = get_default_allocator())
+        : allocator_(allocator), size_(str.size()), capacity_(0)
+    {
+      storage_.data = const_cast<pointer>(str.data()); // NOLINT
+    }
+
     constexpr BasicCString(BasicCString&& other) noexcept { swap(other); }
 
     constexpr auto operator=(BasicCString&& other) noexcept -> BasicCString&
     {
       swap(other);
       other.clear();
+      return *this;
+    }
+
+    constexpr auto operator=(CompStr str) noexcept -> BasicCString&
+    {
+      size_ = str.size();
+      maybe_deallocate();
+      storage_.data =
+        const_cast<pointer>(str.data()); // NOLINT(cppcoreguidelines-pro-type-const-cast)
+      capacity_ = 0;
       return *this;
     }
 
@@ -583,10 +602,6 @@ namespace soul
 
   using CString = BasicCString<memory::Allocator, 64>;
 
-  inline auto operator""_str(const char* str, std::size_t /* len */) noexcept -> CString
-  {
-    return CString::From(str);
-  }
 } // namespace soul
 
 template <soul::memory::allocator_type AllocatorT, soul::usize InlineCapacityV>

@@ -358,4 +358,6 @@ namespace soul
   {
     return {data, size};
   }
+
+  using StringView = Span<const char*>;
 } // namespace soul

@@ -123,7 +123,7 @@ TEST(TestCStringConstruction, TestConstructFromCharArray)
 TEST(TestCStringConstruction, TestCStringConstructionFromLiteral)
 {
   const auto literal_str = "abcdef"_str;
-  SOUL_TEST_RUN(verify_equal(literal_str, CString::From("abcdef")));
+  SOUL_TEST_RUN(verify_equal(CString(literal_str), CString::From("abcdef")));
 }
 
 TEST(TestCStringConstruction, TestConstructionWithSize)
@@ -269,6 +269,29 @@ TEST_F(TestCStringManipulation, TestMoveAssignemnt)
   SOUL_TEST_RUN(test_move_assignment(TestString(), test_max_inline_string2));
   SOUL_TEST_RUN(test_move_assignment(TestString(), test_long_string2));
   SOUL_TEST_RUN(test_move_assignment(TestString(), TestString()));
+}
+
+TEST_F(TestCStringManipulation, TestAssignCompStr)
+{
+  const auto test_assign_comp_str = [](const TestString& sample_string, CompStr comp_str) {
+    auto test_string = sample_string.clone();
+    test_string = comp_str;
+    SOUL_TEST_RUN(verify_equal(test_string, TestString(comp_str)));
+  };
+  SOUL_TEST_RUN(test_assign_comp_str(test_const_segment_string, "test"_str));
+  SOUL_TEST_RUN(test_assign_comp_str(test_const_segment_string, ""_str));
+
+  SOUL_TEST_RUN(test_assign_comp_str(test_short_string, "test"_str));
+  SOUL_TEST_RUN(test_assign_comp_str(test_short_string, ""_str));
+
+  SOUL_TEST_RUN(test_assign_comp_str(test_max_inline_string, "test"_str));
+  SOUL_TEST_RUN(test_assign_comp_str(test_max_inline_string, ""_str));
+
+  SOUL_TEST_RUN(test_assign_comp_str(test_long_string, "test"_str));
+  SOUL_TEST_RUN(test_assign_comp_str(test_long_string, ""_str));
+
+  SOUL_TEST_RUN(test_assign_comp_str(TestString(), "test"_str));
+  SOUL_TEST_RUN(test_assign_comp_str(TestString(), ""_str));
 }
 
 TEST_F(TestCStringManipulation, TestCloneFrom)
