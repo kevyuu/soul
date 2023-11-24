@@ -1,7 +1,5 @@
 #pragma once
 
-#include <compare>
-
 #include "core/config.h"
 #include "core/mutex.h"
 #include "core/vector.h"
