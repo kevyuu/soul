@@ -1,7 +1,5 @@
 #pragma once
 
-#include <numeric>
-
 #include "core/bitset.h"
 #include "core/type.h"
 
