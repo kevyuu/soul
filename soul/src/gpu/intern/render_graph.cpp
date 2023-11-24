@@ -153,9 +153,9 @@ namespace soul::gpu
     return resource_nodes_[node_id.id];
   }
 
-  std::span<const impl::ResourceNode> RenderGraph::get_resource_nodes() const
+  Span<const impl::ResourceNode*> RenderGraph::get_resource_nodes() const
   {
-    return resource_nodes_;
+    return resource_nodes_.cspan();
   }
 
 } // namespace soul::gpu

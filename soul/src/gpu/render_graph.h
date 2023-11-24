@@ -1,8 +1,7 @@
 #pragma once
 
-#include <span>
-
 #include "core/slice.h"
+#include "core/span.h"
 #include "core/type_traits.h"
 #include "gpu/command_list.h"
 #include "gpu/type.h"
@@ -546,99 +545,98 @@ namespace soul::gpu
     }
 
     [[nodiscard]]
-    auto get_vertex_buffers() const -> std::span<const BufferNodeID>
+    auto get_vertex_buffers() const -> Span<const BufferNodeID*>
     {
-      return vertex_buffers_;
+      return vertex_buffers_.cspan();
     }
     [[nodiscard]]
-    auto get_index_buffers() const -> std::span<const BufferNodeID>
+    auto get_index_buffers() const -> Span<const BufferNodeID*>
     {
-      return index_buffers_;
-    }
-
-    [[nodiscard]]
-    auto get_buffer_read_accesses() const -> std::span<const ShaderBufferReadAccess>
-    {
-      return shader_buffer_read_accesses_;
+      return index_buffers_.cspan();
     }
 
     [[nodiscard]]
-    auto get_buffer_write_accesses() const -> std::span<const ShaderBufferWriteAccess>
+    auto get_buffer_read_accesses() const -> Span<const ShaderBufferReadAccess*>
     {
-      return shader_buffer_write_accesses_;
+      return shader_buffer_read_accesses_.cspan();
     }
 
     [[nodiscard]]
-    auto get_texture_read_accesses() const -> std::span<const ShaderTextureReadAccess>
+    auto get_buffer_write_accesses() const -> Span<const ShaderBufferWriteAccess*>
     {
-      return shader_texture_read_accesses_;
+      return shader_buffer_write_accesses_.cspan();
     }
 
     [[nodiscard]]
-    auto get_texture_write_accesses() const -> std::span<const ShaderTextureWriteAccess>
+    auto get_texture_read_accesses() const -> Span<const ShaderTextureReadAccess*>
     {
-      return shader_texture_write_accesses_;
+      return shader_texture_read_accesses_.cspan();
     }
 
     [[nodiscard]]
-    auto get_shader_tlas_read_accesses() const -> std::span<const ShaderTlasReadAccess>
+    auto get_texture_write_accesses() const -> Span<const ShaderTextureWriteAccess*>
     {
-      return shader_tlas_read_accesses_;
+      return shader_texture_write_accesses_.cspan();
     }
 
     [[nodiscard]]
-    auto get_shader_blas_group_read_accesses() const -> std::span<const ShaderBlasGroupReadAccess>
+    auto get_shader_tlas_read_accesses() const -> Span<const ShaderTlasReadAccess*>
     {
-      return shader_blas_group_read_accesses_;
+      return shader_tlas_read_accesses_.cspan();
     }
 
     [[nodiscard]]
-    auto get_source_buffers() const -> std::span<const TransferSrcBufferAccess>
+    auto get_shader_blas_group_read_accesses() const -> Span<const ShaderBlasGroupReadAccess*>
     {
-      return source_buffers_;
+      return shader_blas_group_read_accesses_.cspan();
     }
 
     [[nodiscard]]
-    auto get_destination_buffers() const -> std::span<const TransferDstBufferAccess>
+    auto get_source_buffers() const -> Span<const TransferSrcBufferAccess*>
     {
-      return destination_buffers_;
+      return source_buffers_.cspan();
     }
 
     [[nodiscard]]
-    auto get_source_textures() const -> std::span<const TransferSrcTextureAccess>
+    auto get_destination_buffers() const -> Span<const TransferDstBufferAccess*>
     {
-      return source_textures_;
+      return destination_buffers_.cspan();
     }
 
     [[nodiscard]]
-    auto get_destination_textures() const -> std::span<const TransferDstTextureAccess>
+    auto get_source_textures() const -> Span<const TransferSrcTextureAccess*>
     {
-      return destination_textures_;
+      return source_textures_.cspan();
     }
 
     [[nodiscard]]
-    auto get_as_build_input_buffers() const -> std::span<const BufferNodeID>
+    auto get_destination_textures() const -> Span<const TransferDstTextureAccess*>
     {
-      return as_build_input_buffers_;
+      return destination_textures_.cspan();
     }
 
     [[nodiscard]]
-    auto get_as_build_input_blas_groups() const -> std::span<const BlasGroupNodeID>
+    auto get_as_build_input_buffers() const -> Span<const BufferNodeID*>
     {
-      return as_build_input_blas_groups_;
+      return as_build_input_buffers_.cspan();
     }
 
     [[nodiscard]]
-    auto get_as_build_destination_tlas_list() const -> std::span<const AsBuildDstTlasAccess>
+    auto get_as_build_input_blas_groups() const -> Span<const BlasGroupNodeID*>
     {
-      return as_build_dst_tlas_list_;
+      return as_build_input_blas_groups_.cspan();
     }
 
     [[nodiscard]]
-    auto get_as_build_destination_blas_group_list() const
-      -> std::span<const AsBuildDstBlasGroupAccess>
+    auto get_as_build_destination_tlas_list() const -> Span<const AsBuildDstTlasAccess*>
     {
-      return as_build_dst_blas_group_list_;
+      return as_build_dst_tlas_list_.cspan();
+    }
+
+    [[nodiscard]]
+    auto get_as_build_destination_blas_group_list() const -> Span<const AsBuildDstBlasGroupAccess*>
+    {
+      return as_build_dst_blas_group_list_.cspan();
     }
 
     [[nodiscard]]
@@ -867,15 +865,15 @@ namespace soul::gpu
     }
 
     [[nodiscard]]
-    auto get_external_tlas_list() const -> std::span<const impl::RGExternalTlas>
+    auto get_external_tlas_list() const -> Span<const impl::RGExternalTlas*>
     {
-      return external_tlas_list_;
+      return external_tlas_list_.cspan();
     }
 
     [[nodiscard]]
-    auto get_external_blas_group_list() const -> std::span<const impl::RGExternalBlasGroup>
+    auto get_external_blas_group_list() const -> Span<const impl::RGExternalBlasGroup*>
     {
-      return external_blas_group_list_;
+      return external_blas_group_list_.cspan();
     }
 
     [[nodiscard]]
@@ -918,7 +916,7 @@ namespace soul::gpu
     auto get_resource_node(ResourceNodeID node_id) -> impl::ResourceNode&;
 
     [[nodiscard]]
-    auto get_resource_nodes() const -> std::span<const impl::ResourceNode>;
+    auto get_resource_nodes() const -> Span<const impl::ResourceNode*>;
 
     template <RGResourceType resource_type>
     auto create_resource_node(impl::RGResourceID resource_id) -> TypedResourceNodeID<resource_type>
