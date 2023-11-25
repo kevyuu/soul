@@ -85,7 +85,12 @@ target_link_system_libraries(
   Tracy::TracyClient
   PRIVATE
   dxc)
-target_compile_definitions(soul PUBLIC TRACY_ENABLE NOMINMAX GLM_FORCE_SIZE_T_LENGTH SOUL_HOST_CODE)
+target_compile_definitions(
+  soul
+  PUBLIC TRACY_ENABLE
+         NOMINMAX
+         GLM_FORCE_SIZE_T_LENGTH
+         SOUL_HOST_CODE)
 
 get_target_property(soul_include_directories soul INCLUDE_DIRECTORIES)
 message(STATUS "Soul include directories : ${soul_include_directories}")
@@ -145,3 +150,21 @@ target_compile_definitions(
          SOUL_PROJECT_SOURCE_DIR="${PROJECT_SOURCE_DIR}/"
   PRIVATE "$<$<STREQUAL:${CMAKE_SYSTEM_NAME},Windows>:SOUL_OS_WINDOWS>"
           "$<$<STREQUAL:${CMAKE_SYSTEM_NAME},Darwin>:SOUL_OS_APPLE>")
+
+target_precompile_headers(
+  soul
+  PUBLIC
+  <algorithm>
+  <atomic>
+  <concepts>
+  <condition_variable>
+  <cstdint>
+  <filesystem>
+  <format>
+  <limits>
+  <mutex>
+  <ranges>
+  <random>
+  <shared_mutex>
+  <thread>
+  <glm/glm.hpp>)

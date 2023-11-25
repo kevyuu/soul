@@ -67,7 +67,8 @@
         "SOUL_PROFILE_CPU_BACKEND": "DISABLED",
         "SOUL_ASSERT_PARANOIA_LEVEL": "1",
         "SOUL_ENABLE_EXCEPTION": true,
-        "SOUL_ENABLE_RTTI": true
+        "SOUL_ENABLE_RTTI": true,
+        "SOUL_TIME_TRACE_ENABLE": true
       },
       "hidden": true
     },
