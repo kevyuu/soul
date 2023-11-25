@@ -1,4 +1,5 @@
 #include "app.h"
+#include "core/span.h"
 #include "imgui_impl_glfw.h"
 
 #include "core/log.h"
@@ -213,7 +214,10 @@ auto App::get_exe_path() -> soul::Path
     s_exe_path_init = true;
   }
 
-  return Path::From(String::From(s_exe_path.data()));
+  return Path::From(StringView{s_exe_path.data(), s_exe_path.size()});
 }
 
-auto App::get_media_path() -> Path { return get_exe_path().parent_path().parent_path() / "media"; }
+auto App::get_media_path() -> Path
+{
+  return get_exe_path().parent_path().parent_path() / "media"_str;
+}

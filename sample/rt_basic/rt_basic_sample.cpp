@@ -525,8 +525,8 @@ public:
     sampler_id_ = gpu_system_->request_sampler(
       gpu::SamplerDesc::same_filter_wrap(gpu::TextureFilter::LINEAR, gpu::TextureWrap::REPEAT));
 
-    load_model(get_media_path() / "scenes" / "Medieval_building.obj");
-    load_model(get_media_path() / "scenes" / "plane.obj");
+    load_model(get_media_path() / "scenes"_str / "Medieval_building.obj"_str);
+    load_model(get_media_path() / "scenes"_str / "plane.obj"_str);
     create_gpu_obj_desc_buffer();
 
     create_blas();

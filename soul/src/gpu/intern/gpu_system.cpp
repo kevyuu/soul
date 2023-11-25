@@ -8,10 +8,10 @@
 #include <random>
 #include <string>
 
-#include "core/string.h"
 #include "core/log.h"
 #include "core/panic.h"
 #include "core/profile.h"
+#include "core/string.h"
 #include "core/util.h"
 #include "core/vector.h"
 #include "gpu/intern/bindless_descriptor_allocator.h"
@@ -1967,12 +1967,12 @@ namespace soul::gpu
           if (path.is_absolute()) {
             SOUL_ASSERT(
               0, std::filesystem::exists(path), "%s does not exist", path.string().c_str());
-            return canonical(path);
+            return path.canonical();
           }
           for (const auto& search_path : program_desc.search_paths) {
             auto full_path_candidate = search_path / path;
             if (exists(full_path_candidate)) {
-              return canonical(full_path_candidate);
+              return full_path_candidate.canonical();
             }
           }
           SOUL_ASSERT(0, false, "Cannot find file {} in any search path", path.string().c_str());
