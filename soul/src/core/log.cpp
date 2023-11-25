@@ -1,6 +1,6 @@
 #include <iostream>
 
-#include "core/cstring.h"
+#include "core/string.h"
 #include "core/log.h"
 #include "core/mutex.h"
 #include "memory/allocator.h"
@@ -13,7 +13,7 @@ namespace soul::impl
     struct LogBuffer {
       static constexpr usize CAPACITY = 8192;
       Mutex lock;
-      CString buffer;
+      String buffer;
 
       explicit LogBuffer(memory::Allocator* allocator) : buffer(allocator) { buffer.reserve(8192); }
     };
@@ -45,7 +45,7 @@ namespace soul::impl
     }
   } // namespace
 
-  auto log(LogLevel log_level, const CString& message) -> void
+  auto log(LogLevel log_level, const String& message) -> void
   {
     auto& log_buffers = get_log_buffers();
     std::lock_guard guard(log_buffers[log_level].lock);

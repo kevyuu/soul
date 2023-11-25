@@ -380,7 +380,7 @@ namespace soul::gpu::impl
 
     const auto size_info =
       gpu_system_->get_as_build_size_info(build_info, max_primitives_counts.data());
-    CString as_scratch_buffer_name(&scope_allocator);
+    String as_scratch_buffer_name(&scope_allocator);
     if (dst_blas.desc.name != nullptr) {
       as_scratch_buffer_name.appendf("{}_scratch_buffer", dst_blas.desc.name);
     }

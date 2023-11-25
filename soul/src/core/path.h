@@ -1,7 +1,7 @@
 #pragma once
 
 #include <filesystem>
-#include "core/cstring.h"
+#include "core/string.h"
 #include "core/type_traits.h"
 
 namespace soul
@@ -19,7 +19,7 @@ namespace soul
     }
 
     [[nodiscard]]
-    static auto From(CString str) -> Path
+    static auto From(String str) -> Path
     {
       return std::filesystem::path(str.data());
     }

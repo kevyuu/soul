@@ -4,7 +4,7 @@
 #include <gtest/gtest.h>
 
 #include "core/config.h"
-#include "core/cstring.h"
+#include "core/string.h"
 #include "core/log.h"
 #include "core/meta.h"
 #include "core/objops.h"
@@ -30,7 +30,7 @@ namespace soul
 } // namespace soul
 
 struct TestEntry {
-  soul::CString name;
+  soul::String name;
   TestObject test_obj;
   using object_type = TestObject;
 
@@ -48,12 +48,12 @@ struct TestEntry {
   friend auto operator==(const TestEntry& rhs, const TestEntry& lhs) -> bool = default;
 
   struct GetKeyOp {
-    auto operator()(const TestEntry& entry) const -> const soul::CString& { return entry.name; }
+    auto operator()(const TestEntry& entry) const -> const soul::String& { return entry.name; }
   };
 };
 static_assert(can_nontrivial_destruct_v<TestEntry>);
 
-using TestTable = soul::RobinTable<soul::CString, TestEntry, TestEntry::GetKeyOp>;
+using TestTable = soul::RobinTable<soul::String, TestEntry, TestEntry::GetKeyOp>;
 static_assert(ts_clone<TestTable>);
 static_assert(std::ranges::sized_range<TestTable>);
 
@@ -202,13 +202,13 @@ auto generate_random_entries(usize count) -> soul::Vector<TestEntry>
   std::random_device rd;
   std::mt19937 generator(rd());
 
-  auto generate_random_string = [&generator](usize length, usize suffix_id) -> soul::CString {
+  auto generate_random_string = [&generator](usize length, usize suffix_id) -> soul::String {
     const char* char_samples =
       "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ!@#$%^&*()`~-_=+"
       "[{]{|;:'\",<.>/?";
     const auto char_samples_length = strlen(char_samples);
 
-    auto output = CString::WithCapacity(length + util::digit_count(suffix_id));
+    auto output = String::WithCapacity(length + util::digit_count(suffix_id));
 
     while (length > 0) {
       auto rand_numb = generator();

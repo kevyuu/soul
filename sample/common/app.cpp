@@ -213,7 +213,7 @@ auto App::get_exe_path() -> soul::Path
     s_exe_path_init = true;
   }
 
-  return Path::From(CString::From(s_exe_path.data()));
+  return Path::From(String::From(s_exe_path.data()));
 }
 
 auto App::get_media_path() -> Path { return get_exe_path().parent_path().parent_path() / "media"; }

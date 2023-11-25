@@ -2,7 +2,7 @@
 
 #include <filesystem>
 
-#include "core/cstring.h"
+#include "core/string.h"
 #include "core/flag_map.h"
 #include "core/flag_set.h"
 #include "core/hash_map.h"
@@ -844,7 +844,7 @@ namespace soul::gpu
   };
 
   struct ShaderString {
-    CString source;
+    String source;
   };
 
   using ShaderSource = Variant<ShaderFile, ShaderString>;
@@ -1364,7 +1364,7 @@ namespace soul::gpu
     struct Shader {
       ShaderStage stage;
       VkShaderModule vk_handle = VK_NULL_HANDLE;
-      CString entry_point;
+      String entry_point;
     };
 
     struct ShaderTable {

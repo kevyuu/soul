@@ -2,7 +2,7 @@
 #include <gtest/gtest.h>
 
 #include "core/config.h"
-#include "core/cstring.h"
+#include "core/string.h"
 #include "memory/allocator.h"
 
 #include "util.h"
@@ -17,7 +17,7 @@ namespace soul
 } // namespace soul
 
 constexpr usize TEST_INLINE_CAPACITY = 32;
-using TestString = soul::BasicCString<soul::memory::Allocator, TEST_INLINE_CAPACITY>;
+using TestString = soul::BasicString<soul::memory::Allocator, TEST_INLINE_CAPACITY>;
 
 constexpr const char* TEST_SHORT_STR = "abcdef";
 constexpr const auto TEST_SHORT_STR_SIZE = soul::str_length(TEST_SHORT_STR);
@@ -89,13 +89,13 @@ void verify_equal(const StringT& result_str, const StringT& expected_str)
 
 #include "common_test.h"
 
-TEST(TestCStringConstruction, TestDefaultConstructor)
+TEST(TestStringConstruction, TestDefaultConstructor)
 {
   const TestString cstring;
   verify_equal(cstring, "");
 }
 
-TEST(TestCStringConstruction, TestConstructionUnsharedFromCharArray)
+TEST(TestStringConstruction, TestConstructionUnsharedFromCharArray)
 {
   const auto test_construction_unshared_from = [](const char* str) {
     const auto test_string = TestString::UnsharedFrom(str);
@@ -107,7 +107,7 @@ TEST(TestCStringConstruction, TestConstructionUnsharedFromCharArray)
   SOUL_TEST_RUN(test_construction_unshared_from(TEST_LONG_STR));
 }
 
-TEST(TestCStringConstruction, TestConstructFromCharArray)
+TEST(TestStringConstruction, TestConstructFromCharArray)
 {
   const auto test_construction_from = [](const char* str) {
     const auto cstring = TestString::From(str);
@@ -120,13 +120,13 @@ TEST(TestCStringConstruction, TestConstructFromCharArray)
   SOUL_TEST_RUN(test_construction_from(TEST_LONG_STR));
 }
 
-TEST(TestCStringConstruction, TestCStringConstructionFromLiteral)
+TEST(TestStringConstruction, TestStringConstructionFromLiteral)
 {
   const auto literal_str = "abcdef"_str;
-  SOUL_TEST_RUN(verify_equal(CString(literal_str), CString::From("abcdef")));
+  SOUL_TEST_RUN(verify_equal(String(literal_str), String::From("abcdef")));
 }
 
-TEST(TestCStringConstruction, TestConstructionWithSize)
+TEST(TestStringConstruction, TestConstructionWithSize)
 {
   const auto test_construction_with_size = [](usize size) {
     const auto test_string = TestString::WithSize(size);
@@ -138,7 +138,7 @@ TEST(TestCStringConstruction, TestConstructionWithSize)
   SOUL_TEST_RUN(test_construction_with_size(TEST_LONG_STR_SIZE));
 }
 
-TEST(TestCStringConstruction, TestConstructionFormat)
+TEST(TestStringConstruction, TestConstructionFormat)
 {
   SOUL_TEST_RUN(verify_equal(TestString::Format("{}", ""), ""));
   SOUL_TEST_RUN(verify_equal(TestString::Format("ab{}ef", "cd"), "abcdef"));
@@ -153,7 +153,7 @@ TEST(TestCStringConstruction, TestConstructionFormat)
     "abcdefghijklmnopqrstuvwxyz1234567890"));
 }
 
-TEST(TestCStringConstruction, TestConstructionReservedFormat)
+TEST(TestStringConstruction, TestConstructionReservedFormat)
 {
   SOUL_TEST_RUN(
     verify_equal(TestString::ReservedFormat(soul::get_default_allocator(), "{}", ""), ""));
@@ -173,7 +173,7 @@ TEST(TestCStringConstruction, TestConstructionReservedFormat)
     "abcdefghijklmnopqrstuvwxyz1234567890"));
 }
 
-TEST(TestCStringConstruction, TestConstructionWithCapacity)
+TEST(TestStringConstruction, TestConstructionWithCapacity)
 {
   const auto test_construction_with_capacity = [](usize capacity) {
     const auto test_string = TestString::WithCapacity(capacity);
@@ -185,7 +185,7 @@ TEST(TestCStringConstruction, TestConstructionWithCapacity)
   SOUL_TEST_RUN(test_construction_with_capacity(TEST_LONG_STR_SIZE));
 }
 
-TEST(TestCStringConstruction, TestCustomAllocatorDefaultConstructor)
+TEST(TestStringConstruction, TestCustomAllocatorDefaultConstructor)
 {
   TestAllocator::reset_all();
   TestAllocator test_allocator;
@@ -198,7 +198,7 @@ TEST(TestCStringConstruction, TestCustomAllocatorDefaultConstructor)
   SOUL_TEST_ASSERT_GE(cstring.capacity(), 10);
 }
 
-TEST(TestCStringConstruction, TestClone)
+TEST(TestStringConstruction, TestClone)
 {
   SOUL_TEST_RUN(test_clone(TestString::From(TEST_SHORT_STR)));
   SOUL_TEST_RUN(test_clone(TestString::UnsharedFrom(TEST_SHORT_STR)));
@@ -210,7 +210,7 @@ TEST(TestCStringConstruction, TestClone)
   SOUL_TEST_RUN(test_clone(TestString::UnsharedFrom("")));
 }
 
-TEST(TestCStringConstruction, TestMoveConstructor)
+TEST(TestStringConstruction, TestMoveConstructor)
 {
   SOUL_TEST_RUN(test_move_constructor(TestString::From(TEST_SHORT_STR)));
   SOUL_TEST_RUN(test_move_constructor(TestString::UnsharedFrom(TEST_SHORT_STR)));
@@ -222,7 +222,7 @@ TEST(TestCStringConstruction, TestMoveConstructor)
   SOUL_TEST_RUN(test_move_constructor(TestString::UnsharedFrom("")));
 }
 
-class TestCStringManipulation : public testing::Test
+class TestStringManipulation : public testing::Test
 {
 public:
   TestString test_const_segment_string = TestString::From(TEST_SHORT_STR);
@@ -238,7 +238,7 @@ public:
   TestString test_long_string2 = TestString::UnsharedFrom(TEST_LONG_STR2);
 };
 
-TEST_F(TestCStringManipulation, TestMoveAssignemnt)
+TEST_F(TestStringManipulation, TestMoveAssignemnt)
 {
   SOUL_TEST_RUN(test_move_assignment(test_const_segment_string, test_const_segment_string2));
   SOUL_TEST_RUN(test_move_assignment(test_const_segment_string, test_short_string2));
@@ -271,7 +271,7 @@ TEST_F(TestCStringManipulation, TestMoveAssignemnt)
   SOUL_TEST_RUN(test_move_assignment(TestString(), TestString()));
 }
 
-TEST_F(TestCStringManipulation, TestAssignCompStr)
+TEST_F(TestStringManipulation, TestAssignCompStr)
 {
   const auto test_assign_comp_str = [](const TestString& sample_string, CompStr comp_str) {
     auto test_string = sample_string.clone();
@@ -294,7 +294,7 @@ TEST_F(TestCStringManipulation, TestAssignCompStr)
   SOUL_TEST_RUN(test_assign_comp_str(TestString(), ""_str));
 }
 
-TEST_F(TestCStringManipulation, TestCloneFrom)
+TEST_F(TestStringManipulation, TestCloneFrom)
 {
   SOUL_TEST_RUN(test_clone_from(test_const_segment_string, test_const_segment_string2));
   SOUL_TEST_RUN(test_clone_from(test_const_segment_string, test_short_string2));
@@ -327,7 +327,7 @@ TEST_F(TestCStringManipulation, TestCloneFrom)
   SOUL_TEST_RUN(test_clone_from(TestString(), TestString()));
 }
 
-TEST_F(TestCStringManipulation, TestCStringSwap)
+TEST_F(TestStringManipulation, TestStringSwap)
 {
   SOUL_TEST_RUN(test_swap(test_const_segment_string, test_const_segment_string2));
   SOUL_TEST_RUN(test_swap(test_const_segment_string, test_short_string2));
@@ -360,7 +360,7 @@ TEST_F(TestCStringManipulation, TestCStringSwap)
   SOUL_TEST_RUN(test_swap(TestString(), TestString()));
 }
 
-TEST_F(TestCStringManipulation, TestReserve)
+TEST_F(TestStringManipulation, TestReserve)
 {
   const auto test_reserve = [](const TestString& string_src, usize new_capacity) {
     auto test_string = string_src.clone();
@@ -395,7 +395,7 @@ TEST_F(TestCStringManipulation, TestReserve)
   SOUL_TEST_RUN(test_reserve(TestString(), TEST_LONG_STR_SIZE));
 }
 
-TEST_F(TestCStringManipulation, TestClear)
+TEST_F(TestStringManipulation, TestClear)
 {
   const auto test_clear = [](const TestString& sample_string) {
     auto test_string = sample_string.clone();
@@ -410,7 +410,7 @@ TEST_F(TestCStringManipulation, TestClear)
   SOUL_TEST_RUN(test_clear(TestString()));
 }
 
-TEST_F(TestCStringManipulation, TestPushBack)
+TEST_F(TestStringManipulation, TestPushBack)
 {
   const auto test_push_back = [](const TestString& sample_string, char c) {
     auto test_string = sample_string.clone();
@@ -426,7 +426,7 @@ TEST_F(TestCStringManipulation, TestPushBack)
   SOUL_TEST_RUN(test_push_back(TestString(), 'x'));
 }
 
-TEST_F(TestCStringManipulation, TestAppendCharArr)
+TEST_F(TestStringManipulation, TestAppendCharArr)
 {
   const auto test_append = [](const TestString& sample_string, const char* extra_str) {
     auto test_string = sample_string.clone();
@@ -462,7 +462,7 @@ TEST_F(TestCStringManipulation, TestAppendCharArr)
   SOUL_TEST_RUN(test_append(TestString(), ""));
 }
 
-TEST_F(TestCStringManipulation, TestAppend)
+TEST_F(TestStringManipulation, TestAppend)
 {
   const auto test_append = [](const TestString& sample_string, const TestString& extra_string) {
     auto test_string = sample_string.clone();
@@ -498,7 +498,7 @@ TEST_F(TestCStringManipulation, TestAppend)
   SOUL_TEST_RUN(test_append(TestString(), TestString()));
 }
 
-TEST_F(TestCStringManipulation, TestAppendFormat)
+TEST_F(TestStringManipulation, TestAppendFormat)
 {
   const auto test_append_format =
     []<typename... Args>(
@@ -530,7 +530,7 @@ TEST_F(TestCStringManipulation, TestAppendFormat)
   SOUL_TEST_RUN(test_append_format(test_long_string, "{}", ""));
 }
 
-TEST_F(TestCStringManipulation, TestAssign)
+TEST_F(TestStringManipulation, TestAssign)
 {
   const auto test_assign = [](const TestString& sample_string, const char* assigned_str) {
     auto test_string = sample_string.clone();
@@ -564,7 +564,7 @@ TEST_F(TestCStringManipulation, TestAssign)
   SOUL_TEST_RUN(test_assign(TestString(), ""));
 }
 
-TEST_F(TestCStringManipulation, TestAssignFormat)
+TEST_F(TestStringManipulation, TestAssignFormat)
 {
   const auto test_assign_format =
     []<typename... Args>(
@@ -595,7 +595,7 @@ TEST_F(TestCStringManipulation, TestAssignFormat)
   SOUL_TEST_RUN(test_assign_format(test_long_string, "{}", ""));
 }
 
-TEST(TestCStringFormat, TestCStringFormat)
+TEST(TestStringFormat, TestStringFormat)
 {
   SOUL_TEST_RUN(verify_equal(TestString::Format("{}", TestString()), ""));
   SOUL_TEST_RUN(verify_equal(TestString::Format("{}", TestString::From(TEST_SHORT_STR)), "abcdef"));
@@ -605,7 +605,7 @@ TEST(TestCStringFormat, TestCStringFormat)
     verify_equal(TestString::Format("{}", TestString::From(TEST_LONG_STR)), TEST_LONG_STR));
 };
 
-TEST(TestCStringHash, TestCStringHash)
+TEST(TestStringHash, TestStringHash)
 {
   TestString test_const_segment_string = TestString::From(TEST_SHORT_STR);
   TestString test_const_segment_string2 = TestString::From(TEST_LONG_STR);

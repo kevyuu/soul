@@ -4,7 +4,7 @@
 
 #include "core/array.h"
 #include "core/config.h"
-#include "core/cstring.h"
+#include "core/string.h"
 #include "core/hash.h"
 #include "core/type_traits.h"
 #include "memory/allocator.h"

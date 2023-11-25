@@ -8,7 +8,7 @@
 #include <random>
 #include <string>
 
-#include "core/cstring.h"
+#include "core/string.h"
 #include "core/log.h"
 #include "core/panic.h"
 #include "core/profile.h"
@@ -270,7 +270,7 @@ namespace soul::gpu
     }
 
     // NOLINTBEGIN(cert-err33-c)
-    inline auto load_file(const char* filepath, memory::Allocator& allocator) -> CString
+    inline auto load_file(const char* filepath, memory::Allocator& allocator) -> String
     {
       FILE* file = nullptr;
       const auto err = fopen_s(&file, filepath, "rb");
@@ -283,7 +283,7 @@ namespace soul::gpu
       const auto fsize = ftell(file);
       fseek(file, 0, SEEK_SET); /* same as rewind(f); */
 
-      auto string = CString::WithSize(fsize, &allocator);
+      auto string = String::WithSize(fsize, &allocator);
       fread(string.data(), 1, fsize, file);
 
       return string;
@@ -1122,7 +1122,7 @@ namespace soul::gpu
     }
 
     if (desc.name != nullptr) {
-      const auto tex_name = CString::Format("{}({})", desc.name, _db.frame_counter);
+      const auto tex_name = String::Format("{}({})", desc.name, _db.frame_counter);
       const VkDebugUtilsObjectNameInfoEXT image_name_info = {
         VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
         nullptr,
@@ -1299,7 +1299,7 @@ namespace soul::gpu
   auto System::create_blas(const BlasDesc& desc, const BlasGroupID blas_group_id) -> BlasID
   {
     runtime::ScopeAllocator<> scope_allocator("create_blas(const BlasDesc&, BlasGroupID)");
-    CString as_storage_name(&scope_allocator);
+    String as_storage_name(&scope_allocator);
     if (desc.name != nullptr) {
       as_storage_name.appendf("{}_storage_buffer", desc.name);
     }
@@ -1321,7 +1321,7 @@ namespace soul::gpu
     vkCreateAccelerationStructureKHR(_db.device, &create_info, nullptr, &vk_handle);
 
     if (desc.name != nullptr) {
-      CString as_name(&scope_allocator);
+      String as_name(&scope_allocator);
       as_name.appendf("{}({})", desc.name, _db.frame_counter);
       const VkDebugUtilsObjectNameInfoEXT as_name_info = {
         VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
@@ -1409,7 +1409,7 @@ namespace soul::gpu
   auto System::create_tlas(const TlasDesc& desc) -> TlasID
   {
     runtime::ScopeAllocator<> scope_allocator("gpu::System::create_tlas(const TlasDesc& desc)");
-    CString as_storage_name(&scope_allocator);
+    String as_storage_name(&scope_allocator);
     if (desc.name != nullptr) {
       as_storage_name.appendf("{}_storage_buffer", desc.name);
     }
@@ -1573,7 +1573,7 @@ namespace soul::gpu
 
     if (desc.name != nullptr) {
       runtime::ScopeAllocator<> scope_allocator("Buffer name");
-      CString buffer_name(&scope_allocator);
+      String buffer_name(&scope_allocator);
       buffer_name.appendf("{}(f{})", desc.name, _db.frame_counter);
 
       const VkDebugUtilsObjectNameInfoEXT image_name_info = {
@@ -1954,9 +1954,9 @@ namespace soul::gpu
     // ReSharper disable once CppLocalVariableMayBeConst
     auto* session = get_dxc_session();
 
-    Vector<const CString*> shader_sources(&scope_allocator);
+    Vector<const String*> shader_sources(&scope_allocator);
     shader_sources.reserve(program_desc.sources.size());
-    Vector<CString> shader_file_sources(&scope_allocator);
+    Vector<String> shader_file_sources(&scope_allocator);
     shader_file_sources.reserve(program_desc.sources.size());
 
     for (const auto& source : program_desc.sources) {
@@ -1991,11 +1991,11 @@ namespace soul::gpu
       shader_sources.begin(),
       shader_sources.end(),
       usize(0),
-      [](const usize prev_size, const CString* source) -> usize {
+      [](const usize prev_size, const String* source) -> usize {
         return prev_size + source->size();
       });
 
-    CString full_source_string(&scope_allocator);
+    String full_source_string(&scope_allocator);
     total_source_size += RESOURCE_HLSL_SIZE;
     total_source_size += RESOURCE_RT_EXT_HLSL_SIZE;
     full_source_string.reserve(total_source_size);
@@ -2118,7 +2118,7 @@ namespace soul::gpu
       program.shaders.push_back(Shader{
         .stage = stage,
         .vk_handle = shader_module,
-        .entry_point = CString::From(entry_point.name),
+        .entry_point = String::From(entry_point.name),
       });
     }
 
@@ -2208,7 +2208,7 @@ namespace soul::gpu
       _db.device, {}, {}, 1, &rt_pipeline_create_info, nullptr, &shader_table.pipeline);
 
     if (shader_table_desc.name != nullptr) {
-      CString pipeline_name(&scope_allocator);
+      String pipeline_name(&scope_allocator);
       pipeline_name.appendf("{}_pipeline({})", shader_table_desc.name, _db.frame_counter);
       const VkDebugUtilsObjectNameInfoEXT pipeline_name_info = {
         VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
@@ -2265,7 +2265,7 @@ namespace soul::gpu
         handle_size * group_counts[shader_group]);
       current_storage_offset += handle_size * group_counts[shader_group];
 
-      CString buffer_name(&scope_allocator);
+      String buffer_name(&scope_allocator);
       if (shader_table_desc.name != nullptr) {
         buffer_name.appendf("{}_{}", shader_table_desc.name, group_names[shader_group]);
       }

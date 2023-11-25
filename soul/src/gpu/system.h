@@ -1,6 +1,6 @@
 #pragma once
 
-#include "core/cstring.h"
+#include "core/string.h"
 #include "core/panic.h"
 #include "core/result.h"
 #include "gpu/intern/bindless_descriptor_allocator.h"

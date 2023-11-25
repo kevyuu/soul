@@ -25,7 +25,7 @@ set(SOUL_HEADERS
     src/core/enum_array.h
     src/core/bit_vector.h
     src/core/geometry.h
-    src/core/cstring.h
+    src/core/string.h
     src/core/thread.h
     src/core/tuple.h
     src/gpu/type.h

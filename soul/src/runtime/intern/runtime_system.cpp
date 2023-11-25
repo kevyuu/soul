@@ -1,7 +1,7 @@
 #include <thread>
 
 #include "core/architecture.h"
-#include "core/cstring.h"
+#include "core/string.h"
 #include "core/panic.h"
 #include "core/profile.h"
 #include "core/util.h"
@@ -29,7 +29,7 @@ namespace soul::runtime
   {
     Database::g_thread_context = thread_context;
 
-    const auto thread_name = CString::Format("Worker Thread = {}", get_thread_id());
+    const auto thread_name = String::Format("Worker Thread = {}", get_thread_id());
     SOUL_PROFILE_THREAD_SET_NAME(thread_name.data());
 
     char temp_allocator_name[512];

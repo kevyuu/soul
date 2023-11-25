@@ -68,7 +68,7 @@ namespace soul
   } // namespace impl
 
   template <memory::allocator_type AllocatorT = memory::Allocator, usize InlineCapacityV = 8>
-  class BasicCString
+  class BasicString
   {
   public:
     using value_type = char;
@@ -80,14 +80,14 @@ namespace soul
     static_assert(InlineCapacityV > 0);
     static constexpr usize INLINE_CAPACITY = InlineCapacityV;
 
-    explicit constexpr BasicCString(NotNull<memory::Allocator*> allocator = get_default_allocator())
+    explicit constexpr BasicString(NotNull<memory::Allocator*> allocator = get_default_allocator())
         : allocator_(allocator), capacity_(get_init_capacity(1))
     {
       init_reserve(capacity_);
       data()[0] = '\0';
     }
 
-    constexpr BasicCString( // NOLINT(hicpp-explicit-conversions)
+    constexpr BasicString( // NOLINT(hicpp-explicit-conversions)
       CompStr str,
       NotNull<memory::Allocator*> allocator = get_default_allocator())
         : allocator_(allocator), size_(str.size()), capacity_(0)
@@ -95,16 +95,16 @@ namespace soul
       storage_.data = const_cast<pointer>(str.data()); // NOLINT
     }
 
-    constexpr BasicCString(BasicCString&& other) noexcept { swap(other); }
+    constexpr BasicString(BasicString&& other) noexcept { swap(other); }
 
-    constexpr auto operator=(BasicCString&& other) noexcept -> BasicCString&
+    constexpr auto operator=(BasicString&& other) noexcept -> BasicString&
     {
       swap(other);
       other.clear();
       return *this;
     }
 
-    constexpr auto operator=(CompStr str) noexcept -> BasicCString&
+    constexpr auto operator=(CompStr str) noexcept -> BasicString&
     {
       size_ = str.size();
       maybe_deallocate();
@@ -135,7 +135,7 @@ namespace soul
       std::vformat_to(std::back_inserter(*this), fmt.get(), std::make_format_args(args...));
     }
 
-    constexpr ~BasicCString()
+    constexpr ~BasicString()
     {
       if (is_using_heap()) {
         allocator_->deallocate_array(storage_.data, capacity_);
@@ -144,60 +144,60 @@ namespace soul
 
     [[nodiscard]]
     static constexpr auto WithCapacity(
-      usize capacity, NotNull<AllocatorT*> allocator = get_default_allocator()) -> BasicCString
+      usize capacity, NotNull<AllocatorT*> allocator = get_default_allocator()) -> BasicString
     {
-      return BasicCString(Construct::with_capacity, capacity, allocator);
+      return BasicString(Construct::with_capacity, capacity, allocator);
     }
 
     template <typename... Args>
     [[nodiscard]]
-    static constexpr auto Format(std::format_string<Args...> fmt, Args&&... args) -> BasicCString
+    static constexpr auto Format(std::format_string<Args...> fmt, Args&&... args) -> BasicString
     {
-      return BasicCString(Construct::vformat, fmt.get(), std::make_format_args(args...));
+      return BasicString(Construct::vformat, fmt.get(), std::make_format_args(args...));
     }
 
     template <typename... Args>
     [[nodiscard]]
     static constexpr auto ReservedFormat(
       NotNull<AllocatorT*> allocator, std::format_string<Args...> fmt, Args&&... args)
-      -> BasicCString
+      -> BasicString
     {
-      return BasicCString(
+      return BasicString(
         Construct::reserved_format, allocator, std::move(fmt), std::forward<Args>(args)...);
     }
 
     [[nodiscard]]
     static constexpr auto From(
       NotNull<const char*> str, NotNull<AllocatorT*> allocator = get_default_allocator())
-      -> BasicCString
+      -> BasicString
     {
-      return BasicCString(Construct::from, str, allocator);
+      return BasicString(Construct::from, str, allocator);
     }
 
     [[nodiscard]]
     static constexpr auto UnsharedFrom(
       NotNull<const char*> str, NotNull<AllocatorT*> allocator = get_default_allocator())
-      -> BasicCString
+      -> BasicString
     {
-      return BasicCString(Construct::unshared_from, str, allocator);
+      return BasicString(Construct::unshared_from, str, allocator);
     }
 
     [[nodiscard]]
     static constexpr auto WithSize(
-      usize size, NotNull<AllocatorT*> allocator = get_default_allocator()) -> BasicCString
+      usize size, NotNull<AllocatorT*> allocator = get_default_allocator()) -> BasicString
     {
-      return BasicCString(Construct::with_size, size, allocator);
+      return BasicString(Construct::with_size, size, allocator);
     }
 
     [[nodiscard]]
-    constexpr auto clone() const -> BasicCString
+    constexpr auto clone() const -> BasicString
     {
-      return BasicCString(*this);
+      return BasicString(*this);
     }
 
-    constexpr auto clone_from(const BasicCString& other) { *this = other; }
+    constexpr auto clone_from(const BasicString& other) { *this = other; }
 
-    constexpr void swap(BasicCString& other) noexcept
+    constexpr void swap(BasicString& other) noexcept
     {
       using std::swap;
       swap(size_, other.size_);
@@ -206,7 +206,7 @@ namespace soul
       swap(storage_, other.storage_);
     }
 
-    friend void swap(BasicCString& a, BasicCString& b) noexcept { a.swap(b); }
+    friend void swap(BasicString& a, BasicString& b) noexcept { a.swap(b); }
 
     constexpr void reserve(usize new_capacity)
     {
@@ -253,7 +253,7 @@ namespace soul
       data()[size_] = '\0';
     }
 
-    constexpr auto append(const BasicCString& other) -> BasicCString&
+    constexpr auto append(const BasicString& other) -> BasicString&
     {
       ensure_capacity(size_ + other.size_ + 1);
       memcpy(data() + size_, other.data(), other.size_ + 1);
@@ -262,7 +262,7 @@ namespace soul
       return *this;
     }
 
-    constexpr auto append(const char* x) -> BasicCString&
+    constexpr auto append(const char* x) -> BasicString&
     {
       const auto extra_size = soul::str_length(x);
       ensure_capacity(size_ + extra_size + 1);
@@ -330,7 +330,7 @@ namespace soul
       return {data(), cast<SpanSizeT>(size())};
     }
 
-    constexpr friend auto operator==(const BasicCString& lhs, const BasicCString& rhs) -> b8
+    constexpr friend auto operator==(const BasicString& lhs, const BasicString& rhs) -> b8
     {
       if (lhs.size_ != rhs.size_) {
         return false;
@@ -381,7 +381,7 @@ namespace soul
       static constexpr auto with_size = WithSize{};
     };
 
-    constexpr BasicCString(
+    constexpr BasicString(
       Construct::WithCapacity /*tag*/, usize capacity, NotNull<AllocatorT*> allocator)
         : allocator_(allocator), capacity_(get_init_capacity(capacity))
     {
@@ -389,7 +389,7 @@ namespace soul
       data()[0] = '\0';
     }
 
-    constexpr BasicCString(Construct::Vformat /*tag*/, std::string_view fmt, std::format_args args)
+    constexpr BasicString(Construct::Vformat /*tag*/, std::string_view fmt, std::format_args args)
         : allocator_(get_default_allocator())
     {
       data()[0] = '\0';
@@ -397,7 +397,7 @@ namespace soul
     }
 
     template <typename... Args>
-    constexpr BasicCString(
+    constexpr BasicString(
       Construct::ReservedFormat /*tag*/,
       NotNull<AllocatorT*> allocator,
       std::format_string<Args...> fmt,
@@ -411,7 +411,7 @@ namespace soul
       data()[size_] = '\0';
     }
 
-    constexpr BasicCString(
+    constexpr BasicString(
       Construct::From /*tag*/, NotNull<const char*> str, NotNull<AllocatorT*> allocator)
         : allocator_(allocator), size_(str_length(str.get()))
     {
@@ -425,7 +425,7 @@ namespace soul
       }
     }
 
-    constexpr BasicCString(
+    constexpr BasicString(
       Construct::UnsharedFrom /*tag*/, NotNull<const char*> str, NotNull<AllocatorT*> allocator)
         : allocator_(allocator),
           size_(str_length(str.get())),
@@ -436,14 +436,14 @@ namespace soul
       std::memcpy(data(), str.get(), size_ + 1);
     }
 
-    constexpr BasicCString(Construct::WithSize /*tag*/, usize size, NotNull<AllocatorT*> allocator)
+    constexpr BasicString(Construct::WithSize /*tag*/, usize size, NotNull<AllocatorT*> allocator)
         : size_(size), capacity_(get_init_capacity(size + 1)), allocator_(allocator)
     {
       init_reserve(capacity_);
       data()[size_] = '\0';
     }
 
-    constexpr BasicCString(const BasicCString& other)
+    constexpr BasicString(const BasicString& other)
         : size_(other.size_), allocator_(other.allocator_)
     {
       if (other.is_using_const_segment()) {
@@ -457,7 +457,7 @@ namespace soul
       }
     }
 
-    constexpr auto operator=(const BasicCString& other) -> BasicCString&
+    constexpr auto operator=(const BasicString& other) -> BasicString&
     {
       if (&other == this) {
         return *this;
@@ -593,21 +593,21 @@ namespace soul
       init_reserve(capacity_);
     }
 
-    friend constexpr void soul_op_hash_combine(auto& hasher, const BasicCString& val)
+    friend constexpr void soul_op_hash_combine(auto& hasher, const BasicString& val)
     {
       hasher.combine_span(val.cspan());
     }
   };
 
-  using CString = BasicCString<memory::Allocator, 64>;
+  using String = BasicString<memory::Allocator, 64>;
 
 } // namespace soul
 
 template <soul::memory::allocator_type AllocatorT, soul::usize InlineCapacityV>
-struct std::formatter<soul::BasicCString<AllocatorT, InlineCapacityV>> // NOLINT
+struct std::formatter<soul::BasicString<AllocatorT, InlineCapacityV>> // NOLINT
     : std::formatter<std::string_view> {
   auto format(
-    const soul::BasicCString<AllocatorT, InlineCapacityV>& string, std::format_context& ctx)
+    const soul::BasicString<AllocatorT, InlineCapacityV>& string, std::format_context& ctx)
   {
     return std::formatter<std::string_view>::format(
       std::string_view(string.data(), string.size()), ctx);

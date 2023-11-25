@@ -23,7 +23,7 @@
 using namespace soul;
 
 struct Texture {
-  CString name;
+  String name;
   gpu::TextureID texture_id;
 
   Texture() = default;
@@ -248,7 +248,7 @@ class DrawIndexedIndirectSampleApp final : public App
     for (const auto& texture_name : obj_loader.textures) {
       textures_.push_back(Texture{});
       auto& texture = textures_.back();
-      texture.name = CString::From(texture_name.c_str());
+      texture.name = String::From(texture_name.c_str());
       const auto texture_path = get_media_path() / "textures" / texture_name;
       int texture_width, texture_height, texture_channel_count; // NOLINT
       stbi_uc* texture_pixels = stbi_load(

@@ -2,7 +2,7 @@
 
 #include <format>
 
-#include "core/cstring.h"
+#include "core/string.h"
 #include "core/flag_map.h"
 
 namespace soul
@@ -18,7 +18,7 @@ namespace soul::memory
 namespace soul::impl
 {
   // TODO(kevinyu) : Use cstring_view(pointer to char and length) after it is implemented
-  auto log(LogLevel log_level, const CString& message) -> void;
+  auto log(LogLevel log_level, const String& message) -> void;
   constexpr auto LOG_PREFIX =
     FlagMap<LogLevel, const char*>::FromValues({"FATAL", "WARN", "ERROR", "INFO", "DEBUG"});
 
@@ -42,7 +42,7 @@ namespace soul::impl
     -> void
   {
     if (log_level <= impl::LOG_LEVEL) {
-      CString message;
+      String message;
       message.appendf(
         "[{}]:{}:{}::", impl::LOG_PREFIX[log_level], relative_from_project_path(file_name), line);
       message.appendf(std::move(fmt), std::forward<Args>(args)...);
