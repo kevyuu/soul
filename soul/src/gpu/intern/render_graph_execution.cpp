@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <numeric>
 #include <ranges>
 
 #include <volk.h>

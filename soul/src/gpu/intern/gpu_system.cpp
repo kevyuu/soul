@@ -4,6 +4,7 @@
 
 #include <cstddef>
 #include <limits>
+#include <numeric>
 #include <random>
 #include <string>
 

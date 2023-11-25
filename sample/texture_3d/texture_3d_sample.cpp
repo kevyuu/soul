@@ -11,6 +11,7 @@
 #include <imgui/imgui.h>
 
 #include <functional>
+#include <numeric>
 #include <random>
 
 using namespace soul;
