@@ -4,16 +4,12 @@
 #include <cstdint>
 #include <limits>
 
-#include "glm/mat4x3.hpp"
-#include "glm/mat4x4.hpp"
-#include "glm/vec2.hpp"
-#include "glm/vec3.hpp"
-#include "glm/vec4.hpp"
+#include <glm/glm.hpp>
 
 #include "core/builtins.h"
-#include "core/panic.h"
+#include "core/compiler.h"
+#include "core/panic_lite.h"
 #include "core/type_traits.h"
-#include <glm/detail/qualifier.hpp>
 
 namespace soul
 {
@@ -633,7 +629,7 @@ namespace soul
   {
     using Dst = std::remove_pointer_t<PointerDst>;
     if constexpr (!std::is_same_v<PointerDst, void*>) {
-      SOUL_ASSERT(
+      SOUL_ASSERT_LITE(
         0,
         reinterpret_cast<uptr>(srcPtr) % alignof(Dst) == 0,
         "Source pointer is not aligned in PointerDst alignment!");
@@ -645,11 +641,11 @@ namespace soul
   template <std::integral IntegralDst, std::integral IntegralSrc>
   constexpr auto cast(IntegralSrc src) -> IntegralDst
   {
-    SOUL_ASSERT(
+    SOUL_ASSERT_LITE(
       0,
       static_cast<u64>(src) <= std::numeric_limits<IntegralDst>::max(),
       "Source value is larger than the destintation type maximum!");
-    SOUL_ASSERT(
+    SOUL_ASSERT_LITE(
       0,
       static_cast<i64>(src) >= std::numeric_limits<IntegralDst>::min(),
       "Source value is smaller than the destination type minimum!");
