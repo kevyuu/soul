@@ -2,13 +2,13 @@
 
 #include <filesystem>
 
-#include "core/string.h"
 #include "core/flag_map.h"
 #include "core/flag_set.h"
 #include "core/hash_map.h"
 #include "core/path.h"
 #include "core/pool.h"
 #include "core/sbo_vector.h"
+#include "core/string.h"
 #include "core/type.h"
 #include "core/uint64_hash_map.h"
 #include "core/variant.h"
@@ -851,7 +851,7 @@ namespace soul::gpu
 
   struct ShaderEntryPoint {
     ShaderStage stage;
-    const char* name;
+    StringView name;
   };
 
   static constexpr auto ENTRY_POINT_UNUSED = VK_SHADER_UNUSED_KHR;

@@ -9,7 +9,7 @@
 
 using namespace soul;
 
-static constexpr const char* IMGUI_HLSL = R"HLSL(
+static constexpr auto IMGUI_HLSL = R"HLSL(
 
 struct Transform {
     float2 scale;
@@ -37,7 +37,7 @@ struct VSOutput
 };
 
 [shader("vertex")]
-VSOutput vsMain(VSInput input)
+VSOutput vs_main(VSInput input)
 {
     Transform transform = get_buffer<Transform>(push_constant.transform_descriptor_id, 0);
 	VSOutput output;
@@ -53,7 +53,7 @@ struct PSOutput
 };
 
 [shader("pixel")]
-PSOutput psMain(VSOutput input)
+PSOutput ps_main(VSOutput input)
 {
 	PSOutput output;
 	Texture2D render_texture = get_texture_2d(push_constant.texture_descriptor_id);
@@ -62,7 +62,7 @@ PSOutput psMain(VSOutput input)
 	return output;
 }
 
-)HLSL";
+)HLSL"_str;
 
 ImGuiRenderGraphPass::ImGuiRenderGraphPass(soul::gpu::System* gpu_system) : gpu_system_(gpu_system)
 {
@@ -70,8 +70,8 @@ ImGuiRenderGraphPass::ImGuiRenderGraphPass(soul::gpu::System* gpu_system) : gpu_
   const auto shader_source = gpu::ShaderSource::From(gpu::ShaderString{String::From(IMGUI_HLSL)});
   const auto search_path = Path::From("shaders/"_str);
   constexpr auto entry_points = soul::Array{
-    gpu::ShaderEntryPoint{gpu::ShaderStage::VERTEX, "vsMain"},
-    gpu::ShaderEntryPoint{gpu::ShaderStage::FRAGMENT, "psMain"},
+    gpu::ShaderEntryPoint{gpu::ShaderStage::VERTEX, "vs_main"_str},
+    gpu::ShaderEntryPoint{gpu::ShaderStage::FRAGMENT, "ps_main"_str},
   };
   const gpu::ProgramDesc program_desc = {
     .search_paths = u32cspan(&search_path, 1),

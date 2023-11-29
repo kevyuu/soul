@@ -159,8 +159,8 @@ public:
       gpu::ShaderSource::From(gpu::ShaderFile{.path = Path::From("texture_cube_sample.hlsl"_str)});
     const auto search_path = Path::From("shaders/"_str);
     constexpr auto entry_points = soul::Array{
-      gpu::ShaderEntryPoint{gpu::ShaderStage::VERTEX, "vsMain"},
-      gpu::ShaderEntryPoint{gpu::ShaderStage::FRAGMENT, "psMain"},
+      gpu::ShaderEntryPoint{gpu::ShaderStage::VERTEX, "vs_main"_str},
+      gpu::ShaderEntryPoint{gpu::ShaderStage::FRAGMENT, "ps_main"_str},
     };
     const gpu::ProgramDesc program_desc = {
       .search_paths = u32cspan(&search_path, 1),

@@ -198,11 +198,11 @@ public:
     constexpr auto entry_points = soul::Array{
       gpu::ShaderEntryPoint{
         gpu::ShaderStage::VERTEX,
-        "vs_main",
+        "vs_main"_str,
       },
       gpu::ShaderEntryPoint{
         gpu::ShaderStage::FRAGMENT,
-        "ps_main",
+        "ps_main"_str,
       },
     };
     const gpu::ProgramDesc program_desc = {

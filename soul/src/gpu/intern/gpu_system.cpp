@@ -2019,11 +2019,11 @@ namespace soul::gpu
 
     for (const auto& entry_point : program_desc.entry_points) {
       const auto stage = entry_point.stage;
-      const char* entry_point_name = entry_point.name;
-      if (entry_point_name == nullptr) {
+      if (entry_point.name.size() == 0) {
         continue;
       }
 
+      auto entry_point_name = String::From(entry_point.name);
       // Tell the compiler to output SPIR-V
       Vector<LPCWSTR> arguments;
 
@@ -2040,14 +2040,14 @@ namespace soul::gpu
       arguments.push_back(L"-fspv-extension=SPV_KHR_ray_tracing");
       arguments.push_back(L"-fspv-extension=SPV_KHR_ray_query");
 
-      const auto entry_point_name_size = strlen(entry_point.name) + 1;
+      const auto entry_point_name_size = entry_point.name.size() + 1;
       auto* entry_point_wide_chars = scope_allocator.allocate_array<wchar_t>(entry_point_name_size);
       size_t entry_point_out_size;
       const auto result = mbstowcs_s(
         &entry_point_out_size,
         entry_point_wide_chars,
         entry_point_name_size,
-        entry_point.name,
+        entry_point_name.c_str(),
         entry_point_name_size);
       SOUL_ASSERT(0, result != -1, "Invalid multibyte characters");
       arguments.push_back(L"-E");
@@ -2118,7 +2118,7 @@ namespace soul::gpu
       program.shaders.push_back(Shader{
         .stage = stage,
         .vk_handle = shader_module,
-        .entry_point = String::From(entry_point.name),
+        .entry_point = std::move(entry_point_name),
       });
     }
 

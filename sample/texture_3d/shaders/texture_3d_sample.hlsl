@@ -17,7 +17,7 @@ struct VSOutput
 };
 
 [shader("vertex")]
-VSOutput vsMain(VSInput input)
+VSOutput vs_main(VSInput input)
 {
 	VSOutput output;
 	output.position = float4(input.position, 0.0, 1.0);
@@ -31,7 +31,7 @@ struct PSOutput
 };
 
 [shader("pixel")]
-PSOutput psMain(VSOutput input)
+PSOutput ps_main(VSOutput input)
 {
 	PSOutput output;
 	Texture3D test_texture = get_texture_3d(push_constant.texture_descriptor_id);

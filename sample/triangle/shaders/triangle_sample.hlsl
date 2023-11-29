@@ -18,7 +18,7 @@ struct VSOutput
 };
 
 [shader("vertex")]
-VSOutput vsMain(uint vertex_id : SV_VERTEXID)
+VSOutput vs_main(uint vertex_id : SV_VERTEXID)
 {
 	VSOutput output;
 	output.position = float4(positions[vertex_id], 0.0, 1.0);
@@ -32,7 +32,7 @@ struct PSOutput
 };
 
 [shader("pixel")]
-PSOutput fsMain(VSOutput input)
+PSOutput fs_main(VSOutput input)
 {
     PSOutput output;
     output.color = float4(input.color, 1.0);

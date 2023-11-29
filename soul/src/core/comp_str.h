@@ -5,7 +5,14 @@
 
 namespace soul
 {
-  struct CompStr {
+  class CompStr;
+  inline namespace literals
+  {
+    consteval auto operator""_str(const char* literal, usize length) -> CompStr;
+  } // namespace literals
+
+  class CompStr
+  {
   private:
     const char* data_;
     usize size_;
@@ -25,19 +32,28 @@ namespace soul
       return data_;
     }
 
-    operator Span<const char*>() const // NOLINT(hicpp-explicit-conversions)
+    [[nodiscard]]
+    constexpr auto c_str() const -> const char*
+    {
+      return data_;
+    }
+
+    constexpr operator Span<const char*>() const // NOLINT(hicpp-explicit-conversions)
     {
       return {data_, size_};
     }
 
-    friend consteval auto operator""_str(const char* literal, usize length) -> CompStr;
+    friend consteval auto literals::operator""_str(const char* literal, usize length) -> CompStr;
   };
 
-  [[nodiscard]]
-  consteval auto
-  operator""_str(const char* literal, usize length) -> CompStr
+  inline namespace literals
   {
-    return CompStr(literal, length);
-  }
+    [[nodiscard]]
+    consteval auto
+    operator""_str(const char* literal, usize length) -> CompStr
+    {
+      return CompStr(literal, length);
+    }
+  } // namespace literals
 
 } // namespace soul

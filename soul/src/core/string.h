@@ -114,17 +114,20 @@ namespace soul
       return *this;
     }
 
-    constexpr void assign(NotNull<const char*> str)
+    constexpr void assign(NotNull<const char*> str) { assign(StringView{str.get(), strlen(str)}); }
+
+    constexpr void assign(StringView str_view)
     {
-      size_ = strlen(str);
+      const char* str = str_view.data();
+      size_ = str_view.size();
 
       if (is_in_const_segment(str)) {
         maybe_deallocate();
-        storage_.data = const_cast<pointer>(str.get()); // NOLINT
+        storage_.data = const_cast<pointer>(str); // NOLINT
         capacity_ = 0;
       } else {
         maybe_reallocate(size_ + 1);
-        memcpy(data(), str.get(), size_ + 1);
+        memcpy(data(), str, size_ + 1);
       }
     }
 
@@ -171,7 +174,14 @@ namespace soul
       NotNull<const char*> str, NotNull<AllocatorT*> allocator = get_default_allocator())
       -> BasicString
     {
-      return BasicString(Construct::from, str, allocator);
+      return BasicString(Construct::from, StringView{str, strlen(str)}, allocator);
+    }
+
+    [[nodiscard]]
+    static constexpr auto From(
+      StringView str_view, NotNull<AllocatorT*> allocator = get_default_allocator()) -> BasicString
+    {
+      return BasicString(Construct::from, str_view, allocator);
     }
 
     [[nodiscard]]
@@ -179,7 +189,14 @@ namespace soul
       NotNull<const char*> str, NotNull<AllocatorT*> allocator = get_default_allocator())
       -> BasicString
     {
-      return BasicString(Construct::unshared_from, str, allocator);
+      return BasicString(Construct::unshared_from, StringView{str, strlen(str)}, allocator);
+    }
+
+    [[nodiscard]]
+    static constexpr auto UnsharedFrom(
+      StringView str_view, NotNull<AllocatorT*> allocator = get_default_allocator()) -> BasicString
+    {
+      return BasicString(Construct::unshared_from, str_view, allocator);
     }
 
     [[nodiscard]]
@@ -309,6 +326,12 @@ namespace soul
       }
     }
 
+    [[nodiscard]]
+    constexpr auto c_str() const -> const_pointer
+    {
+      return data();
+    }
+
     template <ts_unsigned_integral SpanSizeT = usize>
     [[nodiscard]]
     constexpr auto span() -> Span<pointer>
@@ -412,28 +435,27 @@ namespace soul
     }
 
     constexpr BasicString(
-      Construct::From /*tag*/, NotNull<const char*> str, NotNull<AllocatorT*> allocator)
-        : allocator_(allocator), size_(str_length(str.get()))
+      Construct::From /*tag*/, StringView str_view, NotNull<AllocatorT*> allocator)
+        : allocator_(allocator), size_(str_view.size())
     {
+      const char* str = str_view.data();
       if (is_in_const_segment(str)) {
-        storage_.data = const_cast<pointer>(str.get()); // NOLINT
+        storage_.data = const_cast<pointer>(str); // NOLINT
         capacity_ = 0;
       } else {
         capacity_ = get_init_capacity(size_ + 1);
         init_reserve(capacity_);
-        std::memcpy(data(), str.get(), size_ + 1);
+        std::memcpy(data(), str, size_ + 1);
       }
     }
 
     constexpr BasicString(
-      Construct::UnsharedFrom /*tag*/, NotNull<const char*> str, NotNull<AllocatorT*> allocator)
-        : allocator_(allocator),
-          size_(str_length(str.get())),
-          capacity_(get_init_capacity(size_ + 1))
+      Construct::UnsharedFrom /*tag*/, StringView str_view, NotNull<AllocatorT*> allocator)
+        : allocator_(allocator), size_(str_view.size()), capacity_(get_init_capacity(size_ + 1))
     {
 
       init_reserve(capacity_);
-      std::memcpy(data(), str.get(), size_ + 1);
+      std::memcpy(data(), str_view.data(), size_ + 1);
     }
 
     constexpr BasicString(Construct::WithSize /*tag*/, usize size, NotNull<AllocatorT*> allocator)

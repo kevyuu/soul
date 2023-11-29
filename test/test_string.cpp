@@ -2,6 +2,7 @@
 #include <gtest/gtest.h>
 
 #include "core/config.h"
+#include "core/span.h"
 #include "core/string.h"
 #include "memory/allocator.h"
 
@@ -16,21 +17,27 @@ namespace soul
   }
 } // namespace soul
 
+using namespace soul::literals;
+
 constexpr usize TEST_INLINE_CAPACITY = 32;
 using TestString = soul::BasicString<soul::memory::Allocator, TEST_INLINE_CAPACITY>;
 
 constexpr const char* TEST_SHORT_STR = "abcdef";
+constexpr auto TEST_SHORT_STR_VIEW = soul::StringView{"abcdef"_str};
 constexpr const auto TEST_SHORT_STR_SIZE = soul::str_length(TEST_SHORT_STR);
 static_assert(TEST_SHORT_STR_SIZE + 1 < TEST_INLINE_CAPACITY);
 
 constexpr const char* TEST_SHORT_STR2 = "adefghbc";
+constexpr auto TEST_SHORT_STR_VIEW2 = soul::StringView{"abefghbc"_str};
 constexpr const auto TEST_SHORT_STR_SIZE2 = soul::str_length(TEST_SHORT_STR2);
 static_assert(TEST_SHORT_STR_SIZE2 + 1 < TEST_INLINE_CAPACITY);
 
 constexpr const char* TEST_MAX_INLINE_STR = "abcdefghijklmnopqrstvuwxyz12345";
+constexpr auto TEST_MAX_INLINE_STR_VIEW = soul::StringView{"abcdefghijklmnopqrstvuwxyz12345"_str};
 static_assert(soul::str_length(TEST_MAX_INLINE_STR) == (TEST_INLINE_CAPACITY - 1));
 
 constexpr const char* TEST_MAX_INLINE_STR2 = "12345abcdefghijklmnopqrstvuwxyz";
+constexpr auto TEST_MAX_INLINE_STR_VIEW2 = soul::StringView{"12345abcdefghijklmnopqrstvuwxyz"_str};
 static_assert(soul::str_length(TEST_MAX_INLINE_STR2) == (TEST_INLINE_CAPACITY - 1));
 
 constexpr const char* TEST_LONG_STR = R"(
@@ -43,6 +50,7 @@ pariatur. Excepteur sint occaecat cupidatat non proident, sunt in
 culpa qui officia deserunt mollit anim id est laborum.
 )";
 constexpr const auto TEST_LONG_STR_SIZE = soul::str_length(TEST_LONG_STR);
+constexpr const auto TEST_LONG_STR_VIEW = soul::StringView{TEST_LONG_STR, TEST_LONG_STR_SIZE};
 static_assert(TEST_LONG_STR_SIZE + 1 > TEST_INLINE_CAPACITY);
 
 constexpr const char* TEST_LONG_STR2 = R"(
@@ -55,6 +63,7 @@ pariatur. Excepteur sint occaecat cupidatat non proident, sunt in
 culpa qui officia deserunt mollit anim id est laborum.
 )";
 constexpr const auto TEST_LONG_STR2_SIZE = soul::str_length(TEST_LONG_STR2);
+constexpr const auto TEST_LONG_STR_VIEW2 = soul::StringView{TEST_LONG_STR2, TEST_LONG_STR2_SIZE};
 static_assert(TEST_LONG_STR2_SIZE + 1 > TEST_INLINE_CAPACITY);
 
 template <typename T>
@@ -78,6 +87,13 @@ void verify_equal(const StringT& result_str, const char* expected_str)
 }
 
 template <typename StringT>
+void verify_equal(const StringT& result_str, soul::StringView expected_str_view)
+{
+  SOUL_TEST_ASSERT_STREQ(result_str.data(), expected_str_view.data());
+  SOUL_TEST_ASSERT_EQ(result_str.size(), expected_str_view.size());
+}
+
+template <typename StringT>
 void verify_equal(const StringT& result_str, const StringT& expected_str)
 {
   SOUL_TEST_ASSERT_EQ(result_str, expected_str);
@@ -95,29 +111,17 @@ TEST(TestStringConstruction, TestDefaultConstructor)
   verify_equal(cstring, "");
 }
 
-TEST(TestStringConstruction, TestConstructionUnsharedFromCharArray)
+TEST(TestStringConstruction, TestConstructionFromStringView)
 {
-  const auto test_construction_unshared_from = [](const char* str) {
-    const auto test_string = TestString::UnsharedFrom(str);
-    SOUL_TEST_RUN(verify_equal(test_string, str));
-  };
-  SOUL_TEST_RUN(test_construction_unshared_from(""));
-  SOUL_TEST_RUN(test_construction_unshared_from(TEST_SHORT_STR));
-  SOUL_TEST_RUN(test_construction_unshared_from(TEST_MAX_INLINE_STR));
-  SOUL_TEST_RUN(test_construction_unshared_from(TEST_LONG_STR));
-}
-
-TEST(TestStringConstruction, TestConstructFromCharArray)
-{
-  const auto test_construction_from = [](const char* str) {
-    const auto cstring = TestString::From(str);
-    SOUL_TEST_RUN(verify_equal(cstring, str));
+  const auto test_construction_from = [](StringView str_view) {
+    const auto cstring = TestString::From(str_view);
+    SOUL_TEST_RUN(verify_equal(cstring, str_view));
   };
 
-  SOUL_TEST_RUN(test_construction_from(""));
-  SOUL_TEST_RUN(test_construction_from(TEST_SHORT_STR));
-  SOUL_TEST_RUN(test_construction_from(TEST_MAX_INLINE_STR));
-  SOUL_TEST_RUN(test_construction_from(TEST_LONG_STR));
+  SOUL_TEST_RUN(test_construction_from(""_str));
+  SOUL_TEST_RUN(test_construction_from(TEST_SHORT_STR_VIEW));
+  SOUL_TEST_RUN(test_construction_from(TEST_MAX_INLINE_STR_VIEW));
+  SOUL_TEST_RUN(test_construction_from(TEST_LONG_STR_VIEW));
 }
 
 TEST(TestStringConstruction, TestStringConstructionFromLiteral)
@@ -532,36 +536,36 @@ TEST_F(TestStringManipulation, TestAppendFormat)
 
 TEST_F(TestStringManipulation, TestAssign)
 {
-  const auto test_assign = [](const TestString& sample_string, const char* assigned_str) {
+  const auto test_assign = [](const TestString& sample_string, StringView assigned_str_view) {
     auto test_string = sample_string.clone();
-    test_string.assign(assigned_str);
-    verify_equal(test_string, assigned_str);
+    test_string.assign(assigned_str_view);
+    verify_equal(test_string, assigned_str_view);
   };
 
-  SOUL_TEST_RUN(test_assign(test_const_segment_string, TEST_SHORT_STR));
-  SOUL_TEST_RUN(test_assign(test_const_segment_string, TEST_MAX_INLINE_STR));
-  SOUL_TEST_RUN(test_assign(test_const_segment_string, TEST_LONG_STR));
-  SOUL_TEST_RUN(test_assign(test_const_segment_string, ""));
+  SOUL_TEST_RUN(test_assign(test_const_segment_string, TEST_SHORT_STR_VIEW));
+  SOUL_TEST_RUN(test_assign(test_const_segment_string, TEST_MAX_INLINE_STR_VIEW));
+  SOUL_TEST_RUN(test_assign(test_const_segment_string, TEST_LONG_STR_VIEW));
+  SOUL_TEST_RUN(test_assign(test_const_segment_string, ""_str));
 
-  SOUL_TEST_RUN(test_assign(test_short_string, TEST_SHORT_STR));
-  SOUL_TEST_RUN(test_assign(test_short_string, TEST_MAX_INLINE_STR));
-  SOUL_TEST_RUN(test_assign(test_short_string, TEST_LONG_STR));
-  SOUL_TEST_RUN(test_assign(test_short_string, ""));
+  SOUL_TEST_RUN(test_assign(test_short_string, TEST_SHORT_STR_VIEW));
+  SOUL_TEST_RUN(test_assign(test_short_string, TEST_MAX_INLINE_STR_VIEW));
+  SOUL_TEST_RUN(test_assign(test_short_string, TEST_LONG_STR_VIEW));
+  SOUL_TEST_RUN(test_assign(test_short_string, ""_str));
 
-  SOUL_TEST_RUN(test_assign(test_max_inline_string, TEST_SHORT_STR));
-  SOUL_TEST_RUN(test_assign(test_max_inline_string, TEST_MAX_INLINE_STR));
-  SOUL_TEST_RUN(test_assign(test_max_inline_string, TEST_LONG_STR));
-  SOUL_TEST_RUN(test_assign(test_max_inline_string, ""));
+  SOUL_TEST_RUN(test_assign(test_max_inline_string, TEST_SHORT_STR_VIEW));
+  SOUL_TEST_RUN(test_assign(test_max_inline_string, TEST_MAX_INLINE_STR_VIEW));
+  SOUL_TEST_RUN(test_assign(test_max_inline_string, TEST_LONG_STR_VIEW));
+  SOUL_TEST_RUN(test_assign(test_max_inline_string, ""_str));
 
-  SOUL_TEST_RUN(test_assign(test_long_string, TEST_SHORT_STR));
-  SOUL_TEST_RUN(test_assign(test_long_string, TEST_MAX_INLINE_STR));
-  SOUL_TEST_RUN(test_assign(test_long_string, TEST_LONG_STR));
-  SOUL_TEST_RUN(test_assign(test_long_string, ""));
+  SOUL_TEST_RUN(test_assign(test_long_string, TEST_SHORT_STR_VIEW));
+  SOUL_TEST_RUN(test_assign(test_long_string, TEST_MAX_INLINE_STR_VIEW));
+  SOUL_TEST_RUN(test_assign(test_long_string, TEST_LONG_STR_VIEW));
+  SOUL_TEST_RUN(test_assign(test_long_string, ""_str));
 
-  SOUL_TEST_RUN(test_assign(TestString(), TEST_SHORT_STR));
-  SOUL_TEST_RUN(test_assign(TestString(), TEST_MAX_INLINE_STR));
-  SOUL_TEST_RUN(test_assign(TestString(), TEST_LONG_STR));
-  SOUL_TEST_RUN(test_assign(TestString(), ""));
+  SOUL_TEST_RUN(test_assign(TestString(), TEST_SHORT_STR_VIEW));
+  SOUL_TEST_RUN(test_assign(TestString(), TEST_MAX_INLINE_STR_VIEW));
+  SOUL_TEST_RUN(test_assign(TestString(), TEST_LONG_STR_VIEW));
+  SOUL_TEST_RUN(test_assign(TestString(), ""_str));
 }
 
 TEST_F(TestStringManipulation, TestAssignFormat)

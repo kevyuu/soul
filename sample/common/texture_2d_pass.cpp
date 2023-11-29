@@ -3,7 +3,9 @@
 #include "gpu/gpu.h"
 #include "gpu/type.h"
 
-static constexpr const char* TEXTURE_2D_HLSL = R"HLSL(
+using namespace soul;
+
+static constexpr auto TEXTURE_2D_HLSL = R"HLSL(
 struct VSInput {
 	[[vk::location(0)]] float2 position: POSITION;
 	[[vk::location(1)]] float2 tex_coord: TEXCOORD;
@@ -22,7 +24,7 @@ struct VSOutput
 };
 
 [shader("vertex")]
-VSOutput vsMain(VSInput input)
+VSOutput vs_main(VSInput input)
 {
 	VSOutput output;
 	output.position = float4(input.position, 0.0, 1.0);
@@ -36,7 +38,7 @@ struct PSOutput
 };
 
 [shader("pixel")]
-PSOutput psMain(VSOutput input)
+PSOutput ps_main(VSOutput input)
 {
 	PSOutput output;
 	Texture2D test_texture = get_texture_2d(push_constant.texture_descriptor_id);
@@ -44,9 +46,7 @@ PSOutput psMain(VSOutput input)
 	output.color = test_texture.Sample(test_sampler, input.tex_coord);
 	return output;
 }
-)HLSL";
-
-using namespace soul;
+)HLSL"_str;
 
 struct Vertex {
   vec2f position = {};
@@ -69,8 +69,8 @@ Texture2DRGPass::Texture2DRGPass(gpu::System* gpu_system) : gpu_system_(gpu_syst
     gpu::ShaderSource::From(gpu::ShaderString{String::From(TEXTURE_2D_HLSL)});
   const auto search_path = Path::From("shaders/"_str);
   constexpr auto entry_points = soul::Array{
-    gpu::ShaderEntryPoint{gpu::ShaderStage::VERTEX, "vsMain"},
-    gpu::ShaderEntryPoint{gpu::ShaderStage::FRAGMENT, "psMain"},
+    gpu::ShaderEntryPoint{gpu::ShaderStage::VERTEX, "vs_main"_str},
+    gpu::ShaderEntryPoint{gpu::ShaderStage::FRAGMENT, "ps_main"_str},
   };
   const gpu::ProgramDesc program_desc = {
     .search_paths = u32cspan(&search_path, 1),

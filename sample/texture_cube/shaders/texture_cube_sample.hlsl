@@ -19,7 +19,7 @@ struct VSOutput
 };
 
 [shader("vertex")]
-VSOutput vsMain(VSInput input)
+VSOutput vs_main(VSInput input)
 {
 	VSOutput output;
 	output.tex_coord = input.position;
@@ -30,7 +30,7 @@ VSOutput vsMain(VSInput input)
 }
 
 [shader("pixel")]
-float4 psMain(VSOutput output) : SV_TARGET
+float4 ps_main(VSOutput output) : SV_TARGET
 {
 	TextureCube cube_tex = get_texture_cube(push_constant.texture_descriptor_id);
     SamplerState cube_sampler = get_sampler(push_constant.sampler_descriptor_id);

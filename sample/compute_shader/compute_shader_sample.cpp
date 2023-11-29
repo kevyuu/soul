@@ -85,7 +85,7 @@ public:
       gpu::ShaderFile{.path = Path::From("compute_shader_sample.hlsl"_str)});
     const auto search_path = Path::From("shaders/"_str);
     constexpr auto entry_points = soul::Array{
-      gpu::ShaderEntryPoint{gpu::ShaderStage::COMPUTE, "csMain"},
+      gpu::ShaderEntryPoint{gpu::ShaderStage::COMPUTE, "cs_main"_str},
     };
     const gpu::ProgramDesc program_desc = {
       .search_paths = u32cspan(&search_path, 1),

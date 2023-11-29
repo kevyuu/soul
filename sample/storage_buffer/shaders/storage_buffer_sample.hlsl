@@ -18,7 +18,7 @@ struct VSOutput
 };
 
 [shader("vertex")]
-VSOutput vsMain(VSInput input)
+VSOutput vs_main(VSInput input)
 {
 	VSOutput output;
 	Transform transform = get_buffer<Transform>(push_constant.transform_descriptor_id, push_constant.offset);
@@ -33,7 +33,7 @@ struct PSOutput
 };
 
 [shader("pixel")]
-PSOutput psMain(VSOutput input)
+PSOutput ps_main(VSOutput input)
 {
     PSOutput output;
     output.color = float4(input.color, 1.0);

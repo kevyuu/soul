@@ -4,7 +4,7 @@
 ComputePushConstant push_constant;
 
 [numthreads(WORK_GROUP_SIZE_X, WORK_GROUP_SIZE_Y, 1)]
-void csMain(uint3 dispatch_thread_id : SV_DispatchThreadID)
+void cs_main(uint3 dispatch_thread_id : SV_DispatchThreadID)
 {
     float4 value = float4(0.0, 0.0, 0.0, 1.0);
     int2 texel_coord = dispatch_thread_id.xy;
