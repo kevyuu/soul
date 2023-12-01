@@ -130,7 +130,7 @@ namespace soul
     [[nodiscard]]
     constexpr auto crend() const -> const_reverse_iterator;
 
-    T buffer_[ArrSizeV];
+    T list[ArrSizeV];
   };
 
   template <typeset T, usize ArrSizeV>
@@ -175,7 +175,7 @@ namespace soul
   {
     using std::swap;
     for (usize i = 0; i < ArrSizeV; i++) {
-      swap(buffer_[i], other.buffer_[i]);
+      swap(list[i], other.list[i]);
     }
   }
 
@@ -186,7 +186,7 @@ namespace soul
   {
     const auto create_array =
       []<usize... idx>(std::index_sequence<idx...>, const this_type& original) -> this_type {
-      return {original.buffer_[idx].clone()...};
+      return {original.list[idx].clone()...};
     };
     return create_array(std::make_index_sequence<ArrSizeV>(), *this);
   }
@@ -196,20 +196,20 @@ namespace soul
     requires ts_clone<T>
   {
     for (usize i = 0; i < ArrSizeV; i++) {
-      buffer_[i].clone_from(other.buffer[i]);
+      list[i].clone_from(other.buffer[i]);
     }
   }
 
   template <typeset T, usize ArrSizeV>
   constexpr auto Array<T, ArrSizeV>::data() noexcept -> pointer
   {
-    return buffer_;
+    return list;
   }
 
   template <typeset T, usize ArrSizeV>
   constexpr auto Array<T, ArrSizeV>::data() const noexcept -> const_pointer
   {
-    return buffer_;
+    return list;
   }
 
   template <typeset T, usize ArrSizeV>
@@ -236,25 +236,25 @@ namespace soul
   template <typeset T, usize ArrSizeV>
   constexpr auto Array<T, ArrSizeV>::front() -> reference
   {
-    return buffer_[0];
+    return list[0];
   }
 
   template <typeset T, usize ArrSizeV>
   constexpr auto Array<T, ArrSizeV>::front() const -> const_reference
   {
-    return buffer_[0];
+    return list[0];
   }
 
   template <typeset T, usize ArrSizeV>
   constexpr auto Array<T, ArrSizeV>::back() noexcept -> reference
   {
-    return buffer_[ArrSizeV - 1];
+    return list[ArrSizeV - 1];
   }
 
   template <typeset T, usize ArrSizeV>
   constexpr auto Array<T, ArrSizeV>::back() const noexcept -> const_reference
   {
-    return buffer_[ArrSizeV - 1];
+    return list[ArrSizeV - 1];
   }
 
   template <typeset T, usize ArrSizeV>
@@ -266,7 +266,7 @@ namespace soul
       "Out of bound access to array detected. idx = {}, _size = ",
       idx,
       ArrSizeV);
-    return buffer_[idx];
+    return list[idx];
   }
 
   template <typeset T, usize ArrSizeV>
@@ -278,7 +278,7 @@ namespace soul
       "Out of bound access to array detected. idx = {}, _size={}",
       idx,
       ArrSizeV);
-    return buffer_[idx];
+    return list[idx];
   }
 
   template <typeset T, usize ArrSizeV>
@@ -298,37 +298,37 @@ namespace soul
   template <typeset T, usize ArrSizeV>
   constexpr auto Array<T, ArrSizeV>::begin() -> iterator
   {
-    return buffer_;
+    return list;
   }
 
   template <typeset T, usize ArrSizeV>
   constexpr auto Array<T, ArrSizeV>::begin() const -> const_iterator
   {
-    return buffer_;
+    return list;
   }
 
   template <typeset T, usize ArrSizeV>
   constexpr auto Array<T, ArrSizeV>::cbegin() const -> const_iterator
   {
-    return buffer_;
+    return list;
   }
 
   template <typeset T, usize ArrSizeV>
   constexpr auto Array<T, ArrSizeV>::end() -> iterator
   {
-    return buffer_ + ArrSizeV;
+    return list + ArrSizeV;
   }
 
   template <typeset T, usize ArrSizeV>
   constexpr auto Array<T, ArrSizeV>::end() const -> const_iterator
   {
-    return buffer_ + ArrSizeV;
+    return list + ArrSizeV;
   }
 
   template <typeset T, usize ArrSizeV>
   constexpr auto Array<T, ArrSizeV>::cend() const -> const_iterator
   {
-    return buffer_ + ArrSizeV;
+    return list + ArrSizeV;
   }
 
   template <typeset T, usize ArrSizeV>

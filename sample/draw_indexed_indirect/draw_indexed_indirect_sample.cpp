@@ -141,13 +141,13 @@ class DrawIndexedIndirectSampleApp final : public App
       gpu::BufferNodeID scene_buffer;
     };
 
-    const gpu::ColorAttachmentDesc color_attachment_desc = {
+    const gpu::RGColorAttachmentDesc color_attachment_desc = {
       .node_id = render_target,
       .clear = true,
     };
     auto clear_value = gpu::ClearValue();
     clear_value.depth_stencil.depth = 1.0f;
-    const gpu::DepthStencilAttachmentDesc depth_attachment_desc = {
+    const gpu::RGDepthStencilAttachmentDesc depth_attachment_desc = {
       .node_id = render_graph.create_texture(
         "Depth Target",
         gpu::RGTextureDesc::create_d2(gpu::TextureFormat::DEPTH32F, 1, {viewport.x, viewport.y})),
@@ -166,29 +166,38 @@ class DrawIndexedIndirectSampleApp final : public App
       [viewport, this](const auto& parameter, auto& registry, auto& command_list) {
         const gpu::GraphicPipelineStateDesc pipeline_desc = {
           .program_id = program_id_,
-          .input_bindings = {{.stride = sizeof(Vertex)}},
+          .input_bindings =
+            {
+              .list =
+                {
+                  {.stride = sizeof(Vertex)},
+                },
+            },
           .input_attributes =
             {
-              {
-                .binding = 0,
-                .offset = offsetof(Vertex, position),
-                .type = gpu::VertexElementType::FLOAT3,
-              },
-              {
-                .binding = 0,
-                .offset = offsetof(Vertex, normal),
-                .type = gpu::VertexElementType::FLOAT3,
-              },
-              {
-                .binding = 0,
-                .offset = offsetof(Vertex, color),
-                .type = gpu::VertexElementType::FLOAT3,
-              },
-              {
-                .binding = 0,
-                .offset = offsetof(Vertex, tex_coord),
-                .type = gpu::VertexElementType::FLOAT2,
-              },
+              .list =
+                {
+                  {
+                    .binding = 0,
+                    .offset = offsetof(Vertex, position),
+                    .type = gpu::VertexElementType::FLOAT3,
+                  },
+                  {
+                    .binding = 0,
+                    .offset = offsetof(Vertex, normal),
+                    .type = gpu::VertexElementType::FLOAT3,
+                  },
+                  {
+                    .binding = 0,
+                    .offset = offsetof(Vertex, color),
+                    .type = gpu::VertexElementType::FLOAT3,
+                  },
+                  {
+                    .binding = 0,
+                    .offset = offsetof(Vertex, tex_coord),
+                    .type = gpu::VertexElementType::FLOAT2,
+                  },
+                },
             },
           .viewport =
             {

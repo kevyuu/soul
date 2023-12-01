@@ -31,22 +31,15 @@ namespace soul
     constexpr Span(MaybeNull<pointer> data, size_type size) : data_(data), size_(size)
     {
       SOUL_ASSERT_LITE(
-        0,
-        (size != 0 && data != nullptr) || (size == 0 && data == nullptr),
-        "Non zero size cannot hold nullptr, and zero size must be nullptr");
+        0, (size != 0 && data != nullptr) || (size == 0), "Non zero size cannot hold nullptr");
     }
 
-    constexpr Span(NotNull<pointer> data, size_type size) : data_(data), size_(size)
-    {
-      SOUL_ASSERT_LITE(0, size != 0, "Span from not null cannot have zero count");
-    }
+    constexpr Span(NotNull<pointer> data, size_type size) : data_(data), size_(size) {}
 
     constexpr Span(pointer data, size_type size) : data_(data), size_(size)
     {
       SOUL_ASSERT_LITE(
-        0,
-        (size != 0 && data != nullptr) || (size == 0 && data == nullptr),
-        "Non zero size cannot hold nullptr, and zero size must be nullptr");
+        0, (size != 0 && data != nullptr) || (size == 0), "Non zero size cannot hold nullptr");
     }
 
     template <typename U>

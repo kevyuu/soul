@@ -67,7 +67,7 @@ class MSAASample final : public App
       [this, enable_msaa, viewport, &render_graph]() -> gpu::RGRenderTargetDesc {
       const auto sample_render_target_dim = vec2ui32(viewport.x / 4, viewport.y / 4);
       if (enable_msaa) {
-        const gpu::ColorAttachmentDesc color_attachment_desc = {
+        const gpu::RGColorAttachmentDesc color_attachment_desc = {
           .node_id = render_graph.create_texture(
             "MSAA Color Target",
             gpu::RGTextureDesc::create_d2(
@@ -80,14 +80,14 @@ class MSAASample final : public App
           .clear = true,
         };
 
-        const gpu::ResolveAttachmentDesc resolve_attachment_desc = {
+        const gpu::RGResolveAttachmentDesc resolve_attachment_desc = {
           .node_id = render_graph.create_texture(
             "MSAA Resolve Target",
             gpu::RGTextureDesc::create_d2(
               gpu::TextureFormat::RGBA8, 1, sample_render_target_dim, true)),
         };
 
-        const gpu::DepthStencilAttachmentDesc depth_attachment_desc = {
+        const gpu::RGDepthStencilAttachmentDesc depth_attachment_desc = {
           .node_id = render_graph.create_texture(
             "MSAA Depth Target",
             gpu::RGTextureDesc::create_d2(
@@ -107,7 +107,7 @@ class MSAASample final : public App
           depth_attachment_desc);
       }
 
-      const gpu::ColorAttachmentDesc color_attachment_desc = {
+      const gpu::RGColorAttachmentDesc color_attachment_desc = {
         .node_id = render_graph.create_texture(
           "Color Target",
           gpu::RGTextureDesc::create_d2(
@@ -115,7 +115,7 @@ class MSAASample final : public App
         .clear = true,
       };
 
-      const gpu::DepthStencilAttachmentDesc depth_attachment_desc = {
+      const gpu::RGDepthStencilAttachmentDesc depth_attachment_desc = {
         .node_id = render_graph.create_texture(
           "Depth Target",
           gpu::RGTextureDesc::create_d2(
@@ -139,14 +139,17 @@ class MSAASample final : public App
        this](const auto& /* parameter */, auto& registry, auto& command_list) {
         const gpu::GraphicPipelineStateDesc pipeline_desc = {
           .program_id = program_id_,
-          .input_bindings = {{.stride = sizeof(Vertex)}},
+          .input_bindings = {.list = {{.stride = sizeof(Vertex)}}},
           .input_attributes =
             {
-              {
-                .binding = 0,
-                .offset = offsetof(Vertex, position),
-                .type = gpu::VertexElementType::FLOAT2,
-              },
+              .list =
+                {
+                  {
+                    .binding = 0,
+                    .offset = offsetof(Vertex, position),
+                    .type = gpu::VertexElementType::FLOAT2,
+                  },
+                },
             },
           .viewport =
             {

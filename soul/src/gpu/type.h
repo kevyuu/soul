@@ -927,37 +927,90 @@ namespace soul::gpu
     }
   };
 
+  struct InputBindingDesc {
+    u32 stride = 0;
+
+    auto operator==(const InputBindingDesc&) const -> bool = default;
+
+    friend void soul_op_hash_combine(auto& hasher, const InputBindingDesc& desc)
+    {
+      hasher.combine(desc.stride);
+    }
+  };
+
+  struct InputAttrDesc {
+    u32 binding = 0;
+    u32 offset = 0;
+    VertexElementType type = VertexElementType::DEFAULT;
+    VertexElementFlags flags = 0;
+
+    auto operator==(const InputAttrDesc&) const -> bool = default;
+
+    friend void soul_op_hash_combine(auto& hasher, const InputAttrDesc& val)
+    {
+      hasher.combine(val.binding, val.offset, val.type, val.flags);
+    }
+  };
+
+  struct ColorAttachmentDesc {
+    b8 blend_enable = false;
+    b8 color_write = true;
+    BlendFactor src_color_blend_factor = BlendFactor::ZERO;
+    BlendFactor dst_color_blend_factor = BlendFactor::ZERO;
+    BlendOp color_blend_op = BlendOp::ADD;
+    BlendFactor src_alpha_blend_factor = BlendFactor::ZERO;
+    BlendFactor dst_alpha_blend_factor = BlendFactor::ZERO;
+    BlendOp alpha_blend_op = BlendOp::ADD;
+
+    auto operator==(const ColorAttachmentDesc&) const -> bool = default;
+
+    friend void soul_op_hash_combine(auto& hasher, const ColorAttachmentDesc& desc)
+    {
+      hasher.combine(
+        desc.blend_enable,
+        desc.color_write,
+        desc.src_color_blend_factor,
+        desc.dst_color_blend_factor,
+        desc.color_blend_op,
+        desc.src_alpha_blend_factor,
+        desc.dst_alpha_blend_factor,
+        desc.alpha_blend_op);
+    }
+  };
+
+  struct DepthStencilAttachmentDesc {
+    b8 depth_test_enable = false;
+    b8 depth_write_enable = false;
+    CompareOp depth_compare_op = CompareOp::NEVER;
+
+    auto operator==(const DepthStencilAttachmentDesc&) const -> bool = default;
+
+    friend void soul_op_hash_combine(auto& hasher, const DepthStencilAttachmentDesc& desc)
+    {
+      hasher.combine(desc.depth_test_enable, desc.depth_write_enable, desc.depth_compare_op);
+    }
+  };
+
+  struct DepthBiasDesc {
+    f32 constant = 0.0f;
+    f32 slope = 0.0f;
+
+    auto operator==(const DepthBiasDesc&) const -> bool = default;
+
+    friend void soul_op_hash_combine(auto& hasher, const DepthBiasDesc& desc)
+    {
+      hasher.combine(desc.constant, desc.slope);
+    }
+  };
+
   struct GraphicPipelineStateDesc {
     ProgramID program_id;
 
     InputLayoutDesc input_layout;
 
-    struct InputBindingDesc {
-      u32 stride = 0;
+    Array<InputBindingDesc, MAX_INPUT_BINDING_PER_SHADER> input_bindings;
 
-      auto operator==(const InputBindingDesc&) const -> bool = default;
-
-      friend void soul_op_hash_combine(auto& hasher, const InputBindingDesc& desc)
-      {
-        hasher.combine(desc.stride);
-      }
-
-    } input_bindings[MAX_INPUT_BINDING_PER_SHADER];
-
-    struct InputAttrDesc {
-      u32 binding = 0;
-      u32 offset = 0;
-      VertexElementType type = VertexElementType::DEFAULT;
-      VertexElementFlags flags = 0;
-
-      auto operator==(const InputAttrDesc&) const -> bool = default;
-
-      friend void soul_op_hash_combine(auto& hasher, const InputAttrDesc& val)
-      {
-        hasher.combine(val.binding, val.offset, val.type, val.flags);
-      }
-
-    } input_attributes[MAX_INPUT_PER_SHADER];
+    Array<InputAttrDesc, MAX_INPUT_PER_SHADER> input_attributes;
 
     Viewport viewport;
 
@@ -980,59 +1033,9 @@ namespace soul::gpu
 
     u8 color_attachment_count = 0;
 
-    struct ColorAttachmentDesc {
-      b8 blend_enable = false;
-      b8 color_write = true;
-      BlendFactor src_color_blend_factor = BlendFactor::ZERO;
-      BlendFactor dst_color_blend_factor = BlendFactor::ZERO;
-      BlendOp color_blend_op = BlendOp::ADD;
-      BlendFactor src_alpha_blend_factor = BlendFactor::ZERO;
-      BlendFactor dst_alpha_blend_factor = BlendFactor::ZERO;
-      BlendOp alpha_blend_op = BlendOp::ADD;
-
-      auto operator==(const ColorAttachmentDesc&) const -> bool = default;
-
-      friend void soul_op_hash_combine(auto& hasher, const ColorAttachmentDesc& desc)
-      {
-        hasher.combine(
-          desc.blend_enable,
-          desc.color_write,
-          desc.src_color_blend_factor,
-          desc.dst_color_blend_factor,
-          desc.color_blend_op,
-          desc.src_alpha_blend_factor,
-          desc.dst_alpha_blend_factor,
-          desc.alpha_blend_op);
-      }
-    };
-    ColorAttachmentDesc color_attachments[MAX_COLOR_ATTACHMENT_PER_SHADER];
-
-    struct DepthStencilAttachmentDesc {
-      b8 depth_test_enable = false;
-      b8 depth_write_enable = false;
-      CompareOp depth_compare_op = CompareOp::NEVER;
-
-      auto operator==(const DepthStencilAttachmentDesc&) const -> bool = default;
-
-      friend void soul_op_hash_combine(auto& hasher, const DepthStencilAttachmentDesc& desc)
-      {
-        hasher.combine(desc.depth_test_enable, desc.depth_write_enable, desc.depth_compare_op);
-      }
-    };
+    Array<ColorAttachmentDesc, MAX_COLOR_ATTACHMENT_PER_SHADER> color_attachments;
 
     DepthStencilAttachmentDesc depth_stencil_attachment;
-
-    struct DepthBiasDesc {
-      f32 constant = 0.0f;
-      f32 slope = 0.0f;
-
-      auto operator==(const DepthBiasDesc&) const -> bool = default;
-
-      friend void soul_op_hash_combine(auto& hasher, const DepthBiasDesc& desc)
-      {
-        hasher.combine(desc.constant, desc.slope);
-      }
-    };
 
     DepthBiasDesc depth_bias;
 
@@ -1049,9 +1052,9 @@ namespace soul::gpu
         desc.color_attachment_count,
         desc.depth_stencil_attachment,
         desc.depth_bias);
-      hasher.combine_span(u64cspan(desc.input_bindings, MAX_INPUT_BINDING_PER_SHADER));
-      hasher.combine_span(u64cspan(desc.input_attributes, MAX_INPUT_PER_SHADER));
-      hasher.combine_span(u64cspan(desc.color_attachments, MAX_COLOR_ATTACHMENT_PER_SHADER));
+      hasher.combine_span(desc.input_bindings.span());
+      hasher.combine_span(desc.input_attributes.span());
+      hasher.combine_span(desc.color_attachments.span());
     }
   };
 

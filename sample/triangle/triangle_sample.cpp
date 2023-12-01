@@ -14,7 +14,7 @@ class TriangleSampleApp final : public App
   auto render(gpu::TextureNodeID render_target, gpu::RenderGraph& render_graph)
     -> gpu::TextureNodeID override
   {
-    const gpu::ColorAttachmentDesc color_attachment_desc = {
+    const gpu::RGColorAttachmentDesc color_attachment_desc = {
       .node_id = render_target,
       .clear = true,
     };

@@ -214,7 +214,7 @@ class Texture3DSampleApp final : public App
       ImGui::End();
     }
 
-    const gpu::ColorAttachmentDesc color_attachment_desc = {
+    const gpu::RGColorAttachmentDesc color_attachment_desc = {
       .node_id = render_target,
       .clear = true,
     };
@@ -307,19 +307,28 @@ class Texture3DSampleApp final : public App
       [viewport, this](const auto& parameter, auto& registry, auto& command_list) {
         const gpu::GraphicPipelineStateDesc pipeline_desc = {
           .program_id = program_id_,
-          .input_bindings = {{.stride = sizeof(Vertex)}},
+          .input_bindings =
+            {
+              .list =
+                {
+                  {.stride = sizeof(Vertex)},
+                },
+            },
           .input_attributes =
             {
-              {
-                .binding = 0,
-                .offset = offsetof(Vertex, position),
-                .type = gpu::VertexElementType::FLOAT2,
-              },
-              {
-                .binding = 0,
-                .offset = offsetof(Vertex, texture_coords),
-                .type = gpu::VertexElementType::FLOAT3,
-              },
+              .list =
+                {
+                  {
+                    .binding = 0,
+                    .offset = offsetof(Vertex, position),
+                    .type = gpu::VertexElementType::FLOAT2,
+                  },
+                  {
+                    .binding = 0,
+                    .offset = offsetof(Vertex, texture_coords),
+                    .type = gpu::VertexElementType::FLOAT3,
+                  },
+                },
             },
           .viewport =
             {.width = static_cast<float>(viewport.x), .height = static_cast<float>(viewport.y)},

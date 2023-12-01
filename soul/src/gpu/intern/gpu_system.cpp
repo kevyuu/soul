@@ -1817,8 +1817,8 @@ namespace soul::gpu
 
       VkPipelineColorBlendAttachmentState color_blend_attachments[MAX_COLOR_ATTACHMENT_PER_SHADER];
       std::transform(
-        desc.color_attachments,
-        desc.color_attachments + MAX_COLOR_ATTACHMENT_PER_SHADER,
+        desc.color_attachments.begin(),
+        desc.color_attachments.end(),
         color_blend_attachments,
         [](const auto& attachment) -> VkPipelineColorBlendAttachmentState {
           return {

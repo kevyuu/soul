@@ -78,7 +78,7 @@ class BufferTransferCommandSample final : public App
   auto render(gpu::TextureNodeID render_target, gpu::RenderGraph& render_graph)
     -> gpu::TextureNodeID override
   {
-    const gpu::ColorAttachmentDesc color_attachment_desc = {
+    const gpu::RGColorAttachmentDesc color_attachment_desc = {
       .node_id = render_target, .clear = true};
 
     const vec2ui32 viewport = gpu_system_->get_swapchain_extent();
@@ -238,19 +238,28 @@ class BufferTransferCommandSample final : public App
       [viewport, this](const auto& parameter, auto& registry, auto& command_list) {
         const gpu::GraphicPipelineStateDesc pipeline_desc = {
           .program_id = program_id_,
-          .input_bindings = {{.stride = sizeof(Vertex)}},
+          .input_bindings =
+            {
+              .list =
+                {
+                  {.stride = sizeof(Vertex)},
+                },
+            },
           .input_attributes =
             {
-              {
-                .binding = 0,
-                .offset = offsetof(Vertex, position),
-                .type = gpu::VertexElementType::FLOAT2,
-              },
-              {
-                .binding = 0,
-                .offset = offsetof(Vertex, color),
-                .type = gpu::VertexElementType::FLOAT3,
-              },
+              .list =
+                {
+                  {
+                    .binding = 0,
+                    .offset = offsetof(Vertex, position),
+                    .type = gpu::VertexElementType::FLOAT2,
+                  },
+                  {
+                    .binding = 0,
+                    .offset = offsetof(Vertex, color),
+                    .type = gpu::VertexElementType::FLOAT3,
+                  },
+                },
             },
           .viewport =
             {

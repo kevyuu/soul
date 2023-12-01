@@ -203,14 +203,14 @@ namespace soul::gpu
     usize size = 0;
   };
 
-  struct ColorAttachmentDesc {
+  struct RGColorAttachmentDesc {
     TextureNodeID node_id;
     SubresourceIndex view = SubresourceIndex();
     b8 clear = false;
     ClearValue clear_value;
   };
 
-  struct DepthStencilAttachmentDesc {
+  struct RGDepthStencilAttachmentDesc {
     TextureNodeID node_id;
     SubresourceIndex view;
     b8 depth_write_enable = true;
@@ -218,7 +218,7 @@ namespace soul::gpu
     ClearValue clear_value;
   };
 
-  struct ResolveAttachmentDesc {
+  struct RGResolveAttachmentDesc {
     TextureNodeID node_id;
     SubresourceIndex view;
     b8 clear = false;
@@ -277,9 +277,9 @@ namespace soul::gpu
     AttachmentDesc desc;
   };
 
-  using ColorAttachment = AttachmentAccess<ColorAttachmentDesc>;
-  using DepthStencilAttachment = AttachmentAccess<DepthStencilAttachmentDesc>;
-  using ResolveAttachment = AttachmentAccess<ResolveAttachmentDesc>;
+  using ColorAttachment = AttachmentAccess<RGColorAttachmentDesc>;
+  using DepthStencilAttachment = AttachmentAccess<RGDepthStencilAttachmentDesc>;
+  using ResolveAttachment = AttachmentAccess<RGResolveAttachmentDesc>;
 
   struct TransferSrcBufferAccess {
     BufferNodeID node_id;
@@ -387,20 +387,20 @@ namespace soul::gpu
 
   struct RGRenderTargetDesc {
 
-    using ColorAttachments = SBOVector<ColorAttachmentDesc, 1>;
-    using ResolveAttachments = SBOVector<ResolveAttachmentDesc, 1>;
+    using ColorAttachments = SBOVector<RGColorAttachmentDesc, 1>;
+    using ResolveAttachments = SBOVector<RGResolveAttachmentDesc, 1>;
 
     RGRenderTargetDesc() = default;
 
-    RGRenderTargetDesc(vec2ui32 dimension, const ColorAttachmentDesc& color)
+    RGRenderTargetDesc(vec2ui32 dimension, const RGColorAttachmentDesc& color)
         : dimension(dimension), color_attachments(ColorAttachments::FillN(1, color))
     {
     }
 
     RGRenderTargetDesc(
       vec2ui32 dimension,
-      const ColorAttachmentDesc& color,
-      const DepthStencilAttachmentDesc& depth_stencil)
+      const RGColorAttachmentDesc& color,
+      const RGDepthStencilAttachmentDesc& depth_stencil)
         : dimension(dimension),
           color_attachments(ColorAttachments::FillN(1, color)),
           depth_stencil_attachment(depth_stencil)
@@ -410,9 +410,9 @@ namespace soul::gpu
     RGRenderTargetDesc(
       vec2ui32 dimension,
       const TextureSampleCount sample_count,
-      const ColorAttachmentDesc& color,
-      const ResolveAttachmentDesc& resolve,
-      const DepthStencilAttachmentDesc depth_stencil)
+      const RGColorAttachmentDesc& color,
+      const RGResolveAttachmentDesc& resolve,
+      const RGDepthStencilAttachmentDesc depth_stencil)
         : dimension(dimension),
           sample_count(sample_count),
           color_attachments(ColorAttachments::FillN(1, color)),
@@ -421,16 +421,16 @@ namespace soul::gpu
     {
     }
 
-    RGRenderTargetDesc(vec2ui32 dimension, const DepthStencilAttachmentDesc& depth_stencil)
+    RGRenderTargetDesc(vec2ui32 dimension, const RGDepthStencilAttachmentDesc& depth_stencil)
         : dimension(dimension), depth_stencil_attachment(depth_stencil)
     {
     }
 
     vec2ui32 dimension = {};
     TextureSampleCount sample_count = TextureSampleCount::COUNT_1;
-    SBOVector<ColorAttachmentDesc, 1> color_attachments;
-    SBOVector<ResolveAttachmentDesc, 1> resolve_attachments;
-    DepthStencilAttachmentDesc depth_stencil_attachment;
+    SBOVector<RGColorAttachmentDesc, 1> color_attachments;
+    SBOVector<RGResolveAttachmentDesc, 1> resolve_attachments;
+    RGDepthStencilAttachmentDesc depth_stencil_attachment;
   };
 
   struct RGRenderTarget {
@@ -513,6 +513,10 @@ namespace soul::gpu
     RGDependencyBuilder(
       PassNodeID pass_id, NotNull<PassBaseNode*> pass_node, NotNull<RenderGraph*> render_graph);
   };
+  using RGRasterDependencyBuilder = RGDependencyBuilder<PIPELINE_FLAGS_RASTER>;
+  using RGComputeDependencyBuilder = RGDependencyBuilder<PIPELINE_FLAGS_COMPUTE>;
+  using RGRayTracingDependencyBuilder = RGDependencyBuilder<PIPELINE_FLAGS_RAY_TRACING>;
+  using RGNonShaderDependencyBuilder = RGDependencyBuilder<PIPELINE_FLAGS_RASTER>;
 
   class PassBaseNode
   {

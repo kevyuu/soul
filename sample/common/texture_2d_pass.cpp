@@ -113,7 +113,8 @@ auto Texture2DRGPass::add_pass(const Parameter& parameter, gpu::RenderGraph& ren
   -> gpu::TextureNodeID
 {
   const gpu::TextureNodeID render_target = parameter.render_target;
-  const gpu::ColorAttachmentDesc color_attachment_desc = {.node_id = render_target, .clear = true};
+  const gpu::RGColorAttachmentDesc color_attachment_desc = {
+    .node_id = render_target, .clear = true};
 
   const vec2ui32 viewport = gpu_system_->get_swapchain_extent();
 
@@ -129,15 +130,24 @@ auto Texture2DRGPass::add_pass(const Parameter& parameter, gpu::RenderGraph& ren
     [this, viewport](const auto& parameter, auto& registry, auto& command_list) {
       const gpu::GraphicPipelineStateDesc pipeline_desc = {
         .program_id = program_id_,
-        .input_bindings = {{.stride = sizeof(Vertex)}},
+        .input_bindings =
+          {
+            .list =
+              {
+                {.stride = sizeof(Vertex)},
+              },
+          },
         .input_attributes =
           {
-            {.binding = 0,
-             .offset = offsetof(Vertex, position),
-             .type = gpu::VertexElementType::FLOAT2},
-            {.binding = 0,
-             .offset = offsetof(Vertex, texture_coords),
-             .type = gpu::VertexElementType::FLOAT2},
+            .list =
+              {
+                {.binding = 0,
+                 .offset = offsetof(Vertex, position),
+                 .type = gpu::VertexElementType::FLOAT2},
+                {.binding = 0,
+                 .offset = offsetof(Vertex, texture_coords),
+                 .type = gpu::VertexElementType::FLOAT2},
+              },
           },
         .viewport =
           {

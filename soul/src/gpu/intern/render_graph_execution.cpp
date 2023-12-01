@@ -846,7 +846,7 @@ namespace soul::gpu::impl
       }
 
       if (render_target.depth_stencil_attachment.out_node_id.id.is_valid()) {
-        const DepthStencilAttachmentDesc& desc = render_target.depth_stencil_attachment.desc;
+        const RGDepthStencilAttachmentDesc& desc = render_target.depth_stencil_attachment.desc;
         ClearValue clear_value = desc.clear_value;
         clear_values[clear_count++].depthStencil = {
           clear_value.depth_stencil.depth, clear_value.depth_stencil.stencil};

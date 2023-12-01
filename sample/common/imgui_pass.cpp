@@ -133,7 +133,7 @@ void ImGuiRenderGraphPass::add_pass(
     return;
   }
 
-  const gpu::ColorAttachmentDesc color_attachment_desc = {
+  const gpu::RGColorAttachmentDesc color_attachment_desc = {
     .node_id = render_target,
     .clear = false,
   };
@@ -247,20 +247,26 @@ void ImGuiRenderGraphPass::add_pass(
       runtime::ScopeAllocator scope_allocator("Imgui Render Pass Execute Scope Allocator");
       gpu::GraphicPipelineStateDesc pipeline_desc = {
         .program_id = program_id_,
-        .input_bindings = {{.stride = sizeof(ImDrawVert)}},
+        .input_bindings =
+          {
+            .list = {{.stride = sizeof(ImDrawVert)}},
+          },
         .input_attributes =
           {
-            {.binding = 0,
-             .offset = offsetof(ImDrawVert, pos),
-             .type = gpu::VertexElementType::FLOAT2},
-            {.binding = 0,
-             .offset = offsetof(ImDrawVert, uv),
-             .type = gpu::VertexElementType::FLOAT2},
-            {
-              .binding = 0,
-              .offset = offsetof(ImDrawVert, col),
-              .type = gpu::VertexElementType::UINT,
-            },
+            .list =
+              {
+                {.binding = 0,
+                 .offset = offsetof(ImDrawVert, pos),
+                 .type = gpu::VertexElementType::FLOAT2},
+                {.binding = 0,
+                 .offset = offsetof(ImDrawVert, uv),
+                 .type = gpu::VertexElementType::FLOAT2},
+                {
+                  .binding = 0,
+                  .offset = offsetof(ImDrawVert, col),
+                  .type = gpu::VertexElementType::UINT,
+                },
+              },
           },
         .viewport =
           {
@@ -270,7 +276,7 @@ void ImGuiRenderGraphPass::add_pass(
         .color_attachment_count = 1,
         .color_attachments =
           {
-            {
+            .list = {{
               .blend_enable = true,
               .src_color_blend_factor = gpu::BlendFactor::SRC_ALPHA,
               .dst_color_blend_factor = gpu::BlendFactor::ONE_MINUS_SRC_ALPHA,
@@ -278,7 +284,7 @@ void ImGuiRenderGraphPass::add_pass(
               .src_alpha_blend_factor = gpu::BlendFactor::ONE,
               .dst_alpha_blend_factor = gpu::BlendFactor::ZERO,
               .alpha_blend_op = gpu::BlendOp::ADD,
-            },
+            }},
           },
       };
 
