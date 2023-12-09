@@ -1666,6 +1666,7 @@ namespace soul::gpu
       u32 swapchain_index = 0;
 
       struct Garbages {
+        Vector<ProgramID> programs;
         Vector<TextureID> textures;
         Vector<BufferID> buffers;
         Vector<VkAccelerationStructureKHR> as_vk_handles;

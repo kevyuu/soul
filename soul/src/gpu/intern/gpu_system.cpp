@@ -1627,7 +1627,6 @@ namespace soul::gpu
     swapchain_texture.cache_state.commit_acquire_swapchain();
     swapchain_texture.layout = VK_IMAGE_LAYOUT_UNDEFINED;
     frame_context.image_available_semaphore.state = BinarySemaphore::State::SIGNALLED;
-
     return result;
   }
 
@@ -2135,6 +2134,12 @@ namespace soul::gpu
   {
     SOUL_ASSERT(0, program_id.is_valid(), "");
     return _db.programs[program_id.id];
+  }
+
+  void System::destroy_program(ProgramID program_id)
+  {
+    SOUL_ASSERT(0, program_id.is_valid(), "");
+    get_frame_context().garbages.programs.push_back(program_id);
   }
 
   auto System::create_shader_table(const ShaderTableDesc& shader_table_desc) -> ShaderTableID
@@ -2941,6 +2946,17 @@ namespace soul::gpu
       if (garbages.swapchain.vk_handle != VK_NULL_HANDLE) {
         vkDestroySwapchainKHR(_db.device, garbages.swapchain.vk_handle, nullptr);
         garbages.swapchain.vk_handle = VK_NULL_HANDLE;
+      }
+    }
+
+    {
+      SOUL_PROFILE_ZONE_WITH_NAME("Destroy programs");
+      for (const auto program_id : garbages.programs) {
+        const auto& program = _db.programs[program_id.id];
+        for (const auto& shader : program.shaders) {
+          vkDestroyShaderModule(_db.device, shader.vk_handle, nullptr);
+        }
+        _db.programs.remove(program_id.id);
       }
     }
 

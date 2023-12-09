@@ -1,8 +1,8 @@
 #pragma once
 
-#include "core/string.h"
 #include "core/panic.h"
 #include "core/result.h"
+#include "core/string.h"
 #include "gpu/intern/bindless_descriptor_allocator.h"
 #include "gpu/type.h"
 
@@ -100,6 +100,7 @@ namespace soul::gpu
     auto create_program(const ProgramDesc& program_desc) -> Result<ProgramID, Error>;
     auto get_program(ProgramID program_id) const -> const impl::Program&;
     auto get_program(ProgramID program_id) -> impl::Program&;
+    void destroy_program(ProgramID program_id);
 
     auto create_shader_table(const ShaderTableDesc& shader_table_desc) -> ShaderTableID;
     void destroy_shader_table(ShaderTableID shader_table_id);
