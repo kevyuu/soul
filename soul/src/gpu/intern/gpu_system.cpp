@@ -2940,6 +2940,7 @@ namespace soul::gpu
       garbages.swapchain.image_views.resize(0);
       if (garbages.swapchain.vk_handle != VK_NULL_HANDLE) {
         vkDestroySwapchainKHR(_db.device, garbages.swapchain.vk_handle, nullptr);
+        garbages.swapchain.vk_handle = VK_NULL_HANDLE;
       }
     }
 
