@@ -36,7 +36,7 @@ namespace soul
       Entry<KeyT, ValT>,
       typename Entry<KeyT, ValT>::GetKeyOp,
       Hash,
-      RobinTableConfig{},
+      RobinTableConfig{.load_factor = 0.5f},
       AllocatorT>;
 
     HashTableT hash_table_;
@@ -79,7 +79,22 @@ namespace soul
       return hash_table_.insert(EntryT{.key = key.forward_ref(), .value = value.forward_ref()});
     }
 
+    template <typename QueryT>
+      requires(BorrowTrait<KeyT, QueryT>::available)
+    void remove(QueryT key)
+    {
+      return hash_table_.remove(key);
+    }
+
     void remove(const KeyT& key) { return hash_table_.remove(key); }
+
+    template <typename QueryT>
+      requires(BorrowTrait<KeyT, QueryT>::available)
+    [[nodiscard]]
+    auto contains(QueryT key) const -> b8
+    {
+      return hash_table_.contains(key);
+    }
 
     [[nodiscard]]
     auto contains(const KeyT& key) const -> b8
@@ -87,9 +102,27 @@ namespace soul
       return hash_table_.contains(key);
     }
 
+    template <typename QueryT>
+      requires(BorrowTrait<KeyT, QueryT>::available)
+    [[nodiscard]]
+    auto
+    operator[](QueryT key) -> ValT&
+    {
+      return hash_table_.entry_ref(key).value;
+    }
+
     [[nodiscard]]
     auto
     operator[](const KeyT& key) -> ValT&
+    {
+      return hash_table_.entry_ref(key).value;
+    }
+
+    template <typename QueryT>
+      requires(BorrowTrait<KeyT, QueryT>::available)
+    [[nodiscard]]
+    auto
+    operator[](QueryT key) const -> const ValT&
     {
       return hash_table_.entry_ref(key).value;
     }
@@ -101,8 +134,24 @@ namespace soul
       return hash_table_.entry_ref(key).value;
     }
 
+    template <typename QueryT>
+      requires(BorrowTrait<KeyT, QueryT>::available)
+    [[nodiscard]]
+    auto ref(QueryT key) -> ValT&
+    {
+      return operator[](key);
+    }
+
     [[nodiscard]]
     auto ref(const KeyT& key) -> ValT&
+    {
+      return operator[](key);
+    }
+
+    template <typename QueryT>
+      requires(BorrowTrait<KeyT, QueryT>::available)
+    [[nodiscard]]
+    auto ref(QueryT key) const -> const ValT&
     {
       return operator[](key);
     }

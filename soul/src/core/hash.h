@@ -1,6 +1,7 @@
 #pragma once
 
 #include <concepts>
+#include "core/borrow.h"
 #include "core/builtins.h"
 #include "core/compiler.h"
 #include "core/span.h"
@@ -220,6 +221,15 @@ namespace soul
     requires(impl_soul_op_hash_combine_v<T>)
   struct HashOp {
     auto operator()(const T& val) const -> u64
+    {
+      Hasher hasher;
+      hasher.combine(val);
+      return hasher.finish();
+    }
+
+    template <typename BorrowedT>
+      requires(BorrowTrait<T, BorrowedT>::available)
+    auto operator()(BorrowedT val) const -> u64
     {
       Hasher hasher;
       hasher.combine(val);

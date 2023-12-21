@@ -2,6 +2,7 @@
 
 #include "core/array.h"
 #include "core/builtins.h"
+#include "core/compiler.h"
 #include "core/config.h"
 #include "core/hash.h"
 #include "core/log.h"
@@ -114,6 +115,7 @@ namespace soul
     static auto ROBIN_TABLE_METADATA_DUMMY_SENTINEL = RobinTableMetadata::Sentinel(); // NOLINT
 
   } // namespace impl
+
   struct RobinTableConfig {
     f32 load_factor = 0.5f;
   };
@@ -386,8 +388,35 @@ namespace soul
       size_++;
     }
 
+    template <typename QueryT>
+      requires(BorrowTrait<KeyT, QueryT>::available)
+    auto do_find_index(QueryT key) const -> usize
+    {
+      if (SOUL_UNLIKELY(empty())) {
+        return slot_count();
+      }
+      const auto hash_code = hash_fn_(key);
+      const auto home_index = home_index_from_hash(hash_code);
+      auto slot_index = home_index;
+      auto metadata = Metadata::FromHash(hash_code);
+      while (!metadatas_[slot_index].is_empty()) {
+        if (metadata == metadatas_[slot_index]) {
+          const auto& stored_key = get_key_fn_(entries_[slot_index]);
+          if (key == borrow<QueryT>(stored_key)) {
+            return slot_index;
+          }
+        }
+        metadata.increment_psl();
+        slot_index++;
+      }
+      return slot_count();
+    }
+
     auto do_find_index(const KeyT& key) const -> usize
     {
+      if (SOUL_UNLIKELY(empty())) {
+        return slot_count();
+      }
       const auto hash_code = hash_fn_(key);
       const auto home_index = home_index_from_hash(hash_code);
       auto slot_index = home_index;
@@ -402,6 +431,24 @@ namespace soul
         slot_index++;
       }
       return slot_count();
+    }
+
+    void do_remove_index(usize prev_bucket_index)
+    {
+      if (prev_bucket_index == slot_count()) {
+        return;
+      }
+      auto bucket_index = next_bucket_index(prev_bucket_index);
+      while (metadatas_[bucket_index].is_psl_greater_than_one() && bucket_index < slot_count()) {
+        metadatas_[prev_bucket_index] = metadatas_[bucket_index];
+        metadatas_[prev_bucket_index].decrement_psl();
+        entries_[prev_bucket_index] = std::move(entries_[bucket_index]);
+        prev_bucket_index = bucket_index;
+        bucket_index = next_bucket_index(bucket_index);
+      }
+      metadatas_[prev_bucket_index] = Metadata::Empty();
+      destroy_at(&entries_[prev_bucket_index]);
+      size_--;
     }
 
     void duplicate_entries(const RobinTable& other)
@@ -523,6 +570,14 @@ namespace soul
       }
     }
 
+    template <typename QueryT>
+      requires(BorrowTrait<KeyT, QueryT>::available)
+    [[nodiscard]]
+    auto contains(QueryT key) const -> b8
+    {
+      return do_find_index(key) != slot_count();
+    }
+
     [[nodiscard]]
     auto contains(const KeyT& key) const -> b8
     {
@@ -533,6 +588,12 @@ namespace soul
     auto size() const -> usize
     {
       return size_;
+    }
+
+    [[nodiscard]]
+    auto empty() const -> b8
+    {
+      return size_ == 0;
     }
 
     [[nodiscard]]
@@ -614,6 +675,28 @@ namespace soul
       }
     }
 
+    template <typename QueryT>
+      requires(BorrowTrait<KeyT, QueryT>::available)
+    auto find(QueryT key) -> iterator
+    {
+      if (slot_count_ == 0) {
+        return end();
+      }
+      const auto index = do_find_index(key);
+      return iterator(metadatas_ + index, entries_ + index);
+    }
+
+    template <typename QueryT>
+      requires(BorrowTrait<KeyT, QueryT>::available)
+    auto find(QueryT key) const -> const_iterator
+    {
+      if (slot_count_ == 0) {
+        return end();
+      }
+      const auto index = do_find_index(key);
+      return const_iterator(metadatas_ + index, entries_ + index);
+    }
+
     auto find(const KeyT& key) -> iterator
     {
       if (slot_count_ == 0) {
@@ -632,6 +715,26 @@ namespace soul
       return const_iterator(metadatas_ + index, entries_ + index);
     }
 
+    template <typename QueryT>
+      requires(BorrowTrait<KeyT, QueryT>::available)
+    [[nodiscard]]
+    auto entry_ref(QueryT key) -> EntryT&
+    {
+      SOUL_ASSERT(0, slot_count_ > 0, "");
+      const auto index = do_find_index(key);
+      return entries_[index];
+    }
+
+    template <typename QueryT>
+      requires(BorrowTrait<KeyT, QueryT>::available)
+    [[nodiscard]]
+    auto entry_ref(QueryT key) const -> const EntryT&
+    {
+      SOUL_ASSERT(0, slot_count_ > 0, "");
+      const auto index = do_find_index(key);
+      return entries_[index];
+    }
+
     [[nodiscard]]
     auto entry_ref(const KeyT& key) -> EntryT&
     {
@@ -648,26 +751,24 @@ namespace soul
       return entries_[index];
     }
 
+    template <typename QueryT>
+      requires(BorrowTrait<KeyT, QueryT>::available)
+    void remove(QueryT key)
+    {
+      if (slot_count() == 0) {
+        return;
+      }
+      auto prev_bucket_index = do_find_index(key);
+      do_remove_index(prev_bucket_index);
+    }
+
     void remove(const KeyT& key)
     {
       if (slot_count() == 0) {
         return;
       }
       auto prev_bucket_index = do_find_index(key);
-      if (prev_bucket_index == slot_count()) {
-        return;
-      }
-      auto bucket_index = next_bucket_index(prev_bucket_index);
-      while (metadatas_[bucket_index].is_psl_greater_than_one() && bucket_index < slot_count()) {
-        metadatas_[prev_bucket_index] = metadatas_[bucket_index];
-        metadatas_[prev_bucket_index].decrement_psl();
-        entries_[prev_bucket_index] = std::move(entries_[bucket_index]);
-        prev_bucket_index = bucket_index;
-        bucket_index = next_bucket_index(bucket_index);
-      }
-      metadatas_[prev_bucket_index] = Metadata::Empty();
-      destroy_at(&entries_[prev_bucket_index]);
-      size_--;
+      do_remove_index(prev_bucket_index);
     }
   };
 } // namespace soul
