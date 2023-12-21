@@ -169,6 +169,11 @@ namespace soul
       return size_ * sizeof(remove_pointer_t<pointer>);
     }
 
+    friend constexpr void soul_op_hash_combine(auto& hasher, Span span)
+    {
+      hasher.combine_span(span);
+    }
+
   private:
     pointer data_;
     size_type size_;
