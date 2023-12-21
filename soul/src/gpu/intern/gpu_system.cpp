@@ -17,6 +17,7 @@
 #include "gpu/intern/bindless_descriptor_allocator.h"
 #include "gpu/intern/enum_mapping.h"
 #include "gpu/intern/render_graph_execution.h"
+#include "gpu/intern/vk_check.h"
 #include "gpu/render_graph.h"
 #include "gpu/system.h"
 #include "gpu/type.h"

@@ -5,6 +5,7 @@
 
 #include "bindless_descriptor_allocator.h"
 #include "enum_mapping.h"
+#include "gpu/intern/vk_check.h"
 
 namespace soul::gpu::impl
 {

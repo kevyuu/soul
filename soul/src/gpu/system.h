@@ -1,24 +1,10 @@
 #pragma once
 
-#include "core/panic.h"
 #include "core/result.h"
 #include "core/string.h"
 #include "gpu/intern/bindless_descriptor_allocator.h"
 #include "gpu/type.h"
 
-#if defined(SOUL_ASSERT_ENABLE)
-#  define SOUL_VK_CHECK(result, ...) SOUL_ASSERT(1, result == VK_SUCCESS, ##__VA_ARGS__)
-#else
-#  include "core/log.h"
-#  define SOUL_VK_CHECK(expr, message)                                                             \
-    do {                                                                                           \
-      VkResult _result = expr;                                                                     \
-      if (_result != VK_SUCCESS) {                                                                 \
-        SOUL_LOG_ERROR("Vulkan error| expr = {}, result = {} ", #expr, usize(_result));            \
-        SOUL_LOG_ERROR("Message = {}", message);                                                   \
-      }                                                                                            \
-    } while (1)
-#endif
 
 namespace soul::gpu::impl
 {
