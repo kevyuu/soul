@@ -990,11 +990,7 @@ namespace soul
   auto Vector<T, AllocatorT, InlineSizeV>::operator[](usize idx) -> reference
   {
     SOUL_ASSERT(
-      0,
-      idx < size_,
-      "Out of bound access to array detected. idx = %llu, _size = %llu",
-      idx,
-      size_);
+      0, idx < size_, "Out of bound access to array detected. idx = {}, _size = {}", idx, size_);
     return buffer_[idx];
   }
 
@@ -1002,7 +998,7 @@ namespace soul
   auto Vector<T, AllocatorT, InlineSizeV>::operator[](usize idx) const -> const_reference
   {
     SOUL_ASSERT(
-      0, idx < size_, "Out of bound access to array detected. idx = %llu, _size=%llu", idx, size_);
+      0, idx < size_, "Out of bound access to array detected. idx = {}, _size= {}", idx, size_);
     return buffer_[idx];
   }
 
