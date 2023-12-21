@@ -28,6 +28,18 @@ namespace soul
 
     Span() = delete;
 
+    constexpr explicit Span(const char* data)
+      requires(same_as<T, const char*>)
+        : data_(data == nullptr ? "" : data), size_(data == nullptr ? 0 : strlen(data))
+    {
+    }
+
+    constexpr auto is_null_terminated() -> b8
+      requires(same_as<T, const char*>)
+    {
+      return data_[size_] == '\0';
+    }
+
     constexpr Span(MaybeNull<pointer> data, size_type size) : data_(data), size_(size)
     {
       SOUL_ASSERT_LITE(
@@ -358,7 +370,6 @@ namespace soul
     return {data, size};
   }
 
-  using StringView = Span<const char*>;
   template <typename T, typename Size1T, typename Size2T>
   [[nodiscard]]
   auto

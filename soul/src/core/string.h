@@ -2,11 +2,13 @@
 
 #include <format>
 
+#include "core/borrow.h"
 #include "core/comp_str.h"
 #include "core/compiler.h"
 #include "core/config.h"
 #include "core/not_null.h"
 #include "core/span.h"
+#include "core/string_view.h"
 #include "core/type.h"
 
 #include "memory/allocator.h"
@@ -439,7 +441,7 @@ namespace soul
         : allocator_(allocator), size_(str_view.size())
     {
       const char* str = str_view.data();
-      if (is_in_const_segment(str)) {
+      if (is_in_const_segment(str) && str_view.is_null_terminated()) {
         storage_.data = const_cast<pointer>(str); // NOLINT
         capacity_ = 0;
       } else {
@@ -622,6 +624,15 @@ namespace soul
   };
 
   using String = BasicString<memory::Allocator, 64>;
+
+  template <memory::allocator_type AllocatorT, usize InlineCapacityV>
+  struct BorrowTrait<BasicString<AllocatorT, InlineCapacityV>, StringView> {
+    static constexpr b8 available = true;
+    static constexpr auto Borrow(const String& string) -> StringView
+    {
+      return StringView(string.data(), string.size());
+    }
+  };
 
 } // namespace soul
 
