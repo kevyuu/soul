@@ -354,4 +354,19 @@ namespace soul
   }
 
   using StringView = Span<const char*>;
+  template <typename T, typename Size1T, typename Size2T>
+  [[nodiscard]]
+  auto
+  operator==(Span<T, Size1T> lhs, Span<T, Size2T> rhs) -> b8
+  {
+    if (lhs.size() != rhs.size()) {
+      return false;
+    }
+    for (usize i = 0; i < lhs.size(); i++) {
+      if (lhs[i] != rhs[i]) {
+        return false;
+      }
+    }
+    return true;
+  }
 } // namespace soul
