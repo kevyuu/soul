@@ -14,7 +14,7 @@ namespace soul::runtime
     ScopeAllocator() = delete;
 
     explicit ScopeAllocator(
-      const char* name,
+      const char* name = "Unnamed",
       BackingAllocator* backing_allocator = get_temp_allocator(),
       Allocator* fallback_allocator = get_default_allocator());
 
