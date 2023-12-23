@@ -4,6 +4,7 @@
 #include "core/type_traits.h"
 
 #include <memory>
+#include <yvals_core.h>
 
 namespace soul
 {
@@ -235,6 +236,16 @@ namespace soul
       }
     } else {
       std::uninitialized_copy_n(std::move(src_it), size, dst);
+    }
+  }
+
+  template <typename T, std::input_iterator InputIteratorT>
+  inline constexpr void uninitialized_duplicate_n(InputIteratorT src_it, size_t size, T* dst)
+  {
+    if constexpr (ts_clone<T>) {
+      uninitialized_clone_n(src_it, size, dst);
+    } else {
+      uninitialized_copy_n(src_it, size, dst);
     }
   }
 
