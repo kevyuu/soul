@@ -1,7 +1,5 @@
 #pragma once
 
-#include <filesystem>
-
 #include "core/flag_map.h"
 #include "core/flag_set.h"
 #include "core/hash_map.h"
@@ -27,28 +25,7 @@ namespace soul::gpu
 {
   class System;
   class RenderGraph;
-
-  class WSI
-  {
-  public:
-    [[nodiscard]]
-    virtual auto create_vulkan_surface(VkInstance instance) -> VkSurfaceKHR = 0;
-
-    WSI() = default;
-
-    WSI(const WSI& other) = delete;
-
-    WSI(WSI&& other) = delete;
-
-    auto operator=(const WSI& other) -> WSI& = delete;
-
-    auto operator=(WSI&& other) -> WSI& = delete;
-
-    [[nodiscard]]
-    virtual auto get_framebuffer_size() const -> vec2ui32 = 0;
-
-    virtual ~WSI() = default;
-  };
+  class WSI;
 
   using Offset2D = vec2i32;
   using Extent2D = vec2ui32;

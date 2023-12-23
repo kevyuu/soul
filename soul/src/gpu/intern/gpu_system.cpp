@@ -14,6 +14,7 @@
 #include "core/string.h"
 #include "core/util.h"
 #include "core/vector.h"
+#include "gpu/id.h"
 #include "gpu/intern/bindless_descriptor_allocator.h"
 #include "gpu/intern/enum_mapping.h"
 #include "gpu/intern/render_graph_execution.h"
@@ -21,6 +22,7 @@
 #include "gpu/render_graph.h"
 #include "gpu/system.h"
 #include "gpu/type.h"
+#include "gpu/wsi.h"
 #include "math/math.h"
 #include "memory/allocator.h"
 #include "runtime/scope_allocator.h"
@@ -1033,6 +1035,8 @@ namespace soul::gpu
   }
 
   auto System::get_gpu_properties() const -> const GPUProperties& { return _db.gpu_properties; }
+
+  void System::shutdown() { vkDeviceWaitIdle(_db.device); }
 
   auto System::get_queue_data_from_queue_flags(QueueFlags flags) const -> QueueData
   {
@@ -3245,28 +3249,43 @@ namespace soul::gpu
 
   auto System::get_ssbo_descriptor_id(BufferID buffer_id) const -> DescriptorID
   {
+    if (buffer_id.is_null()) {
+      return DescriptorID::null();
+    }
     return get_buffer(buffer_id).storage_buffer_gpu_handle;
   }
 
   auto System::get_srv_descriptor_id(
     TextureID texture_id, std::optional<SubresourceIndex> subresource_index) -> DescriptorID
   {
+    if (texture_id.is_null()) {
+      return DescriptorID::null();
+    }
     return get_texture_view(texture_id, subresource_index).sampled_image_gpu_handle;
   }
 
   auto System::get_uav_descriptor_id(
     TextureID texture_id, std::optional<SubresourceIndex> subresource_index) -> DescriptorID
   {
+    if (texture_id.is_null()) {
+      return DescriptorID::null();
+    }
     return get_texture_view(texture_id, subresource_index).storage_image_gpu_handle;
   }
 
   auto System::get_sampler_descriptor_id(SamplerID sampler_id) const -> DescriptorID
   {
+    if (sampler_id.is_null()) {
+      return DescriptorID::null();
+    }
     return sampler_id.descriptorID;
   }
 
   auto System::get_as_descriptor_id(TlasID tlas_id) const -> DescriptorID
   {
+    if (tlas_id.is_null()) {
+      return DescriptorID::null();
+    }
     return get_tlas(tlas_id).descriptor_id;
   }
 
