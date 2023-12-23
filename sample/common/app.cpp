@@ -129,6 +129,7 @@ App::~App()
   if (app_config_.enable_imgui) {
     runtime::get_context_allocator()->destroy(NotNull(imgui_render_graph_pass_));
   }
+  gpu_system_->shutdown();
   default_allocator_.destroy(gpu_system_);
   default_allocator_.destroy(wsi_);
   glfwDestroyWindow(window_);
