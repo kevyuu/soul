@@ -55,8 +55,8 @@ struct PSOutput {
   RasterObjInstanceData instance_data = scene.get_instance_data(input.instance_id);
 
   float3 L;
-  float light_intensity = scene.light_intensity;
-  float light_distance = 100000.0;
+  f32 light_intensity = scene.light_intensity;
+  f32 light_distance = 100000.0;
   float3 light_color = float3(1.0, 1.0, 1.0);
 
   uint primitive_debug_idx = primitive_id;

@@ -7,7 +7,7 @@ struct VSInput {
 struct push_constant {
 	soulsl::DescriptorID texture_descriptor_id;
 	soulsl::DescriptorID sampler_descriptor_id;
-	float depth;
+	f32 depth;
 } push_constant;
 
 struct VSOutput
@@ -36,7 +36,7 @@ PSOutput ps_main(VSOutput input)
 	PSOutput output;
 	Texture3D test_texture = get_texture_3d(push_constant.texture_descriptor_id);
 	SamplerState test_sampler = get_sampler(push_constant.sampler_descriptor_id);
-	float color = test_texture.Sample(test_sampler, float3(input.tex_coord, push_constant.depth));
+	f32 color = test_texture.Sample(test_sampler, float3(input.tex_coord, push_constant.depth));
 	output.color = float4(color, color, color, 1.0);
     return output;
 }

@@ -25,7 +25,7 @@ struct RasterObjScene
   soulsl::float4x4 projection;
   soulsl::float3 camera_position;
 	soulsl::float3 light_position;
-	float light_intensity;
+	f32 light_intensity;
 	int light_type;
 
 #ifndef SOUL_HOST_CODE

@@ -18,6 +18,7 @@
  */
 
 #pragma once
+#include "core/aabb.h"
 #include "core/path.h"
 #include "core/type.h"
 #include "core/vector.h"

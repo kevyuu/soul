@@ -27,7 +27,7 @@ struct RTObjScene
 	soulsl::float4x4 projection_inverse;
 	soulsl::float4 clear_color;
 	soulsl::float3 light_position;
-	float light_intensity;
+	f32 light_intensity;
 	int light_type;
 };
 

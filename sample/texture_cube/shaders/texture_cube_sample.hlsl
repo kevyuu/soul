@@ -9,7 +9,7 @@ struct push_constant {
 	soulsl::float4x4 view;
 	soulsl::DescriptorID texture_descriptor_id;
 	soulsl::DescriptorID sampler_descriptor_id;
-	float alignment1, alignment2;
+	f32 alignment1, alignment2;
 } push_constant;
 
 struct VSOutput

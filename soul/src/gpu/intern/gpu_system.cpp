@@ -42,8 +42,15 @@ static constexpr const char* RESOURCE_HLSL = R"HLSL(
 
 #define SOULSL_CONST_FUNCTION
 
+typedef int i32;
+typedef int64_t i64;
 typedef uint u32;
+typedef uint64_t u64;
 typedef bool b8;
+
+typedef half f16;
+typedef float f32;
+typedef double f64;
 
 namespace soul
 {

@@ -40,7 +40,7 @@ void rgen_main()
 	TraceRay(rs, RAY_FLAG_FORCE_OPAQUE, 0xff, 0, 0, 0, rayDesc, payload);
 
 	RWTexture2D<float4> image = get_rw_texture_2d_float4(push_constant.image_descriptor_id);\
-	float gamma = 1. / 2.2;
+	f32 gamma = 1. / 2.2;
 	float4 color = pow(float4(payload.hit_value, 0.0), float4(gamma, gamma, gamma, gamma));
 	image[int2(LaunchID.xy)] = float4(color);
 }
@@ -86,8 +86,8 @@ void rchit_main(inout ColorPayload p, in float2 attribs)
 	WavefrontMaterial material = get_buffer_array<WavefrontMaterial>(gpu_obj_desc.material_descriptor_id, mat_index);
 
 	float3 L;
-	float light_intensity = scene.light_intensity;
-	float light_distance = 100000.0;
+	f32 light_intensity = scene.light_intensity;
+	f32 light_distance = 100000.0;
 
 	if (scene.light_type == 0)
 	{
@@ -110,7 +110,7 @@ void rchit_main(inout ColorPayload p, in float2 attribs)
 	}
 
 	float3 specular = float3(0, 0, 0);
-	float attenuation = 1;
+	f32 attenuation = 1;
 
 	if (dot(world_normal, L) > 0)
 	{

@@ -5,5 +5,5 @@ struct ComputePushConstant
 {
     soulsl::DescriptorID output_uav_gpu_handle;
     soulsl::uint2 dimension;
-    float t;
+    f32 t;
 };
