@@ -4,11 +4,11 @@
 #include "shaders/wavefront_material.hlsl"
 
 struct RasterObjInstanceData {
-  soulsl::float4x4 transform; // Matrix of the instance
-  soulsl::float4x4 normal_matrix; // Matrix of normal orientation
+  mat4f32 transform; // Matrix of the instance
+  mat4f32 normal_matrix; // Matrix of normal orientation
   soulsl::DescriptorID material_buffer_descriptor_id;
   soulsl::DescriptorID material_indices_descriptor_id;
-  soulsl::float3 debug_color;
+  vec3f32 debug_color;
 
 #ifndef SOUL_HOST_CODE
   WavefrontMaterial get_material_by_primitive_id(soulsl::uint1 primitive_id) {
@@ -21,10 +21,10 @@ struct RasterObjInstanceData {
 struct RasterObjScene
 {
   soulsl::DescriptorID instance_buffer_descriptor_id;
-  soulsl::float4x4 view;
-  soulsl::float4x4 projection;
-  soulsl::float3 camera_position;
-	soulsl::float3 light_position;
+  mat4f32 view;
+  mat4f32 projection;
+  vec3f32 camera_position;
+	vec3f32 light_position;
 	f32 light_intensity;
 	int light_type;
 

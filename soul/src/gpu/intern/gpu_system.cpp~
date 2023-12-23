@@ -77,10 +77,17 @@ typedef vector <double, 2> vec2f64;
 typedef vector <double, 3> vec3f64;
 typedef vector <double, 4> vec4f64;
 
-typedef matrix <float, 2, 2> mat2f32;
-typedef matrix <float, 3, 3> mat3f32;
-typedef matrix <float, 4, 4> mat4f32;
+namespace soul
+{
+  typedef vector <uint, 2> vec2u32;
 
+  typedef vector <float, 2> vec2f32;
+  typedef vector <float, 3> vec3f32;
+  typedef vector <float, 4> vec4f32;
+
+  typedef matrix <float, 3, 3> mat3f32;
+  typedef matrix <float, 4, 4> mat4f32;
+}
 
 namespace soulsl
 {
@@ -98,6 +105,12 @@ namespace soulsl
       }
   };
   static const DescriptorID DESCRIPTOR_ID_NULL = { UINT_MAX };
+
+  typedef matrix <float, 3, 3> mat3f32;
+  typedef matrix <float, 4, 4> mat4f32;
+
+  typedef uint64_t address;
+  typedef uint64_t duint;
 
 }
 

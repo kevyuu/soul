@@ -365,13 +365,25 @@ namespace soul
     using vec3i16 = vec3<i16>;
     using vec4i16 = vec4<i16>;
 
-    using vec2u32 = vec2<u32>;
-    using vec3u32 = vec3<u32>;
-    using vec4u32 = vec4<u32>;
+    using vec2u16 = vec2<u16>;
+    using vec3u16 = vec3<u16>;
+    using vec4u16 = vec4<u16>;
 
     using vec2i32 = vec2<i32>;
     using vec3i32 = vec3<i32>;
     using vec4i32 = vec4<i32>;
+
+    using vec2u32 = vec2<u32>;
+    using vec3u32 = vec3<u32>;
+    using vec4u32 = vec4<u32>;
+
+    using vec2i64 = vec2<i64>;
+    using vec3i64 = vec3<i64>;
+    using vec4i64 = vec4<i64>;
+
+    using vec2u64 = vec2<u64>;
+    using vec3u64 = vec3<u64>;
+    using vec4u64 = vec4<u64>;
 
     using vec2f32 = vec2<f32>;
     using vec3f32 = vec3<f32>;

@@ -3,6 +3,7 @@
 #include "gpu/type.h"
 #include "math/math.h"
 
+#include "builtins.h"
 #include "shaders/transform.hlsl"
 
 #include <app.h>

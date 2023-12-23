@@ -13,20 +13,20 @@ struct RTObjDesc
 
 struct RTObjVertex  // See ObjLoader, copy of VertexObj, could be compressed for device
 {
-	soulsl::float3 position;
-	soulsl::float3 normal;
-	soulsl::float3 color;
-	soulsl::float2 tex_coord;
+	vec3f32 position;
+	vec3f32 normal;
+	vec3f32 color;
+	vec2f32 tex_coord;
 };
 
 struct RTObjScene
 {
 	soulsl::DescriptorID gpu_obj_buffer_descriptor_id;
-  soulsl::float3 camera_position;
-	soulsl::float4x4 view_inverse;
-	soulsl::float4x4 projection_inverse;
-	soulsl::float4 clear_color;
-	soulsl::float3 light_position;
+  vec3f32 camera_position;
+	mat4f32 view_inverse;
+	mat4f32 projection_inverse;
+	vec4f32 clear_color;
+	vec3f32 light_position;
 	f32 light_intensity;
 	int light_type;
 };

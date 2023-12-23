@@ -132,8 +132,8 @@ class TextureCubeSampleApp final : public App
         using Command = gpu::RenderCommandDrawIndex;
 
         const struct PushConstant {
-          soulsl::float4x4 projection = soulsl::float4x4();
-          soulsl::float4x4 view = soulsl::float4x4();
+          mat4f32 projection = mat4f32();
+          mat4f32 view = mat4f32();
           soulsl::DescriptorID texture_descriptor_id;
           soulsl::DescriptorID sampler_descriptor_id;
           float align1 = 0.0f;

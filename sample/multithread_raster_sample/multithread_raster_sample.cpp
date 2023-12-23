@@ -4,6 +4,7 @@
 #include "gpu/type.h"
 #include "math/math.h"
 
+#include "builtins.h"
 #include "shaders/multithread_raster_type.hlsl"
 
 #include <app.h>

@@ -5,8 +5,8 @@ struct VSInput {
 
 [[vk::push_constant]]
 struct push_constant {
-	soulsl::float4x4 projection;
-	soulsl::float4x4 view;
+	mat4f32 projection;
+	mat4f32 view;
 	soulsl::DescriptorID texture_descriptor_id;
 	soulsl::DescriptorID sampler_descriptor_id;
 	f32 alignment1, alignment2;

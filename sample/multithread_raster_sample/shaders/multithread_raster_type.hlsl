@@ -1,5 +1,5 @@
 struct MultithreadRasterPushConstant
 {
-	soulsl::float4x4 transform;
-	soulsl::float3 color;
+	mat4f32 transform;
+	vec3f32 color;
 };

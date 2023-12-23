@@ -1,6 +1,6 @@
 struct Transform {
-	soulsl::float3 color;
-	soulsl::float4x4 scale;
-	soulsl::float4x4 translation;
-	soulsl::float4x4 rotation;
+	vec3f32 color;
+	mat4f32 scale;
+	mat4f32 translation;
+	mat4f32 rotation;
 };

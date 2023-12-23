@@ -248,7 +248,7 @@ class DrawIndexedIndirectSampleApp final : public App
   auto load_model(
     const Path& model_path,
     const mat4f32 transform = mat4f32::identity(),
-    soulsl::float3 debug_color = {1.0f, 0.0f, 0.0f}) -> void
+    vec3f32 debug_color = {1.0f, 0.0f, 0.0f}) -> void
   {
 
     ObjLoader obj_loader;

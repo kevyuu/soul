@@ -1,3 +1,3 @@
 struct Transform {
-	soulsl::float4x4 translation;
+	mat4f32 translation;
 };
