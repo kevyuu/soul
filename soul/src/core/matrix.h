@@ -141,12 +141,41 @@ namespace soul
   };
 
   template <typename T>
-  using matrix4x4 = matrix<4, 4, T>;
+  using mat4 = matrix<4, 4, T>;
 
   inline namespace builtin
   {
-    using mat3f = matrix<3, 3, f32>;
-    using mat4f = matrix<4, 4, f32>;
+    using mat2i16 = matrix<2, 2, i16>;
+    using mat3i16 = matrix<3, 3, i16>;
+    using mat4i16 = matrix<4, 4, i16>;
+
+    using mat2u16 = matrix<2, 2, u16>;
+    using mat3u16 = matrix<3, 3, u16>;
+    using mat4u16 = matrix<4, 4, u16>;
+
+    using mat2i32 = matrix<2, 2, i32>;
+    using mat3i32 = matrix<3, 3, i32>;
+    using mat4i32 = matrix<4, 4, i32>;
+
+    using mat2u32 = matrix<2, 2, u32>;
+    using mat3u32 = matrix<3, 3, u32>;
+    using mat4u32 = matrix<4, 4, u32>;
+
+    using mat2i64 = matrix<2, 2, i64>;
+    using mat3i64 = matrix<3, 3, i64>;
+    using mat4i64 = matrix<4, 4, i64>;
+
+    using mat2u64 = matrix<2, 2, u64>;
+    using mat3u64 = matrix<3, 3, u64>;
+    using mat4u64 = matrix<4, 4, u64>;
+
+    using mat2f32 = matrix<2, 2, f32>;
+    using mat3f32 = matrix<3, 3, f32>;
+    using mat4f32 = matrix<4, 4, f32>;
+
+    using mat2f64 = matrix<2, 2, f64>;
+    using mat3f64 = matrix<3, 3, f64>;
+    using mat4f64 = matrix<4, 4, f64>;
   } // namespace builtin
 
 } // namespace soul

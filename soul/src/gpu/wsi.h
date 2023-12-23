@@ -23,7 +23,7 @@ namespace soul::gpu
     auto operator=(WSI&& other) -> WSI& = delete;
 
     [[nodiscard]]
-    virtual auto get_framebuffer_size() const -> vec2ui32 = 0;
+    virtual auto get_framebuffer_size() const -> vec2u32 = 0;
 
     virtual ~WSI() = default;
   };

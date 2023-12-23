@@ -28,7 +28,7 @@ namespace soul::gpu
   class WSI;
 
   using Offset2D = vec2i32;
-  using Extent2D = vec2ui32;
+  using Extent2D = vec2u32;
 
   struct Rect2D {
     Offset2D offset;
@@ -57,7 +57,7 @@ namespace soul::gpu
   };
 
   using Offset3D = vec3i32;
-  using Extent3D = vec3ui32;
+  using Extent3D = vec3u32;
 
   enum class ErrorKind { FILE_NOT_FOUND, OTHER, COUNT };
 
@@ -346,15 +346,15 @@ namespace soul::gpu
 
   struct ClearValue {
     union Color {
-      vec4f float32;
-      vec4ui32 uint32;
+      vec4f32 float32;
+      vec4u32 uint32;
       vec4i32 int32;
 
       Color() : float32() {}
 
-      explicit Color(vec4f val) : float32(val) {}
+      explicit Color(vec4f32 val) : float32(val) {}
 
-      explicit Color(vec4ui32 val) : uint32(val) {}
+      explicit Color(vec4u32 val) : uint32(val) {}
 
       explicit Color(vec4i32 val) : int32(val) {}
     } color;
@@ -369,9 +369,9 @@ namespace soul::gpu
 
     ClearValue() = default;
 
-    ClearValue(vec4f color, f32 depth, u32 stencil) : color(color), depth_stencil(depth, stencil) {}
+    ClearValue(vec4f32 color, f32 depth, u32 stencil) : color(color), depth_stencil(depth, stencil) {}
 
-    ClearValue(vec4ui32 color, f32 depth, u32 stencil) : color(color), depth_stencil(depth, stencil)
+    ClearValue(vec4u32 color, f32 depth, u32 stencil) : color(color), depth_stencil(depth, stencil)
     {
     }
 
@@ -579,7 +579,7 @@ namespace soul::gpu
   struct TextureDesc {
     TextureType type = TextureType::D2;
     TextureFormat format = TextureFormat::COUNT;
-    vec3ui32 extent;
+    vec3u32 extent;
     u32 mip_levels = 1;
     u16 layer_count = 1;
     TextureSampleCount sample_count = TextureSampleCount::COUNT_1;
@@ -593,13 +593,13 @@ namespace soul::gpu
       u32 mip_levels,
       TextureUsageFlags usage_flags,
       QueueFlags queue_flags,
-      const vec2ui32 dimension,
+      const vec2u32 dimension,
       TextureSampleCount sample_count = TextureSampleCount::COUNT_1) -> TextureDesc
     {
       return {
         .type = TextureType::D2,
         .format = format,
-        .extent = vec3ui32(dimension.x, dimension.y, 1),
+        .extent = vec3u32(dimension.x, dimension.y, 1),
         .mip_levels = mip_levels,
         .sample_count = sample_count,
         .usage_flags = usage_flags,
@@ -613,7 +613,7 @@ namespace soul::gpu
       u32 mip_levels,
       TextureUsageFlags usage_flags,
       QueueFlags queue_flags,
-      const vec3ui32 dimension) -> TextureDesc
+      const vec3u32 dimension) -> TextureDesc
     {
       return {
         .type = TextureType::D3,
@@ -631,13 +631,13 @@ namespace soul::gpu
       u32 mip_levels,
       TextureUsageFlags usage_flags,
       QueueFlags queue_flags,
-      const vec2ui32 dimension,
+      const vec2u32 dimension,
       u16 layer_count) -> TextureDesc
     {
       return {
         .type = TextureType::D2_ARRAY,
         .format = format,
-        .extent = vec3ui32(dimension.x, dimension.y, 1),
+        .extent = vec3u32(dimension.x, dimension.y, 1),
         .mip_levels = mip_levels,
         .layer_count = layer_count,
         .usage_flags = usage_flags,
@@ -651,12 +651,12 @@ namespace soul::gpu
       u32 mip_levels,
       TextureUsageFlags usage_flags,
       QueueFlags queue_flags,
-      const vec2ui32 dimension) -> TextureDesc
+      const vec2u32 dimension) -> TextureDesc
     {
       return {
         .type = TextureType::CUBE,
         .format = format,
-        .extent = vec3ui32(dimension.x, dimension.y, 1),
+        .extent = vec3u32(dimension.x, dimension.y, 1),
         .mip_levels = mip_levels,
         .layer_count = 6,
         .usage_flags = usage_flags,
@@ -784,7 +784,7 @@ namespace soul::gpu
 
     RTInstanceDesc() = default;
     RTInstanceDesc(
-      mat4f in_transform,
+      mat4f32 in_transform,
       u32 instance_id,
       u32 instance_mask,
       u32 sbt_offset,
@@ -1860,7 +1860,7 @@ namespace soul::gpu
     PipelineStateID pipeline_state_id;
     void* push_constant_data = nullptr;
     u32 push_constant_size = 0;
-    vec3ui32 group_count;
+    vec3u32 group_count;
   };
 
   struct RenderCommandRayTrace : RenderCommandTyped<RenderCommandType::RAY_TRACE> {
@@ -1868,7 +1868,7 @@ namespace soul::gpu
     ShaderTableID shader_table_id;
     void* push_constant_data = nullptr;
     u32 push_constant_size = 0;
-    vec3ui32 dimension;
+    vec3u32 dimension;
   };
 
   struct RenderCommandBuildTlas : RenderCommandTyped<RenderCommandType::BUILD_TLAS> {

@@ -29,7 +29,7 @@ struct ObjModel {
 };
 
 struct ObjInstance {
-  mat4f transform;  // Matrix of the instance
+  mat4f32 transform;  // Matrix of the instance
   u32 obj_index{0}; // Model index reference
 };
 
@@ -60,10 +60,10 @@ class RTBasicSampleApp final : public App
   bool need_rebuild_blas_ = false;
   bool need_rebuild_tlas_ = false;
 
-  vec4f clear_color_ = vec4f(1.0f, 1.0f, 1.0f, 1.0f);
+  vec4f32 clear_color_ = vec4f32(1.0f, 1.0f, 1.0f, 1.0f);
 
   struct Light {
-    vec3f position = {10.f, 15.f, 8.f};
+    vec3f32 position = {10.f, 15.f, 8.f};
     float intensity = 100.0f;
     int type = 0;
   } light_;
@@ -216,7 +216,7 @@ class RTBasicSampleApp final : public App
       need_rebuild_tlas_ = false;
     }
 
-    const vec2ui32 viewport = gpu_system_->get_swapchain_extent();
+    const vec2u32 viewport = gpu_system_->get_swapchain_extent();
 
     const auto scene_buffer =
       render_graph.create_buffer("Scene Buffer", {.size = sizeof(RTObjScene)});
@@ -266,7 +266,7 @@ class RTBasicSampleApp final : public App
         1,
         viewport,
         true,
-        gpu::ClearValue(vec4f{0.0f, 0.0f, 0.0f, 1.0f}, 0.0f, 0.0f)));
+        gpu::ClearValue(vec4f32{0.0f, 0.0f, 0.0f, 1.0f}, 0.0f, 0.0f)));
 
     struct RayTracingPassParameter {
       gpu::TextureNodeID target_texture;
@@ -305,7 +305,7 @@ class RTBasicSampleApp final : public App
               .shader_table_id = shader_table_id_,
               .push_constant_data = &push_constant,
               .push_constant_size = sizeof(RayTracingPushConstant),
-              .dimension = vec3ui32(viewport.x, viewport.y, 1.0),
+              .dimension = vec3u32(viewport.x, viewport.y, 1.0),
             });
           })
         .get_parameter();
@@ -317,7 +317,7 @@ class RTBasicSampleApp final : public App
     return texture_2d_pass.add_pass(texture_2d_parameter, render_graph);
   }
 
-  auto load_model(const Path& model_path, const mat4f transform = mat4f::identity()) -> void
+  auto load_model(const Path& model_path, const mat4f32 transform = mat4f32::identity()) -> void
   {
     instances_.push_back(
       ObjInstance{.transform = transform, .obj_index = soul::cast<u32>(models_.size())});
@@ -538,7 +538,7 @@ public:
     const auto camera_target = bounding_box_.center();
     const auto camera_position =
       camera_target + (bounding_box_.max - camera_target) * distance_multiplier;
-    camera_man_.set_camera(camera_position, camera_target, vec3f(0, 1, 0));
+    camera_man_.set_camera(camera_position, camera_target, vec3f32(0, 1, 0));
   }
 };
 

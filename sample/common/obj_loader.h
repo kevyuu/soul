@@ -28,11 +28,11 @@
 
 // Structure holding the material
 struct MaterialObj {
-  soul::vec3f ambient = soul::vec3f(0.1f, 0.1f, 0.1f);
-  soul::vec3f diffuse = soul::vec3f(0.7f, 0.7f, 0.7f);
-  soul::vec3f specular = soul::vec3f(1.0f, 1.0f, 1.0f);
-  soul::vec3f transmittance = soul::vec3f(0.0f, 0.0f, 0.0f);
-  soul::vec3f emission = soul::vec3f(0.0f, 0.0f, 0.10);
+  soul::vec3f32 ambient = soul::vec3f32(0.1f, 0.1f, 0.1f);
+  soul::vec3f32 diffuse = soul::vec3f32(0.7f, 0.7f, 0.7f);
+  soul::vec3f32 specular = soul::vec3f32(1.0f, 1.0f, 1.0f);
+  soul::vec3f32 transmittance = soul::vec3f32(0.0f, 0.0f, 0.0f);
+  soul::vec3f32 emission = soul::vec3f32(0.0f, 0.0f, 0.10);
   float shininess = 0.f;
   float ior = 1.0f;     // index of refraction
   float dissolve = 1.f; // 1 == opaque; 0 == fully transparent
@@ -44,10 +44,10 @@ struct MaterialObj {
 // OBJ representation of a vertex
 // NOTE: BLAS builder depends on pos being the first member
 struct VertexObj {
-  soul::vec3f position;
-  soul::vec3f normal;
-  soul::vec3f color;
-  soul::vec2f tex_coord;
+  soul::vec3f32 position;
+  soul::vec3f32 normal;
+  soul::vec3f32 color;
+  soul::vec2f32 tex_coord;
 };
 
 struct ShapeObj {

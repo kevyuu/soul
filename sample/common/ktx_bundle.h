@@ -110,7 +110,7 @@ namespace image
      * Assumes 3 bands for a total of 9 RGB coefficients.
      * Returns true if successful.
      */
-    bool getSphericalHarmonics(soul::vec3f* result);
+    bool getSphericalHarmonics(soul::vec3f32* result);
 
     /**
      * Gets the number of miplevels (this is never zero).

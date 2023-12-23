@@ -22,9 +22,9 @@ using namespace soul;
 class TextureCubeSampleApp final : public App
 {
   static constexpr float CYCLE_DURATION = 30.0f;
-  static constexpr vec3ui32 DIMENSION{128, 128, 128};
+  static constexpr vec3u32 DIMENSION{128, 128, 128};
 
-  using SkyboxVertex = vec3f;
+  using SkyboxVertex = vec3f32;
   static constexpr SkyboxVertex SKYBOX_VERTICES[] = {
     //   Coordinates
     {-5.0f, -5.0f, 5.0f},  //        7--------6
@@ -96,7 +96,7 @@ class TextureCubeSampleApp final : public App
     const gpu::RGColorAttachmentDesc color_attachment_desc = {
       .node_id = render_target, .clear = true};
 
-    const vec2ui32 viewport = gpu_system_->get_swapchain_extent();
+    const vec2u32 viewport = gpu_system_->get_swapchain_extent();
     struct RenderPassParameter {
     };
     const auto& raster_node = render_graph.add_raster_pass<RenderPassParameter>(

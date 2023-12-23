@@ -297,7 +297,7 @@ namespace image
     mMetadata->keyvals.insert({key, value});
   }
 
-  bool KtxBundle::getSphericalHarmonics(soul::vec3f* result)
+  bool KtxBundle::getSphericalHarmonics(soul::vec3f32* result)
   {
     char const* src = getMetadata("sh");
     if (!src) {

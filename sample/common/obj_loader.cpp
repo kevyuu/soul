@@ -20,12 +20,12 @@ auto ObjLoader::load_model(const soul::Path& filepath) -> void
   // Collecting the material in the scene
   for (const auto& material : reader.GetMaterials()) {
     MaterialObj m;
-    m.ambient = soul::vec3f(material.ambient[0], material.ambient[1], material.ambient[2]);
-    m.diffuse = soul::vec3f(material.diffuse[0], material.diffuse[1], material.diffuse[2]);
-    m.specular = soul::vec3f(material.specular[0], material.specular[1], material.specular[2]);
-    m.emission = soul::vec3f(material.emission[0], material.emission[1], material.emission[2]);
+    m.ambient = soul::vec3f32(material.ambient[0], material.ambient[1], material.ambient[2]);
+    m.diffuse = soul::vec3f32(material.diffuse[0], material.diffuse[1], material.diffuse[2]);
+    m.specular = soul::vec3f32(material.specular[0], material.specular[1], material.specular[2]);
+    m.emission = soul::vec3f32(material.emission[0], material.emission[1], material.emission[2]);
     m.transmittance =
-      soul::vec3f(material.transmittance[0], material.transmittance[1], material.transmittance[2]);
+      soul::vec3f32(material.transmittance[0], material.transmittance[1], material.transmittance[2]);
     m.dissolve = material.dissolve;
     m.ior = material.ior;
     m.shininess = material.shininess;
@@ -98,7 +98,7 @@ auto ObjLoader::load_model(const soul::Path& filepath) -> void
       VertexObj& v1 = vertices[indices[i + 1]];
       VertexObj& v2 = vertices[indices[i + 2]];
 
-      soul::vec3f n = soul::math::normalize(
+      soul::vec3f32 n = soul::math::normalize(
         soul::math::cross((v1.position - v0.position), (v2.position - v0.position)));
       v0.normal = n;
       v1.normal = n;

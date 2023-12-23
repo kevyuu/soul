@@ -142,11 +142,11 @@ public:
 class Texture3DSampleApp final : public App
 {
   static constexpr float CYCLE_DURATION = 30.0f;
-  static constexpr vec3ui32 DIMENSION{128, 128, 128};
+  static constexpr vec3u32 DIMENSION{128, 128, 128};
 
   struct Vertex {
-    vec2f position = {};
-    vec2f texture_coords = {};
+    vec2f32 position = {};
+    vec2f32 texture_coords = {};
   };
 
   static constexpr Vertex VERTICES[4] = {
@@ -168,7 +168,7 @@ class Texture3DSampleApp final : public App
 
   const std::chrono::steady_clock::time_point start_ = std::chrono::steady_clock::now();
 
-  static auto create_noise_data(vec3ui32 dimension, memory::Allocator& allocator) -> void*
+  static auto create_noise_data(vec3u32 dimension, memory::Allocator& allocator) -> void*
   {
     const auto tex_mem_size = dimension.x * dimension.y * dimension.z;
 
@@ -219,7 +219,7 @@ class Texture3DSampleApp final : public App
       .clear = true,
     };
 
-    const vec2ui32 viewport = gpu_system_->get_swapchain_extent();
+    const vec2u32 viewport = gpu_system_->get_swapchain_extent();
 
     gpu::TextureNodeID noise_texture_node =
       render_graph.import_texture("Noise Texture", test_texture_id_);

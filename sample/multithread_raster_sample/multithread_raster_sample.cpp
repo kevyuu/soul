@@ -16,7 +16,7 @@ class MultiThreadRasterSample final : public App
   static constexpr usize COL_COUNT = 30;
 
   struct Vertex {
-    vec2f position = {};
+    vec2f32 position = {};
   };
 
   static constexpr Vertex VERTICES[4] = {
@@ -51,22 +51,22 @@ class MultiThreadRasterSample final : public App
         const auto y_offset = y_start + ((y_end - y_start) / static_cast<float>(row_count)) *
                                           (static_cast<float>(row_idx) + 0.5f);
 
-        const auto translate_vec = vec3f(x_offset, y_offset, 0.0f);
-        const auto scale_vec = vec3f(2.0f / col_count, 2.0f / row_count, 0.0f);
-        const auto color = vec3f(dist(gen), dist(gen), dist(gen));
+        const auto translate_vec = vec3f32(x_offset, y_offset, 0.0f);
+        const auto scale_vec = vec3f32(2.0f / col_count, 2.0f / row_count, 0.0f);
+        const auto color = vec3f32(dist(gen), dist(gen), dist(gen));
 
         vector.emplace_back(MultithreadRasterPushConstant{
-          .transform = math::scale(math::translate(mat4f::identity(), translate_vec), scale_vec),
+          .transform = math::scale(math::translate(mat4f32::identity(), translate_vec), scale_vec),
           .color = color,
         });
       }
     }
   }
 
-  static auto get_rotation(const float elapsed_seconds) -> mat4f
+  static auto get_rotation(const float elapsed_seconds) -> mat4f32
   {
     return math::rotate(
-      mat4f::identity(), math::radians(elapsed_seconds * 10.0f), vec3f(0.0f, 0.0f, 1.0f));
+      mat4f32::identity(), math::radians(elapsed_seconds * 10.0f), vec3f32(0.0f, 0.0f, 1.0f));
   }
 
   auto render(gpu::TextureNodeID render_target, gpu::RenderGraph& render_graph)
@@ -77,7 +77,7 @@ class MultiThreadRasterSample final : public App
       .clear = true,
     };
 
-    const vec2ui32 viewport = gpu_system_->get_swapchain_extent();
+    const vec2u32 viewport = gpu_system_->get_swapchain_extent();
 
     struct RenderPassParameter {
     };

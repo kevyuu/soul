@@ -107,7 +107,7 @@ ImGuiRenderGraphPass::ImGuiRenderGraphPass(soul::gpu::System* gpu_system) : gpu_
     1,
     {gpu::TextureUsage::SAMPLED},
     {gpu::QueueType::GRAPHIC},
-    vec2ui32(width, height));
+    vec2u32(width, height));
 
   font_texture_id_ = gpu_system_->create_texture(font_tex_desc, load_desc);
   gpu_system_->flush_texture(font_texture_id_, {gpu::TextureUsage::SAMPLED});
@@ -126,7 +126,7 @@ ImGuiRenderGraphPass::~ImGuiRenderGraphPass()
 void ImGuiRenderGraphPass::add_pass(
   soul::gpu::TextureNodeID render_target, soul::gpu::RenderGraph& render_graph)
 {
-  const vec2ui32 viewport = gpu_system_->get_swapchain_extent();
+  const vec2u32 viewport = gpu_system_->get_swapchain_extent();
   const auto& draw_data = *ImGui::GetDrawData();
 
   if (draw_data.TotalVtxCount == 0) {

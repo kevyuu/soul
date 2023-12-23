@@ -128,7 +128,7 @@ namespace soul::gpu
     void end_frame();
 
     void recreate_swapchain();
-    auto get_swapchain_extent() -> vec2ui32;
+    auto get_swapchain_extent() -> vec2u32;
     auto get_swapchain_texture() -> TextureID;
 
     auto get_frame_context() -> impl::FrameContext&;

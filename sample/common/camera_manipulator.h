@@ -9,34 +9,34 @@ public:
     float zoom_speed;
     float orbit_speed;
 
-    soul::vec3f up_axis;
+    soul::vec3f32 up_axis;
   };
 
   explicit CameraManipulator(
     const Config& config,
-    soul::vec3f position = soul::vec3f(),
-    soul::vec3f target = soul::vec3f(),
-    soul::vec3f up = soul::vec3f());
+    soul::vec3f32 position = soul::vec3f32(),
+    soul::vec3f32 target = soul::vec3f32(),
+    soul::vec3f32 up = soul::vec3f32());
 
-  auto set_camera(soul::vec3f camera_position, soul::vec3f camera_target, soul::vec3f camera_up)
+  auto set_camera(soul::vec3f32 camera_position, soul::vec3f32 camera_target, soul::vec3f32 camera_up)
     -> void;
   auto get_camera(
-    soul::vec3f* camera_position, soul::vec3f* camera_target, soul::vec3f* camera_up) const -> void;
-  auto get_position() -> soul::vec3f;
-  auto get_camera_target() const -> soul::vec3f;
-  auto set_camera_target(soul::vec3f target) -> void;
+    soul::vec3f32* camera_position, soul::vec3f32* camera_target, soul::vec3f32* camera_up) const -> void;
+  auto get_position() -> soul::vec3f32;
+  auto get_camera_target() const -> soul::vec3f32;
+  auto set_camera_target(soul::vec3f32 target) -> void;
 
   auto zoom(float delta) -> void;
   auto orbit(float dx, float dy) -> void;
   auto pan(float dx, float dy) -> void;
 
-  auto get_view_matrix() const -> soul::mat4f;
-  auto get_transform_matrix() const -> soul::mat4f;
+  auto get_view_matrix() const -> soul::mat4f32;
+  auto get_transform_matrix() const -> soul::mat4f32;
 
 private:
-  soul::vec3f position_ = soul::vec3f();
-  soul::vec3f target_ = soul::vec3f();
-  soul::vec3f up_ = soul::vec3f();
+  soul::vec3f32 position_ = soul::vec3f32();
+  soul::vec3f32 target_ = soul::vec3f32();
+  soul::vec3f32 up_ = soul::vec3f32();
   float distance_ = 0.0f;
 
   float min_distance_;

@@ -932,7 +932,7 @@ namespace soul::gpu::impl
 
       const auto cmd_buffer = command_pools_->request_command_buffer(current_queue_type);
 
-      vec3f color = util::get_random_color();
+      vec3f32 color = util::get_random_color();
       const VkDebugUtilsLabelEXT passLabel = {
         VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT, // sType
         nullptr,                                 // pNext

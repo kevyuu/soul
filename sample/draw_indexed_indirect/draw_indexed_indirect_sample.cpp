@@ -49,10 +49,10 @@ class DrawIndexedIndirectSampleApp final : public App
   gpu::ProgramID program_id_;
   RasterObjScene gpu_scene_;
 
-  vec4f clear_color_ = vec4f(1.0f, 1.0f, 1.0f, 1.0f);
+  vec4f32 clear_color_ = vec4f32(1.0f, 1.0f, 1.0f, 1.0f);
 
   struct Light {
-    vec3f position = {10.f, 15.f, 8.f};
+    vec3f32 position = {10.f, 15.f, 8.f};
     float intensity = 100.0f;
     int type = 0;
   } light_;
@@ -60,10 +60,10 @@ class DrawIndexedIndirectSampleApp final : public App
   AABB bounding_box_;
 
   struct Vertex {
-    vec3f position;
-    vec3f normal;
-    vec3f color;
-    vec2f tex_coord;
+    vec3f32 position;
+    vec3f32 normal;
+    vec3f32 color;
+    vec2f32 tex_coord;
   };
   auto render(gpu::TextureNodeID render_target, gpu::RenderGraph& render_graph)
     -> gpu::TextureNodeID override
@@ -81,7 +81,7 @@ class DrawIndexedIndirectSampleApp final : public App
       ImGui::End();
     }
 
-    const vec2ui32 viewport = gpu_system_->get_swapchain_extent();
+    const vec2u32 viewport = gpu_system_->get_swapchain_extent();
 
     const auto scene_buffer =
       render_graph.create_buffer("Scene Buffer", {.size = sizeof(RasterObjScene)});
@@ -247,7 +247,7 @@ class DrawIndexedIndirectSampleApp final : public App
 
   auto load_model(
     const Path& model_path,
-    const mat4f transform = mat4f::identity(),
+    const mat4f32 transform = mat4f32::identity(),
     soulsl::float3 debug_color = {1.0f, 0.0f, 0.0f}) -> void
   {
 
@@ -381,10 +381,10 @@ public:
       gpu::SamplerDesc::same_filter_wrap(gpu::TextureFilter::LINEAR, gpu::TextureWrap::REPEAT));
 
     load_model(
-      get_media_path() / "scenes"_str / "plane.obj"_str, mat4f::identity(), {1.0f, 0.0f, 0.0f});
+      get_media_path() / "scenes"_str / "plane.obj"_str, mat4f32::identity(), {1.0f, 0.0f, 0.0f});
     load_model(
       get_media_path() / "scenes"_str / "Medieval_building.obj"_str,
-      mat4f::identity(),
+      mat4f32::identity(),
       {0.0f, 1.0f, 0.0f});
 
     vertex_buffer_ = gpu_system_->create_buffer(
@@ -435,7 +435,7 @@ public:
     const auto camera_target = bounding_box_.center();
     const auto camera_position =
       camera_target + (bounding_box_.max - camera_target) * distance_multiplier;
-    camera_man_.set_camera(camera_position, camera_target, vec3f(0, 1, 0));
+    camera_man_.set_camera(camera_position, camera_target, vec3f32(0, 1, 0));
   }
 };
 

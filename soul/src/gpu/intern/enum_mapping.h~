@@ -423,7 +423,7 @@ namespace soul::gpu
 
   constexpr auto get_vk_offset_3d(const vec3i32 val) -> VkOffset3D { return {val.x, val.y, val.z}; }
 
-  constexpr auto get_vk_extent_3d(const vec3ui32 val) -> VkExtent3D
+  constexpr auto get_vk_extent_3d(const vec3u32 val) -> VkExtent3D
   {
     return {val.x, val.y, val.z};
   }

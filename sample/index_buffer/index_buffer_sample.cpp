@@ -15,8 +15,8 @@ class IndexBufferSampleApp final : public App
   gpu::ProgramID program_id_;
 
   struct Vertex {
-    vec2f position;
-    vec3f color;
+    vec2f32 position;
+    vec3f32 color;
   };
 
   static constexpr Vertex VERTICES[4] = {
@@ -42,7 +42,7 @@ class IndexBufferSampleApp final : public App
       .clear = true,
     };
 
-    const vec2ui32 viewport = gpu_system_->get_swapchain_extent();
+    const vec2u32 viewport = gpu_system_->get_swapchain_extent();
 
     struct PassParameter {
     };

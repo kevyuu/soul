@@ -19,8 +19,8 @@ class BufferTransferCommandSample final : public App
   static constexpr usize TRANSFORM_COUNT = ROW_COUNT * COL_COUNT;
 
   struct Vertex {
-    vec2f position = {};
-    vec3f color = {};
+    vec2f32 position = {};
+    vec3f32 color = {};
   };
 
   static constexpr Vertex VERTICES[4] = {
@@ -59,20 +59,20 @@ class BufferTransferCommandSample final : public App
                                           (static_cast<float>(row_idx) + 0.5f);
         Transform transform = {
           .color = {1.0f, 0.0f, 0.0f},
-          .scale = math::scale(mat4f::identity(), vec3f(0.25f, 0.25, 1.0f)),
-          .translation = math::translate(mat4f::identity(), vec3f(x_offset, y_offset, 0.0f)),
+          .scale = math::scale(mat4f32::identity(), vec3f32(0.25f, 0.25, 1.0f)),
+          .translation = math::translate(mat4f32::identity(), vec3f32(x_offset, y_offset, 0.0f)),
           .rotation =
-            math::rotate(mat4f::identity(), math::radians(45.0f), vec3f(0.0f, 0.0f, 1.0f)),
+            math::rotate(mat4f32::identity(), math::radians(45.0f), vec3f32(0.0f, 0.0f, 1.0f)),
         };
         transforms_vector.push_back(transform);
       }
     }
   }
 
-  static auto get_rotation(const float elapsed_seconds) -> mat4f
+  static auto get_rotation(const float elapsed_seconds) -> mat4f32
   {
     return math::rotate(
-      mat4f::identity(), math::radians(elapsed_seconds * 10.0f), vec3f(0.0f, 0.0f, 1.0f));
+      mat4f32::identity(), math::radians(elapsed_seconds * 10.0f), vec3f32(0.0f, 0.0f, 1.0f));
   }
 
   auto render(gpu::TextureNodeID render_target, gpu::RenderGraph& render_graph)
@@ -81,7 +81,7 @@ class BufferTransferCommandSample final : public App
     const gpu::RGColorAttachmentDesc color_attachment_desc = {
       .node_id = render_target, .clear = true};
 
-    const vec2ui32 viewport = gpu_system_->get_swapchain_extent();
+    const vec2u32 viewport = gpu_system_->get_swapchain_extent();
 
     const auto elapsed_seconds_float = get_elapsed_seconds();
 

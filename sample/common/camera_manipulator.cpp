@@ -5,7 +5,7 @@
 #include "math/math.h"
 
 CameraManipulator::CameraManipulator(
-  const Config& config, soul::vec3f position, soul::vec3f target, soul::vec3f up)
+  const Config& config, soul::vec3f32 position, soul::vec3f32 target, soul::vec3f32 up)
     : position_(position),
       target_(target),
       up_(up),
@@ -16,7 +16,7 @@ CameraManipulator::CameraManipulator(
 }
 
 auto CameraManipulator::set_camera(
-  const soul::vec3f camera_position, const soul::vec3f camera_target, const soul::vec3f camera_up)
+  const soul::vec3f32 camera_position, const soul::vec3f32 camera_target, const soul::vec3f32 camera_up)
   -> void
 {
   position_ = camera_position;
@@ -26,24 +26,24 @@ auto CameraManipulator::set_camera(
 }
 
 auto CameraManipulator::get_camera(
-  soul::vec3f* camera_position, soul::vec3f* camera_target, soul::vec3f* camera_up) const -> void
+  soul::vec3f32* camera_position, soul::vec3f32* camera_target, soul::vec3f32* camera_up) const -> void
 {
   *camera_position = position_;
   *camera_target = target_;
   *camera_up = up_;
 }
 
-auto CameraManipulator::get_position() -> soul::vec3f { return position_; }
+auto CameraManipulator::get_position() -> soul::vec3f32 { return position_; }
 
-auto CameraManipulator::get_camera_target() const -> soul::vec3f { return target_; }
+auto CameraManipulator::get_camera_target() const -> soul::vec3f32 { return target_; }
 
-auto CameraManipulator::set_camera_target(soul::vec3f target) -> void { target_ = target; }
+auto CameraManipulator::set_camera_target(soul::vec3f32 target) -> void { target_ = target; }
 
 auto CameraManipulator::zoom(float delta) -> void
 {
-  const soul::vec3f look_dir = soul::math::normalize(target_ - position_);
+  const soul::vec3f32 look_dir = soul::math::normalize(target_ - position_);
 
-  const soul::vec3f movement = look_dir * delta * config_.zoom_speed;
+  const soul::vec3f32 movement = look_dir * delta * config_.zoom_speed;
   position_ += movement;
 
   if (soul::math::dot(look_dir, target_ - position_) < min_distance_) {
@@ -56,7 +56,7 @@ auto CameraManipulator::zoom(float delta) -> void
 
 auto CameraManipulator::orbit(float dx, float dy) -> void
 {
-  soul::vec3f orbit_dir = soul::math::normalize(position_ - target_);
+  soul::vec3f32 orbit_dir = soul::math::normalize(position_ - target_);
   auto orbit_phi = std::asin(orbit_dir.y);
   auto orbit_theta = std::atan2(orbit_dir.z, orbit_dir.x);
 
@@ -76,29 +76,29 @@ auto CameraManipulator::orbit(float dx, float dy) -> void
 
 auto CameraManipulator::pan(float dx, float dy) -> void
 {
-  const soul::vec3f camera_dir = soul::math::normalize(target_ - position_);
-  const soul::vec3f camera_right =
+  const soul::vec3f32 camera_dir = soul::math::normalize(target_ - position_);
+  const soul::vec3f32 camera_right =
     soul::math::normalize(soul::math::cross(camera_dir, config_.up_axis));
 
-  const soul::vec3f movement = 0.001f * (-dx * camera_right + dy * up_);
+  const soul::vec3f32 movement = 0.001f * (-dx * camera_right + dy * up_);
   target_ += movement;
   position_ += movement;
 }
 
 auto CameraManipulator::recalculate_up_vector() -> void
 {
-  const soul::vec3f camera_dir = soul::math::normalize(target_ - position_);
-  const soul::vec3f camera_right =
+  const soul::vec3f32 camera_dir = soul::math::normalize(target_ - position_);
+  const soul::vec3f32 camera_right =
     soul::math::normalize(soul::math::cross(camera_dir, config_.up_axis));
   up_ = soul::math::normalize(soul::math::cross(camera_right, camera_dir));
 }
 
-auto CameraManipulator::get_view_matrix() const -> soul::mat4f
+auto CameraManipulator::get_view_matrix() const -> soul::mat4f32
 {
   return soul::math::look_at(position_, target_, up_);
 }
 
-auto CameraManipulator::get_transform_matrix() const -> soul::mat4f
+auto CameraManipulator::get_transform_matrix() const -> soul::mat4f32
 {
   return soul::math::inverse(soul::math::look_at(position_, target_, up_));
 }

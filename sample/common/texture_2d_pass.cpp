@@ -49,8 +49,8 @@ PSOutput ps_main(VSOutput input)
 )HLSL"_str;
 
 struct Vertex {
-  vec2f position = {};
-  vec2f texture_coords = {};
+  vec2f32 position = {};
+  vec2f32 texture_coords = {};
 };
 
 static constexpr Vertex VERTICES[4] = {
@@ -116,7 +116,7 @@ auto Texture2DRGPass::add_pass(const Parameter& parameter, gpu::RenderGraph& ren
   const gpu::RGColorAttachmentDesc color_attachment_desc = {
     .node_id = render_target, .clear = true};
 
-  const vec2ui32 viewport = gpu_system_->get_swapchain_extent();
+  const vec2u32 viewport = gpu_system_->get_swapchain_extent();
 
   const auto& raster_node = render_graph.add_raster_pass<Parameter>(
     "Render Pass Parameter",

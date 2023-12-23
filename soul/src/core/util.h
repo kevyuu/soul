@@ -198,7 +198,7 @@ namespace soul::util
   }
 
   [[nodiscard]]
-  inline auto get_random_color() -> vec3f
+  inline auto get_random_color() -> vec3f32
   {
     auto get_random_float = []() -> f32 {
       return f32(get_random_u32()) / f32(std::numeric_limits<u32>::max());

@@ -17,7 +17,7 @@ class MSAASample final : public App
   Texture2DRGPass texture_2d_pass_;
 
   struct Vertex {
-    vec2f position = {};
+    vec2f32 position = {};
   };
 
   static constexpr Vertex VERTICES[4] = {
@@ -65,7 +65,7 @@ class MSAASample final : public App
 
     const auto sample_render_target_desc =
       [this, enable_msaa, viewport, &render_graph]() -> gpu::RGRenderTargetDesc {
-      const auto sample_render_target_dim = vec2ui32(viewport.x / 4, viewport.y / 4);
+      const auto sample_render_target_dim = vec2u32(viewport.x / 4, viewport.y / 4);
       if (enable_msaa) {
         const gpu::RGColorAttachmentDesc color_attachment_desc = {
           .node_id = render_graph.create_texture(
@@ -239,22 +239,22 @@ public:
       INDICES);
     gpu_system_->flush_buffer(index_buffer_id_);
 
-    const auto scale_vec = vec3f(0.5f, 0.5, 1.0f);
+    const auto scale_vec = vec3f32(0.5f, 0.5, 1.0f);
     const auto rotate_angle = math::radians(45.0f);
-    const auto rotate_axis = vec3f(0.0f, 0.0f, 1.0f);
+    const auto rotate_axis = vec3f32(0.0f, 0.0f, 1.0f);
     push_constants_.push_back(MSAAPushConstant{
       .transform = math::scale(
         math::rotate(
-          math::translate(mat4f::identity(), vec3f(-0.25f, 0.0f, 0.1f)), rotate_angle, rotate_axis),
+          math::translate(mat4f32::identity(), vec3f32(-0.25f, 0.0f, 0.1f)), rotate_angle, rotate_axis),
         scale_vec),
-      .color = vec3f(1.0f, 0.0f, 0.0f),
+      .color = vec3f32(1.0f, 0.0f, 0.0f),
     });
     push_constants_.push_back(MSAAPushConstant{
       .transform = math::scale(
         math::rotate(
-          math::translate(mat4f::identity(), vec3f(0.25f, 0.0f, 0.0f)), rotate_angle, rotate_axis),
+          math::translate(mat4f32::identity(), vec3f32(0.25f, 0.0f, 0.0f)), rotate_angle, rotate_axis),
         scale_vec),
-      .color = vec3f(0.0f, 1.0f, 0.0f),
+      .color = vec3f32(0.0f, 1.0f, 0.0f),
     });
   }
 };

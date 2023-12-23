@@ -33,39 +33,38 @@ namespace soul::math
   }
 
   template <usize D1, usize D2, usize D3, typename T>
-  SOUL_ALWAYS_INLINE auto mul(const matrix<D1, D2, T>& a, const matrix<D2, D3, T>& b) -> mat4f
+  SOUL_ALWAYS_INLINE auto mul(const matrix<D1, D2, T>& a, const matrix<D2, D3, T>& b) -> mat4f32
   {
     return matrix<D1, D2, T>(a.storage * b.storage);
   }
 
   template <typename T>
-  SOUL_ALWAYS_INLINE auto translate(const matrix4x4<T>& m, const vec3<T>& v) -> matrix4x4<T>
+  SOUL_ALWAYS_INLINE auto translate(const mat4<T>& m, const vec3<T>& v) -> mat4<T>
   {
-    return matrix4x4<T>(glm::translate(m.storage, v.storage));
+    return mat4<T>(glm::translate(m.storage, v.storage));
   }
 
   template <typename T>
-  SOUL_ALWAYS_INLINE auto rotate(const matrix4x4<T>& m, T angle, const vec3<T>& axis)
-    -> matrix4x4<T>
+  SOUL_ALWAYS_INLINE auto rotate(const mat4<T>& m, T angle, const vec3<T>& axis) -> mat4<T>
   {
-    return matrix4x4<T>(glm::rotate(m.storage, angle, axis.storage));
+    return mat4<T>(glm::rotate(m.storage, angle, axis.storage));
   }
 
   template <typename T>
-  SOUL_ALWAYS_INLINE auto scale(const matrix4x4<T>& m, const vec3<T>& scale) -> matrix4x4<T>
+  SOUL_ALWAYS_INLINE auto scale(const mat4<T>& m, const vec3<T>& scale) -> mat4<T>
   {
-    return matrix4x4<T>(glm::scale(m.storage, scale.storage));
+    return mat4<T>(glm::scale(m.storage, scale.storage));
   }
 
   template <typename T>
   SOUL_ALWAYS_INLINE auto look_at(const vec3<T>& eye, const vec3<T>& center, const vec3<T>& up)
-    -> matrix4x4<T>
+    -> mat4<T>
   {
-    return matrix4x4<T>(glm::lookAt(eye.storage, center.storage, up.storage));
+    return mat4<T>(glm::lookAt(eye.storage, center.storage, up.storage));
   }
 
   template <typename T>
-  SOUL_ALWAYS_INLINE auto perspective(T fovy, T aspect, T z_near, T z_far) -> matrix4x4<T>
+  SOUL_ALWAYS_INLINE auto perspective(T fovy, T aspect, T z_near, T z_far) -> mat4<T>
   {
     T fov_rad = fovy;
     T focal_length = 1.0f / std::tan(fov_rad / 2.0f);
@@ -75,7 +74,7 @@ namespace soul::math
     T A = z_far / (z_near - z_far);
     T B = z_near * A;
 
-    matrix4x4<T> result;
+    mat4<T> result;
 
     result.m(0, 0) = x;
     result.m(0, 1) = 0.0f;
@@ -200,7 +199,7 @@ namespace soul::math
     return vec<dim, T>::FromStorage(glm::abs(val.storage));
   }
 
-  SOUL_ALWAYS_INLINE auto combine(const AABB aabb, const vec3f point) -> AABB
+  SOUL_ALWAYS_INLINE auto combine(const AABB aabb, const vec3f32 point) -> AABB
   {
     return {min(aabb.min, point), max(aabb.max, point)};
   }

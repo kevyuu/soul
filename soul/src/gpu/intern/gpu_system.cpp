@@ -54,14 +54,14 @@ typedef double f64;
 
 namespace soul
 {
-  typedef vector <uint, 2> vec2ui32;
+  typedef vector <uint, 2> vec2u32;
 
-  typedef vector <float, 2> vec2f;
-  typedef vector <float, 3> vec3f;
-  typedef vector <float, 4> vec4f;
+  typedef vector <float, 2> vec2f32;
+  typedef vector <float, 3> vec3f32;
+  typedef vector <float, 4> vec4f32;
 
-  typedef matrix <float, 3, 3> mat3f;
-  typedef matrix <float, 4, 4> mat4f;
+  typedef matrix <float, 3, 3> mat3f32;
+  typedef matrix <float, 4, 4> mat4f32;
 }
 
 namespace soulsl
@@ -173,7 +173,7 @@ namespace soul::gpu
 
   namespace
   {
-    auto pick_surface_extent(const VkSurfaceCapabilitiesKHR capabilities, const vec2ui32 dimension)
+    auto pick_surface_extent(const VkSurfaceCapabilitiesKHR capabilities, const vec2u32 dimension)
       -> VkExtent2D
     {
       SOUL_LOG_INFO("Picking vulkan swap extent");
@@ -944,7 +944,7 @@ namespace soul::gpu
               1,
               {},
               {},
-              vec2ui32(db->swapchain.extent.width, db->swapchain.extent.height)),
+              vec2u32(db->swapchain.extent.width, db->swapchain.extent.height)),
             .vk_handle = image,
             .view = {.vk_handle = image_view},
             .sharing_mode = image_sharing_mode}));
@@ -3232,7 +3232,7 @@ namespace soul::gpu
             1,
             {},
             {},
-            vec2ui32(_db.swapchain.extent.width, _db.swapchain.extent.height)),
+            vec2u32(_db.swapchain.extent.width, _db.swapchain.extent.height)),
           .vk_handle = image,
           .view = {.vk_handle = image_view},
           .sharing_mode = image_sharing_mode}));
@@ -3244,7 +3244,7 @@ namespace soul::gpu
     SOUL_ASSERT(0, result == VK_SUCCESS, "");
   }
 
-  auto System::get_swapchain_extent() -> vec2ui32
+  auto System::get_swapchain_extent() -> vec2u32
   {
     return {_db.swapchain.extent.width, _db.swapchain.extent.height};
   }
@@ -4019,7 +4019,7 @@ namespace soul::gpu
   }
 
   RTInstanceDesc::RTInstanceDesc(
-    const mat4f in_transform,
+    const mat4f32 in_transform,
     const u32 instance_id,
     const u32 instance_mask,
     const u32 sbt_offset,

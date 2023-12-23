@@ -17,9 +17,9 @@ class Texture2DSampleApp final : public App
   static constexpr usize TRANSFORM_COUNT = ROW_COUNT * COL_COUNT;
 
   struct Vertex {
-    vec2f position = {};
-    vec3f color = {};
-    vec2f texture_coords = {};
+    vec2f32 position = {};
+    vec3f32 color = {};
+    vec2f32 texture_coords = {};
   };
 
   static constexpr Vertex VERTICES[4] = {
@@ -46,7 +46,7 @@ class Texture2DSampleApp final : public App
     const gpu::RGColorAttachmentDesc color_attachment_desc = {
       .node_id = render_target, .clear = true};
 
-    const vec2ui32 viewport = gpu_system_->get_swapchain_extent();
+    const vec2u32 viewport = gpu_system_->get_swapchain_extent();
 
     struct RenderPassParameter {
     };

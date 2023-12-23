@@ -18,7 +18,7 @@ namespace soul::gpu
     return surface;
   }
 
-  auto GLFWWsi::get_framebuffer_size() const -> vec2ui32
+  auto GLFWWsi::get_framebuffer_size() const -> vec2u32
   {
     int width, height; // NOLINT
     glfwGetFramebufferSize(window_, &width, &height);

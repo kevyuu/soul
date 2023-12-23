@@ -135,7 +135,7 @@ namespace soul::gpu
   struct RGTextureDesc {
     TextureType type = TextureType::D2;
     TextureFormat format = TextureFormat::RGBA8;
-    vec3ui32 extent;
+    vec3u32 extent;
     u32 mip_levels = 1;
     u16 layer_count = 1;
     TextureSampleCount sample_count = TextureSampleCount::COUNT_1;
@@ -145,7 +145,7 @@ namespace soul::gpu
     static auto create_d2(
       const TextureFormat format,
       const u32 mip_levels,
-      const vec2ui32 dimension,
+      const vec2u32 dimension,
       b8 clear = false,
       ClearValue clear_value = {},
       const TextureSampleCount sample_count = TextureSampleCount::COUNT_1) -> RGTextureDesc
@@ -153,7 +153,7 @@ namespace soul::gpu
       return {
         .type = TextureType::D2,
         .format = format,
-        .extent = vec3ui32(dimension.x, dimension.y, 1),
+        .extent = vec3u32(dimension.x, dimension.y, 1),
         .mip_levels = mip_levels,
         .layer_count = 1,
         .sample_count = sample_count,
@@ -164,7 +164,7 @@ namespace soul::gpu
     static auto create_d3(
       const TextureFormat format,
       const u32 mip_levels,
-      const vec3ui32 dimension,
+      const vec3u32 dimension,
       b8 clear = false,
       ClearValue clear_value = {},
       const TextureSampleCount sample_count = TextureSampleCount::COUNT_1) -> RGTextureDesc
@@ -183,7 +183,7 @@ namespace soul::gpu
     static auto create_d2_array(
       const TextureFormat format,
       const u32 mip_levels,
-      const vec2ui32 dimension,
+      const vec2u32 dimension,
       const u16 layer_count,
       b8 clear = false,
       ClearValue clear_value = {}) -> RGTextureDesc
@@ -191,7 +191,7 @@ namespace soul::gpu
       return {
         .type = TextureType::D2_ARRAY,
         .format = format,
-        .extent = vec3ui32(dimension.x, dimension.y, 1),
+        .extent = vec3u32(dimension.x, dimension.y, 1),
         .mip_levels = mip_levels,
         .layer_count = layer_count,
         .clear = clear,
@@ -321,7 +321,7 @@ namespace soul::gpu
       const char* name = nullptr;
       TextureType type = TextureType::D2;
       TextureFormat format = TextureFormat::COUNT;
-      vec3ui32 extent = {};
+      vec3u32 extent = {};
       u32 mip_levels = 1;
       u16 layer_count = 1;
       TextureSampleCount sample_count = TextureSampleCount::COUNT_1;
@@ -392,13 +392,13 @@ namespace soul::gpu
 
     RGRenderTargetDesc() = default;
 
-    RGRenderTargetDesc(vec2ui32 dimension, const RGColorAttachmentDesc& color)
+    RGRenderTargetDesc(vec2u32 dimension, const RGColorAttachmentDesc& color)
         : dimension(dimension), color_attachments(ColorAttachments::FillN(1, color))
     {
     }
 
     RGRenderTargetDesc(
-      vec2ui32 dimension,
+      vec2u32 dimension,
       const RGColorAttachmentDesc& color,
       const RGDepthStencilAttachmentDesc& depth_stencil)
         : dimension(dimension),
@@ -408,7 +408,7 @@ namespace soul::gpu
     }
 
     RGRenderTargetDesc(
-      vec2ui32 dimension,
+      vec2u32 dimension,
       const TextureSampleCount sample_count,
       const RGColorAttachmentDesc& color,
       const RGResolveAttachmentDesc& resolve,
@@ -421,12 +421,12 @@ namespace soul::gpu
     {
     }
 
-    RGRenderTargetDesc(vec2ui32 dimension, const RGDepthStencilAttachmentDesc& depth_stencil)
+    RGRenderTargetDesc(vec2u32 dimension, const RGDepthStencilAttachmentDesc& depth_stencil)
         : dimension(dimension), depth_stencil_attachment(depth_stencil)
     {
     }
 
-    vec2ui32 dimension = {};
+    vec2u32 dimension = {};
     TextureSampleCount sample_count = TextureSampleCount::COUNT_1;
     SBOVector<RGColorAttachmentDesc, 1> color_attachments;
     SBOVector<RGResolveAttachmentDesc, 1> resolve_attachments;
@@ -434,7 +434,7 @@ namespace soul::gpu
   };
 
   struct RGRenderTarget {
-    vec2ui32 dimension = {};
+    vec2u32 dimension = {};
     TextureSampleCount sample_count = TextureSampleCount::COUNT_1;
     Vector<ColorAttachment> color_attachments;
     Vector<ResolveAttachment> resolve_attachments;

@@ -29,7 +29,7 @@ namespace soul::gpu
     auto create_vulkan_surface(VkInstance instance) -> VkSurfaceKHR override;
 
     [[nodiscard]]
-    auto get_framebuffer_size() const -> vec2ui32 override;
+    auto get_framebuffer_size() const -> vec2u32 override;
 
   private:
     GLFWwindow* window_;

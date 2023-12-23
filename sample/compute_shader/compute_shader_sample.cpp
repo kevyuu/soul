@@ -23,7 +23,7 @@ class ComputeShaderSampleApp final : public App
   auto render(gpu::TextureNodeID render_target, gpu::RenderGraph& render_graph)
     -> gpu::TextureNodeID override
   {
-    const vec2ui32 viewport = gpu_system_->get_swapchain_extent();
+    const vec2u32 viewport = gpu_system_->get_swapchain_extent();
 
     const gpu::TextureNodeID target_texture = render_graph.create_texture(
       "Target Texture",
@@ -32,7 +32,7 @@ class ComputeShaderSampleApp final : public App
         1,
         viewport,
         true,
-        gpu::ClearValue(vec4f{1.0f, 0.0f, 0.0f, 1.0f}, 0.0f, 0.0f)));
+        gpu::ClearValue(vec4f32{1.0f, 0.0f, 0.0f, 1.0f}, 0.0f, 0.0f)));
 
     struct ComputePassParameter {
       gpu::TextureNodeID target_texture;

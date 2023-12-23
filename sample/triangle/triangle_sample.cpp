@@ -19,7 +19,7 @@ class TriangleSampleApp final : public App
       .clear = true,
     };
 
-    const vec2ui32 viewport = gpu_system_->get_swapchain_extent();
+    const vec2u32 viewport = gpu_system_->get_swapchain_extent();
 
     struct PassParameter {
     };

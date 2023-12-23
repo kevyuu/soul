@@ -18,9 +18,9 @@ class Texture3DSampleApp final : public App
   static constexpr usize TRANSFORM_COUNT = ROW_COUNT * COL_COUNT;
 
   struct Vertex {
-    vec2f position = {};
-    vec3f color = {};
-    vec2f texture_coords = {};
+    vec2f32 position = {};
+    vec3f32 color = {};
+    vec2f32 texture_coords = {};
   };
 
   static constexpr Vertex VERTICES[4] = {
@@ -35,10 +35,10 @@ class Texture3DSampleApp final : public App
 
   struct Transform {
     float dummy = 0.0f;
-    vec3f color = {};
-    mat4f scale = {};
-    mat4f position = {};
-    mat4f rotation = {};
+    vec3f32 color = {};
+    mat4f32 scale = {};
+    mat4f32 position = {};
+    mat4f32 rotation = {};
   };
 
   gpu::ProgramID program_id_ = gpu::ProgramID();
@@ -59,7 +59,7 @@ class Texture3DSampleApp final : public App
       .clear = true,
     };
 
-    const vec2ui32 viewport = gpu_system_->get_swapchain_extent();
+    const vec2u32 viewport = gpu_system_->get_swapchain_extent();
 
     const auto persistent_texture_node_id =
       render_graph.import_texture("Persistent Texture", test_texture_id_);

@@ -5,12 +5,12 @@
 namespace soul
 {
   struct AABB {
-    vec3f min = vec3f::Fill(std::numeric_limits<f32>::max());
-    vec3f max = vec3f::Fill(std::numeric_limits<f32>::lowest());
+    vec3f32 min = vec3f32::Fill(std::numeric_limits<f32>::max());
+    vec3f32 max = vec3f32::Fill(std::numeric_limits<f32>::lowest());
 
     AABB() = default;
 
-    AABB(const vec3f& min, const vec3f& max) noexcept : min{min}, max{max} {}
+    AABB(const vec3f32& min, const vec3f32& max) noexcept : min{min}, max{max} {}
 
     [[nodiscard]]
     auto is_empty() const -> bool
@@ -19,7 +19,7 @@ namespace soul
     }
 
     [[nodiscard]]
-    auto is_inside(const vec3f& point) const -> bool
+    auto is_inside(const vec3f32& point) const -> bool
     {
       return (point.x >= min.x && point.x <= max.x) && (point.y >= min.y && point.y <= max.y) &&
              (point.z >= min.z && point.z <= max.z);
@@ -27,25 +27,25 @@ namespace soul
 
     struct Corners {
       static constexpr usize COUNT = 8;
-      vec3f vertices[COUNT];
+      vec3f32 vertices[COUNT];
     };
 
     [[nodiscard]]
     auto get_corners() const -> Corners
     {
       return {
-        vec3f(min.x, min.y, min.z),
-        vec3f(min.x, min.y, max.z),
-        vec3f(min.x, max.y, min.z),
-        vec3f(min.x, max.y, max.z),
-        vec3f(max.x, min.y, min.z),
-        vec3f(max.x, min.y, max.z),
-        vec3f(max.x, max.y, min.z),
-        vec3f(max.x, max.y, max.z)};
+        vec3f32(min.x, min.y, min.z),
+        vec3f32(min.x, min.y, max.z),
+        vec3f32(min.x, max.y, min.z),
+        vec3f32(min.x, max.y, max.z),
+        vec3f32(max.x, min.y, min.z),
+        vec3f32(max.x, min.y, max.z),
+        vec3f32(max.x, max.y, min.z),
+        vec3f32(max.x, max.y, max.z)};
     }
 
     [[nodiscard]]
-    auto center() const -> vec3f
+    auto center() const -> vec3f32
     {
       return (min + max) / 2.0f;
     }

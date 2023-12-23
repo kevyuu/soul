@@ -96,7 +96,7 @@ App::App(const AppConfig& app_config)
       gpu_system_(default_allocator_.create<gpu::System>(&default_allocator_).unwrap()),
       app_config_(app_config),
       camera_man_(
-        {4.0f, 0.01f, vec3f(0.0f, 1.0f, 0.0f)}, vec3f(0, 0, 1.0f), vec3f(0, 0, 0), vec3f(0, 1, 0))
+        {4.0f, 0.01f, vec3f32(0.0f, 1.0f, 0.0f)}, vec3f32(0, 0, 1.0f), vec3f32(0, 0, 0), vec3f32(0, 1, 0))
 {
   const gpu::System::Config config = {
     .wsi = wsi_, .max_frame_in_flight = 3, .thread_count = runtime::get_thread_count()};
@@ -138,7 +138,7 @@ auto App::run() -> void
     SOUL_PROFILE_FRAME();
     runtime::System::get().begin_frame();
 
-    vec2f glfw_window_scale;
+    vec2f32 glfw_window_scale;
     glfwGetWindowContentScale(window_, &glfw_window_scale.x, &glfw_window_scale.y);
     SOUL_ASSERT(0, glfw_window_scale.x - glfw_window_scale.y == 0.0f, "");
 
