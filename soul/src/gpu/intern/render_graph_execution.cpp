@@ -504,6 +504,15 @@ namespace soul::gpu::impl
       const RGInternalBuffer& rg_buffer = render_graph_->get_internal_buffers()[i];
       BufferExecInfo& buffer_info = buffer_infos_[i];
 
+      if (buffer_info.usage_flags.none()) {
+        SOUL_ASSERT_LITE(
+          0,
+          buffer_info.first_pass.is_null() && buffer_info.last_pass.is_null() &&
+            buffer_info.queue_flags.none() && buffer_info.passes.empty(),
+          "");
+        continue;
+      }
+
       buffer_info.buffer_id = gpu_system_->create_transient_buffer({
         .size = rg_buffer.size,
         .usage_flags = buffer_info.usage_flags,
@@ -524,7 +533,12 @@ namespace soul::gpu::impl
       const RGInternalTexture& rg_texture = render_graph_->get_internal_textures()[i];
       TextureExecInfo& texture_info = texture_infos_[i];
 
-      if (texture_info.queue_flags.none()) {
+      if (texture_info.usage_flags.none()) {
+        SOUL_ASSERT_LITE(
+          0,
+          texture_info.first_pass.is_null() && texture_info.last_pass.is_null() &&
+            texture_info.queue_flags.none(),
+          "");
         continue;
       }
 
@@ -705,6 +719,10 @@ namespace soul::gpu::impl
     }
 
     for (auto& texture_info : texture_infos_) {
+      if (texture_info.usage_flags.none()) {
+        continue;
+      }
+
       const auto& texture = gpu_system_->get_texture(texture_info.texture_id);
 
       std::for_each(
@@ -747,6 +765,9 @@ namespace soul::gpu::impl
     }
 
     std::ranges::for_each(texture_infos_, [this](const TextureExecInfo& texture_info) {
+      if (texture_info.usage_flags.none()) {
+        return;
+      }
       const Texture& texture = gpu_system_->get_texture(texture_info.texture_id);
       std::for_each(
         texture_info.view,
@@ -1237,7 +1258,6 @@ namespace soul::gpu::impl
           const auto next_pass_idx = buffer_info.passes[buffer_info.pass_counter + 1].id;
           const auto next_queue_type =
             render_graph_->get_pass_nodes()[next_pass_idx]->get_queue_type();
-          const auto x = 0;
 
           if (current_queue_type != next_queue_type) {
             pending_semaphores.push_back(&buffer_info.pending_semaphore);
@@ -1453,6 +1473,9 @@ namespace soul::gpu::impl
     }
 
     for (const auto& texture_info : internal_texture_infos_) {
+      if (texture_info.usage_flags.none()) {
+        continue;
+      }
       gpu_system_->destroy_texture(texture_info.texture_id);
     }
   }
