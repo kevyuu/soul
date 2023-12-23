@@ -360,8 +360,8 @@ public:
       : App(app_config), texture_2d_pass(gpu_system_)
   {
     const auto shader_source = gpu::ShaderSource::From(
-      gpu::ShaderFile{.path = Path::From("shaders/draw_indexed_indirect_sample.hlsl"_str)});
-    const auto search_path = Path::From("shaders/"_str);
+      gpu::ShaderFile{.path = Path::From("draw_indexed_indirect_sample.hlsl"_str)});
+    const auto search_path = Path::From("shaders"_str);
     constexpr auto entry_points = soul::Array{
       gpu::ShaderEntryPoint{gpu::ShaderStage::VERTEX, "vs_main"_str},
       gpu::ShaderEntryPoint{gpu::ShaderStage::FRAGMENT, "ps_main"_str},
