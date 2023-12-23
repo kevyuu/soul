@@ -640,7 +640,7 @@ template <soul::memory::allocator_type AllocatorT, soul::usize InlineCapacityV>
 struct std::formatter<soul::BasicString<AllocatorT, InlineCapacityV>> // NOLINT
     : std::formatter<std::string_view> {
   auto format(
-    const soul::BasicString<AllocatorT, InlineCapacityV>& string, std::format_context& ctx)
+    const soul::BasicString<AllocatorT, InlineCapacityV>& string, std::format_context& ctx) const
   {
     return std::formatter<std::string_view>::format(
       std::string_view(string.data(), string.size()), ctx);
