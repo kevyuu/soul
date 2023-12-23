@@ -1,6 +1,7 @@
 #pragma once
 
 #include <ranges>
+#include <utility>
 
 #include "core/config.h"
 #include "core/objops.h"
@@ -314,11 +315,7 @@ namespace soul
       : allocator_(other.allocator_), size_(other.size_)
   {
     init_reserve(other.capacity_);
-    if constexpr (ts_clone<T>) {
-      uninitialized_clone_n(other.buffer_, other.size_, buffer_);
-    } else {
-      uninitialized_copy_n(other.buffer_, other.size_, buffer_);
-    }
+    uninitialized_duplicate_n(other.buffer_, other.size_, buffer_);
   }
 
   template <typename T, memory::allocator_type AllocatorT, usize N>
@@ -1046,4 +1043,5 @@ namespace soul
     }
     return std::ranges::equal(lhs, rhs);
   }
+
 } // namespace soul
