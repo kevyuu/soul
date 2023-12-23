@@ -55,6 +55,9 @@ target_link_libraries(test_robin_table PRIVATE GTest::gtest GTest::gtest_main so
 add_executable(test_comp_str test_comp_str.cpp util.cpp)
 target_link_libraries(test_comp_str PRIVATE GTest::gtest GTest::gtest_main soul)
 
+add_executable(test_deque test_deque.cpp util.cpp)
+target_link_libraries(test_deque PRIVATE GTest::gtest GTest::gtest_main soul)
+
 add_test(gtest_meta test_meta)
 add_test(gtest_core_util test_core_util)
 add_test(gtest_array test_array)
@@ -74,3 +77,4 @@ add_test(gtest_tuple test_tuple)
 add_test(gtest_hash test_hash)
 add_test(gtest_robin_table test_robin_table)
 add_test(gtest_comp_str test_comp_str)
+add_test(gtest_deque test_deque)
