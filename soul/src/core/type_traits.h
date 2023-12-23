@@ -3,7 +3,9 @@
 #include <concepts>
 #include <type_traits>
 
-#include "core/builtins.h"
+#include "core/boolean.h"
+#include "core/floating_point.h"
+#include "core/integer.h"
 
 namespace soul
 {

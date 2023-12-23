@@ -143,7 +143,10 @@ namespace soul
   template <typename T>
   using matrix4x4 = matrix<4, 4, T>;
 
-  using mat3f = matrix<3, 3, f32>;
-  using mat4f = matrix<4, 4, f32>;
+  inline namespace builtin
+  {
+    using mat3f = matrix<3, 3, f32>;
+    using mat4f = matrix<4, 4, f32>;
+  } // namespace builtin
 
 } // namespace soul

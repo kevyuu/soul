@@ -5,6 +5,9 @@
 #include "core/boolean.h"
 #include "core/floating_point.h"
 #include "core/integer.h"
+#include "core/matrix.h"
+#include "core/quaternion.h"
+#include "core/vec.h"
 
 namespace soul
 {

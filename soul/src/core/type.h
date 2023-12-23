@@ -6,14 +6,10 @@
 
 #include <glm/glm.hpp>
 
-#include "core/aabb.h"
 #include "core/builtins.h"
 #include "core/compiler.h"
-#include "core/matrix.h"
 #include "core/panic_lite.h"
-#include "core/quaternion.h"
 #include "core/type_traits.h"
-#include "core/vec.h"
 
 namespace soul
 {

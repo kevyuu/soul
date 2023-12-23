@@ -359,23 +359,26 @@ namespace soul
   template <typename T>
   using vec4 = vec<4, T>;
 
-  using vec2f = vec2<f32>;
-  using vec3f = vec3<f32>;
-  using vec4f = vec4<f32>;
+  inline namespace builtin
+  {
+    using vec2f = vec2<f32>;
+    using vec3f = vec3<f32>;
+    using vec4f = vec4<f32>;
 
-  using vec2d = vec2<f64>;
-  using vec3d = vec3<f64>;
-  using vec4d = vec4<f64>;
+    using vec2d = vec2<f64>;
+    using vec3d = vec3<f64>;
+    using vec4d = vec4<f64>;
 
-  using vec2i16 = vec2<i16>;
-  using vec3i16 = vec3<i16>;
-  using vec4i16 = vec4<i16>;
+    using vec2i16 = vec2<i16>;
+    using vec3i16 = vec3<i16>;
+    using vec4i16 = vec4<i16>;
 
-  using vec2ui32 = vec2<u32>;
-  using vec3ui32 = vec3<u32>;
-  using vec4ui32 = vec4<u32>;
+    using vec2ui32 = vec2<u32>;
+    using vec3ui32 = vec3<u32>;
+    using vec4ui32 = vec4<u32>;
 
-  using vec2i32 = vec2<i32>;
-  using vec3i32 = vec3<i32>;
-  using vec4i32 = vec4<i32>;
+    using vec2i32 = vec2<i32>;
+    using vec3i32 = vec3<i32>;
+    using vec4i32 = vec4<i32>;
+  } // namespace builtin
 } // namespace soul
