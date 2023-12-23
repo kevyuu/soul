@@ -39,6 +39,6 @@ namespace soul
 
   inline namespace builtin
   {
-    using quatf = quat<f32>;
+    using quatf32 = quat<f32>;
   }
 } // namespace soul
