@@ -146,7 +146,7 @@ namespace soul::runtime
 
     u16 thread_index = 0;
 
-    Vector<memory::Allocator*> allocator_stack{nullptr};
+    Vector<memory::Allocator*> allocator_stack;
     TempAllocator* temp_allocator = nullptr;
   };
 

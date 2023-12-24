@@ -8,11 +8,11 @@
 namespace soul
 {
 
-  template <typename T, memory::allocator_type AllocatorType = memory::Allocator>
+  template <typename T, memory::allocator_type AllocatorT = memory::Allocator>
   class FixedVector
   {
   public:
-    using this_type = FixedVector<T, AllocatorType>;
+    using this_type = FixedVector<T, AllocatorT>;
     using value_type = T;
     using pointer = T*;
     using const_pointer = const T*;
@@ -23,9 +23,7 @@ namespace soul
     using reverse_iterator = std::reverse_iterator<iterator>;
     using const_reverse_iterator = std::reverse_iterator<const_iterator>;
 
-    explicit FixedVector(AllocatorType* allocator = get_default_allocator()) : allocator_(allocator)
-    {
-    }
+    explicit FixedVector(AllocatorT* allocator = get_default_allocator()) : allocator_(allocator) {}
 
     FixedVector(const FixedVector& other);
     auto operator=(const FixedVector& other) -> FixedVector& = delete;
@@ -34,13 +32,13 @@ namespace soul
     ~FixedVector();
 
     template <typename... Args>
-    auto init(AllocatorType& allocator, usize size, Args&&... args) -> void;
+    auto init(AllocatorT& allocator, usize size, Args&&... args) -> void;
 
     template <typename... Args>
     auto init(usize size, Args&&... args) -> void;
 
-    template <typename Construct>
-    auto init_construct(usize size, Construct func) -> void;
+    template <typename GenerateFn>
+    auto init_generate(NotNull<AllocatorT*> allocator, usize size, GenerateFn func) -> void;
 
     auto cleanup() -> void;
 
@@ -133,21 +131,21 @@ namespace soul
     }
 
   private:
-    AllocatorType* allocator_;
+    AllocatorT* allocator_;
     T* buffer_ = nullptr;
     usize size_ = 0;
   };
 
-  template <typename T, memory::allocator_type AllocatorType>
-  FixedVector<T, AllocatorType>::FixedVector(const FixedVector<T, AllocatorType>& other)
+  template <typename T, memory::allocator_type AllocatorT>
+  FixedVector<T, AllocatorT>::FixedVector(const FixedVector<T, AllocatorT>& other)
       : allocator_(other.allocator_), size_(other.size_)
   {
     buffer_ = allocator_->template allocate_array<T>(size_);
     std::uninitialized_copy_n(other.buffer_, other.size_, buffer_);
   }
 
-  template <typename T, memory::allocator_type AllocatorType>
-  FixedVector<T, AllocatorType>::FixedVector(FixedVector&& other) noexcept
+  template <typename T, memory::allocator_type AllocatorT>
+  FixedVector<T, AllocatorT>::FixedVector(FixedVector&& other) noexcept
       : allocator_(std::move(other.allocator_)),
         buffer_(std::move(other.buffer_)),
         size_(std::move(other.size_))
@@ -155,8 +153,8 @@ namespace soul
     other.buffer_ = nullptr;
   }
 
-  template <typename T, memory::allocator_type AllocatorType>
-  FixedVector<T, AllocatorType>::~FixedVector()
+  template <typename T, memory::allocator_type AllocatorT>
+  FixedVector<T, AllocatorT>::~FixedVector()
   {
     if (allocator_ == nullptr) {
       return;
@@ -164,10 +162,9 @@ namespace soul
     cleanup();
   }
 
-  template <typename T, memory::allocator_type AllocatorType>
+  template <typename T, memory::allocator_type AllocatorT>
   template <typename... Args>
-  auto FixedVector<T, AllocatorType>::init(AllocatorType& allocator, usize size, Args&&... args)
-    -> void
+  auto FixedVector<T, AllocatorT>::init(AllocatorT& allocator, usize size, Args&&... args) -> void
   {
     SOUL_ASSERT(0, size != 0, "");
     SOUL_ASSERT(0, size_ == 0, "Array have been initialized before");
@@ -177,9 +174,9 @@ namespace soul
     init(size, std::forward<Args>(args)...);
   }
 
-  template <typename T, memory::allocator_type AllocatorType>
+  template <typename T, memory::allocator_type AllocatorT>
   template <typename... Args>
-  auto FixedVector<T, AllocatorType>::init(const usize size, Args&&... args) -> void
+  auto FixedVector<T, AllocatorT>::init(const usize size, Args&&... args) -> void
   {
     SOUL_ASSERT(0, size != 0, "");
     SOUL_ASSERT(0, size_ == 0, "Array have been initialized before");
@@ -191,35 +188,37 @@ namespace soul
     }
   }
 
-  template <typename T, memory::allocator_type AllocatorType>
-  template <typename Construct>
-  auto FixedVector<T, AllocatorType>::init_construct(const usize size, Construct func) -> void
+  template <typename T, memory::allocator_type AllocatorT>
+  template <typename GenerateFn>
+  auto FixedVector<T, AllocatorT>::init_generate(
+    NotNull<AllocatorT*> allocator, const usize size, GenerateFn generate_fn) -> void
   {
+    allocator_ = allocator;
     size_ = size;
     buffer_ = allocator_->template allocate_array<T>(size_);
     for (usize i = 0; i < size_; i++) {
-      func(i, buffer_ + i);
+      new (buffer_ + i) T(generate_fn(i));
     }
   }
 
-  template <typename T, memory::allocator_type AllocatorType>
-  auto FixedVector<T, AllocatorType>::cleanup() -> void
+  template <typename T, memory::allocator_type AllocatorT>
+  auto FixedVector<T, AllocatorT>::cleanup() -> void
   {
     std::destroy_n(buffer_, size_);
     allocator_->deallocate(buffer_);
     buffer_ = nullptr;
   }
 
-  template <typename T, memory::allocator_type AllocatorType>
-  auto FixedVector<T, AllocatorType>::operator[](usize idx) -> reference
+  template <typename T, memory::allocator_type AllocatorT>
+  auto FixedVector<T, AllocatorT>::operator[](usize idx) -> reference
   {
     SOUL_ASSERT(
       0, idx < size_, "Out of bound access to array detected. idx = %d, _size = %d", idx, size_);
     return buffer_[idx];
   }
 
-  template <typename T, memory::allocator_type AllocatorType>
-  auto FixedVector<T, AllocatorType>::operator[](usize idx) const -> const_reference
+  template <typename T, memory::allocator_type AllocatorT>
+  auto FixedVector<T, AllocatorT>::operator[](usize idx) const -> const_reference
   {
     SOUL_ASSERT(
       0, idx < size_, "Out of bound access to array detected. idx = %d, _size=%d", idx, size_);

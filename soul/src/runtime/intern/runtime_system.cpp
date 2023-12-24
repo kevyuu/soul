@@ -1,12 +1,13 @@
 #include <thread>
 
 #include "core/architecture.h"
-#include "core/string.h"
 #include "core/panic.h"
 #include "core/profile.h"
+#include "core/string.h"
 #include "core/util.h"
 #include "memory/allocators/linear_allocator.h"
 #include "memory/allocators/proxy_allocator.h"
+#include "runtime/data.h"
 #include "runtime/system.h"
 
 namespace soul::runtime
@@ -172,16 +173,20 @@ namespace soul::runtime
       Constant::MAX_THREAD_COUNT);
     db_.thread_count = thread_count;
 
-    db_.thread_contexts.init(*config.defaultAllocator, thread_count);
+    db_.thread_contexts.init_generate(
+      config.defaultAllocator, thread_count, [&config](usize idx) -> ThreadContext {
+        return ThreadContext{
+          .task_count = 0,
+          .thread_index = static_cast<u16>(idx),
+          .allocator_stack = Vector<memory::Allocator*>(config.defaultAllocator),
+        };
+      });
 
     // NOTE(kevinyu): i == 0 is for main thread
     Database::g_thread_context = db_.thread_contexts.data();
 
-    for (u16 i = 0; i < thread_count; ++i) {
-      db_.thread_contexts[i].task_count = 0;
-      db_.thread_contexts[i].thread_index = i;
-      db_.thread_contexts[i].task_deque.init();
-      db_.thread_contexts[i].allocator_stack.set_allocator(*config.defaultAllocator);
+    for (auto& thread_context : db_.thread_contexts) {
+      thread_context.task_deque.init();
     }
 
     db_.is_terminated.store(false, std::memory_order_relaxed);
