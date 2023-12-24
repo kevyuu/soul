@@ -110,7 +110,7 @@ namespace soul
     void reset();
 
   private:
-    AllocatorT* allocator_;
+    NotNull<AllocatorT*> allocator_;
     BlockT* blocks_ = nullptr;
     usize size_ = 0;
     usize capacity_ = 0;
@@ -187,7 +187,7 @@ namespace soul
 
   template <ts_bit_block BlockT, memory::allocator_type AllocatorT>
   BitVector<BlockT, AllocatorT>::BitVector(BitVector&& other) noexcept
-      : allocator_(std::exchange(other.allocator_, nullptr)),
+      : allocator_(other.allocator_),
         blocks_(std::exchange(other.blocks_, nullptr)),
         size_(std::exchange(other.size_, 0)),
         capacity_(std::exchange(other.capacity_, 0))

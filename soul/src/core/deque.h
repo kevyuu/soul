@@ -141,7 +141,7 @@ namespace soul
     SOUL_NO_UNIQUE_ADDRESS RawBuffer<T, InlineSizeV> stack_storage_;
     static constexpr usize GROWTH_FACTOR = 2;
     static constexpr b8 IS_SBO = InlineSizeV > 0;
-    AllocatorT* allocator_ = nullptr;
+    NotNull<AllocatorT*> allocator_;
     T* buffer_ = stack_storage_.data();
     usize size_ = 0;
     usize capacity_ = InlineSizeV;
@@ -168,7 +168,7 @@ namespace soul
     }
 
     Deque(Deque&& other) noexcept
-        : allocator_(std::exchange(other.allocator_, nullptr)),
+        : allocator_(other.allocator_),
           buffer_(std::exchange(other.buffer_, nullptr)),
           size_(std::exchange(other.size_, 0)),
           capacity_(std::exchange(other.capacity_, 0)),

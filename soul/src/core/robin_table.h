@@ -216,7 +216,7 @@ namespace soul
     static constexpr u8 HASH_CODE_BIT_COUNT_ = 64;
     static constexpr u8 INITIAL_SHIFTS_ = HASH_CODE_BIT_COUNT_ - 3;
 
-    AllocatorT* allocator_ = nullptr;
+    NotNull<AllocatorT*> allocator_ = nullptr;
     u8 shifts_ = INITIAL_SHIFTS_;
     u64 slot_count_ = 0;
     u64 capacity_ = 0;
@@ -489,7 +489,7 @@ namespace soul
     }
 
     RobinTable(RobinTable&& other) noexcept
-        : allocator_(std::exchange(other.allocator_, nullptr)),
+        : allocator_(other.allocator_),
           shifts_(std::exchange(other.shifts_, INITIAL_SHIFTS_)),
           slot_count_(std::exchange(other.slot_count_, 0)),
           capacity_(std::exchange(other.capacity_, 0)),

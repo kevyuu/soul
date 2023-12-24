@@ -215,7 +215,7 @@ namespace soul
     SOUL_NO_UNIQUE_ADDRESS RawBuffer<T, InlineSizeV> stack_storage_;
     static constexpr usize GROWTH_FACTOR = 2;
     static constexpr b8 IS_SBO = InlineSizeV > 0;
-    AllocatorT* allocator_ = nullptr;
+    NotNull<AllocatorT*> allocator_;
     T* buffer_ = stack_storage_.data();
     usize size_ = 0;
     usize capacity_ = InlineSizeV;
@@ -331,8 +331,7 @@ namespace soul
   }
 
   template <typename T, memory::allocator_type AllocatorT, usize N>
-  Vector<T, AllocatorT, N>::Vector(Vector&& other) noexcept
-      : allocator_(std::exchange(other.allocator_, nullptr))
+  Vector<T, AllocatorT, N>::Vector(Vector&& other) noexcept : allocator_(other.allocator_)
   {
     if (!other.is_using_stack_storage()) {
       buffer_ = std::exchange(other.buffer_, other.stack_storage_.data());

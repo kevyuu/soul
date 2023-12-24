@@ -97,7 +97,10 @@ namespace soul
       storage_.data = const_cast<pointer>(str.data()); // NOLINT
     }
 
-    constexpr BasicString(BasicString&& other) noexcept { swap(other); }
+    constexpr BasicString(BasicString&& other) noexcept : allocator_(other.allocator_)
+    {
+      swap(other);
+    }
 
     constexpr auto operator=(BasicString&& other) noexcept -> BasicString&
     {
@@ -376,7 +379,7 @@ namespace soul
       pointer data;
     } storage_;
 
-    AllocatorT* allocator_ = nullptr;
+    NotNull<AllocatorT*> allocator_;
     usize size_ = 0; // string size, not counting NULL
     usize capacity_ = InlineCapacityV;
 
