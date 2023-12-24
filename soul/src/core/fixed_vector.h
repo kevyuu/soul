@@ -204,7 +204,7 @@ namespace soul
   template <typename T, memory::allocator_type AllocatorT>
   auto FixedVector<T, AllocatorT>::cleanup() -> void
   {
-    std::destroy_n(buffer_, size_);
+    destroy_n(buffer_, size_);
     allocator_->deallocate(buffer_);
     buffer_ = nullptr;
   }

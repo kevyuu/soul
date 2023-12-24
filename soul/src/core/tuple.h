@@ -1,5 +1,6 @@
 #pragma once
 
+#include "core/array.h"
 #include "core/builtins.h"
 #include "core/meta.h"
 #include "core/objops.h"
@@ -194,6 +195,13 @@ namespace soul
     storage storage_;
 
   public:
+    static constexpr auto ELEMENT_COUNT = sizeof...(Ts) + 1;
+    static constexpr Array<usize, ELEMENT_COUNT> ELEMENT_SIZES = {sizeof(T), sizeof(Ts)...};
+    static constexpr Array<usize, ELEMENT_COUNT> ELEMENT_ALIGNMENTS = {alignof(T), alignof(Ts)...};
+
+    template <usize IndexV>
+    using type_at_t = get_type_at_t<IndexV, T, Ts...>;
+
     constexpr Tuple() = default;
 
     constexpr Tuple(OwnRef<T> arg, OwnRef<Ts>... args) // NOLINT
@@ -249,4 +257,32 @@ namespace soul
 
   template <class... ValueTs>
   Tuple(ValueTs...) -> Tuple<ValueTs...>;
+
+  template <typename T>
+  concept ts_tuple = is_specialization_v<T, Tuple>;
+
+  struct TupleX {
+
+    template <ts_tuple T>
+    struct tuple_of_pointer;
+
+    template <typename T, typename... Ts>
+    struct tuple_of_pointer<Tuple<T, Ts...>> {
+      using type = Tuple<T*, Ts*...>;
+    };
+
+    template <ts_tuple T>
+    using tuple_of_pointer_t = tuple_of_pointer<T>::type;
+
+    template <ts_tuple T>
+    struct tuple_of_own_ref;
+
+    template <typename T, typename... Ts>
+    struct tuple_of_own_ref<Tuple<T, Ts...>> {
+      using type = Tuple<OwnRef<T>, OwnRef<Ts>*...>;
+    };
+
+    template <ts_tuple T>
+    using tuple_of_own_ref_t = tuple_of_own_ref<T>::type;
+  };
 } // namespace soul

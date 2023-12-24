@@ -60,20 +60,6 @@ namespace soul
     return [&val] { return val.clone(); };
   }
 
-  template <class T>
-  inline constexpr void destroy_at(T* const p) noexcept
-  {
-    if constexpr (!std::is_trivially_destructible_v<T>) {
-      if constexpr (std::is_array_v<T>) {
-        for (auto& elem : *p) {
-          std::destroy_at(std::addressof(elem));
-        }
-      } else {
-        p->~T();
-      }
-    }
-  }
-
   template <typename T, typename... Args>
   inline constexpr void construct_at(T* const location, Args&&... args) noexcept
   {
@@ -81,6 +67,15 @@ namespace soul
       std::construct_at(location, std::forward<Args>(args)...);
     } else {
       new (location) T(std::forward<Args>(args)...);
+    }
+  }
+
+  template <class T>
+  inline constexpr void destroy_at(T* const p) noexcept
+  {
+    if constexpr (!std::is_trivially_destructible_v<T>) {
+      static_assert(!std::is_array_v<T>);
+      p->~T();
     }
   }
 
@@ -94,24 +89,6 @@ namespace soul
       new (location) T(std::move(src)); // NOLINT
     }
     soul::destroy_at(&src);
-  }
-
-  template <typename T, std::input_iterator IteratorT>
-  inline constexpr void uninitialized_relocate_n(IteratorT src_it, usize size, T* dst) noexcept
-  {
-    if (std::is_constant_evaluated()) {
-      for (; size != 0; ++src_it, ++dst, (void)--size) {
-        std::construct_at(dst, std::move(*src_it));
-        const T* src_ptr = src_it;
-        soul::destroy_at(src_ptr);
-      }
-    } else {
-      std::uninitialized_move_n(std::move(src_it), size, dst);
-      for (; size != 0; ++src_it, ++dst, (void)--size) {
-        const T* src_ptr = src_it;
-        soul::destroy_at(src_ptr);
-      }
-    }
   }
 
   template <typename T>
@@ -134,20 +111,6 @@ namespace soul
     }
   }
 
-  template <typename T, std::input_iterator IteratorT>
-  inline constexpr void uninitialized_clone_n(IteratorT src_it, size_t size, T* dst) noexcept
-  {
-    if (std::is_constant_evaluated()) {
-      for (; size != 0; ++src_it, ++dst, (void)--size) {
-        std::construct_at(dst, Generator([&] { return dst->clone(); }));
-      }
-    } else {
-      for (; size != 0; ++src_it, ++dst, (void)--size) {
-        new (dst) T(src_it->clone());
-      }
-    }
-  }
-
   template <class T, ts_generate_fn<T> Fn>
   inline constexpr void generate_at(T* const location, Fn fn) noexcept
   {
@@ -155,20 +118,6 @@ namespace soul
       std::construct_at(location, Generator(fn));
     } else {
       new (location) T(std::invoke(fn));
-    }
-  }
-
-  template <class T, ts_generate_fn<T> Fn>
-  inline constexpr void uninitialized_generate_n(Fn fn, size_t size, T* dst) noexcept
-  {
-    if (std::is_constant_evaluated()) {
-      for (; size != 0; ++dst, (void)--size) {
-        std::construct_at(dst, Generator(fn));
-      }
-    } else {
-      for (; size != 0; ++dst, (void)--size) {
-        new (dst) T(std::invoke(fn));
-      }
     }
   }
 
@@ -180,22 +129,6 @@ namespace soul
         &location, Generator([fn = std::move(fn), it] { return std::invoke(fn, *it); }));
     } else {
       new (&location) T(std::invoke(fn, *it));
-    }
-  }
-
-  template <class T, std::input_iterator IteratorT, ts_fn<T, std::iter_value_t<IteratorT>> Fn>
-  inline constexpr void uninitialized_transform_construct_n(
-    IteratorT src_it, Fn fn, size_t size, T* dst) noexcept
-  {
-    if (std::is_constant_evaluated()) {
-      for (; size != 0; ++src_it, ++dst, (void)--size) {
-        std::construct_at(
-          dst, Generator([fn = std::move(fn), &src_it] { return std::invoke(fn, *src_it); }));
-      }
-    } else {
-      for (; size != 0; ++src_it, ++dst, (void)--size) {
-        new (dst) T(std::invoke(fn, *src_it));
-      }
     }
   }
 
@@ -227,6 +160,36 @@ namespace soul
     }
   }
 
+  template <class T, std::input_iterator IteratorT, ts_fn<T, std::iter_value_t<IteratorT>> Fn>
+  inline constexpr void uninitialized_transform_construct_n(
+    IteratorT src_it, Fn fn, size_t size, T* dst) noexcept
+  {
+    if (std::is_constant_evaluated()) {
+      for (; size != 0; ++src_it, ++dst, (void)--size) {
+        std::construct_at(
+          dst, Generator([fn = std::move(fn), &src_it] { return std::invoke(fn, *src_it); }));
+      }
+    } else {
+      for (; size != 0; ++src_it, ++dst, (void)--size) {
+        new (dst) T(std::invoke(fn, *src_it));
+      }
+    }
+  }
+
+  template <class T, ts_generate_fn<T> Fn>
+  inline constexpr void uninitialized_generate_n(Fn fn, size_t size, T* dst) noexcept
+  {
+    if (std::is_constant_evaluated()) {
+      for (; size != 0; ++dst, (void)--size) {
+        std::construct_at(dst, Generator(fn));
+      }
+    } else {
+      for (; size != 0; ++dst, (void)--size) {
+        new (dst) T(std::invoke(fn));
+      }
+    }
+  }
+
   template <typename T, std::input_iterator InputIteratorT>
   inline constexpr void uninitialized_copy_n(InputIteratorT src_it, size_t size, T* dst)
   {
@@ -236,16 +199,6 @@ namespace soul
       }
     } else {
       std::uninitialized_copy_n(std::move(src_it), size, dst);
-    }
-  }
-
-  template <typename T, std::input_iterator InputIteratorT>
-  inline constexpr void uninitialized_duplicate_n(InputIteratorT src_it, size_t size, T* dst)
-  {
-    if constexpr (ts_clone<T>) {
-      uninitialized_clone_n(src_it, size, dst);
-    } else {
-      uninitialized_copy_n(src_it, size, dst);
     }
   }
 
@@ -261,4 +214,56 @@ namespace soul
     }
   }
 
+  template <typename T, std::input_iterator IteratorT>
+  inline constexpr void uninitialized_clone_n(IteratorT src_it, size_t size, T* dst) noexcept
+  {
+    if (std::is_constant_evaluated()) {
+      for (; size != 0; ++src_it, ++dst, (void)--size) {
+        std::construct_at(dst, Generator([&] { return dst->clone(); }));
+      }
+    } else {
+      for (; size != 0; ++src_it, ++dst, (void)--size) {
+        new (dst) T(src_it->clone());
+      }
+    }
+  }
+
+  template <typename T, std::input_iterator InputIteratorT>
+  inline constexpr void uninitialized_duplicate_n(InputIteratorT src_it, size_t size, T* dst)
+  {
+    if constexpr (ts_clone<T>) {
+      uninitialized_clone_n(src_it, size, dst);
+    } else {
+      uninitialized_copy_n(src_it, size, dst);
+    }
+  }
+
+  template <class T>
+  inline constexpr void destroy_n(T* const p, usize size) noexcept
+  {
+    if constexpr (!std::is_trivially_destructible_v<T>) {
+      static_assert(!std::is_array_v<T>);
+      for (usize i = 0; i < size; i++) {
+        (p + i)->~T();
+      }
+    }
+  }
+
+  template <typename T, std::input_iterator IteratorT>
+  inline constexpr void uninitialized_relocate_n(IteratorT src_it, usize size, T* dst) noexcept
+  {
+    if (std::is_constant_evaluated()) {
+      for (; size != 0; ++src_it, ++dst, (void)--size) {
+        std::construct_at(dst, std::move(*src_it));
+        const T* src_ptr = src_it;
+        soul::destroy_at(src_ptr);
+      }
+    } else {
+      std::uninitialized_move_n(std::move(src_it), size, dst);
+      for (; size != 0; ++src_it, ++dst, (void)--size) {
+        const T* src_ptr = src_it;
+        soul::destroy_at(src_ptr);
+      }
+    }
+  }
 } // namespace soul

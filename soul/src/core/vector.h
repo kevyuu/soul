@@ -554,7 +554,7 @@ namespace soul
 
         T* new_buffer = allocator_->template allocate_array<T>(new_size);
         uninitialized_copy_n(std::begin(range), new_size, new_buffer);
-        std::destroy_n(buffer_, size_);
+        destroy_n(buffer_, size_);
         if (!is_using_stack_storage()) {
           allocator_->deallocate_array(buffer_, capacity_);
         }
@@ -778,7 +778,7 @@ namespace soul
   template <typename T, memory::allocator_type AllocatorT, usize N>
   void Vector<T, AllocatorT, N>::clear() noexcept
   {
-    std::destroy_n(buffer_, size_);
+    destroy_n(buffer_, size_);
     size_ = 0;
   }
 
@@ -835,7 +835,7 @@ namespace soul
   {
     SOUL_ASSERT(0, size_ != 0, "Cannot pop_back an empty sbo_vector");
     size_--;
-    std::destroy_n(buffer_ + size_, 1);
+    destroy_n(buffer_ + size_, 1);
   }
 
   template <typename T, memory::allocator_type AllocatorT, usize N>
@@ -843,7 +843,7 @@ namespace soul
   {
     SOUL_ASSERT(0, size_ >= count, "Cannot pop back more than sbo_vector size");
     size_ = size_ - count;
-    std::destroy_n(buffer_ + size_, count);
+    destroy_n(buffer_ + size_, count);
   }
 
   template <typename T, memory::allocator_type AllocatorT, usize InlineSizeV>

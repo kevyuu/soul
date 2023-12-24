@@ -466,8 +466,8 @@ namespace soul
     {
       const auto size1 = head_idx_ + size_ > capacity_ ? (capacity_ - head_idx_) : size_;
       const auto size2 = size_ - size1;
-      std::destroy_n(buffer_ + head_idx_, size1);
-      std::destroy_n(buffer_, size2);
+      destroy_n(buffer_ + head_idx_, size1);
+      destroy_n(buffer_, size2);
       size_ = 0;
       head_idx_ = 0;
     }
