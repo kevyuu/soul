@@ -38,6 +38,14 @@ namespace soul
 #  define __has_builtin(x) __noop
 #endif
 
+#if defined(_MSC_VER)
+#  define SOUL_UNROLL
+#  define SOUL_NOUNROLL
+#else
+#  define SOUL_UNROLL _Pragma("unroll")
+#  define SOUL_NOUNROLL _Pragma("nounroll")
+#endif
+
 #if __has_builtin(__builtin_expect)
 #  ifdef __cplusplus
 #    define SOUL_LIKELY(exp) (__builtin_expect(!!(exp), true))

@@ -251,8 +251,48 @@ namespace soul
       return lhs.storage_ == rhs.storage_;
     }
 
+    template <typename Fn>
+    void for_each(Fn fn)
+    {
+      return for_each_impl(fn);
+    }
+
+    template <typename Fn>
+    void for_each(Fn fn) const
+    {
+      return for_each_impl(fn);
+    }
+
   private:
     constexpr explicit Tuple(storage&& other_storage) : storage_(std::move(other_storage)) {}
+
+    template <usize IndexV = 0, typename Fn>
+      requires(IndexV == ELEMENT_COUNT)
+    void for_each_impl(Fn fn)
+    {
+    }
+
+    template <usize IndexV = 0, typename Fn>
+      requires(IndexV < ELEMENT_COUNT)
+    void for_each_impl(Fn fn)
+    {
+      fn.template operator()<IndexV>(ref<IndexV>());
+      for_each_impl<IndexV + 1, Fn>(fn);
+    }
+
+    template <usize IndexV = 0, typename Fn>
+      requires(IndexV == ELEMENT_COUNT)
+    void for_each_impl(Fn fn) const
+    {
+    }
+
+    template <usize IndexV = 0, typename Fn>
+      requires(IndexV < ELEMENT_COUNT)
+    void for_each_impl(Fn fn) const
+    {
+      fn.template operator()<IndexV>(ref<IndexV>());
+      for_each_impl<IndexV + 1, Fn>(fn);
+    }
   };
 
   template <class... ValueTs>
@@ -273,16 +313,5 @@ namespace soul
 
     template <ts_tuple T>
     using tuple_of_pointer_t = tuple_of_pointer<T>::type;
-
-    template <ts_tuple T>
-    struct tuple_of_own_ref;
-
-    template <typename T, typename... Ts>
-    struct tuple_of_own_ref<Tuple<T, Ts...>> {
-      using type = Tuple<OwnRef<T>, OwnRef<Ts>*...>;
-    };
-
-    template <ts_tuple T>
-    using tuple_of_own_ref_t = tuple_of_own_ref<T>::type;
   };
 } // namespace soul
