@@ -76,7 +76,7 @@ namespace soul
 
     void insert(OwnRef<KeyT, true> key, OwnRef<ValT, true> value)
     {
-      return hash_table_.insert(EntryT{.key = key.forward_ref(), .value = value.forward_ref()});
+      return hash_table_.insert(EntryT{.key = std::move(key), .value = std::move(value)});
     }
 
     template <typename QueryT>

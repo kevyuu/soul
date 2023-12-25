@@ -800,14 +800,14 @@ namespace soul
       const auto new_capacity = get_new_capacity(capacity_);
       T* old_buffer = buffer_;
       buffer_ = allocator_->template allocate_array<T>(new_capacity);
-      item.store_at(buffer_ + size_);
+      construct_at(buffer_ + size_, std::move(item));
       uninitialized_relocate_n(old_buffer, size_, buffer_);
       if (old_buffer != stack_storage_.data()) {
         allocator_->deallocate_array(old_buffer, capacity_);
       }
       capacity_ = new_capacity;
     } else {
-      item.store_at(buffer_ + size_);
+      construct_at(buffer_ + size_, std::move(item));
     }
     ++size_;
   }

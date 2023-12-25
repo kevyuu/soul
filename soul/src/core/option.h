@@ -326,7 +326,7 @@ namespace soul
 
     constexpr explicit Option(Construct::Some /* tag */, OwnRef<T> val) : is_some_(true)
     {
-      val.store_at(&value_);
+      construct_at(&value_, std::move(val));
     }
 
     template <ts_generate_fn<T> Fn>
@@ -377,7 +377,7 @@ namespace soul
   [[nodiscard]]
   constexpr auto Option<T>::Some(OwnRef<T> val) noexcept -> Option
   {
-    return Option(Construct::some, val.forward());
+    return Option(Construct::some, std::move(val));
   }
 
   template <typeset T>

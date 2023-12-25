@@ -272,7 +272,7 @@ namespace soul
       if (size_ == capacity_) {
         const auto new_capacity = get_new_capacity(capacity_);
         T* new_buffer = allocator_->template allocate_array<T>(new_capacity);
-        item.store_at(new_buffer + size_);
+        construct_at(new_buffer + size_, std::move(item));
         UninitializedRelocate(buffer_, capacity_, head_idx_, size_, new_buffer);
         if (buffer_ != stack_storage_.data()) {
           allocator_->deallocate_array(buffer_, capacity_);
@@ -282,7 +282,7 @@ namespace soul
         head_idx_ = 0;
       } else {
         const auto offset = (head_idx_ + size_) % capacity_;
-        item.store_at(buffer_ + offset);
+        construct_at(buffer_ + offset, std::move(item));
       }
       ++size_;
     }
@@ -302,7 +302,7 @@ namespace soul
       if (size_ == capacity_) {
         const auto new_capacity = get_new_capacity(capacity_);
         T* new_buffer = allocator_->template allocate_array<T>(new_capacity);
-        item.store_at(new_buffer + new_capacity - 1);
+        construct_at(new_buffer + new_capacity - 1, std::move(item));
         UninitializedRelocate(buffer_, capacity_, head_idx_, size_, new_buffer);
         if (buffer_ != stack_storage_.data()) {
           allocator_->deallocate_array(buffer_, capacity_);
@@ -312,7 +312,7 @@ namespace soul
         head_idx_ = new_capacity - 1;
       } else {
         decrement_head_idx();
-        item.store_at(buffer_ + head_idx_);
+        construct_at(buffer_ + head_idx_, std::move(item));
       }
       ++size_;
     }

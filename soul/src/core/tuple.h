@@ -206,7 +206,7 @@ namespace soul
 
     constexpr Tuple(OwnRef<T> arg, OwnRef<Ts>... args) // NOLINT
         : storage_(
-            std::make_index_sequence<sizeof...(Ts) + 1>(), arg.forward_ref(), args.forward_ref()...)
+            std::make_index_sequence<sizeof...(Ts) + 1>(), std::move(arg), std::move(args)...)
     {
     }
 

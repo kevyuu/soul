@@ -42,14 +42,14 @@ namespace soul
       template <typename T>
       constexpr explicit RecursiveUnion(OwnRef<T> other)
         requires(is_same_v<T, T_first>)
-          : first_(other)
+          : first_(std::move(other))
       {
       }
 
       template <typename T>
       constexpr explicit RecursiveUnion(OwnRef<T> other)
         requires(!is_same_v<T, T_first>)
-          : remaining_(other.forward())
+          : remaining_(std::move(other))
       {
       }
 
@@ -345,7 +345,7 @@ namespace soul
     template <typeset T>
     constexpr explicit Variant(Construct::From /* tag */, OwnRef<T> val)
       requires(is_variant_alt_v<T>)
-        : storage_(val.forward()), active_index_(get_type_index_v<T, Ts...>)
+        : storage_(std::move(val)), active_index_(get_type_index_v<T, Ts...>)
     {
     }
 

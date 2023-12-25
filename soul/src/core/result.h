@@ -159,13 +159,13 @@ namespace soul
     [[nodiscard]]
     static constexpr auto Ok(OwnRef<OkT> val) noexcept -> Result
     {
-      return Result(Construct::ok, val.forward());
+      return Result(Construct::ok, std::move(val));
     }
 
     [[nodiscard]]
     static constexpr auto Err(OwnRef<ErrT> val) noexcept -> Result
     {
-      return Result(Construct::err, val.forward());
+      return Result(Construct::err, std::move(val));
     }
 
     template <ts_generate_fn<OkT> Fn>
@@ -443,12 +443,12 @@ namespace soul
     };
 
     constexpr explicit Result(Construct::Ok /* tag */, OwnRef<OkT> ok_val)
-        : ok_val_(ok_val), state_(State::OK)
+        : ok_val_(std::move(ok_val)), state_(State::OK)
     {
     }
 
     constexpr explicit Result(Construct::Err /* tag */, OwnRef<ErrT> err_val)
-        : err_val_(err_val), state_(State::ERR)
+        : err_val_(std::move(err_val)), state_(State::ERR)
     {
     }
 

@@ -354,21 +354,26 @@ namespace soul
       }
     }
 
-    void do_insert(OwnRef<EntryT, true> entry)
+    void do_insert(OwnRef<EntryT, true> entry_ref)
     {
-      const auto& key = get_key_fn_(entry.const_ref());
-      const auto hash_code = hash_fn_(key);
+      EntryT entry_tmp = std::move(entry_ref);
+      const auto hash_code = hash_fn_(get_key_fn_(entry_tmp));
       const auto home_index = home_index_from_hash(hash_code);
       const auto expected_max_psl = math::floor_log2(size_ + 1) + 2;
       auto bucket_index = home_index;
       auto metadata = Metadata::FromHash(hash_code);
       while (!metadatas_[bucket_index].is_empty()) {
         auto& current_entry = entries_[bucket_index];
-        if (metadata == metadatas_[bucket_index] && key == get_key_fn_(current_entry)) {
-          current_entry = entry.forward_ref();
+        if (
+          metadata == metadatas_[bucket_index] &&
+          get_key_fn_(entry_tmp) == get_key_fn_(current_entry)) {
+          current_entry = std::move(entry_tmp);
           return;
         } else if (metadatas_[bucket_index] < metadata) {
-          entry.swap_at(&current_entry);
+          using std::swap;
+          EntryT tmp = std::move(current_entry);
+          current_entry = std::move(entry_tmp);
+          entry_tmp = std::move(tmp);
           swap(metadata, metadatas_[bucket_index]);
         }
         metadata.increment_psl();
@@ -383,7 +388,7 @@ namespace soul
           metadata.get_psl(),
           expected_max_psl);
       }
-      entry.store_at(&entries_[bucket_index]);
+      construct_at(&entries_[bucket_index], std::move(entry_tmp));
       metadatas_[bucket_index] = metadata;
       size_++;
     }
@@ -657,7 +662,7 @@ namespace soul
         allocate_slots_from_shift();
 
         if (old_slot_count == 0) {
-          do_insert(entry.forward());
+          do_insert(std::move(entry));
         } else {
           size_ = 0;
           for (usize bucket_index = 0; bucket_index < old_slot_count; bucket_index++) {
@@ -666,12 +671,12 @@ namespace soul
               destroy_at(&old_entries[bucket_index]);
             }
           }
-          do_insert(entry.forward());
+          do_insert(std::move(entry));
           allocator_->deallocate_array(old_metadatas, slot_count_ + 1);
           allocator_->deallocate_array(old_entries, old_slot_count);
         }
       } else {
-        do_insert(entry.forward());
+        do_insert(std::move(entry));
       }
     }
 
