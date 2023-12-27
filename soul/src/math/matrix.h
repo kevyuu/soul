@@ -441,7 +441,7 @@ namespace soul::math
   [[nodiscard]]
   inline auto perspective(T fovy, T aspect, T z_near, T z_far) -> Matrix<T, 4, 4>
   {
-    SOUL_ASSERT(0, abs(aspect - std::numeric_limits<T>::epsilon()) > T(0), "");
+    SOUL_ASSERT(0, abs(aspect - std::numeric_limits<T>::epsilon()) > T(0));
 
     T fov_rad = fovy;
     T focal_length = 1.0f / std::tan(fov_rad / 2.0f);

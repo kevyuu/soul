@@ -42,7 +42,7 @@ namespace soul
 
     constexpr Span(MaybeNull<pointer> data, size_type size) : data_(data), size_(size)
     {
-      SOUL_ASSERT_LITE(
+      SOUL_ASSERT(
         0, (size != 0 && data != nullptr) || (size == 0), "Non zero size cannot hold nullptr");
     }
 
@@ -50,7 +50,7 @@ namespace soul
 
     constexpr Span(pointer data, size_type size) : data_(data), size_(size)
     {
-      SOUL_ASSERT_LITE(
+      SOUL_ASSERT(
         0, (size != 0 && data != nullptr) || (size == 0), "Non zero size cannot hold nullptr");
     }
 
@@ -137,23 +137,13 @@ namespace soul
 
     constexpr auto operator[](usize idx) -> reference
     {
-      SOUL_ASSERT(
-        0,
-        idx < size_,
-        "Out of bound access to span detected. idx = %llu, _size = %llu",
-        idx,
-        size_);
+      SOUL_ASSERT_UPPER_BOUND_CHECK(idx, size_);
       return data_[idx];
     }
 
     constexpr auto operator[](usize idx) const -> const_reference
     {
-      SOUL_ASSERT(
-        0,
-        idx < size_,
-        "Out of bound access to span detected. idx = %llu, _size = %llu",
-        idx,
-        size_);
+      SOUL_ASSERT_UPPER_BOUND_CHECK(idx, size_);
       return data_[idx];
     }
 

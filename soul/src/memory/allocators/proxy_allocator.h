@@ -260,7 +260,7 @@ namespace soul::memory
 
     void on_post_deallocate() override {}
 
-    void on_pre_cleanup() override { SOUL_ASSERT(0, _counter == 0, ""); }
+    void on_pre_cleanup() override { SOUL_ASSERT(0, _counter == 0); }
 
     void on_post_cleanup() override {}
 
@@ -294,7 +294,7 @@ namespace soul::memory
 
     auto on_post_allocate(const Allocation allocation) -> Allocation override
     {
-      SOUL_ASSERT(0, allocation.size == current_alloc_size_, "");
+      SOUL_ASSERT(0, allocation.size == current_alloc_size_);
       memset(allocation.addr, on_alloc_clear_value_, current_alloc_size_);
       return allocation;
     }
@@ -357,7 +357,7 @@ namespace soul::memory
         util::pointer_add(allocation.addr, GUARD_SIZE + current_alloc_size_),
         GUARD_FLAG,
         GUARD_SIZE);
-      SOUL_ASSERT(0, allocation.size > 2ull * GUARD_SIZE, "");
+      SOUL_ASSERT(0, allocation.size > 2ull * GUARD_SIZE);
       return {util::pointer_add(allocation.addr, GUARD_SIZE), allocation.size - 2ull * GUARD_SIZE};
     }
 
@@ -368,8 +368,8 @@ namespace soul::memory
         auto* base_front = cast<byte*>(util::pointer_sub(dealloc_param.addr, GUARD_SIZE));
         auto* base_back = cast<byte*>(util::pointer_add(dealloc_param.addr, dealloc_param.size));
         for (usize i = 0; i < GUARD_SIZE; i++) {
-          SOUL_ASSERT(0, base_front[i] == GUARD_FLAG, "");
-          SOUL_ASSERT(0, base_back[i] == GUARD_FLAG, "");
+          SOUL_ASSERT(0, base_front[i] == GUARD_FLAG);
+          SOUL_ASSERT(0, base_back[i] == GUARD_FLAG);
         }
         return {
           util::pointer_sub(dealloc_param.addr, GUARD_SIZE),

@@ -96,7 +96,7 @@ namespace soul::memory
     template <typename Type>
     void destroy(NotNull<Type*> ptr)
     {
-      SOUL_ASSERT(0, ptr != nullptr, "");
+      SOUL_ASSERT(0, ptr != nullptr);
       if constexpr (!std::is_trivially_destructible_v<Type>) {
         ptr->~Type();
       }

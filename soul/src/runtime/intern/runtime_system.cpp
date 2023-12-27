@@ -1,7 +1,7 @@
 #include <thread>
 
 #include "core/architecture.h"
-#include "core/panic.h"
+#include "core/panic_format.h"
 #include "core/profile.h"
 #include "core/string.h"
 #include "core/util.h"
@@ -165,10 +165,10 @@ namespace soul::runtime
                                 ? config.threadCount
                                 : soul::cast<ThreadCount>(get_hardware_thread_count());
 
-    SOUL_ASSERT(
+    SOUL_ASSERT_FORMAT(
       0,
       thread_count <= Constant::MAX_THREAD_COUNT,
-      "Thread count : %d is more than MAX_THREAD_COUNT : %d",
+      "Thread count : {} is more than MAX_THREAD_COUNT : {}",
       thread_count,
       Constant::MAX_THREAD_COUNT);
     db_.thread_count = thread_count;
@@ -239,10 +239,10 @@ namespace soul::runtime
   {
     SOUL_ASSERT_MAIN_THREAD();
 
-    SOUL_ASSERT(
+    SOUL_ASSERT_FORMAT(
       0,
       db_.active_task_count == 0,
-      "There is still pending task in work deque! Active Task Count = %d.",
+      "There is still pending task in work deque! Active Task Count = {}.",
       db_.active_task_count);
     terminate();
     for (u64 i = 1; i < db_.thread_count; i++) {
@@ -262,13 +262,13 @@ namespace soul::runtime
 
   void System::push_allocator(memory::Allocator* allocator)
   {
-    SOUL_ASSERT(0, db_.default_allocator != nullptr, "");
+    SOUL_ASSERT(0, db_.default_allocator != nullptr);
     get_thread_context().allocator_stack.push_back(allocator);
   }
 
   void System::pop_allocator()
   {
-    SOUL_ASSERT(0, !get_thread_context().allocator_stack.empty(), "");
+    SOUL_ASSERT(0, !get_thread_context().allocator_stack.empty());
     get_thread_context().allocator_stack.pop_back();
   }
 
@@ -289,7 +289,7 @@ namespace soul::runtime
 
   auto System::get_temp_allocator() -> TempAllocator*
   {
-    SOUL_ASSERT(0, get_thread_context().temp_allocator != nullptr, "");
+    SOUL_ASSERT(0, get_thread_context().temp_allocator != nullptr);
     return get_thread_context().temp_allocator;
   }
 

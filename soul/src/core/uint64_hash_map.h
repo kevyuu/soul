@@ -1,7 +1,7 @@
 #pragma once
 
 #include "core/config.h"
-#include "core/panic.h"
+#include "core/panic_format.h"
 #include "core/type.h"
 #include "memory/allocator.h"
 
@@ -85,11 +85,11 @@ namespace soul
 
     auto init_assert() -> void
     {
-      SOUL_ASSERT(0, indexes_ == nullptr, "");
-      SOUL_ASSERT(0, values_ == nullptr, "");
-      SOUL_ASSERT(0, size_ == 0, "");
-      SOUL_ASSERT(0, capacity_ == 0, "");
-      SOUL_ASSERT(0, max_dib_ == 0, "");
+      SOUL_ASSERT(0, indexes_ == nullptr);
+      SOUL_ASSERT(0, values_ == nullptr);
+      SOUL_ASSERT(0, size_ == 0);
+      SOUL_ASSERT(0, capacity_ == 0);
+      SOUL_ASSERT(0, max_dib_ == 0);
     }
 
     [[nodiscard]]
@@ -253,7 +253,7 @@ namespace soul
   template <typename T>
   auto UInt64HashMap<T>::reserve(usize capacity) -> void
   {
-    SOUL_ASSERT(0, size_ == capacity_, "");
+    SOUL_ASSERT(0, size_ == capacity_);
     Index* old_indexes = indexes_;
     indexes_ = static_cast<Index*>(allocator_->allocate(capacity * sizeof(Index), alignof(Index)));
     memset(indexes_, 0, sizeof(Index) * capacity);
@@ -265,8 +265,8 @@ namespace soul
     size_ = 0;
 
     if (old_capacity != 0) {
-      SOUL_ASSERT(0, old_indexes != nullptr, "");
-      SOUL_ASSERT(0, old_values != nullptr, "");
+      SOUL_ASSERT(0, old_indexes != nullptr);
+      SOUL_ASSERT(0, old_values != nullptr);
       for (usize i = 0; i < old_capacity; ++i) {
         if (old_indexes[i].dib != 0) {
           add(old_indexes[i].key, std::move(old_values[i]));
@@ -328,7 +328,7 @@ namespace soul
   auto UInt64HashMap<T>::remove(u64 key) -> void
   {
     u32 index = find_index(key);
-    SOUL_ASSERT(
+    SOUL_ASSERT_FORMAT(
       0,
       indexes_[index].key == key && indexes_[index].dib != 0,
       "Does not found any key : %d in the hash map",
@@ -340,7 +340,7 @@ namespace soul
   auto UInt64HashMap<T>::operator[](u64 key) -> T&
   {
     u32 index = find_index(key);
-    SOUL_ASSERT(0, indexes_[index].key == key && indexes_[index].dib != 0, "");
+    SOUL_ASSERT(0, indexes_[index].key == key && indexes_[index].dib != 0);
     return values_[index];
   }
 
@@ -348,7 +348,7 @@ namespace soul
   auto UInt64HashMap<T>::operator[](u64 key) const -> const T&
   {
     u32 index = find_index(key);
-    SOUL_ASSERT(0, indexes_[index].key == key && indexes_[index].dib != 0, "");
+    SOUL_ASSERT(0, indexes_[index].key == key && indexes_[index].dib != 0);
     return values_[index];
   }
 

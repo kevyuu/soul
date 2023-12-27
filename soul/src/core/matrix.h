@@ -4,7 +4,7 @@
 #include "core/compiler.h"
 #include "core/floating_point.h"
 #include "core/integer.h"
-#include "core/panic_lite.h"
+#include "core/panic.h"
 #include "core/vec.h"
 
 namespace soul
@@ -120,13 +120,13 @@ namespace soul
 
     auto operator[](u8 r) -> RowType&
     {
-      SOUL_ASSERT_LITE(0, r < RowCount, "");
+      SOUL_ASSERT(0, r < RowCount);
       return rows_[r];
     }
 
     auto operator[](u8 r) const -> const RowType&
     {
-      SOUL_ASSERT_LITE(0, r < RowCount, "");
+      SOUL_ASSERT(0, r < RowCount);
       return rows_[r];
     }
 
@@ -143,19 +143,19 @@ namespace soul
 
     auto row(u8 r) const -> RowType
     {
-      SOUL_ASSERT_LITE(0, r < RowCount, "");
+      SOUL_ASSERT(0, r < RowCount);
       return rows_[r];
     }
 
     void set_row(u8 r, const RowType& v)
     {
-      SOUL_ASSERT_LITE(0, r < RowCount, "");
+      SOUL_ASSERT(0, r < RowCount);
       rows_[r] = v;
     }
 
     auto col(u8 col) const -> ColType
     {
-      SOUL_ASSERT_LITE(0, col < ColCount, "");
+      SOUL_ASSERT(0, col < ColCount);
       ColType result;
       for (u8 r = 0; r < RowCount; ++r) {
         result[r] = rows_[r][col];
@@ -165,7 +165,7 @@ namespace soul
 
     void set_col(u8 col, const ColType& v)
     {
-      SOUL_ASSERT_LITE(0, col < ColCount, "");
+      SOUL_ASSERT(0, col < ColCount);
       for (u8 r = 0; r < RowCount; ++r) {
         rows_[r][col] = v[r];
       }

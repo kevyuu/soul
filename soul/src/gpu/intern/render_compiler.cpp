@@ -83,7 +83,7 @@ namespace soul::gpu::impl
         continue;
       }
       const Buffer& vertex_buffer = gpu_system_->get_buffer(vert_buf_id);
-      SOUL_ASSERT(0, vertex_buffer.desc.usage_flags.test(BufferUsage::VERTEX), "");
+      SOUL_ASSERT(0, vertex_buffer.desc.usage_flags.test(BufferUsage::VERTEX));
       VkDeviceSize offsets[] = {0};
       vkCmdBindVertexBuffers(command_buffer_, vert_buf_idx, 1, &vertex_buffer.vk_handle, offsets);
     }
@@ -107,13 +107,13 @@ namespace soul::gpu::impl
         continue;
       }
       const Buffer& vertex_buffer = gpu_system_->get_buffer(vert_buf_id);
-      SOUL_ASSERT(0, vertex_buffer.desc.usage_flags.test(BufferUsage::VERTEX), "");
+      SOUL_ASSERT(0, vertex_buffer.desc.usage_flags.test(BufferUsage::VERTEX));
       VkDeviceSize offsets[] = {0};
       vkCmdBindVertexBuffers(command_buffer_, vert_buf_idx, 1, &vertex_buffer.vk_handle, offsets);
     }
 
     const Buffer& index_buffer = gpu_system_->get_buffer(command.index_buffer_id);
-    SOUL_ASSERT(0, index_buffer.desc.usage_flags.test(gpu::BufferUsage::INDEX), "");
+    SOUL_ASSERT(0, index_buffer.desc.usage_flags.test(gpu::BufferUsage::INDEX));
 
     vkCmdBindIndexBuffer(
       command_buffer_, index_buffer.vk_handle, command.index_offset, vk_cast(command.index_type));
@@ -133,13 +133,13 @@ namespace soul::gpu::impl
         continue;
       }
       const Buffer& vertex_buffer = gpu_system_->get_buffer(vert_buf_id);
-      SOUL_ASSERT(0, vertex_buffer.desc.usage_flags.test(BufferUsage::VERTEX), "");
+      SOUL_ASSERT(0, vertex_buffer.desc.usage_flags.test(BufferUsage::VERTEX));
       VkDeviceSize offsets[] = {0};
       vkCmdBindVertexBuffers(command_buffer_, vert_buf_idx, 1, &vertex_buffer.vk_handle, offsets);
     }
 
     const Buffer& index_buffer = gpu_system_->get_buffer(command.index_buffer_id);
-    SOUL_ASSERT(0, index_buffer.desc.usage_flags.test(gpu::BufferUsage::INDEX), "");
+    SOUL_ASSERT(0, index_buffer.desc.usage_flags.test(gpu::BufferUsage::INDEX));
 
     vkCmdBindIndexBuffer(
       command_buffer_, index_buffer.vk_handle, command.index_offset, vk_cast(command.index_type));
@@ -237,7 +237,7 @@ namespace soul::gpu::impl
     const auto gpu_allocator = gpu_system_->get_gpu_allocator();
     const auto& dst_buffer = gpu_system_->get_buffer(command.dst_buffer);
     if ((dst_buffer.memory_property_flags & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) != 0u) {
-      SOUL_ASSERT(0, dst_buffer.memory_property_flags & VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, "");
+      SOUL_ASSERT(0, dst_buffer.memory_property_flags & VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
       void* mapped_data; // NOLINT
       vmaMapMemory(gpu_allocator, dst_buffer.allocation, &mapped_data);
       for (usize region_idx = 0; region_idx < command.regions.size(); region_idx++) {
@@ -512,7 +512,7 @@ namespace soul::gpu::impl
   auto RenderCompiler::apply_pipeline_state(PipelineStateID pipeline_state_id) -> void
   {
     SOUL_PROFILE_ZONE();
-    SOUL_ASSERT(0, pipeline_state_id.is_valid(), "");
+    SOUL_ASSERT(0, pipeline_state_id.is_valid());
     const PipelineState& pipeline_state = gpu_system_->get_pipeline_state(pipeline_state_id);
     apply_pipeline_state(pipeline_state.vk_handle, pipeline_state.bind_point);
   }

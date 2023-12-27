@@ -16,7 +16,7 @@
 
 // ReSharper disable All
 #include "ktx_bundle.h"
-#include "core/panic_lite.h"
+#include "core/panic.h"
 
 #include <string>
 #include <vector>
@@ -115,11 +115,11 @@ namespace image
   KtxBundle::KtxBundle(uint8_t const* bytes, uint32_t nbytes)
       : mBlobs(new KtxBlobList), mMetadata(new KtxMetadata)
   {
-    SOUL_ASSERT_LITE(0, sizeof(SerializationHeader) <= nbytes, "KTX buffer is too small");
+    SOUL_ASSERT(0, sizeof(SerializationHeader) <= nbytes, "KTX buffer is too small");
 
     // First, "parse" the header by casting it to a struct.
     SerializationHeader const* header = (SerializationHeader const*)bytes;
-    SOUL_ASSERT_LITE(0, memcmp(header->magic, MAGIC, 12) == 0, "KTX has unexpected identifier");
+    SOUL_ASSERT(0, memcmp(header->magic, MAGIC, 12) == 0, "KTX has unexpected identifier");
     mInfo = header->info;
 
     // The spec allows 0 or 1 for the number of array layers and mipmap levels, but we replace 0
@@ -271,7 +271,7 @@ namespace image
           if (blobSize == 0) {
             blobSize = thisBlobSize;
           }
-          SOUL_ASSERT_LITE(0, blobSize == thisBlobSize, "Inconsistent blob sizes within LOD");
+          SOUL_ASSERT(0, blobSize == thisBlobSize, "Inconsistent blob sizes within LOD");
           total += thisBlobSize;
         }
       }

@@ -2,6 +2,7 @@
 
 #include <algorithm>
 
+#include "core/panic.h"
 #include "core/span.h"
 #include "core/type.h"
 #include "core/type_traits.h"
@@ -260,24 +261,14 @@ namespace soul
   template <typeset T, usize ArrSizeV>
   constexpr auto Array<T, ArrSizeV>::operator[](usize idx) -> reference
   {
-    SOUL_ASSERT(
-      0,
-      idx < ArrSizeV,
-      "Out of bound access to array detected. idx = {}, _size = ",
-      idx,
-      ArrSizeV);
+    SOUL_ASSERT_UPPER_BOUND_CHECK(idx, ArrSizeV);
     return list[idx];
   }
 
   template <typeset T, usize ArrSizeV>
   constexpr auto Array<T, ArrSizeV>::operator[](usize idx) const -> const_reference
   {
-    SOUL_ASSERT(
-      0,
-      idx < ArrSizeV,
-      "Out of bound access to array detected. idx = {}, _size={}",
-      idx,
-      ArrSizeV);
+    SOUL_ASSERT_UPPER_BOUND_CHECK(idx, ArrSizeV);
     return list[idx];
   }
 

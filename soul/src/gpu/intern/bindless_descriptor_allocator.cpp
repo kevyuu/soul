@@ -28,7 +28,7 @@ namespace soul::gpu::impl
     if (device_ != VK_NULL_HANDLE && descriptor_pool_ != VK_NULL_HANDLE) {
       vkDestroyDescriptorPool(device_, descriptor_pool_, nullptr);
     } else {
-      SOUL_ASSERT(0, device_ == VK_NULL_HANDLE && descriptor_pool_ == VK_NULL_HANDLE, "");
+      SOUL_ASSERT(0, device_ == VK_NULL_HANDLE && descriptor_pool_ == VK_NULL_HANDLE);
     }
   }
 

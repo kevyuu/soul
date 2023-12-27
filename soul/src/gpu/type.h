@@ -1262,8 +1262,8 @@ namespace soul::gpu
 
       auto commit_access(QueueType queue, PipelineStageFlags stages, AccessFlags accesses) -> void
       {
-        SOUL_ASSERT(0, (sync_stages & stages) == stages, "");
-        SOUL_ASSERT(0, unavailable_accesses.none(), "");
+        SOUL_ASSERT(0, (sync_stages & stages) == stages);
+        SOUL_ASSERT(0, unavailable_accesses.none());
         queue_owner = queue;
         unavailable_pipeline_stages |= stages;
         const auto write_accesses = (accesses & ACCESS_FLAGS_WRITE);

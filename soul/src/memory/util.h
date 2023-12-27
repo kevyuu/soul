@@ -7,7 +7,7 @@ namespace soul::memory::util
   [[nodiscard]]
   static auto pointer_page_size_round(const usize size, const usize page_size) -> usize
   {
-    SOUL_ASSERT(0, page_size != 0, "");
+    SOUL_ASSERT(0, page_size != 0);
     return ((size + page_size) & ~(page_size - 1));
   }
 

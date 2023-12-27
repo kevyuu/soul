@@ -9,7 +9,7 @@
 #include "core/meta.h"
 #include "core/objops.h"
 #include "core/panic.h"
-#include "core/panic_lite.h"
+#include "core/panic.h"
 #include "core/robin_table.h"
 #include "core/type_traits.h"
 #include "core/util.h"

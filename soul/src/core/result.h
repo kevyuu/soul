@@ -3,6 +3,7 @@
 #include "core/builtins.h"
 #include "core/option.h"
 #include "core/own_ref.h"
+#include "core/panic.h"
 #include "core/type_traits.h"
 
 namespace soul

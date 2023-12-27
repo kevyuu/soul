@@ -8,7 +8,7 @@
 #include "core/log.h"
 #include "core/meta.h"
 #include "core/objops.h"
-#include "core/panic_lite.h"
+#include "core/panic_format.h"
 #include "core/span.h"
 #include "math/math.h"
 #include "memory/allocator.h"
@@ -379,9 +379,9 @@ namespace soul
         metadata.increment_psl();
         bucket_index++;
         if (metadata.is_psl_overflow()) {
-          SOUL_PANIC_LITE("RobinTable: PSL overflow");
+          SOUL_PANIC("RobinTable: PSL overflow");
         }
-        SOUL_ASSERT(
+        SOUL_ASSERT_FORMAT(
           0,
           metadata.get_psl() <= expected_max_psl,
           "Robin table psl({}) reach higher than max expected psl({})",
@@ -725,7 +725,7 @@ namespace soul
     [[nodiscard]]
     auto entry_ref(QueryT key) -> EntryT&
     {
-      SOUL_ASSERT(0, slot_count_ > 0, "");
+      SOUL_ASSERT(0, slot_count_ > 0);
       const auto index = do_find_index(key);
       return entries_[index];
     }
@@ -735,7 +735,7 @@ namespace soul
     [[nodiscard]]
     auto entry_ref(QueryT key) const -> const EntryT&
     {
-      SOUL_ASSERT(0, slot_count_ > 0, "");
+      SOUL_ASSERT(0, slot_count_ > 0);
       const auto index = do_find_index(key);
       return entries_[index];
     }
@@ -743,7 +743,7 @@ namespace soul
     [[nodiscard]]
     auto entry_ref(const KeyT& key) -> EntryT&
     {
-      SOUL_ASSERT(0, slot_count_ > 0, "");
+      SOUL_ASSERT(0, slot_count_ > 0);
       const auto index = do_find_index(key);
       return entries_[index];
     }
@@ -751,7 +751,7 @@ namespace soul
     [[nodiscard]]
     auto entry_ref(const KeyT& key) const -> const EntryT&
     {
-      SOUL_ASSERT(0, slot_count_ > 0, "");
+      SOUL_ASSERT(0, slot_count_ > 0);
       const auto index = do_find_index(key);
       return entries_[index];
     }

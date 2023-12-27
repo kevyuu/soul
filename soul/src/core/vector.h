@@ -985,16 +985,14 @@ namespace soul
   template <typename T, memory::allocator_type AllocatorT, usize InlineSizeV>
   auto Vector<T, AllocatorT, InlineSizeV>::operator[](usize idx) -> reference
   {
-    SOUL_ASSERT(
-      0, idx < size_, "Out of bound access to array detected. idx = {}, _size = {}", idx, size_);
+    SOUL_ASSERT_UPPER_BOUND_CHECK(idx, size_);
     return buffer_[idx];
   }
 
   template <typename T, memory::allocator_type AllocatorT, usize InlineSizeV>
   auto Vector<T, AllocatorT, InlineSizeV>::operator[](usize idx) const -> const_reference
   {
-    SOUL_ASSERT(
-      0, idx < size_, "Out of bound access to array detected. idx = {}, _size= {}", idx, size_);
+    SOUL_ASSERT_UPPER_BOUND_CHECK(idx, size_);
     return buffer_[idx];
   }
 

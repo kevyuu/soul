@@ -4,6 +4,7 @@
 
 #include "core/flag_map.h"
 #include "core/format.h"
+#include "core/panic.h"
 #include "core/string.h"
 
 namespace soul

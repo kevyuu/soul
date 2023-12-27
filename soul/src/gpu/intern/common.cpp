@@ -33,7 +33,7 @@ namespace soul::gpu
                 },
             };
           }
-          SOUL_ASSERT(0, desc.type == RTGeometryType::AABB, "");
+          SOUL_ASSERT(0, desc.type == RTGeometryType::AABB);
           const auto& aabb_desc = desc.content.aabbs;
           return {
             .aabbs =
@@ -74,7 +74,7 @@ namespace soul::gpu
         if (desc.type == RTGeometryType::TRIANGLE) {
           return desc.content.triangles.index_count / 3;
         }
-        SOUL_ASSERT(0, desc.type == RTGeometryType::AABB, "");
+        SOUL_ASSERT(0, desc.type == RTGeometryType::AABB);
         return desc.content.aabbs.count;
       },
       allocator);

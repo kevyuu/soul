@@ -8,7 +8,7 @@
 
 #include "core/builtins.h"
 #include "core/compiler.h"
-#include "core/panic_lite.h"
+#include "core/panic.h"
 #include "core/type_traits.h"
 
 namespace soul
@@ -43,7 +43,7 @@ namespace soul
   {
     using Dst = std::remove_pointer_t<PointerDst>;
     if constexpr (!std::is_same_v<PointerDst, void*>) {
-      SOUL_ASSERT_LITE(
+      SOUL_ASSERT(
         0,
         reinterpret_cast<uptr>(srcPtr) % alignof(Dst) == 0,
         "Source pointer is not aligned in PointerDst alignment!");
@@ -55,11 +55,11 @@ namespace soul
   template <std::integral IntegralDst, std::integral IntegralSrc>
   constexpr auto cast(IntegralSrc src) -> IntegralDst
   {
-    SOUL_ASSERT_LITE(
+    SOUL_ASSERT(
       0,
       static_cast<u64>(src) <= std::numeric_limits<IntegralDst>::max(),
       "Source value is larger than the destintation type maximum!");
-    SOUL_ASSERT_LITE(
+    SOUL_ASSERT(
       0,
       static_cast<i64>(src) >= std::numeric_limits<IntegralDst>::min(),
       "Source value is smaller than the destination type minimum!");

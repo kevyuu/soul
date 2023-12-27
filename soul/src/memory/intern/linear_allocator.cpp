@@ -7,7 +7,7 @@ namespace soul::memory
   LinearAllocator::LinearAllocator(const char* name, const usize size, Allocator* backing_allocator)
       : Allocator(name), backing_allocator_(backing_allocator)
   {
-    SOUL_ASSERT(0, backing_allocator_ != nullptr, "");
+    SOUL_ASSERT(0, backing_allocator_ != nullptr);
     const Allocation allocation = backing_allocator_->try_allocate(size, 0, name);
     base_addr_ = allocation.addr;
     current_addr_ = base_addr_;
@@ -48,7 +48,7 @@ namespace soul::memory
 
   void LinearAllocator::rewind(void* addr)
   {
-    SOUL_ASSERT(0, addr >= base_addr_ && addr <= current_addr_, "");
+    SOUL_ASSERT(0, addr >= base_addr_ && addr <= current_addr_);
     current_addr_ = addr;
   }
 

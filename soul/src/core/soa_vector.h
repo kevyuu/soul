@@ -6,7 +6,9 @@
 #include "core/array.h"
 #include "core/config.h"
 #include "core/integer.h"
+#include "core/panic.h"
 #include "core/tuple.h"
+
 #include "memory/allocator.h"
 
 namespace soul
@@ -99,7 +101,7 @@ namespace soul
 
     void remove(usize index)
     {
-      SOUL_ASSERT(0, index < size_, "Element does not exist!");
+      SOUL_ASSERT_UPPER_BOUND_CHECK(index, size_);
       if (size_ > 1) {
         structure_buffers_.for_each(
           [remove_index = index, size = size_]<usize IndexV>(auto* structure_buffer) {
@@ -161,7 +163,7 @@ namespace soul
     [[nodiscard]]
     constexpr auto ref(usize element_index) const -> const type_at_t<StrucureIndexV>&
     {
-      SOUL_ASSERT(0, element_index < size_, "Element does not exist!");
+      SOUL_ASSERT_UPPER_BOUND_CHECK(element_index, size_);
       return structure_buffers_.template ref<StrucureIndexV>()[element_index];
     }
 
@@ -169,7 +171,7 @@ namespace soul
     [[nodiscard]]
     constexpr auto ref(usize element_index) -> type_at_t<StructureIndexV>&
     {
-      SOUL_ASSERT(0, element_index < size_, "Element does not exist!");
+      SOUL_ASSERT_UPPER_BOUND_CHECK(element_index, size_);
       return structure_buffers_.template ref<StructureIndexV>()[element_index];
     }
 
@@ -218,7 +220,7 @@ namespace soul
         usize unalignment = (offsets[i - 1] + sizes[i - 1]) % alignments[i];
         usize alignment = unalignment != 0u ? (alignments[i] - unalignment) : 0;
         offsets[i] = offsets[i - 1] + (sizes[i - 1] + alignment);
-        SOUL_ASSERT(0, offsets[i] % alignments[i] == 0, "");
+        SOUL_ASSERT(0, offsets[i] % alignments[i] == 0);
       }
       return offsets;
     }

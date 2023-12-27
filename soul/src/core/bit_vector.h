@@ -4,7 +4,9 @@
 
 #include "core/bit_ref.h"
 #include "core/config.h"
+#include "core/panic.h"
 #include "core/type.h"
+
 #include "memory/allocator.h"
 
 namespace soul
@@ -245,7 +247,7 @@ namespace soul
   template <ts_bit_block BlockT, memory::allocator_type AllocatorT>
   BitVector<BlockT, AllocatorT>::~BitVector()
   {
-    SOUL_ASSERT(0, allocator_ != nullptr || blocks_ == nullptr, "");
+    SOUL_ASSERT(0, allocator_ != nullptr || blocks_ == nullptr);
     if (allocator_ == nullptr) {
       return;
     }
@@ -406,42 +408,42 @@ namespace soul
   template <ts_bit_block BlockT, memory::allocator_type AllocatorT>
   void BitVector<BlockT, AllocatorT>::pop_back()
   {
-    SOUL_ASSERT(0, size_ != 0, "");
+    SOUL_ASSERT(0, size_ != 0);
     size_--;
   }
 
   template <ts_bit_block BlockT, memory::allocator_type AllocatorT>
   void BitVector<BlockT, AllocatorT>::pop_back(const usize count)
   {
-    SOUL_ASSERT(0, size_ >= count, "");
+    SOUL_ASSERT(0, size_ >= count);
     size_ -= count;
   }
 
   template <ts_bit_block BlockT, memory::allocator_type AllocatorT>
   auto BitVector<BlockT, AllocatorT>::front() noexcept -> reference
   {
-    SOUL_ASSERT(0, size_ != 0, "");
+    SOUL_ASSERT(0, size_ != 0);
     return reference(blocks_, 0);
   }
 
   template <ts_bit_block BlockT, memory::allocator_type AllocatorT>
   auto BitVector<BlockT, AllocatorT>::front() const noexcept -> const_reference
   {
-    SOUL_ASSERT(0, size_ != 0, "");
+    SOUL_ASSERT(0, size_ != 0);
     return static_cast<const_reference>(blocks_[0] & BlockT(1));
   }
 
   template <ts_bit_block BlockT, memory::allocator_type AllocatorT>
   auto BitVector<BlockT, AllocatorT>::back() noexcept -> reference
   {
-    SOUL_ASSERT(0, size_ != 0, "");
+    SOUL_ASSERT(0, size_ != 0);
     return get_bit_ref(size_ - 1);
   }
 
   template <ts_bit_block BlockT, memory::allocator_type AllocatorT>
   auto BitVector<BlockT, AllocatorT>::back() const noexcept -> const_reference
   {
-    SOUL_ASSERT(0, size_ != 0, "");
+    SOUL_ASSERT(0, size_ != 0);
     return static_cast<const_reference>(
       blocks_[get_block_index(size_ - 1)] & (BlockT(1) << get_block_offset(size_ - 1)));
   }
@@ -449,14 +451,14 @@ namespace soul
   template <ts_bit_block BlockT, memory::allocator_type AllocatorT>
   auto BitVector<BlockT, AllocatorT>::operator[](const usize index) -> reference
   {
-    SOUL_ASSERT(0, index < size_, "");
+    SOUL_ASSERT_UPPER_BOUND_CHECK(index, size_);
     return get_bit_ref(index);
   }
 
   template <ts_bit_block BlockT, memory::allocator_type AllocatorT>
   auto BitVector<BlockT, AllocatorT>::operator[](const usize index) const -> const_reference
   {
-    SOUL_ASSERT(0, index < size_, "");
+    SOUL_ASSERT_UPPER_BOUND_CHECK(index, size_);
     return get_bool(index);
   }
 

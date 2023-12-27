@@ -84,7 +84,7 @@ namespace soul::gpu::impl
     std::ranges::for_each(view_index_range, [pass_id, texture_info](SubresourceIndex view_index) {
       texture_info->get_view(view_index)->passes.push_back(pass_id);
     });
-    SOUL_ASSERT(0, !texture_info->view->passes.empty(), "");
+    SOUL_ASSERT(0, !texture_info->view->passes.empty());
   };
 
   void update_resource_info(
@@ -277,7 +277,7 @@ namespace soul::gpu::impl
         pass_node.get_shader_blas_group_read_accesses(), pass_node_id, pass_queue_type);
 
       for (const BufferNodeID node_id : pass_node.get_vertex_buffers()) {
-        SOUL_ASSERT(0, node_id.is_valid(), "");
+        SOUL_ASSERT(0, node_id.is_valid());
 
         auto buffer_info_id = get_buffer_info_index(node_id);
 
@@ -292,7 +292,7 @@ namespace soul::gpu::impl
       }
 
       for (const BufferNodeID node_id : pass_node.get_index_buffers()) {
-        SOUL_ASSERT(0, node_id.is_valid(), "");
+        SOUL_ASSERT(0, node_id.is_valid());
 
         const auto buffer_info_id = get_buffer_info_index(node_id);
 
@@ -310,7 +310,7 @@ namespace soul::gpu::impl
         pass_node.get_render_target();
 
       for (const ColorAttachment& color_attachment : colorAttachments) {
-        SOUL_ASSERT(0, color_attachment.out_node_id.id.is_valid(), "");
+        SOUL_ASSERT(0, color_attachment.out_node_id.id.is_valid());
 
         const auto texture_info_id = get_texture_info_index(color_attachment.out_node_id);
         update_texture_info(
@@ -505,7 +505,7 @@ namespace soul::gpu::impl
       BufferExecInfo& buffer_info = buffer_infos_[i];
 
       if (buffer_info.usage_flags.none()) {
-        SOUL_ASSERT_LITE(
+        SOUL_ASSERT(
           0,
           buffer_info.first_pass.is_null() && buffer_info.last_pass.is_null() &&
             buffer_info.queue_flags.none() && buffer_info.passes.empty(),
@@ -534,7 +534,7 @@ namespace soul::gpu::impl
       TextureExecInfo& texture_info = texture_infos_[i];
 
       if (texture_info.usage_flags.none()) {
-        SOUL_ASSERT_LITE(
+        SOUL_ASSERT(
           0,
           texture_info.first_pass.is_null() && texture_info.last_pass.is_null() &&
             texture_info.queue_flags.none(),
@@ -983,7 +983,7 @@ namespace soul::gpu::impl
           if (
             unavailable_pipeline_stages.none() ||
             unavailable_pipeline_stages == PipelineStageFlags{PipelineStage::TOP_OF_PIPE}) {
-            SOUL_ASSERT(0, resource_info.cache_state.unavailable_accesses.none(), "");
+            SOUL_ASSERT(0, resource_info.cache_state.unavailable_accesses.none());
           }
           VkMemoryBarrier mem_barrier = {
             .sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER,
@@ -1033,7 +1033,7 @@ namespace soul::gpu::impl
             buffer_info.cache_state.unavailable_pipeline_stages.none() ||
             buffer_info.cache_state.unavailable_pipeline_stages ==
               PipelineStageFlags{PipelineStage::TOP_OF_PIPE}) {
-            SOUL_ASSERT(0, buffer_info.cache_state.unavailable_accesses.none(), "");
+            SOUL_ASSERT(0, buffer_info.cache_state.unavailable_accesses.none());
           }
           VkBufferMemoryBarrier mem_barrier = {
             .sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER,
@@ -1158,7 +1158,7 @@ namespace soul::gpu::impl
         if (pipeline_src_stage_flags.none()) {
           pipeline_src_stage_flags = {PipelineStage::TOP_OF_PIPE};
         }
-        SOUL_ASSERT(0, pipeline_dst_stage_flags.any(), "");
+        SOUL_ASSERT(0, pipeline_dst_stage_flags.any());
         vkCmdPipelineBarrier(
           cmd_buffer.get_vk_handle(),
           vk_cast(pipeline_src_stage_flags),
@@ -1358,7 +1358,7 @@ namespace soul::gpu::impl
         "");
 
       texture.layout = layout;
-      SOUL_ASSERT(0, texture_info.get_view_count() > 0, "");
+      SOUL_ASSERT(0, texture_info.get_view_count() > 0);
       texture.cache_state = texture_info.view[0].cache_state;
       for (auto view_idx = 1u; view_idx < texture_info.get_view_count(); view_idx++) {
         texture.cache_state.join(texture_info.view[view_idx].cache_state);
@@ -1487,7 +1487,7 @@ namespace soul::gpu::impl
   {
     PassExecInfo& pass_info = pass_infos_[pass_node_id.id];
     for (const ShaderBufferReadAccess& shader_access : access_list) {
-      SOUL_ASSERT(0, shader_access.node_id.is_valid(), "");
+      SOUL_ASSERT(0, shader_access.node_id.is_valid());
 
       const auto buffer_info_id = get_buffer_info_index(shader_access.node_id);
 
@@ -1514,7 +1514,7 @@ namespace soul::gpu::impl
   {
     PassExecInfo& pass_info = pass_infos_[pass_node_id.id];
     for (const auto& shader_access : access_list) {
-      SOUL_ASSERT(0, shader_access.output_node_id.is_valid(), "");
+      SOUL_ASSERT(0, shader_access.output_node_id.is_valid());
 
       const auto buffer_info_id = get_buffer_info_index(shader_access.output_node_id);
 
@@ -1541,7 +1541,7 @@ namespace soul::gpu::impl
   {
     PassExecInfo& pass_info = pass_infos_[pass_node_id.id];
     for (const auto& shader_access : access_list) {
-      SOUL_ASSERT(0, shader_access.node_id.is_valid(), "");
+      SOUL_ASSERT(0, shader_access.node_id.is_valid());
 
       const auto texture_info_id = get_texture_info_index(shader_access.node_id);
       const auto stage_flags = cast_to_pipeline_stage_flags(shader_access.stage_flags);
@@ -1584,7 +1584,7 @@ namespace soul::gpu::impl
   {
     PassExecInfo& pass_info = pass_infos_[pass_node_id.id];
     for (const auto& shader_access : access_list) {
-      SOUL_ASSERT(0, shader_access.output_node_id.is_valid(), "");
+      SOUL_ASSERT(0, shader_access.output_node_id.is_valid());
 
       const auto texture_info_id = get_texture_info_index(shader_access.output_node_id);
       const auto stage_flags = cast_to_pipeline_stage_flags(shader_access.stage_flags);
@@ -1617,7 +1617,7 @@ namespace soul::gpu::impl
   {
     PassExecInfo& pass_info = pass_infos_[pass_node_id.id];
     for (const ShaderTlasReadAccess& shader_access : access_list) {
-      SOUL_ASSERT(0, shader_access.node_id.is_valid(), "");
+      SOUL_ASSERT(0, shader_access.node_id.is_valid());
 
       const auto resource_info_id = get_tlas_resource_info_index(shader_access.node_id);
 
@@ -1641,7 +1641,7 @@ namespace soul::gpu::impl
   {
     PassExecInfo& pass_info = pass_infos_[pass_node_id.id];
     for (const ShaderBlasGroupReadAccess& shader_access : access_list) {
-      SOUL_ASSERT(0, shader_access.node_id.is_valid(), "");
+      SOUL_ASSERT(0, shader_access.node_id.is_valid());
 
       const auto resource_info_id = get_blas_group_resource_info_index(shader_access.node_id);
 

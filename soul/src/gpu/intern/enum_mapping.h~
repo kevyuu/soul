@@ -391,7 +391,7 @@ namespace soul::gpu
 
   SOUL_ALWAYS_INLINE auto soul_cast(VkSampleCountFlags flags) -> TextureSampleCountFlags
   {
-    SOUL_ASSERT(0, util::get_last_one_bit_pos(flags) <= VK_SAMPLE_COUNT_64_BIT, "");
+    SOUL_ASSERT(0, util::get_last_one_bit_pos(flags) <= VK_SAMPLE_COUNT_64_BIT);
     static constexpr TextureSampleCount MAP[] = {
       TextureSampleCount::COUNT_1,
       TextureSampleCount::COUNT_2,

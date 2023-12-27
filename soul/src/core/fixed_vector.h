@@ -2,7 +2,9 @@
 
 #include "core/compiler.h"
 #include "core/config.h"
+#include "core/panic.h"
 #include "core/type.h"
+
 #include "memory/allocator.h"
 
 namespace soul
@@ -166,10 +168,10 @@ namespace soul
   template <typename... Args>
   auto FixedVector<T, AllocatorT>::init(AllocatorT& allocator, usize size, Args&&... args) -> void
   {
-    SOUL_ASSERT(0, size != 0, "");
+    SOUL_ASSERT(0, size != 0);
     SOUL_ASSERT(0, size_ == 0, "Array have been initialized before");
     SOUL_ASSERT(0, buffer_ == nullptr, "Array have been initialized before");
-    SOUL_ASSERT(0, allocator_ == nullptr, "");
+    SOUL_ASSERT(0, allocator_ == nullptr);
     allocator_ = &allocator;
     init(size, std::forward<Args>(args)...);
   }
@@ -178,7 +180,7 @@ namespace soul
   template <typename... Args>
   auto FixedVector<T, AllocatorT>::init(const usize size, Args&&... args) -> void
   {
-    SOUL_ASSERT(0, size != 0, "");
+    SOUL_ASSERT(0, size != 0);
     SOUL_ASSERT(0, size_ == 0, "Array have been initialized before");
     SOUL_ASSERT(0, buffer_ == nullptr, "Array have been initialized before");
     size_ = size;
@@ -212,16 +214,14 @@ namespace soul
   template <typename T, memory::allocator_type AllocatorT>
   auto FixedVector<T, AllocatorT>::operator[](usize idx) -> reference
   {
-    SOUL_ASSERT(
-      0, idx < size_, "Out of bound access to array detected. idx = %d, _size = %d", idx, size_);
+    SOUL_ASSERT_UPPER_BOUND_CHECK(idx, size_);
     return buffer_[idx];
   }
 
   template <typename T, memory::allocator_type AllocatorT>
   auto FixedVector<T, AllocatorT>::operator[](usize idx) const -> const_reference
   {
-    SOUL_ASSERT(
-      0, idx < size_, "Out of bound access to array detected. idx = %d, _size=%d", idx, size_);
+    SOUL_ASSERT_UPPER_BOUND_CHECK(idx, size_);
     return buffer_[idx];
   }
 } // namespace soul

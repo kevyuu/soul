@@ -35,7 +35,7 @@ namespace soul
     auto
     operator[](usize idx) -> T&
     {
-      SOUL_ASSERT(0, idx < size_, "");
+      SOUL_ASSERT(0, idx < size_);
       return (*vector_)[begin_idx_ + idx];
     }
 
@@ -43,7 +43,7 @@ namespace soul
     auto
     operator[](usize idx) const -> const T&
     {
-      SOUL_ASSERT(0, idx < size_, "");
+      SOUL_ASSERT(0, idx < size_);
       return this->operator[](idx);
     }
 

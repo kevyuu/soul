@@ -9,7 +9,7 @@
 #include <gtest/gtest.h>
 
 #include "core/log.h"
-#include "core/panic.h"
+#include "core/panic_format.h"
 #include "core/type_traits.h"
 #include "core/vector.h"
 #include "core/views.h"
@@ -153,7 +153,7 @@ struct TestObject {
   // ReSharper disable once CppSpecialFunctionWithoutNoexceptSpecification
   TestObject(TestObject&& test_object) : x(test_object.x), throwOnCopy(test_object.throwOnCopy)
   {
-    SOUL_ASSERT(
+    SOUL_ASSERT_FORMAT(
       0,
       test_object.state_value == K_CONSTRUCTED_STATE,
       "Moving {} object with x : {}",
@@ -189,7 +189,7 @@ struct TestObject {
   ~TestObject()
   {
     if (state_value != K_CONSTRUCTED_STATE && state_value != K_MOVED_FROM_STATE) {
-      SOUL_PANIC("state value is wrong. state_value : {}", StateStr(state_value));
+      SOUL_PANIC_FORMAT("state value is wrong. state_value : {}", StateStr(state_value));
       ++s_diagnostic.magic_error_count;
     }
     if (state_value == K_CONSTRUCTED_STATE) {
@@ -296,8 +296,8 @@ public:
   auto operator=(TestAllocator&&) noexcept = delete;
   ~TestAllocator() override
   {
-    SOUL_ASSERT(0, allocVolume == 0, "Alloc Volume : {}", allocVolume);
-    SOUL_ASSERT(
+    SOUL_ASSERT_FORMAT(0, allocVolume == 0, "Alloc Volume : {}", allocVolume);
+    SOUL_ASSERT_FORMAT(
       0, allocCount == freeCount, "Alloc Count : {}, Free Count : {}", allocCount, freeCount);
   }
 
@@ -367,7 +367,7 @@ struct ProgramExitCheck {
   ProgramExitCheck& operator=(ProgramExitCheck&&) = delete;
   ~ProgramExitCheck()
   {
-    SOUL_ASSERT(
+    SOUL_ASSERT_FORMAT(
       0,
       TestObject::IsClear(),
       "Test Object not being cleaned up properly!\n"

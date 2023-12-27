@@ -201,7 +201,7 @@ namespace soul
   template <typename T>
   auto PackedPool<T>::reserve(soul_size capacity) -> void
   {
-    SOUL_ASSERT(0, capacity > capacity_, "");
+    SOUL_ASSERT(0, capacity > capacity_);
 
     T* oldBuffer = buffer_;
     buffer_ = static_cast<T*>(allocator_->allocate(capacity * sizeof(T), alignof(T)));
@@ -213,7 +213,7 @@ namespace soul
     if (oldBuffer != nullptr) {
       Move(oldBuffer, oldBuffer + capacity_, buffer_);
       allocator_->deallocate(oldBuffer);
-      SOUL_ASSERT(0, oldPoolIDs != nullptr, "");
+      SOUL_ASSERT(0, oldPoolIDs != nullptr);
       Move(oldPoolIDs, oldPoolIDs + capacity_, pool_ids_);
       allocator_->deallocate(oldPoolIDs);
     }

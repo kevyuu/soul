@@ -144,7 +144,7 @@ auto App::run() -> void
 
     vec2f32 glfw_window_scale;
     glfwGetWindowContentScale(window_, &glfw_window_scale.x, &glfw_window_scale.y);
-    SOUL_ASSERT(0, glfw_window_scale.x - glfw_window_scale.y == 0.0f, "");
+    SOUL_ASSERT(0, glfw_window_scale.x - glfw_window_scale.y == 0.0f);
 
     {
       SOUL_PROFILE_ZONE_WITH_NAME("GLFW Poll Events");

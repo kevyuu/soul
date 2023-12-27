@@ -116,7 +116,7 @@ public:
     };
     auto result = gpu_system_->create_program(program_desc);
     if (result.is_err()) {
-      SOUL_ASSERT(0, "Cannot create shader program");
+      SOUL_PANIC("Cannot create shader program");
     }
     program_id_ = result.ok_ref();
     vertex_buffer_id_ = gpu_system_->create_buffer(

@@ -3,11 +3,11 @@
 #include "core/config.h"
 #include "core/hash.h"
 #include "core/own_ref.h"
-#include "core/panic.h"
 #include "core/robin_table.h"
 #include "core/type.h"
 #include "core/type_traits.h"
 #include "core/util.h"
+
 #include "runtime/runtime.h"
 
 namespace soul

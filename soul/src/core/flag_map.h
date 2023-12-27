@@ -65,25 +65,25 @@ namespace soul
 
     constexpr auto operator[](EnumT index) noexcept -> reference
     {
-      SOUL_ASSERT(0, to_underlying(index) < to_underlying(EnumT::COUNT), "");
+      SOUL_ASSERT_UPPER_BOUND_CHECK(to_underlying(index), to_underlying(EnumT::COUNT));
       return buffer_[to_underlying(index)];
     }
 
     constexpr auto operator[](EnumT index) const -> const_reference
     {
-      SOUL_ASSERT(0, to_underlying(index) < to_underlying(EnumT::COUNT), "");
+      SOUL_ASSERT_UPPER_BOUND_CHECK(to_underlying(index), to_underlying(EnumT::COUNT));
       return buffer_[to_underlying(index)];
     }
 
     constexpr auto ref(EnumT index) noexcept -> reference
     {
-      SOUL_ASSERT(0, to_underlying(index) < to_underlying(EnumT::COUNT), "");
+      SOUL_ASSERT_UPPER_BOUND_CHECK(to_underlying(index), to_underlying(EnumT::COUNT));
       return buffer_[to_underlying(index)];
     }
 
     constexpr auto ref(EnumT index) const -> const_reference
     {
-      SOUL_ASSERT(0, to_underlying(index) < to_underlying(EnumT::COUNT), "");
+      SOUL_ASSERT_UPPER_BOUND_CHECK(to_underlying(index), to_underlying(EnumT::COUNT));
       return buffer_[to_underlying(index)];
     }
 

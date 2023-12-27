@@ -9,7 +9,7 @@
 #include <string>
 
 #include "core/log.h"
-#include "core/panic.h"
+#include "core/panic_format.h"
 #include "core/profile.h"
 #include "core/string.h"
 #include "core/util.h"
@@ -264,7 +264,7 @@ namespace soul::gpu
       }
       case VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT: {
         SOUL_LOG_ERROR("VkDebugUtils: {}", callback_data->pMessage);
-        SOUL_PANIC("Vulkan Error!, VkDebugUtils: {}", callback_data->pMessage);
+        SOUL_PANIC_FORMAT("Vulkan Error!, VkDebugUtils: {}", callback_data->pMessage);
         break;
       }
       case VK_DEBUG_UTILS_MESSAGE_SEVERITY_FLAG_BITS_MAX_ENUM_EXT: {
@@ -281,7 +281,7 @@ namespace soul::gpu
       FILE* file = nullptr;
       const auto err = fopen_s(&file, filepath, "rb");
       if (err != 0) {
-        SOUL_PANIC("Fail to open file %s", filepath);
+        SOUL_PANIC_FORMAT("Fail to open file {}", filepath);
       }
       SCOPE_EXIT(fclose(file));
 
@@ -348,12 +348,12 @@ namespace soul::gpu
       0,
       config.wsi != nullptr,
       "Invalid configuration value | wsi = nullptr, headless rendering is not supported yet");
-    SOUL_ASSERT(
+    SOUL_ASSERT_FORMAT(
       0,
       config.thread_count > 0,
       "Invalid configuration value | threadCount = {}",
       config.thread_count);
-    SOUL_ASSERT(
+    SOUL_ASSERT_FORMAT(
       0,
       config.max_frame_in_flight > 0,
       "Invalid configuration value | maxFrameInFlight = {}",
@@ -414,7 +414,7 @@ namespace soul::gpu
         return true;
       };
 
-      SOUL_ASSERT(0, is_required_layers_supported(), "");
+      SOUL_ASSERT(0, is_required_layers_supported());
 
       constexpr u32 required_layers_count = std::size(REQUIRED_LAYERS);
 #else
@@ -1055,7 +1055,7 @@ namespace soul::gpu
   {
     SOUL_PROFILE_ZONE();
 
-    SOUL_ASSERT(0, desc.layer_count >= 1, "");
+    SOUL_ASSERT(0, desc.layer_count >= 1);
 
     const VkFormat format = vk_cast(desc.format);
     const QueueData queue_data = get_queue_data_from_queue_flags(desc.queue_flags);
@@ -1148,9 +1148,9 @@ namespace soul::gpu
   auto System::create_texture(const TextureDesc& desc, const TextureLoadDesc& load_desc)
     -> TextureID
   {
-    SOUL_ASSERT(0, load_desc.data != nullptr, "");
-    SOUL_ASSERT(0, load_desc.data_size != 0, "");
-    SOUL_ASSERT(0, load_desc.regions.size() != 0, "");
+    SOUL_ASSERT(0, load_desc.data != nullptr);
+    SOUL_ASSERT(0, load_desc.data_size != 0);
+    SOUL_ASSERT(0, load_desc.regions.size() != 0);
 
     TextureDesc new_desc = desc;
     new_desc.usage_flags |= {TextureUsage::TRANSFER_DST};
@@ -1237,7 +1237,7 @@ namespace soul::gpu
     -> TextureView
   {
     auto& texture = get_texture(texture_id);
-    SOUL_ASSERT(0, level < texture.desc.mip_levels, "");
+    SOUL_ASSERT(0, level < texture.desc.mip_levels);
 
     const auto layer_count = texture.desc.type == TextureType::D2_ARRAY ? texture.desc.extent.z : 1;
 
@@ -1505,8 +1505,8 @@ namespace soul::gpu
 
   auto System::create_buffer(const BufferDesc& desc, const b8 use_linear_pool) -> BufferID
   {
-    SOUL_ASSERT(0, desc.size > 0, "");
-    SOUL_ASSERT(0, desc.usage_flags.any(), "");
+    SOUL_ASSERT(0, desc.size > 0);
+    SOUL_ASSERT(0, desc.usage_flags.any());
 
     auto queue_flags = desc.queue_flags;
     const auto usage_flags = desc.usage_flags;
@@ -1516,7 +1516,7 @@ namespace soul::gpu
     }
 
     const QueueData queue_data = get_queue_data_from_queue_flags(queue_flags);
-    SOUL_ASSERT(0, queue_data.count > 0, "");
+    SOUL_ASSERT(0, queue_data.count > 0);
     const VkBufferCreateInfo buffer_info = {
       .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
       .size = desc.size,
@@ -1669,13 +1669,13 @@ namespace soul::gpu
 
   auto System::get_buffer(const BufferID buffer_id) -> Buffer&
   {
-    SOUL_ASSERT(0, !buffer_id.is_null(), "");
+    SOUL_ASSERT(0, !buffer_id.is_null());
     return *_db.buffer_pool.get(buffer_id.id);
   }
 
   auto System::get_buffer(const BufferID buffer_id) const -> const Buffer&
   {
-    SOUL_ASSERT(0, !buffer_id.is_null(), "");
+    SOUL_ASSERT(0, !buffer_id.is_null());
     return *_db.buffer_pool.get(buffer_id.id);
   }
 
@@ -1907,9 +1907,9 @@ namespace soul::gpu
       [this](const ComputePipelineStateDesc& desc) -> PipelineState {
       const auto& program = get_program(desc.program_id);
 
-      SOUL_ASSERT(0, program.shaders.size() == 1, "");
+      SOUL_ASSERT(0, program.shaders.size() == 1);
       const Shader& compute_shader = program.shaders[0];
-      SOUL_ASSERT(0, compute_shader.stage == ShaderStage::COMPUTE, "");
+      SOUL_ASSERT(0, compute_shader.stage == ShaderStage::COMPUTE);
       const VkPipelineShaderStageCreateInfo compute_shader_stage_create_info = {
         .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
         .stage = VK_SHADER_STAGE_COMPUTE_BIT,
@@ -1952,7 +1952,7 @@ namespace soul::gpu
 
   auto System::create_program(const ProgramDesc& program_desc) -> Result<ProgramID, Error>
   {
-    SOUL_ASSERT(0, program_desc.entry_points.size() != 0, "");
+    SOUL_ASSERT(0, program_desc.entry_points.size() != 0);
     runtime::ScopeAllocator<> scope_allocator("gpu::System::create_program(const ProgramDesc&");
 
     const auto program_id = ProgramID(_db.programs.create());
@@ -1972,7 +1972,7 @@ namespace soul::gpu
         const Path& path = shader_file.path;
         const Path full_path = [&path, &program_desc]() -> Path {
           if (path.is_absolute()) {
-            SOUL_ASSERT(
+            SOUL_ASSERT_FORMAT(
               0, std::filesystem::exists(path), "%s does not exist", path.string().c_str());
             return path.canonical();
           }
@@ -1982,7 +1982,8 @@ namespace soul::gpu
               return full_path_candidate.canonical();
             }
           }
-          SOUL_ASSERT(0, false, "Cannot find file {} in any search path", path.string().c_str());
+          SOUL_ASSERT_FORMAT(
+            0, false, "Cannot find file {} in any search path", path.string().c_str());
           return Path::From(""_str);
         }();
         auto full_path_str = full_path.string();
@@ -2136,19 +2137,19 @@ namespace soul::gpu
 
   auto System::get_program(ProgramID program_id) const -> const Program&
   {
-    SOUL_ASSERT(0, program_id.is_valid(), "");
+    SOUL_ASSERT(0, program_id.is_valid());
     return _db.programs[program_id.id];
   }
 
   auto System::get_program(ProgramID program_id) -> Program&
   {
-    SOUL_ASSERT(0, program_id.is_valid(), "");
+    SOUL_ASSERT(0, program_id.is_valid());
     return _db.programs[program_id.id];
   }
 
   void System::destroy_program(ProgramID program_id)
   {
-    SOUL_ASSERT(0, program_id.is_valid(), "");
+    SOUL_ASSERT(0, program_id.is_valid());
     get_frame_context().garbages.programs.push_back(program_id);
   }
 
@@ -2635,7 +2636,7 @@ namespace soul::gpu
                 .indexType = vk_cast(triangle_desc.index_type),
               }};
           }
-          SOUL_ASSERT(0, desc.type == RTGeometryType::AABB, "");
+          SOUL_ASSERT(0, desc.type == RTGeometryType::AABB);
           const auto& aabb_desc = desc.content.aabbs;
           return {
             .aabbs = {
@@ -2669,7 +2670,7 @@ namespace soul::gpu
         if (desc.type == RTGeometryType::TRIANGLE) {
           return desc.content.triangles.index_count / 3;
         }
-        SOUL_ASSERT(0, desc.type == RTGeometryType::AABB, "");
+        SOUL_ASSERT(0, desc.type == RTGeometryType::AABB);
         return desc.content.aabbs.count;
       });
 
@@ -2739,13 +2740,13 @@ namespace soul::gpu
     -> void
   {
     SOUL_ASSERT_MAIN_THREAD();
-    SOUL_ASSERT(0, wait_stages != 0, "");
+    SOUL_ASSERT(0, wait_stages != 0);
 
     if (!commands_.empty()) {
       flush();
     }
 
-    SOUL_ASSERT(0, semaphore->state == BinarySemaphore::State::SIGNALLED, "");
+    SOUL_ASSERT(0, semaphore->state == BinarySemaphore::State::SIGNALLED);
     semaphore->state = BinarySemaphore::State::WAITED;
     wait_semaphores_.push_back(semaphore->vk_handle);
     wait_stages_.push_back(wait_stages);
@@ -2755,7 +2756,7 @@ namespace soul::gpu
   auto CommandQueue::wait(TimelineSemaphore semaphore, VkPipelineStageFlags wait_stages) -> void
   {
     SOUL_ASSERT_MAIN_THREAD();
-    SOUL_ASSERT(0, wait_stages != 0, "");
+    SOUL_ASSERT(0, wait_stages != 0);
 
     if (!commands_.empty()) {
       flush();
@@ -2795,8 +2796,8 @@ namespace soul::gpu
   {
     SOUL_ASSERT_MAIN_THREAD();
     SOUL_PROFILE_ZONE();
-    SOUL_ASSERT(0, wait_semaphores_.size() == wait_stages_.size(), "");
-    SOUL_ASSERT(0, wait_semaphores_.size() == wait_timeline_values_.size(), "");
+    SOUL_ASSERT(0, wait_semaphores_.size() == wait_stages_.size());
+    SOUL_ASSERT(0, wait_semaphores_.size() == wait_timeline_values_.size());
 
     current_timeline_values_++;
 
@@ -3049,7 +3050,7 @@ namespace soul::gpu
     _db.pipeline_state_cache.on_new_frame();
 
     const auto result = acquire_swapchain();
-    SOUL_ASSERT(0, result == VK_SUCCESS, "");
+    SOUL_ASSERT(0, result == VK_SUCCESS);
   }
 
   auto System::end_frame() -> void
@@ -3066,7 +3067,7 @@ namespace soul::gpu
       frame_context.gpu_resource_finalizer.flush(
         get_frame_context().command_pools, _db.queues, *this);
 
-      SOUL_ASSERT(0, swapchain_texture.cache_state.queue_owner == QueueType::GRAPHIC, "");
+      SOUL_ASSERT(0, swapchain_texture.cache_state.queue_owner == QueueType::GRAPHIC);
       // TODO: Handle when swapchain texture is untouch (ResourceOwner is PRESENTATION_ENGINE)
       const auto cmd_buffer =
         frame_context.command_pools.request_command_buffer(QueueType::GRAPHIC);
@@ -3239,7 +3240,7 @@ namespace soul::gpu
     SOUL_LOG_INFO("Vulkan swapchain recreation sucessful");
 
     const auto result = acquire_swapchain();
-    SOUL_ASSERT(0, result == VK_SUCCESS, "");
+    SOUL_ASSERT(0, result == VK_SUCCESS);
   }
 
   auto System::get_swapchain_extent() -> vec2u32
@@ -3509,7 +3510,7 @@ namespace soul::gpu
       0, buffer.cache_state.queue_owner == QueueType::NONE, "Buffer must be uninitialized!");
     const auto buffer_size = buffer.desc.size;
     if (buffer.memory_property_flags & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) {
-      SOUL_ASSERT(0, buffer.memory_property_flags & VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, "");
+      SOUL_ASSERT(0, buffer.memory_property_flags & VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
       void* mapped_data;
       vmaMapMemory(gpu_allocator_, buffer.allocation, &mapped_data);
       memcpy(mapped_data, data, buffer.desc.size);
@@ -3656,7 +3657,7 @@ namespace soul::gpu
     if (range.aspectMask & VK_IMAGE_ASPECT_DEPTH_BIT) {
       const VkClearDepthStencilValue vk_clear_value = {
         clear_value.depth_stencil.depth, clear_value.depth_stencil.stencil};
-      SOUL_ASSERT(0, !(range.aspectMask & VK_IMAGE_ASPECT_COLOR_BIT), "");
+      SOUL_ASSERT(0, !(range.aspectMask & VK_IMAGE_ASPECT_COLOR_BIT));
       vkCmdClearDepthStencilImage(
         clear_command_buffer,
         texture.vk_handle,
@@ -3903,7 +3904,7 @@ namespace soul::gpu
           result = USAGE_LAYOUT_MAP[texture_usage];
         }
       });
-      SOUL_ASSERT(0, result != VK_IMAGE_LAYOUT_UNDEFINED, "");
+      SOUL_ASSERT(0, result != VK_IMAGE_LAYOUT_UNDEFINED);
       return result;
     };
 

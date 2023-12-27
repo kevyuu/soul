@@ -1,5 +1,5 @@
 #include "gpu/render_graph.h"
-#include "core/panic.h"
+#include "core/panic_format.h"
 #include "gpu/system.h"
 
 namespace soul::gpu
@@ -40,8 +40,8 @@ namespace soul::gpu
 
   BufferNodeID RenderGraph::create_buffer(const char* name, const RGBufferDesc& desc)
   {
-    SOUL_ASSERT(
-      0, desc.size > 0, "Render Graph buffer size must be greater than zero!, name = %s", name);
+    SOUL_ASSERT_FORMAT(
+      0, desc.size > 0, "Render Graph buffer size must be greater than zero!, name = {}", name);
 
     const auto resource_index =
       soul::cast<u32>(internal_buffers_.add(RGInternalBuffer{.name = name, .size = desc.size}));

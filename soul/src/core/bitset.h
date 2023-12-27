@@ -2,6 +2,7 @@
 
 #include "core/array.h"
 #include "core/bit_ref.h"
+#include "core/panic.h"
 #include "core/type.h"
 #include "core/util.h"
 
@@ -463,7 +464,7 @@ namespace soul
   template <usize BitCount, ts_bit_block BlockType>
   constexpr auto Bitset<BitCount, BlockType>::flip(const usize index) -> this_type&
   {
-    SOUL_ASSERT(0, index < BitCount, "");
+    SOUL_ASSERT_UPPER_BOUND_CHECK(index, BitCount);
     get_block(index) ^= base_type::GetBlockOneMask(index);
     return *this;
   }
@@ -483,7 +484,7 @@ namespace soul
   template <usize BitCount, ts_bit_block BlockType>
   constexpr auto Bitset<BitCount, BlockType>::test(usize index) const -> b8
   {
-    SOUL_ASSERT(0, index < BitCount, "");
+    SOUL_ASSERT_UPPER_BOUND_CHECK(index, BitCount);
     BlockType block = get_block(index);
     return (block & base_type::GetBlockOneMask(index));
   }

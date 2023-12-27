@@ -2,7 +2,6 @@
 
 #include "core/objops.h"
 #include "core/own_ref.h"
-#include "core/panic.h"
 #include "core/type.h"
 #include "core/type_traits.h"
 #include "core/uninitialized.h"

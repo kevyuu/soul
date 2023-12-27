@@ -7,7 +7,7 @@ set(SOUL_SOURCES_WINDOWS src/memory/intern/windows/page_allocator.cpp)
 set(SOUL_SOURCES
     src/core/log.cpp
     src/core/panic.cpp
-    src/core/panic_lite.cpp
+    src/core/panic_format.cpp
     src/gpu/intern/common.cpp
     src/gpu/intern/glfw_wsi.cpp
     src/gpu/intern/gpu_system.cpp

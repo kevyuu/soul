@@ -21,7 +21,7 @@ namespace soul::memory
 
   auto PageAllocator::deallocate(void* addr, uint32 size) -> void
   {
-    SOUL_ASSERT(0, util::pointer_page_size_round(size, page_size_) == size, "");
+    SOUL_ASSERT(0, util::pointer_page_size_round(size, page_size_) == size);
     munmap(addr, size);
   }
 

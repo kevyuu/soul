@@ -182,7 +182,7 @@ namespace soul
   auto Pool<T, AllocatorType>::swap(Pool& other) noexcept -> void
   {
     using std::swap;
-    SOUL_ASSERT(0, allocator_ == other.allocator_, "");
+    SOUL_ASSERT(0, allocator_ == other.allocator_);
     swap(bit_vector_, other.bit_vector_);
     swap(buffer_, other.buffer_);
     swap(capacity_, other.capacity_);
@@ -316,28 +316,28 @@ namespace soul
   template <typename T, memory::allocator_type AllocatorType>
   auto Pool<T, AllocatorType>::operator[](PoolID id) -> reference
   {
-    SOUL_ASSERT(0, id < capacity_, "Pool access violation");
+    SOUL_ASSERT_UPPER_BOUND_CHECK(id, capacity_);
     return buffer_[id].datum;
   }
 
   template <typename T, memory::allocator_type AllocatorType>
   auto Pool<T, AllocatorType>::operator[](PoolID id) const -> const_reference
   {
-    SOUL_ASSERT(0, id < capacity_, "Pool access violation");
+    SOUL_ASSERT_UPPER_BOUND_CHECK(id, capacity_);
     return buffer_[id].datum;
   }
 
   template <typename T, memory::allocator_type AllocatorType>
   auto Pool<T, AllocatorType>::ptr(PoolID id) -> pointer
   {
-    SOUL_ASSERT(0, id < capacity_, "Pool access violation");
+    SOUL_ASSERT_UPPER_BOUND_CHECK(id, capacity_);
     return &(buffer_[id].datum);
   }
 
   template <typename T, memory::allocator_type AllocatorType>
   auto Pool<T, AllocatorType>::ptr(PoolID id) const -> const_pointer
   {
-    SOUL_ASSERT(0, id < capacity_, "Pool access violation");
+    SOUL_ASSERT_UPPER_BOUND_CHECK(id, capacity_);
     return &(buffer_[id].datum);
   }
 

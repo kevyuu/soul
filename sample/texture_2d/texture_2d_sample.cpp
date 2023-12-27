@@ -166,7 +166,7 @@ public:
     {
       int width, height, channel_count;
       void* data = stbi_load("assets/awesomeface.png", &width, &height, &channel_count, 0);
-      SOUL_ASSERT(0, data != nullptr, "");
+      SOUL_ASSERT(0, data != nullptr);
 
       const gpu::TextureRegionUpdate region_load = {
         .subresource = {.layer_count = 1},

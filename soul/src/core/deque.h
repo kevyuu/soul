@@ -5,7 +5,7 @@
 #include "core/config.h"
 #include "core/log.h"
 #include "core/objops.h"
-#include "core/panic_lite.h"
+#include "core/panic.h"
 #include "memory/allocator.h"
 
 #include <deque>

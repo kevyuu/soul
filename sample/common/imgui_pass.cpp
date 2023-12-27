@@ -138,7 +138,7 @@ void ImGuiRenderGraphPass::add_pass(
     .clear = false,
   };
 
-  SOUL_ASSERT(0, draw_data.TotalVtxCount > 0 && draw_data.TotalIdxCount > 0, "");
+  SOUL_ASSERT(0, draw_data.TotalVtxCount > 0 && draw_data.TotalIdxCount > 0);
   const gpu::BufferNodeID vertex_buffer_node_id = render_graph.create_buffer(
     "ImGui Vertex", {.size = sizeof(ImDrawVert) * draw_data.TotalVtxCount});
   const gpu::BufferNodeID index_buffer_node_id = render_graph.create_buffer(

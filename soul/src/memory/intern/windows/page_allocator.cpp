@@ -20,7 +20,7 @@ namespace soul::memory
   {
     auto new_size = util::pointer_page_size_round(size, page_size_);
     void* addr = VirtualAlloc(nullptr, new_size, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
-    SOUL_ASSERT(0, addr != nullptr, "");
+    SOUL_ASSERT(0, addr != nullptr);
     return {addr, new_size};
   }
 
@@ -37,7 +37,7 @@ namespace soul::memory
   void PageAllocator::deallocate(void* addr)
   {
     const auto is_success = VirtualFree(addr, 0, MEM_RELEASE);
-    SOUL_ASSERT(0, is_success, "");
+    SOUL_ASSERT(0, is_success);
   }
 
 } // namespace soul::memory
