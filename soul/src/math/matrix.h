@@ -13,37 +13,41 @@ namespace soul::math
   // ----------------------------------------------------------------------------
 
   /// Multiply Matrix and Matrix.
-  template <typename T, u8 M, u8 N, u8 P>
+  template <typename T, u8 LhsRowCountV, u8 LhsColCountV, u8 RhsColCountV>
   [[nodiscard]]
-  auto mul(const Matrix<T, M, N>& lhs, const Matrix<T, N, P>& rhs) -> Matrix<T, M, P>
+  auto mul(
+    const Matrix<T, LhsRowCountV, LhsColCountV>& lhs,
+    const Matrix<T, LhsColCountV, RhsColCountV>& rhs) -> Matrix<T, LhsRowCountV, RhsColCountV>
   {
-    Matrix<T, M, P> result;
-    for (i32 m = 0; m < M; ++m) {
-      for (i32 p = 0; p < P; ++p) {
+    Matrix<T, LhsRowCountV, RhsColCountV> result;
+    for (i32 m = 0; m < LhsRowCountV; ++m) {
+      for (i32 p = 0; p < RhsColCountV; ++p) {
         result[m][p] = dot(lhs.row(m), rhs.col(p));
       }
     }
     return result;
   }
   /// Multiply Matrix and Vec. Vec is treated as a column Vec.
-  template <typename T, u8 R, u8 C>
+  template <typename T, u8 RowCountV, u8 ColCountV>
   [[nodiscard]]
-  auto mul(const Matrix<T, R, C>& lhs, const Vec<T, C>& rhs) -> Vec<T, R>
+  auto mul(const Matrix<T, RowCountV, ColCountV>& lhs, const Vec<T, ColCountV>& rhs)
+    -> Vec<T, RowCountV>
   {
-    Vec<T, R> result;
-    for (i32 r = 0; r < R; ++r) {
+    Vec<T, RowCountV> result;
+    for (i32 r = 0; r < RowCountV; ++r) {
       result[r] = dot(lhs.row(r), rhs);
     }
     return result;
   }
 
   /// Multiply Vec and Matrix. Vec is treated as a row Vec.
-  template <typename T, u8 R, u8 C>
+  template <typename T, u8 RowCountV, u8 ColCountV>
   [[nodiscard]]
-  auto mul(const Vec<T, R>& lhs, const Matrix<T, R, C>& rhs) -> Vec<T, C>
+  auto mul(const Vec<T, RowCountV>& lhs, const Matrix<T, RowCountV, ColCountV>& rhs)
+    -> Vec<T, ColCountV>
   {
-    Vec<T, C> result;
-    for (i32 c = 0; c < C; ++c) {
+    Vec<T, ColCountV> result;
+    for (i32 c = 0; c < ColCountV; ++c) {
       result[c] = dot(lhs, rhs.col(c));
     }
     return result;
@@ -80,12 +84,12 @@ namespace soul::math
   // ----------------------------------------------------------------------------
 
   /// Tranpose a Matrix.
-  template <typename T, u8 R, u8 C>
-  auto transpose(const Matrix<T, R, C>& m) -> Matrix<T, C, R>
+  template <typename T, u8 RowCountV, u8 ColCountV>
+  auto transpose(const Matrix<T, RowCountV, ColCountV>& m) -> Matrix<T, ColCountV, RowCountV>
   {
-    Matrix<T, C, R> result;
-    for (i32 r = 0; r < R; ++r) {
-      for (i32 c = 0; c < C; ++c) {
+    Matrix<T, ColCountV, RowCountV> result;
+    for (i32 r = 0; r < RowCountV; ++r) {
+      for (i32 c = 0; c < ColCountV; ++c) {
         result[c][r] = m[r][c];
       }
     }

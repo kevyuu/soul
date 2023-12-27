@@ -10,24 +10,24 @@
 namespace soul
 {
 
-  template <typename T, u8 RowCount, u8 ColCount>
+  template <typename T, u8 RowCountV, u8 ColCountV>
   class Matrix
   {
-    static_assert(RowCount >= 1 && RowCount <= 4);
-    static_assert(ColCount >= 1 && ColCount <= 4);
+    static_assert(RowCountV >= 1 && RowCountV <= 4);
+    static_assert(ColCountV >= 1 && ColCountV <= 4);
 
   public:
     using value_type = T;
-    using RowType = Vec<T, ColCount>;
-    using ColType = Vec<T, RowCount>;
-    static constexpr u8 ROW_COUNT = RowCount;
-    static constexpr u8 COL_COUNT = ColCount;
+    using RowType = Vec<T, ColCountV>;
+    using ColType = Vec<T, RowCountV>;
+    static constexpr u8 ROW_COUNT = RowCountV;
+    static constexpr u8 COL_COUNT = ColCountV;
 
   private:
-    RowType rows_[RowCount];
+    RowType rows_[RowCountV];
 
   public:
-    Matrix() : Matrix(Construct::diagonal, Vec<T, RowCount>(1)){};
+    Matrix() : Matrix(Construct::diagonal, Vec<T, RowCountV>(1)){};
 
     template <typename U>
     Matrix(std::initializer_list<U> v)
@@ -54,16 +54,16 @@ namespace soul
     template <u8 R, u8 C>
     Matrix(const Matrix<T, R, C>& other) // NOLINT
     {
-      for (u8 r = 0; r < std::min(RowCount, R); ++r) {
-        std::memcpy(&rows_[r], &other.rows_[r], std::min(ColCount, C) * sizeof(T));
+      for (u8 r = 0; r < std::min(RowCountV, R); ++r) {
+        std::memcpy(&rows_[r], &other.rows_[r], std::min(ColCountV, C) * sizeof(T));
       }
     }
 
     template <u8 R, u8 C>
     auto operator=(const Matrix<T, R, C>& other) -> Matrix&
     {
-      for (u8 r = 0; r < std::min(RowCount, R); ++r) {
-        std::memcpy(&rows_[r], &other.rows_[r], std::min(ColCount, C) * sizeof(T));
+      for (u8 r = 0; r < std::min(RowCountV, R); ++r) {
+        std::memcpy(&rows_[r], &other.rows_[r], std::min(ColCountV, C) * sizeof(T));
       }
 
       return *this;
@@ -84,11 +84,11 @@ namespace soul
     [[nodiscard]]
     static auto Identity() -> Matrix
     {
-      return Matrix(Construct::diagonal, Vec<T, RowCount>(1));
+      return Matrix(Construct::diagonal, Vec<T, RowCountV>(1));
     }
 
     [[nodiscard]]
-    static auto Diagonal(Vec<T, RowCount> diagonal_vec) -> Matrix
+    static auto Diagonal(Vec<T, RowCountV> diagonal_vec) -> Matrix
     {
       return Matrix(Construct::diagonal, diagonal_vec);
     }
@@ -97,8 +97,8 @@ namespace soul
     [[nodiscard]]
     static auto FromColumns(const VecT&... column_vecs) -> Matrix
     {
-      static_assert((is_same_v<VecT, Vec<T, RowCount>> && ...), "g type mismatch");
-      static_assert(sizeof...(VecT) == ColCount, "Number of column mismatch");
+      static_assert((is_same_v<VecT, Vec<T, RowCountV>> && ...), "g type mismatch");
+      static_assert(sizeof...(VecT) == ColCountV, "Number of column mismatch");
       return Matrix(Construct::from_columns, column_vecs...);
     }
 
@@ -120,13 +120,13 @@ namespace soul
 
     auto operator[](u8 r) -> RowType&
     {
-      SOUL_ASSERT(0, r < RowCount);
+      SOUL_ASSERT(0, r < RowCountV);
       return rows_[r];
     }
 
     auto operator[](u8 r) const -> const RowType&
     {
-      SOUL_ASSERT(0, r < RowCount);
+      SOUL_ASSERT(0, r < RowCountV);
       return rows_[r];
     }
 
@@ -143,21 +143,21 @@ namespace soul
 
     auto row(u8 r) const -> RowType
     {
-      SOUL_ASSERT(0, r < RowCount);
+      SOUL_ASSERT(0, r < RowCountV);
       return rows_[r];
     }
 
     void set_row(u8 r, const RowType& v)
     {
-      SOUL_ASSERT(0, r < RowCount);
+      SOUL_ASSERT(0, r < RowCountV);
       rows_[r] = v;
     }
 
     auto col(u8 col) const -> ColType
     {
-      SOUL_ASSERT(0, col < ColCount);
+      SOUL_ASSERT(0, col < ColCountV);
       ColType result;
-      for (u8 r = 0; r < RowCount; ++r) {
+      for (u8 r = 0; r < RowCountV; ++r) {
         result[r] = rows_[r][col];
       }
       return result;
@@ -165,8 +165,8 @@ namespace soul
 
     void set_col(u8 col, const ColType& v)
     {
-      SOUL_ASSERT(0, col < ColCount);
-      for (u8 r = 0; r < RowCount; ++r) {
+      SOUL_ASSERT(0, col < ColCountV);
+      for (u8 r = 0; r < RowCountV; ++r) {
         rows_[r][col] = v[r];
       }
     }
@@ -198,18 +198,18 @@ namespace soul
 
     explicit Matrix(Construct::Fill /* tag */, T val)
     {
-      for (usize row_idx = 0; row_idx < RowCount; row_idx++) {
-        for (usize col_idx = 0; col_idx < ColCount; col_idx++) {
+      for (usize row_idx = 0; row_idx < RowCountV; row_idx++) {
+        for (usize col_idx = 0; col_idx < ColCountV; col_idx++) {
           m(row_idx, col_idx) = val;
         }
       }
     }
 
-    explicit Matrix(Construct::Diagonal /* tag */, Vec<T, RowCount> val)
-      requires(RowCount == ColCount)
+    explicit Matrix(Construct::Diagonal /* tag */, Vec<T, RowCountV> val)
+      requires(RowCountV == ColCountV)
         : Matrix(Construct::fill, 0)
     {
-      for (usize diagonal_idx = 0; diagonal_idx < RowCount; diagonal_idx++) {
+      for (usize diagonal_idx = 0; diagonal_idx < RowCountV; diagonal_idx++) {
         m(diagonal_idx, diagonal_idx) = val[diagonal_idx];
       }
     }
@@ -223,18 +223,18 @@ namespace soul
 
     explicit Matrix(Construct::FromRowMajorData /* tag */, const T* data)
     {
-      for (usize row_idx = 0; row_idx < RowCount; row_idx++) {
-        for (usize col_idx = 0; col_idx < ColCount; col_idx++) {
-          m(row_idx, col_idx) = data[row_idx * ColCount + col_idx];
+      for (usize row_idx = 0; row_idx < RowCountV; row_idx++) {
+        for (usize col_idx = 0; col_idx < ColCountV; col_idx++) {
+          m(row_idx, col_idx) = data[row_idx * ColCountV + col_idx];
         }
       }
     }
 
     explicit Matrix(Construct::FromColumnMajorData /* tag */, const T* data)
     {
-      for (usize col_idx = 0; col_idx < ColCount; col_idx++) {
-        for (usize row_idx = 0; row_idx < RowCount; row_idx++) {
-          m(row_idx, col_idx) = data[col_idx * RowCount + row_idx];
+      for (usize col_idx = 0; col_idx < ColCountV; col_idx++) {
+        for (usize row_idx = 0; row_idx < RowCountV; row_idx++) {
+          m(row_idx, col_idx) = data[col_idx * RowCountV + row_idx];
         }
       }
     }
