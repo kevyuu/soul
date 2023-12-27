@@ -12,7 +12,7 @@ auto ObjLoader::load_model(const soul::Path& filepath) -> void
   if (!reader.Valid()) {
     SOUL_LOG_INFO("{}", reader.Error().c_str());
     SOUL_LOG_ERROR("Cannot load: {}", filepath.string().c_str());
-    assert(reader.Valid());
+    SOUL_ASSERT(0, reader.Valid());
   }
 
   std::map<std::string, int> texture_name_index_map;

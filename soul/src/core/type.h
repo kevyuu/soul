@@ -4,7 +4,6 @@
 #include <cstdint>
 #include <limits>
 
-#include <glm/glm.hpp>
 
 #include "core/builtins.h"
 #include "core/compiler.h"
