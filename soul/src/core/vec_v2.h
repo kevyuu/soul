@@ -7,7 +7,7 @@
 
 namespace soul
 {
-  template <typename T, u8 DimensionV>
+  template <typename T, usize DimensionV>
   struct Vec;
 
   template <typename T>
@@ -210,7 +210,7 @@ namespace soul
 
   template <typename T>
   struct Vec<T, 4> {
-    static constexpr u8 DIMENSION = 4;
+    static constexpr u8 dimension = 4;
     using value_type = T;
 
     union {
@@ -362,11 +362,12 @@ namespace soul
     using vec4b8 = vec4<b8>;
   } // namespace builtin
 
+
   // --------------------------------------------------------------------------------------
   // Unary operators
   // --------------------------------------------------------------------------------------
 
-  template <ts_arithmetic T, u8 DimensionV>
+  template <ts_arithmetic T, int DimensionV>
   [[nodiscard]]
   constexpr auto
   operator+(const Vec<T, DimensionV> v) noexcept
@@ -374,7 +375,7 @@ namespace soul
     return v;
   }
 
-  template <ts_arithmetic T, u8 DimensionV>
+  template <ts_arithmetic T, int DimensionV>
   [[nodiscard]]
   constexpr auto
   operator-(const Vec<T, DimensionV> v) noexcept
@@ -391,7 +392,7 @@ namespace soul
   }
 
   /// Unary not operator
-  template <typename T, u8 DimensionV>
+  template <typename T, int DimensionV>
   [[nodiscard]]
   constexpr auto
   operator!(const Vec<T, DimensionV> v) noexcept
@@ -408,7 +409,7 @@ namespace soul
   }
 
   /// Unary not operator
-  template <ts_arithmetic T, u8 DimensionV>
+  template <ts_arithmetic T, int DimensionV>
   [[nodiscard]]
   constexpr auto
   operator~(const Vec<T, DimensionV> v) noexcept
@@ -429,7 +430,7 @@ namespace soul
   // --------------------------------------------------------------------------------------
 
   /// Binary + operator
-  template <ts_arithmetic T, u8 DimensionV>
+  template <ts_arithmetic T, usize DimensionV>
   [[nodiscard]]
   constexpr auto
   operator+(const Vec<T, DimensionV>& lhs, const Vec<T, DimensionV>& rhs) -> Vec<T, DimensionV>
@@ -446,7 +447,7 @@ namespace soul
   }
 
   /// Binary + operator
-  template <ts_arithmetic T, u8 DimensionV>
+  template <ts_arithmetic T, usize DimensionV>
   [[nodiscard]]
   constexpr auto
   operator+(const Vec<T, DimensionV>& lhs, T rhs) -> Vec<T, DimensionV>
@@ -455,7 +456,7 @@ namespace soul
   }
 
   /// Binary + operator
-  template <ts_arithmetic T, u8 DimensionV>
+  template <ts_arithmetic T, usize DimensionV>
   [[nodiscard]]
   constexpr auto
   operator+(T lhs, const Vec<T, DimensionV>& rhs) -> Vec<T, DimensionV>
@@ -464,7 +465,7 @@ namespace soul
   }
 
   /// Binary - operator
-  template <ts_arithmetic T, u8 DimensionV>
+  template <ts_arithmetic T, usize DimensionV>
   [[nodiscard]]
   constexpr auto
   operator-(const Vec<T, DimensionV>& lhs, const Vec<T, DimensionV>& rhs) -> Vec<T, DimensionV>
@@ -481,7 +482,7 @@ namespace soul
   }
 
   /// Binary - operator
-  template <ts_arithmetic T, u8 DimensionV>
+  template <ts_arithmetic T, usize DimensionV>
   [[nodiscard]]
   constexpr auto
   operator-(const Vec<T, DimensionV>& lhs, T rhs) -> Vec<T, DimensionV>
@@ -490,7 +491,7 @@ namespace soul
   }
 
   /// Binary - operator
-  template <ts_arithmetic T, u8 DimensionV>
+  template <ts_arithmetic T, usize DimensionV>
   [[nodiscard]]
   constexpr auto
   operator-(T lhs, const Vec<T, DimensionV>& rhs) -> Vec<T, DimensionV>
@@ -499,7 +500,7 @@ namespace soul
   }
 
   /// Binary * operator
-  template <ts_arithmetic T, u8 DimensionV>
+  template <ts_arithmetic T, usize DimensionV>
   [[nodiscard]]
   constexpr auto
   operator*(const Vec<T, DimensionV>& lhs, const Vec<T, DimensionV>& rhs) -> Vec<T, DimensionV>
@@ -516,7 +517,7 @@ namespace soul
   }
 
   /// Binary * operator
-  template <ts_arithmetic T, u8 DimensionV>
+  template <ts_arithmetic T, usize DimensionV>
   [[nodiscard]]
   constexpr auto
   operator*(const Vec<T, DimensionV>& lhs, T rhs) -> Vec<T, DimensionV>
@@ -525,7 +526,7 @@ namespace soul
   }
 
   /// Binary * operator
-  template <ts_arithmetic T, u8 DimensionV>
+  template <ts_arithmetic T, usize DimensionV>
   [[nodiscard]]
   constexpr auto
   operator*(T lhs, const Vec<T, DimensionV>& rhs) -> Vec<T, DimensionV>
@@ -534,7 +535,7 @@ namespace soul
   }
 
   /// Binary / operator
-  template <ts_arithmetic T, u8 DimensionV>
+  template <ts_arithmetic T, usize DimensionV>
   [[nodiscard]]
   constexpr auto
   operator/(const Vec<T, DimensionV>& lhs, const Vec<T, DimensionV>& rhs) -> Vec<T, DimensionV>
@@ -551,7 +552,7 @@ namespace soul
   }
 
   /// Binary / operator
-  template <ts_arithmetic T, u8 DimensionV>
+  template <ts_arithmetic T, usize DimensionV>
   [[nodiscard]]
   constexpr auto
   operator/(const Vec<T, DimensionV>& lhs, T rhs) -> Vec<T, DimensionV>
@@ -560,7 +561,7 @@ namespace soul
   }
 
   /// Binary / operator
-  template <ts_arithmetic T, u8 DimensionV>
+  template <ts_arithmetic T, usize DimensionV>
   [[nodiscard]]
   constexpr auto
   operator/(T lhs, const Vec<T, DimensionV>& rhs) -> Vec<T, DimensionV>
@@ -569,7 +570,7 @@ namespace soul
   }
 
   /// Binary % operator
-  template <ts_integral T, u8 DimensionV>
+  template <ts_integral T, int DimensionV>
   [[nodiscard]]
   constexpr auto
   operator%(const Vec<T, DimensionV>& lhs, const Vec<T, DimensionV>& rhs) -> Vec<T, DimensionV>
@@ -586,7 +587,7 @@ namespace soul
   }
 
   /// Binary % operator
-  template <ts_integral T, u8 DimensionV>
+  template <ts_integral T, int DimensionV>
   [[nodiscard]]
   constexpr auto
   operator%(const Vec<T, DimensionV>& lhs, T rhs) -> Vec<T, DimensionV>
@@ -595,7 +596,7 @@ namespace soul
   }
 
   /// Binary % operator
-  template <ts_integral T, u8 DimensionV>
+  template <ts_integral T, int DimensionV>
   [[nodiscard]]
   constexpr auto
   operator%(T lhs, const Vec<T, DimensionV>& rhs) -> Vec<T, DimensionV>
@@ -604,7 +605,7 @@ namespace soul
   }
 
   /// Binary << operator
-  template <ts_integral T, u8 DimensionV>
+  template <ts_integral T, int DimensionV>
   [[nodiscard]]
   constexpr auto
   operator<<(const Vec<T, DimensionV>& lhs, const Vec<T, DimensionV>& rhs) -> Vec<T, DimensionV>
@@ -621,7 +622,7 @@ namespace soul
   }
 
   /// Binary << operator
-  template <ts_integral T, u8 DimensionV>
+  template <ts_integral T, int DimensionV>
   [[nodiscard]]
   constexpr auto
   operator<<(const Vec<T, DimensionV>& lhs, T rhs) -> Vec<T, DimensionV>
@@ -630,7 +631,7 @@ namespace soul
   }
 
   /// Binary << operator
-  template <ts_integral T, u8 DimensionV>
+  template <ts_integral T, int DimensionV>
   [[nodiscard]]
   constexpr auto
   operator<<(T lhs, const Vec<T, DimensionV>& rhs) -> Vec<T, DimensionV>
@@ -639,7 +640,7 @@ namespace soul
   }
 
   /// Binary >> operator
-  template <ts_integral T, u8 DimensionV>
+  template <ts_integral T, int DimensionV>
   [[nodiscard]]
   constexpr auto
   operator>>(const Vec<T, DimensionV>& lhs, const Vec<T, DimensionV>& rhs) -> Vec<T, DimensionV>
@@ -656,7 +657,7 @@ namespace soul
   }
 
   /// Binary >> operator
-  template <ts_integral T, u8 DimensionV>
+  template <ts_integral T, int DimensionV>
   [[nodiscard]]
   constexpr auto
   operator>>(const Vec<T, DimensionV>& lhs, T rhs) -> Vec<T, DimensionV>
@@ -665,7 +666,7 @@ namespace soul
   }
 
   /// Binary >> operator
-  template <ts_integral T, u8 DimensionV>
+  template <ts_integral T, int DimensionV>
   [[nodiscard]]
   constexpr auto
   operator>>(T lhs, const Vec<T, DimensionV>& rhs) -> Vec<T, DimensionV>
@@ -674,7 +675,7 @@ namespace soul
   }
 
   /// Binary | operator
-  template <ts_integral T, u8 DimensionV>
+  template <ts_integral T, int DimensionV>
   [[nodiscard]]
   constexpr auto
   operator|(const Vec<T, DimensionV>& lhs, const Vec<T, DimensionV>& rhs) -> Vec<T, DimensionV>
@@ -691,7 +692,7 @@ namespace soul
   }
 
   /// Binary | operator
-  template <ts_integral T, u8 DimensionV>
+  template <ts_integral T, int DimensionV>
   [[nodiscard]]
   constexpr auto
   operator|(const Vec<T, DimensionV>& lhs, T rhs) -> Vec<T, DimensionV>
@@ -700,7 +701,7 @@ namespace soul
   }
 
   /// Binary | operator
-  template <ts_integral T, u8 DimensionV>
+  template <ts_integral T, int DimensionV>
   [[nodiscard]]
   constexpr auto
   operator|(T lhs, const Vec<T, DimensionV>& rhs) -> Vec<T, DimensionV>
@@ -709,7 +710,7 @@ namespace soul
   }
 
   /// Binary & operator
-  template <ts_integral T, u8 DimensionV>
+  template <ts_integral T, int DimensionV>
   [[nodiscard]]
   constexpr auto
   operator&(const Vec<T, DimensionV>& lhs, const Vec<T, DimensionV>& rhs) -> Vec<T, DimensionV>
@@ -726,7 +727,7 @@ namespace soul
   }
 
   /// Binary & operator
-  template <ts_integral T, u8 DimensionV>
+  template <ts_integral T, int DimensionV>
   [[nodiscard]]
   constexpr auto
   operator&(const Vec<T, DimensionV>& lhs, T rhs) -> Vec<T, DimensionV>
@@ -735,7 +736,7 @@ namespace soul
   }
 
   /// Binary & operator
-  template <ts_integral T, u8 DimensionV>
+  template <ts_integral T, int DimensionV>
   [[nodiscard]]
   constexpr auto
   operator&(T lhs, const Vec<T, DimensionV>& rhs) -> Vec<T, DimensionV>
@@ -744,7 +745,7 @@ namespace soul
   }
 
   /// Binary ^ operator
-  template <ts_integral T, u8 DimensionV>
+  template <ts_integral T, int DimensionV>
   [[nodiscard]]
   constexpr auto
   operator^(const Vec<T, DimensionV>& lhs, const Vec<T, DimensionV>& rhs) -> Vec<T, DimensionV>
@@ -761,7 +762,7 @@ namespace soul
   }
 
   /// Binary ^ operator
-  template <ts_integral T, u8 DimensionV>
+  template <ts_integral T, int DimensionV>
   [[nodiscard]]
   constexpr auto
   operator^(const Vec<T, DimensionV>& lhs, T rhs) -> Vec<T, DimensionV>
@@ -770,7 +771,7 @@ namespace soul
   }
 
   /// Binary ^ operator
-  template <ts_integral T, u8 DimensionV>
+  template <ts_integral T, int DimensionV>
   [[nodiscard]]
   constexpr auto
   operator^(T lhs, const Vec<T, DimensionV>& rhs) -> Vec<T, DimensionV>
@@ -1306,36 +1307,6 @@ namespace soul
   constexpr auto operator^=(Vec<T, DimensionV>& lhs, T rhs) -> Vec<T, DimensionV>
   {
     return (lhs ^= Vec<T, DimensionV>(rhs));
-  }
-
-  // ----------------------------------------------------------------------------
-  // Boolean reductions
-  // ----------------------------------------------------------------------------
-  // clang-format off
-  [[nodiscard]] constexpr auto any(const vec1b8 v) -> b8 { return v.x; }
-  [[nodiscard]] constexpr auto any(const vec2b8 v) -> b8 { return v.x || v.y; }
-  [[nodiscard]] constexpr auto any(const vec3b8 v) -> b8 { return v.x || v.y || v.z; }
-  [[nodiscard]] constexpr auto any(const vec4b8 v) -> b8 { return v.x || v.y || v.z || v.w; }
-
-  [[nodiscard]] constexpr auto all(const vec1b8 v) -> b8 { return v.x; }
-  [[nodiscard]] constexpr auto all(const vec2b8 v) -> b8 { return v.x && v.y; }
-  [[nodiscard]] constexpr auto all(const vec3b8 v) -> b8 { return v.x && v.y && v.z; }
-  [[nodiscard]] constexpr auto all(const vec4b8 v) -> b8 { return v.x && v.y && v.z && v.w; }
-
-  [[nodiscard]] constexpr auto none(const vec1b8 v) -> b8 { return !any(v); }
-  [[nodiscard]] constexpr auto none(const vec2b8 v) -> b8 { return !any(v); }
-  [[nodiscard]] constexpr auto none(const vec3b8 v) -> b8 { return !any(v); }
-  [[nodiscard]] constexpr auto none(const vec4b8 v) -> b8 { return !any(v); }
-  // clang-format on
-  
-
-  template <typename T, u8 DimensionV>
-  constexpr void soul_op_hash_combine(auto& hasher, const Vec<T, DimensionV>& val)
-  {
-    const auto hash_combine = [&hasher, &val]<usize... idx>(std::index_sequence<idx...>) {
-      ((hasher.combine(val[idx])), ...);
-    };
-    return hash_combine(std::make_index_sequence<DimensionV>());
   }
 
 } // namespace soul

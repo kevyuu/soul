@@ -4,178 +4,312 @@
 #include "core/compiler.h"
 #include "core/floating_point.h"
 #include "core/integer.h"
-#include "core/quaternion.h"
+#include "core/panic_lite.h"
 #include "core/vec.h"
-
-#include <glm/glm.hpp>
 
 namespace soul
 {
 
-  // A matrix to represent multiplication with column g
-  // Read this article if you are confused.
-  // https://fgiesen.wordpress.com/2012/02/12/row-major-vs-column-major-row-vectors-vs-column-vectors/
-  // Internally we use glm to store the matrix, glm use column major ordering
-  // and multiply column g (used by gilbert strang lecture).
-  // This struct provide and accessor m(row, column) both row and column refer
-  // to the row and column of matrix, not the c++ 2d array that represent it
-  // This is done to be consistent with our shader.
-  template <usize Row, usize Column, typename T>
-  struct matrix {
-    using this_type = matrix<Column, Row, T>;
-    using storage_type = glm::mat<Column, Row, T, glm::defaultp>;
-    storage_type storage;
+  template <typename T, u8 RowCount, u8 ColCount>
+  class Matrix
+  {
+    static_assert(RowCount >= 1 && RowCount <= 4);
+    static_assert(ColCount >= 1 && ColCount <= 4);
 
-    constexpr matrix() = default;
+  public:
+    using value_type = T;
+    using RowType = Vec<T, ColCount>;
+    using ColType = Vec<T, RowCount>;
+    static constexpr u8 ROW_COUNT = RowCount;
+    static constexpr u8 COL_COUNT = ColCount;
 
-    constexpr explicit matrix(T val) : storage(val) {}
+  private:
+    RowType rows_[RowCount];
 
-    constexpr explicit matrix(storage_type mat) : storage(mat) {}
+  public:
+    Matrix() : Matrix(Construct::diagonal, Vec<T, RowCount>(1)){};
 
-    [[nodiscard]]
-    SOUL_ALWAYS_INLINE auto m(const usize row, const usize column) const -> T
+    template <typename U>
+    Matrix(std::initializer_list<U> v)
     {
-      return storage[column][row];
-    }
-
-    SOUL_ALWAYS_INLINE auto m(const usize row, const usize column) -> T&
-    {
-      return storage[column][row];
-    }
-
-    SOUL_ALWAYS_INLINE void set_column(usize column, const vec<Row, T>& vec)
-    {
-      for (usize i = 0; i < Row; i++) {
-        storage[column][i] = vec[i];
+      T* f = &rows_[0][0];
+      for (auto it = v.begin(); it != v.end(); ++it, ++f) {
+        *f = static_cast<T>(*it);
       }
     }
 
-    [[nodiscard]]
-    static constexpr auto identity() -> this_type
+    Matrix(const Matrix&) = default;
+
+    Matrix(Matrix&&) noexcept = default;
+
+    auto operator=(const Matrix&) -> Matrix& = default;
+
+    auto operator=(Matrix&&) noexcept -> Matrix& = default;
+
+    ~Matrix() = default;
+
+    /// Construct Matrix from another Matrix with different dimensions.
+    /// In HLSL/Slang, destination Matrix must be equal or smaller than source Matrix.
+    /// In Falcor, destination Matrix can be larger than source Matrix (initialized with identity).
+    template <u8 R, u8 C>
+    Matrix(const Matrix<T, R, C>& other) // NOLINT
     {
-      return this_type(storage_type(1));
+      for (u8 r = 0; r < std::min(RowCount, R); ++r) {
+        std::memcpy(&rows_[r], &other.rows_[r], std::min(ColCount, C) * sizeof(T));
+      }
+    }
+
+    template <u8 R, u8 C>
+    auto operator=(const Matrix<T, R, C>& other) -> Matrix&
+    {
+      for (u8 r = 0; r < std::min(RowCount, R); ++r) {
+        std::memcpy(&rows_[r], &other.rows_[r], std::min(ColCount, C) * sizeof(T));
+      }
+
+      return *this;
+    }
+
+    [[nodiscard]]
+    static auto Fill(T val) -> Matrix
+    {
+      return Matrix(Construct::fill, val);
+    }
+
+    [[nodiscard]]
+    static auto Zeros() -> Matrix
+    {
+      return Matrix(Construct::fill, 0);
+    }
+
+    [[nodiscard]]
+    static auto Identity() -> Matrix
+    {
+      return Matrix(Construct::diagonal, Vec<T, RowCount>(1));
+    }
+
+    [[nodiscard]]
+    static auto Diagonal(Vec<T, RowCount> diagonal_vec) -> Matrix
+    {
+      return Matrix(Construct::diagonal, diagonal_vec);
     }
 
     template <typename... VecT>
     [[nodiscard]]
-    static auto FromColumns(const VecT&... column_vecs) -> matrix
+    static auto FromColumns(const VecT&... column_vecs) -> Matrix
     {
-      static_assert((is_same_v<VecT, vec<Row, T>> && ...), "g type mismatch");
-      static_assert(sizeof...(VecT) == Column, "Number of column mismatch");
-      matrix mat;
-      u8 column_idx = 0;
-      (mat.set_column(column_idx++, column_vecs), ...);
-      return mat;
+      static_assert((is_same_v<VecT, Vec<T, RowCount>> && ...), "g type mismatch");
+      static_assert(sizeof...(VecT) == ColCount, "Number of column mismatch");
+      return Matrix(Construct::from_columns, column_vecs...);
     }
 
     [[nodiscard]]
     static auto FromRowMajorData(const T* data)
     {
-      matrix mat;
-      for (usize row_idx = 0; row_idx < Row; row_idx++) {
-        for (usize col_idx = 0; col_idx < Column; col_idx++) {
-          mat.m(row_idx, col_idx) = data[row_idx * Column + col_idx];
-        }
-      }
-      return mat;
-    };
-
-    [[nodiscard]]
-    static auto FromColumnMajorData(const T* data) -> matrix
-    {
-      matrix mat;
-      for (usize col_idx = 0; col_idx < Column; col_idx++) {
-        for (usize row_idx = 0; row_idx < Row; row_idx++) {
-          mat.m(row_idx, col_idx) = data[col_idx * Row + row_idx];
-        }
-      }
-      return mat;
+      return Matrix(Construct::from_row_major_data, data);
     }
 
     [[nodiscard]]
-    static auto ComposeTransform(
-      const vec3<T>& translation, const quat<T>& rotation, const vec3<T>& scale)
-      requires(Row == 4 && Column == 4)
+    static auto FromColumnMajorData(const T* data)
     {
-      const T tx = translation.x;
-      const T ty = translation.y;
-      const T tz = translation.z;
-      const T qx = rotation.x;
-      const T qy = rotation.y;
-      const T qz = rotation.z;
-      const T qw = rotation.w;
-      const T sx = scale.x;
-      const T sy = scale.y;
-      const T sz = scale.z;
+      return Matrix(Construct::from_column_major_data, data);
+    }
 
-      const vec4<T> column0 = {
-        (1 - 2 * qy * qy - 2 * qz * qz) * sx,
-        (2 * qx * qy + 2 * qz * qw) * sx,
-        (2 * qx * qz - 2 * qy * qw) * sx,
-        0.f,
+    auto data() -> T* { return &rows_[0][0]; }
+
+    auto data() const -> const T* { return &rows_[0][0]; }
+
+    auto operator[](u8 r) -> RowType&
+    {
+      SOUL_ASSERT_LITE(0, r < RowCount, "");
+      return rows_[r];
+    }
+
+    auto operator[](u8 r) const -> const RowType&
+    {
+      SOUL_ASSERT_LITE(0, r < RowCount, "");
+      return rows_[r];
+    }
+
+    [[nodiscard]]
+    SOUL_ALWAYS_INLINE auto m(const usize row, const usize column) const -> T
+    {
+      return rows_[row][column];
+    }
+
+    SOUL_ALWAYS_INLINE auto m(const usize row, const usize column) -> T&
+    {
+      return rows_[row][column];
+    }
+
+    auto row(u8 r) const -> RowType
+    {
+      SOUL_ASSERT_LITE(0, r < RowCount, "");
+      return rows_[r];
+    }
+
+    void set_row(u8 r, const RowType& v)
+    {
+      SOUL_ASSERT_LITE(0, r < RowCount, "");
+      rows_[r] = v;
+    }
+
+    auto col(u8 col) const -> ColType
+    {
+      SOUL_ASSERT_LITE(0, col < ColCount, "");
+      ColType result;
+      for (u8 r = 0; r < RowCount; ++r) {
+        result[r] = rows_[r][col];
+      }
+      return result;
+    }
+
+    void set_col(u8 col, const ColType& v)
+    {
+      SOUL_ASSERT_LITE(0, col < ColCount, "");
+      for (u8 r = 0; r < RowCount; ++r) {
+        rows_[r][col] = v[r];
+      }
+    }
+
+    auto operator==(const Matrix& rhs) const -> b8
+    {
+      return std::memcmp(this, &rhs, sizeof(*this)) == 0;
+    }
+
+  private:
+    struct Construct {
+      struct Fill {
+      };
+      struct Diagonal {
+      };
+      struct FromColumns {
+      };
+      struct FromRowMajorData {
+      };
+      struct FromColumnMajorData {
       };
 
-      const vec4<T> column1 = {
-        (2 * qx * qy - 2 * qz * qw) * sy,
-        (1 - 2 * qx * qx - 2 * qz * qz) * sy,
-        (2 * qy * qz + 2 * qx * qw) * sy,
-        0.f,
-      };
+      static constexpr auto fill = Fill{};
+      static constexpr auto diagonal = Diagonal{};
+      static constexpr auto from_columns = FromColumns{};
+      static constexpr auto from_row_major_data = FromRowMajorData{};
+      static constexpr auto from_column_major_data = FromColumnMajorData{};
+    };
 
-      const vec4<T> column2 = {
-        (2 * qx * qz + 2 * qy * qw) * sz,
-        (2 * qy * qz - 2 * qx * qw) * sz,
-        (1 - 2 * qx * qx - 2 * qy * qy) * sz,
-        0.f,
-      };
+    explicit Matrix(Construct::Fill /* tag */, T val)
+    {
+      for (usize row_idx = 0; row_idx < RowCount; row_idx++) {
+        for (usize col_idx = 0; col_idx < ColCount; col_idx++) {
+          m(row_idx, col_idx) = val;
+        }
+      }
+    }
 
-      const vec4<T> column3 = {
-        tx,
-        ty,
-        tz,
-        1.f,
-      };
+    explicit Matrix(Construct::Diagonal /* tag */, Vec<T, RowCount> val)
+      requires(RowCount == ColCount)
+        : Matrix(Construct::fill, 0)
+    {
+      for (usize diagonal_idx = 0; diagonal_idx < RowCount; diagonal_idx++) {
+        m(diagonal_idx, diagonal_idx) = val[diagonal_idx];
+      }
+    }
 
-      return matrix::FromColumns(column0, column1, column2, column3);
+    template <typename... VecTs>
+    explicit Matrix(Construct::FromColumns /* tag */, const VecTs&... column_vecs)
+    {
+      u8 column_idx = 0;
+      (set_col(column_idx++, column_vecs), ...);
+    }
+
+    explicit Matrix(Construct::FromRowMajorData /* tag */, const T* data)
+    {
+      for (usize row_idx = 0; row_idx < RowCount; row_idx++) {
+        for (usize col_idx = 0; col_idx < ColCount; col_idx++) {
+          m(row_idx, col_idx) = data[row_idx * ColCount + col_idx];
+        }
+      }
+    }
+
+    explicit Matrix(Construct::FromColumnMajorData /* tag */, const T* data)
+    {
+      for (usize col_idx = 0; col_idx < ColCount; col_idx++) {
+        for (usize row_idx = 0; row_idx < RowCount; row_idx++) {
+          m(row_idx, col_idx) = data[col_idx * RowCount + row_idx];
+        }
+      }
     }
   };
 
-  template <typename T>
-  using mat4 = matrix<4, 4, T>;
-
   inline namespace builtin
   {
-    using mat2i16 = matrix<2, 2, i16>;
-    using mat3i16 = matrix<3, 3, i16>;
-    using mat4i16 = matrix<4, 4, i16>;
+    template <typename T>
+    using mat4 = Matrix<T, 4, 4>;
 
-    using mat2u16 = matrix<2, 2, u16>;
-    using mat3u16 = matrix<3, 3, u16>;
-    using mat4u16 = matrix<4, 4, u16>;
+    using mat2i16 = Matrix<i16, 2, 2>;
+    using mat3i16 = Matrix<i16, 3, 3>;
+    using mat4i16 = Matrix<i16, 4, 4>;
 
-    using mat2i32 = matrix<2, 2, i32>;
-    using mat3i32 = matrix<3, 3, i32>;
-    using mat4i32 = matrix<4, 4, i32>;
+    using mat2u16 = Matrix<u16, 2, 2>;
+    using mat3u16 = Matrix<u16, 3, 3>;
+    using mat4u16 = Matrix<u16, 4, 4>;
 
-    using mat2u32 = matrix<2, 2, u32>;
-    using mat3u32 = matrix<3, 3, u32>;
-    using mat4u32 = matrix<4, 4, u32>;
+    using mat2i32 = Matrix<i32, 2, 2>;
+    using mat3i32 = Matrix<i32, 3, 3>;
+    using mat4i32 = Matrix<i32, 4, 4>;
 
-    using mat2i64 = matrix<2, 2, i64>;
-    using mat3i64 = matrix<3, 3, i64>;
-    using mat4i64 = matrix<4, 4, i64>;
+    using mat2u32 = Matrix<u32, 2, 2>;
+    using mat3u32 = Matrix<u32, 3, 3>;
+    using mat4u32 = Matrix<u32, 4, 4>;
 
-    using mat2u64 = matrix<2, 2, u64>;
-    using mat3u64 = matrix<3, 3, u64>;
-    using mat4u64 = matrix<4, 4, u64>;
+    using mat2i64 = Matrix<i64, 2, 2>;
+    using mat3i64 = Matrix<i64, 3, 3>;
+    using mat4i64 = Matrix<i64, 4, 4>;
 
-    using mat2f32 = matrix<2, 2, f32>;
-    using mat3f32 = matrix<3, 3, f32>;
-    using mat4f32 = matrix<4, 4, f32>;
+    using mat2u64 = Matrix<u64, 2, 2>;
+    using mat3u64 = Matrix<u64, 3, 3>;
+    using mat4u64 = Matrix<u64, 4, 4>;
 
-    using mat2f64 = matrix<2, 2, f64>;
-    using mat3f64 = matrix<3, 3, f64>;
-    using mat4f64 = matrix<4, 4, f64>;
+    using mat2f32 = Matrix<f32, 2, 2>;
+    using mat3f32 = Matrix<f32, 3, 3>;
+    using mat4f32 = Matrix<f32, 4, 4>;
+
+    using mat2f64 = Matrix<f64, 2, 2>;
+    using mat3f64 = Matrix<f64, 3, 3>;
+    using mat4f64 = Matrix<f64, 4, 4>;
+
   } // namespace builtin
 
+  // ----------------------------------------------------------------------------
+  // Binary operators (component-wise)
+  // ----------------------------------------------------------------------------
+
+  /// Binary * operator
+  template <typename T, u8 R, u8 C>
+  [[nodiscard]]
+  auto
+  operator*(const Matrix<T, R, C>& lhs, const T& rhs) -> Matrix<T, R, C>
+  {
+    Matrix<T, R, C> result;
+    for (u8 r = 0; r < R; ++r) {
+      for (u8 c = 0; c < C; ++c) {
+        result[r][c] = lhs[r][c] * rhs;
+      }
+    }
+    return result;
+  }
+
+  /// Binary * operator
+  template <typename T, u8 R, u8 C>
+  [[nodiscard]]
+  auto
+  operator+(const Matrix<T, R, C>& lhs, const Matrix<T, R, C>& rhs) -> Matrix<T, R, C>
+  {
+    Matrix<T, R, C> result;
+    for (u8 r = 0; r < R; ++r) {
+      for (u8 c = 0; c < C; ++c) {
+        result[r][c] = lhs[r][c] + rhs[r][c];
+      }
+    }
+    return result;
+  }
 } // namespace soul

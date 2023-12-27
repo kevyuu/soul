@@ -245,14 +245,14 @@ public:
     push_constants_.push_back(MSAAPushConstant{
       .transform = math::scale(
         math::rotate(
-          math::translate(mat4f32::identity(), vec3f32(-0.25f, 0.0f, 0.1f)), rotate_angle, rotate_axis),
+          math::translate(mat4f32::Identity(), vec3f32(-0.25f, 0.0f, 0.1f)), rotate_angle, rotate_axis),
         scale_vec),
       .color = vec3f32(1.0f, 0.0f, 0.0f),
     });
     push_constants_.push_back(MSAAPushConstant{
       .transform = math::scale(
         math::rotate(
-          math::translate(mat4f32::identity(), vec3f32(0.25f, 0.0f, 0.0f)), rotate_angle, rotate_axis),
+          math::translate(mat4f32::Identity(), vec3f32(0.25f, 0.0f, 0.0f)), rotate_angle, rotate_axis),
         scale_vec),
       .color = vec3f32(0.0f, 1.0f, 0.0f),
     });

@@ -200,6 +200,12 @@ namespace soul
   concept ts_arithmetic = std::is_arithmetic_v<T>;
 
   template <typename T>
+  concept ts_floating_point = std::is_floating_point_v<T>;
+
+  template <typename T>
+  concept ts_signed = std::is_signed_v<T>;
+
+  template <typename T>
   inline b8 constexpr can_compare_equality_v = std::equality_comparable<T>;
 
   template <typename T = void>

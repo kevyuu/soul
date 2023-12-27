@@ -2,8 +2,9 @@
 
 #include <format>
 
-#include "core/string.h"
 #include "core/flag_map.h"
+#include "core/format.h"
+#include "core/string.h"
 
 namespace soul
 {

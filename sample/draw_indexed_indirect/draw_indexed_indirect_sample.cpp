@@ -57,7 +57,7 @@ class DrawIndexedIndirectSampleApp final : public App
     int type = 0;
   } light_;
 
-  AABB bounding_box_;
+  math::AABB bounding_box_;
 
   struct Vertex {
     vec3f32 position;
@@ -247,7 +247,7 @@ class DrawIndexedIndirectSampleApp final : public App
 
   auto load_model(
     const Path& model_path,
-    const mat4f32 transform = mat4f32::identity(),
+    const mat4f32 transform = mat4f32::Identity(),
     vec3f32 debug_color = {1.0f, 0.0f, 0.0f}) -> void
   {
 
@@ -381,10 +381,10 @@ public:
       gpu::SamplerDesc::same_filter_wrap(gpu::TextureFilter::LINEAR, gpu::TextureWrap::REPEAT));
 
     load_model(
-      get_media_path() / "scenes"_str / "plane.obj"_str, mat4f32::identity(), {1.0f, 0.0f, 0.0f});
+      get_media_path() / "scenes"_str / "plane.obj"_str, mat4f32::Identity(), {1.0f, 0.0f, 0.0f});
     load_model(
       get_media_path() / "scenes"_str / "Medieval_building.obj"_str,
-      mat4f32::identity(),
+      mat4f32::Identity(),
       {0.0f, 1.0f, 0.0f});
 
     vertex_buffer_ = gpu_system_->create_buffer(

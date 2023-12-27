@@ -34,7 +34,10 @@ namespace soul::gpu
     Offset2D offset;
     Extent2D extent;
 
-    auto operator==(const Rect2D& other) const -> bool = default;
+    auto operator==(const Rect2D& other) const -> b8
+    {
+      return (all(offset == other.offset) && all(extent == other.extent));
+    }
 
     friend void soul_op_hash_combine(auto& hasher, const Rect2D& rect)
     {
@@ -369,7 +372,9 @@ namespace soul::gpu
 
     ClearValue() = default;
 
-    ClearValue(vec4f32 color, f32 depth, u32 stencil) : color(color), depth_stencil(depth, stencil) {}
+    ClearValue(vec4f32 color, f32 depth, u32 stencil) : color(color), depth_stencil(depth, stencil)
+    {
+    }
 
     ClearValue(vec4u32 color, f32 depth, u32 stencil) : color(color), depth_stencil(depth, stencil)
     {

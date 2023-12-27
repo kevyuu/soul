@@ -1,12 +1,17 @@
 #pragma once
 
+#include <limits>
+
+#include "core/compiler.h"
 #include "core/vec.h"
 
-namespace soul
+#include "math/vec.h"
+
+namespace soul::math
 {
   struct AABB {
-    vec3f32 min = vec3f32::Fill(std::numeric_limits<f32>::max());
-    vec3f32 max = vec3f32::Fill(std::numeric_limits<f32>::lowest());
+    vec3f32 min = vec3f32(std::numeric_limits<f32>::max());
+    vec3f32 max = vec3f32(std::numeric_limits<f32>::lowest());
 
     AABB() = default;
 
@@ -50,4 +55,14 @@ namespace soul
       return (min + max) / 2.0f;
     }
   };
-} // namespace soul
+
+  SOUL_ALWAYS_INLINE auto combine(AABB aabb, vec3f32 point) -> AABB
+  {
+    return {min(aabb.min, point), max(aabb.max, point)};
+  }
+
+  SOUL_ALWAYS_INLINE auto combine(AABB x, AABB y) -> AABB
+  {
+    return {min(x.min, y.min), max(x.max, y.max)};
+  }
+} // namespace soul::math

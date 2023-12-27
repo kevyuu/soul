@@ -24,8 +24,8 @@ auto ObjLoader::load_model(const soul::Path& filepath) -> void
     m.diffuse = soul::vec3f32(material.diffuse[0], material.diffuse[1], material.diffuse[2]);
     m.specular = soul::vec3f32(material.specular[0], material.specular[1], material.specular[2]);
     m.emission = soul::vec3f32(material.emission[0], material.emission[1], material.emission[2]);
-    m.transmittance =
-      soul::vec3f32(material.transmittance[0], material.transmittance[1], material.transmittance[2]);
+    m.transmittance = soul::vec3f32(
+      material.transmittance[0], material.transmittance[1], material.transmittance[2]);
     m.dissolve = material.dissolve;
     m.ior = material.ior;
     m.shininess = material.shininess;
@@ -77,7 +77,7 @@ auto ObjLoader::load_model(const soul::Path& filepath) -> void
         vertex.color = {*(vc + 0), *(vc + 1), *(vc + 2)};
       }
 
-      vertex.position *= 4;
+      vertex.position *= 4.0_f32;
 
       vertices.push_back(vertex);
       indices.push_back(static_cast<int>(indices.size()));

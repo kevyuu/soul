@@ -57,7 +57,7 @@ class MultiThreadRasterSample final : public App
         const auto color = vec3f32(dist(gen), dist(gen), dist(gen));
 
         vector.emplace_back(MultithreadRasterPushConstant{
-          .transform = math::scale(math::translate(mat4f32::identity(), translate_vec), scale_vec),
+          .transform = math::scale(math::translate(mat4f32::Identity(), translate_vec), scale_vec),
           .color = color,
         });
       }
@@ -67,7 +67,7 @@ class MultiThreadRasterSample final : public App
   static auto get_rotation(const float elapsed_seconds) -> mat4f32
   {
     return math::rotate(
-      mat4f32::identity(), math::radians(elapsed_seconds * 10.0f), vec3f32(0.0f, 0.0f, 1.0f));
+      mat4f32::Identity(), math::radians(elapsed_seconds * 10.0f), vec3f32(0.0f, 0.0f, 1.0f));
   }
 
   auto render(gpu::TextureNodeID render_target, gpu::RenderGraph& render_graph)

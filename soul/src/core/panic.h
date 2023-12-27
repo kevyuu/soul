@@ -3,8 +3,9 @@
 
 #include <format>
 
-#include "compiler.h"
-#include "panic_lite.h"
+#include "core/compiler.h"
+#include "core/format.h"
+#include "core/panic_lite.h"
 
 namespace soul
 {

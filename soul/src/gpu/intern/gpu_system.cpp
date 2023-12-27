@@ -39,7 +39,6 @@
 #include <vk_mem_alloc.h>
 
 static constexpr const char* RESOURCE_HLSL = R"HLSL(
-
 #define SOULSL_CONST_FUNCTION
 
 typedef int i32;
@@ -2039,6 +2038,8 @@ namespace soul::gpu
       arguments.push_back(L"2021");
       arguments.push_back(L"-spirv");
 
+      // Matrix order
+      arguments.push_back(L"-fspv-use-legacy-buffer-matrix-order");
       // memory layout for resources
       arguments.push_back(L"-fvk-use-dx-layout");
       // Vulkan version

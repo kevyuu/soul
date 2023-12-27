@@ -1,3 +1,4 @@
+#include "core/log.h"
 #include "core/type.h"
 #include "gpu/gpu.h"
 #include "gpu/type.h"
@@ -60,11 +61,12 @@ class BufferTransferCommandSample final : public App
                                           (static_cast<float>(row_idx) + 0.5f);
         Transform transform = {
           .color = {1.0f, 0.0f, 0.0f},
-          .scale = math::scale(mat4f32::identity(), vec3f32(0.25f, 0.25, 1.0f)),
-          .translation = math::translate(mat4f32::identity(), vec3f32(x_offset, y_offset, 0.0f)),
+          .scale = math::scale(mat4f32::Identity(), vec3f32(0.25f, 0.25, 1.0f)),
+          .translation = math::translate(mat4f32::Identity(), vec3f32(x_offset, y_offset, 0.0f)),
           .rotation =
-            math::rotate(mat4f32::identity(), math::radians(45.0f), vec3f32(0.0f, 0.0f, 1.0f)),
+            math::rotate(mat4f32::Identity(), math::radians(45.0f), vec3f32(0.0f, 0.0f, 1.0f)),
         };
+        SOUL_LOG_INFO("Translation matrix : {}", transform.translation);
         transforms_vector.push_back(transform);
       }
     }
@@ -73,7 +75,7 @@ class BufferTransferCommandSample final : public App
   static auto get_rotation(const float elapsed_seconds) -> mat4f32
   {
     return math::rotate(
-      mat4f32::identity(), math::radians(elapsed_seconds * 10.0f), vec3f32(0.0f, 0.0f, 1.0f));
+      mat4f32::Identity(), math::radians(elapsed_seconds * 10.0f), vec3f32(0.0f, 0.0f, 1.0f));
   }
 
   auto render(gpu::TextureNodeID render_target, gpu::RenderGraph& render_graph)

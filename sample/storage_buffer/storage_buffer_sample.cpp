@@ -164,9 +164,9 @@ public:
       const auto y_offset = -1.0f + (2.0f / ROW_COUNT) * (static_cast<float>(row_idx) + 0.5f);
       transforms[transform_idx] = {
         .color = {1.0f, 0.0f, 0.0f},
-        .scale = math::scale(mat4f32::identity(), vec3f32(0.25f, 0.25, 1.0f)),
-        .translation = math::translate(mat4f32::identity(), vec3f32(x_offset, y_offset, 0.0f)),
-        .rotation = math::rotate(mat4f32::identity(), math::radians(45.0f), vec3f32(0.0f, 0.0f, 1.0f)),
+        .scale = math::scale(mat4f32::Identity(), vec3f32(0.25f, 0.25, 1.0f)),
+        .translation = math::translate(mat4f32::Identity(), vec3f32(x_offset, y_offset, 0.0f)),
+        .rotation = math::rotate(mat4f32::Identity(), math::radians(45.0f), vec3f32(0.0f, 0.0f, 1.0f)),
       };
     }
 

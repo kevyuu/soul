@@ -29,8 +29,8 @@ struct ObjModel {
 };
 
 struct ObjInstance {
-  mat4f32 transform;  // Matrix of the instance
-  u32 obj_index{0}; // Model index reference
+  mat4f32 transform; // Matrix of the instance
+  u32 obj_index{0};  // Model index reference
 };
 
 struct Texture {
@@ -68,7 +68,7 @@ class RTBasicSampleApp final : public App
     int type = 0;
   } light_;
 
-  AABB bounding_box_;
+  math::AABB bounding_box_;
 
   auto render(gpu::TextureNodeID render_target, gpu::RenderGraph& render_graph)
     -> gpu::TextureNodeID override
@@ -317,7 +317,7 @@ class RTBasicSampleApp final : public App
     return texture_2d_pass.add_pass(texture_2d_parameter, render_graph);
   }
 
-  auto load_model(const Path& model_path, const mat4f32 transform = mat4f32::identity()) -> void
+  auto load_model(const Path& model_path, const mat4f32 transform = mat4f32::Identity()) -> void
   {
     instances_.push_back(
       ObjInstance{.transform = transform, .obj_index = soul::cast<u32>(models_.size())});

@@ -11,8 +11,8 @@ struct RasterObjInstanceData {
   vec3f32 debug_color;
 
 #ifndef SOUL_HOST_CODE
-  WavefrontMaterial get_material_by_primitive_id(soulsl::uint1 primitive_id) {
-    soulsl::uint1 mat_id = get_buffer_array<soulsl::uint1>(material_indices_descriptor_id, primitive_id);
+  WavefrontMaterial get_material_by_primitive_id(u32 primitive_id) {
+    u32 mat_id = get_buffer_array<u32>(material_indices_descriptor_id, primitive_id);
     return get_buffer_array<WavefrontMaterial>(material_buffer_descriptor_id, mat_id);
   } 
 #endif // not SOUL_HOST_CODE
@@ -29,7 +29,7 @@ struct RasterObjScene
 	int light_type;
 
 #ifndef SOUL_HOST_CODE
-  RasterObjInstanceData get_instance_data(soulsl::uint1 id) {
+  RasterObjInstanceData get_instance_data(u32 id) {
     return get_buffer_array<RasterObjInstanceData>(instance_buffer_descriptor_id, id);
   }
 #endif // not SOUL_HOST_CODE

@@ -1,6 +1,7 @@
 #pragma once
 
-#include "builtins.h"
+#include "boolean.h"
+#include "integer.h"
 
 /**
  * Panic is used in a lot of places. The usage doesn't necessarily need to

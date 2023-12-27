@@ -18,10 +18,10 @@
  */
 
 #pragma once
-#include "core/aabb.h"
 #include "core/path.h"
 #include "core/type.h"
 #include "core/vector.h"
+#include "math/math.h"
 #include "tiny_obj_loader.h"
 
 #include "builtins.h"
@@ -69,5 +69,5 @@ public:
   soul::Vector<MaterialObj> materials;
   soul::Vector<std::string> textures;
   soul::Vector<MaterialIndexObj> mat_indexes;
-  soul::AABB bounding_box;
+  soul::math::AABB bounding_box;
 };

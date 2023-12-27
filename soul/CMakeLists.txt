@@ -166,5 +166,4 @@ target_precompile_headers(
   <ranges>
   <random>
   <shared_mutex>
-  <thread>
-  <glm/glm.hpp>)
+  <thread>)
