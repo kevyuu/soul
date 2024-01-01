@@ -154,6 +154,8 @@ namespace soul
 
     void generate_back(ts_generate_fn<T> auto fn);
 
+    void remove(usize index);
+
     void pop_back();
 
     void pop_back(usize count);
@@ -830,6 +832,18 @@ namespace soul
     }
     ++size_;
   }
+
+  template <typename T, memory::allocator_type AllocatorT, usize N>
+  void Vector<T, AllocatorT, N>::remove(usize index)
+  {
+    SOUL_ASSERT_UPPER_BOUND_CHECK(index, size_);
+    if (size_ > 1) {
+      buffer_[index] = std::move(buffer_[size_ - 1]);
+    }
+    size_--;
+    destroy_at(buffer_ + size_);
+  }
+
   template <typename T, memory::allocator_type AllocatorT, usize N>
   void Vector<T, AllocatorT, N>::pop_back()
   {
