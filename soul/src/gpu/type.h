@@ -256,6 +256,7 @@ namespace soul::gpu
     RGBA16F,
     R32UI,
     SRGBA8,
+    SBGRA8,
 
     RGB16,
     RGB16F,

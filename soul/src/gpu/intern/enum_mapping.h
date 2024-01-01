@@ -77,6 +77,7 @@ namespace soul::gpu
     VK_FORMAT_R16G16B16A16_SFLOAT,
     VK_FORMAT_R32_UINT,
     VK_FORMAT_R8G8B8A8_SRGB,
+    VK_FORMAT_B8G8R8A8_SRGB,
 
     VK_FORMAT_R16G16B16_UNORM,
     VK_FORMAT_R16G16B16_SFLOAT,
@@ -107,14 +108,13 @@ namespace soul::gpu
 
   SOUL_ALWAYS_INLINE auto vk_cast_to_image_view_type(const TextureType type) -> VkImageViewType
   {
-    static constexpr auto IMAGE_VIEW_TYPE_MAP =
-      FlagMap<TextureType, VkImageViewType>::FromValues({
-        VK_IMAGE_VIEW_TYPE_1D,
-        VK_IMAGE_VIEW_TYPE_2D,
-        VK_IMAGE_VIEW_TYPE_2D_ARRAY,
-        VK_IMAGE_VIEW_TYPE_3D,
-        VK_IMAGE_VIEW_TYPE_CUBE,
-      });
+    static constexpr auto IMAGE_VIEW_TYPE_MAP = FlagMap<TextureType, VkImageViewType>::FromValues({
+      VK_IMAGE_VIEW_TYPE_1D,
+      VK_IMAGE_VIEW_TYPE_2D,
+      VK_IMAGE_VIEW_TYPE_2D_ARRAY,
+      VK_IMAGE_VIEW_TYPE_3D,
+      VK_IMAGE_VIEW_TYPE_CUBE,
+    });
     return IMAGE_VIEW_TYPE_MAP[type];
   }
 
@@ -139,6 +139,7 @@ namespace soul::gpu
         VK_IMAGE_ASPECT_COLOR_BIT,
         VK_IMAGE_ASPECT_COLOR_BIT,
         VK_IMAGE_ASPECT_COLOR_BIT,
+        VK_IMAGE_ASPECT_COLOR_BIT,
 
         VK_IMAGE_ASPECT_COLOR_BIT,
         VK_IMAGE_ASPECT_COLOR_BIT,
@@ -159,9 +160,8 @@ namespace soul::gpu
     return FILTER_MAP[filter];
   }
 
-  static constexpr auto MIPMAP_FILTER_MAP =
-    FlagMap<TextureFilter, VkSamplerMipmapMode>::FromValues(
-      {VK_SAMPLER_MIPMAP_MODE_NEAREST, VK_SAMPLER_MIPMAP_MODE_LINEAR});
+  static constexpr auto MIPMAP_FILTER_MAP = FlagMap<TextureFilter, VkSamplerMipmapMode>::FromValues(
+    {VK_SAMPLER_MIPMAP_MODE_NEAREST, VK_SAMPLER_MIPMAP_MODE_LINEAR});
 
   SOUL_ALWAYS_INLINE auto vk_cast_mipmap_filter(const TextureFilter filter) -> VkSamplerMipmapMode
   {
@@ -424,10 +424,7 @@ namespace soul::gpu
 
   constexpr auto get_vk_offset_3d(const vec3i32 val) -> VkOffset3D { return {val.x, val.y, val.z}; }
 
-  constexpr auto get_vk_extent_3d(const vec3u32 val) -> VkExtent3D
-  {
-    return {val.x, val.y, val.z};
-  }
+  constexpr auto get_vk_extent_3d(const vec3u32 val) -> VkExtent3D { return {val.x, val.y, val.z}; }
 
   constexpr auto get_vk_subresource_layers(
     const TextureSubresourceLayers& subresource_layers, const VkImageAspectFlags aspect_flags)
