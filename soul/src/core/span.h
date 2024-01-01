@@ -34,7 +34,8 @@ namespace soul
     {
     }
 
-    constexpr auto is_null_terminated() -> b8
+    [[nodiscard]]
+    constexpr auto is_null_terminated() const -> b8
       requires(same_as<T, const char*>)
     {
       return data_[size_] == '\0';
