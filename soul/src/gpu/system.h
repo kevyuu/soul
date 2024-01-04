@@ -26,7 +26,7 @@ namespace soul::gpu
       WSI* wsi                  = nullptr;
       u16 max_frame_in_flight   = 0;
       u16 thread_count          = 0;
-      usize transient_pool_size = 17 * ONE_MEGABYTE;
+      usize transient_pool_size = 100 * ONE_MEGABYTE;
     };
 
     void init(const Config& config);
