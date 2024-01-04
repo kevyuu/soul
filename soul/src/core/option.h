@@ -272,6 +272,12 @@ namespace soul
     constexpr Option(Option&& other) noexcept
       requires(can_nontrivial_move_v<T>);
 
+    constexpr Option(const T& val) noexcept // NOLINT(hicpp-explicit-conversions)
+      requires(can_trivial_copy_v<T>);
+
+    constexpr Option(T&& val) noexcept // NOLINT(hicpp-explicit-conversions)
+      requires(!can_trivial_copy_v<T>);
+
     constexpr auto operator=(const Option& other) noexcept -> Option&
       requires(can_trivial_copy_v<T>)
     = default;
@@ -282,6 +288,14 @@ namespace soul
 
     constexpr auto operator=(Option&& other) noexcept -> Option&
       requires(can_nontrivial_move_v<T>);
+
+    constexpr auto operator=(const T& val) noexcept // NOLINT(hicpp-explicit-conversions)
+      -> Option&
+      requires(can_trivial_copy_v<T>);
+
+    constexpr auto operator=(T&& val) noexcept // NOLINT(hicpp-explicit-conversions)
+      -> Option&
+      requires(!can_trivial_copy_v<T>);
 
     constexpr ~Option() noexcept
       requires(can_trivial_destruct_v<T>)
@@ -380,6 +394,22 @@ namespace soul
   }
 
   template <typeset T>
+  constexpr Option<T>::Option(const T& val) noexcept
+    requires(can_trivial_copy_v<T>)
+      : is_some_(true)
+  {
+    construct_at(&value_, val);
+  }
+
+  template <typeset T>
+  constexpr Option<T>::Option(T&& val) noexcept
+    requires(!can_trivial_copy_v<T>)
+      : is_some_(true)
+  {
+    construct_at(&value_, std::move(val));
+  }
+
+  template <typeset T>
   constexpr auto Option<T>::operator=(Option&& other) noexcept -> Option&
     requires(can_nontrivial_move_v<T>)
   {
@@ -396,6 +426,36 @@ namespace soul
     } else
     {
       reset();
+    }
+    return *this;
+  }
+
+  template <typeset T>
+  constexpr auto Option<T>::operator=(const T& val) noexcept -> Option&
+    requires(can_trivial_copy_v<T>)
+  {
+    if (is_some_)
+    {
+      value_ = val;
+    } else
+    {
+      is_some_ = true;
+      construct_at(&value_, val);
+    }
+    return *this;
+  }
+
+  template <typeset T>
+  constexpr auto Option<T>::operator=(T&& val) noexcept -> Option&
+    requires(!can_trivial_copy_v<T>)
+  {
+    if (is_some_)
+    {
+      value_ = std::move(val);
+    } else
+    {
+      is_some_ = true;
+      construct_at(&value_, std::move(val));
     }
     return *this;
   }
