@@ -16,7 +16,7 @@ namespace soul
     using value_type = T;
 
     union {
-      T elem_[1];
+      T data[1];
       T x;
       T r;
       T s;
@@ -54,13 +54,13 @@ namespace soul
     constexpr auto
     operator[](int index) noexcept -> T&
     {
-      return elem_[index];
+      return data[index];
     }
     [[nodiscard]]
     constexpr auto
     operator[](int index) const noexcept -> const T&
     {
-      return elem_[index];
+      return data[index];
     }
   };
 
@@ -70,7 +70,7 @@ namespace soul
     using value_type = T;
 
     union {
-      T elem_[2];
+      T data[2];
       struct {
         T x, y;
       };
@@ -121,15 +121,17 @@ namespace soul
     constexpr auto
     operator[](u8 index) noexcept -> T&
     {
-      return elem_[index];
+      return data[index];
     }
 
     [[nodiscard]]
     constexpr auto
     operator[](u8 index) const noexcept -> const T&
     {
-      return elem_[index];
+      return data[index];
     }
+
+#include "vec2_swizzles.inl"
   };
 
   template <typename T>
@@ -138,7 +140,7 @@ namespace soul
     using value_type = T;
 
     union {
-      T elem_[3];
+      T data[3];
       struct {
         T x, y, z;
       };
@@ -198,14 +200,16 @@ namespace soul
     constexpr auto
     operator[](u8 index) noexcept -> T&
     {
-      return elem_[index];
+      return data[index];
     }
     [[nodiscard]]
     constexpr auto
     operator[](u8 index) const noexcept -> const T&
     {
-      return elem_[index];
+      return data[index];
     }
+
+#include "vec3_swizzles.inl"
   };
 
   template <typename T>
@@ -214,7 +218,7 @@ namespace soul
     using value_type = T;
 
     union {
-      T elem_[4];
+      T data[4];
       struct {
         T x, y, z, w;
       };
@@ -292,14 +296,15 @@ namespace soul
     constexpr auto
     operator[](u8 index) noexcept -> T&
     {
-      return elem_[index];
+      return data[index];
     }
     [[nodiscard]]
     constexpr auto
     operator[](u8 index) const noexcept -> const T&
     {
-      return elem_[index];
+      return data[index];
     }
+#include "vec4_swizzles.inl"
   };
 
   inline namespace builtin
@@ -1327,7 +1332,6 @@ namespace soul
   [[nodiscard]] constexpr auto none(const vec3b8 v) -> b8 { return !any(v); }
   [[nodiscard]] constexpr auto none(const vec4b8 v) -> b8 { return !any(v); }
   // clang-format on
-  
 
   template <typename T, u8 DimensionV>
   constexpr void soul_op_hash_combine(auto& hasher, const Vec<T, DimensionV>& val)
