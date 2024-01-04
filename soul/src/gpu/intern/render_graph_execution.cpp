@@ -213,28 +213,27 @@ namespace soul::gpu::impl
 
     pass_infos_.resize(render_graph_->get_pass_nodes().size());
 
-    buffer_infos_.resize(
-      render_graph_->get_internal_buffers().size() + render_graph_->get_external_buffers().size());
-    internal_buffer_infos_.set(&buffer_infos_, 0, render_graph_->get_internal_buffers().size());
-    external_buffer_infos_.set(
-      &buffer_infos_, render_graph_->get_internal_buffers().size(), buffer_infos_.size());
+    const auto internal_buffer_count = render_graph_->get_internal_buffers().size();
+    const auto external_buffer_count = render_graph_->get_external_buffers().size();
+    const auto buffer_count          = internal_buffer_count + external_buffer_count;
+    buffer_infos_.resize(buffer_count);
+    internal_buffer_infos_ = u64span(buffer_infos_.begin(), internal_buffer_count);
+    external_buffer_infos_ =
+      u64span(buffer_infos_.begin() + internal_buffer_count, external_buffer_count);
 
     const auto& internal_textures = render_graph_->get_internal_textures();
     const auto& external_textures = render_graph_->get_external_textures();
     texture_infos_.resize(internal_textures.size() + external_textures.size());
-    internal_texture_infos_.set(&texture_infos_, 0, internal_textures.size());
-    external_texture_infos_.set(&texture_infos_, internal_textures.size(), texture_infos_.size());
+    internal_texture_infos_ = u64span(texture_infos_.begin(), internal_textures.size());
+    external_texture_infos_ =
+      u64span(texture_infos_.begin() + internal_textures.size(), external_textures.size());
 
-    resource_infos_.resize(
-      render_graph_->get_external_tlas_list().size() +
-      render_graph_->get_external_blas_group_list().size());
-    external_tlas_resource_infos_.set(
-      &resource_infos_, 0, render_graph_->get_external_tlas_list().size());
-    external_blas_group_resource_infos_.set(
-      &resource_infos_,
-      external_tlas_resource_infos_.get_end_idx(),
-      external_tlas_resource_infos_.get_end_idx() +
-        render_graph_->get_external_blas_group_list().size());
+    const auto external_tlas_count       = render_graph_->get_external_tlas_list().size();
+    const auto external_blas_group_count = render_graph_->get_external_blas_group_list().size();
+    resource_infos_.resize(external_tlas_count + external_blas_group_count);
+    external_tlas_resource_infos_ = u64span(resource_infos_.begin(), external_tlas_count);
+    external_blas_group_resource_infos_ =
+      u64span(resource_infos_.begin() + external_tlas_count, external_blas_group_count);
 
     constexpr auto fold_internal_texture_view_count =
       [](usize count, const RGInternalTexture& internal_texture)
@@ -1620,7 +1619,7 @@ namespace soul::gpu::impl
   {
     const auto& node = render_graph_->get_resource_node(node_id);
     SOUL_ASSERT(0, node.resource_id.is_external());
-    return soul::cast<u32>(external_tlas_resource_infos_.get_begin_idx()) +
+    return soul::cast<u32>(external_tlas_resource_infos_.begin() - resource_infos_.begin()) +
            node.resource_id.get_index();
   }
 
@@ -1629,7 +1628,7 @@ namespace soul::gpu::impl
   {
     const auto& node = render_graph_->get_resource_node(node_id);
     SOUL_ASSERT(0, node.resource_id.is_external());
-    return soul::cast<u32>(external_blas_group_resource_infos_.get_begin_idx()) +
+    return soul::cast<u32>(external_blas_group_resource_infos_.begin() - resource_infos_.begin()) +
            node.resource_id.get_index();
   }
 

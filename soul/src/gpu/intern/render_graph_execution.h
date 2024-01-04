@@ -248,17 +248,17 @@ namespace soul::gpu::impl
     NotNull<CommandPools*> command_pools_;
 
     Vector<BufferExecInfo> buffer_infos_;
-    Slice<BufferExecInfo> internal_buffer_infos_;
-    Slice<BufferExecInfo> external_buffer_infos_;
+    Span<BufferExecInfo*> internal_buffer_infos_ = nilspan;
+    Span<BufferExecInfo*> external_buffer_infos_ = nilspan;
 
     Vector<TextureExecInfo> texture_infos_;
-    Slice<TextureExecInfo> internal_texture_infos_;
-    Slice<TextureExecInfo> external_texture_infos_;
+    Span<TextureExecInfo*> internal_texture_infos_ = nilspan;
+    Span<TextureExecInfo*> external_texture_infos_ = nilspan;
     Vector<TextureViewExecInfo> texture_view_infos_;
 
     Vector<ResourceExecInfo> resource_infos_;
-    Slice<ResourceExecInfo> external_tlas_resource_infos_;
-    Slice<ResourceExecInfo> external_blas_group_resource_infos_;
+    Span<ResourceExecInfo*> external_tlas_resource_infos_       = nilspan;
+    Span<ResourceExecInfo*> external_blas_group_resource_infos_ = nilspan;
 
     Vector<PassExecInfo> pass_infos_;
 

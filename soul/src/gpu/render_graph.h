@@ -1,6 +1,5 @@
 #pragma once
 
-#include "core/slice.h"
 #include "core/span.h"
 #include "core/type_traits.h"
 #include "gpu/command_list.h"
