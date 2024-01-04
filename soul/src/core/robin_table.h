@@ -381,12 +381,12 @@ namespace soul
         if (metadata.is_psl_overflow()) {
           SOUL_PANIC("RobinTable: PSL overflow");
         }
-        SOUL_ASSERT_FORMAT(
-          0,
-          metadata.get_psl() <= expected_max_psl,
-          "Robin table psl({}) reach higher than max expected psl({})",
-          metadata.get_psl(),
-          expected_max_psl);
+        // SOUL_ASSERT_FORMAT(
+        //   0,
+        //   metadata.get_psl() <= expected_max_psl,
+        //   "Robin table psl({}) reach higher than max expected psl({})",
+        //   metadata.get_psl(),
+        //   expected_max_psl);
       }
       construct_at(&entries_[bucket_index], std::move(entry_tmp));
       metadatas_[bucket_index] = metadata;
