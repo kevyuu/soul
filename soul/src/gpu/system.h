@@ -60,7 +60,7 @@ namespace soul::gpu
     auto get_texture_view(TextureID texture_id, u32 level, u32 layer = 0) -> impl::TextureView;
     auto get_texture_view(TextureID texture_id, SubresourceIndex subresource_index)
       -> impl::TextureView;
-    auto get_texture_view(TextureID texture_id, std::optional<SubresourceIndex> subresource)
+    auto get_texture_view(TextureID texture_id, Option<SubresourceIndex> subresource)
       -> impl::TextureView;
     auto texture_desc_ref(TextureID texture_id) const -> const TextureDesc&;
 
@@ -106,10 +106,10 @@ namespace soul::gpu
 
     auto get_ssbo_descriptor_id(BufferID buffer_id) const -> DescriptorID;
     auto get_srv_descriptor_id(
-      TextureID texture_id, std::optional<SubresourceIndex> subresource_index = std::nullopt)
+      TextureID texture_id, Option<SubresourceIndex> subresource_index = nilopt)
       -> DescriptorID;
     auto get_uav_descriptor_id(
-      TextureID texture_id, std::optional<SubresourceIndex> subresource_index = std::nullopt)
+      TextureID texture_id, Option<SubresourceIndex> subresource_index = nilopt)
       -> DescriptorID;
     auto get_sampler_descriptor_id(SamplerID sampler_id) const -> DescriptorID;
     auto get_as_descriptor_id(TlasID tlas_id) const -> DescriptorID;

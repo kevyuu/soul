@@ -1367,12 +1367,11 @@ namespace soul::gpu
   }
 
   auto System::get_texture_view(
-    const TextureID texture_id, const std::optional<SubresourceIndex> subresource_index)
-    -> TextureView
+    const TextureID texture_id, const Option<SubresourceIndex> subresource_index) -> TextureView
   {
-    if (subresource_index)
+    if (subresource_index.is_some())
     {
-      return get_texture_view(texture_id, *subresource_index);
+      return get_texture_view(texture_id, subresource_index.some_ref());
     }
     return get_texture(texture_id).view;
   }
@@ -1624,11 +1623,11 @@ namespace soul::gpu
 
     auto alloc_create_info = [](const BufferDesc& buffer_desc) -> VmaAllocationCreateInfo
     {
-      if (buffer_desc.memory_option)
+      if (buffer_desc.memory_option.is_some())
       {
         return {
-          .requiredFlags  = vk_cast(buffer_desc.memory_option->required),
-          .preferredFlags = vk_cast(buffer_desc.memory_option->preferred)};
+          .requiredFlags  = vk_cast(buffer_desc.memory_option.some_ref().required),
+          .preferredFlags = vk_cast(buffer_desc.memory_option.some_ref().preferred)};
       }
       return {.usage = VMA_MEMORY_USAGE_AUTO};
     }(desc);
@@ -1641,7 +1640,7 @@ namespace soul::gpu
       alloc_create_info = {.pool = _db.linear_pools[memory_index]};
     }
 
-    std::optional<VkDeviceSize> alignment = std::nullopt;
+    Option<VkDeviceSize> alignment = nilopt;
     if (desc.usage_flags.test(BufferUsage::AS_SCRATCH_BUFFER))
     {
       alignment = _db.as_properties.minAccelerationStructureScratchOffsetAlignment;
@@ -1649,14 +1648,14 @@ namespace soul::gpu
 
     VkBuffer vk_handle;
     VmaAllocation allocation;
-    if (alignment)
+    if (alignment.is_some())
     {
       SOUL_VK_CHECK(
         vmaCreateBufferWithAlignment(
           _db.gpu_allocator,
           &buffer_info,
           &alloc_create_info,
-          alignment.value(),
+          alignment.some_ref(),
           &vk_handle,
           &allocation,
           nullptr),
@@ -1703,6 +1702,7 @@ namespace soul::gpu
 
   auto System::create_staging_buffer(const usize size) -> BufferID
   {
+    const Option<int> test = int(3);
     return create_transient_buffer({
       .size        = size,
       .usage_flags = {BufferUsage::TRANSFER_SRC},
@@ -3475,7 +3475,7 @@ namespace soul::gpu
   }
 
   auto System::get_srv_descriptor_id(
-    TextureID texture_id, std::optional<SubresourceIndex> subresource_index) -> DescriptorID
+    TextureID texture_id, Option<SubresourceIndex> subresource_index) -> DescriptorID
   {
     if (texture_id.is_null())
     {
@@ -3485,7 +3485,7 @@ namespace soul::gpu
   }
 
   auto System::get_uav_descriptor_id(
-    TextureID texture_id, std::optional<SubresourceIndex> subresource_index) -> DescriptorID
+    TextureID texture_id, Option<SubresourceIndex> subresource_index) -> DescriptorID
   {
     if (texture_id.is_null())
     {

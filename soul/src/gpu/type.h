@@ -632,9 +632,9 @@ namespace soul::gpu
   {
     usize size = 0;
     BufferUsageFlags usage_flags;
-    QueueFlags queue_flags                    = QUEUE_DEFAULT;
-    std::optional<MemoryOption> memory_option = std::nullopt;
-    const char* name                          = nullptr;
+    QueueFlags queue_flags             = QUEUE_DEFAULT;
+    Option<MemoryOption> memory_option = nilopt;
+    const char* name                   = nullptr;
   };
 
   struct TextureSubresourceLayers
