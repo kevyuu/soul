@@ -443,6 +443,54 @@ namespace soul::math
 
   template <typename T>
   [[nodiscard]]
+  inline auto compose_transform(
+    const Vec<T, 3>& translation, const Quaternion<T>& rotation, const Vec<T, 3>& scale)
+    -> Matrix<T, 4, 4>
+  {
+    const T tx = translation.x;
+    const T ty = translation.y;
+    const T tz = translation.z;
+    const T qx = rotation.x;
+    const T qy = rotation.y;
+    const T qz = rotation.z;
+    const T qw = rotation.w;
+    const T sx = scale.x;
+    const T sy = scale.y;
+    const T sz = scale.z;
+
+    const vec4<T> column0 = {
+      (1 - 2 * qy * qy - 2 * qz * qz) * sx,
+      (2 * qx * qy + 2 * qz * qw) * sx,
+      (2 * qx * qz - 2 * qy * qw) * sx,
+      0.f,
+    };
+
+    const vec4<T> column1 = {
+      (2 * qx * qy - 2 * qz * qw) * sy,
+      (1 - 2 * qx * qx - 2 * qz * qz) * sy,
+      (2 * qy * qz + 2 * qx * qw) * sy,
+      0.f,
+    };
+
+    const vec4<T> column2 = {
+      (2 * qx * qz + 2 * qy * qw) * sz,
+      (2 * qy * qz - 2 * qx * qw) * sz,
+      (1 - 2 * qx * qx - 2 * qy * qy) * sz,
+      0.f,
+    };
+
+    const vec4<T> column3 = {
+      tx,
+      ty,
+      tz,
+      1.f,
+    };
+
+    return Matrix<T, 4, 4>::FromColumns(column0, column1, column2, column3);
+  }
+
+  template <typename T>
+  [[nodiscard]]
   inline auto perspective(T fovy, T aspect, T z_near, T z_far) -> Matrix<T, 4, 4>
   {
     SOUL_ASSERT(0, abs(aspect - std::numeric_limits<T>::epsilon()) > T(0));
@@ -677,4 +725,5 @@ namespace soul::math
 
     return m;
   }
+
 } // namespace soul::math

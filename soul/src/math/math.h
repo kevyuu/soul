@@ -9,4 +9,5 @@
 #include "math/matrix.h"
 #include "math/quaternion.h"
 #include "math/scalar.h"
+#include "math/transform.h"
 #include "math/vec.h"

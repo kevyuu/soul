@@ -413,7 +413,7 @@ namespace soul::math
       }
 
       axis = normalize(axis);
-      return quat_angle_axis(T(fconst::PI), axis);
+      return quat_angle_axis(T(f32const::PI), axis);
     }
 
     // Implementation from Stan Melax's Game Programming Gems 1 article
