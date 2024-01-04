@@ -5,7 +5,6 @@
 #include "gpu/intern/bindless_descriptor_allocator.h"
 #include "gpu/type.h"
 
-
 namespace soul::gpu::impl
 {
   class RenderCompiler;
@@ -44,7 +43,7 @@ namespace soul::gpu
     void destroy_buffer(BufferID buffer_id);
     auto get_buffer(BufferID buffer_id) -> impl::Buffer&;
     auto get_buffer(BufferID buffer_id) const -> const impl::Buffer&;
-    auto get_gpu_address(BufferID buffer_id) const -> GPUAddress;
+    auto get_gpu_address(BufferID buffer_id, usize offset = 0) const -> GPUAddress;
     auto buffer_desc_ref(BufferID buffer_id) const -> const BufferDesc&;
 
     auto create_texture(const TextureDesc& desc) -> TextureID;

@@ -650,9 +650,15 @@ namespace soul::gpu
     }
 
     [[nodiscard]]
-    auto get_color_attachment_node_id() const -> TextureNodeID
+    auto get_color_attachment_node_id(usize idx = 0) const -> TextureNodeID
     {
-      return render_target_.color_attachments[0].out_node_id;
+      return render_target_.color_attachments[idx].out_node_id;
+    }
+
+    [[nodiscard]]
+    auto get_depth_stencil_attachment_node_id() const -> TextureNodeID
+    {
+      return render_target_.depth_stencil_attachment.out_node_id;
     }
 
   protected:

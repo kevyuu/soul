@@ -440,11 +440,11 @@ namespace soul::gpu::impl
       const auto max_primitives_counts = compute_max_primitives_counts(build_desc, scope_allocator);
 
       const auto& dst_blas = gpu_system_->get_blas(blas_build.dst_blas_id);
+      build_info.dstAccelerationStructure = dst_blas.vk_handle;
       if (blas_build.src_blas_id.is_valid()) {
         const auto& src_blas = gpu_system_->get_blas(blas_build.src_blas_id);
         build_info.srcAccelerationStructure = src_blas.vk_handle;
       }
-      build_info.dstAccelerationStructure = dst_blas.vk_handle;
       build_infos.push_back(build_info);
 
       build_range_list_vec.push_back(
@@ -485,6 +485,8 @@ namespace soul::gpu::impl
     for (u32 build_idx = 0; build_idx < command.builds.size(); build_idx++) {
       auto current_scratch_size = build_scratch_sizes[build_idx];
       if (current_build_scratch_size + current_scratch_size > command.max_build_memory_size) {
+        // TODO: Add barrier after each build because they use the same scratch buffer
+        SOUL_PANIC("Barrier between blas build command is not implemented yet!");
         vkCmdBuildAccelerationStructuresKHR(
           command_buffer_,
           current_build_count,
