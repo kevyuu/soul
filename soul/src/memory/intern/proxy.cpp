@@ -25,13 +25,17 @@ namespace soul::memory
 
   auto ProfileProxy::on_pre_deallocate(const DeallocateParam& dealloc_param) -> DeallocateParam
   {
-    if (dealloc_param.addr == nullptr) {
+    if (dealloc_param.addr == nullptr)
+    {
       return dealloc_param;
     }
     SOUL_MEMPROFILE_REGISTER_DEALLOCATION(_name, deallocParam.addr, deallocParam.size);
     return dealloc_param;
   }
 
-  void ProfileProxy::on_pre_cleanup() { SOUL_MEMPROFILE_DEREGISTER_ALLOCATOR(_name); }
+  void ProfileProxy::on_pre_cleanup()
+  {
+    SOUL_MEMPROFILE_DEREGISTER_ALLOCATOR(_name);
+  }
 
 } // namespace soul::memory

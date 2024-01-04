@@ -49,14 +49,15 @@ namespace soul::runtime
         "Consider increase the storage size of the"
         "task or dynamically allocate the memory.");
 
-      auto call = [](TaskID taskID, void* data) {
+      auto call = [](TaskID taskID, void* data)
+      {
         Execute& lambda = *static_cast<Execute*>(data);
         lambda(taskID);
         lambda.~Execute();
       };
 
       const TaskID task_id = create_task(parent, call);
-      Task* task = get_task_ptr(task_id);
+      Task* task           = get_task_ptr(task_id);
       new (task->storage) Execute(std::forward<Execute>(lambda));
       return task_id;
     }
@@ -72,27 +73,31 @@ namespace soul::runtime
         "ParallelForTaskData size is too big. TaskData = %d"
         "Consider to increase the storage size of the task.");
 
-      auto parallel_func = [](TaskID taskID, void* data) {
+      auto parallel_func = [](TaskID taskID, void* data)
+      {
         TaskData& task_data = (*static_cast<TaskData*>(data));
-        if (task_data.count > task_data.min_count) {
-          const u32 left_count = task_data.count / 2;
+        if (task_data.count > task_data.min_count)
+        {
+          const u32 left_count      = task_data.count / 2;
           const TaskID left_task_id = get().create_parallel_for_task_recursive(
             taskID, task_data.start, left_count, task_data.min_count, task_data.func);
           get().task_run(left_task_id);
 
-          const u32 right_count = task_data.count - left_count;
+          const u32 right_count      = task_data.count - left_count;
           const TaskID right_task_id = get().create_parallel_for_task_recursive(
             taskID, task_data.start + left_count, right_count, task_data.min_count, task_data.func);
           get().task_run(right_task_id);
-        } else {
-          for (usize i = 0; i < task_data.count; i++) {
+        } else
+        {
+          for (usize i = 0; i < task_data.count; i++)
+          {
             task_data.func(task_data.start + i);
           }
         }
       };
 
       const TaskID task_id = create_task(parent, std::move(parallel_func));
-      Task* task = get_task_ptr(task_id);
+      Task* task           = get_task_ptr(task_id);
       new (task->storage) TaskData(start, data_count, block_size, std::forward<Func>(func));
       return task_id;
     }

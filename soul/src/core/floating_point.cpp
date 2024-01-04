@@ -7,7 +7,8 @@ namespace soul
     auto overflow() -> float
     {
       volatile float f = 1e10;
-      for (i32 i = 0; i < 10; ++i) {
+      for (i32 i = 0; i < 10; ++i)
+      {
         f *= f; // this will overflow before the for loop terminates
       }
       return f;
@@ -36,8 +37,10 @@ namespace soul
     // Now reassemble s, e and m into a half:
     //
 
-    if (e <= 0) {
-      if (e < -10) {
+    if (e <= 0)
+    {
+      if (e < -10)
+      {
         //
         // E is less than -10.  The absolute value of f is
         // less than half_MIN (f may be a small normalized
@@ -67,7 +70,8 @@ namespace soul
       // the code below will handle it correctly.
       //
 
-      if ((m & 0x00001000) != 0) {
+      if ((m & 0x00001000) != 0)
+      {
         m += 0x00002000;
       }
 
@@ -76,15 +80,18 @@ namespace soul
       //
 
       return u16(s | (m >> 13));
-    } else if (e == 0xff - (127 - 15)) {
-      if (m == 0) {
+    } else if (e == 0xff - (127 - 15))
+    {
+      if (m == 0)
+      {
         //
         // F is an infinity; convert f to a half
         // infinity with the same sign as f.
         //
 
         return u16(s | 0x7c00);
-      } else {
+      } else
+      {
         //
         // F is a NAN; we produce a half NAN that preserves
         // the sign bit and the 10 leftmost bits of the
@@ -98,7 +105,8 @@ namespace soul
 
         return u16(s | 0x7c00 | m | static_cast<i32>(m == 0));
       }
-    } else {
+    } else
+    {
       //
       // E is greater than zero.  F is a normalized float.
       // We try to convert f to a normalized half.
@@ -108,10 +116,12 @@ namespace soul
       // Round to nearest, round "0.5" up
       //
 
-      if ((m & 0x00001000) != 0) {
+      if ((m & 0x00001000) != 0)
+      {
         m += 0x00002000;
 
-        if ((m & 0x00800000) != 0) {
+        if ((m & 0x00800000) != 0)
+        {
           m = 0;  // overflow in significand,
           e += 1; // adjust exponent
         }
@@ -121,7 +131,8 @@ namespace soul
       // Handle exponent overflow
       //
 
-      if (e > 30) {
+      if (e > 30)
+      {
         overflow(); // Cause a hardware floating point overflow;
 
         return u16(s | 0x7c00); // Return infinity with same sign as f.
@@ -141,19 +152,23 @@ namespace soul
     i32 e = (value >> 10) & 0x0000001f;
     i32 m = value & 0x000003ff;
 
-    if (e == 0) {
-      if (m == 0) {
+    if (e == 0)
+    {
+      if (m == 0)
+      {
         //
         // Plus or minus zero
         //
 
         return std::bit_cast<float, i32>(s << 31);
-      } else {
+      } else
+      {
         //
         // Denormalized number -- renormalize it
         //
 
-        while (!(m & 0x00000400)) {
+        while (!(m & 0x00000400))
+        {
           m <<= 1;
           e -= 1;
         }
@@ -161,14 +176,17 @@ namespace soul
         e += 1;
         m &= ~0x00000400;
       }
-    } else if (e == 31) {
-      if (m == 0) {
+    } else if (e == 31)
+    {
+      if (m == 0)
+      {
         //
         // Positive or negative infinity
         //
 
         return std::bit_cast<float, i32>((s << 31) | 0x7f800000);
-      } else {
+      } else
+      {
         //
         // Nan -- preserve sign and significand bits
         //

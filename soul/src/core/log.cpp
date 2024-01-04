@@ -1,8 +1,8 @@
 #include <iostream>
 
-#include "core/string.h"
 #include "core/log.h"
 #include "core/mutex.h"
+#include "core/string.h"
 #include "memory/allocator.h"
 #include "memory/allocators/malloc_allocator.h"
 
@@ -10,12 +10,16 @@ namespace soul::impl
 {
   namespace
   {
-    struct LogBuffer {
+    struct LogBuffer
+    {
       static constexpr usize CAPACITY = 8192;
       Mutex lock;
       String buffer;
 
-      explicit LogBuffer(memory::Allocator* allocator) : buffer(allocator) { buffer.reserve(8192); }
+      explicit LogBuffer(memory::Allocator* allocator) : buffer(allocator)
+      {
+        buffer.reserve(8192);
+      }
     };
 
     using LogBuffers = FlagMap<LogLevel, LogBuffer>;
@@ -23,16 +27,21 @@ namespace soul::impl
     auto get_log_buffers() -> LogBuffers&
     {
       static memory::MallocAllocator malloc_allocator("malloc allocator");
-      static auto log_buffers =
-        LogBuffers::Generate([] { return LogBuffer(&malloc_allocator); });
+      static auto log_buffers = LogBuffers::Generate(
+        []
+        {
+          return LogBuffer(&malloc_allocator);
+        });
       return log_buffers;
     }
 
     auto get_output_stream(LogLevel log_level) -> std::ostream&
     {
-      if (log_level == LogLevel::FATAL && log_level == LogLevel::ERROR) {
+      if (log_level == LogLevel::FATAL && log_level == LogLevel::ERROR)
+      {
         return std::cerr;
-      } else {
+      } else
+      {
         return std::cout;
       }
     }
@@ -50,10 +59,12 @@ namespace soul::impl
     auto& log_buffers = get_log_buffers();
     std::lock_guard guard(log_buffers[log_level].lock);
     auto& log_buffer = log_buffers[log_level];
-    if (log_buffer.buffer.size() + message.size() + 1 > LogBuffer::CAPACITY) {
+    if (log_buffer.buffer.size() + message.size() + 1 > LogBuffer::CAPACITY)
+    {
       log_flush_no_lock(log_level);
     }
-    if (message.size() >= log_buffer.buffer.capacity()) {
+    if (message.size() >= log_buffer.buffer.capacity())
+    {
       get_output_stream(log_level) << message.data() << std::endl;
       return;
     }
@@ -71,7 +82,8 @@ namespace soul::impl
 
   auto flush_logs() -> void
   {
-    for (auto log_level : FlagIter<LogLevel>()) {
+    for (auto log_level : FlagIter<LogLevel>())
+    {
       flush_log(log_level);
     }
   }

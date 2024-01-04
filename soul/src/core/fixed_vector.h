@@ -14,15 +14,15 @@ namespace soul
   class FixedVector
   {
   public:
-    using this_type = FixedVector<T, AllocatorT>;
-    using value_type = T;
-    using pointer = T*;
-    using const_pointer = const T*;
-    using reference = T&;
-    using const_reference = T&;
-    using iterator = T*;
-    using const_iterator = const T*;
-    using reverse_iterator = std::reverse_iterator<iterator>;
+    using this_type              = FixedVector<T, AllocatorT>;
+    using value_type             = T;
+    using pointer                = T*;
+    using const_pointer          = const T*;
+    using reference              = T&;
+    using const_reference        = T&;
+    using iterator               = T*;
+    using const_iterator         = const T*;
+    using reverse_iterator       = std::reverse_iterator<iterator>;
     using const_reverse_iterator = std::reverse_iterator<const_iterator>;
 
     explicit FixedVector(AllocatorT* allocator = get_default_allocator()) : allocator_(allocator) {}
@@ -49,6 +49,7 @@ namespace soul
     {
       return &buffer_[0];
     }
+
     [[nodiscard]]
     auto data() const -> const_pointer
     {
@@ -73,11 +74,13 @@ namespace soul
     {
       return buffer_;
     }
+
     [[nodiscard]]
     auto begin() const -> const_iterator
     {
       return buffer_;
     }
+
     [[nodiscard]]
     auto cbegin() const -> const_iterator
     {
@@ -89,11 +92,13 @@ namespace soul
     {
       return buffer_ + size_;
     }
+
     [[nodiscard]]
     auto end() const -> const_iterator
     {
       return buffer_ + size_;
     }
+
     [[nodiscard]]
     auto cend() const -> const_iterator
     {
@@ -105,11 +110,13 @@ namespace soul
     {
       return reverse_iterator(end());
     }
+
     [[nodiscard]]
     auto rbegin() const -> const_reverse_iterator
     {
       return const_reverse_iterator(cend());
     }
+
     [[nodiscard]]
     auto crbegin() const -> const_reverse_iterator
     {
@@ -121,11 +128,13 @@ namespace soul
     {
       return reverse_iterator(begin());
     }
+
     [[nodiscard]]
     auto rend() const -> const_reverse_iterator
     {
       return const_reverse_iterator(cbegin());
     }
+
     [[nodiscard]]
     auto crend() const -> const_reverse_iterator
     {
@@ -134,7 +143,7 @@ namespace soul
 
   private:
     AllocatorT* allocator_;
-    T* buffer_ = nullptr;
+    T* buffer_  = nullptr;
     usize size_ = 0;
   };
 
@@ -158,7 +167,8 @@ namespace soul
   template <typename T, memory::allocator_type AllocatorT>
   FixedVector<T, AllocatorT>::~FixedVector()
   {
-    if (allocator_ == nullptr) {
+    if (allocator_ == nullptr)
+    {
       return;
     }
     cleanup();
@@ -183,9 +193,10 @@ namespace soul
     SOUL_ASSERT(0, size != 0);
     SOUL_ASSERT(0, size_ == 0, "Array have been initialized before");
     SOUL_ASSERT(0, buffer_ == nullptr, "Array have been initialized before");
-    size_ = size;
+    size_   = size;
     buffer_ = allocator_->template allocate_array<T>(size_);
-    for (usize i = 0; i < size_; i++) {
+    for (usize i = 0; i < size_; i++)
+    {
       new (buffer_ + i) T(std::forward<Args>(args)...);
     }
   }
@@ -196,9 +207,10 @@ namespace soul
     NotNull<AllocatorT*> allocator, const usize size, GenerateFn generate_fn) -> void
   {
     allocator_ = allocator;
-    size_ = size;
-    buffer_ = allocator_->template allocate_array<T>(size_);
-    for (usize i = 0; i < size_; i++) {
+    size_      = size;
+    buffer_    = allocator_->template allocate_array<T>(size_);
+    for (usize i = 0; i < size_; i++)
+    {
       new (buffer_ + i) T(generate_fn(i));
     }
   }

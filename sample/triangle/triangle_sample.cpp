@@ -16,34 +16,38 @@ class TriangleSampleApp final : public App
   {
     const gpu::RGColorAttachmentDesc color_attachment_desc = {
       .node_id = render_target,
-      .clear = true,
+      .clear   = true,
     };
 
     const vec2u32 viewport = gpu_system_->get_swapchain_extent();
 
-    struct PassParameter {
+    struct PassParameter
+    {
     };
+
     const auto& raster_node = render_graph.add_raster_pass<PassParameter>(
       "Triangle Test",
       gpu::RGRenderTargetDesc(viewport, color_attachment_desc),
-      [](auto& parameter, auto& builder) -> void {
+      [](auto& parameter, auto& builder) -> void
+      {
         // We leave this empty, because there is no any shader dependency.
         // We will hardcode the triangle vertex on the shader in this example.
       },
-      [viewport, this](const auto& parameter, auto& registry, auto& command_list) -> void {
+      [viewport, this](const auto& parameter, auto& registry, auto& command_list) -> void
+      {
         const gpu::GraphicPipelineStateDesc pipeline_desc = {
           .program_id = program_id_,
           .viewport =
             {.width = static_cast<float>(viewport.x), .height = static_cast<float>(viewport.y)},
-          .scissor = {.extent = viewport},
+          .scissor                = {.extent = viewport},
           .color_attachment_count = 1,
         };
 
-        using Command = gpu::RenderCommandDraw;
+        using Command         = gpu::RenderCommandDraw;
         const Command command = {
           .pipeline_state_id = registry.get_pipeline_state(pipeline_desc),
-          .vertex_count = 3,
-          .instance_count = 1,
+          .vertex_count      = 3,
+          .instance_count    = 1,
         };
         command_list.push(command);
       });
@@ -56,14 +60,14 @@ public:
   {
     const auto shader_source =
       gpu::ShaderSource::From(gpu::ShaderFile{.path = Path::From("triangle_sample.hlsl"_str)});
-    const auto search_path = Path::From("shaders/"_str);
+    const auto search_path  = Path::From("shaders/"_str);
     const auto entry_points = soul::Array{
       gpu::ShaderEntryPoint{gpu::ShaderStage::VERTEX, "vs_main"_str},
       gpu::ShaderEntryPoint{gpu::ShaderStage::FRAGMENT, "fs_main"_str},
     };
     const gpu::ProgramDesc program_desc = {
       .search_paths = u32cspan(&search_path, 1),
-      .sources = u32cspan(&shader_source, 1),
+      .sources      = u32cspan(&shader_source, 1),
       .entry_points = entry_points.cspan<u32>(),
     };
     program_id_ = gpu_system_->create_program(program_desc).ok_ref();

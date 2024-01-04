@@ -6,7 +6,8 @@
 class Texture2DRGPass
 {
 public:
-  struct Parameter {
+  struct Parameter
+  {
     soul::gpu::TextureNodeID sampled_texture;
     soul::gpu::TextureNodeID render_target;
   };
@@ -17,9 +18,9 @@ public:
     -> soul::gpu::TextureNodeID;
 
 private:
-  soul::gpu::ProgramID program_id_ = soul::gpu::ProgramID();
+  soul::gpu::ProgramID program_id_      = soul::gpu::ProgramID();
   soul::gpu::BufferID vertex_buffer_id_ = soul::gpu::BufferID();
-  soul::gpu::BufferID index_buffer_id_ = soul::gpu::BufferID();
-  soul::gpu::SamplerID sampler_id_ = soul::gpu::SamplerID();
-  soul::gpu::System* gpu_system_ = nullptr;
+  soul::gpu::BufferID index_buffer_id_  = soul::gpu::BufferID();
+  soul::gpu::SamplerID sampler_id_      = soul::gpu::SamplerID();
+  soul::gpu::System* gpu_system_        = nullptr;
 };

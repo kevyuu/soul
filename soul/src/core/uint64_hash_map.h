@@ -21,10 +21,18 @@ namespace soul
     auto operator=(const UInt64HashMap& other) -> UInt64HashMap&;
     UInt64HashMap(UInt64HashMap&& other) noexcept;
     auto operator=(UInt64HashMap&& other) noexcept -> UInt64HashMap&;
-    ~UInt64HashMap() { cleanup(); }
+
+    ~UInt64HashMap()
+    {
+      cleanup();
+    }
 
     auto swap(UInt64HashMap<T>& other) noexcept -> void;
-    friend auto swap(UInt64HashMap<T>& a, UInt64HashMap<T>& b) noexcept -> void { a.swap(b); }
+
+    friend auto swap(UInt64HashMap<T>& a, UInt64HashMap<T>& b) noexcept -> void
+    {
+      a.swap(b);
+    }
 
     auto clear() -> void;
     auto cleanup() -> void;
@@ -38,7 +46,8 @@ namespace soul
     [[nodiscard]]
     auto is_exist(u64 key) const noexcept -> b8
     {
-      if (size_ == 0) {
+      if (size_ == 0)
+      {
         return false;
       }
       u32 index = find_index(key);
@@ -57,11 +66,13 @@ namespace soul
     {
       return size_;
     }
+
     [[nodiscard]]
     auto capacity() const -> usize
     {
       return capacity_;
     }
+
     [[nodiscard]]
     auto empty() const noexcept -> b8
     {
@@ -71,17 +82,18 @@ namespace soul
   private:
     memory::Allocator* allocator_ = nullptr;
 
-    struct Index {
+    struct Index
+    {
       u64 key;
       usize dib;
     };
 
     Index* indexes_ = nullptr;
-    T* values_ = nullptr;
+    T* values_      = nullptr;
 
-    usize size_ = 0;
+    usize size_     = 0;
     usize capacity_ = 0;
-    usize max_dib_ = 0;
+    usize max_dib_  = 0;
 
     auto init_assert() -> void
     {
@@ -96,10 +108,11 @@ namespace soul
     auto find_index(u64 key) const -> usize
     {
       const u32 baseIndex = key % capacity_;
-      auto iter_index = baseIndex;
-      u32 dib = 0;
+      auto iter_index     = baseIndex;
+      u32 dib             = 0;
       while ((indexes_[iter_index].key != key) && (indexes_[iter_index].dib != 0) &&
-             (dib < max_dib_)) {
+             (dib < max_dib_))
+      {
         dib++;
         iter_index++;
         iter_index %= capacity_;
@@ -111,12 +124,13 @@ namespace soul
     {
       u32 next_index = index + 1;
       next_index %= capacity_;
-      while (indexes_[next_index].dib > 1) {
+      while (indexes_[next_index].dib > 1)
+      {
         indexes_[index].key = indexes_[next_index].key;
         indexes_[index].dib = indexes_[next_index].dib - 1;
-        values_[index] = std::move(values_[next_index]);
-        index = (index + 1) % capacity_;
-        next_index = (next_index + 1) % capacity_;
+        values_[index]      = std::move(values_[next_index]);
+        index               = (index + 1) % capacity_;
+        next_index          = (next_index + 1) % capacity_;
       }
       indexes_[index].dib = 0;
       size_--;
@@ -133,8 +147,10 @@ namespace soul
       requires can_nontrivial_move_v<U>
     auto move_values(const UInt64HashMap<U>& other) -> void
     {
-      for (usize i = 0; i < other._capacity; ++i) {
-        if (other._indexes[i].dib == 0) {
+      for (usize i = 0; i < other._capacity; ++i)
+      {
+        if (other._indexes[i].dib == 0)
+        {
           continue;
         }
         new (values_ + i) U(std::move(other._values[i]));
@@ -152,8 +168,10 @@ namespace soul
       requires can_nontrivial_copy_v<U>
     auto copy_values(const UInt64HashMap<T>& other) -> void
     {
-      for (auto i = 0; i < other.capacity_; i++) {
-        if (other.indexes_[i].dib == 0) {
+      for (auto i = 0; i < other.capacity_; i++)
+      {
+        if (other.indexes_[i].dib == 0)
+        {
           continue;
         }
         new (values_ + i) T(other.values_[i]);
@@ -163,9 +181,12 @@ namespace soul
     template <typename U = T>
     auto destruct_values() -> void
     {
-      if constexpr (can_nontrivial_destruct_v<U>) {
-        for (auto i = 0; i < capacity_; i++) {
-          if (indexes_[i].dib != 0) {
+      if constexpr (can_nontrivial_destruct_v<U>)
+      {
+        for (auto i = 0; i < capacity_; i++)
+        {
+          if (indexes_[i].dib != 0)
+          {
             values_[i].~U();
           }
         }
@@ -205,11 +226,11 @@ namespace soul
         capacity_(std::move(other.capacity_)),
         max_dib_(std::move(other.max_dib_))
   {
-    other.indexes_ = nullptr;
-    other.values_ = nullptr;
-    other.size_ = 0;
+    other.indexes_  = nullptr;
+    other.values_   = nullptr;
+    other.size_     = 0;
     other.capacity_ = 0;
-    other.max_dib_ = 0;
+    other.max_dib_  = 0;
   }
 
   template <typename T>
@@ -236,7 +257,7 @@ namespace soul
     destruct_values();
     memset(indexes_, 0, sizeof(Index) * capacity_);
     max_dib_ = 0;
-    size_ = 0;
+    size_    = 0;
   }
 
   template <typename T>
@@ -245,8 +266,8 @@ namespace soul
     destruct_values();
     allocator_->deallocate(indexes_);
     allocator_->deallocate(values_); // NOLINT(bugprone-sizeof-expression)
-    max_dib_ = 0;
-    size_ = 0;
+    max_dib_  = 0;
+    size_     = 0;
     capacity_ = 0;
   }
 
@@ -258,17 +279,20 @@ namespace soul
     indexes_ = static_cast<Index*>(allocator_->allocate(capacity * sizeof(Index), alignof(Index)));
     memset(indexes_, 0, sizeof(Index) * capacity);
     T* old_values = values_;
-    values_ = static_cast<T*>(allocator_->allocate(capacity * sizeof(T), alignof(T)));
+    values_       = static_cast<T*>(allocator_->allocate(capacity * sizeof(T), alignof(T)));
     const auto old_capacity = capacity_;
-    capacity_ = capacity;
-    max_dib_ = 0;
-    size_ = 0;
+    capacity_               = capacity;
+    max_dib_                = 0;
+    size_                   = 0;
 
-    if (old_capacity != 0) {
+    if (old_capacity != 0)
+    {
       SOUL_ASSERT(0, old_indexes != nullptr);
       SOUL_ASSERT(0, old_values != nullptr);
-      for (usize i = 0; i < old_capacity; ++i) {
-        if (old_indexes[i].dib != 0) {
+      for (usize i = 0; i < old_capacity; ++i)
+      {
+        if (old_indexes[i].dib != 0)
+        {
           add(old_indexes[i].key, std::move(old_values[i]));
         }
       }
@@ -287,28 +311,32 @@ namespace soul
   template <typename T>
   auto UInt64HashMap<T>::add(u64 key, T&& value) -> void
   {
-    if (size_ == capacity_) {
+    if (size_ == capacity_)
+    {
       reserve(capacity_ * 2 + 8);
     }
     const auto base_index = static_cast<u32>(key % capacity_);
-    auto iter_index = base_index;
-    T value_to_insert = std::move(value);
-    auto key_to_insert = key;
-    u32 dib = 1;
-    while (indexes_[iter_index].dib != 0) {
-      if (indexes_[iter_index].dib < dib) {
-        const u64 tmpKey = indexes_[iter_index].key;
-        T tmpValue = std::move(values_[iter_index]);
-        const u32 tmpDIB = indexes_[iter_index].dib;
+    auto iter_index       = base_index;
+    T value_to_insert     = std::move(value);
+    auto key_to_insert    = key;
+    u32 dib               = 1;
+    while (indexes_[iter_index].dib != 0)
+    {
+      if (indexes_[iter_index].dib < dib)
+      {
+        const u64 tmpKey         = indexes_[iter_index].key;
+        T tmpValue               = std::move(values_[iter_index]);
+        const u32 tmpDIB         = indexes_[iter_index].dib;
         indexes_[iter_index].key = key_to_insert;
         indexes_[iter_index].dib = dib;
-        if (max_dib_ < dib) {
+        if (max_dib_ < dib)
+        {
           max_dib_ = dib;
         }
         new (values_ + iter_index) T(std::move(value_to_insert));
-        key_to_insert = tmpKey;
+        key_to_insert   = tmpKey;
         value_to_insert = std::move(tmpValue);
-        dib = tmpDIB;
+        dib             = tmpDIB;
       }
       dib++;
       iter_index++;
@@ -317,7 +345,8 @@ namespace soul
 
     indexes_[iter_index].key = key_to_insert;
     indexes_[iter_index].dib = dib;
-    if (max_dib_ < dib) {
+    if (max_dib_ < dib)
+    {
       max_dib_ = dib;
     }
     new (values_ + iter_index) T(std::move(value_to_insert));

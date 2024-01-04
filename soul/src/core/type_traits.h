@@ -10,15 +10,16 @@
 namespace soul
 {
   using false_type = std::false_type;
-  using true_type = std::true_type;
+  using true_type  = std::true_type;
 
-  struct match_any {
-    match_any() = delete;
-    match_any(const match_any&) = delete;
-    match_any(match_any&&) noexcept = delete;
+  struct match_any
+  {
+    match_any()                                    = delete;
+    match_any(const match_any&)                    = delete;
+    match_any(match_any&&) noexcept                = delete;
     auto operator=(const match_any&) -> match_any& = delete;
-    auto operator=(match_any&&) -> match_any& = delete;
-    ~match_any() = delete;
+    auto operator=(match_any&&) -> match_any&      = delete;
+    ~match_any()                                   = delete;
   };
 
   template <typename T>
@@ -80,7 +81,8 @@ namespace soul
   };
 
   template <typename T1, typename T2>
-  inline constexpr b8 assert_same_as_v = [] {
+  inline constexpr b8 assert_same_as_v = []
+  {
     static_assert(std::same_as<T1, T2>, "Type is not the same");
     return true;
   }();
@@ -209,16 +211,19 @@ namespace soul
   inline b8 constexpr can_compare_equality_v = std::equality_comparable<T>;
 
   template <typename T = void>
-  struct static_assert_error {
+  struct static_assert_error
+  {
     static b8 constexpr value = false;
   };
 
   template <class T, template <class...> class Template>
-  struct is_specialization : std::false_type {
+  struct is_specialization : std::false_type
+  {
   };
 
   template <template <class...> class Template, class... Args>
-  struct is_specialization<Template<Args...>, Template> : std::true_type {
+  struct is_specialization<Template<Args...>, Template> : std::true_type
+  {
   };
 
   template <class T, template <class...> class Template>

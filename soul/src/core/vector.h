@@ -17,19 +17,19 @@ namespace soul
   template <
     typename T,
     memory::allocator_type AllocatorT = memory::Allocator,
-    usize InlineSizeV = 0>
+    usize InlineSizeV                 = 0>
   class Vector
   {
   public:
-    using this_type = Vector<T, AllocatorT, InlineSizeV>;
-    using value_type = T;
-    using pointer = T*;
-    using const_pointer = const T*;
-    using reference = T&;
-    using const_reference = const T&;
-    using iterator = T*;
-    using const_iterator = const T*;
-    using reverse_iterator = std::reverse_iterator<iterator>;
+    using this_type              = Vector<T, AllocatorT, InlineSizeV>;
+    using value_type             = T;
+    using pointer                = T*;
+    using const_pointer          = const T*;
+    using reference              = T&;
+    using const_reference        = const T&;
+    using iterator               = T*;
+    using const_iterator         = const T*;
+    using reverse_iterator       = std::reverse_iterator<iterator>;
     using const_reverse_iterator = std::reverse_iterator<const_iterator>;
 
     static constexpr usize INLINE_ELEMENT_COUNT = InlineSizeV;
@@ -91,7 +91,10 @@ namespace soul
 
     void swap(this_type& other) noexcept;
 
-    friend void swap(this_type& a, this_type& b) noexcept { a.swap(b); }
+    friend void swap(this_type& a, this_type& b) noexcept
+    {
+      a.swap(b);
+    }
 
     [[nodiscard]]
     auto begin() -> iterator;
@@ -216,10 +219,10 @@ namespace soul
   private:
     SOUL_NO_UNIQUE_ADDRESS RawBuffer<T, InlineSizeV> stack_storage_;
     static constexpr usize GROWTH_FACTOR = 2;
-    static constexpr b8 IS_SBO = InlineSizeV > 0;
+    static constexpr b8 IS_SBO           = InlineSizeV > 0;
     NotNull<AllocatorT*> allocator_;
-    T* buffer_ = stack_storage_.data();
-    usize size_ = 0;
+    T* buffer_      = stack_storage_.data();
+    usize size_     = 0;
     usize capacity_ = InlineSizeV;
 
     Vector(const Vector& other, AllocatorT& allocator);
@@ -228,28 +231,42 @@ namespace soul
 
     auto operator=(const Vector& rhs) -> Vector&;
 
-    struct Construct {
-      struct WithSize {
-      };
-      struct WithCapacity {
-      };
-      struct From {
-      };
-      struct FillN {
-      };
-      struct GenerateN {
-      };
-      struct Transform {
-      };
-      struct TransformIndex {
+    struct Construct
+    {
+      struct WithSize
+      {
       };
 
-      static constexpr auto with_size = WithSize{};
-      static constexpr auto with_capacity = WithCapacity{};
-      static constexpr auto from = From{};
-      static constexpr auto fill_n = FillN{};
-      static constexpr auto generate_n = GenerateN{};
-      static constexpr auto transform = Transform{};
+      struct WithCapacity
+      {
+      };
+
+      struct From
+      {
+      };
+
+      struct FillN
+      {
+      };
+
+      struct GenerateN
+      {
+      };
+
+      struct Transform
+      {
+      };
+
+      struct TransformIndex
+      {
+      };
+
+      static constexpr auto with_size       = WithSize{};
+      static constexpr auto with_capacity   = WithCapacity{};
+      static constexpr auto from            = From{};
+      static constexpr auto fill_n          = FillN{};
+      static constexpr auto generate_n      = GenerateN{};
+      static constexpr auto transform       = Transform{};
       static constexpr auto transform_index = TransformIndex{};
     };
 
@@ -325,9 +342,11 @@ namespace soul
       : allocator_(&allocator), size_(other.size_)
   {
     init_reserve(other.capacity_);
-    if constexpr (ts_clone<T>) {
+    if constexpr (ts_clone<T>)
+    {
       uninitialized_clone_n(other.buffer_, other.size_, buffer_);
-    } else {
+    } else
+    {
       uninitialized_copy_n(other.buffer_, other.size_, buffer_);
     }
   }
@@ -335,10 +354,12 @@ namespace soul
   template <typename T, memory::allocator_type AllocatorT, usize N>
   Vector<T, AllocatorT, N>::Vector(Vector&& other) noexcept : allocator_(other.allocator_)
   {
-    if (!other.is_using_stack_storage()) {
-      buffer_ = std::exchange(other.buffer_, other.stack_storage_.data());
+    if (!other.is_using_stack_storage())
+    {
+      buffer_   = std::exchange(other.buffer_, other.stack_storage_.data());
       capacity_ = std::exchange(other.capacity_, N);
-    } else {
+    } else
+    {
       uninitialized_relocate_n(other.buffer_, other.size_, buffer_);
     }
     size_ = std::exchange(other.size_, 0);
@@ -385,13 +406,16 @@ namespace soul
     Construct::From /*tag*/, RangeT&& range, NotNull<AllocatorT*> allocator)
       : allocator_(allocator)
   {
-    if constexpr (std::ranges::sized_range<RangeT> || std::ranges::forward_range<RangeT>) {
+    if constexpr (std::ranges::sized_range<RangeT> || std::ranges::forward_range<RangeT>)
+    {
       const auto size = usize(std::ranges::distance(range));
       init_reserve(size);
       uninitialized_copy_n(std::ranges::begin(range), size, buffer_);
       size_ = size;
-    } else {
-      for (auto it = std::ranges::begin(range), last = std::ranges::end(range); it != last; it++) {
+    } else
+    {
+      for (auto it = std::ranges::begin(range), last = std::ranges::end(range); it != last; it++)
+      {
         epmplace_back(*it);
       }
     }
@@ -403,13 +427,16 @@ namespace soul
     Construct::Transform /*tag*/, RangeT&& range, Fn fn, AllocatorT& allocator)
       : allocator_(&allocator)
   {
-    if constexpr (std::ranges::sized_range<RangeT> || std::ranges::forward_range<RangeT>) {
+    if constexpr (std::ranges::sized_range<RangeT> || std::ranges::forward_range<RangeT>)
+    {
       const auto size = usize(std::ranges::distance(range));
       init_reserve(size);
       uninitialized_transform_construct_n(std::ranges::begin(range), std::move(fn), size, buffer_);
       size_ = size;
-    } else {
-      for (auto it = std::ranges::begin(range), last = std::ranges::end(range); it != last; it++) {
+    } else
+    {
+      for (auto it = std::ranges::begin(range), last = std::ranges::end(range); it != last; it++)
+      {
         transform_construct_at(buffer_, it, std::move(fn));
       }
     }
@@ -441,9 +468,11 @@ namespace soul
   template <typename T, memory::allocator_type AllocatorT, usize N>
   auto Vector<T, AllocatorT, N>::operator=(Vector&& other) noexcept -> this_type&
   {
-    if (this->allocator_ == other.allocator_) {
+    if (this->allocator_ == other.allocator_)
+    {
       this_type(std::move(other)).swap(*this);
-    } else {
+    } else
+    {
       this_type(other, *allocator_).swap(*this);
     }
     return *this;
@@ -530,14 +559,17 @@ namespace soul
   void Vector<T, AllocatorT, N>::assign(usize size, const value_type& value)
     requires ts_copy<T>
   {
-    if (size > capacity_) {
+    if (size > capacity_)
+    {
       this_type tmp(Construct::fill_n, value, size, *allocator_);
       swap(tmp);
-    } else if (size > size_) {
+    } else if (size > size_)
+    {
       std::fill_n(buffer_, size_, value);
       std::uninitialized_fill_n(buffer_ + size_, size - size_, value);
       size_ = size;
-    } else {
+    } else
+    {
       std::fill_n(buffer_, size, value);
       std::destroy(buffer_ + size, buffer_ + size_);
       size_ = size;
@@ -548,57 +580,67 @@ namespace soul
   template <std::ranges::input_range RangeT>
   void Vector<T, AllocatorT, N>::assign(RangeT&& range)
   {
-    if constexpr (std::ranges::sized_range<RangeT> || std::ranges::forward_range<RangeT>) {
+    if constexpr (std::ranges::sized_range<RangeT> || std::ranges::forward_range<RangeT>)
+    {
 
       const auto new_size = soul::cast<usize>(std::ranges::distance(range));
 
-      if (new_size > capacity_) {
+      if (new_size > capacity_)
+      {
 
         T* new_buffer = allocator_->template allocate_array<T>(new_size);
         uninitialized_copy_n(std::begin(range), new_size, new_buffer);
         destroy_n(buffer_, size_);
-        if (!is_using_stack_storage()) {
+        if (!is_using_stack_storage())
+        {
           allocator_->deallocate_array(buffer_, capacity_);
         }
-        buffer_ = new_buffer;
-        size_ = new_size;
+        buffer_   = new_buffer;
+        size_     = new_size;
         capacity_ = new_size;
-
-      } else if (new_size > size_) {
+      } else if (new_size > size_)
+      {
         auto range_input_it = std::ranges::begin(range);
 
-        if constexpr (std::ranges::random_access_range<RangeT>) {
+        if constexpr (std::ranges::random_access_range<RangeT>)
+        {
           std::copy_n(range_input_it, size_, buffer_);
           range_input_it += size_;
-        } else {
-          for (auto i = 0; i < size_; ++i, ++range_input_it) {
+        } else
+        {
+          for (auto i = 0; i < size_; ++i, ++range_input_it)
+          {
             buffer_[i] = *range_input_it;
           }
         }
 
         uninitialized_copy_n(range_input_it, new_size - size_, buffer_ + size_);
         size_ = new_size;
-
-      } else {
+      } else
+      {
         std::copy_n(std::ranges::begin(range), new_size, buffer_);
         std::destroy(buffer_ + new_size, buffer_ + size_);
         size_ = new_size;
       }
-    } else {
+    } else
+    {
 
       iterator buffer_start(buffer_);
       iterator buffer_end(buffer_ + size_);
-      auto first = std::ranges::begin(range);
+      auto first      = std::ranges::begin(range);
       const auto last = std::ranges::end(range);
-      while ((buffer_start != buffer_end) && (first != last)) {
+      while ((buffer_start != buffer_end) && (first != last))
+      {
         *buffer_start = *first;
         ++first;
         ++buffer_start;
       }
 
-      if (first == last) {
+      if (first == last)
+      {
         pop_back(std::distance(buffer_start, buffer_end));
-      } else {
+      } else
+      {
         append(std::ranges::subrange(first, last));
       }
     }
@@ -609,19 +651,23 @@ namespace soul
   {
     using std::swap;
 
-    if (!is_using_stack_storage() && !other.is_using_stack_storage()) {
+    if (!is_using_stack_storage() && !other.is_using_stack_storage())
+    {
       SOUL_ASSERT(
         0, allocator_ == other.allocator_, "Cannot swap container with different allocator");
       swap(buffer_, other.buffer_);
-    } else if (is_using_stack_storage() && !other.is_using_stack_storage()) {
+    } else if (is_using_stack_storage() && !other.is_using_stack_storage())
+    {
       uninitialized_relocate_n(buffer_, size_, other.stack_storage_.data());
-      buffer_ = other.buffer_;
+      buffer_       = other.buffer_;
       other.buffer_ = other.stack_storage_.data();
-    } else if (!is_using_stack_storage() && other.is_using_stack_storage()) {
+    } else if (!is_using_stack_storage() && other.is_using_stack_storage())
+    {
       uninitialized_relocate_n(other.buffer_, other.size_, stack_storage_.data());
       other.buffer_ = buffer_;
-      buffer_ = stack_storage_.data();
-    } else {
+      buffer_       = stack_storage_.data();
+    } else
+    {
       RawBuffer<T, N> temp;
       uninitialized_relocate_n(other.buffer_, other.size_, temp.data());
       uninitialized_relocate_n(buffer_, size_, other.buffer_);
@@ -731,7 +777,8 @@ namespace soul
   template <typename T, memory::allocator_type AllocatorT, usize N>
   void Vector<T, AllocatorT, N>::set_allocator(AllocatorT& allocator) noexcept
   {
-    if (buffer_ != stack_storage_.data()) {
+    if (buffer_ != stack_storage_.data())
+    {
       T* buffer = allocator.template allocate_array<T>(size_);
       uninitialized_relocate_n(buffer_, size_, buffer);
       allocator_->deallocate_array(buffer_, capacity_);
@@ -749,12 +796,15 @@ namespace soul
   template <typename T, memory::allocator_type AllocatorT, usize N>
   void Vector<T, AllocatorT, N>::resize(usize size)
   {
-    if (size > size_) {
-      if (size > capacity_) {
+    if (size > size_)
+    {
+      if (size > capacity_)
+      {
         reserve(size);
       }
       uninitialized_value_construct_n(buffer_ + size_, size - size_);
-    } else {
+    } else
+    {
       std::destroy(buffer_ + size, buffer_ + size_);
     }
     size_ = size;
@@ -763,14 +813,17 @@ namespace soul
   template <typename T, memory::allocator_type AllocatorT, usize N>
   void Vector<T, AllocatorT, N>::reserve(usize capacity)
   {
-    if (capacity < capacity_) {
+    if (capacity < capacity_)
+    {
       return;
     }
-    if (!IS_SBO || capacity > N) {
+    if (!IS_SBO || capacity > N)
+    {
       T* old_buffer = buffer_;
-      buffer_ = allocator_->template allocate_array<T>(capacity);
+      buffer_       = allocator_->template allocate_array<T>(capacity);
       uninitialized_relocate_n(old_buffer, size_, buffer_);
-      if (old_buffer != stack_storage_.data()) {
+      if (old_buffer != stack_storage_.data())
+      {
         allocator_->deallocate_array(old_buffer, capacity_);
       }
       capacity_ = capacity;
@@ -788,27 +841,31 @@ namespace soul
   void Vector<T, AllocatorT, N>::cleanup()
   {
     clear();
-    if (buffer_ != stack_storage_.data()) {
+    if (buffer_ != stack_storage_.data())
+    {
       allocator_->deallocate_array(buffer_, capacity_);
     }
-    buffer_ = stack_storage_.data();
+    buffer_   = stack_storage_.data();
     capacity_ = N;
   }
 
   template <typename T, memory::allocator_type AllocatorT, usize N>
   void Vector<T, AllocatorT, N>::push_back(OwnRef<T> item)
   {
-    if (size_ == capacity_) {
+    if (size_ == capacity_)
+    {
       const auto new_capacity = get_new_capacity(capacity_);
-      T* old_buffer = buffer_;
-      buffer_ = allocator_->template allocate_array<T>(new_capacity);
+      T* old_buffer           = buffer_;
+      buffer_                 = allocator_->template allocate_array<T>(new_capacity);
       construct_at(buffer_ + size_, std::move(item));
       uninitialized_relocate_n(old_buffer, size_, buffer_);
-      if (old_buffer != stack_storage_.data()) {
+      if (old_buffer != stack_storage_.data())
+      {
         allocator_->deallocate_array(old_buffer, capacity_);
       }
       capacity_ = new_capacity;
-    } else {
+    } else
+    {
       construct_at(buffer_ + size_, std::move(item));
     }
     ++size_;
@@ -817,17 +874,20 @@ namespace soul
   template <typename T, memory::allocator_type AllocatorT, usize N>
   void Vector<T, AllocatorT, N>::generate_back(ts_generate_fn<T> auto fn)
   {
-    if (size_ == capacity_) {
+    if (size_ == capacity_)
+    {
       const auto new_capacity = get_new_capacity(capacity_);
-      T* old_buffer = buffer_;
-      buffer_ = allocator_->template allocate_array<T>(new_capacity);
+      T* old_buffer           = buffer_;
+      buffer_                 = allocator_->template allocate_array<T>(new_capacity);
       generate_at(buffer_ + size_, fn);
       uninitialized_relocate_n(old_buffer, size_, buffer_);
-      if (old_buffer != stack_storage_.data()) {
+      if (old_buffer != stack_storage_.data())
+      {
         allocator_->deallocate_array(old_buffer, capacity_);
       }
       capacity_ = new_capacity;
-    } else {
+    } else
+    {
       generate_at(buffer_ + size_, fn);
     }
     ++size_;
@@ -837,7 +897,8 @@ namespace soul
   void Vector<T, AllocatorT, N>::remove(usize index)
   {
     SOUL_ASSERT_UPPER_BOUND_CHECK(index, size_);
-    if (size_ > 1) {
+    if (size_ > 1)
+    {
       buffer_[index] = std::move(buffer_[size_ - 1]);
     }
     size_--;
@@ -863,16 +924,19 @@ namespace soul
   template <typename T, memory::allocator_type AllocatorT, usize InlineSizeV>
   void Vector<T, AllocatorT, InlineSizeV>::shrink_to_fit()
   {
-    if (capacity_ == size_ || is_using_stack_storage()) {
+    if (capacity_ == size_ || is_using_stack_storage())
+    {
       return;
     }
-    T* old_buffer = buffer_;
+    T* old_buffer           = buffer_;
     const auto old_capacity = capacity_;
-    if (size_ > InlineSizeV) {
-      buffer_ = allocator_->template allocate_array<T>(size_);
+    if (size_ > InlineSizeV)
+    {
+      buffer_   = allocator_->template allocate_array<T>(size_);
       capacity_ = size_;
-    } else {
-      buffer_ = stack_storage_.data();
+    } else
+    {
+      buffer_   = stack_storage_.data();
       capacity_ = InlineSizeV;
     }
     uninitialized_relocate_n(old_buffer, size_, buffer_);
@@ -890,17 +954,20 @@ namespace soul
   template <typename... Args>
   auto Vector<T, AllocatorT, N>::emplace_back(Args&&... args) -> reference
   {
-    if (size_ == capacity_) {
+    if (size_ == capacity_)
+    {
       const auto new_capacity = get_new_capacity(capacity_);
-      T* old_buffer = buffer_;
-      buffer_ = allocator_->template allocate_array<T>(new_capacity);
+      T* old_buffer           = buffer_;
+      buffer_                 = allocator_->template allocate_array<T>(new_capacity);
       soul::construct_at(buffer_ + size_, std::forward<Args>(args)...);
       uninitialized_relocate_n(old_buffer, size_, buffer_);
-      if (old_buffer != stack_storage_.data()) {
+      if (old_buffer != stack_storage_.data())
+      {
         allocator_->deallocate_array(old_buffer, capacity_);
       }
       capacity_ = new_capacity;
-    } else {
+    } else
+    {
       soul::construct_at(buffer_ + size_, std::forward<Args>(args)...);
     }
     ++size_;
@@ -911,25 +978,31 @@ namespace soul
   template <std::ranges::input_range RangeT>
   void Vector<T, AllocatorT, N>::append(RangeT&& range)
   {
-    if constexpr (std::ranges::sized_range<RangeT> || std::ranges::forward_range<RangeT>) {
+    if constexpr (std::ranges::sized_range<RangeT> || std::ranges::forward_range<RangeT>)
+    {
       const auto range_size = usize(std::ranges::distance(range));
-      const auto new_size = size_ + range_size;
-      if (new_size > capacity_) {
+      const auto new_size   = size_ + range_size;
+      if (new_size > capacity_)
+      {
         const auto new_capacity = get_new_capacity(capacity_, new_size);
-        T* old_buffer = buffer_;
-        buffer_ = allocator_->template allocate_array<T>(new_capacity);
+        T* old_buffer           = buffer_;
+        buffer_                 = allocator_->template allocate_array<T>(new_capacity);
         uninitialized_copy_n(std::ranges::begin(range), range_size, buffer_ + size_);
         uninitialized_relocate_n(old_buffer, size_, buffer_);
-        if (old_buffer != stack_storage_.data()) {
+        if (old_buffer != stack_storage_.data())
+        {
           allocator_->deallocate_array(old_buffer, capacity_);
         }
         capacity_ = new_capacity;
-      } else {
+      } else
+      {
         uninitialized_copy_n(std::ranges::begin(range), range_size, buffer_ + size_);
       }
       size_ = new_size;
-    } else {
-      for (auto it = std::ranges::begin(range), last = std::ranges::end(range); it != last; it++) {
+    } else
+    {
+      for (auto it = std::ranges::begin(range), last = std::ranges::end(range); it != last; it++)
+      {
         emplace_back(*it);
       }
     }
@@ -1028,11 +1101,13 @@ namespace soul
   void Vector<T, AllocatorT, N>::init_reserve(usize capacity)
   {
     auto need_heap = true;
-    if constexpr (IS_SBO) {
+    if constexpr (IS_SBO)
+    {
       need_heap = capacity > N;
     }
-    if (need_heap) {
-      buffer_ = allocator_->template allocate_array<T>(capacity);
+    if (need_heap)
+    {
+      buffer_   = allocator_->template allocate_array<T>(capacity);
       capacity_ = capacity;
     }
   }
@@ -1040,7 +1115,8 @@ namespace soul
   template <typename T, memory::allocator_type AllocatorT, usize N>
   auto Vector<T, AllocatorT, N>::is_using_stack_storage() const -> b8
   {
-    if constexpr (!IS_SBO) {
+    if constexpr (!IS_SBO)
+    {
       return false;
     }
     return buffer_ == stack_storage_.data();
@@ -1049,7 +1125,8 @@ namespace soul
   template <typename T, memory::allocator_type AllocatorT, usize N>
   auto operator==(const Vector<T, AllocatorT, N>& lhs, const Vector<T, AllocatorT, N>& rhs) -> b8
   {
-    if (lhs.size() != rhs.size()) {
+    if (lhs.size() != rhs.size())
+    {
       return false;
     }
     return std::ranges::equal(lhs, rhs);

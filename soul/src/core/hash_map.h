@@ -13,20 +13,25 @@
 namespace soul
 {
   template <typename KeyT, typename ValueT>
-  struct Entry {
+  struct Entry
+  {
     KeyT key;
     ValueT value;
 
-    struct GetKeyOp {
-      auto operator()(const Entry& entry) const -> const KeyT& { return entry.key; }
+    struct GetKeyOp
+    {
+      auto operator()(const Entry& entry) const -> const KeyT&
+      {
+        return entry.key;
+      }
     };
   };
 
   template <
     typename KeyT,
     typename ValT,
-    typename Hash = HashOp<KeyT>,
-    typename KeyEqual = std::equal_to<KeyT>,
+    typename Hash                     = HashOp<KeyT>,
+    typename KeyEqual                 = std::equal_to<KeyT>,
     memory::allocator_type AllocatorT = memory::Allocator>
   class HashMap
   {
@@ -58,7 +63,10 @@ namespace soul
       return HashMap(*this);
     }
 
-    void clone_from(const HashMap& other) { return *this = other; }
+    void clone_from(const HashMap& other)
+    {
+      return *this = other;
+    }
 
     void swap(HashMap<KeyT, ValT>& other) noexcept
     {
@@ -66,13 +74,25 @@ namespace soul
       swap(this->hash_table_, other.hash_table_);
     }
 
-    friend void swap(HashMap& a, HashMap& b) noexcept { a.swap(b); }
+    friend void swap(HashMap& a, HashMap& b) noexcept
+    {
+      a.swap(b);
+    }
 
-    void clear() { hash_table_.clear(); }
+    void clear()
+    {
+      hash_table_.clear();
+    }
 
-    void cleanup() { hash_table_.cleanup(); }
+    void cleanup()
+    {
+      hash_table_.cleanup();
+    }
 
-    void reserve(usize capacity) { hash_table_.reserve(capacity); }
+    void reserve(usize capacity)
+    {
+      hash_table_.reserve(capacity);
+    }
 
     void insert(OwnRef<KeyT, true> key, OwnRef<ValT, true> value)
     {
@@ -86,7 +106,10 @@ namespace soul
       return hash_table_.remove(key);
     }
 
-    void remove(const KeyT& key) { return hash_table_.remove(key); }
+    void remove(const KeyT& key)
+    {
+      return hash_table_.remove(key);
+    }
 
     template <typename QueryT>
       requires(BorrowTrait<KeyT, QueryT>::available)

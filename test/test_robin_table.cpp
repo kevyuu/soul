@@ -4,13 +4,12 @@
 #include <gtest/gtest.h>
 
 #include "core/config.h"
-#include "core/string.h"
 #include "core/log.h"
 #include "core/meta.h"
 #include "core/objops.h"
 #include "core/panic.h"
-#include "core/panic.h"
 #include "core/robin_table.h"
+#include "core/string.h"
 #include "core/type_traits.h"
 #include "core/util.h"
 #include "core/vector.h"
@@ -29,7 +28,8 @@ namespace soul
   }
 } // namespace soul
 
-struct TestEntry {
+struct TestEntry
+{
   soul::String name;
   TestObject test_obj;
   using object_type = TestObject;
@@ -39,6 +39,7 @@ struct TestEntry {
   {
     return {name.clone(), test_obj.clone()};
   }
+
   void clone_from(const TestEntry& test_entry)
   {
     name.clone_from(test_entry.name);
@@ -47,10 +48,15 @@ struct TestEntry {
 
   friend auto operator==(const TestEntry& rhs, const TestEntry& lhs) -> bool = default;
 
-  struct GetKeyOp {
-    auto operator()(const TestEntry& entry) const -> const soul::String& { return entry.name; }
+  struct GetKeyOp
+  {
+    auto operator()(const TestEntry& entry) const -> const soul::String&
+    {
+      return entry.name;
+    }
   };
 };
+
 static_assert(can_nontrivial_destruct_v<TestEntry>);
 
 using TestTable = soul::RobinTable<soul::String, TestEntry, TestEntry::GetKeyOp>;
@@ -76,15 +82,18 @@ template <typename TableT>
 auto verify_equal(const TableT& lhs, const TableT& rhs)
 {
   SOUL_TEST_ASSERT_EQ(lhs.size(), rhs.size());
-  const auto sort_fn = [](const TestEntry& a, const TestEntry& b) {
+  const auto sort_fn = [](const TestEntry& a, const TestEntry& b)
+  {
     return std::ranges::lexicographical_compare(a.name.cspan(), b.name.cspan());
   };
 
-  for (const auto& entry : lhs) {
+  for (const auto& entry : lhs)
+  {
     verify_contain(rhs, entry);
   }
 
-  for (const auto& entry : rhs) {
+  for (const auto& entry : rhs)
+  {
     verify_contain(lhs, entry);
   }
 }
@@ -118,23 +127,31 @@ auto test_construction_from_array(Array<TestEntry, ArrSizeV>&& entries)
 {
   auto entry_vector = soul::Vector<TestEntry>::From(entries | soul::views::clone<TestEntry>());
 
-  std::ranges::sort(entry_vector, [](const TestEntry& a, const TestEntry& b) {
-    return std::ranges::lexicographical_compare(a.name.cspan(), b.name.cspan());
-  });
+  std::ranges::sort(
+    entry_vector,
+    [](const TestEntry& a, const TestEntry& b)
+    {
+      return std::ranges::lexicographical_compare(a.name.cspan(), b.name.cspan());
+    });
 
   const auto test_table = TestTable::From(entries | soul::views::move<TestEntry>());
 
   SOUL_TEST_ASSERT_EQ(entry_vector.size(), test_table.size());
-  for (const auto& entry : entry_vector) {
+  for (const auto& entry : entry_vector)
+  {
     verify_contain(test_table, entry);
   }
   soul::Vector<TestEntry> table_entries;
-  for (const auto& entry : test_table) {
+  for (const auto& entry : test_table)
+  {
     table_entries.push_back(entry.clone());
   }
-  std::ranges::sort(table_entries, [](const TestEntry& a, const TestEntry& b) {
-    return std::ranges::lexicographical_compare(a.name.cspan(), b.name.cspan());
-  });
+  std::ranges::sort(
+    table_entries,
+    [](const TestEntry& a, const TestEntry& b)
+    {
+      return std::ranges::lexicographical_compare(a.name.cspan(), b.name.cspan());
+    });
   SOUL_TEST_ASSERT_EQ(entry_vector, table_entries);
 }
 
@@ -202,7 +219,8 @@ auto generate_random_entries(usize count) -> soul::Vector<TestEntry>
   std::random_device rd;
   std::mt19937 generator(rd());
 
-  auto generate_random_string = [&generator](usize length, usize suffix_id) -> soul::String {
+  auto generate_random_string = [&generator](usize length, usize suffix_id) -> soul::String
+  {
     const char* char_samples =
       "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ!@#$%^&*()`~-_=+"
       "[{]{|;:'\",<.>/?";
@@ -210,9 +228,11 @@ auto generate_random_entries(usize count) -> soul::Vector<TestEntry>
 
     auto output = String::WithCapacity(length + util::digit_count(suffix_id));
 
-    while (length > 0) {
+    while (length > 0)
+    {
       auto rand_numb = generator();
-      while (rand_numb > char_samples_length && length > 0) {
+      while (rand_numb > char_samples_length && length > 0)
+      {
         output.push_back(char_samples[rand_numb % char_samples_length]);
         rand_numb /= char_samples_length;
         length--;
@@ -225,9 +245,12 @@ auto generate_random_entries(usize count) -> soul::Vector<TestEntry>
   };
 
   return soul::Vector<TestEntry>::TransformIndex(
-    0, count, [&generator, &generate_random_string](usize index) -> TestEntry {
+    0,
+    count,
+    [&generator, &generate_random_string](usize index) -> TestEntry
+    {
       return {
-        .name = generate_random_string(10, index),
+        .name     = generate_random_string(10, index),
         .test_obj = TestObject(static_cast<int>(generator())),
       };
     });
@@ -287,12 +310,14 @@ TEST_F(TestRobinTableManipulation, TestSwap)
 
 TEST_F(TestRobinTableManipulation, TestClear)
 {
-  const auto test_clear = []<typename TableT>(const TableT& table) {
+  const auto test_clear = []<typename TableT>(const TableT& table)
+  {
     auto test_table = table.clone();
     test_table.clear();
 
     SOUL_TEST_ASSERT_EQ(test_table.size(), 0);
-    for (const auto& entry : table) {
+    for (const auto& entry : table)
+    {
       SOUL_TEST_ASSERT_FALSE(test_table.contains(entry.name));
       SOUL_TEST_ASSERT_EQ(test_table.find(entry.name), test_table.end());
     }
@@ -305,12 +330,14 @@ TEST_F(TestRobinTableManipulation, TestClear)
 
 TEST_F(TestRobinTableManipulation, TestCleanup)
 {
-  const auto test_cleanup = []<typename TableT>(const TableT& table) {
+  const auto test_cleanup = []<typename TableT>(const TableT& table)
+  {
     auto test_table = table.clone();
     test_table.cleanup();
 
     SOUL_TEST_ASSERT_EQ(test_table.size(), 0);
-    for (const auto& entry : table) {
+    for (const auto& entry : table)
+    {
       SOUL_TEST_ASSERT_FALSE(test_table.contains(entry.name));
       SOUL_TEST_ASSERT_EQ(test_table.find(entry.name), test_table.end());
     }
@@ -336,8 +363,9 @@ TEST_F(TestRobinTableManipulation, TestReserve)
 
 TEST_F(TestRobinTableManipulation, TestInsert)
 {
-  const auto test_insert = []<typename TableT>(const TableT& table) {
-    auto test_table = table.clone();
+  const auto test_insert = []<typename TableT>(const TableT& table)
+  {
+    auto test_table         = table.clone();
     const auto initial_size = table.size();
 
     const auto test_entry1 = TestEntry{"soul_test_str"_str, TestObject(3)};
@@ -350,10 +378,12 @@ TEST_F(TestRobinTableManipulation, TestInsert)
 
     const auto RANDOM_INSERT_COUNT = 1000;
     const auto random_test_entries = generate_random_entries(RANDOM_INSERT_COUNT);
-    for (const auto& random_entry : random_test_entries) {
+    for (const auto& random_entry : random_test_entries)
+    {
       test_table.insert(random_entry.clone());
     }
-    for (const auto& random_entry : random_test_entries) {
+    for (const auto& random_entry : random_test_entries)
+    {
       verify_contain(test_table, random_entry);
     }
 
@@ -383,8 +413,9 @@ TEST_F(TestRobinTableManipulation, TestRemove)
 
   {
     const auto initial_size = test_table2.size();
-    auto middle_iter = test_table2.begin();
-    for (auto i = 0; i < initial_size / 2; i++) {
+    auto middle_iter        = test_table2.begin();
+    for (auto i = 0; i < initial_size / 2; i++)
+    {
       middle_iter++;
     }
     const auto names = Array{
@@ -392,10 +423,12 @@ TEST_F(TestRobinTableManipulation, TestRemove)
       middle_iter->name.clone(),
     };
 
-    for (const auto& name : names) {
+    for (const auto& name : names)
+    {
       test_table2.remove(name);
     }
-    for (const auto& name : names) {
+    for (const auto& name : names)
+    {
       SOUL_TEST_RUN(verify_not_contain(test_table2, name));
     }
   }

@@ -13,15 +13,15 @@ namespace soul
   public:
     static constexpr u64 COUNT = to_underlying(EnumT::COUNT);
 
-    using this_type = FlagMap<EnumT, ValT>;
-    using value_type = ValT;
-    using pointer = ValT*;
-    using const_pointer = const ValT*;
-    using reference = ValT&;
-    using const_reference = const ValT&;
-    using iterator = ValT*;
-    using const_iterator = const ValT*;
-    using reverse_iterator = std::reverse_iterator<iterator>;
+    using this_type              = FlagMap<EnumT, ValT>;
+    using value_type             = ValT;
+    using pointer                = ValT*;
+    using const_pointer          = const ValT*;
+    using reference              = ValT&;
+    using const_reference        = const ValT&;
+    using iterator               = ValT*;
+    using const_iterator         = const ValT*;
+    using reverse_iterator       = std::reverse_iterator<iterator>;
     using const_reverse_iterator = std::reverse_iterator<const_iterator>;
 
     template <std::size_t N>
@@ -179,7 +179,8 @@ namespace soul
     std::initializer_list<std::pair<EnumT, ValT>> init_list) noexcept -> this_type
   {
     FlagMap<EnumT, ValT> ret;
-    for (auto item : init_list) {
+    for (auto item : init_list)
+    {
       ret[item.first] = item.second;
     }
     return ret;
@@ -190,7 +191,8 @@ namespace soul
   consteval auto FlagMap<EnumT, ValT>::FromValues(const ValT (&list)[N]) noexcept -> this_type
   {
     static_assert(N == COUNT);
-    const auto create_array = [&]<usize... I>(std::index_sequence<I...>) -> this_type {
+    const auto create_array = [&]<usize... I>(std::index_sequence<I...>) -> this_type
+    {
       return {list[I]...};
     };
     return create_array(std::make_index_sequence<COUNT>());

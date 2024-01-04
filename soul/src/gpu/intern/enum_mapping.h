@@ -250,7 +250,8 @@ namespace soul::gpu
       VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_STORAGE_BIT_KHR |
       VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR |
       VK_BUFFER_USAGE_SHADER_BINDING_TABLE_BIT_KHR;
-    if ((result & need_buffer_device_address_bit) != 0u) {
+    if ((result & need_buffer_device_address_bit) != 0u)
+    {
       result |= VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT_KHR;
     }
     return result;
@@ -314,11 +315,13 @@ namespace soul::gpu
   SOUL_ALWAYS_INLINE auto vk_cast(const VertexElementType type, const VertexElementFlags flags)
     -> VkFormat
   {
-    const b8 integer = (flags & VERTEX_ELEMENT_INTEGER_TARGET) != 0;
+    const b8 integer    = (flags & VERTEX_ELEMENT_INTEGER_TARGET) != 0;
     const b8 normalized = (flags & VERTEX_ELEMENT_NORMALIZED) != 0;
-    using ElementType = VertexElementType;
-    if (normalized) {
-      switch (type) {
+    using ElementType   = VertexElementType;
+    if (normalized)
+    {
+      switch (type)
+      {
       // Single Component Types
       case ElementType::BYTE: return VK_FORMAT_R8_SNORM;
       case ElementType::UBYTE: return VK_FORMAT_R8_UNORM;
@@ -352,7 +355,8 @@ namespace soul::gpu
       case ElementType::COUNT: SOUL_NOT_IMPLEMENTED(); return VK_FORMAT_UNDEFINED;
       }
     }
-    switch (type) {
+    switch (type)
+    {
     // Single Component Types
     case ElementType::BYTE: return integer ? VK_FORMAT_R8_SINT : VK_FORMAT_R8_SSCALED;
     case ElementType::UBYTE: return integer ? VK_FORMAT_R8_UINT : VK_FORMAT_R8_USCALED;
@@ -404,7 +408,11 @@ namespace soul::gpu
     };
     TextureSampleCountFlags result;
     util::for_each_one_bit_pos(
-      flags, [&result](usize bit_position) { result.set(MAP[bit_position]); });
+      flags,
+      [&result](usize bit_position)
+      {
+        result.set(MAP[bit_position]);
+      });
     return result;
   }
 
@@ -422,19 +430,25 @@ namespace soul::gpu
     return MAP[sample_count];
   }
 
-  constexpr auto get_vk_offset_3d(const vec3i32 val) -> VkOffset3D { return {val.x, val.y, val.z}; }
+  constexpr auto get_vk_offset_3d(const vec3i32 val) -> VkOffset3D
+  {
+    return {val.x, val.y, val.z};
+  }
 
-  constexpr auto get_vk_extent_3d(const vec3u32 val) -> VkExtent3D { return {val.x, val.y, val.z}; }
+  constexpr auto get_vk_extent_3d(const vec3u32 val) -> VkExtent3D
+  {
+    return {val.x, val.y, val.z};
+  }
 
   constexpr auto get_vk_subresource_layers(
     const TextureSubresourceLayers& subresource_layers, const VkImageAspectFlags aspect_flags)
     -> VkImageSubresourceLayers
   {
     return {
-      .aspectMask = aspect_flags,
-      .mipLevel = subresource_layers.mip_level,
+      .aspectMask     = aspect_flags,
+      .mipLevel       = subresource_layers.mip_level,
       .baseArrayLayer = subresource_layers.base_array_layer,
-      .layerCount = subresource_layers.layer_count};
+      .layerCount     = subresource_layers.layer_count};
   }
 
   SOUL_ALWAYS_INLINE auto vk_cast(const IndexType index_type) -> VkIndexType

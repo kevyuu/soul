@@ -8,13 +8,15 @@
 namespace soul::memory
 {
 
-  struct AllocateParam {
-    usize size = 0;
+  struct AllocateParam
+  {
+    usize size      = 0;
     usize alignment = 0;
     const char* tag = nullptr;
   };
 
-  struct DeallocateParam {
+  struct DeallocateParam
+  {
     void* addr = nullptr;
     usize size = 0;
   };
@@ -34,7 +36,10 @@ namespace soul::memory
 
     virtual ~Proxy() = default;
 
-    virtual auto get_base_addr(void* addr) const -> void* { return addr; }
+    virtual auto get_base_addr(void* addr) const -> void*
+    {
+      return addr;
+    }
 
     [[nodiscard]]
     virtual auto get_base_size(const usize size) const -> usize
@@ -62,7 +67,8 @@ namespace soul::memory
   class NoOpProxy final : public Proxy
   {
   public:
-    struct Config {
+    struct Config
+    {
     };
 
     explicit NoOpProxy(const Config& /* config */) {}
@@ -75,7 +81,11 @@ namespace soul::memory
     {
       return alloc_param;
     }
-    auto on_post_allocate(const Allocation allocation) -> Allocation override { return allocation; }
+
+    auto on_post_allocate(const Allocation allocation) -> Allocation override
+    {
+      return allocation;
+    }
 
     auto on_pre_deallocate(const DeallocateParam& dealloc_param) -> DeallocateParam override
     {
@@ -105,7 +115,8 @@ namespace soul::memory
     Proxy5 proxy5_;
 
   public:
-    struct Config {
+    struct Config
+    {
       typename Proxy1::Config config1;
       typename Proxy2::Config config2;
       typename Proxy3::Config config3;
@@ -135,10 +146,10 @@ namespace soul::memory
     auto get_base_addr(void* addr) const -> void* override
     {
       void* base_addr = proxy1_.get_base_addr(addr);
-      base_addr = proxy2_.get_base_addr(base_addr);
-      base_addr = proxy3_.get_base_addr(base_addr);
-      base_addr = proxy4_.get_base_addr(base_addr);
-      base_addr = proxy5_.get_base_addr(base_addr);
+      base_addr       = proxy2_.get_base_addr(base_addr);
+      base_addr       = proxy3_.get_base_addr(base_addr);
+      base_addr       = proxy4_.get_base_addr(base_addr);
+      base_addr       = proxy5_.get_base_addr(base_addr);
       return base_addr;
     }
 
@@ -146,10 +157,10 @@ namespace soul::memory
     auto get_base_size(const usize size) const -> usize override
     {
       usize base_size = proxy1_.get_base_size(size);
-      base_size = proxy2_.get_base_size(base_size);
-      base_size = proxy3_.get_base_size(base_size);
-      base_size = proxy4_.get_base_size(base_size);
-      base_size = proxy5_.get_base_size(base_size);
+      base_size       = proxy2_.get_base_size(base_size);
+      base_size       = proxy3_.get_base_size(base_size);
+      base_size       = proxy4_.get_base_size(base_size);
+      base_size       = proxy5_.get_base_size(base_size);
       return base_size;
     }
 
@@ -174,11 +185,11 @@ namespace soul::memory
     auto on_pre_allocate(const AllocateParam& alloc_param) -> AllocateParam override
     {
       AllocateParam param = alloc_param;
-      param = proxy1_.on_pre_allocate(param);
-      param = proxy2_.on_pre_allocate(param);
-      param = proxy3_.on_pre_allocate(param);
-      param = proxy4_.on_pre_allocate(param);
-      param = proxy5_.on_pre_allocate(param);
+      param               = proxy1_.on_pre_allocate(param);
+      param               = proxy2_.on_pre_allocate(param);
+      param               = proxy3_.on_pre_allocate(param);
+      param               = proxy4_.on_pre_allocate(param);
+      param               = proxy5_.on_pre_allocate(param);
       return param;
     }
 
@@ -195,11 +206,11 @@ namespace soul::memory
     auto on_pre_deallocate(const DeallocateParam& dealloc_param) -> DeallocateParam override
     {
       DeallocateParam param = dealloc_param;
-      param = proxy1_.on_pre_deallocate(param);
-      param = proxy2_.on_pre_deallocate(param);
-      param = proxy3_.on_pre_deallocate(param);
-      param = proxy4_.on_pre_deallocate(param);
-      param = proxy5_.on_pre_deallocate(param);
+      param                 = proxy1_.on_pre_deallocate(param);
+      param                 = proxy2_.on_pre_deallocate(param);
+      param                 = proxy3_.on_pre_deallocate(param);
+      param                 = proxy4_.on_pre_deallocate(param);
+      param                 = proxy5_.on_pre_deallocate(param);
       return param;
     }
 
@@ -234,13 +245,18 @@ namespace soul::memory
   class CounterProxy final : public Proxy
   {
   public:
-    struct Config {
+    struct Config
+    {
     };
 
     explicit CounterProxy(const Config& /* config */) {}
 
     CounterProxy() = default;
-    void on_pre_init(const char* /* name */) override { _counter = 0; }
+
+    void on_pre_init(const char* /* name */) override
+    {
+      _counter = 0;
+    }
 
     void on_post_init() override {}
 
@@ -250,7 +266,10 @@ namespace soul::memory
       return alloc_param;
     }
 
-    auto on_post_allocate(const Allocation allocation) -> Allocation override { return allocation; }
+    auto on_post_allocate(const Allocation allocation) -> Allocation override
+    {
+      return allocation;
+    }
 
     auto on_pre_deallocate(const DeallocateParam& dealloc_param) -> DeallocateParam override
     {
@@ -260,7 +279,10 @@ namespace soul::memory
 
     void on_post_deallocate() override {}
 
-    void on_pre_cleanup() override { SOUL_ASSERT(0, _counter == 0); }
+    void on_pre_cleanup() override
+    {
+      SOUL_ASSERT(0, _counter == 0);
+    }
 
     void on_post_cleanup() override {}
 
@@ -271,7 +293,8 @@ namespace soul::memory
   class ClearValuesProxy final : public Proxy
   {
   public:
-    struct Config {
+    struct Config
+    {
       u8 allocate_clear_value;
       u8 free_clear_value;
     };
@@ -301,7 +324,8 @@ namespace soul::memory
 
     auto on_pre_deallocate(const DeallocateParam& dealloc_param) -> DeallocateParam override
     {
-      if (dealloc_param.addr != nullptr) {
+      if (dealloc_param.addr != nullptr)
+      {
         SOUL_ASSERT(0, dealloc_param.size != 0, "This proxy need size in its deallocate call");
         memset(dealloc_param.addr, on_dealloc_clear_value_, dealloc_param.size);
       }
@@ -324,7 +348,8 @@ namespace soul::memory
   class BoundGuardProxy final : public Proxy
   {
   public:
-    struct Config {
+    struct Config
+    {
     };
 
     explicit BoundGuardProxy(const Config& /* config */) {}
@@ -363,11 +388,13 @@ namespace soul::memory
 
     auto on_pre_deallocate(const DeallocateParam& dealloc_param) -> DeallocateParam override
     {
-      if (dealloc_param.addr != nullptr) {
+      if (dealloc_param.addr != nullptr)
+      {
         SOUL_ASSERT(0, dealloc_param.size != 0, "This proxy need size in its deallocate call");
         auto* base_front = cast<byte*>(util::pointer_sub(dealloc_param.addr, GUARD_SIZE));
-        auto* base_back = cast<byte*>(util::pointer_add(dealloc_param.addr, dealloc_param.size));
-        for (usize i = 0; i < GUARD_SIZE; i++) {
+        auto* base_back  = cast<byte*>(util::pointer_add(dealloc_param.addr, dealloc_param.size));
+        for (usize i = 0; i < GUARD_SIZE; i++)
+        {
           SOUL_ASSERT(0, base_front[i] == GUARD_FLAG);
           SOUL_ASSERT(0, base_back[i] == GUARD_FLAG);
         }
@@ -385,15 +412,16 @@ namespace soul::memory
     void on_post_cleanup() override {}
 
   private:
-    static constexpr u32 GUARD_SIZE = alignof(std::max_align_t);
+    static constexpr u32 GUARD_SIZE  = alignof(std::max_align_t);
     static constexpr byte GUARD_FLAG = 0xAA;
-    usize current_alloc_size_ = 0;
+    usize current_alloc_size_        = 0;
   };
 
   class ProfileProxy final : public Proxy
   {
   public:
-    struct Config {
+    struct Config
+    {
     };
 
     explicit ProfileProxy(const Config& /* config */) {}
@@ -422,7 +450,8 @@ namespace soul::memory
   class MutexProxy final : public Proxy
   {
   public:
-    struct Config {
+    struct Config
+    {
     };
 
     explicit MutexProxy(const Config& /* config */) {}
@@ -449,7 +478,10 @@ namespace soul::memory
       return dealloc_param;
     }
 
-    void on_post_deallocate() override { mutex_.unlock(); }
+    void on_post_deallocate() override
+    {
+      mutex_.unlock();
+    }
 
     void on_pre_cleanup() override {}
 
@@ -502,11 +534,12 @@ namespace soul::memory
     auto try_allocate(const usize size, const usize alignment, const char* tag)
       -> Allocation override
     {
-      if (size == 0) {
+      if (size == 0)
+      {
         return {nullptr, 0};
       }
-      AllocateParam param = {size, alignment, tag};
-      param = proxy_.on_pre_allocate(param);
+      AllocateParam param   = {size, alignment, tag};
+      param                 = proxy_.on_pre_allocate(param);
       Allocation allocation = allocator->try_allocate(param.size, param.alignment, name());
       return proxy_.on_post_allocate(allocation);
     }
@@ -520,11 +553,12 @@ namespace soul::memory
 
     void deallocate(void* addr) override
     {
-      if (addr == nullptr) {
+      if (addr == nullptr)
+      {
         return;
       }
       DeallocateParam param = {addr, get_allocation_size(addr)};
-      param = proxy_.on_pre_deallocate(param);
+      param                 = proxy_.on_pre_deallocate(param);
       allocator->deallocate(param.addr);
       proxy_.on_post_deallocate();
     }
@@ -535,7 +569,10 @@ namespace soul::memory
       return allocator->get_marker();
     }
 
-    void rewind(void* addr) { allocator->rewind(addr); }
+    void rewind(void* addr)
+    {
+      allocator->rewind(addr);
+    }
 
   private:
     Proxy proxy_;

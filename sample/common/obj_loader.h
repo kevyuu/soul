@@ -27,36 +27,39 @@
 #include "builtins.h"
 
 // Structure holding the material
-struct MaterialObj {
-  soul::vec3f32 ambient = soul::vec3f32(0.1f, 0.1f, 0.1f);
-  soul::vec3f32 diffuse = soul::vec3f32(0.7f, 0.7f, 0.7f);
-  soul::vec3f32 specular = soul::vec3f32(1.0f, 1.0f, 1.0f);
+struct MaterialObj
+{
+  soul::vec3f32 ambient       = soul::vec3f32(0.1f, 0.1f, 0.1f);
+  soul::vec3f32 diffuse       = soul::vec3f32(0.7f, 0.7f, 0.7f);
+  soul::vec3f32 specular      = soul::vec3f32(1.0f, 1.0f, 1.0f);
   soul::vec3f32 transmittance = soul::vec3f32(0.0f, 0.0f, 0.0f);
-  soul::vec3f32 emission = soul::vec3f32(0.0f, 0.0f, 0.10);
-  float shininess = 0.f;
-  float ior = 1.0f;     // index of refraction
-  float dissolve = 1.f; // 1 == opaque; 0 == fully transparent
+  soul::vec3f32 emission      = soul::vec3f32(0.0f, 0.0f, 0.10);
+  float shininess             = 0.f;
+  float ior                   = 1.0f; // index of refraction
+  float dissolve              = 1.f;  // 1 == opaque; 0 == fully transparent
   // illumination model (see http://www.fileformat.info/format/material/)
-  int illum = 0;
-  int texture_id = -1;
+  int illum                   = 0;
+  int texture_id              = -1;
 };
 
 // OBJ representation of a vertex
 // NOTE: BLAS builder depends on pos being the first member
-struct VertexObj {
+struct VertexObj
+{
   soul::vec3f32 position;
   soul::vec3f32 normal;
   soul::vec3f32 color;
   soul::vec2f32 tex_coord;
 };
 
-struct ShapeObj {
+struct ShapeObj
+{
   uint32_t offset;
   uint32_t index_count;
   uint32_t mat_index;
 };
 
-using IndexObj = u32;
+using IndexObj         = u32;
 using MaterialIndexObj = i32;
 
 class ObjLoader

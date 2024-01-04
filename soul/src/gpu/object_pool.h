@@ -12,9 +12,10 @@ namespace soul::gpu
   class ConcurrentObjectPool
   {
   public:
-    struct ID {
-      T* obj = nullptr;
-      u64 cookie = 0;
+    struct ID
+    {
+      T* obj                            = nullptr;
+      u64 cookie                        = 0;
       auto operator<=>(const ID&) const = default;
     };
 
@@ -25,15 +26,16 @@ namespace soul::gpu
     {
     }
 
-    ConcurrentObjectPool(const ConcurrentObjectPool&) = delete;
+    ConcurrentObjectPool(const ConcurrentObjectPool&)                        = delete;
     auto operator=(const ConcurrentObjectPool& rhs) -> ConcurrentObjectPool& = delete;
-    ConcurrentObjectPool(ConcurrentObjectPool&&) = delete;
-    auto operator=(ConcurrentObjectPool&& rhs) -> ConcurrentObjectPool& = delete;
+    ConcurrentObjectPool(ConcurrentObjectPool&&)                             = delete;
+    auto operator=(ConcurrentObjectPool&& rhs) -> ConcurrentObjectPool&      = delete;
 
     ~ConcurrentObjectPool()
     {
       auto num_objects = BLOCK_SIZE / sizeof(T);
-      for (T* memory : memories_) {
+      for (T* memory : memories_)
+      {
         allocator_->deallocate(memory);
       }
     }
@@ -42,13 +44,16 @@ namespace soul::gpu
     auto create(ARGS&&... args) -> ID
     {
       std::lock_guard guard(mutex_);
-      if (vacants_.empty()) {
+      if (vacants_.empty())
+      {
         auto num_objects = BLOCK_SIZE / sizeof(T);
         T* memory = static_cast<T*>(allocator_->allocate(num_objects * sizeof(T), alignof(T), ""));
-        if (!memory) {
+        if (!memory)
+        {
           return NULLVAL;
         }
-        for (usize object_idx = 0; object_idx < num_objects; object_idx++) {
+        for (usize object_idx = 0; object_idx < num_objects; object_idx++)
+        {
           vacants_.push_back(&memory[object_idx]);
         }
         memories_.push_back(memory);
@@ -66,7 +71,10 @@ namespace soul::gpu
       vacants_.push_back(id.obj);
     }
 
-    auto get(ID id) const -> T* { return id.obj; }
+    auto get(ID id) const -> T*
+    {
+      return id.obj;
+    }
 
   private:
     mutable Lockable mutex_;

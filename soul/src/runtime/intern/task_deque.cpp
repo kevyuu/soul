@@ -11,7 +11,10 @@ namespace soul::runtime
     _top.store(0, std::memory_order_relaxed);
   }
 
-  void TaskDeque::shutdown() { SOUL_ASSERT_MAIN_THREAD(); }
+  void TaskDeque::shutdown()
+  {
+    SOUL_ASSERT_MAIN_THREAD();
+  }
 
   void TaskDeque::reset()
   {
@@ -45,22 +48,25 @@ namespace soul::runtime
   {
     // NOTE(kevinyu): bottom must be fetched before top hence memory_order_acquire here
     auto bottom = _bottom.fetch_sub(1, std::memory_order_acquire);
-    bottom = bottom - 1;
-    auto top = _top.load(std::memory_order_acquire);
+    bottom      = bottom - 1;
+    auto top    = _top.load(std::memory_order_acquire);
 
-    if (bottom < top) {
+    if (bottom < top)
+    {
       _bottom.store(top);
       return TaskID::NULLVAL();
     }
 
-    if (bottom > top) {
+    if (bottom > top)
+    {
       return _tasks[bottom];
     }
 
     // NOTE(kevinyu): bottom == top. last element case. pretend to steal
     TaskID task = TaskID::NULLVAL();
     if (_top.compare_exchange_strong(
-          top, top + 1, std::memory_order_acq_rel, std::memory_order_relaxed)) {
+          top, top + 1, std::memory_order_acq_rel, std::memory_order_relaxed))
+    {
       top += 1;
       task = _tasks[bottom];
     }
@@ -78,13 +84,15 @@ namespace soul::runtime
     // fetching bottom
     const auto bottom = _bottom.load(std::memory_order_acquire);
 
-    if (top >= bottom) {
+    if (top >= bottom)
+    {
       return TaskID::NULLVAL();
     }
 
     const TaskID task = _tasks[top];
     if (_top.compare_exchange_strong(
-          top, top + 1, std::memory_order_acq_rel, std::memory_order_relaxed)) {
+          top, top + 1, std::memory_order_acq_rel, std::memory_order_relaxed))
+    {
       return task;
     }
 

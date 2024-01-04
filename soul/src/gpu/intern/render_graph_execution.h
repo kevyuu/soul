@@ -7,13 +7,15 @@
 namespace soul::gpu::impl
 {
 
-  struct BufferAccess {
+  struct BufferAccess
+  {
     PipelineStageFlags stage_flags;
     AccessFlags access_flags;
     u32 buffer_info_idx = 0;
   };
 
-  struct TextureAccess {
+  struct TextureAccess
+  {
     PipelineStageFlags stage_flags;
     AccessFlags access_flags;
 
@@ -22,20 +24,22 @@ namespace soul::gpu::impl
     SubresourceIndex view;
   };
 
-  struct ResourceAccess {
+  struct ResourceAccess
+  {
     PipelineStageFlags stage_flags;
     AccessFlags access_flags;
     u32 resource_info_idx;
   };
 
-  struct BufferExecInfo {
+  struct BufferExecInfo
+  {
     PassNodeID first_pass;
     PassNodeID last_pass;
     BufferUsageFlags usage_flags;
     QueueFlags queue_flags;
     BufferID buffer_id;
 
-    VkEvent pending_event = VK_NULL_HANDLE;
+    VkEvent pending_event       = VK_NULL_HANDLE;
     Semaphore pending_semaphore = Semaphore::From(TimelineSemaphore::null());
     ResourceCacheState cache_state;
 
@@ -43,24 +47,26 @@ namespace soul::gpu::impl
     u32 pass_counter = 0;
   };
 
-  struct TextureViewExecInfo {
-    VkEvent pending_event = VK_NULL_HANDLE;
+  struct TextureViewExecInfo
+  {
+    VkEvent pending_event       = VK_NULL_HANDLE;
     Semaphore pending_semaphore = Semaphore::From(TimelineSemaphore::null());
     ResourceCacheState cache_state;
     Vector<PassNodeID> passes;
-    u32 pass_counter = 0;
+    u32 pass_counter     = 0;
     VkImageLayout layout = VK_IMAGE_LAYOUT_UNDEFINED;
   };
 
-  struct TextureExecInfo {
+  struct TextureExecInfo
+  {
     PassNodeID first_pass;
     PassNodeID last_pass;
     TextureUsageFlags usage_flags;
     QueueFlags queue_flags;
     TextureID texture_id;
     TextureViewExecInfo* view = nullptr;
-    u32 mip_levels = 0;
-    u32 layers = 0;
+    u32 mip_levels            = 0;
+    u32 layers                = 0;
 
     [[nodiscard]]
     auto get_view_count() const -> usize
@@ -81,12 +87,13 @@ namespace soul::gpu::impl
     }
   };
 
-  struct ResourceExecInfo {
+  struct ResourceExecInfo
+  {
     PassNodeID first_pass;
     PassNodeID last_pass;
     QueueFlags queue_flags;
 
-    VkEvent pending_event = VK_NULL_HANDLE;
+    VkEvent pending_event       = VK_NULL_HANDLE;
     Semaphore pending_semaphore = Semaphore::From(TimelineSemaphore::null());
     ResourceCacheState cache_state;
 
@@ -97,13 +104,19 @@ namespace soul::gpu::impl
   class PassDependencyGraph
   {
   public:
-    enum class DependencyType : u8 { READ_AFTER_WRITE, WRITE_AFTER_WRITE, WRITE_AFTER_READ, COUNT };
+    enum class DependencyType : u8
+    {
+      READ_AFTER_WRITE,
+      WRITE_AFTER_WRITE,
+      WRITE_AFTER_READ,
+      COUNT
+    };
 
-    using DependencyFlags = FlagSet<DependencyType>;
+    using DependencyFlags                                      = FlagSet<DependencyType>;
     static constexpr DependencyFlags OP_AFTER_WRITE_DEPENDENCY = {
       DependencyType::READ_AFTER_WRITE, DependencyType::WRITE_AFTER_WRITE};
 
-    using NodeList = Vector<PassNodeID>;
+    using NodeList             = Vector<PassNodeID>;
     using NodeDependencyMatrix = FlagMap<DependencyType, BitVector<>>;
 
     PassDependencyGraph(usize pass_node_count, std::span<const ResourceNode> resource_nodes);
@@ -148,7 +161,8 @@ namespace soul::gpu::impl
     auto calculate_dependency_level(PassNodeID pass_node_id) -> usize;
   };
 
-  struct PassExecInfo {
+  struct PassExecInfo
+  {
     PassBaseNode* pass_node = nullptr;
     Vector<BufferAccess> buffer_accesses;
     Vector<TextureAccess> texture_accesses;
@@ -176,11 +190,11 @@ namespace soul::gpu::impl
     {
     }
 
-    RenderGraphExecution() = delete;
-    RenderGraphExecution(const RenderGraphExecution& other) = delete;
+    RenderGraphExecution()                                                     = delete;
+    RenderGraphExecution(const RenderGraphExecution& other)                    = delete;
     auto operator=(const RenderGraphExecution& other) -> RenderGraphExecution& = delete;
 
-    RenderGraphExecution(RenderGraphExecution&& other) = delete;
+    RenderGraphExecution(RenderGraphExecution&& other)                    = delete;
     auto operator=(RenderGraphExecution&& other) -> RenderGraphExecution& = delete;
 
     ~RenderGraphExecution() = default;

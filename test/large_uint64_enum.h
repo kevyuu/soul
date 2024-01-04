@@ -4,7 +4,8 @@
 
 #include "builtins.h"
 
-enum class LargeUint64TestEnum : u64 {
+enum class LargeUint64TestEnum : u64
+{
   ONE,
   TWO,
   THREE,

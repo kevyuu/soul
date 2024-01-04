@@ -22,38 +22,52 @@ static std::vector<std::string> soul_test_messages;
 
 inline static auto get_soul_test_message() -> std::string
 {
-  if (soul_test_messages.empty()) {
+  if (soul_test_messages.empty())
+  {
     return "-----";
   }
   std::string str = std::accumulate(
     soul_test_messages.begin() + 1,
     soul_test_messages.end(),
     soul_test_messages[0],
-    [](std::string x, std::string y) { return x + "::" + y; });
-  if (str.empty()) {
+    [](std::string x, std::string y)
+    {
+      return x + "::" + y;
+    });
+  if (str.empty())
+  {
     return DEFAULT_SOUL_TEST_MESSAGE;
   }
   return str;
 }
 
-struct SoulTestMessageScope {
-  explicit SoulTestMessageScope(const char* message) { soul_test_messages.push_back(message); }
+struct SoulTestMessageScope
+{
+  explicit SoulTestMessageScope(const char* message)
+  {
+    soul_test_messages.push_back(message);
+  }
 
-  SoulTestMessageScope(const SoulTestMessageScope&) = delete;
-  SoulTestMessageScope(SoulTestMessageScope&&) = delete;
+  SoulTestMessageScope(const SoulTestMessageScope&)                    = delete;
+  SoulTestMessageScope(SoulTestMessageScope&&)                         = delete;
   auto operator=(const SoulTestMessageScope&) -> SoulTestMessageScope& = delete;
-  auto operator=(SoulTestMessageScope&&) -> SoulTestMessageScope& = delete;
+  auto operator=(SoulTestMessageScope&&) -> SoulTestMessageScope&      = delete;
 
-  ~SoulTestMessageScope() { soul_test_messages.pop_back(); }
+  ~SoulTestMessageScope()
+  {
+    soul_test_messages.pop_back();
+  }
 };
 
-#define SOUL_SINGLE_ARG(...) __VA_ARGS__
+#define SOUL_SINGLE_ARG(...)       __VA_ARGS__
 #define SOUL_TEST_MESSAGE(message) SoulTestMessageScope test_message_scope(message)
 #define SOUL_TEST_RUN(expr)                                                                        \
-  do {                                                                                             \
+  do                                                                                               \
+  {                                                                                                \
     SOUL_TEST_MESSAGE(#expr);                                                                      \
     expr;                                                                                          \
-  } while (0)
+  }                                                                                                \
+  while (0)
 #define SOUL_TEST_ASSERT_EQ(expr1, expr2)                                                          \
   ASSERT_EQ(expr1, expr2) << "Case : " << get_soul_test_message()
 #define SOUL_TEST_ASSERT_STREQ(expr1, expr2)                                                       \
@@ -68,10 +82,11 @@ struct SoulTestMessageScope {
   ASSERT_LE(expr1, expr2) << "Case : " << get_soul_test_message()
 #define SOUL_TEST_ASSERT_LT(expr1, expr2)                                                          \
   ASSERT_LT(expr1, expr2) << "Case : " << get_soul_test_message()
-#define SOUL_TEST_ASSERT_TRUE(expr) ASSERT_TRUE(expr) << "Case : " << get_soul_test_message()
+#define SOUL_TEST_ASSERT_TRUE(expr)  ASSERT_TRUE(expr) << "Case : " << get_soul_test_message()
 #define SOUL_TEST_ASSERT_FALSE(expr) ASSERT_FALSE(expr) << "Case : " << get_soul_test_message()
 
-struct TestObject {
+struct TestObject
+{
   int x;          // Value for the TestObject.
   b8 throwOnCopy; // Throw an exception of this object is copied, moved, or assigned to another.
   int64_t id;
@@ -80,32 +95,36 @@ struct TestObject {
   uint32_t state_value;
 
   static constexpr u32 K_CONSTRUCTED_STATE = 0x01f1cbe8;
-  static constexpr u32 K_MOVED_FROM_STATE = 3;
-  static constexpr u32 K_DESTRUCTED_STATE = 0;
+  static constexpr u32 K_MOVED_FROM_STATE  = 3;
+  static constexpr u32 K_DESTRUCTED_STATE  = 0;
 
   static auto StateStr(u32 state) -> const char*
   {
-    if (state == K_CONSTRUCTED_STATE) {
+    if (state == K_CONSTRUCTED_STATE)
+    {
       return "constructed_state";
-    } else if (state == K_MOVED_FROM_STATE) {
+    } else if (state == K_MOVED_FROM_STATE)
+    {
       return "moved_from_state";
-    } else if (state == K_DESTRUCTED_STATE) {
+    } else if (state == K_DESTRUCTED_STATE)
+    {
       return "destructed_state";
     }
     return "invalid_state";
   }
 
-  struct Diagnostic {
-    i64 obj_count = 0;          // Count of all current existing TestObjects.
-    i64 ctor_count = 0;         // Count of times any ctor was called.
-    i64 dtor_count = 0;         // Count of times dtor was called.
+  struct Diagnostic
+  {
+    i64 obj_count          = 0; // Count of all current existing TestObjects.
+    i64 ctor_count         = 0; // Count of times any ctor was called.
+    i64 dtor_count         = 0; // Count of times dtor was called.
     i64 default_ctor_count = 0; // Count of times the default ctor was called.
-    i64 arg_ctor_count = 0;     // Count of times the x0,x1,x2 ctor was called.
-    i64 copy_ctor_count = 0;    // Count of times copy ctor was called.
-    i64 move_ctor_count = 0;    // Count of times move ctor was called.
-    i64 copy_assign_count = 0;  // Count of times copy assignment was called.
-    i64 move_assign_count = 0;  // Count of times move assignment was called.
-    i32 magic_error_count = 0;  // Number of magic number mismatch errors.
+    i64 arg_ctor_count     = 0; // Count of times the x0,x1,x2 ctor was called.
+    i64 copy_ctor_count    = 0; // Count of times copy ctor was called.
+    i64 move_ctor_count    = 0; // Count of times move ctor was called.
+    i64 copy_assign_count  = 0; // Count of times copy assignment was called.
+    i64 move_assign_count  = 0; // Count of times move assignment was called.
+    i32 magic_error_count  = 0; // Number of magic number mismatch errors.
 
     [[nodiscard]]
     auto
@@ -163,7 +182,8 @@ struct TestObject {
     ++s_diagnostic.ctor_count;
     ++s_diagnostic.move_ctor_count;
     id = s_diagnostic.ctor_count; // testObject keeps its mId, and we assign ours anew.
-    if (throwOnCopy) {
+    if (throwOnCopy)
+    {
       SOUL_PANIC("Disallowed TestObject copy");
     }
   }
@@ -173,13 +193,15 @@ struct TestObject {
   {
     ++s_diagnostic.move_assign_count;
 
-    if (&testObject != this) {
+    if (&testObject != this)
+    {
       std::swap(x, testObject.x);
       // Leave id alone.
       std::swap(state_value, testObject.state_value);
       std::swap(throwOnCopy, testObject.throwOnCopy);
 
-      if (throwOnCopy) {
+      if (throwOnCopy)
+      {
         SOUL_PANIC("Disallowed TestObject copy");
       }
     }
@@ -188,11 +210,13 @@ struct TestObject {
 
   ~TestObject()
   {
-    if (state_value != K_CONSTRUCTED_STATE && state_value != K_MOVED_FROM_STATE) {
+    if (state_value != K_CONSTRUCTED_STATE && state_value != K_MOVED_FROM_STATE)
+    {
       SOUL_PANIC_FORMAT("state value is wrong. state_value : {}", StateStr(state_value));
       ++s_diagnostic.magic_error_count;
     }
-    if (state_value == K_CONSTRUCTED_STATE) {
+    if (state_value == K_CONSTRUCTED_STATE)
+    {
       s_diagnostic.obj_count--;
     }
     state_value = 0;
@@ -201,16 +225,16 @@ struct TestObject {
 
   static auto reset() -> void
   {
-    s_diagnostic.obj_count = 0;
-    s_diagnostic.ctor_count = 0;
-    s_diagnostic.dtor_count = 0;
+    s_diagnostic.obj_count          = 0;
+    s_diagnostic.ctor_count         = 0;
+    s_diagnostic.dtor_count         = 0;
     s_diagnostic.default_ctor_count = 0;
-    s_diagnostic.arg_ctor_count = 0;
-    s_diagnostic.copy_ctor_count = 0;
-    s_diagnostic.move_ctor_count = 0;
-    s_diagnostic.copy_assign_count = 0;
-    s_diagnostic.move_assign_count = 0;
-    s_diagnostic.magic_error_count = 0;
+    s_diagnostic.arg_ctor_count     = 0;
+    s_diagnostic.copy_ctor_count    = 0;
+    s_diagnostic.move_ctor_count    = 0;
+    s_diagnostic.copy_assign_count  = 0;
+    s_diagnostic.move_assign_count  = 0;
+    s_diagnostic.magic_error_count  = 0;
   }
 
   static auto IsClear() -> b8
@@ -229,7 +253,8 @@ protected:
     ++s_diagnostic.ctor_count;
     ++s_diagnostic.copy_ctor_count;
     id = s_diagnostic.ctor_count;
-    if (throwOnCopy) {
+    if (throwOnCopy)
+    {
       SOUL_PANIC("Disallowed TestObject copy");
     }
   }
@@ -238,12 +263,14 @@ protected:
   {
     ++s_diagnostic.copy_assign_count;
 
-    if (&testObject != this) {
-      x = testObject.x;
+    if (&testObject != this)
+    {
+      x           = testObject.x;
       // Leave mId alone.
       state_value = testObject.state_value;
       throwOnCopy = testObject.throwOnCopy;
-      if (throwOnCopy) {
+      if (throwOnCopy)
+      {
         SOUL_PANIC("Disallowed TestObject copy");
       }
     }
@@ -257,15 +284,25 @@ public:
     return TestObject(*this);
   }
 
-  void clone_from(const TestObject& test_obj) { *this = test_obj; }
+  void clone_from(const TestObject& test_obj)
+  {
+    *this = test_obj;
+  }
 
   friend class std::vector<TestObject>;
 };
+
 static_assert(soul::ts_clone<TestObject>);
 
-inline auto operator==(const TestObject& t1, const TestObject& t2) -> b8 { return t1.x == t2.x; }
+inline auto operator==(const TestObject& t1, const TestObject& t2) -> b8
+{
+  return t1.x == t2.x;
+}
 
-inline auto operator<(const TestObject& t1, const TestObject& t2) -> b8 { return t1.x < t2.x; }
+inline auto operator<(const TestObject& t1, const TestObject& t2) -> b8
+{
+  return t1.x < t2.x;
+}
 
 using ListTestObject = soul::Vector<TestObject>;
 static_assert(soul::ts_clone<ListTestObject>);
@@ -284,16 +321,17 @@ public:
 
   static auto reset_all() -> void
   {
-    allocCountAll = 0;
-    freeCountAll = 0;
+    allocCountAll  = 0;
+    freeCountAll   = 0;
     allocVolumeAll = 0;
     lastAllocation = nullptr;
   }
 
-  TestAllocator(const TestAllocator&) = delete;
-  TestAllocator(TestAllocator&&) noexcept = delete;
-  auto operator=(const TestAllocator&) = delete;
+  TestAllocator(const TestAllocator&)      = delete;
+  TestAllocator(TestAllocator&&) noexcept  = delete;
+  auto operator=(const TestAllocator&)     = delete;
   auto operator=(TestAllocator&&) noexcept = delete;
+
   ~TestAllocator() override
   {
     SOUL_ASSERT_FORMAT(0, allocVolume == 0, "Alloc Volume : {}", allocVolume);
@@ -322,12 +360,24 @@ static auto generate_random_sequence(const usize size) -> Sequence<T>
   std::uniform_int_distribution<int> dist(1, 100);
 
   Sequence<T> result(size);
-  if constexpr (std::same_as<T, ListTestObject>) {
-    std::generate(result.begin(), result.end(), [&]() {
-      return ListTestObject::GenerateN(soul::clone_fn(TestObject(dist(random_engine))), 10);
-    });
-  } else {
-    std::generate(result.begin(), result.end(), [&]() { return T(dist(random_engine)); });
+  if constexpr (std::same_as<T, ListTestObject>)
+  {
+    std::generate(
+      result.begin(),
+      result.end(),
+      [&]()
+      {
+        return ListTestObject::GenerateN(soul::clone_fn(TestObject(dist(random_engine))), 10);
+      });
+  } else
+  {
+    std::generate(
+      result.begin(),
+      result.end(),
+      [&]()
+      {
+        return T(dist(random_engine));
+      });
   }
   return result;
 }
@@ -359,12 +409,14 @@ static auto generate_sequence(const Sequence<T>& sequence1, const Sequence<T>& s
   return sequence;
 }
 
-struct ProgramExitCheck {
-  ProgramExitCheck() = default;
-  ProgramExitCheck(const ProgramExitCheck&) = default;
-  ProgramExitCheck(ProgramExitCheck&&) = delete;
+struct ProgramExitCheck
+{
+  ProgramExitCheck()                                   = default;
+  ProgramExitCheck(const ProgramExitCheck&)            = default;
+  ProgramExitCheck(ProgramExitCheck&&)                 = delete;
   ProgramExitCheck& operator=(const ProgramExitCheck&) = default;
-  ProgramExitCheck& operator=(ProgramExitCheck&&) = delete;
+  ProgramExitCheck& operator=(ProgramExitCheck&&)      = delete;
+
   ~ProgramExitCheck()
   {
     SOUL_ASSERT_FORMAT(
@@ -383,4 +435,5 @@ struct ProgramExitCheck {
       TestObject::s_diagnostic.magic_error_count);
   }
 };
+
 const auto test_object_exist_assert = ProgramExitCheck();

@@ -17,18 +17,18 @@ namespace soul
     {
     }
 
-    Slice(const Slice& other) = default;
-    auto operator=(const Slice& other) -> Slice& = default;
-    Slice(Slice&& other) noexcept = default;
+    Slice(const Slice& other)                        = default;
+    auto operator=(const Slice& other) -> Slice&     = default;
+    Slice(Slice&& other) noexcept                    = default;
     auto operator=(Slice&& other) noexcept -> Slice& = default;
-    ~Slice() = default;
+    ~Slice()                                         = default;
 
     auto set(Vector<T>* array, usize begin, usize end) -> void
     {
-      vector_ = array;
+      vector_    = array;
       begin_idx_ = begin;
-      end_idx_ = end;
-      size_ = end_idx_ - begin_idx_;
+      end_idx_   = end;
+      size_      = end_idx_ - begin_idx_;
     }
 
     [[nodiscard]]
@@ -58,6 +58,7 @@ namespace soul
     {
       return vector_->data() + begin_idx_;
     }
+
     [[nodiscard]]
     auto end() const -> const T*
     {
@@ -69,6 +70,7 @@ namespace soul
     {
       return vector_->data() + begin_idx_;
     }
+
     [[nodiscard]]
     auto end() -> T*
     {
@@ -80,6 +82,7 @@ namespace soul
     {
       return begin_idx_;
     }
+
     [[nodiscard]]
     auto get_end_idx() const -> usize
     {
@@ -88,9 +91,9 @@ namespace soul
 
   private:
     Vector<T>* vector_ = nullptr;
-    usize begin_idx_ = 0;
-    usize end_idx_ = 0;
-    usize size_ = 0;
+    usize begin_idx_   = 0;
+    usize end_idx_     = 0;
+    usize size_        = 0;
   };
 
 } // namespace soul

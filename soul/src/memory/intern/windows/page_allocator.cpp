@@ -19,14 +19,15 @@ namespace soul::memory
     -> Allocation
   {
     auto new_size = util::pointer_page_size_round(size, page_size_);
-    void* addr = VirtualAlloc(nullptr, new_size, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
+    void* addr    = VirtualAlloc(nullptr, new_size, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
     SOUL_ASSERT(0, addr != nullptr);
     return {addr, new_size};
   }
 
   auto PageAllocator::get_allocation_size(void* addr) const -> usize
   {
-    if (addr == nullptr) {
+    if (addr == nullptr)
+    {
       return 0;
     }
     MEMORY_BASIC_INFORMATION memory_basic_information;

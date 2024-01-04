@@ -48,8 +48,9 @@ PSOutput ps_main(VSOutput input)
 }
 )HLSL"_str;
 
-struct Vertex {
-  vec2f32 position = {};
+struct Vertex
+{
+  vec2f32 position       = {};
   vec2f32 texture_coords = {};
 };
 
@@ -60,45 +61,46 @@ static constexpr Vertex VERTICES[4] = {
   {{-1.0f, 1.0f}, {0.0f, 1.0f}}   // bottom left
 };
 
-using Index = u16;
+using Index                      = u16;
 static constexpr Index INDICES[] = {0, 1, 2, 2, 3, 0};
 
 Texture2DRGPass::Texture2DRGPass(gpu::System* gpu_system) : gpu_system_(gpu_system)
 {
   const auto shader_source =
     gpu::ShaderSource::From(gpu::ShaderString{String::From(TEXTURE_2D_HLSL)});
-  const auto search_path = Path::From("shaders/"_str);
+  const auto search_path      = Path::From("shaders/"_str);
   constexpr auto entry_points = soul::Array{
     gpu::ShaderEntryPoint{gpu::ShaderStage::VERTEX, "vs_main"_str},
     gpu::ShaderEntryPoint{gpu::ShaderStage::FRAGMENT, "ps_main"_str},
   };
   const gpu::ProgramDesc program_desc = {
     .search_paths = u32cspan(&search_path, 1),
-    .sources = u32cspan(&shader_source, 1),
+    .sources      = u32cspan(&shader_source, 1),
     .entry_points = entry_points.cspan<u32>(),
   };
   auto result = gpu_system_->create_program(program_desc);
-  if (result.is_err()) {
+  if (result.is_err())
+  {
     SOUL_PANIC("Fail to create program");
   }
   program_id_ = result.ok_ref();
 
   vertex_buffer_id_ = gpu_system_->create_buffer(
     {
-      .size = sizeof(Vertex) * std::size(VERTICES),
+      .size        = sizeof(Vertex) * std::size(VERTICES),
       .usage_flags = {gpu::BufferUsage::VERTEX},
       .queue_flags = {gpu::QueueType::GRAPHIC},
-      .name = "Texture2DRGPass vertex buffer",
+      .name        = "Texture2DRGPass vertex buffer",
     },
     VERTICES);
   gpu_system_->flush_buffer(vertex_buffer_id_);
 
   index_buffer_id_ = gpu_system_->create_buffer(
     {
-      .size = sizeof(Index) * std::size(INDICES),
+      .size        = sizeof(Index) * std::size(INDICES),
       .usage_flags = {gpu::BufferUsage::INDEX},
       .queue_flags = {gpu::QueueType::GRAPHIC},
-      .name = "Texture2DRGPass index buffer",
+      .name        = "Texture2DRGPass index buffer",
     },
     INDICES);
   gpu_system_->flush_buffer(index_buffer_id_);
@@ -112,7 +114,7 @@ Texture2DRGPass::~Texture2DRGPass() {}
 auto Texture2DRGPass::add_pass(const Parameter& parameter, gpu::RenderGraph& render_graph)
   -> gpu::TextureNodeID
 {
-  const gpu::TextureNodeID render_target = parameter.render_target;
+  const gpu::TextureNodeID render_target                 = parameter.render_target;
   const gpu::RGColorAttachmentDesc color_attachment_desc = {
     .node_id = render_target, .clear = true};
 
@@ -121,13 +123,15 @@ auto Texture2DRGPass::add_pass(const Parameter& parameter, gpu::RenderGraph& ren
   const auto& raster_node = render_graph.add_raster_pass<Parameter>(
     "Render Pass Parameter",
     gpu::RGRenderTargetDesc(viewport, color_attachment_desc),
-    [this, in_parameter = parameter](auto& parameter, auto& builder) {
+    [this, in_parameter = parameter](auto& parameter, auto& builder)
+    {
       parameter.sampled_texture = builder.add_shader_texture(
         in_parameter.sampled_texture,
         {gpu::ShaderStage::FRAGMENT},
         gpu::ShaderTextureReadUsage::UNIFORM);
     },
-    [this, viewport](const auto& parameter, auto& registry, auto& command_list) {
+    [this, viewport](const auto& parameter, auto& registry, auto& command_list)
+    {
       const gpu::GraphicPipelineStateDesc pipeline_desc = {
         .program_id = program_id_,
         .input_bindings =
@@ -142,24 +146,25 @@ auto Texture2DRGPass::add_pass(const Parameter& parameter, gpu::RenderGraph& ren
             .list =
               {
                 {.binding = 0,
-                 .offset = offsetof(Vertex, position),
-                 .type = gpu::VertexElementType::FLOAT2},
+                 .offset  = offsetof(Vertex, position),
+                 .type    = gpu::VertexElementType::FLOAT2},
                 {.binding = 0,
-                 .offset = offsetof(Vertex, texture_coords),
-                 .type = gpu::VertexElementType::FLOAT2},
+                 .offset  = offsetof(Vertex, texture_coords),
+                 .type    = gpu::VertexElementType::FLOAT2},
               },
           },
         .viewport =
           {
-            .width = static_cast<float>(viewport.x),
+            .width  = static_cast<float>(viewport.x),
             .height = static_cast<float>(viewport.y),
           },
-        .scissor = {.extent = viewport},
+        .scissor                = {.extent = viewport},
         .color_attachment_count = 1,
       };
       const auto pipeline_state_id = registry.get_pipeline_state(pipeline_desc);
 
-      struct PushConstant {
+      struct PushConstant
+      {
         gpu::DescriptorID texture_descriptor_id;
         gpu::DescriptorID sampler_descriptor_id;
       };
@@ -171,13 +176,13 @@ auto Texture2DRGPass::add_pass(const Parameter& parameter, gpu::RenderGraph& ren
       };
 
       command_list.push(gpu::RenderCommandDrawIndex{
-        .pipeline_state_id = pipeline_state_id,
+        .pipeline_state_id  = pipeline_state_id,
         .push_constant_data = soul::cast<void*>(&push_constant),
         .push_constant_size = sizeof(PushConstant),
-        .vertex_buffer_ids = {vertex_buffer_id_},
-        .index_buffer_id = index_buffer_id_,
-        .first_index = 0,
-        .index_count = std::size(INDICES),
+        .vertex_buffer_ids  = {vertex_buffer_id_},
+        .index_buffer_id    = index_buffer_id_,
+        .first_index        = 0,
+        .index_count        = std::size(INDICES),
       });
     });
 

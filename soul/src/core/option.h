@@ -11,14 +11,17 @@ namespace soul
   class NilOpt
   {
   };
+
   constexpr auto nilopt = NilOpt{};
 
   template <typeset T>
   class Option;
 
   template <typename T, typename SomeT = match_any>
-  inline constexpr b8 is_option_v = [] {
-    if constexpr (is_specialization_v<T, Option>) {
+  inline constexpr b8 is_option_v = []
+  {
+    if constexpr (is_specialization_v<T, Option>)
+    {
       return is_match_v<SomeT, typename T::some_type>;
     }
     return false;
@@ -61,7 +64,8 @@ namespace soul
         requires(can_trivial_copy_v<Option<T>>)
       {
         auto& opt = get_option();
-        if (opt.is_some()) {
+        if (opt.is_some())
+        {
           return opt.some_ref();
         }
         return default_val;
@@ -71,7 +75,8 @@ namespace soul
       constexpr auto unwrap_or(OwnRef<T> default_val) && -> val_ret_type
       {
         auto& opt = get_option();
-        if (opt.is_some()) {
+        if (opt.is_some())
+        {
           return std::move(opt.some_ref());
         }
         return default_val;
@@ -105,7 +110,8 @@ namespace soul
       constexpr auto and_then(Fn fn) & -> FnReturnT
       {
         auto& opt = get_option();
-        if (opt.is_some()) {
+        if (opt.is_some())
+        {
           return std::invoke(fn, opt.some_ref());
         }
         return FnReturnT{};
@@ -116,7 +122,8 @@ namespace soul
       constexpr auto and_then(Fn fn) const& -> FnReturnT
       {
         const auto& opt = get_option();
-        if (opt.is_some()) {
+        if (opt.is_some())
+        {
           return std::invoke(fn, opt.some_ref());
         }
         return FnReturnT{};
@@ -127,7 +134,8 @@ namespace soul
       constexpr auto and_then(Fn fn) && -> FnReturnT
       {
         auto& opt = get_option();
-        if (opt.is_some()) {
+        if (opt.is_some())
+        {
           return std::invoke(fn, std::move(opt.some_ref()));
         }
         return FnReturnT{};
@@ -142,8 +150,13 @@ namespace soul
       constexpr auto transform(Fn fn) & -> Option<FnReturnT>
       {
         auto& opt = get_option();
-        if (opt.is_some()) {
-          return Option<FnReturnT>::Generate([&, this] { return std::invoke(fn, opt.some_ref()); });
+        if (opt.is_some())
+        {
+          return Option<FnReturnT>::Generate(
+            [&, this]
+            {
+              return std::invoke(fn, opt.some_ref());
+            });
         }
         return Option<FnReturnT>();
       }
@@ -153,8 +166,13 @@ namespace soul
       constexpr auto transform(Fn fn) const& -> Option<FnReturnT>
       {
         const auto& opt = get_option();
-        if (opt.is_some()) {
-          return Option<FnReturnT>::Generate([&, this] { return std::invoke(fn, opt.some_ref()); });
+        if (opt.is_some())
+        {
+          return Option<FnReturnT>::Generate(
+            [&, this]
+            {
+              return std::invoke(fn, opt.some_ref());
+            });
         }
         return Option<FnReturnT>();
       }
@@ -164,9 +182,13 @@ namespace soul
       constexpr auto transform(Fn fn) && -> Option<FnReturnT>
       {
         auto& opt = get_option();
-        if (opt.is_some()) {
+        if (opt.is_some())
+        {
           return Option<FnReturnT>::Generate(
-            [&, this] { return std::invoke(fn, std::move(opt.some_ref())); });
+            [&, this]
+            {
+              return std::invoke(fn, std::move(opt.some_ref()));
+            });
         }
         return Option<FnReturnT>();
       }
@@ -181,7 +203,8 @@ namespace soul
         requires(can_trivial_copy_v<Option<T>>)
       {
         auto& opt = get_option();
-        if (opt.is_some()) {
+        if (opt.is_some())
+        {
           return opt;
         }
         return std::invoke(fn);
@@ -192,7 +215,8 @@ namespace soul
       constexpr auto or_else(Fn fn) && -> Option<T>
       {
         auto& opt = get_option();
-        if (opt.is_some()) {
+        if (opt.is_some())
+        {
           return std::move(opt);
         }
         return std::invoke(fn);
@@ -220,10 +244,12 @@ namespace soul
   {
 
   private:
-    union {
+    union
+    {
       UninitializedDummy dummy_;
       std::remove_const_t<T> value_;
     };
+
     b8 is_some_ = false;
 
     using val_ret_type = std::remove_cv_t<T>;
@@ -302,7 +328,8 @@ namespace soul
       requires(can_clone_v<T> || can_nontrivial_copy_v<T>)
         : is_some_(other.is_some_)
     {
-      if (is_some_) {
+      if (is_some_)
+      {
         duplicate_at(&value_, other.value_);
       }
     }
@@ -314,12 +341,17 @@ namespace soul
       return *this;
     }
 
-    struct Construct {
-      struct Some {
+    struct Construct
+    {
+      struct Some
+      {
       };
-      struct InitGenerate {
+
+      struct InitGenerate
+      {
       };
-      static constexpr auto some = Some{};
+
+      static constexpr auto some          = Some{};
       static constexpr auto init_generate = InitGenerate{};
     };
 
@@ -340,7 +372,8 @@ namespace soul
     requires(can_nontrivial_move_v<T>)
       : is_some_(other.is_some_)
   {
-    if (other.is_some_) {
+    if (other.is_some_)
+    {
       relocate_at(&value_, std::move(other.value_));
       other.is_some_ = false;
     }
@@ -350,14 +383,18 @@ namespace soul
   constexpr auto Option<T>::operator=(Option&& other) noexcept -> Option&
     requires(can_nontrivial_move_v<T>)
   {
-    if (other.is_some_) {
-      if (is_some_) {
+    if (other.is_some_)
+    {
+      if (is_some_)
+      {
         value_ = std::move(other.value_);
-      } else {
+      } else
+      {
         is_some_ = true;
         construct_at(&value_, std::move(other.value_));
       }
-    } else {
+    } else
+    {
       reset();
     }
     return *this;
@@ -367,7 +404,8 @@ namespace soul
   constexpr Option<T>::~Option() noexcept
     requires(can_nontrivial_destruct_v<T>)
   {
-    if (is_some_) {
+    if (is_some_)
+    {
       destroy_at(&value_);
     }
   }
@@ -391,12 +429,15 @@ namespace soul
   constexpr void Option<T>::swap(Option& other) noexcept
     requires(can_move_v<T> && can_swap_v<T>)
   {
-    if (is_some_ == other.is_some_) {
-      if (is_some_) {
+    if (is_some_ == other.is_some_)
+    {
+      if (is_some_)
+      {
         using std::swap;
         swap(value_, other.value_);
       }
-    } else {
+    } else
+    {
       auto& src = is_some_ ? *this : other;
       auto& dst = is_some_ ? other : *this;
       construct_at(&dst.value_, std::move(src.value_));
@@ -428,7 +469,8 @@ namespace soul
   template <typeset T>
   constexpr void Option<T>::reset()
   {
-    if (is_some_) {
+    if (is_some_)
+    {
       destroy_at(&value_);
       is_some_ = false;
     }
@@ -444,7 +486,8 @@ namespace soul
   template <typeset T>
   constexpr auto operator==(const Option<T>& left, const Option<T>& right) noexcept -> b8
   {
-    if (left.is_some() && right.is_some()) {
+    if (left.is_some() && right.is_some())
+    {
       return left.some_ref() == right.some_ref();
     }
     return left.is_some() == right.is_some();
@@ -467,7 +510,7 @@ namespace soul
   {
   public:
     using some_type = NotNull<T>;
-    using ptr_type = T;
+    using ptr_type  = T;
 
     constexpr Option() : not_null_ptr_(NotNull<T>::NewUnchecked(nullptr)) {}
 
@@ -487,11 +530,17 @@ namespace soul
 
     ~Option() = default;
 
-    constexpr operator T() const { return not_null_ptr_.get_unchecked(); } // NOLINT
+    constexpr operator T() const
+    {
+      return not_null_ptr_.get_unchecked();
+    } // NOLINT
 
     constexpr operator NotNull<T>() const = delete;
 
-    constexpr void swap(Option& other) { not_null_ptr_.swap(other.not_null_ptr_); }
+    constexpr void swap(Option& other)
+    {
+      not_null_ptr_.swap(other.not_null_ptr_);
+    }
 
     [[nodiscard]]
     static constexpr auto Some(NotNull<T> not_null_ptr) noexcept -> Option
@@ -525,32 +574,38 @@ namespace soul
       return not_null_ptr_.get_unchecked() != nullptr;
     }
 
-    constexpr void reset() { not_null_ptr_.set_unchecked(nullptr); }
+    constexpr void reset()
+    {
+      not_null_ptr_.set_unchecked(nullptr);
+    }
 
     [[nodiscard]]
     constexpr auto unwrap_or(NotNull<T> default_val) const -> NotNull<T>
     {
-      if (is_some()) {
+      if (is_some())
+      {
         return not_null_ptr_;
       }
       return default_val;
     }
 
-    auto operator++() -> Option& = delete;
-    auto operator--() -> Option& = delete;
-    auto operator++(int) -> Option = delete;
-    auto operator--(int) -> Option = delete;
+    auto operator++() -> Option&              = delete;
+    auto operator--() -> Option&              = delete;
+    auto operator++(int) -> Option            = delete;
+    auto operator--(int) -> Option            = delete;
     auto operator+=(std::ptrdiff_t) -> Option = delete;
     auto operator-=(std::ptrdiff_t) -> Option = delete;
-    void operator[](std::ptrdiff_t) const = delete;
+    void operator[](std::ptrdiff_t) const     = delete;
 
   private:
     NotNull<T> not_null_ptr_;
   };
 
   template <typename T, typename PtrT = match_any>
-  inline constexpr b8 is_maybe_null_v = [] {
-    if constexpr (is_option_v<T>) {
+  inline constexpr b8 is_maybe_null_v = []
+  {
+    if constexpr (is_option_v<T>)
+    {
       return is_not_null_v<typename T::some_type, PtrT>;
     }
     return false;

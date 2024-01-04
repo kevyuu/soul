@@ -13,17 +13,18 @@ namespace soul
   static constexpr usize MAX_BRACE_INIT_SIZE = 32;
 
   template <typeset T, usize ArrSizeV>
-  struct Array {
+  struct Array
+  {
 
-    using this_type = Array<T, ArrSizeV>;
-    using value_type = T;
-    using pointer = T*;
-    using const_pointer = const T*;
-    using reference = T&;
-    using const_reference = const T&;
-    using iterator = T*;
-    using const_iterator = const T*;
-    using reverse_iterator = std::reverse_iterator<iterator>;
+    using this_type              = Array<T, ArrSizeV>;
+    using value_type             = T;
+    using pointer                = T*;
+    using const_pointer          = const T*;
+    using reference              = T&;
+    using const_reference        = const T&;
+    using iterator               = T*;
+    using const_iterator         = const T*;
+    using reverse_iterator       = std::reverse_iterator<iterator>;
     using const_reverse_iterator = std::reverse_iterator<const_iterator>;
 
     [[nodiscard]]
@@ -42,7 +43,10 @@ namespace soul
 
     constexpr void swap(this_type& other) noexcept;
 
-    friend constexpr void swap(this_type& a, this_type& b) noexcept { a.swap(b); }
+    friend constexpr void swap(this_type& a, this_type& b) noexcept
+    {
+      a.swap(b);
+    }
 
     [[nodiscard]]
     constexpr auto clone() const -> this_type
@@ -140,7 +144,8 @@ namespace soul
     requires(ArrSizeV <= MAX_BRACE_INIT_SIZE)
   {
     const auto create_array =
-      []<usize... idx>(std::index_sequence<idx...>, const T& val) -> this_type {
+      []<usize... idx>(std::index_sequence<idx...>, const T& val) -> this_type
+    {
       return {(static_cast<void>(idx), val)...};
     };
     return create_array(std::make_index_sequence<ArrSizeV>(), val);
@@ -152,7 +157,8 @@ namespace soul
   constexpr auto Array<T, ArrSizeV>::Generate(Fn fn) -> this_type
     requires(ArrSizeV <= MAX_BRACE_INIT_SIZE)
   {
-    const auto create_array = []<usize... idx>(std::index_sequence<idx...>, Fn fn) -> this_type {
+    const auto create_array = []<usize... idx>(std::index_sequence<idx...>, Fn fn) -> this_type
+    {
       return {(static_cast<void>(idx), std::invoke(fn))...};
     };
     return create_array(std::make_index_sequence<ArrSizeV>(), fn);
@@ -165,7 +171,8 @@ namespace soul
     requires(ArrSizeV <= MAX_BRACE_INIT_SIZE)
   {
     static_assert(ArrSizeV <= MAX_BRACE_INIT_SIZE);
-    const auto create_array = []<usize... idx>(std::index_sequence<idx...>, Fn fn) -> this_type {
+    const auto create_array = []<usize... idx>(std::index_sequence<idx...>, Fn fn) -> this_type
+    {
       return {(std::invoke(fn, idx))...};
     };
     return create_array(std::make_index_sequence<ArrSizeV>(), fn);
@@ -175,7 +182,8 @@ namespace soul
   constexpr void Array<T, ArrSizeV>::swap(this_type& other) noexcept
   {
     using std::swap;
-    for (usize i = 0; i < ArrSizeV; i++) {
+    for (usize i = 0; i < ArrSizeV; i++)
+    {
       swap(list[i], other.list[i]);
     }
   }
@@ -186,7 +194,8 @@ namespace soul
     requires(ts_clone<T> && ArrSizeV <= MAX_BRACE_INIT_SIZE)
   {
     const auto create_array =
-      []<usize... idx>(std::index_sequence<idx...>, const this_type& original) -> this_type {
+      []<usize... idx>(std::index_sequence<idx...>, const this_type& original) -> this_type
+    {
       return {original.list[idx].clone()...};
     };
     return create_array(std::make_index_sequence<ArrSizeV>(), *this);
@@ -196,7 +205,8 @@ namespace soul
   constexpr void Array<T, ArrSizeV>::clone_from(const this_type& other)
     requires ts_clone<T>
   {
-    for (usize i = 0; i < ArrSizeV; i++) {
+    for (usize i = 0; i < ArrSizeV; i++)
+    {
       list[i].clone_from(other.buffer[i]);
     }
   }
@@ -359,17 +369,18 @@ namespace soul
   }
 
   template <typeset T>
-  struct Array<T, 0> {
+  struct Array<T, 0>
+  {
 
-    using this_type = Array<T, 0>;
-    using value_type = T;
-    using pointer = T*;
-    using const_pointer = const T*;
-    using reference = T&;
-    using const_reference = const T&;
-    using iterator = T*;
-    using const_iterator = const T*;
-    using reverse_iterator = std::reverse_iterator<iterator>;
+    using this_type              = Array<T, 0>;
+    using value_type             = T;
+    using pointer                = T*;
+    using const_pointer          = const T*;
+    using reference              = T&;
+    using const_reference        = const T&;
+    using iterator               = T*;
+    using const_iterator         = const T*;
+    using reverse_iterator       = std::reverse_iterator<iterator>;
     using const_reverse_iterator = std::reverse_iterator<const_iterator>;
 
     [[nodiscard]]

@@ -22,38 +22,47 @@ namespace soul
       UINT64_C(0x589965cc75374cc3),
     };
 
-    auto mix = [](u64 a, u64 b) -> u64 {
+    auto mix = [](u64 a, u64 b) -> u64
+    {
       util::mul128(&a, &b);
       return a ^ b;
     };
 
-    auto r3 = [](const byte* p, usize k) -> u64 {
+    auto r3 = [](const byte* p, usize k) -> u64
+    {
       return (static_cast<u64>(p[0]) << 16U) | (static_cast<u64>(p[k >> 1U]) << 8U) | p[k - 1];
     };
 
     const byte* p = bytes.data().unwrap();
-    u64 seed = SECRETS[0];
+    u64 seed      = SECRETS[0];
     u64 a{};
     u64 b{};
     usize len = bytes.size();
-    if (SOUL_LIKELY(len <= 16)) {
-      if (SOUL_LIKELY(len >= 4)) {
+    if (SOUL_LIKELY(len <= 16))
+    {
+      if (SOUL_LIKELY(len >= 4))
+      {
         a = (util::unaligned_load32(p) << 32U) | util::unaligned_load32(p + ((len >> 3U) << 2U));
         b = (util::unaligned_load32(p + len - 4) << 32U) |
             util::unaligned_load32(p + len - 4 - ((len >> 3U) << 2U));
-      } else if (SOUL_LIKELY(len > 0)) {
+      } else if (SOUL_LIKELY(len > 0))
+      {
         a = r3(p, len);
         b = 0;
-      } else {
+      } else
+      {
         a = 0;
         b = 0;
       }
-    } else {
+    } else
+    {
       size_t i = len;
-      if (SOUL_UNLIKELY(i > 48)) {
+      if (SOUL_UNLIKELY(i > 48))
+      {
         u64 see1 = seed;
         u64 see2 = seed;
-        do {
+        do
+        {
           seed = mix(util::unaligned_load64(p) ^ SECRETS[1], util::unaligned_load64(p + 8) ^ seed);
           see1 =
             mix(util::unaligned_load64(p + 16) ^ SECRETS[2], util::unaligned_load64(p + 24) ^ see1);
@@ -61,10 +70,12 @@ namespace soul
             mix(util::unaligned_load64(p + 32) ^ SECRETS[3], util::unaligned_load64(p + 40) ^ see2);
           p += 48;
           i -= 48;
-        } while (SOUL_LIKELY(i > 48));
+        }
+        while (SOUL_LIKELY(i > 48));
         seed ^= see1 ^ see2;
       }
-      while (SOUL_UNLIKELY(i > 16)) {
+      while (SOUL_UNLIKELY(i > 16))
+      {
         seed = mix(util::unaligned_load64(p) ^ SECRETS[1], util::unaligned_load64(p + 8) ^ seed);
         i -= 16;
         p += 16;
@@ -101,14 +112,16 @@ namespace soul
 
     static constexpr auto Read4To8(const byte* p, usize len) -> u64
     {
-      u32 low_mem = util::unaligned_load32(p);
+      u32 low_mem  = util::unaligned_load32(p);
       u32 high_mem = util::unaligned_load32(p + len - 4);
       u32 most_significant, least_significant; // NOLINT
-      if constexpr (get_endianess() == Endianess::LITTLE) {
-        most_significant = high_mem;
+      if constexpr (get_endianess() == Endianess::LITTLE)
+      {
+        most_significant  = high_mem;
         least_significant = low_mem;
-      } else {
-        most_significant = low_mem;
+      } else
+      {
+        most_significant  = low_mem;
         least_significant = high_mem;
       }
       return (static_cast<uint64_t>(most_significant) << (len - 4) * 8) | least_significant;
@@ -123,11 +136,13 @@ namespace soul
       byte mem2 = p[len - 1];
 
       byte significant0, significant1, significant2; // NOLINT
-      if constexpr (get_endianess() == Endianess::LITTLE) {
+      if constexpr (get_endianess() == Endianess::LITTLE)
+      {
         significant2 = mem2;
         significant1 = mem1;
         significant0 = mem0;
-      } else {
+      } else
+      {
         significant2 = mem0;
         significant1 = len == 2 ? mem0 : mem1;
         significant0 = mem2;
@@ -141,17 +156,23 @@ namespace soul
   public:
     constexpr explicit Hasher(u64 seed = 0x9E3779B97F4A7C15ULL) : state_(seed) {}
 
-    constexpr void combine_u64(u64 val) { state_ = Mix(state_, val); }
+    constexpr void combine_u64(u64 val)
+    {
+      state_ = Mix(state_, val);
+    }
 
     constexpr void combine_bytes(Span<const byte*> bytes)
     {
       const byte* data = bytes.data();
-      const u64 size = bytes.size_in_bytes();
-      if (size > 8) {
+      const u64 size   = bytes.size_in_bytes();
+      if (size > 8)
+      {
         state_ = Mix(state_, hash_wy_bytes({data, size}));
-      } else if (size >= 4) {
+      } else if (size >= 4)
+      {
         state_ = Mix(state_, Read4To8(data, size));
-      } else if (size > 0) {
+      } else if (size > 0)
+      {
         state_ = Mix(state_, Read1To3(data, size));
       }
     }
@@ -159,13 +180,16 @@ namespace soul
     template <typename T>
     constexpr void combine_span(Span<const T*> span)
     {
-      if constexpr (has_unique_object_representations_v<T>) {
-        const T* data = span.data();
+      if constexpr (has_unique_object_representations_v<T>)
+      {
+        const T* data    = span.data();
         const usize size = span.size_in_bytes();
         combine_bytes({reinterpret_cast<const byte*>(data), size});
-      } else {
+      } else
+      {
         combine_u64(span.size());
-        for (const T& val : span) {
+        for (const T& val : span)
+        {
           soul_op_hash_combine(*this, val);
         }
       }
@@ -186,7 +210,10 @@ namespace soul
       (combine(args), ...);
     }
 
-    constexpr auto finish() -> u64 { return state_; }
+    constexpr auto finish() -> u64
+    {
+      return state_;
+    }
   };
 
   constexpr void soul_op_hash_combine(Hasher& hasher, ts_integral auto val)
@@ -219,7 +246,8 @@ namespace soul
 
   template <typename T>
     requires(impl_soul_op_hash_combine_v<T>)
-  struct HashOp {
+  struct HashOp
+  {
     auto operator()(const T& val) const -> u64
     {
       Hasher hasher;

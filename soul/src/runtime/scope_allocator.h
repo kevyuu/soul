@@ -14,9 +14,9 @@ namespace soul::runtime
     ScopeAllocator() = delete;
 
     explicit ScopeAllocator(
-      const char* name = "Unnamed",
+      const char* name                    = "Unnamed",
       BackingAllocator* backing_allocator = get_temp_allocator(),
-      Allocator* fallback_allocator = get_default_allocator());
+      Allocator* fallback_allocator       = get_default_allocator());
 
     ScopeAllocator(const ScopeAllocator& other) = delete;
 
@@ -38,8 +38,8 @@ namespace soul::runtime
 
   private:
     BackingAllocator* backing_allocator_ = nullptr;
-    void* scope_base_addr_ = nullptr;
-    Allocator* fallback_allocator_ = nullptr;
+    void* scope_base_addr_               = nullptr;
+    Allocator* fallback_allocator_       = nullptr;
     Vector<memory::Allocation> fallback_allocations_;
 
     [[nodiscard]]
@@ -63,7 +63,8 @@ namespace soul::runtime
   ScopeAllocator<BackingAllocator>::~ScopeAllocator()
   {
     rewind(scope_base_addr_);
-    for (const auto [addr, size] : fallback_allocations_) {
+    for (const auto [addr, size] : fallback_allocations_)
+    {
       fallback_allocator_->deallocate(addr);
     }
   }
@@ -79,7 +80,8 @@ namespace soul::runtime
     -> memory::Allocation
   {
     memory::Allocation allocation = backing_allocator_->try_allocate(size, alignment, tag);
-    if (allocation.addr == nullptr) {
+    if (allocation.addr == nullptr)
+    {
       allocation = fallback_allocator_->try_allocate(size, alignment, tag);
       fallback_allocations_.push_back(allocation);
     }

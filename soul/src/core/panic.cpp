@@ -7,9 +7,11 @@ namespace soul
 
   void panic(const char* file_name, usize line, const char* function, const char* message)
   {
-    if (message == nullptr) {
+    if (message == nullptr)
+    {
       panic_format(file_name, line, function);
-    } else {
+    } else
+    {
       panic_format(file_name, line, function, "{}", message);
     }
   }
@@ -21,9 +23,11 @@ namespace soul
     const char* expr,
     const char* message)
   {
-    if (message == nullptr) {
+    if (message == nullptr)
+    {
       panic_assert_format(file_name, line, function, expr);
-    } else {
+    } else
+    {
       panic_assert_format(file_name, line, function, expr, "{}", message);
     }
   }

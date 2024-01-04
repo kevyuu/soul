@@ -21,16 +21,16 @@ namespace soul::gpu
     static auto New(
       NotNull<System*> system,
       NotNull<const impl::RenderGraphExecution*> execution,
-      VkRenderPass render_pass = VK_NULL_HANDLE,
+      VkRenderPass render_pass              = VK_NULL_HANDLE,
       const TextureSampleCount sample_count = TextureSampleCount::COUNT_1)
     {
       return RenderGraphRegistry(system, execution, render_pass, sample_count);
     }
 
-    RenderGraphRegistry(const RenderGraphRegistry& other) = delete;
+    RenderGraphRegistry(const RenderGraphRegistry& other)                    = delete;
     auto operator=(const RenderGraphRegistry& other) -> RenderGraphRegistry& = delete;
 
-    RenderGraphRegistry(RenderGraphRegistry&& other) = delete;
+    RenderGraphRegistry(RenderGraphRegistry&& other)                   = delete;
     auto operator=(RenderGraphRegistry&& other) -> RenderGraphRegistry = delete;
 
     ~RenderGraphRegistry() = default;

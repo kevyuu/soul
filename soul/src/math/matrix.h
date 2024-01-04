@@ -20,13 +20,16 @@ namespace soul::math
     const Matrix<T, LhsColCountV, RhsColCountV>& rhs) -> Matrix<T, LhsRowCountV, RhsColCountV>
   {
     Matrix<T, LhsRowCountV, RhsColCountV> result;
-    for (i32 m = 0; m < LhsRowCountV; ++m) {
-      for (i32 p = 0; p < RhsColCountV; ++p) {
+    for (i32 m = 0; m < LhsRowCountV; ++m)
+    {
+      for (i32 p = 0; p < RhsColCountV; ++p)
+      {
         result[m][p] = dot(lhs.row(m), rhs.col(p));
       }
     }
     return result;
   }
+
   /// Multiply Matrix and Vec. Vec is treated as a column Vec.
   template <typename T, u8 RowCountV, u8 ColCountV>
   [[nodiscard]]
@@ -34,7 +37,8 @@ namespace soul::math
     -> Vec<T, RowCountV>
   {
     Vec<T, RowCountV> result;
-    for (i32 r = 0; r < RowCountV; ++r) {
+    for (i32 r = 0; r < RowCountV; ++r)
+    {
       result[r] = dot(lhs.row(r), rhs);
     }
     return result;
@@ -47,7 +51,8 @@ namespace soul::math
     -> Vec<T, ColCountV>
   {
     Vec<T, ColCountV> result;
-    for (i32 c = 0; c < ColCountV; ++c) {
+    for (i32 c = 0; c < ColCountV; ++c)
+    {
       result[c] = dot(lhs, rhs.col(c));
     }
     return result;
@@ -88,8 +93,10 @@ namespace soul::math
   auto transpose(const Matrix<T, RowCountV, ColCountV>& m) -> Matrix<T, ColCountV, RowCountV>
   {
     Matrix<T, ColCountV, RowCountV> result;
-    for (i32 r = 0; r < RowCountV; ++r) {
-      for (i32 c = 0; c < ColCountV; ++c) {
+    for (i32 r = 0; r < RowCountV; ++r)
+    {
+      for (i32 c = 0; c < ColCountV; ++c)
+      {
         result[c][r] = m[r][c];
       }
     }
@@ -315,13 +322,16 @@ namespace soul::math
     Matrix<T, 4, 4> local_matrix(model_matrix);
 
     // Abort if zero Matrix.
-    if (abs(local_matrix[3][3]) < eps) {
+    if (abs(local_matrix[3][3]) < eps)
+    {
       return false;
     }
 
     // Normalize the Matrix.
-    for (i32 i = 0; i < 4; ++i) {
-      for (i32 j = 0; j < 4; ++j) {
+    for (i32 i = 0; i < 4; ++i)
+    {
+      for (i32 j = 0; j < 4; ++j)
+      {
         local_matrix[i][j] /= local_matrix[3][3];
       }
     }
@@ -330,28 +340,31 @@ namespace soul::math
     // an easy way to test for singularity of the upper 3x3 component.
     Matrix<T, 4, 4> perspective_matrix(local_matrix);
     perspective_matrix[3] = Vec<T, 4>(0, 0, 0, 1);
-    if (abs(determinant(perspective_matrix)) < eps) {
+    if (abs(determinant(perspective_matrix)) < eps)
+    {
       return false;
     }
 
     // First, isolate perspective. This is the messiest.
     if (
       abs(local_matrix[3][0]) >= eps || abs(local_matrix[3][1]) >= eps ||
-      abs(local_matrix[3][2]) >= eps) {
+      abs(local_matrix[3][2]) >= eps)
+    {
       // right_hand_side is the right hand side of the equation.
       Vec<T, 4> right_hand_side = local_matrix[3];
 
       // Solve the equation by inverting perspective_matrix and multiplying
       // right_hand_side by the inverse.
       // (This is the easiest way, not necessarily the best.)
-      Matrix<T, 4, 4> inverse_perspective_matrix = inverse(perspective_matrix);
+      Matrix<T, 4, 4> inverse_perspective_matrix            = inverse(perspective_matrix);
       Matrix<T, 4, 4> transposed_inverse_perspective_matrix = transpose(inverse_perspective_matrix);
 
       perspective = mul(transposed_inverse_perspective_matrix, right_hand_side);
 
       // Clear the perspective partition.
       local_matrix[3] = Vec<T, 4>(0, 0, 0, 1);
-    } else {
+    } else
+    {
       // No perspective.
       perspective = Vec<T, 4>(0, 0, 0, 1);
     }
@@ -363,15 +376,17 @@ namespace soul::math
     Vec<T, 3> row[3];
 
     // Now get scale and shear.
-    for (i32 i = 0; i < 3; ++i) {
-      for (i32 j = 0; j < 3; ++j) {
+    for (i32 i = 0; i < 3; ++i)
+    {
+      for (i32 j = 0; j < 3; ++j)
+      {
         row[i][j] = local_matrix[j][i];
       }
     }
 
     // Compute X scale factor and normalize first row.
     scale.x = length(row[0]);
-    row[0] = normalize(row[0]);
+    row[0]  = normalize(row[0]);
 
     // Compute XY shear factor and make 2nd row orthogonal to 1st.
     skew.z = dot(row[0], row[1]);
@@ -379,7 +394,7 @@ namespace soul::math
 
     // Now, compute Y scale and normalize 2nd row.
     scale.y = length(row[1]);
-    row[1] = normalize(row[1]);
+    row[1]  = normalize(row[1]);
     skew.z /= scale.y;
 
     // Compute XZ and YZ shears, orthogonalize 3rd row.
@@ -390,16 +405,18 @@ namespace soul::math
 
     // Next, get Z scale and normalize 3rd row.
     scale.z = length(row[2]);
-    row[2] = normalize(row[2]);
+    row[2]  = normalize(row[2]);
     skew.y /= scale.z;
     skew.x /= scale.z;
 
     // At this point, the Matrix (in rows[]) is orthonormal.
     // Check for a coordinate system flip. If the determinant
     // is -1, then negate the Matrix and the scaling factors.
-    if (dot(row[0], cross(row[1], row[2])) < T(0)) {
+    if (dot(row[0], cross(row[1], row[2])) < T(0))
+    {
       scale *= T(-1);
-      for (auto& i : row) {
+      for (auto& i : row)
+      {
         i *= T(-1);
       }
     }
@@ -409,21 +426,25 @@ namespace soul::math
     i32 j = 0;
     i32 k = 0;
     T root, trace = row[0].x + row[1].y + row[2].z; // NOLINT
-    if (trace > T(0)) {
-      root = sqrt(trace + T(1));
+    if (trace > T(0))
+    {
+      root          = sqrt(trace + T(1));
       orientation.w = T(0.5) * root;
-      root = T(0.5) / root;
+      root          = T(0.5) / root;
       orientation.x = root * (row[1].z - row[2].y);
       orientation.y = root * (row[2].x - row[0].z);
       orientation.z = root * (row[0].y - row[1].x);
     } // end if > 0
-    else {
+    else
+    {
       static i32 next[3] = {1, 2, 0};
-      i = 0;
-      if (row[1].y > row[0].x) {
+      i                  = 0;
+      if (row[1].y > row[0].x)
+      {
         i = 1;
       }
-      if (row[2].z > row[i][i]) {
+      if (row[2].z > row[i][i])
+      {
         i = 2;
       }
       j = next[i];
@@ -432,10 +453,10 @@ namespace soul::math
       root = sqrt(row[i][i] - row[j][j] - row[k][k] + T(1));
 
       orientation[i] = T(0.5) * root;
-      root = T(0.5) / root;
+      root           = T(0.5) / root;
       orientation[j] = root * (row[i][j] + row[j][i]);
       orientation[k] = root * (row[i][k] + row[k][i]);
-      orientation.w = root * (row[j][k] - row[k][j]);
+      orientation.w  = root * (row[j][k] - row[k][j]);
     } // end if <= 0
 
     return true;
@@ -495,7 +516,7 @@ namespace soul::math
   {
     SOUL_ASSERT(0, abs(aspect - std::numeric_limits<T>::epsilon()) > T(0));
 
-    T fov_rad = fovy;
+    T fov_rad      = fovy;
     T focal_length = 1.0f / std::tan(fov_rad / 2.0f);
 
     T x = focal_length / aspect;
@@ -534,12 +555,12 @@ namespace soul::math
   inline auto ortho(T left, T right, T bottom, T top, T z_near, T z_far) -> Matrix<T, 4, 4>
   {
     Matrix<T, 4, 4> m = Matrix<T, 4, 4>::Identity();
-    m[0][0] = T(2) / (right - left);
-    m[1][1] = T(2) / (top - bottom);
-    m[2][2] = -T(1) / (z_far - z_near);
-    m[0][3] = -(right + left) / (right - left);
-    m[1][3] = -(top + bottom) / (top - bottom);
-    m[2][3] = -z_near / (z_far - z_near);
+    m[0][0]           = T(2) / (right - left);
+    m[1][1]           = T(2) / (top - bottom);
+    m[2][2]           = -T(1) / (z_far - z_near);
+    m[0][3]           = -(right + left) / (right - left);
+    m[1][3]           = -(top + bottom) / (top - bottom);
+    m[2][3]           = -z_near / (z_far - z_near);
     return m;
   }
 
@@ -680,18 +701,18 @@ namespace soul::math
     Vec<T, 3> u(cross(f, r));
 
     Matrix<T, 4, 4> result = Matrix<T, 4, 4>::Identity();
-    result[0][0] = r.x;
-    result[0][1] = r.y;
-    result[0][2] = r.z;
-    result[1][0] = u.x;
-    result[1][1] = u.y;
-    result[1][2] = u.z;
-    result[2][0] = f.x;
-    result[2][1] = f.y;
-    result[2][2] = f.z;
-    result[0][3] = -dot(r, eye);
-    result[1][3] = -dot(u, eye);
-    result[2][3] = -dot(f, eye);
+    result[0][0]           = r.x;
+    result[0][1]           = r.y;
+    result[0][2]           = r.z;
+    result[1][0]           = u.x;
+    result[1][1]           = u.y;
+    result[1][2]           = u.z;
+    result[2][0]           = f.x;
+    result[2][1]           = f.y;
+    result[2][2]           = f.z;
+    result[0][3]           = -dot(r, eye);
+    result[1][3]           = -dot(u, eye);
+    result[2][3]           = -dot(f, eye);
 
     return result;
   }

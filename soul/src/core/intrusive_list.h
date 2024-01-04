@@ -6,7 +6,8 @@
 namespace soul
 {
 
-  struct IntrusiveListNode {
+  struct IntrusiveListNode
+  {
     IntrusiveListNode* prev = nullptr;
     IntrusiveListNode* next = nullptr;
   };
@@ -18,14 +19,14 @@ namespace soul
   class IntrusiveListIterator
   {
   public:
-    using this_type = IntrusiveListIterator<T, IsConst>;
-    using iterator = IntrusiveListIterator<T, false>;
-    using value_type = T;
-    using node_type = T;
-    using pointer = std::conditional_t<IsConst, const T*, T*>;
-    using reference = std::conditional_t<IsConst, const T&, T&>;
+    using this_type         = IntrusiveListIterator<T, IsConst>;
+    using iterator          = IntrusiveListIterator<T, false>;
+    using value_type        = T;
+    using node_type         = T;
+    using pointer           = std::conditional_t<IsConst, const T*, T*>;
+    using reference         = std::conditional_t<IsConst, const T&, T&>;
     using iterator_category = std::bidirectional_iterator_tag;
-    using difference_type = ptrdiff_t;
+    using difference_type   = ptrdiff_t;
 
     pointer node;
 
@@ -127,29 +128,33 @@ namespace soul
   class IntrusiveList
   {
   public:
-    using this_type = IntrusiveList<T>;
-    using node_type = T;
-    using value_type = T;
-    using reference = T&;
-    using const_reference = const T&;
-    using pointer = T*;
-    using const_pointer = const T*;
-    using iterator = IntrusiveListIterator<T, false>;
-    using const_iterator = IntrusiveListIterator<T, true>;
-    using reverse_iterator = std::reverse_iterator<iterator>;
+    using this_type              = IntrusiveList<T>;
+    using node_type              = T;
+    using value_type             = T;
+    using reference              = T&;
+    using const_reference        = const T&;
+    using pointer                = T*;
+    using const_pointer          = const T*;
+    using iterator               = IntrusiveListIterator<T, false>;
+    using const_iterator         = IntrusiveListIterator<T, true>;
+    using reverse_iterator       = std::reverse_iterator<iterator>;
     using const_reverse_iterator = std::reverse_iterator<const_iterator>;
 
     IntrusiveList();
     IntrusiveList(const this_type& x) = delete;
-    IntrusiveList(this_type&& x) = delete;
+    IntrusiveList(this_type&& x)      = delete;
 
     auto operator=(const this_type& x) -> this_type& = delete;
-    auto operator=(this_type&& x) -> IntrusiveList& = delete;
+    auto operator=(this_type&& x) -> IntrusiveList&  = delete;
 
     ~IntrusiveList() = default;
 
     auto swap(this_type& rhs) noexcept -> void;
-    friend auto swap(this_type& a, this_type& b) noexcept -> void { a.swap(b); }
+
+    friend auto swap(this_type& a, this_type& b) noexcept -> void
+    {
+      a.swap(b);
+    }
 
     [[nodiscard]]
     auto begin() noexcept -> iterator;
@@ -230,21 +235,25 @@ namespace soul
   auto IntrusiveList<T>::swap(this_type& rhs) noexcept -> void
   {
     IntrusiveListNode tmp(anchor_);
-    anchor_ = rhs.anchor_;
+    anchor_     = rhs.anchor_;
     rhs.anchor_ = tmp;
 
-    if (anchor_.next == &rhs.anchor_) {
+    if (anchor_.next == &rhs.anchor_)
+    {
       anchor_.next = &anchor_;
       anchor_.prev = &anchor_;
-    } else {
+    } else
+    {
       anchor_.next->prev = &anchor_;
       anchor_.prev->next = &anchor_;
     }
 
-    if (rhs.anchor_.next == &anchor_) {
+    if (rhs.anchor_.next == &anchor_)
+    {
       rhs.anchor_.next = &rhs.anchor_;
       rhs.anchor_.prev = &rhs.anchor_;
-    } else {
+    } else
+    {
       rhs.anchor_.next->prev = &rhs.anchor_;
       rhs.anchor_.prev->next = &rhs.anchor_;
     }
@@ -326,7 +335,8 @@ namespace soul
   auto IntrusiveList<T>::size() const noexcept -> usize
   {
     usize size = 0;
-    for (const IntrusiveListNode* node = anchor_.next; node != &anchor_; node = node->next) {
+    for (const IntrusiveListNode* node = anchor_.next; node != &anchor_; node = node->next)
+    {
       size++;
     }
     return size;
@@ -369,7 +379,7 @@ namespace soul
     x.prev = &anchor_;
 
     anchor_.next->prev = &x;
-    anchor_.next = &x;
+    anchor_.next       = &x;
   }
 
   template <intrusive_node_type T>
@@ -379,7 +389,7 @@ namespace soul
     x.next = &anchor_;
 
     anchor_.prev->next = &x;
-    anchor_.prev = &x;
+    anchor_.prev       = &x;
   }
 
   template <intrusive_node_type T>
@@ -399,8 +409,10 @@ namespace soul
   template <intrusive_node_type T>
   auto IntrusiveList<T>::contains(const value_type& x) const -> b8
   {
-    for (const IntrusiveListNode* node = anchor_.next; node != &anchor_; node = node->next) {
-      if (node == &x) {
+    for (const IntrusiveListNode* node = anchor_.next; node != &anchor_; node = node->next)
+    {
+      if (node == &x)
+      {
         return true;
       }
     }
@@ -410,8 +422,10 @@ namespace soul
   template <intrusive_node_type T>
   auto IntrusiveList<T>::locate(value_type& x) -> iterator
   {
-    for (IntrusiveListNode* node = anchor_.next; node != &anchor_; node = node->next) {
-      if (node == &x) {
+    for (IntrusiveListNode* node = anchor_.next; node != &anchor_; node = node->next)
+    {
+      if (node == &x)
+      {
         return iterator(static_cast<T*>(node));
       }
     }
@@ -421,8 +435,10 @@ namespace soul
   template <intrusive_node_type T>
   auto IntrusiveList<T>::locate(const value_type& x) const -> const_iterator
   {
-    for (const IntrusiveListNode* node = anchor_.next; node != &anchor_; node = node->next) {
-      if (node == &x) {
+    for (const IntrusiveListNode* node = anchor_.next; node != &anchor_; node = node->next)
+    {
+      if (node == &x)
+      {
         return const_iterator(static_cast<const T*>(node));
       }
     }
@@ -435,10 +451,10 @@ namespace soul
   {
     IntrusiveListNode& next = *const_cast<node_type*>(pos.node);
     IntrusiveListNode& prev = *static_cast<node_type*>(next.prev);
-    prev.next = &x;
-    next.prev = &x;
-    x.next = &next;
-    x.prev = &prev;
+    prev.next               = &x;
+    next.prev               = &x;
+    x.next                  = &next;
+    x.prev                  = &prev;
 
     return iterator(&x);
   }
@@ -448,8 +464,8 @@ namespace soul
   {
     IntrusiveListNode& next = *static_cast<node_type*>(pos.node->next);
     IntrusiveListNode& prev = *static_cast<node_type*>(pos.node->prev);
-    prev.next = &next;
-    next.prev = &prev;
+    prev.next               = &next;
+    next.prev               = &prev;
 
     return iterator(static_cast<node_type*>(&next));
   }
@@ -486,7 +502,8 @@ namespace soul
   template <intrusive_node_type T>
   auto IntrusiveList<T>::splice(const_iterator pos, value_type& value) -> void
   {
-    if (pos.node != &value) {
+    if (pos.node != &value)
+    {
       remove(value);
       insert(pos, value);
     }
@@ -496,9 +513,10 @@ namespace soul
   // ReSharper disable once CppMemberFunctionMayBeStatic
   auto IntrusiveList<T>::splice(const_iterator pos, this_type& list) -> void
   {
-    if (!list.empty()) {
-      IntrusiveListNode& new_next = *const_cast<node_type*>(pos.node);
-      IntrusiveListNode& new_prev = *new_next.prev;
+    if (!list.empty())
+    {
+      IntrusiveListNode& new_next  = *const_cast<node_type*>(pos.node);
+      IntrusiveListNode& new_prev  = *new_next.prev;
       IntrusiveListNode& list_head = *list.anchor_.next;
       IntrusiveListNode& list_tail = *list.anchor_.prev;
 
@@ -517,7 +535,8 @@ namespace soul
   auto IntrusiveList<T>::splice(const_iterator pos, this_type& list, const_iterator iterator)
     -> void
   {
-    if (pos != iterator) {
+    if (pos != iterator)
+    {
       list.erase(iterator);
       insert(pos, *(const_cast<T*>(iterator.node)));
     }
@@ -528,22 +547,24 @@ namespace soul
   auto IntrusiveList<T>::splice(
     const_iterator pos, this_type& /*list*/, const_iterator first, const_iterator last) -> void
   {
-    if (first != last) {
+    if (first != last)
+    {
       IntrusiveListNode& first_node = *const_cast<node_type*>(first.node);
-      IntrusiveListNode& last_node = *(last.node->prev);
+      IntrusiveListNode& last_node  = *(last.node->prev);
 
       first_node.prev->next = last_node.next;
-      last_node.next->prev = first_node.prev;
+      last_node.next->prev  = first_node.prev;
 
       IntrusiveListNode& new_next = *const_cast<node_type*>(pos.node);
       IntrusiveListNode& new_prev = *new_next.prev;
 
       first_node.prev = &new_prev;
-      last_node.next = &new_next;
-      new_next.prev = &last_node;
-      new_prev.next = &first_node;
+      last_node.next  = &new_next;
+      new_next.prev   = &last_node;
+      new_prev.next   = &first_node;
     }
   }
+
   // NOLINTEND(cppcoreguidelines-pro-type-const-cast)
 
 } // namespace soul

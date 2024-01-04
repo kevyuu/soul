@@ -26,7 +26,7 @@ template <typeset T>
 auto test_move_constructor(const T& result_src)
 {
   auto result_src_clone = duplicate(result_src);
-  const auto test = std::move(result_src_clone);
+  const auto test       = std::move(result_src_clone);
   verify_equal(test, result_src);
 }
 
@@ -34,7 +34,7 @@ template <typeset T>
 auto test_copy_assignment(const T& src, const T& sample_dst)
 {
   auto dst = sample_dst;
-  dst = src;
+  dst      = src;
   verify_equal(dst, src);
 }
 
@@ -51,7 +51,7 @@ auto test_move_assignment(const T& sample_src, const T& sample_dst)
 {
   auto src = duplicate(sample_src);
   auto dst = duplicate(sample_dst);
-  dst = std::move(src);
+  dst      = std::move(src);
   verify_equal(dst, sample_src);
 }
 
@@ -68,7 +68,7 @@ auto test_swap(const T& sample_lhs, const T& sample_rhs)
 template <typeset T>
 auto test_reserve(const T& sample, usize new_capacity)
 {
-  auto test = duplicate(sample);
+  auto test             = duplicate(sample);
   auto initial_capacity = test.capacity();
   test.reserve(new_capacity);
   SOUL_TEST_ASSERT_GE(test.capacity(), initial_capacity);
@@ -78,11 +78,15 @@ auto test_reserve(const T& sample, usize new_capacity)
 template <typename T, usize ArrSizeV>
 auto test_hash_implementation(const soul::Array<T, ArrSizeV>& vals)
 {
-  for (usize idx1 = 0; idx1 < vals.size(); idx1++) {
-    for (usize idx2 = 0; idx2 < vals.size(); idx2++) {
-      if (idx1 == idx2) {
+  for (usize idx1 = 0; idx1 < vals.size(); idx1++)
+  {
+    for (usize idx2 = 0; idx2 < vals.size(); idx2++)
+    {
+      if (idx1 == idx2)
+      {
         SOUL_TEST_ASSERT_EQ(soul::hash(vals[idx1]), soul::hash(vals[idx2]));
-      } else {
+      } else
+      {
         SOUL_TEST_ASSERT_NE(soul::hash(vals[idx1]), soul::hash(vals[idx2]));
       }
     }
@@ -92,11 +96,15 @@ auto test_hash_implementation(const soul::Array<T, ArrSizeV>& vals)
 template <typename T, usize ArrSizeV>
 auto test_hash_span_implementation(const soul::Array<T, ArrSizeV>& vals)
 {
-  for (usize idx1 = 0; idx1 < vals.size(); idx1++) {
-    for (usize idx2 = 0; idx2 < vals.size(); idx2++) {
-      if (idx1 == idx2) {
+  for (usize idx1 = 0; idx1 < vals.size(); idx1++)
+  {
+    for (usize idx2 = 0; idx2 < vals.size(); idx2++)
+    {
+      if (idx1 == idx2)
+      {
         SOUL_TEST_ASSERT_EQ(soul::hash_span(vals[idx1]), soul::hash_span(vals[idx2]));
-      } else {
+      } else
+      {
         SOUL_TEST_ASSERT_NE(soul::hash_span(vals[idx1]), soul::hash_span(vals[idx2]));
       }
     }

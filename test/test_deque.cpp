@@ -34,14 +34,17 @@ auto verify_equal(const DequeT& lhs, const DequeT& rhs)
 {
   using value_t = DequeT::value_type;
   SOUL_TEST_ASSERT_EQ(lhs.size(), rhs.size());
-  for (auto i = 0; i < lhs.size(); i++) {
-    if (lhs[i] != rhs[i]) {
+  for (auto i = 0; i < lhs.size(); i++)
+  {
+    if (lhs[i] != rhs[i])
+    {
 
       SOUL_LOG_INFO("i : {}", i);
     }
     SOUL_TEST_ASSERT_EQ(lhs[i], rhs[i]);
   }
-  if (lhs.size() > 0) {
+  if (lhs.size() > 0)
+  {
     SOUL_TEST_ASSERT_EQ(lhs.back_ref(), rhs.back_ref());
     SOUL_TEST_ASSERT_EQ(lhs.front_ref(), rhs.front_ref());
   }
@@ -262,7 +265,7 @@ TEST_F(TestDequeManipulationAfterConstruction, TestReserve)
 template <typename T>
 void test_deque_shrink_to_fit(const soul::Deque<T>& sample_deque, const usize new_capacity)
 {
-  auto test_deque = sample_deque.clone();
+  auto test_deque         = sample_deque.clone();
   const auto old_capacity = test_deque.capacity();
   test_deque.reserve(new_capacity);
   test_deque.shrink_to_fit();
@@ -285,15 +288,18 @@ void test_deque_push_back(const soul::Deque<T>& sample_deque, const T& val)
 {
   using Deque = soul::Deque<T>;
 
-  auto test_deque = sample_deque.clone();
+  auto test_deque  = sample_deque.clone();
   Deque test_copy1 = test_deque.clone();
   Deque test_copy2 = test_deque.clone();
 
-  if constexpr (!soul::ts_clone<T>) {
+  if constexpr (!soul::ts_clone<T>)
+  {
     test_copy1.push_back(val);
     SOUL_TEST_ASSERT_EQ(test_copy1.size(), test_deque.size() + 1);
-    for (usize i = 0; i < test_deque.size(); i++) {
-      if (test_deque[i] != test_copy1[i]) {
+    for (usize i = 0; i < test_deque.size(); i++)
+    {
+      if (test_deque[i] != test_copy1[i])
+      {
         SOUL_LOG_INFO(
           "idx : {}, test_deque item : {}, test_copy1 item : {}", i, test_deque[i], test_copy1[i]);
       }
@@ -318,7 +324,8 @@ TEST_F(TestDequeManipulationAfterConstruction, TestPushBack)
   SOUL_TEST_RUN(test_deque_push_back(deque_int1, 5));
   SOUL_TEST_RUN(test_deque_push_back(deque_obj1, TestObject(5)));
 
-  auto test_push_back_self_referential = []<typename T>(const soul::Deque<T>& sample_deque) {
+  auto test_push_back_self_referential = []<typename T>(const soul::Deque<T>& sample_deque)
+  {
     using Deque = soul::Deque<T>;
 
     auto test_deque = sample_deque.clone();
@@ -339,11 +346,12 @@ void test_deque_push_front(const soul::Deque<T>& sample_deque, const T& val)
 {
   using Deque = soul::Deque<T>;
 
-  auto test_deque = sample_deque.clone();
+  auto test_deque  = sample_deque.clone();
   Deque test_copy1 = test_deque.clone();
   Deque test_copy2 = test_deque.clone();
 
-  if constexpr (!soul::ts_clone<T>) {
+  if constexpr (!soul::ts_clone<T>)
+  {
     test_copy1.push_front(val);
     SOUL_TEST_ASSERT_EQ(test_copy1.size(), test_deque.size() + 1);
     SOUL_TEST_ASSERT_TRUE(std::equal(test_deque.rbegin(), test_deque.rend(), test_copy1.rbegin()));
@@ -365,7 +373,8 @@ TEST_F(TestDequeManipulationAfterConstruction, TestPushFront)
   SOUL_TEST_RUN(test_deque_push_front(deque_int1, 5));
   SOUL_TEST_RUN(test_deque_push_front(deque_obj1, TestObject(5)));
 
-  auto test_push_front_self_referential = []<typename T>(const soul::Deque<T>& sample_deque) {
+  auto test_push_front_self_referential = []<typename T>(const soul::Deque<T>& sample_deque)
+  {
     using Deque = soul::Deque<T>;
 
     auto test_deque = sample_deque.clone();
@@ -387,7 +396,8 @@ void test_deque_pop_front(const soul::Deque<T>& sample_deque)
 {
   auto test_deque = sample_deque.clone();
 
-  for (const auto& item : sample_deque) {
+  for (const auto& item : sample_deque)
+  {
     SOUL_TEST_ASSERT_EQ(test_deque.pop_front(), item);
   }
   SOUL_TEST_ASSERT_EQ(test_deque.size(), 0);
@@ -409,7 +419,8 @@ void test_deque_pop_back(const soul::Deque<T>& sample_deque)
 {
   auto test_deque = sample_deque.clone();
 
-  for (const auto& item : sample_deque | std::views::reverse) {
+  for (const auto& item : sample_deque | std::views::reverse)
+  {
     SOUL_TEST_ASSERT_EQ(test_deque.pop_back(), item);
   }
   SOUL_TEST_ASSERT_EQ(test_deque.size(), 0);
@@ -428,7 +439,7 @@ TEST_F(TestDequeManipulationAfterConstruction, TestDequePopBack)
 class TestDequeManipulationAfterManipulation : public testing::Test
 {
 public:
-  DequeInt deque_after_push_back = DequeInt::From(generate_random_sequence<int>(1000));
+  DequeInt deque_after_push_back  = DequeInt::From(generate_random_sequence<int>(1000));
   DequeInt deque_after_push_front = DequeInt::From(generate_random_sequence<int>(8));
 
   DequeObj deque_after_pop_front =
@@ -602,7 +613,8 @@ public:
 
   TestEmptyDequeManipulationAfterManipulation()
   {
-    while (!deque_obj_empty.empty()) {
+    while (!deque_obj_empty.empty())
+    {
       deque_obj_empty.pop_front();
     }
   }
@@ -635,7 +647,7 @@ TEST_F(TestEmptyDequeManipulationAfterManipulation, TestMoveConstructor)
 TEST_F(TestEmptyDequeManipulationAfterManipulation, TestMoveFromFilledToEmtpy)
 {
   const auto expected = deque_obj_filled.clone();
-  deque_obj_empty = std::move(deque_obj_filled);
+  deque_obj_empty     = std::move(deque_obj_filled);
   SOUL_TEST_RUN(verify_equal(deque_obj_empty, expected));
 }
 

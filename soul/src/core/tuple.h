@@ -102,15 +102,15 @@ namespace soul
     {
     public:
       static constexpr b8 can_tuple_default_construct = (can_default_construct_v<Ts> && ...);
-      static constexpr b8 can_tuple_trivial_copy = (can_trivial_copy_v<Ts> && ...);
-      static constexpr b8 can_tuple_trivial_move = (can_trivial_move_v<Ts> && ...);
+      static constexpr b8 can_tuple_trivial_copy      = (can_trivial_copy_v<Ts> && ...);
+      static constexpr b8 can_tuple_trivial_move      = (can_trivial_move_v<Ts> && ...);
       static constexpr b8 can_tuple_clone =
         !can_tuple_trivial_copy && (can_copy_or_clone_v<Ts> && ...);
       static constexpr b8 can_tuple_nontrivial_move =
         !can_tuple_trivial_move && (can_move_v<Ts> && ...);
-      static constexpr b8 can_tuple_trivial_destruct = (can_trivial_destruct_v<Ts> && ...);
+      static constexpr b8 can_tuple_trivial_destruct    = (can_trivial_destruct_v<Ts> && ...);
       static constexpr b8 can_tuple_nontrivial_destruct = (can_nontrivial_destruct_v<Ts> || ...);
-      static constexpr b8 can_tuple_swap = (can_swap_v<Ts> && ...);
+      static constexpr b8 can_tuple_swap                = (can_swap_v<Ts> && ...);
 
       constexpr TupleStorage() = default;
 
@@ -157,7 +157,7 @@ namespace soul
       constexpr auto ref() const -> const get_type_at_t<IndexV, Ts...>&
       {
         using BaseT = const TupleLeaf<IndexV, get_type_at_t<IndexV, Ts...>>*;
-        BaseT base = this;
+        BaseT base  = this;
         return base->ref();
       }
 
@@ -166,7 +166,7 @@ namespace soul
       constexpr auto ref() -> get_type_at_t<IndexV, Ts...>&
       {
         using BaseT = TupleLeaf<IndexV, get_type_at_t<IndexV, Ts...>>*;
-        BaseT base = this;
+        BaseT base  = this;
         return base->ref();
       }
 
@@ -195,8 +195,8 @@ namespace soul
     storage storage_;
 
   public:
-    static constexpr auto ELEMENT_COUNT = sizeof...(Ts) + 1;
-    static constexpr Array<usize, ELEMENT_COUNT> ELEMENT_SIZES = {sizeof(T), sizeof(Ts)...};
+    static constexpr auto ELEMENT_COUNT                             = sizeof...(Ts) + 1;
+    static constexpr Array<usize, ELEMENT_COUNT> ELEMENT_SIZES      = {sizeof(T), sizeof(Ts)...};
     static constexpr Array<usize, ELEMENT_COUNT> ELEMENT_ALIGNMENTS = {alignof(T), alignof(Ts)...};
 
     template <usize IndexV>
@@ -301,13 +301,15 @@ namespace soul
   template <typename T>
   concept ts_tuple = is_specialization_v<T, Tuple>;
 
-  struct TupleX {
+  struct TupleX
+  {
 
     template <ts_tuple T>
     struct tuple_of_pointer;
 
     template <typename T, typename... Ts>
-    struct tuple_of_pointer<Tuple<T, Ts...>> {
+    struct tuple_of_pointer<Tuple<T, Ts...>>
+    {
       using type = Tuple<T*, Ts*...>;
     };
 

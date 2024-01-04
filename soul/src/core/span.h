@@ -7,24 +7,26 @@
 
 namespace soul
 {
-  struct NilSpan {
+  struct NilSpan
+  {
   };
+
   constexpr auto nilspan = NilSpan{};
 
   template <ts_pointer T, ts_unsigned_integral SizeT = usize>
   class Span
   {
   public:
-    using value_type = remove_pointer_t<T>;
-    using pointer = value_type*;
-    using const_pointer = const value_type*;
-    using reference = value_type&;
-    using const_reference = const value_type&;
-    using iterator = value_type*;
-    using const_iterator = const value_type*;
-    using reverse_iterator = std::reverse_iterator<iterator>;
+    using value_type             = remove_pointer_t<T>;
+    using pointer                = value_type*;
+    using const_pointer          = const value_type*;
+    using reference              = value_type&;
+    using const_reference        = const value_type&;
+    using iterator               = value_type*;
+    using const_iterator         = const value_type*;
+    using reverse_iterator       = std::reverse_iterator<iterator>;
     using const_reverse_iterator = std::reverse_iterator<const_iterator>;
-    using size_type = SizeT;
+    using size_type              = SizeT;
 
     Span() = delete;
 
@@ -183,8 +185,10 @@ namespace soul
   };
 
   template <typename T, typename PointerT = match_any, typename SizeT = match_any>
-  inline constexpr b8 is_span_v = [] {
-    if constexpr (is_specialization_v<T, Span>) {
+  inline constexpr b8 is_span_v = []
+  {
+    if constexpr (is_specialization_v<T, Span>)
+    {
       return is_match_v<PointerT, typename T::pointer> && is_match_v<SizeT, typename T::size_type>;
     }
     return false;
@@ -366,11 +370,14 @@ namespace soul
   auto
   operator==(Span<T, Size1T> lhs, Span<T, Size2T> rhs) -> b8
   {
-    if (lhs.size() != rhs.size()) {
+    if (lhs.size() != rhs.size())
+    {
       return false;
     }
-    for (usize i = 0; i < lhs.size(); i++) {
-      if (lhs[i] != rhs[i]) {
+    for (usize i = 0; i < lhs.size(); i++)
+    {
+      if (lhs[i] != rhs[i])
+      {
         return false;
       }
     }

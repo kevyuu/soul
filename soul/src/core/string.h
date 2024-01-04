@@ -25,7 +25,7 @@ namespace soul
   segment and does not require memory management. Used by SIMDString. */
   inline auto is_in_const_segment(NotNull<const char*> str) -> b8
   {
-    static const char* test_str = "__A Unique ConstSeg String__";
+    static const char* test_str             = "__A Unique ConstSeg String__";
     static const auto PROBED_CONST_SEG_ADDR = uintptr_t(test_str);
     // MSVC assigns the const_seg to very high addresses that are grouped together.
     // Beware that when using explicit SEGMENT
@@ -39,13 +39,16 @@ namespace soul
 
   inline constexpr auto str_length(NotNull<const char*> str) -> usize
   {
-    if (std::is_constant_evaluated()) {
+    if (std::is_constant_evaluated())
+    {
       usize length = 0;
-      while (str.get()[length] != '\0') {
+      while (str.get()[length] != '\0')
+      {
         length++;
       }
       return length;
-    } else {
+    } else
+    {
       return strlen(str.get());
     }
   }
@@ -55,12 +58,16 @@ namespace soul
     template <typename CharT, typename... Args>
     inline constexpr auto estimate_args_length(Args&&... args) -> usize
     {
-      constexpr auto estimate_arg_length = []<typename Arg>(const Arg arg) -> usize {
-        if constexpr (is_same_v<Arg, std::basic_string_view<CharT>>) {
+      constexpr auto estimate_arg_length = []<typename Arg>(const Arg arg) -> usize
+      {
+        if constexpr (is_same_v<Arg, std::basic_string_view<CharT>>)
+        {
           return arg.size();
-        } else if constexpr (is_same_v<Arg, const CharT*>) {
+        } else if constexpr (is_same_v<Arg, const CharT*>)
+        {
           return 32;
-        } else {
+        } else
+        {
           return 8;
         }
       };
@@ -73,10 +80,10 @@ namespace soul
   class BasicString
   {
   public:
-    using value_type = char;
-    using pointer = value_type*;
-    using const_pointer = const value_type*;
-    using reference = value_type&;
+    using value_type      = char;
+    using pointer         = value_type*;
+    using const_pointer   = const value_type*;
+    using reference       = value_type&;
     using const_reference = const value_type&;
 
     static_assert(InlineCapacityV > 0);
@@ -119,18 +126,23 @@ namespace soul
       return *this;
     }
 
-    constexpr void assign(NotNull<const char*> str) { assign(StringView{str.get(), strlen(str)}); }
+    constexpr void assign(NotNull<const char*> str)
+    {
+      assign(StringView{str.get(), strlen(str)});
+    }
 
     constexpr void assign(StringView str_view)
     {
       const char* str = str_view.data();
-      size_ = str_view.size();
+      size_           = str_view.size();
 
-      if (is_in_const_segment(str)) {
+      if (is_in_const_segment(str))
+      {
         maybe_deallocate();
         storage_.data = const_cast<pointer>(str); // NOLINT
-        capacity_ = 0;
-      } else {
+        capacity_     = 0;
+      } else
+      {
         maybe_reallocate(size_ + 1);
         memcpy(data(), str, size_ + 1);
       }
@@ -145,7 +157,8 @@ namespace soul
 
     constexpr ~BasicString()
     {
-      if (is_using_heap()) {
+      if (is_using_heap())
+      {
         allocator_->deallocate_array(storage_.data, capacity_);
       }
     }
@@ -217,7 +230,10 @@ namespace soul
       return BasicString(*this);
     }
 
-    constexpr auto clone_from(const BasicString& other) { *this = other; }
+    constexpr auto clone_from(const BasicString& other)
+    {
+      *this = other;
+    }
 
     constexpr void swap(BasicString& other) noexcept
     {
@@ -228,31 +244,40 @@ namespace soul
       swap(storage_, other.storage_);
     }
 
-    friend void swap(BasicString& a, BasicString& b) noexcept { a.swap(b); }
+    friend void swap(BasicString& a, BasicString& b) noexcept
+    {
+      a.swap(b);
+    }
 
     constexpr void reserve(usize new_capacity)
     {
-      if (new_capacity > capacity_) {
-        if (new_capacity > InlineCapacityV) {
+      if (new_capacity > capacity_)
+      {
+        if (new_capacity > InlineCapacityV)
+        {
           const b8 was_using_heap = is_using_heap();
-          const auto old_data = data();
-          usize old_capacity = capacity_;
+          const auto old_data     = data();
+          usize old_capacity      = capacity_;
 
-          capacity_ = new_capacity;
+          capacity_           = new_capacity;
           const auto new_data = is_using_stack_storage()
                                   ? storage_.buffer
                                   : allocator_->template allocate_array<value_type>(capacity_);
           std::memcpy(new_data, old_data, size_ + 1);
-          if (is_using_heap()) {
+          if (is_using_heap())
+          {
             storage_.data = new_data;
           }
-          if (was_using_heap) {
+          if (was_using_heap)
+          {
             allocator_->deallocate_array(storage_.data, old_capacity);
           }
-        } else if (is_using_const_segment()) {
+        } else if (is_using_const_segment())
+        {
           std::memcpy(storage_.buffer, data(), size_ + 1);
           capacity_ = InlineCapacityV;
-        } else {
+        } else
+        {
           unreachable();
         }
       }
@@ -260,10 +285,11 @@ namespace soul
 
     constexpr void clear()
     {
-      if (is_using_const_segment()) {
+      if (is_using_const_segment())
+      {
         capacity_ = INLINE_CAPACITY;
       }
-      size_ = 0;
+      size_         = 0;
       data()[size_] = '\0';
     }
 
@@ -314,9 +340,11 @@ namespace soul
     [[nodiscard]]
     constexpr auto data() -> pointer
     {
-      if (is_using_stack_storage()) {
+      if (is_using_stack_storage())
+      {
         return storage_.buffer;
-      } else {
+      } else
+      {
         return storage_.data;
       }
     }
@@ -324,9 +352,11 @@ namespace soul
     [[nodiscard]]
     constexpr auto data() const -> const_pointer
     {
-      if (is_using_stack_storage()) {
+      if (is_using_stack_storage())
+      {
         return storage_.buffer;
-      } else {
+      } else
+      {
         return storage_.data;
       }
     }
@@ -360,13 +390,16 @@ namespace soul
 
     constexpr friend auto operator==(const BasicString& lhs, const BasicString& rhs) -> b8
     {
-      if (lhs.size_ != rhs.size_) {
+      if (lhs.size_ != rhs.size_)
+      {
         return false;
       }
       const auto lhs_data = lhs.data();
       const auto rhs_data = rhs.data();
-      for (usize i = 0; i < lhs.size_; i++) {
-        if (lhs_data[i] != rhs_data[i]) {
+      for (usize i = 0; i < lhs.size_; i++)
+      {
+        if (lhs_data[i] != rhs_data[i])
+        {
           return false;
         }
       }
@@ -374,38 +407,52 @@ namespace soul
     }
 
   private:
-    union {
+    union
+    {
       value_type buffer[InlineCapacityV];
       pointer data;
     } storage_;
 
     NotNull<AllocatorT*> allocator_;
-    usize size_ = 0; // string size, not counting NULL
+    usize size_     = 0; // string size, not counting NULL
     usize capacity_ = InlineCapacityV;
 
-    struct Construct {
-      struct WithCapacity {
+    struct Construct
+    {
+      struct WithCapacity
+      {
       };
+
       static constexpr auto with_capacity = WithCapacity{};
 
-      struct ReservedFormat {
+      struct ReservedFormat
+      {
       };
+
       static constexpr auto reserved_format = ReservedFormat{};
 
-      struct Vformat {
+      struct Vformat
+      {
       };
+
       static constexpr auto vformat = Vformat{};
 
-      struct From {
+      struct From
+      {
       };
+
       static constexpr auto from = From{};
 
-      struct UnsharedFrom {
+      struct UnsharedFrom
+      {
       };
+
       static constexpr auto unshared_from = UnsharedFrom{};
 
-      struct WithSize {
+      struct WithSize
+      {
       };
+
       static constexpr auto with_size = WithSize{};
     };
 
@@ -444,10 +491,12 @@ namespace soul
         : allocator_(allocator), size_(str_view.size())
     {
       const char* str = str_view.data();
-      if (is_in_const_segment(str) && str_view.is_null_terminated()) {
+      if (is_in_const_segment(str) && str_view.is_null_terminated())
+      {
         storage_.data = const_cast<pointer>(str); // NOLINT
-        capacity_ = 0;
-      } else {
+        capacity_     = 0;
+      } else
+      {
         capacity_ = get_init_capacity(size_ + 1);
         init_reserve(capacity_);
         std::memcpy(data(), str, size_ + 1);
@@ -473,10 +522,12 @@ namespace soul
     constexpr BasicString(const BasicString& other)
         : size_(other.size_), allocator_(other.allocator_)
     {
-      if (other.is_using_const_segment()) {
+      if (other.is_using_const_segment())
+      {
         storage_.data = other.storage_.data;
-        capacity_ = 0;
-      } else {
+        capacity_     = 0;
+      } else
+      {
         capacity_ = get_init_capacity(size_ + 1);
         init_reserve(capacity_);
         size_ = other.size_;
@@ -486,15 +537,18 @@ namespace soul
 
     constexpr auto operator=(const BasicString& other) -> BasicString&
     {
-      if (&other == this) {
+      if (&other == this)
+      {
         return *this;
       }
-      if (other.is_using_const_segment()) {
+      if (other.is_using_const_segment())
+      {
         maybe_deallocate();
         storage_.data = other.storage_.data;
-        size_ = other.size_;
-        capacity_ = other.capacity_;
-      } else {
+        size_         = other.size_;
+        capacity_     = other.capacity_;
+      } else
+      {
         size_ = other.size_;
         maybe_reallocate(size_ + 1);
         std::memcpy(data(), other.data(), size_ + 1);
@@ -536,16 +590,18 @@ namespace soul
 
     constexpr void init_reserve(usize capacity)
     {
-      if (capacity > InlineCapacityV) {
+      if (capacity > InlineCapacityV)
+      {
         storage_.data = allocator_->template allocate_array<value_type>(capacity);
       }
     }
 
     constexpr void prepare_to_mutate()
     {
-      if (is_using_const_segment()) {
+      if (is_using_const_segment())
+      {
         const_pointer old = storage_.data;
-        capacity_ = get_new_capacity(size_ + 1);
+        capacity_         = get_new_capacity(size_ + 1);
         init_reserve(capacity_);
         std::memcpy(data(), old, size_ + 1);
       }
@@ -553,19 +609,22 @@ namespace soul
 
     constexpr void ensure_capacity(usize min_capacity)
     {
-      if (capacity_ < min_capacity) {
+      if (capacity_ < min_capacity)
+      {
         const auto was_using_heap = is_using_heap();
-        const auto old_data = data();
-        const auto old_capacity = capacity_;
-        capacity_ = get_new_capacity(min_capacity);
-        pointer new_data = is_using_stack_storage()
-                             ? storage_.buffer
-                             : allocator_->template allocate_array<value_type>(capacity_);
+        const auto old_data       = data();
+        const auto old_capacity   = capacity_;
+        capacity_                 = get_new_capacity(min_capacity);
+        pointer new_data          = is_using_stack_storage()
+                                      ? storage_.buffer
+                                      : allocator_->template allocate_array<value_type>(capacity_);
         std::memcpy(new_data, old_data, size_ + 1);
-        if (is_using_heap()) {
+        if (is_using_heap())
+        {
           storage_.data = new_data;
         }
-        if (was_using_heap) {
+        if (was_using_heap)
+        {
           allocator_->deallocate_array(old_data, old_capacity);
         }
       }
@@ -576,31 +635,36 @@ namespace soul
       if (
         ((capacity_ < min_capacity) &&
          !(is_using_stack_storage() && (min_capacity < InlineCapacityV))) ||
-        is_using_const_segment()) {
+        is_using_const_segment())
+      {
 
         const auto was_using_heap = is_using_heap();
-        const auto old = data();
-        const auto old_capacity = capacity_;
-        capacity_ = get_new_capacity(min_capacity + 1);
-        const auto new_data = is_using_stack_storage()
-                                ? storage_.buffer
-                                : allocator_->template allocate_array<value_type>(capacity_);
+        const auto old            = data();
+        const auto old_capacity   = capacity_;
+        capacity_                 = get_new_capacity(min_capacity + 1);
+        const auto new_data       = is_using_stack_storage()
+                                      ? storage_.buffer
+                                      : allocator_->template allocate_array<value_type>(capacity_);
         std::memcpy(new_data, old, pos);
         std::memcpy(new_data + pos + count2, old + pos + count, size_ - pos - count + 1);
-        if (is_using_heap()) {
+        if (is_using_heap())
+        {
           construct_at(&storage_.data, new_data);
         }
-        if (was_using_heap) {
+        if (was_using_heap)
+        {
           allocator_->deallocate_array(old, old_capacity);
         }
-      } else {
+      } else
+      {
         memmove(data() + pos + count2, data() + pos + count, size_ - pos - count + 1);
       }
     }
 
     constexpr void maybe_deallocate()
     {
-      if (is_using_heap()) {
+      if (is_using_heap())
+      {
         allocator_->deallocate_array(storage_.data, capacity_);
         capacity_ = InlineCapacityV;
       }
@@ -608,11 +672,13 @@ namespace soul
 
     constexpr void maybe_reallocate(usize min_capacity)
     {
-      if (capacity_ != 0 && capacity_ >= min_capacity) {
+      if (capacity_ != 0 && capacity_ >= min_capacity)
+      {
         return;
       }
 
-      if (is_using_heap()) {
+      if (is_using_heap())
+      {
         allocator_->deallocate_array(storage_.data, capacity_);
       }
 
@@ -629,8 +695,10 @@ namespace soul
   using String = BasicString<memory::Allocator, 64>;
 
   template <memory::allocator_type AllocatorT, usize InlineCapacityV>
-  struct BorrowTrait<BasicString<AllocatorT, InlineCapacityV>, StringView> {
+  struct BorrowTrait<BasicString<AllocatorT, InlineCapacityV>, StringView>
+  {
     static constexpr b8 available = true;
+
     static constexpr auto Borrow(const String& string) -> StringView
     {
       return StringView(string.data(), string.size());
@@ -641,7 +709,8 @@ namespace soul
 
 template <soul::memory::allocator_type AllocatorT, soul::usize InlineCapacityV>
 struct std::formatter<soul::BasicString<AllocatorT, InlineCapacityV>> // NOLINT
-    : std::formatter<std::string_view> {
+    : std::formatter<std::string_view>
+{
   auto format(
     const soul::BasicString<AllocatorT, InlineCapacityV>& string, std::format_context& ctx) const
   {

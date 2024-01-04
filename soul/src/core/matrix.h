@@ -17,9 +17,9 @@ namespace soul
     static_assert(ColCountV >= 1 && ColCountV <= 4);
 
   public:
-    using value_type = T;
-    using RowType = Vec<T, ColCountV>;
-    using ColType = Vec<T, RowCountV>;
+    using value_type              = T;
+    using RowType                 = Vec<T, ColCountV>;
+    using ColType                 = Vec<T, RowCountV>;
     static constexpr u8 ROW_COUNT = RowCountV;
     static constexpr u8 COL_COUNT = ColCountV;
 
@@ -33,7 +33,8 @@ namespace soul
     Matrix(std::initializer_list<U> v)
     {
       T* f = &rows_[0][0];
-      for (auto it = v.begin(); it != v.end(); ++it, ++f) {
+      for (auto it = v.begin(); it != v.end(); ++it, ++f)
+      {
         *f = static_cast<T>(*it);
       }
     }
@@ -54,7 +55,8 @@ namespace soul
     template <u8 R, u8 C>
     Matrix(const Matrix<T, R, C>& other) // NOLINT
     {
-      for (u8 r = 0; r < std::min(RowCountV, R); ++r) {
+      for (u8 r = 0; r < std::min(RowCountV, R); ++r)
+      {
         std::memcpy(&rows_[r], &other.rows_[r], std::min(ColCountV, C) * sizeof(T));
       }
     }
@@ -62,7 +64,8 @@ namespace soul
     template <u8 R, u8 C>
     auto operator=(const Matrix<T, R, C>& other) -> Matrix&
     {
-      for (u8 r = 0; r < std::min(RowCountV, R); ++r) {
+      for (u8 r = 0; r < std::min(RowCountV, R); ++r)
+      {
         std::memcpy(&rows_[r], &other.rows_[r], std::min(ColCountV, C) * sizeof(T));
       }
 
@@ -114,9 +117,15 @@ namespace soul
       return Matrix(Construct::from_column_major_data, data);
     }
 
-    auto data() -> T* { return &rows_[0][0]; }
+    auto data() -> T*
+    {
+      return &rows_[0][0];
+    }
 
-    auto data() const -> const T* { return &rows_[0][0]; }
+    auto data() const -> const T*
+    {
+      return &rows_[0][0];
+    }
 
     auto operator[](u8 r) -> RowType&
     {
@@ -157,7 +166,8 @@ namespace soul
     {
       SOUL_ASSERT(0, col < ColCountV);
       ColType result;
-      for (u8 r = 0; r < RowCountV; ++r) {
+      for (u8 r = 0; r < RowCountV; ++r)
+      {
         result[r] = rows_[r][col];
       }
       return result;
@@ -166,7 +176,8 @@ namespace soul
     void set_col(u8 col, const ColType& v)
     {
       SOUL_ASSERT(0, col < ColCountV);
-      for (u8 r = 0; r < RowCountV; ++r) {
+      for (u8 r = 0; r < RowCountV; ++r)
+      {
         rows_[r][col] = v[r];
       }
     }
@@ -177,29 +188,41 @@ namespace soul
     }
 
   private:
-    struct Construct {
-      struct Fill {
-      };
-      struct Diagonal {
-      };
-      struct FromColumns {
-      };
-      struct FromRowMajorData {
-      };
-      struct FromColumnMajorData {
+    struct Construct
+    {
+      struct Fill
+      {
       };
 
-      static constexpr auto fill = Fill{};
-      static constexpr auto diagonal = Diagonal{};
-      static constexpr auto from_columns = FromColumns{};
-      static constexpr auto from_row_major_data = FromRowMajorData{};
+      struct Diagonal
+      {
+      };
+
+      struct FromColumns
+      {
+      };
+
+      struct FromRowMajorData
+      {
+      };
+
+      struct FromColumnMajorData
+      {
+      };
+
+      static constexpr auto fill                   = Fill{};
+      static constexpr auto diagonal               = Diagonal{};
+      static constexpr auto from_columns           = FromColumns{};
+      static constexpr auto from_row_major_data    = FromRowMajorData{};
       static constexpr auto from_column_major_data = FromColumnMajorData{};
     };
 
     explicit Matrix(Construct::Fill /* tag */, T val)
     {
-      for (usize row_idx = 0; row_idx < RowCountV; row_idx++) {
-        for (usize col_idx = 0; col_idx < ColCountV; col_idx++) {
+      for (usize row_idx = 0; row_idx < RowCountV; row_idx++)
+      {
+        for (usize col_idx = 0; col_idx < ColCountV; col_idx++)
+        {
           m(row_idx, col_idx) = val;
         }
       }
@@ -209,7 +232,8 @@ namespace soul
       requires(RowCountV == ColCountV)
         : Matrix(Construct::fill, 0)
     {
-      for (usize diagonal_idx = 0; diagonal_idx < RowCountV; diagonal_idx++) {
+      for (usize diagonal_idx = 0; diagonal_idx < RowCountV; diagonal_idx++)
+      {
         m(diagonal_idx, diagonal_idx) = val[diagonal_idx];
       }
     }
@@ -223,8 +247,10 @@ namespace soul
 
     explicit Matrix(Construct::FromRowMajorData /* tag */, const T* data)
     {
-      for (usize row_idx = 0; row_idx < RowCountV; row_idx++) {
-        for (usize col_idx = 0; col_idx < ColCountV; col_idx++) {
+      for (usize row_idx = 0; row_idx < RowCountV; row_idx++)
+      {
+        for (usize col_idx = 0; col_idx < ColCountV; col_idx++)
+        {
           m(row_idx, col_idx) = data[row_idx * ColCountV + col_idx];
         }
       }
@@ -232,8 +258,10 @@ namespace soul
 
     explicit Matrix(Construct::FromColumnMajorData /* tag */, const T* data)
     {
-      for (usize col_idx = 0; col_idx < ColCountV; col_idx++) {
-        for (usize row_idx = 0; row_idx < RowCountV; row_idx++) {
+      for (usize col_idx = 0; col_idx < ColCountV; col_idx++)
+      {
+        for (usize row_idx = 0; row_idx < RowCountV; row_idx++)
+        {
           m(row_idx, col_idx) = data[col_idx * RowCountV + row_idx];
         }
       }
@@ -290,8 +318,10 @@ namespace soul
   operator*(const Matrix<T, R, C>& lhs, const T& rhs) -> Matrix<T, R, C>
   {
     Matrix<T, R, C> result;
-    for (u8 r = 0; r < R; ++r) {
-      for (u8 c = 0; c < C; ++c) {
+    for (u8 r = 0; r < R; ++r)
+    {
+      for (u8 c = 0; c < C; ++c)
+      {
         result[r][c] = lhs[r][c] * rhs;
       }
     }
@@ -305,8 +335,10 @@ namespace soul
   operator+(const Matrix<T, R, C>& lhs, const Matrix<T, R, C>& rhs) -> Matrix<T, R, C>
   {
     Matrix<T, R, C> result;
-    for (u8 r = 0; r < R; ++r) {
-      for (u8 c = 0; c < C; ++c) {
+    for (u8 r = 0; r < R; ++r)
+    {
+      for (u8 c = 0; c < C; ++c)
+      {
         result[r][c] = lhs[r][c] + rhs[r][c];
       }
     }

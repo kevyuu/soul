@@ -21,7 +21,7 @@ namespace soul
 
 TEST(TestNotNullConstruction, TestConstructionFromRawPointer)
 {
-  const auto test_obj = TestObject(4);
+  const auto test_obj                                      = TestObject(4);
   const soul::NotNull<const TestObject*> not_null_test_obj = &test_obj;
   SOUL_TEST_ASSERT_EQ(*not_null_test_obj, test_obj);
   SOUL_TEST_ASSERT_EQ(not_null_test_obj, &test_obj);
@@ -32,7 +32,7 @@ TEST(TestNotNullConstruction, TestConstructionFromRawPointer)
 
 TEST(TestNotNullConstruction, TestPtrOf)
 {
-  const auto test_obj = TestObject(4);
+  const auto test_obj          = TestObject(4);
   const auto not_null_test_obj = soul::ptrof(test_obj);
   SOUL_TEST_ASSERT_EQ(*not_null_test_obj, test_obj);
   SOUL_TEST_ASSERT_EQ(not_null_test_obj, &test_obj);
@@ -43,8 +43,8 @@ TEST(TestNotNullConstruction, TestPtrOf)
 
 TEST(TestNotNullConstruction, TestCopyConstructor)
 {
-  const auto test_obj = TestObject(4);
-  const auto not_null_test_obj = soul::ptrof(test_obj);
+  const auto test_obj           = TestObject(4);
+  const auto not_null_test_obj  = soul::ptrof(test_obj);
   const auto not_null_test_obj2 = not_null_test_obj;
 
   SOUL_TEST_ASSERT_EQ(*not_null_test_obj2, test_obj);
@@ -58,11 +58,11 @@ TEST(TestNotNullConstruction, TestCopyConstructor)
 
 TEST(TestNotNullAssignment, TestAssignment)
 {
-  const auto test_obj = TestObject(4);
+  const auto test_obj    = TestObject(4);
   auto not_null_test_obj = soul::ptrof(test_obj);
 
   const auto test_obj2 = TestObject(5);
-  not_null_test_obj = soul::ptrof(test_obj2);
+  not_null_test_obj    = soul::ptrof(test_obj2);
 
   SOUL_TEST_ASSERT_EQ(*not_null_test_obj, test_obj2);
   SOUL_TEST_ASSERT_EQ(not_null_test_obj, &test_obj2);
@@ -73,10 +73,10 @@ TEST(TestNotNullAssignment, TestAssignment)
 
 TEST(TestNotNullSwap, TestSwap)
 {
-  const auto test_obj = TestObject(4);
+  const auto test_obj    = TestObject(4);
   auto not_null_test_obj = soul::ptrof(test_obj);
 
-  const auto test_obj2 = TestObject(5);
+  const auto test_obj2    = TestObject(5);
   auto not_null_test_obj2 = soul::ptrof(test_obj2);
 
   swap(not_null_test_obj, not_null_test_obj2);

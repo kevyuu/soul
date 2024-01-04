@@ -64,16 +64,21 @@ namespace soul
 
 #if defined(SOUL_ASSERT_ENABLE)
 #  define SOUL_ASSERT_FORMAT(paranoia, test, ...)                                                  \
-    do {                                                                                           \
-      if (!(test) && paranoia <= SOUL_ASSERT_PARANOIA_LEVEL) {                                     \
+    do                                                                                             \
+    {                                                                                              \
+      if (!(test) && paranoia <= SOUL_ASSERT_PARANOIA_LEVEL)                                       \
+      {                                                                                            \
         soul::panic_assert_format(__FILE__, __LINE__, __FUNCTION__, #test, ##__VA_ARGS__);         \
       }                                                                                            \
-    } while (0)
+    }                                                                                              \
+    while (0)
 #  define SOUL_PANIC_FORMAT(...)                                                                   \
-    do {                                                                                           \
+    do                                                                                             \
+    {                                                                                              \
       soul::panic_format(__FILE__, __LINE__, __FUNCTION__, ##__VA_ARGS__);                         \
-    } while (0)
+    }                                                                                              \
+    while (0)
 #else
 #  define SOUL_ASSERT(paranoia, test, ...) ((void)0)
-#  define SOUL_PANIC(...) ((void)0)
+#  define SOUL_PANIC(...)                  ((void)0)
 #endif

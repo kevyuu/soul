@@ -32,9 +32,10 @@ auto glfw_print_error_callback(const int code, const char* message) -> void
 auto glfw_framebuffer_size_callback(GLFWwindow* window, int width, int height) -> void
 {
   SOUL_LOG_INFO("GLFW Framebuffer size callback. Size = ({}, {}).", width, height);
-  auto window_data = static_cast<WindowData*>(glfwGetWindowUserPointer(window));
+  auto window_data     = static_cast<WindowData*>(glfwGetWindowUserPointer(window));
   window_data->resized = true;
 }
+
 namespace
 {
   [[nodiscard]]
@@ -49,12 +50,15 @@ namespace
 
     SOUL_ASSERT(0, glfwVulkanSupported(), "Vulkan is not supported by glfw");
 
-    auto window = [&app_config]() -> NotNull<GLFWwindow*> {
-      if (app_config.screen_dimension.is_some()) {
+    auto window = [&app_config]() -> NotNull<GLFWwindow*>
+    {
+      if (app_config.screen_dimension.is_some())
+      {
         const ScreenDimension screen_dimension = app_config.screen_dimension.unwrap();
         return glfwCreateWindow(
           screen_dimension.width, screen_dimension.height, "Vulkan", nullptr, nullptr);
-      } else {
+      } else
+      {
         NotNull<const GLFWvidmode*> mode = glfwGetVideoMode(glfwGetPrimaryMonitor());
         GLFWwindow* window =
           glfwCreateWindow(mode->width, mode->height, "Vulkan", nullptr, nullptr);
@@ -115,10 +119,12 @@ App::App(const AppConfig& app_config)
   unsigned char* font_pixels;
   io.Fonts->GetTexDataAsRGBA32(&font_pixels, &width, &height);
 
-  if (runtime::get_context_allocator() != &default_allocator_) {
+  if (runtime::get_context_allocator() != &default_allocator_)
+  {
     std::cout << "Context allocator is null" << std::endl;
   }
-  if (app_config.enable_imgui) {
+  if (app_config.enable_imgui)
+  {
     imgui_render_graph_pass_ =
       runtime::get_context_allocator()->create<ImGuiRenderGraphPass>(gpu_system_);
   }
@@ -126,7 +132,8 @@ App::App(const AppConfig& app_config)
 
 App::~App()
 {
-  if (app_config_.enable_imgui) {
+  if (app_config_.enable_imgui)
+  {
     runtime::get_context_allocator()->destroy(NotNull(imgui_render_graph_pass_));
   }
   gpu_system_->shutdown();
@@ -138,7 +145,8 @@ App::~App()
 
 auto App::run() -> void
 {
-  while (!glfwWindowShouldClose(window_)) {
+  while (!glfwWindowShouldClose(window_))
+  {
     SOUL_PROFILE_FRAME();
     runtime::System::get().begin_frame();
 
@@ -149,10 +157,12 @@ auto App::run() -> void
     {
       SOUL_PROFILE_ZONE_WITH_NAME("GLFW Poll Events");
       glfwPollEvents();
-      if (window_data_.resized) {
+      if (window_data_.resized)
+      {
         int width, height;
         glfwGetFramebufferSize(window_, &width, &height);
-        if (width == 0 || height == 0) {
+        if (width == 0 || height == 0)
+        {
           glfwWaitEvents();
           continue;
         }
@@ -164,20 +174,24 @@ auto App::run() -> void
 
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
-    ImGuiIO& io = ImGui::GetIO();
+    ImGuiIO& io        = ImGui::GetIO();
     io.FontGlobalScale = glfw_window_scale.x;
 
-    if (ImGui::IsMouseDragging(ImGuiMouseButton_Middle)) {
+    if (ImGui::IsMouseDragging(ImGuiMouseButton_Middle))
+    {
       // orbit camera
       const auto mouse_delta = ImGui::GetIO().MouseDelta;
-      if (ImGui::GetIO().KeyShift) {
+      if (ImGui::GetIO().KeyShift)
+      {
         camera_man_.pan(mouse_delta.x, mouse_delta.y);
-      } else {
+      } else
+      {
         camera_man_.orbit(mouse_delta.x, mouse_delta.y);
       }
     }
 
-    if (io.MouseWheel != 0.0f && io.KeyShift) {
+    if (io.MouseWheel != 0.0f && io.KeyShift)
+    {
       camera_man_.zoom(io.MouseWheel);
     }
 
@@ -186,7 +200,8 @@ auto App::run() -> void
     const auto render_target_node_id = render(swapchain_texture_node_id, render_graph);
 
     ImGui::Render();
-    if (app_config_.enable_imgui) {
+    if (app_config_.enable_imgui)
+    {
       imgui_render_graph_pass_->add_pass(render_target_node_id, render_graph);
     }
 
@@ -199,23 +214,27 @@ auto App::run() -> void
 
 auto App::get_elapsed_seconds() const -> float
 {
-  const auto end = std::chrono::steady_clock::now();
+  const auto end                                      = std::chrono::steady_clock::now();
   const std::chrono::duration<double> elapsed_seconds = end - start_;
-  const auto elapsed_seconds_float = static_cast<float>(elapsed_seconds.count());
+  const auto elapsed_seconds_float                    = static_cast<float>(elapsed_seconds.count());
   return elapsed_seconds_float;
 }
 
-auto App::get_frame_index() const -> usize { return frame_index_; }
+auto App::get_frame_index() const -> usize
+{
+  return frame_index_;
+}
 
 auto App::get_exe_path() -> soul::Path
 {
   static std::string s_exe_path;
   static auto s_exe_path_init = false;
-  if (!s_exe_path_init) {
+  if (!s_exe_path_init)
+  {
     char module_path[MAX_PATH];
     const size_t module_path_length = GetModuleFileNameA(nullptr, module_path, MAX_PATH);
-    s_exe_path = std::string(module_path, module_path_length);
-    s_exe_path_init = true;
+    s_exe_path                      = std::string(module_path, module_path_length);
+    s_exe_path_init                 = true;
   }
 
   return Path::From(StringView{s_exe_path.data(), s_exe_path.size()});

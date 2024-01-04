@@ -18,7 +18,7 @@ namespace soul::runtime
 {
   using ThreadCount = u16;
 
-  using TempProxy = memory::NoOpProxy;
+  using TempProxy     = memory::NoOpProxy;
   using TempAllocator = memory::ProxyAllocator<memory::LinearAllocator, TempProxy>;
 
   using DefaultAllocatorProxy = memory::MultiProxy<
@@ -29,7 +29,8 @@ namespace soul::runtime
     memory::BoundGuardProxy>;
   using DefaultAllocator = memory::ProxyAllocator<memory::MallocAllocator, DefaultAllocatorProxy>;
 
-  struct Config {
+  struct Config
+  {
     u16 threadCount; // 0 to use hardware thread count
     u16 taskPoolCount;
     TempAllocator* mainThreadTempAllocator;
@@ -37,23 +38,33 @@ namespace soul::runtime
     DefaultAllocator* defaultAllocator;
   };
 
-  struct Constant {
-    static constexpr u32 TASK_ID_THREAD_INDEX_MASK = 0xFFFFC000;
+  struct Constant
+  {
+    static constexpr u32 TASK_ID_THREAD_INDEX_MASK  = 0xFFFFC000;
     static constexpr u32 TASK_ID_THREAD_INDEX_SHIFT = 14;
-    static constexpr u32 TASK_ID_TASK_INDEX_MASK = 0x00003FFF;
-    static constexpr u32 TASK_ID_TASK_INDEX_SHIFT = 0;
+    static constexpr u32 TASK_ID_TASK_INDEX_MASK    = 0x00003FFF;
+    static constexpr u32 TASK_ID_TASK_INDEX_SHIFT   = 0;
 
-    static constexpr u16 MAX_THREAD_COUNT = 16;
+    static constexpr u16 MAX_THREAD_COUNT      = 16;
     static constexpr usize MAX_TASK_PER_THREAD = 2u << (TASK_ID_THREAD_INDEX_SHIFT - 1);
   };
 
   struct Task;
 
   // NOTE(kevinyu): We use id == 0 as both root and null value;
-  struct TaskID {
+  struct TaskID
+  {
     u32 id;
-    static constexpr auto NULLVAL() -> TaskID { return {0, 0}; }
-    static constexpr auto ROOT() -> TaskID { return NULLVAL(); }
+
+    static constexpr auto NULLVAL() -> TaskID
+    {
+      return {0, 0};
+    }
+
+    static constexpr auto ROOT() -> TaskID
+    {
+      return NULLVAL();
+    }
 
     constexpr TaskID() : id(NULLVAL().id) {}
 
@@ -83,17 +94,20 @@ namespace soul::runtime
     {
       return other.id == id;
     }
+
     [[nodiscard]]
     auto
     operator!=(const TaskID& other) const -> b8
     {
       return other.id != id;
     }
+
     [[nodiscard]]
     auto is_root() const -> b8
     {
       return id == ROOT().id;
     }
+
     [[nodiscard]]
     auto is_null() const -> b8
     {
@@ -103,13 +117,14 @@ namespace soul::runtime
 
   using TaskFunc = void (*)(TaskID taskID, void* data);
 
-  struct alignas(SOUL_CACHELINE_SIZE) Task {
+  struct alignas(SOUL_CACHELINE_SIZE) Task
+  {
     static constexpr u32 STORAGE_SIZE_BYTE = SOUL_CACHELINE_SIZE - sizeof(TaskFunc) // func size
                                              - sizeof(TaskID)                       // parentID size
                                              - sizeof(std::atomic<u16>); // unfinishedCount size
 
     void* storage[STORAGE_SIZE_BYTE / sizeof(void*)] = {};
-    TaskFunc func = nullptr;
+    TaskFunc func                                    = nullptr;
     TaskID parent_id;
     std::atomic<u16> unfinished_count = {0};
   };
@@ -138,7 +153,8 @@ namespace soul::runtime
     auto steal() -> TaskID;
   };
 
-  struct alignas(SOUL_CACHELINE_SIZE) ThreadContext {
+  struct alignas(SOUL_CACHELINE_SIZE) ThreadContext
+  {
     TaskDeque task_deque;
 
     Task task_pool[Constant::MAX_TASK_PER_THREAD];
@@ -150,7 +166,8 @@ namespace soul::runtime
     TempAllocator* temp_allocator = nullptr;
   };
 
-  struct Database {
+  struct Database
+  {
     thread_local static ThreadContext* g_thread_context; // NOLINT
     FixedVector<ThreadContext> thread_contexts;
     std::thread threads[Constant::MAX_THREAD_COUNT];
@@ -163,17 +180,18 @@ namespace soul::runtime
 
     std::atomic<b8> is_terminated;
 
-    usize active_task_count = 0;
+    usize active_task_count  = 0;
     ThreadCount thread_count = 0;
 
     memory::Allocator* default_allocator = nullptr;
-    usize temp_allocator_size = 0;
+    usize temp_allocator_size            = 0;
 
     Database() : thread_contexts(nullptr) {}
   };
 
   template <typename Func>
-  struct ParallelForTaskData {
+  struct ParallelForTaskData
+  {
     using ParallelForFunc = Func;
 
     explicit ParallelForTaskData(u32 start, u32 count, u32 min_count, ParallelForFunc&& func)

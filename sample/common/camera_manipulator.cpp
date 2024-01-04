@@ -16,28 +16,39 @@ CameraManipulator::CameraManipulator(
 }
 
 auto CameraManipulator::set_camera(
-  const soul::vec3f32 camera_position, const soul::vec3f32 camera_target, const soul::vec3f32 camera_up)
-  -> void
+  const soul::vec3f32 camera_position,
+  const soul::vec3f32 camera_target,
+  const soul::vec3f32 camera_up) -> void
 {
   position_ = camera_position;
-  target_ = camera_target;
-  up_ = camera_up;
+  target_   = camera_target;
+  up_       = camera_up;
   distance_ = soul::math::length(target_ - position_);
 }
 
 auto CameraManipulator::get_camera(
-  soul::vec3f32* camera_position, soul::vec3f32* camera_target, soul::vec3f32* camera_up) const -> void
+  soul::vec3f32* camera_position, soul::vec3f32* camera_target, soul::vec3f32* camera_up) const
+  -> void
 {
   *camera_position = position_;
-  *camera_target = target_;
-  *camera_up = up_;
+  *camera_target   = target_;
+  *camera_up       = up_;
 }
 
-auto CameraManipulator::get_position() -> soul::vec3f32 { return position_; }
+auto CameraManipulator::get_position() -> soul::vec3f32
+{
+  return position_;
+}
 
-auto CameraManipulator::get_camera_target() const -> soul::vec3f32 { return target_; }
+auto CameraManipulator::get_camera_target() const -> soul::vec3f32
+{
+  return target_;
+}
 
-auto CameraManipulator::set_camera_target(soul::vec3f32 target) -> void { target_ = target; }
+auto CameraManipulator::set_camera_target(soul::vec3f32 target) -> void
+{
+  target_ = target;
+}
 
 auto CameraManipulator::zoom(float delta) -> void
 {
@@ -46,7 +57,8 @@ auto CameraManipulator::zoom(float delta) -> void
   const soul::vec3f32 movement = look_dir * delta * config_.zoom_speed;
   position_ += movement;
 
-  if (soul::math::dot(look_dir, target_ - position_) < min_distance_) {
+  if (soul::math::dot(look_dir, target_ - position_) < min_distance_)
+  {
     position_ = target_ - (look_dir * min_distance_);
   }
   distance_ = soul::math::length(target_ - position_);
@@ -57,20 +69,20 @@ auto CameraManipulator::zoom(float delta) -> void
 auto CameraManipulator::orbit(float dx, float dy) -> void
 {
   soul::vec3f32 orbit_dir = soul::math::normalize(position_ - target_);
-  auto orbit_phi = std::asin(orbit_dir.y);
-  auto orbit_theta = std::atan2(orbit_dir.z, orbit_dir.x);
+  auto orbit_phi          = std::asin(orbit_dir.y);
+  auto orbit_theta        = std::atan2(orbit_dir.z, orbit_dir.x);
 
   orbit_phi += (dy * config_.orbit_speed);
   orbit_theta += (dx * config_.orbit_speed);
 
-  static constexpr auto MAX_PHI = (soul::math::fconst::PI / 2 - 0.001f);
+  static constexpr auto MAX_PHI = (soul::math::f32const::PI / 2 - 0.001f);
 
   orbit_phi = std::clamp(orbit_phi, -MAX_PHI, MAX_PHI);
 
   orbit_dir.y = sin(orbit_phi);
   orbit_dir.x = cos(orbit_phi) * cos(orbit_theta);
   orbit_dir.z = cos(orbit_phi) * sin(orbit_theta);
-  position_ = target_ + orbit_dir * distance_;
+  position_   = target_ + orbit_dir * distance_;
   recalculate_up_vector();
 }
 

@@ -64,9 +64,11 @@ namespace soul
   template <ts_bit_block ElementType>
   auto BitRef<ElementType>::operator=(const b8 val) -> BitRef<ElementType>&
   {
-    if (val) {
+    if (val)
+    {
       set_true();
-    } else {
+    } else
+    {
       set_false();
     }
     return *this;
@@ -79,6 +81,7 @@ namespace soul
     *this = static_cast<b8>(rhs);
     return *this;
   }
+
   // NOLINTEND(cert-oop54-cpp, bugprone-unhandled-self-assignment)
 
   template <ts_bit_block BlockT>
@@ -91,7 +94,8 @@ namespace soul
   template <ts_bit_block BlockT>
   auto BitRef<BlockT>::operator|=(const b8 val) -> BitRef<BlockT>&
   {
-    if (val) {
+    if (val)
+    {
       set_true();
     }
     return *this;
@@ -100,7 +104,8 @@ namespace soul
   template <ts_bit_block BlockT>
   auto BitRef<BlockT>::operator&=(const b8 val) -> BitRef<BlockT>&
   {
-    if (!val) {
+    if (!val)
+    {
       set_false();
     }
     return *this;
@@ -109,9 +114,11 @@ namespace soul
   template <ts_bit_block BlockT>
   auto BitRef<BlockT>::operator^=(const b8 val) -> BitRef<BlockT>&
   {
-    if (*this != val) {
+    if (*this != val)
+    {
       set_true();
-    } else {
+    } else
+    {
       set_false();
     }
     return *this;
@@ -133,9 +140,11 @@ namespace soul
   auto BitRef<BlockT>::flip() -> BitRef<BlockT>&
   {
     const BlockT mask = get_mask();
-    if (*this) {
+    if (*this)
+    {
       set_false();
-    } else {
+    } else
+    {
       set_true();
     }
     return *this;

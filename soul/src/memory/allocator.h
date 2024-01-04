@@ -8,7 +8,8 @@
 namespace soul::memory
 {
 
-  struct Allocation {
+  struct Allocation
+  {
     void* addr = nullptr;
     usize size = 0;
 
@@ -97,7 +98,8 @@ namespace soul::memory
     void destroy(NotNull<Type*> ptr)
     {
       SOUL_ASSERT(0, ptr != nullptr);
-      if constexpr (!std::is_trivially_destructible_v<Type>) {
+      if constexpr (!std::is_trivially_destructible_v<Type>)
+      {
         ptr->~Type();
       }
 

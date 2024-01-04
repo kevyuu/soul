@@ -11,7 +11,8 @@ namespace soul
   template <memory::allocator_type AllocatorT>
   auto get_or_create_cstr(StringView str_view, NotNull<AllocatorT*> allocator) -> const char*
   {
-    if (str_view.is_null_terminated()) {
+    if (str_view.is_null_terminated())
+    {
       return str_view.data();
     }
     char* array = allocator->template allocate_array<char>(str_view.size() + 1);

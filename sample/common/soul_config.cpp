@@ -3,5 +3,8 @@
 
 namespace soul
 {
-  auto get_default_allocator() -> memory::Allocator* { return runtime::get_context_allocator(); }
+  auto get_default_allocator() -> memory::Allocator*
+  {
+    return runtime::get_context_allocator();
+  }
 } // namespace soul

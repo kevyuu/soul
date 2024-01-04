@@ -16,12 +16,17 @@ namespace soul::gpu
     struct ResourceNode;
     struct RGResourceID;
 
-    struct RGResourceID {
+    struct RGResourceID
+    {
       u32 index = std::numeric_limits<u32>::max();
 
       static constexpr u8 EXTERNAL_BIT_POSITION = 31;
 
-      static auto internal_id(const u32 index) -> RGResourceID { return {index}; }
+      static auto internal_id(const u32 index) -> RGResourceID
+      {
+        return {index};
+      }
+
       static auto external_id(const u32 index) -> RGResourceID
       {
         return {index | 1u << EXTERNAL_BIT_POSITION};
@@ -42,13 +47,13 @@ namespace soul::gpu
 
     constexpr RGResourceID RG_RESOURCE_ID_NULL = {std::numeric_limits<u32>::max()};
 
-    using RGBufferID = RGResourceID;
+    using RGBufferID                       = RGResourceID;
     constexpr RGBufferID RG_BUFFER_ID_NULL = RG_RESOURCE_ID_NULL;
 
-    using RGTextureID = RGResourceID;
+    using RGTextureID                        = RGResourceID;
     constexpr RGTextureID RG_TEXTURE_ID_NULL = RG_RESOURCE_ID_NULL;
 
-    using RGTlasID = RGResourceID;
+    using RGTlasID                     = RGResourceID;
     constexpr RGTlasID RG_TLAS_ID_NULL = RG_RESOURCE_ID_NULL;
 
     struct RGInternalTexture;
@@ -103,22 +108,33 @@ namespace soul::gpu
   concept ray_tracing_pass_executable = pass_executable<Func, Data, PIPELINE_FLAGS_RAY_TRACING>;
 
   // ID
-  using PassNodeID = ID<PassBaseNode, u16>;
+  using PassNodeID     = ID<PassBaseNode, u16>;
   using ResourceNodeID = ID<impl::ResourceNode, u16>;
 
-  enum class RGResourceType : u8 { BUFFER, TEXTURE, TLAS, BLAS_GROUP, USER_RESOURCE, COUNT };
+  enum class RGResourceType : u8
+  {
+    BUFFER,
+    TEXTURE,
+    TLAS,
+    BLAS_GROUP,
+    USER_RESOURCE,
+    COUNT
+  };
 
   template <RGResourceType resource_type>
-  struct TypedResourceNodeID {
+  struct TypedResourceNodeID
+  {
     using this_type = TypedResourceNodeID<resource_type>;
     ResourceNodeID id;
 
     friend auto operator<=>(const this_type&, const this_type&) = default;
+
     [[nodiscard]]
     auto is_null() const -> b8
     {
       return id.is_null();
     }
+
     [[nodiscard]]
     auto is_valid() const -> b8
     {
@@ -126,58 +142,59 @@ namespace soul::gpu
     }
   };
 
-  using BufferNodeID = TypedResourceNodeID<RGResourceType::BUFFER>;
-  using TextureNodeID = TypedResourceNodeID<RGResourceType::TEXTURE>;
-  using TlasNodeID = TypedResourceNodeID<RGResourceType::TLAS>;
-  using BlasGroupNodeID = TypedResourceNodeID<RGResourceType::BLAS_GROUP>;
+  using BufferNodeID       = TypedResourceNodeID<RGResourceType::BUFFER>;
+  using TextureNodeID      = TypedResourceNodeID<RGResourceType::TEXTURE>;
+  using TlasNodeID         = TypedResourceNodeID<RGResourceType::TLAS>;
+  using BlasGroupNodeID    = TypedResourceNodeID<RGResourceType::BLAS_GROUP>;
   using UserResourceNodeID = TypedResourceNodeID<RGResourceType::USER_RESOURCE>;
 
-  struct RGTextureDesc {
-    TextureType type = TextureType::D2;
+  struct RGTextureDesc
+  {
+    TextureType type     = TextureType::D2;
     TextureFormat format = TextureFormat::RGBA8;
     vec3u32 extent;
-    u32 mip_levels = 1;
-    u16 layer_count = 1;
+    u32 mip_levels                  = 1;
+    u16 layer_count                 = 1;
     TextureSampleCount sample_count = TextureSampleCount::COUNT_1;
-    b8 clear = false;
+    b8 clear                        = false;
     ClearValue clear_value;
 
     static auto create_d2(
       const TextureFormat format,
       const u32 mip_levels,
       const vec2u32 dimension,
-      b8 clear = false,
-      ClearValue clear_value = {},
+      b8 clear                              = false,
+      ClearValue clear_value                = {},
       const TextureSampleCount sample_count = TextureSampleCount::COUNT_1) -> RGTextureDesc
     {
       return {
-        .type = TextureType::D2,
-        .format = format,
-        .extent = vec3u32(dimension.x, dimension.y, 1),
-        .mip_levels = mip_levels,
-        .layer_count = 1,
+        .type         = TextureType::D2,
+        .format       = format,
+        .extent       = vec3u32(dimension.x, dimension.y, 1),
+        .mip_levels   = mip_levels,
+        .layer_count  = 1,
         .sample_count = sample_count,
-        .clear = clear,
-        .clear_value = clear_value};
+        .clear        = clear,
+        .clear_value  = clear_value};
     }
 
     static auto create_d3(
       const TextureFormat format,
       const u32 mip_levels,
       const vec3u32 dimension,
-      b8 clear = false,
-      ClearValue clear_value = {},
+      b8 clear                              = false,
+      ClearValue clear_value                = {},
       const TextureSampleCount sample_count = TextureSampleCount::COUNT_1) -> RGTextureDesc
     {
       return {
-        .type = TextureType::D3,
-        .format = format,
-        .extent = dimension,
-        .mip_levels = mip_levels,
-        .layer_count = 1,
+        .type         = TextureType::D3,
+        .format       = format,
+        .extent       = dimension,
+        .mip_levels   = mip_levels,
+        .layer_count  = 1,
         .sample_count = sample_count,
-        .clear = clear,
-        .clear_value = clear_value};
+        .clear        = clear,
+        .clear_value  = clear_value};
     }
 
     static auto create_d2_array(
@@ -185,75 +202,102 @@ namespace soul::gpu
       const u32 mip_levels,
       const vec2u32 dimension,
       const u16 layer_count,
-      b8 clear = false,
+      b8 clear               = false,
       ClearValue clear_value = {}) -> RGTextureDesc
     {
       return {
-        .type = TextureType::D2_ARRAY,
-        .format = format,
-        .extent = vec3u32(dimension.x, dimension.y, 1),
-        .mip_levels = mip_levels,
+        .type        = TextureType::D2_ARRAY,
+        .format      = format,
+        .extent      = vec3u32(dimension.x, dimension.y, 1),
+        .mip_levels  = mip_levels,
         .layer_count = layer_count,
-        .clear = clear,
+        .clear       = clear,
         .clear_value = clear_value};
     }
   };
 
-  struct RGBufferDesc {
+  struct RGBufferDesc
+  {
     usize size = 0;
   };
 
-  struct RGColorAttachmentDesc {
+  struct RGColorAttachmentDesc
+  {
     TextureNodeID node_id;
     SubresourceIndex view = SubresourceIndex();
-    b8 clear = false;
+    b8 clear              = false;
     ClearValue clear_value;
   };
 
-  struct RGDepthStencilAttachmentDesc {
+  struct RGDepthStencilAttachmentDesc
+  {
     TextureNodeID node_id;
     SubresourceIndex view;
     b8 depth_write_enable = true;
-    b8 clear = false;
+    b8 clear              = false;
     ClearValue clear_value;
   };
 
-  struct RGResolveAttachmentDesc {
+  struct RGResolveAttachmentDesc
+  {
     TextureNodeID node_id;
     SubresourceIndex view;
     b8 clear = false;
     ClearValue clear_value;
   };
 
-  enum class ShaderBufferReadUsage : u8 { UNIFORM, STORAGE, COUNT };
+  enum class ShaderBufferReadUsage : u8
+  {
+    UNIFORM,
+    STORAGE,
+    COUNT
+  };
 
-  struct ShaderBufferReadAccess {
+  struct ShaderBufferReadAccess
+  {
     BufferNodeID node_id;
     ShaderStageFlags stage_flags;
     ShaderBufferReadUsage usage;
   };
 
-  enum class ShaderBufferWriteUsage : u8 { UNIFORM, STORAGE, COUNT };
+  enum class ShaderBufferWriteUsage : u8
+  {
+    UNIFORM,
+    STORAGE,
+    COUNT
+  };
 
-  struct ShaderBufferWriteAccess {
+  struct ShaderBufferWriteAccess
+  {
     BufferNodeID input_node_id;
     BufferNodeID output_node_id;
     ShaderStageFlags stage_flags;
     ShaderBufferWriteUsage usage;
   };
 
-  enum class ShaderTextureReadUsage : u8 { UNIFORM, STORAGE, COUNT };
+  enum class ShaderTextureReadUsage : u8
+  {
+    UNIFORM,
+    STORAGE,
+    COUNT
+  };
 
-  struct ShaderTextureReadAccess {
+  struct ShaderTextureReadAccess
+  {
     TextureNodeID node_id;
     ShaderStageFlags stage_flags;
     ShaderTextureReadUsage usage;
     SubresourceIndexRange view_range;
   };
 
-  enum class ShaderTextureWriteUsage : u8 { STORAGE, COUNT };
+  enum class ShaderTextureWriteUsage : u8
+  {
+    STORAGE,
+    COUNT
+  };
 
-  struct ShaderTextureWriteAccess {
+  struct ShaderTextureWriteAccess
+  {
     TextureNodeID input_node_id;
     TextureNodeID output_node_id;
     ShaderStageFlags stage_flags;
@@ -261,72 +305,87 @@ namespace soul::gpu
     SubresourceIndexRange view_range;
   };
 
-  struct ShaderTlasReadAccess {
+  struct ShaderTlasReadAccess
+  {
     TlasNodeID node_id;
     ShaderStageFlags stage_flags;
   };
 
-  struct ShaderBlasGroupReadAccess {
+  struct ShaderBlasGroupReadAccess
+  {
     BlasGroupNodeID node_id;
     ShaderStageFlags stage_flags;
   };
 
   template <typename AttachmentDesc>
-  struct AttachmentAccess {
+  struct AttachmentAccess
+  {
     TextureNodeID out_node_id;
     AttachmentDesc desc;
   };
 
-  using ColorAttachment = AttachmentAccess<RGColorAttachmentDesc>;
+  using ColorAttachment        = AttachmentAccess<RGColorAttachmentDesc>;
   using DepthStencilAttachment = AttachmentAccess<RGDepthStencilAttachmentDesc>;
-  using ResolveAttachment = AttachmentAccess<RGResolveAttachmentDesc>;
+  using ResolveAttachment      = AttachmentAccess<RGResolveAttachmentDesc>;
 
-  struct TransferSrcBufferAccess {
+  struct TransferSrcBufferAccess
+  {
     BufferNodeID node_id;
   };
 
-  enum class TransferDataSource : u8 { GPU, CPU, COUNT };
+  enum class TransferDataSource : u8
+  {
+    GPU,
+    CPU,
+    COUNT
+  };
 
-  struct TransferDstBufferAccess {
+  struct TransferDstBufferAccess
+  {
     TransferDataSource data_source = TransferDataSource::COUNT;
     BufferNodeID input_node_id;
     BufferNodeID output_node_id;
   };
 
-  struct TransferSrcTextureAccess {
+  struct TransferSrcTextureAccess
+  {
     TextureNodeID node_id;
     SubresourceIndexRange view_range;
   };
 
-  struct TransferDstTextureAccess {
+  struct TransferDstTextureAccess
+  {
     TransferDataSource data_source = TransferDataSource::COUNT;
     TextureNodeID input_node_id;
     TextureNodeID output_node_id;
     SubresourceIndexRange view_range;
   };
 
-  struct AsBuildDstTlasAccess {
+  struct AsBuildDstTlasAccess
+  {
     TlasNodeID input_node_id;
     TlasNodeID output_node_id;
   };
 
-  struct AsBuildDstBlasGroupAccess {
+  struct AsBuildDstBlasGroupAccess
+  {
     BlasGroupNodeID input_node_id;
     BlasGroupNodeID output_node_id;
   };
 
   namespace impl
   {
-    struct RGInternalTexture {
-      const char* name = nullptr;
-      TextureType type = TextureType::D2;
-      TextureFormat format = TextureFormat::COUNT;
-      vec3u32 extent = {};
-      u32 mip_levels = 1;
-      u16 layer_count = 1;
+    struct RGInternalTexture
+    {
+      const char* name                = nullptr;
+      TextureType type                = TextureType::D2;
+      TextureFormat format            = TextureFormat::COUNT;
+      vec3u32 extent                  = {};
+      u32 mip_levels                  = 1;
+      u16 layer_count                 = 1;
       TextureSampleCount sample_count = TextureSampleCount::COUNT_1;
-      b8 clear = false;
-      ClearValue clear_value = {};
+      b8 clear                        = false;
+      ClearValue clear_value          = {};
 
       [[nodiscard]]
       auto get_view_count() const -> usize
@@ -335,36 +394,42 @@ namespace soul::gpu
       }
     };
 
-    struct RGExternalTexture {
+    struct RGExternalTexture
+    {
       const char* name = nullptr;
       TextureID texture_id;
-      b8 clear = false;
+      b8 clear               = false;
       ClearValue clear_value = {};
     };
 
-    struct RGInternalBuffer {
+    struct RGInternalBuffer
+    {
       const char* name = nullptr;
-      usize size = 0;
-      b8 clear = false;
+      usize size       = 0;
+      b8 clear         = false;
     };
 
-    struct RGExternalBuffer {
+    struct RGExternalBuffer
+    {
       const char* name = nullptr;
       BufferID buffer_id;
       b8 clear = false;
     };
 
-    struct RGExternalTlas {
+    struct RGExternalTlas
+    {
       const char* name = nullptr;
       TlasID tlas_id;
     };
 
-    struct RGExternalBlasGroup {
+    struct RGExternalBlasGroup
+    {
       const char* name = nullptr;
       BlasGroupID blas_group_id;
     };
 
-    struct ResourceNode {
+    struct ResourceNode
+    {
       RGResourceType resource_type;
       RGResourceID resource_id;
       PassNodeID creator;
@@ -385,9 +450,10 @@ namespace soul::gpu
 
   } // namespace impl
 
-  struct RGRenderTargetDesc {
+  struct RGRenderTargetDesc
+  {
 
-    using ColorAttachments = SBOVector<RGColorAttachmentDesc, 1>;
+    using ColorAttachments   = SBOVector<RGColorAttachmentDesc, 1>;
     using ResolveAttachments = SBOVector<RGResolveAttachmentDesc, 1>;
 
     RGRenderTargetDesc() = default;
@@ -426,15 +492,16 @@ namespace soul::gpu
     {
     }
 
-    vec2u32 dimension = {};
+    vec2u32 dimension               = {};
     TextureSampleCount sample_count = TextureSampleCount::COUNT_1;
     SBOVector<RGColorAttachmentDesc, 1> color_attachments;
     SBOVector<RGResolveAttachmentDesc, 1> resolve_attachments;
     RGDepthStencilAttachmentDesc depth_stencil_attachment;
   };
 
-  struct RGRenderTarget {
-    vec2u32 dimension = {};
+  struct RGRenderTarget
+  {
+    vec2u32 dimension               = {};
     TextureSampleCount sample_count = TextureSampleCount::COUNT_1;
     Vector<ColorAttachment> color_attachments;
     Vector<ResolveAttachment> resolve_attachments;
@@ -513,10 +580,11 @@ namespace soul::gpu
     RGDependencyBuilder(
       PassNodeID pass_id, NotNull<PassBaseNode*> pass_node, NotNull<RenderGraph*> render_graph);
   };
-  using RGRasterDependencyBuilder = RGDependencyBuilder<PIPELINE_FLAGS_RASTER>;
-  using RGComputeDependencyBuilder = RGDependencyBuilder<PIPELINE_FLAGS_COMPUTE>;
+
+  using RGRasterDependencyBuilder     = RGDependencyBuilder<PIPELINE_FLAGS_RASTER>;
+  using RGComputeDependencyBuilder    = RGDependencyBuilder<PIPELINE_FLAGS_COMPUTE>;
   using RGRayTracingDependencyBuilder = RGDependencyBuilder<PIPELINE_FLAGS_RAY_TRACING>;
-  using RGNonShaderDependencyBuilder = RGDependencyBuilder<PIPELINE_FLAGS_RASTER>;
+  using RGNonShaderDependencyBuilder  = RGDependencyBuilder<PIPELINE_FLAGS_RASTER>;
 
   class PassBaseNode
   {
@@ -526,22 +594,24 @@ namespace soul::gpu
     {
     }
 
-    PassBaseNode(const PassBaseNode&) = delete;
+    PassBaseNode(const PassBaseNode&)                    = delete;
     auto operator=(const PassBaseNode&) -> PassBaseNode& = delete;
-    PassBaseNode(PassBaseNode&&) = delete;
-    auto operator=(PassBaseNode&&) -> PassBaseNode& = delete;
-    virtual ~PassBaseNode() = default;
+    PassBaseNode(PassBaseNode&&)                         = delete;
+    auto operator=(PassBaseNode&&) -> PassBaseNode&      = delete;
+    virtual ~PassBaseNode()                              = default;
 
     [[nodiscard]]
     auto get_name() const -> const char*
     {
       return name_;
     }
+
     [[nodiscard]]
     auto get_pipeline_flags() const -> PipelineFlags
     {
       return pipeline_flags_;
     }
+
     [[nodiscard]]
     auto get_queue_type() const -> QueueType
     {
@@ -553,6 +623,7 @@ namespace soul::gpu
     {
       return vertex_buffers_.cspan();
     }
+
     [[nodiscard]]
     auto get_index_buffers() const -> Span<const BufferNodeID*>
     {
@@ -705,12 +776,12 @@ namespace soul::gpu
   class PassNode final : public PassBaseNode
   {
   public:
-    PassNode() = delete;
-    PassNode(const PassNode&) = delete;
+    PassNode()                                   = delete;
+    PassNode(const PassNode&)                    = delete;
     auto operator=(const PassNode&) -> PassNode& = delete;
-    PassNode(PassNode&&) = delete;
-    auto operator=(PassNode&&) -> PassNode& = delete;
-    ~PassNode() override = default;
+    PassNode(PassNode&&)                         = delete;
+    auto operator=(PassNode&&) -> PassNode&      = delete;
+    ~PassNode() override                         = default;
 
     PassNode(const char* name, const QueueType queue_type, Execute&& execute)
         : PassBaseNode(name, pipeline_flags, queue_type), execute_(std::forward<Execute>(execute))
@@ -722,6 +793,7 @@ namespace soul::gpu
     {
       return parameter_;
     }
+
     void execute(
       NotNull<RenderGraphRegistry*> registry,
       NotNull<impl::RenderCompiler*> render_compiler,
@@ -730,7 +802,10 @@ namespace soul::gpu
       NotNull<System*> gpu_system) const override;
 
   private:
-    auto get_parameter() -> Parameter& { return parameter_; }
+    auto get_parameter() -> Parameter&
+    {
+      return parameter_;
+    }
 
     Parameter parameter_;
     Execute execute_;
@@ -790,7 +865,7 @@ namespace soul::gpu
       static_assert(raster_pass_executable<Executable, Parameter>);
 
       constexpr auto pipeline_flags = PipelineFlags{PipelineType::RASTER};
-      using Node = PassNode<pipeline_flags, Parameter, Executable>;
+      using Node                    = PassNode<pipeline_flags, Parameter, Executable>;
       const auto node_ptr =
         allocator_->create<Node>(name, QueueType::GRAPHIC, std::forward<Executable>(execute))
           .unwrap();
@@ -1144,10 +1219,11 @@ namespace soul::gpu
   {
     static_assert(pipeline_flags.test(PipelineType::RASTER));
     auto to_output_attachment =
-      [this]<typename AttachmentDesc>(const AttachmentDesc attachment_desc) -> auto {
+      [this]<typename AttachmentDesc>(const AttachmentDesc attachment_desc) -> auto
+    {
       AttachmentAccess<AttachmentDesc> access = {
         .out_node_id = render_graph_->write_resource_node(attachment_desc.node_id, pass_id_),
-        .desc = attachment_desc};
+        .desc        = attachment_desc};
       return access;
     };
 
@@ -1161,7 +1237,8 @@ namespace soul::gpu
       std::back_inserter(pass_node_->render_target_.resolve_attachments),
       to_output_attachment);
 
-    if (render_target_desc.depth_stencil_attachment.node_id.is_valid()) {
+    if (render_target_desc.depth_stencil_attachment.node_id.is_valid())
+    {
       const auto& depth_desc = render_target_desc.depth_stencil_attachment;
       const TextureNodeID out_node_id =
         depth_desc.depth_write_enable
@@ -1172,7 +1249,7 @@ namespace soul::gpu
         .out_node_id = out_node_id, .desc = depth_desc};
     }
 
-    pass_node_->render_target_.dimension = render_target_desc.dimension;
+    pass_node_->render_target_.dimension    = render_target_desc.dimension;
     pass_node_->render_target_.sample_count = render_target_desc.sample_count;
   }
 

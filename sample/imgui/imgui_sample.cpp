@@ -19,7 +19,7 @@ class ImguiSampleApp final : public App
   {
     ImGui::ShowDemoWindow();
 
-    const vec2u32 viewport = gpu_system_->get_swapchain_extent();
+    const vec2u32 viewport                 = gpu_system_->get_swapchain_extent();
     const gpu::TextureNodeID blank_texture = render_graph.create_texture(
       "Blank Texture",
       gpu::RGTextureDesc::create_d2(gpu::TextureFormat::RGBA8, 1, viewport, true, {}));

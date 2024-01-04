@@ -5,7 +5,10 @@ namespace soul::memory
 
   MallocAllocator::MallocAllocator(const char* name) : Allocator(name) {}
 
-  auto MallocAllocator::reset() -> void { SOUL_NOT_IMPLEMENTED(); }
+  auto MallocAllocator::reset() -> void
+  {
+    SOUL_NOT_IMPLEMENTED();
+  }
 
   auto MallocAllocator::try_allocate(usize size, usize /* alignment */, const char* /* tag */)
     -> Allocation
@@ -16,7 +19,8 @@ namespace soul::memory
 
   auto MallocAllocator::get_allocation_size(void* addr) const -> usize
   {
-    if (addr == nullptr) {
+    if (addr == nullptr)
+    {
       return 0;
     }
     return _msize(addr);

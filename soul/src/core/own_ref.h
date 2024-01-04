@@ -27,16 +27,25 @@ namespace soul
 
     void swap(const OwnRef& other)
     {
-      T tmp = std::move(ref_);
-      ref_ = std::move(other);
+      T tmp      = std::move(ref_);
+      ref_       = std::move(other);
       other.ref_ = std::move(tmp);
     }
 
-    friend void swap(const OwnRef& lhs, const OwnRef& rhs) { lhs.swap(rhs); }
+    friend void swap(const OwnRef& lhs, const OwnRef& rhs)
+    {
+      lhs.swap(rhs);
+    }
 
-    constexpr auto const_ref() -> const T& { return ref_; }
+    constexpr auto const_ref() -> const T&
+    {
+      return ref_;
+    }
 
-    constexpr operator T() && { return std::move(ref_); } // NOLINT
+    constexpr operator T() &&
+    {
+      return std::move(ref_);
+    } // NOLINT
 
   private:
     T&& ref_; // NOLINT(cppcoreguidelines-avoid-const-or-ref-data-members)
@@ -65,13 +74,25 @@ namespace soul
 
     constexpr ~OwnRef() = default;
 
-    void swap(const OwnRef& other) { swap(ref_, other.ref_); }
+    void swap(const OwnRef& other)
+    {
+      swap(ref_, other.ref_);
+    }
 
-    friend void swap(const OwnRef& lhs, const OwnRef& rhs) { lhs.swap(rhs); }
+    friend void swap(const OwnRef& lhs, const OwnRef& rhs)
+    {
+      lhs.swap(rhs);
+    }
 
-    constexpr auto const_ref() -> const T& { return ref_; }
+    constexpr auto const_ref() -> const T&
+    {
+      return ref_;
+    }
 
-    constexpr operator T() && { return ref_; } // NOLINT
+    constexpr operator T() &&
+    {
+      return ref_;
+    } // NOLINT
 
   private:
     ref_type ref_;

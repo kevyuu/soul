@@ -229,7 +229,8 @@ namespace soul::math
   inline auto floor_log2(u64 val) -> u64
   {
     u32 level = 0;
-    while ((val >>= 1) != 0u) {
+    while ((val >>= 1) != 0u)
+    {
       ++level;
     }
     return level;

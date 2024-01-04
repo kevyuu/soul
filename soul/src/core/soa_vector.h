@@ -20,7 +20,7 @@ namespace soul
   class SoaVector<Tuple<Ts...>, AllocatorT>
   {
   public:
-    using structure_type = Tuple<Ts...>;
+    using structure_type        = Tuple<Ts...>;
     using structure_buffer_type = TupleX::tuple_of_pointer_t<structure_type>;
 
     template <usize IndexV>
@@ -35,7 +35,7 @@ namespace soul
     NotNull<AllocatorT*> allocator_;
     structure_buffer_type structure_buffers_ =
       GetStructureBuffers(nullptr, offset_array_type::Fill(0));
-    usize size_ = 0;
+    usize size_     = 0;
     usize capacity_ = 0;
 
   public:
@@ -46,7 +46,10 @@ namespace soul
 
     SoaVector(const SoaVector& other) = delete;
 
-    SoaVector(SoaVector&& other) noexcept : allocator_(other.allocator_) { swap(other); }
+    SoaVector(SoaVector&& other) noexcept : allocator_(other.allocator_)
+    {
+      swap(other);
+    }
 
     auto operator=(const SoaVector& other) -> SoaVector& = delete;
 
@@ -57,7 +60,10 @@ namespace soul
       return *this;
     }
 
-    ~SoaVector() { cleanup(); }
+    ~SoaVector()
+    {
+      cleanup();
+    }
 
     void swap(SoaVector& other) noexcept
     {
@@ -70,23 +76,25 @@ namespace soul
 
     void push_back(OwnRef<Ts>... elements)
     {
-      if (size_ == capacity_) {
+      if (size_ == capacity_)
+      {
         const auto new_capacity = GetNewCapacity(capacity_);
         constexpr usize alignment =
           std::max(alignof(std::max_align_t), std::ranges::max(structure_type::ELEMENT_ALIGNMENTS));
         const usize size_needed = GetNeededSize(new_capacity);
 
-        void* new_raw_buffer = allocator_->allocate(size_needed, alignment);
+        void* new_raw_buffer      = allocator_->allocate(size_needed, alignment);
         auto const old_raw_buffer = structure_buffers_.template ref<0>();
 
-        const auto new_offsets = GetOffsets(new_capacity);
+        const auto new_offsets           = GetOffsets(new_capacity);
         const auto new_structure_buffers = GetStructureBuffers(new_raw_buffer, new_offsets);
         ConstructElements(new_structure_buffers, size_, std::move(elements)...);
         relocate_elements(new_structure_buffers);
         structure_buffers_ = new_structure_buffers;
         allocator_->deallocate(old_raw_buffer);
         capacity_ = new_capacity;
-      } else {
+      } else
+      {
         ConstructElements(structure_buffers_, size_, std::move(elements)...);
       }
       ++size_;
@@ -102,9 +110,11 @@ namespace soul
     void remove(usize index)
     {
       SOUL_ASSERT_UPPER_BOUND_CHECK(index, size_);
-      if (size_ > 1) {
+      if (size_ > 1)
+      {
         structure_buffers_.for_each(
-          [remove_index = index, size = size_]<usize IndexV>(auto* structure_buffer) {
+          [remove_index = index, size = size_]<usize IndexV>(auto* structure_buffer)
+          {
             structure_buffer[remove_index] = std::move(structure_buffer[size - 1]);
           });
       }
@@ -122,7 +132,7 @@ namespace soul
     {
       clear();
       allocator_->deallocate(structure_buffers_.template ref<0>());
-      capacity_ = 0;
+      capacity_          = 0;
       structure_buffers_ = GetStructureBuffers(nullptr, offset_array_type::Fill(0));
     }
 
@@ -178,17 +188,21 @@ namespace soul
     template <typename Fn>
     void for_each(usize element_index, Fn fn)
     {
-      structure_buffers_.for_each([&fn, element_index]<usize IndexV>(auto* structure_buffer) {
-        fn.template operator()<IndexV>(structure_buffer[element_index]);
-      });
+      structure_buffers_.for_each(
+        [&fn, element_index]<usize IndexV>(auto* structure_buffer)
+        {
+          fn.template operator()<IndexV>(structure_buffer[element_index]);
+        });
     };
 
     template <typename Fn>
     void for_each(usize element_index, Fn fn) const
     {
-      structure_buffers_.for_each([&fn, element_index]<usize IndexV>(const auto* structure_buffer) {
-        fn.template operator()<IndexV>(structure_buffer[element_index]);
-      });
+      structure_buffers_.for_each(
+        [&fn, element_index]<usize IndexV>(const auto* structure_buffer)
+        {
+          fn.template operator()<IndexV>(structure_buffer[element_index]);
+        });
     };
 
   private:
@@ -200,15 +214,17 @@ namespace soul
 
     static inline auto GetOffsets(size_t capacity) -> Array<usize, ELEMENT_COUNT>
     {
-      const auto sizes =
-        Array<usize, ELEMENT_COUNT>::TransformIndex([capacity](usize idx) -> usize {
+      const auto sizes = Array<usize, ELEMENT_COUNT>::TransformIndex(
+        [capacity](usize idx) -> usize
+        {
           const auto element_size = structure_type::ELEMENT_SIZES[idx];
           return element_size * capacity;
         });
 
       // we align each array to at least the same alignment guaranteed by malloc
-      constexpr auto alignments =
-        Array<usize, ELEMENT_COUNT>::TransformIndex([](usize idx) -> usize {
+      constexpr auto alignments = Array<usize, ELEMENT_COUNT>::TransformIndex(
+        [](usize idx) -> usize
+        {
           const auto element_alignment = structure_type::ELEMENT_ALIGNMENTS[idx];
           return std::max(alignof(std::max_align_t), element_alignment);
         });
@@ -216,10 +232,11 @@ namespace soul
       Array<usize, ELEMENT_COUNT> offsets;
       offsets[0] = 0;
       SOUL_UNROLL
-      for (usize i = 1; i < ELEMENT_COUNT; i++) {
+      for (usize i = 1; i < ELEMENT_COUNT; i++)
+      {
         usize unalignment = (offsets[i - 1] + sizes[i - 1]) % alignments[i];
-        usize alignment = unalignment != 0u ? (alignments[i] - unalignment) : 0;
-        offsets[i] = offsets[i - 1] + (sizes[i - 1] + alignment);
+        usize alignment   = unalignment != 0u ? (alignments[i] - unalignment) : 0;
+        offsets[i]        = offsets[i - 1] + (sizes[i - 1] + alignment);
         SOUL_ASSERT(0, offsets[i] % alignments[i] == 0);
       }
       return offsets;
@@ -243,7 +260,8 @@ namespace soul
       -> structure_buffer_type
     {
       const auto create_tuple =
-        [raw_buffer, &offsets]<usize... idx>(std::index_sequence<idx...>) -> structure_buffer_type {
+        [raw_buffer, &offsets]<usize... idx>(std::index_sequence<idx...>) -> structure_buffer_type
+      {
         return structure_buffer_type{
           (reinterpret_cast<structure_buffer_type::template type_at_t<idx>>(
             uptr(raw_buffer) + offsets[idx]))...};
@@ -260,7 +278,8 @@ namespace soul
     {
       auto* structure_buffer = structure_buffers.template ref<StructureIndexV>();
       construct_at(structure_buffer + element_index, std::move(element));
-      if constexpr (sizeof...(elements) != 0) {
+      if constexpr (sizeof...(elements) != 0)
+      {
         ConstructElements<StructureIndexV + 1>(
           structure_buffers, element_index, std::move(elements)...);
       }
@@ -269,14 +288,18 @@ namespace soul
     void destroy_elements(usize start_idx, usize count) noexcept
     {
       structure_buffers_.for_each(
-        [start_idx, count]<usize IndexV>(auto* buffer) { destroy_n(buffer + start_idx, count); });
+        [start_idx, count]<usize IndexV>(auto* buffer)
+        {
+          destroy_n(buffer + start_idx, count);
+        });
     }
 
     void relocate_elements(const structure_buffer_type& structure_buffers) noexcept
     {
       structure_buffers_.for_each(
-        [&structure_buffers, size = size_]<usize IndexV>(auto* src_buffer) {
-          using element_type = type_at_t<IndexV>;
+        [&structure_buffers, size = size_]<usize IndexV>(auto* src_buffer)
+        {
+          using element_type       = type_at_t<IndexV>;
           element_type* dst_buffer = structure_buffers.template ref<IndexV>();
           uninitialized_relocate_n(src_buffer, size, dst_buffer);
         });

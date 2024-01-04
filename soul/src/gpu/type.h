@@ -127,6 +127,7 @@ namespace soul::gpu
     VERTEX_ELEMENT_NORMALIZED     = 0x2,
     VERTEX_ELEMENT_ENUM_END_BIT
   };
+
   using VertexElementFlags = u8;
   static_assert(VERTEX_ELEMENT_ENUM_END_BIT - 1 <= std::numeric_limits<VertexElementFlags>::max());
 
@@ -1028,6 +1029,7 @@ namespace soul::gpu
     ATTACHMENT_CLEAR_BIT      = 0x10,
     ATTACHMENT_ENUM_END_BIT
   };
+
   using AttachmentFlags = u8;
   static_assert(ATTACHMENT_ENUM_END_BIT - 1 < std::numeric_limits<AttachmentFlags>::max());
 
@@ -1243,6 +1245,7 @@ namespace soul::gpu
     {
       ComputePipelineStateDesc desc;
       auto operator==(const ComputePipelineStateKey&) const -> bool = default;
+
       friend void soul_op_hash_combine(auto& hasher, const ComputePipelineStateKey& key)
       {
         hasher.combine(key.desc);
@@ -1339,6 +1342,7 @@ namespace soul::gpu
         hasher.combine(binding.stage_flags);
       }
     };
+
     static_assert(soul::impl_soul_op_hash_combine_v<DescriptorSetLayoutBinding>);
 
     struct DescriptorSetLayoutKey
@@ -1346,8 +1350,10 @@ namespace soul::gpu
       Array<DescriptorSetLayoutBinding, MAX_BINDING_PER_SET> bindings;
 
       auto operator==(const DescriptorSetLayoutKey& other) const -> bool = default;
+
       friend void soul_op_hash_combine(auto& hasher, const DescriptorSetLayoutKey& key) {}
     };
+
     static_assert(soul::impl_soul_op_hash_combine_v<gpu::impl::DescriptorSetLayoutKey>);
 
     using DescriptorSetLayoutCache =
@@ -1397,8 +1403,11 @@ namespace soul::gpu
         sync_stages                 = dst_stages;
         unavailable_pipeline_stages = {};
         unavailable_accesses        = {};
-        dst_stages.for_each([this](const PipelineStage dst_stage)
-                            { visible_access_matrix[dst_stage] = ACCESS_FLAGS_ALL; });
+        dst_stages.for_each(
+          [this](const PipelineStage dst_stage)
+          {
+            visible_access_matrix[dst_stage] = ACCESS_FLAGS_ALL;
+          });
       }
 
       auto commit_wait_event_or_barrier(
@@ -1433,8 +1442,11 @@ namespace soul::gpu
         {
           visible_access_matrix = VISIBLE_ACCESS_MATRIX_NONE;
         }
-        dst_stages.for_each([this, dst_accesses](const PipelineStage dst_stage)
-                            { visible_access_matrix[dst_stage] |= dst_accesses; });
+        dst_stages.for_each(
+          [this, dst_accesses](const PipelineStage dst_stage)
+          {
+            visible_access_matrix[dst_stage] |= dst_accesses;
+          });
       }
 
       auto commit_access(QueueType queue, PipelineStageFlags stages, AccessFlags accesses) -> void
@@ -1455,8 +1467,11 @@ namespace soul::gpu
       auto need_invalidate(PipelineStageFlags stages, AccessFlags accesses) -> b8
       {
         return stages
-          .find_if([this, accesses](const PipelineStage pipeline_stage)
-                   { return accesses.test_any(~visible_access_matrix[pipeline_stage]); })
+          .find_if(
+            [this, accesses](const PipelineStage pipeline_stage)
+            {
+              return accesses.test_any(~visible_access_matrix[pipeline_stage]);
+            })
           .is_some();
       }
 
@@ -1567,12 +1582,17 @@ namespace soul::gpu
       VkSemaphore vk_handle = VK_NULL_HANDLE;
       State state           = State::INIT;
 
-      static auto null() -> BinarySemaphore { return {VK_NULL_HANDLE}; }
+      static auto null() -> BinarySemaphore
+      {
+        return {VK_NULL_HANDLE};
+      }
+
       [[nodiscard]]
       auto is_null() const -> b8
       {
         return vk_handle == VK_NULL_HANDLE;
       }
+
       [[nodiscard]]
       auto is_valid() const -> b8
       {
@@ -1586,12 +1606,17 @@ namespace soul::gpu
       VkSemaphore vk_handle;
       u64 counter;
 
-      static auto null() -> TimelineSemaphore { return {}; }
+      static auto null() -> TimelineSemaphore
+      {
+        return {};
+      }
+
       [[nodiscard]]
       auto is_null() const -> b8
       {
         return counter == 0;
       }
+
       [[nodiscard]]
       auto is_valid() const -> b8
       {
@@ -1605,8 +1630,14 @@ namespace soul::gpu
     inline auto is_semaphore_valid(Semaphore semaphore) -> b8
     {
       return semaphore.visit(VisitorSet{
-        [](BinarySemaphore* semaphore) { return semaphore->is_valid(); },
-        [](const TimelineSemaphore& semaphore) { return semaphore.is_valid(); },
+        [](BinarySemaphore* semaphore)
+        {
+          return semaphore->is_valid();
+        },
+        [](const TimelineSemaphore& semaphore)
+        {
+          return semaphore.is_valid();
+        },
       });
     }
 
@@ -1614,8 +1645,14 @@ namespace soul::gpu
     inline auto is_semaphore_null(Semaphore semaphore) -> b8
     {
       return semaphore.visit(VisitorSet{
-        [](BinarySemaphore* semaphore) { return semaphore->is_null(); },
-        [](const TimelineSemaphore& semaphore) { return semaphore.is_null(); },
+        [](BinarySemaphore* semaphore)
+        {
+          return semaphore->is_null();
+        },
+        [](const TimelineSemaphore& semaphore)
+        {
+          return semaphore.is_null();
+        },
       });
     }
 
@@ -1689,6 +1726,7 @@ namespace soul::gpu
       {
         return vk_handle_;
       }
+
       auto end() -> void;
     };
 
@@ -1707,6 +1745,7 @@ namespace soul::gpu
       {
         return vk_handle_;
       }
+
       [[nodiscard]]
       auto is_null() const noexcept -> b8
       {

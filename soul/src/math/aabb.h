@@ -9,7 +9,8 @@
 
 namespace soul::math
 {
-  struct AABB {
+  struct AABB
+  {
     vec3f32 min = vec3f32(std::numeric_limits<f32>::max());
     vec3f32 max = vec3f32(std::numeric_limits<f32>::lowest());
 
@@ -30,7 +31,8 @@ namespace soul::math
              (point.z >= min.z && point.z <= max.z);
     }
 
-    struct Corners {
+    struct Corners
+    {
       static constexpr usize COUNT = 8;
       vec3f32 vertices[COUNT];
     };

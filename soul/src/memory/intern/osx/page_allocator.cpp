@@ -8,7 +8,10 @@
 namespace soul::memory
 {
 
-  PageAllocator::PageAllocator(const char* name) : Allocator(name) { page_size_ = getpagesize(); }
+  PageAllocator::PageAllocator(const char* name) : Allocator(name)
+  {
+    page_size_ = getpagesize();
+  }
 
   auto PageAllocator::reset() -> void{};
 

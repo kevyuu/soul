@@ -18,7 +18,7 @@ namespace soul
   template <
     typename T,
     memory::allocator_type AllocatorT = memory::Allocator,
-    usize InlineSizeV = 0>
+    usize InlineSizeV                 = 0>
   class Deque
   {
   public:
@@ -31,16 +31,16 @@ namespace soul
 
     public:
       using iterator_category = std::bidirectional_iterator_tag;
-      using value_type = ItemItemT;
-      using reference = ItemItemT&;
-      using difference_type = std::ptrdiff_t;
-      using pointer = ItemItemT*;
+      using value_type        = ItemItemT;
+      using reference         = ItemItemT&;
+      using difference_type   = std::ptrdiff_t;
+      using pointer           = ItemItemT*;
 
     private:
       ItemItemT* buffer_ = nullptr;
-      usize offset_ = 0;
-      usize size_ = 0;
-      usize capacity_ = 0;
+      usize offset_      = 0;
+      usize size_        = 0;
+      usize capacity_    = 0;
 
       explicit Iterator(ItemItemT* buffer, usize offset, usize size, usize capacity)
           : buffer_(buffer), offset_(offset), size_(size), capacity_(capacity)
@@ -66,9 +66,9 @@ namespace soul
         requires(IsConstV && !IsOtherConstV)
       auto operator=(const Iterator<IsOtherConstV>& other) -> Iterator&
       {
-        buffer_ = other.buffer_;
-        offset_ = other.offset_;
-        size_ = other.size_;
+        buffer_   = other.buffer_;
+        offset_   = other.offset_;
+        size_     = other.size_;
         capacity_ = other.capacity_;
         return *this;
       }
@@ -76,7 +76,8 @@ namespace soul
       auto operator++() -> Iterator&
       {
         offset_++;
-        if (SOUL_UNLIKELY(offset_ == capacity_)) {
+        if (SOUL_UNLIKELY(offset_ == capacity_))
+        {
           offset_ = 0;
         }
         size_--;
@@ -92,7 +93,8 @@ namespace soul
 
       auto operator--() -> Iterator&
       {
-        if (SOUL_UNLIKELY(offset_ == 0)) {
+        if (SOUL_UNLIKELY(offset_ == 0))
+        {
           offset_ = capacity_;
         }
         offset_--;
@@ -113,9 +115,15 @@ namespace soul
         return cast<i64>(other.size_) - cast<i64>(size_);
       }
 
-      auto operator*() const -> reference { return buffer_[offset_]; }
+      auto operator*() const -> reference
+      {
+        return buffer_[offset_];
+      }
 
-      auto operator->() const -> pointer { return &buffer_[offset_]; }
+      auto operator->() const -> pointer
+      {
+        return &buffer_[offset_];
+      }
 
       template <b8 IsOtherConstV>
       auto operator==(Iterator<IsOtherConstV> const& other) const -> b8
@@ -125,14 +133,14 @@ namespace soul
       }
     };
 
-    using value_type = T;
-    using pointer = T*;
-    using const_pointer = const T*;
-    using reference = T&;
-    using const_reference = const T&;
-    using iterator = Iterator<false>;
-    using const_iterator = Iterator<true>;
-    using reverse_iterator = std::reverse_iterator<iterator>;
+    using value_type             = T;
+    using pointer                = T*;
+    using const_pointer          = const T*;
+    using reference              = T&;
+    using const_reference        = const T&;
+    using iterator               = Iterator<false>;
+    using const_iterator         = Iterator<true>;
+    using reverse_iterator       = std::reverse_iterator<iterator>;
     using const_reverse_iterator = std::reverse_iterator<const_iterator>;
 
     static constexpr usize INLINE_ELEMENT_COUNT = InlineSizeV;
@@ -140,10 +148,10 @@ namespace soul
   private:
     SOUL_NO_UNIQUE_ADDRESS RawBuffer<T, InlineSizeV> stack_storage_;
     static constexpr usize GROWTH_FACTOR = 2;
-    static constexpr b8 IS_SBO = InlineSizeV > 0;
+    static constexpr b8 IS_SBO           = InlineSizeV > 0;
     NotNull<AllocatorT*> allocator_;
-    T* buffer_ = stack_storage_.data();
-    usize size_ = 0;
+    T* buffer_      = stack_storage_.data();
+    usize size_     = 0;
     usize capacity_ = InlineSizeV;
     usize head_idx_ = 0;
 
@@ -183,7 +191,10 @@ namespace soul
       return *this;
     }
 
-    ~Deque() { cleanup(); }
+    ~Deque()
+    {
+      cleanup();
+    }
 
     [[nodiscard]]
     auto clone() const -> Deque
@@ -191,58 +202,71 @@ namespace soul
       return Deque(*this);
     }
 
-    void clone_from(const Deque& other) { *this = other; }
+    void clone_from(const Deque& other)
+    {
+      *this = other;
+    }
 
     constexpr void swap(Deque& other) noexcept
     {
       using std::swap;
 
-      if (!is_using_stack_storage() && !other.is_using_stack_storage()) {
+      if (!is_using_stack_storage() && !other.is_using_stack_storage())
+      {
         SOUL_ASSERT(
           0, allocator_ == other.allocator_, "Cannot swap container with different allocator");
         swap(buffer_, other.buffer_);
         swap(head_idx_, other.head_idx_);
-      } else if (is_using_stack_storage() && !other.is_using_stack_storage()) {
+      } else if (is_using_stack_storage() && !other.is_using_stack_storage())
+      {
         UninitializedRelocate(buffer_, capacity_, head_idx_, size_, other.stack_storage_.data());
-        buffer_ = other.buffer_;
-        head_idx_ = other.head_idx_;
-        other.buffer_ = other.stack_storage_.data();
+        buffer_         = other.buffer_;
+        head_idx_       = other.head_idx_;
+        other.buffer_   = other.stack_storage_.data();
         other.head_idx_ = 0;
-      } else if (!is_using_stack_storage() && other.is_using_stack_storage()) {
+      } else if (!is_using_stack_storage() && other.is_using_stack_storage())
+      {
         UninitializedRelocate(
           other.buffer_, other.capacity_, other.head_idx_, other.size_, stack_storage_.data());
-        other.buffer_ = buffer_;
+        other.buffer_   = buffer_;
         other.head_idx_ = head_idx_;
-        buffer_ = stack_storage_.data();
-        head_idx_ = 0;
-      } else {
+        buffer_         = stack_storage_.data();
+        head_idx_       = 0;
+      } else
+      {
         RawBuffer<T, InlineSizeV> temp;
         UninitializedRelocate(
           other.buffer_, other.capacity_, other.head_idx_, other.size_, temp.data());
         UninitializedRelocate(buffer_, capacity_, head_idx_, size_, other.buffer_);
         uninitialized_relocate_n(temp.data(), other.size_, buffer_);
         other.head_idx_ = 0;
-        head_idx_ = 0;
+        head_idx_       = 0;
       }
 
       swap(size_, other.size_);
       swap(capacity_, other.capacity_);
     }
 
-    friend void swap(Deque& a, Deque& b) noexcept { a.swap(b); }
+    friend void swap(Deque& a, Deque& b) noexcept
+    {
+      a.swap(b);
+    }
 
     void reserve(usize capacity)
     {
-      if (capacity < capacity_) {
+      if (capacity < capacity_)
+      {
         return;
       }
-      if (!IS_SBO || capacity > InlineSizeV) {
+      if (!IS_SBO || capacity > InlineSizeV)
+      {
         T* new_buffer = allocator_->template allocate_array<T>(capacity);
         UninitializedRelocate(buffer_, capacity_, head_idx_, size_, new_buffer);
-        if (buffer_ != stack_storage_.data()) {
+        if (buffer_ != stack_storage_.data())
+        {
           allocator_->deallocate_array(buffer_, capacity_);
         }
-        buffer_ = new_buffer;
+        buffer_   = new_buffer;
         capacity_ = capacity;
         head_idx_ = 0;
       }
@@ -250,16 +274,19 @@ namespace soul
 
     void shrink_to_fit()
     {
-      if (capacity_ == size_ || is_using_stack_storage()) {
+      if (capacity_ == size_ || is_using_stack_storage())
+      {
         return;
       }
-      T* old_buffer = buffer_;
+      T* old_buffer           = buffer_;
       const auto old_capacity = capacity_;
-      if (size_ > InlineSizeV) {
-        buffer_ = allocator_->template allocate_array<T>(size_);
+      if (size_ > InlineSizeV)
+      {
+        buffer_   = allocator_->template allocate_array<T>(size_);
         capacity_ = size_;
-      } else {
-        buffer_ = stack_storage_.data();
+      } else
+      {
+        buffer_   = stack_storage_.data();
         capacity_ = InlineSizeV;
       }
       UninitializedRelocate(old_buffer, old_capacity, head_idx_, size_, buffer_);
@@ -269,18 +296,21 @@ namespace soul
 
     void push_back(OwnRef<T> item)
     {
-      if (size_ == capacity_) {
+      if (size_ == capacity_)
+      {
         const auto new_capacity = get_new_capacity(capacity_);
-        T* new_buffer = allocator_->template allocate_array<T>(new_capacity);
+        T* new_buffer           = allocator_->template allocate_array<T>(new_capacity);
         construct_at(new_buffer + size_, std::move(item));
         UninitializedRelocate(buffer_, capacity_, head_idx_, size_, new_buffer);
-        if (buffer_ != stack_storage_.data()) {
+        if (buffer_ != stack_storage_.data())
+        {
           allocator_->deallocate_array(buffer_, capacity_);
         }
-        buffer_ = new_buffer;
+        buffer_   = new_buffer;
         capacity_ = new_capacity;
         head_idx_ = 0;
-      } else {
+      } else
+      {
         const auto offset = (head_idx_ + size_) % capacity_;
         construct_at(buffer_ + offset, std::move(item));
       }
@@ -290,7 +320,7 @@ namespace soul
     auto pop_back() -> T
     {
       const auto back_idx = (head_idx_ + size_ - 1) % capacity_;
-      T* item_addr = buffer_ + back_idx;
+      T* item_addr        = buffer_ + back_idx;
       size_--;
       T item = std::move(*item_addr);
       destroy_at(item_addr);
@@ -299,18 +329,21 @@ namespace soul
 
     void push_front(OwnRef<T> item)
     {
-      if (size_ == capacity_) {
+      if (size_ == capacity_)
+      {
         const auto new_capacity = get_new_capacity(capacity_);
-        T* new_buffer = allocator_->template allocate_array<T>(new_capacity);
+        T* new_buffer           = allocator_->template allocate_array<T>(new_capacity);
         construct_at(new_buffer + new_capacity - 1, std::move(item));
         UninitializedRelocate(buffer_, capacity_, head_idx_, size_, new_buffer);
-        if (buffer_ != stack_storage_.data()) {
+        if (buffer_ != stack_storage_.data())
+        {
           allocator_->deallocate_array(buffer_, capacity_);
         }
         capacity_ = new_capacity;
-        buffer_ = new_buffer;
+        buffer_   = new_buffer;
         head_idx_ = new_capacity - 1;
-      } else {
+      } else
+      {
         decrement_head_idx();
         construct_at(buffer_ + head_idx_, std::move(item));
       }
@@ -320,7 +353,7 @@ namespace soul
     auto pop_front() -> T
     {
       const auto idx = head_idx_;
-      T* item_addr = buffer_ + idx;
+      T* item_addr   = buffer_ + idx;
       increment_head_idx();
       size_--;
       T item = std::move(*item_addr);
@@ -468,17 +501,18 @@ namespace soul
       const auto size2 = size_ - size1;
       destroy_n(buffer_ + head_idx_, size1);
       destroy_n(buffer_, size2);
-      size_ = 0;
+      size_     = 0;
       head_idx_ = 0;
     }
 
     void cleanup()
     {
       clear();
-      if (buffer_ != stack_storage_.data()) {
+      if (buffer_ != stack_storage_.data())
+      {
         allocator_->deallocate_array(buffer_, capacity_);
       }
-      buffer_ = stack_storage_.data();
+      buffer_   = stack_storage_.data();
       capacity_ = InlineSizeV;
     }
 
@@ -496,14 +530,18 @@ namespace soul
       return *this;
     }
 
-    struct Construct {
-      struct WithCapacity {
+    struct Construct
+    {
+      struct WithCapacity
+      {
       };
-      struct From {
+
+      struct From
+      {
       };
 
       static constexpr auto with_capacity = WithCapacity{};
-      static constexpr auto from = From{};
+      static constexpr auto from          = From{};
     };
 
     Deque(Construct::WithCapacity /*tag*/, usize capacity, NotNull<AllocatorT*> allocator)
@@ -516,14 +554,16 @@ namespace soul
     Deque(Construct::From /*tag*/, RangeT&& range, NotNull<AllocatorT*> allocator)
         : allocator_(allocator)
     {
-      if constexpr (std::ranges::sized_range<RangeT> || std::ranges::forward_range<RangeT>) {
+      if constexpr (std::ranges::sized_range<RangeT> || std::ranges::forward_range<RangeT>)
+      {
         const auto size = usize(std::ranges::distance(range));
         init_reserve(size);
         uninitialized_copy_n(std::ranges::begin(range), size, buffer_);
         size_ = size;
-      } else {
-        for (auto it = std::ranges::begin(range), last = std::ranges::end(range); it != last;
-             it++) {
+      } else
+      {
+        for (auto it = std::ranges::begin(range), last = std::ranges::end(range); it != last; it++)
+        {
           push_back(*it);
         }
       }
@@ -532,11 +572,13 @@ namespace soul
     void init_reserve(usize capacity)
     {
       auto need_heap = true;
-      if constexpr (IS_SBO) {
+      if constexpr (IS_SBO)
+      {
         need_heap = capacity > InlineSizeV;
       }
-      if (need_heap) {
-        buffer_ = allocator_->template allocate_array<T>(capacity);
+      if (need_heap)
+      {
+        buffer_   = allocator_->template allocate_array<T>(capacity);
         capacity_ = capacity;
       }
     }
@@ -564,7 +606,8 @@ namespace soul
     [[nodiscard]]
     auto is_using_stack_storage() const -> b8
     {
-      if constexpr (!IS_SBO) {
+      if constexpr (!IS_SBO)
+      {
         return false;
       }
       return buffer_ == stack_storage_.data();
@@ -589,13 +632,18 @@ namespace soul
 
     void decrement_head_idx()
     {
-      if (head_idx_ == 0) {
+      if (head_idx_ == 0)
+      {
         head_idx_ = capacity_ - 1;
-      } else {
+      } else
+      {
         head_idx_ -= 1;
       }
     }
 
-    void increment_head_idx() { head_idx_ = head_idx_ + 1 == capacity_ ? 0 : head_idx_ + 1; }
+    void increment_head_idx()
+    {
+      head_idx_ = head_idx_ + 1 == capacity_ ? 0 : head_idx_ + 1;
+    }
   };
 } // namespace soul

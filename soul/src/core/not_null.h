@@ -15,10 +15,13 @@ namespace soul
   class NotNull;
 
   template <typename T, typename PtrT = match_any>
-  inline constexpr b8 is_not_null_v = [] {
-    if constexpr (!is_specialization_v<T, NotNull>) {
+  inline constexpr b8 is_not_null_v = []
+  {
+    if constexpr (!is_specialization_v<T, NotNull>)
+    {
       return false;
-    } else {
+    } else
+    {
       return is_match_v<typename T::ptr_type, PtrT>;
     }
   }();
@@ -31,12 +34,12 @@ namespace soul
   class NotNull
   {
   public:
-    using ptr_type = T;
-    constexpr NotNull(const NotNull& other) = default;
-    constexpr auto operator=(const NotNull& other) -> NotNull& = default;
-    constexpr NotNull(NotNull&& other) noexcept = default;
+    using ptr_type                                                 = T;
+    constexpr NotNull(const NotNull& other)                        = default;
+    constexpr auto operator=(const NotNull& other) -> NotNull&     = default;
+    constexpr NotNull(NotNull&& other) noexcept                    = default;
     constexpr auto operator=(NotNull&& other) noexcept -> NotNull& = default;
-    constexpr ~NotNull() = default;
+    constexpr ~NotNull()                                           = default;
 
     constexpr NotNull(T ptr) : ptr_(ptr) // NOLINT
     {
@@ -60,43 +63,74 @@ namespace soul
     constexpr void swap(NotNull& other)
     {
       const auto tmp_ptr = ptr_;
-      ptr_ = other.ptr_;
-      other.ptr_ = tmp_ptr;
+      ptr_               = other.ptr_;
+      other.ptr_         = tmp_ptr;
     }
 
-    friend constexpr void swap(NotNull& lhs, NotNull& rhs) { lhs.swap(rhs); }
+    friend constexpr void swap(NotNull& lhs, NotNull& rhs)
+    {
+      lhs.swap(rhs);
+    }
 
     constexpr static auto NewUnchecked(T ptr) -> NotNull<T>
     {
       return NotNull(Construct::new_unchecked, ptr);
     }
-    constexpr auto get_unchecked() const -> T { return ptr_; }
-    constexpr auto set_unchecked(T ptr) { ptr_ = ptr; }
 
-    constexpr operator T() const { return ptr_; } // NOLINT
-    constexpr auto operator*() const -> std::remove_pointer_t<T>& { return *ptr_; }
-    constexpr auto operator->() const -> T { return ptr_; }
-    constexpr auto get() const -> T { return ptr_; }
+    constexpr auto get_unchecked() const -> T
+    {
+      return ptr_;
+    }
+
+    constexpr auto set_unchecked(T ptr)
+    {
+      ptr_ = ptr;
+    }
+
+    constexpr operator T() const
+    {
+      return ptr_;
+    } // NOLINT
+
+    constexpr auto operator*() const -> std::remove_pointer_t<T>&
+    {
+      return *ptr_;
+    }
+
+    constexpr auto operator->() const -> T
+    {
+      return ptr_;
+    }
+
+    constexpr auto get() const -> T
+    {
+      return ptr_;
+    }
 
     // prevents compilation when someone attempts to assign a null pointer constant
-    NotNull(std::nullptr_t) = delete;
+    NotNull(std::nullptr_t)                    = delete;
     auto operator=(std::nullptr_t) -> NotNull& = delete;
 
-    auto operator++() -> NotNull& = delete;
-    auto operator--() -> NotNull& = delete;
-    auto operator++(int) -> NotNull = delete;
-    auto operator--(int) -> NotNull = delete;
+    auto operator++() -> NotNull&              = delete;
+    auto operator--() -> NotNull&              = delete;
+    auto operator++(int) -> NotNull            = delete;
+    auto operator--(int) -> NotNull            = delete;
     auto operator+=(std::ptrdiff_t) -> NotNull = delete;
     auto operator-=(std::ptrdiff_t) -> NotNull = delete;
-    void operator[](std::ptrdiff_t) const = delete;
+    void operator[](std::ptrdiff_t) const      = delete;
 
   private:
-    struct Construct {
-      struct NewUnchecked {
+    struct Construct
+    {
+      struct NewUnchecked
+      {
       };
+
       static constexpr auto new_unchecked = NewUnchecked{};
     };
+
     constexpr explicit NotNull(Construct::NewUnchecked /* tag */, T val) : ptr_(val) {}
+
     T ptr_;
   };
 

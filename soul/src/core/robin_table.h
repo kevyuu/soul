@@ -17,19 +17,20 @@ namespace soul
 {
   namespace impl
   {
-    struct RobinTableMetadata {
+    struct RobinTableMetadata
+    {
       using storage_type = u8;
       storage_type bits;
-      static constexpr u8 TOTAL_BIT_COUNT = sizeof(storage_type) * 8;
-      static constexpr u8 PSL_BIT_COUNT = 5;
+      static constexpr u8 TOTAL_BIT_COUNT           = sizeof(storage_type) * 8;
+      static constexpr u8 PSL_BIT_COUNT             = 5;
       static constexpr storage_type PSL_SHIFT_COUNT = TOTAL_BIT_COUNT - PSL_BIT_COUNT;
-      static constexpr storage_type PSL_INC = 1 << PSL_SHIFT_COUNT;
-      static constexpr storage_type PSL_MAX = (1 << PSL_BIT_COUNT) - 2;
+      static constexpr storage_type PSL_INC         = 1 << PSL_SHIFT_COUNT;
+      static constexpr storage_type PSL_MAX         = (1 << PSL_BIT_COUNT) - 2;
 
       static constexpr storage_type HOISTED_HASH_BIT_COUNT = TOTAL_BIT_COUNT - PSL_BIT_COUNT;
-      static constexpr storage_type HOISTED_HASH_MASK = PSL_INC - 1;
-      static constexpr storage_type PSL_MASK = ~HOISTED_HASH_MASK;
-      static constexpr storage_type SENTINEL_BITS = ~u8(0);
+      static constexpr storage_type HOISTED_HASH_MASK      = PSL_INC - 1;
+      static constexpr storage_type PSL_MASK               = ~HOISTED_HASH_MASK;
+      static constexpr storage_type SENTINEL_BITS          = ~u8(0);
 
       [[nodiscard]]
       static constexpr auto HoistHash(u64 hash_code) -> storage_type
@@ -79,9 +80,16 @@ namespace soul
       {
         return bits >= (PSL_INC << u8(1));
       }
-      void increment_psl() { bits += PSL_INC; }
 
-      void decrement_psl() { bits -= PSL_INC; }
+      void increment_psl()
+      {
+        bits += PSL_INC;
+      }
+
+      void decrement_psl()
+      {
+        bits -= PSL_INC;
+      }
 
       [[nodiscard]]
       auto get_hoisted_hash() const -> storage_type
@@ -116,7 +124,8 @@ namespace soul
 
   } // namespace impl
 
-  struct RobinTableConfig {
+  struct RobinTableConfig
+  {
     f32 load_factor = 0.5f;
   };
 
@@ -124,8 +133,8 @@ namespace soul
     typename KeyT,
     typename EntryT,
     typename GetKeyFn,
-    typename HashFn = soul::HashOp<KeyT>,
-    RobinTableConfig ConfigV = RobinTableConfig(),
+    typename HashFn                   = soul::HashOp<KeyT>,
+    RobinTableConfig ConfigV          = RobinTableConfig(),
     memory::allocator_type AllocatorT = memory::Allocator>
   class RobinTable
   {
@@ -138,17 +147,19 @@ namespace soul
     private:
       Metadata* metadata_iter_ = nullptr;
 
-      using IterEntryT = std::conditional_t<IsConstV, EntryT, const EntryT>;
+      using IterEntryT        = std::conditional_t<IsConstV, EntryT, const EntryT>;
       IterEntryT* entry_iter_ = nullptr;
 
       explicit Iterator(Metadata* metadatas, IterEntryT* entries)
           : metadata_iter_(metadatas), entry_iter_(entries)
       {
-        while (metadata_iter_->is_empty()) {
+        while (metadata_iter_->is_empty())
+        {
           metadata_iter_++;
           entry_iter_++;
         }
-        if (metadata_iter_->is_sentinel()) {
+        if (metadata_iter_->is_sentinel())
+        {
           *this = Iterator();
         }
       }
@@ -157,10 +168,10 @@ namespace soul
 
     public:
       using iterator_category = std::forward_iterator_tag;
-      using value_type = IterEntryT;
-      using reference = IterEntryT&;
-      using difference_type = std::ptrdiff_t;
-      using pointer = IterEntryT*;
+      using value_type        = IterEntryT;
+      using reference         = IterEntryT&;
+      using difference_type   = std::ptrdiff_t;
+      using pointer           = IterEntryT*;
 
       explicit Iterator() = default;
 
@@ -173,11 +184,14 @@ namespace soul
 
       auto operator++() noexcept -> Iterator&
       {
-        do {
+        do
+        {
           ++metadata_iter_;
           ++entry_iter_;
-        } while (metadata_iter_->is_empty());
-        if (metadata_iter_->is_sentinel()) {
+        }
+        while (metadata_iter_->is_empty());
+        if (metadata_iter_->is_sentinel())
+        {
           *this = Iterator();
         }
         return *this;
@@ -190,9 +204,15 @@ namespace soul
         return iter_copy;
       }
 
-      auto operator*() const noexcept -> reference { return *entry_iter_; }
+      auto operator*() const noexcept -> reference
+      {
+        return *entry_iter_;
+      }
 
-      auto operator->() const noexcept -> pointer { return entry_iter_; }
+      auto operator->() const noexcept -> pointer
+      {
+        return entry_iter_;
+      }
 
       template <b8 IsOtherConstV>
       auto operator==(Iterator<IsOtherConstV> const& other) const noexcept -> b8
@@ -201,29 +221,29 @@ namespace soul
       }
     };
 
-    using value_type = EntryT;
-    using key_type = KeyT;
-    using reference = EntryT&;
+    using value_type      = EntryT;
+    using key_type        = KeyT;
+    using reference       = EntryT&;
     using const_reference = const EntryT&;
-    using pointer = EntryT*;
-    using const_pointer = const EntryT*;
-    using iterator = Iterator<false>;
-    using const_iterator = Iterator<true>;
-    using sentinel = iterator;
-    using const_sentinel = const_iterator;
+    using pointer         = EntryT*;
+    using const_pointer   = const EntryT*;
+    using iterator        = Iterator<false>;
+    using const_iterator  = Iterator<true>;
+    using sentinel        = iterator;
+    using const_sentinel  = const_iterator;
 
   private:
     static constexpr u8 HASH_CODE_BIT_COUNT_ = 64;
-    static constexpr u8 INITIAL_SHIFTS_ = HASH_CODE_BIT_COUNT_ - 3;
+    static constexpr u8 INITIAL_SHIFTS_      = HASH_CODE_BIT_COUNT_ - 3;
 
     NotNull<AllocatorT*> allocator_ = nullptr;
-    u8 shifts_ = INITIAL_SHIFTS_;
-    u64 slot_count_ = 0;
-    u64 capacity_ = 0;
-    u64 size_ = 0;
+    u8 shifts_                      = INITIAL_SHIFTS_;
+    u64 slot_count_                 = 0;
+    u64 capacity_                   = 0;
+    u64 size_                       = 0;
 
     Metadata* metadatas_ = &impl::ROBIN_TABLE_METADATA_DUMMY_SENTINEL;
-    EntryT* entries_ = nullptr;
+    EntryT* entries_     = nullptr;
 
     SOUL_NO_UNIQUE_ADDRESS HashFn hash_fn_;
     SOUL_NO_UNIQUE_ADDRESS GetKeyFn get_key_fn_;
@@ -251,13 +271,18 @@ namespace soul
       return *this;
     }
 
-    struct Construct {
-      struct WithCapacity {
+    struct Construct
+    {
+      struct WithCapacity
+      {
       };
-      struct From {
+
+      struct From
+      {
       };
+
       static constexpr auto with_capacity = WithCapacity{};
-      static constexpr auto from = From{};
+      static constexpr auto from          = From{};
     };
 
     RobinTable(Construct::WithCapacity /* tag */, usize min_capacity, AllocatorT& allocator)
@@ -270,12 +295,14 @@ namespace soul
     RobinTable(Construct::From /* tag */, RangeT&& range, AllocatorT& allocator)
         : allocator_(&allocator)
     {
-      if constexpr (std::ranges::sized_range<RangeT> || std::ranges::forward_range<RangeT>) {
+      if constexpr (std::ranges::sized_range<RangeT> || std::ranges::forward_range<RangeT>)
+      {
         const auto size = usize(std::ranges::distance(range));
         do_reserve(size);
       }
       const auto last = std::ranges::end(range);
-      for (auto it = std::ranges::begin(range); it != last; it++) {
+      for (auto it = std::ranges::begin(range); it != last; it++)
+      {
         insert(*it);
       }
     }
@@ -316,7 +343,8 @@ namespace soul
       auto shifts = INITIAL_SHIFTS_;
       while (shifts > 0 &&
              static_cast<usize>(
-               static_cast<f32>(ComputeBucketCount(shifts)) * ConfigV.load_factor) < min_bucket) {
+               static_cast<f32>(ComputeBucketCount(shifts)) * ConfigV.load_factor) < min_bucket)
+      {
         --shifts;
       }
       return shifts;
@@ -325,8 +353,8 @@ namespace soul
     void allocate_slots_from_shift()
     {
       const auto bucket_count = ComputeBucketCount(shifts_);
-      slot_count_ = bucket_count + Metadata::PSL_MAX + 1;
-      capacity_ = ConfigV.load_factor * bucket_count;
+      slot_count_             = bucket_count + Metadata::PSL_MAX + 1;
+      capacity_               = ConfigV.load_factor * bucket_count;
 
       metadatas_ = allocator_->template allocate_array<Metadata>(slot_count_ + 1);
       Metadata::InitMetadatas({metadatas_, slot_count_ + 1});
@@ -335,16 +363,19 @@ namespace soul
 
     void do_reserve(usize min_capacity)
     {
-      const auto old_capacity = capacity_;
+      const auto old_capacity   = capacity_;
       const auto old_slot_count = slot_count_;
-      Metadata* old_metadatas = metadatas_;
-      EntryT* old_entries = entries_;
-      shifts_ = ComputeShiftsForBucketCount(min_capacity);
+      Metadata* old_metadatas   = metadatas_;
+      EntryT* old_entries       = entries_;
+      shifts_                   = ComputeShiftsForBucketCount(min_capacity);
       allocate_slots_from_shift();
-      if (old_slot_count != 0) {
+      if (old_slot_count != 0)
+      {
         size_ = 0;
-        for (usize bucket_index = 0; bucket_index < old_slot_count; bucket_index++) {
-          if (!old_metadatas[bucket_index].is_empty()) {
+        for (usize bucket_index = 0; bucket_index < old_slot_count; bucket_index++)
+        {
+          if (!old_metadatas[bucket_index].is_empty())
+          {
             do_insert(std::move(old_entries[bucket_index]));
             destroy_at(&old_entries[bucket_index]);
           }
@@ -356,29 +387,33 @@ namespace soul
 
     void do_insert(OwnRef<EntryT, true> entry_ref)
     {
-      EntryT entry_tmp = std::move(entry_ref);
-      const auto hash_code = hash_fn_(get_key_fn_(entry_tmp));
-      const auto home_index = home_index_from_hash(hash_code);
+      EntryT entry_tmp            = std::move(entry_ref);
+      const auto hash_code        = hash_fn_(get_key_fn_(entry_tmp));
+      const auto home_index       = home_index_from_hash(hash_code);
       const auto expected_max_psl = math::floor_log2(size_ + 1) + 2;
-      auto bucket_index = home_index;
-      auto metadata = Metadata::FromHash(hash_code);
-      while (!metadatas_[bucket_index].is_empty()) {
+      auto bucket_index           = home_index;
+      auto metadata               = Metadata::FromHash(hash_code);
+      while (!metadatas_[bucket_index].is_empty())
+      {
         auto& current_entry = entries_[bucket_index];
         if (
           metadata == metadatas_[bucket_index] &&
-          get_key_fn_(entry_tmp) == get_key_fn_(current_entry)) {
+          get_key_fn_(entry_tmp) == get_key_fn_(current_entry))
+        {
           current_entry = std::move(entry_tmp);
           return;
-        } else if (metadatas_[bucket_index] < metadata) {
+        } else if (metadatas_[bucket_index] < metadata)
+        {
           using std::swap;
-          EntryT tmp = std::move(current_entry);
+          EntryT tmp    = std::move(current_entry);
           current_entry = std::move(entry_tmp);
-          entry_tmp = std::move(tmp);
+          entry_tmp     = std::move(tmp);
           swap(metadata, metadatas_[bucket_index]);
         }
         metadata.increment_psl();
         bucket_index++;
-        if (metadata.is_psl_overflow()) {
+        if (metadata.is_psl_overflow())
+        {
           SOUL_PANIC("RobinTable: PSL overflow");
         }
         // SOUL_ASSERT_FORMAT(
@@ -397,17 +432,21 @@ namespace soul
       requires(BorrowTrait<KeyT, QueryT>::available)
     auto do_find_index(QueryT key) const -> usize
     {
-      if (SOUL_UNLIKELY(empty())) {
+      if (SOUL_UNLIKELY(empty()))
+      {
         return slot_count();
       }
-      const auto hash_code = hash_fn_(key);
+      const auto hash_code  = hash_fn_(key);
       const auto home_index = home_index_from_hash(hash_code);
-      auto slot_index = home_index;
-      auto metadata = Metadata::FromHash(hash_code);
-      while (!metadatas_[slot_index].is_empty()) {
-        if (metadata == metadatas_[slot_index]) {
+      auto slot_index       = home_index;
+      auto metadata         = Metadata::FromHash(hash_code);
+      while (!metadatas_[slot_index].is_empty())
+      {
+        if (metadata == metadatas_[slot_index])
+        {
           const auto& stored_key = get_key_fn_(entries_[slot_index]);
-          if (key == borrow<QueryT>(stored_key)) {
+          if (key == borrow<QueryT>(stored_key))
+          {
             return slot_index;
           }
         }
@@ -419,16 +458,20 @@ namespace soul
 
     auto do_find_index(const KeyT& key) const -> usize
     {
-      if (SOUL_UNLIKELY(empty())) {
+      if (SOUL_UNLIKELY(empty()))
+      {
         return slot_count();
       }
-      const auto hash_code = hash_fn_(key);
+      const auto hash_code  = hash_fn_(key);
       const auto home_index = home_index_from_hash(hash_code);
-      auto slot_index = home_index;
-      auto metadata = Metadata::FromHash(hash_code);
-      while (!metadatas_[slot_index].is_empty()) {
-        if (metadata == metadatas_[slot_index]) {
-          if (key == get_key_fn_(entries_[slot_index])) {
+      auto slot_index       = home_index;
+      auto metadata         = Metadata::FromHash(hash_code);
+      while (!metadatas_[slot_index].is_empty())
+      {
+        if (metadata == metadatas_[slot_index])
+        {
+          if (key == get_key_fn_(entries_[slot_index]))
+          {
             return slot_index;
           }
         }
@@ -440,16 +483,18 @@ namespace soul
 
     void do_remove_index(usize prev_bucket_index)
     {
-      if (prev_bucket_index == slot_count()) {
+      if (prev_bucket_index == slot_count())
+      {
         return;
       }
       auto bucket_index = next_bucket_index(prev_bucket_index);
-      while (metadatas_[bucket_index].is_psl_greater_than_one() && bucket_index < slot_count()) {
+      while (metadatas_[bucket_index].is_psl_greater_than_one() && bucket_index < slot_count())
+      {
         metadatas_[prev_bucket_index] = metadatas_[bucket_index];
         metadatas_[prev_bucket_index].decrement_psl();
         entries_[prev_bucket_index] = std::move(entries_[bucket_index]);
-        prev_bucket_index = bucket_index;
-        bucket_index = next_bucket_index(bucket_index);
+        prev_bucket_index           = bucket_index;
+        bucket_index                = next_bucket_index(bucket_index);
       }
       metadatas_[prev_bucket_index] = Metadata::Empty();
       destroy_at(&entries_[prev_bucket_index]);
@@ -458,18 +503,25 @@ namespace soul
 
     void duplicate_entries(const RobinTable& other)
     {
-      if constexpr (ts_copy<EntryT>) {
+      if constexpr (ts_copy<EntryT>)
+      {
         memcpy(entries_, other.entries_, sizeof(EntryT) * other.capacity_);
-      } else if constexpr (ts_clone<EntryT>) {
-        for (usize slot_index = 0; slot_index < other.slot_count(); ++slot_index) {
-          if (metadatas_[slot_index].is_empty()) {
+      } else if constexpr (ts_clone<EntryT>)
+      {
+        for (usize slot_index = 0; slot_index < other.slot_count(); ++slot_index)
+        {
+          if (metadatas_[slot_index].is_empty())
+          {
             continue;
           }
           clone_at(entries_ + slot_index, other.entries_[slot_index]);
         }
-      } else {
-        for (usize slot_index = 0; slot_index < other.slot_count(); ++slot_index) {
-          if (metadatas_[slot_index].is_empty()) {
+      } else
+      {
+        for (usize slot_index = 0; slot_index < other.slot_count(); ++slot_index)
+        {
+          if (metadatas_[slot_index].is_empty())
+          {
             continue;
           }
           construct_at(entries_ + 1, other.entries_[slot_index]);
@@ -479,9 +531,12 @@ namespace soul
 
     void destruct_entries()
     {
-      if constexpr (can_nontrivial_destruct_v<EntryT>) {
-        for (usize slot_index = 0; slot_index < slot_count(); ++slot_index) {
-          if (!metadatas_[slot_index].is_empty()) {
+      if constexpr (can_nontrivial_destruct_v<EntryT>)
+      {
+        for (usize slot_index = 0; slot_index < slot_count(); ++slot_index)
+        {
+          if (!metadatas_[slot_index].is_empty())
+          {
             destroy_at(&entries_[slot_index]);
           }
         }
@@ -513,7 +568,8 @@ namespace soul
 
     ~RobinTable()
     {
-      if (slot_count_ != 0) {
+      if (slot_count_ != 0)
+      {
         destruct_entries();
         allocator_->deallocate_array(metadatas_, slot_count_ + 1);
         allocator_->deallocate_array(entries_, slot_count_);
@@ -538,7 +594,10 @@ namespace soul
       return RobinTable(*this);
     }
 
-    void clone_from(const RobinTable& other) { *this = other; }
+    void clone_from(const RobinTable& other)
+    {
+      *this = other;
+    }
 
     friend void swap(RobinTable& lhs, RobinTable& rhs)
     {
@@ -561,17 +620,18 @@ namespace soul
 
     void cleanup()
     {
-      if (slot_count_ != 0) {
+      if (slot_count_ != 0)
+      {
         destruct_entries();
         allocator_->deallocate_array(metadatas_, slot_count_ + 1);
         allocator_->deallocate_array(entries_, slot_count_);
 
-        shifts_ = INITIAL_SHIFTS_;
+        shifts_     = INITIAL_SHIFTS_;
         slot_count_ = 0;
-        capacity_ = 0;
-        size_ = 0;
-        metadatas_ = &impl::ROBIN_TABLE_METADATA_DUMMY_SENTINEL;
-        entries_ = nullptr;
+        capacity_   = 0;
+        size_       = 0;
+        metadatas_  = &impl::ROBIN_TABLE_METADATA_DUMMY_SENTINEL;
+        entries_    = nullptr;
       }
     }
 
@@ -645,28 +705,34 @@ namespace soul
 
     void reserve(usize capacity)
     {
-      if (capacity > capacity_) {
+      if (capacity > capacity_)
+      {
         do_reserve(capacity);
       }
     }
 
     void insert(OwnRef<EntryT, true> entry)
     {
-      if (size_ + 1 > capacity_) {
-        const auto old_capacity = capacity_;
+      if (size_ + 1 > capacity_)
+      {
+        const auto old_capacity   = capacity_;
         const auto old_slot_count = slot_count_;
-        Metadata* old_metadatas = metadatas_;
-        EntryT* old_entries = entries_;
+        Metadata* old_metadatas   = metadatas_;
+        EntryT* old_entries       = entries_;
 
         shifts_--;
         allocate_slots_from_shift();
 
-        if (old_slot_count == 0) {
+        if (old_slot_count == 0)
+        {
           do_insert(std::move(entry));
-        } else {
+        } else
+        {
           size_ = 0;
-          for (usize bucket_index = 0; bucket_index < old_slot_count; bucket_index++) {
-            if (!old_metadatas[bucket_index].is_empty()) {
+          for (usize bucket_index = 0; bucket_index < old_slot_count; bucket_index++)
+          {
+            if (!old_metadatas[bucket_index].is_empty())
+            {
               do_insert(std::move(old_entries[bucket_index]));
               destroy_at(&old_entries[bucket_index]);
             }
@@ -675,7 +741,8 @@ namespace soul
           allocator_->deallocate_array(old_metadatas, slot_count_ + 1);
           allocator_->deallocate_array(old_entries, old_slot_count);
         }
-      } else {
+      } else
+      {
         do_insert(std::move(entry));
       }
     }
@@ -684,7 +751,8 @@ namespace soul
       requires(BorrowTrait<KeyT, QueryT>::available)
     auto find(QueryT key) -> iterator
     {
-      if (slot_count_ == 0) {
+      if (slot_count_ == 0)
+      {
         return end();
       }
       const auto index = do_find_index(key);
@@ -695,7 +763,8 @@ namespace soul
       requires(BorrowTrait<KeyT, QueryT>::available)
     auto find(QueryT key) const -> const_iterator
     {
-      if (slot_count_ == 0) {
+      if (slot_count_ == 0)
+      {
         return end();
       }
       const auto index = do_find_index(key);
@@ -704,7 +773,8 @@ namespace soul
 
     auto find(const KeyT& key) -> iterator
     {
-      if (slot_count_ == 0) {
+      if (slot_count_ == 0)
+      {
         return end();
       }
       const auto index = do_find_index(key);
@@ -713,7 +783,8 @@ namespace soul
 
     auto find(const KeyT& key) const -> const_iterator
     {
-      if (slot_count_ == 0) {
+      if (slot_count_ == 0)
+      {
         return end();
       }
       const auto index = do_find_index(key);
@@ -760,7 +831,8 @@ namespace soul
       requires(BorrowTrait<KeyT, QueryT>::available)
     void remove(QueryT key)
     {
-      if (slot_count() == 0) {
+      if (slot_count() == 0)
+      {
         return;
       }
       auto prev_bucket_index = do_find_index(key);
@@ -769,7 +841,8 @@ namespace soul
 
     void remove(const KeyT& key)
     {
-      if (slot_count() == 0) {
+      if (slot_count() == 0)
+      {
         return;
       }
       auto prev_bucket_index = do_find_index(key);

@@ -14,12 +14,12 @@ namespace soul::gpu
     typename KeyType,
     typename ValType,
     is_shared_lockable_v SharedLockable = RWSpinMutex,
-    typename Hash = HashOp<KeyType>,
-    typename KeyEqual = std::equal_to<KeyType>>
+    typename Hash                       = HashOp<KeyType>,
+    typename KeyEqual                   = std::equal_to<KeyType>>
   class ConcurrentObjectCache
   {
   public:
-    using ID = typename ObjectPool<ValType>::ID;
+    using ID                    = typename ObjectPool<ValType>::ID;
     static constexpr ID NULLVAL = ObjectPool<ValType>::NULLVAL;
 
     explicit ConcurrentObjectCache(memory::Allocator* allocator = get_default_allocator())
@@ -30,19 +30,21 @@ namespace soul::gpu
     {
     }
 
-    ConcurrentObjectCache(const ConcurrentObjectCache&) = delete;
+    ConcurrentObjectCache(const ConcurrentObjectCache&)                    = delete;
     auto operator=(const ConcurrentObjectCache&) -> ConcurrentObjectCache& = delete;
-    ConcurrentObjectCache(ConcurrentObjectCache&&) = delete;
-    auto operator=(ConcurrentObjectCache&&) -> ConcurrentObjectCache& = delete;
-    ~ConcurrentObjectCache() = default;
+    ConcurrentObjectCache(ConcurrentObjectCache&&)                         = delete;
+    auto operator=(ConcurrentObjectCache&&) -> ConcurrentObjectCache&      = delete;
+    ~ConcurrentObjectCache()                                               = default;
 
     auto find(const KeyType& key) -> ID
     {
-      if (read_only_map_.contains(key)) {
+      if (read_only_map_.contains(key))
+      {
         return read_only_map_[key];
       }
       std::shared_lock lock(mutex_);
-      if (fallback_map_.contains(key)) {
+      if (fallback_map_.contains(key))
+      {
         return fallback_map_[key];
       }
       return NULLVAL;
@@ -52,7 +54,8 @@ namespace soul::gpu
     auto create(const KeyType& key, Fn func, Args&&... args) -> ID
     {
       std::unique_lock lock(mutex_);
-      if (fallback_map_.contains(key)) {
+      if (fallback_map_.contains(key))
+      {
         return fallback_map_[key];
       }
       fallback_keys_.push_back(key);
@@ -63,14 +66,18 @@ namespace soul::gpu
 
     auto on_new_frame() -> void
     {
-      for (const KeyType& key : fallback_keys_) {
+      for (const KeyType& key : fallback_keys_)
+      {
         read_only_map_.insert(key, fallback_map_[key]);
       }
       fallback_keys_.clear();
       fallback_map_.clear();
     }
 
-    auto get(ID id) const -> ValType* { return object_pool_.get(id); }
+    auto get(ID id) const -> ValType*
+    {
+      return object_pool_.get(id);
+    }
 
   private:
     HashMap<KeyType, ID> read_only_map_;
@@ -85,12 +92,12 @@ namespace soul::gpu
     typename ValType,
     std::size_t RingSize,
     typename ValDeleter,
-    typename Hash = HashOp<KeyType>,
+    typename Hash     = HashOp<KeyType>,
     typename KeyEqual = std::equal_to<KeyType>>
   class RingCache
   {
   public:
-    using ID = ValType*;
+    using ID                                = ValType*;
     static constexpr const ValType* NULLVAL = nullptr;
 
     explicit RingCache(
@@ -99,15 +106,17 @@ namespace soul::gpu
     {
     }
 
-    RingCache(const RingCache&) = delete;
+    RingCache(const RingCache&)                    = delete;
     auto operator=(const RingCache&) -> RingCache& = delete;
-    RingCache(RingCache&&) = delete;
-    auto operator=(RingCache&&) -> RingCache& = delete;
+    RingCache(RingCache&&)                         = delete;
+    auto operator=(RingCache&&) -> RingCache&      = delete;
 
     ~RingCache()
     {
-      for (Ring& ring : rings_) {
-        for (Item& item : ring) {
+      for (Ring& ring : rings_)
+      {
+        for (Item& item : ring)
+        {
           deleter_(item.val);
         }
       }
@@ -117,10 +126,12 @@ namespace soul::gpu
     auto get_or_create(const KeyType& key, Fn func, Args&&... args) -> ID
     {
       ItemKey item_search_key = get_search_key(key);
-      if (map_.contains(item_search_key)) {
+      if (map_.contains(item_search_key))
+      {
         auto item_id = map_[item_search_key];
-        Item* item = object_pool_.get(item_id);
-        if (item->index != frame_index_) {
+        Item* item   = object_pool_.get(item_id);
+        if (item->index != frame_index_)
+        {
           rings_[frame_index_].splice(rings_[frame_index_].begin, *item);
           item->index = frame_index_;
         }
@@ -139,11 +150,12 @@ namespace soul::gpu
 
     auto on_new_frame() -> void
     {
-      frame_index_ = (frame_index_ + 1) % RingSize;
+      frame_index_     = (frame_index_ + 1) % RingSize;
       usize free_count = 0;
-      for (Item& item : rings_[frame_index_]) {
+      for (Item& item : rings_[frame_index_])
+      {
         auto search_key = get_search_key(item.key);
-        auto item_id = map_[search_key];
+        auto item_id    = map_[search_key];
         map_.remove(search_key);
         deleter_(item.val);
         object_pool_.destroy(item_id);
@@ -152,42 +164,52 @@ namespace soul::gpu
       rings_[frame_index_].clear();
     }
 
-    auto get(ID id) const -> ValType* { return id; }
+    auto get(ID id) const -> ValType*
+    {
+      return id;
+    }
 
   private:
-    struct Item : public IntrusiveListNode {
+    struct Item : public IntrusiveListNode
+    {
       KeyType key;
       ValType val;
       usize index = 0;
     };
 
-    struct ItemKey {
-      std::size_t hash = 0;
+    struct ItemKey
+    {
+      std::size_t hash   = 0;
       const KeyType* key = nullptr;
-      ItemKey() = default;
+      ItemKey()          = default;
 
       ItemKey(std::size_t hash, const KeyType* key) : hash(hash), key(key) {}
     };
 
-    struct ItemKeyHashOperator {
+    struct ItemKeyHashOperator
+    {
       auto operator()(const ItemKey& item_key) const noexcept -> std::size_t
       {
-        if (item_key.key == nullptr) {
+        if (item_key.key == nullptr)
+        {
           return 0u;
         }
         return item_key.hash;
       }
     };
 
-    struct ItemKeyHashCompareOperator {
+    struct ItemKeyHashCompareOperator
+    {
       KeyEqual key_equal_op_;
 
       auto operator()(const ItemKey& item_key1, const ItemKey& item_key2) const noexcept -> b8
       {
-        if (item_key1.key == nullptr || item_key2.key == nullptr) {
+        if (item_key1.key == nullptr || item_key2.key == nullptr)
+        {
           return false;
         }
-        if (item_key1.hash != item_key2.hash) {
+        if (item_key1.hash != item_key2.hash)
+        {
           return false;
         }
         return key_equal_op_(*item_key1.key, *item_key2.key);
@@ -196,7 +218,10 @@ namespace soul::gpu
 
     using ItemID = typename ObjectPool<Item>::ID;
 
-    auto get_search_key(const KeyType& key) -> ItemKey { return ItemKey(hash_op_(key), &key); }
+    auto get_search_key(const KeyType& key) -> ItemKey
+    {
+      return ItemKey(hash_op_(key), &key);
+    }
 
     auto get_persistent_key(typename ObjectPool<Item>::ID id) -> ItemKey
     {

@@ -9,7 +9,15 @@
 
 namespace soul
 {
-  enum class LogLevel : u8 { FATAL, WARN, ERROR, INFO, DEBUG, COUNT };
+  enum class LogLevel : u8
+  {
+    FATAL,
+    WARN,
+    ERROR,
+    INFO,
+    DEBUG,
+    COUNT
+  };
 } // namespace soul
 
 namespace soul::memory
@@ -43,7 +51,8 @@ namespace soul::impl
     const char* const file_name, const usize line, std::format_string<Args...> fmt, Args&&... args)
     -> void
   {
-    if (log_level <= impl::LOG_LEVEL) {
+    if (log_level <= impl::LOG_LEVEL)
+    {
       String message;
       message.appendf(
         "[{}]:{}:{}::", impl::LOG_PREFIX[log_level], relative_from_project_path(file_name), line);
@@ -96,10 +105,10 @@ namespace soul::impl
   auto flush_logs() -> void;
 } // namespace soul::impl
 
-#define SOUL_LOG_DEBUG(...) soul::impl::log_debug(__FILE__, __LINE__, ##__VA_ARGS__)
-#define SOUL_LOG_INFO(...) soul::impl::log_info(__FILE__, __LINE__, ##__VA_ARGS__)
-#define SOUL_LOG_WARN(...) soul::impl::log_warn(__FILE__, __LINE__, ##__VA_ARGS__)
-#define SOUL_LOG_ERROR(...) soul::impl::log_error(__FILE__, __LINE__, ##__VA_ARGS__)
-#define SOUL_LOG_FATAL(...) soul::impl::log_fatal(__FILE__, __LINE__, ##__VA_ARGS__)
+#define SOUL_LOG_DEBUG(...)       soul::impl::log_debug(__FILE__, __LINE__, ##__VA_ARGS__)
+#define SOUL_LOG_INFO(...)        soul::impl::log_info(__FILE__, __LINE__, ##__VA_ARGS__)
+#define SOUL_LOG_WARN(...)        soul::impl::log_warn(__FILE__, __LINE__, ##__VA_ARGS__)
+#define SOUL_LOG_ERROR(...)       soul::impl::log_error(__FILE__, __LINE__, ##__VA_ARGS__)
+#define SOUL_LOG_FATAL(...)       soul::impl::log_fatal(__FILE__, __LINE__, ##__VA_ARGS__)
 #define SOUL_FLUSH_LOG(log_level) soul::impl::flush_log(log_level)
-#define SOUL_FLUSH_LOGS() soul::impl::flush_logs()
+#define SOUL_FLUSH_LOGS()         soul::impl::flush_logs()

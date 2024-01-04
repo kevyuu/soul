@@ -11,9 +11,9 @@ namespace soul
     using base_type = std::filesystem::path;
 
   public:
-    constexpr Path(Path&& other) = default;
+    constexpr Path(Path&& other)                   = default;
     auto operator=(Path&& other) noexcept -> Path& = default;
-    constexpr ~Path() = default;
+    constexpr ~Path()                              = default;
 
     [[nodiscard]]
     static auto From(StringView string_view) -> Path
@@ -27,7 +27,10 @@ namespace soul
       return Path(*this);
     }
 
-    auto clone_from(const Path& path) { *this = path; }
+    auto clone_from(const Path& path)
+    {
+      *this = path;
+    }
 
     auto operator/=(StringView str) -> Path&
     {
@@ -35,7 +38,10 @@ namespace soul
       return *this;
     }
 
-    void clear() noexcept { return base_type::clear(); }
+    void clear() noexcept
+    {
+      return base_type::clear();
+    }
 
     [[nodiscard]]
     auto canonical() const -> Path
@@ -85,7 +91,10 @@ namespace soul
       return Path(base_type::extension());
     }
 
-    void swap(Path& other) noexcept { base_type::swap(other); }
+    void swap(Path& other) noexcept
+    {
+      base_type::swap(other);
+    }
 
     friend auto operator<=>(const Path& lhs, const Path& rhs) noexcept = default;
 

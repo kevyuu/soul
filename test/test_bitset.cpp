@@ -15,11 +15,13 @@ auto verify_empty_bitset(const soul::Bitset<BitCount, BlockT> bitset) -> void
   SOUL_TEST_ASSERT_FALSE(bitset.find_first().is_some());
   SOUL_TEST_ASSERT_FALSE(bitset.find_last().is_some());
   SOUL_TEST_ASSERT_EQ(bitset.size(), BitCount);
-  for (usize i = 0; i < bitset.size(); i++) {
+  for (usize i = 0; i < bitset.size(); i++)
+  {
     SOUL_TEST_ASSERT_FALSE(bitset.test(i)) << ", Index : " << i;
     SOUL_TEST_ASSERT_FALSE(bitset[i]) << ", Index : " << i;
   }
-  for (usize i = 0; i < BitCount; i++) {
+  for (usize i = 0; i < BitCount; i++)
+  {
     SOUL_TEST_ASSERT_FALSE(bitset.find_next(i).is_some());
     SOUL_TEST_ASSERT_FALSE(bitset.find_prev(i).is_some());
   }
@@ -33,14 +35,16 @@ auto verify_full_bitset(const soul::Bitset<BitCount, BlockT> bitset) -> void
   SOUL_TEST_ASSERT_FALSE(bitset.none());
   SOUL_TEST_ASSERT_EQ(bitset.count(), BitCount);
   SOUL_TEST_ASSERT_EQ(bitset.size(), BitCount);
-  for (usize i = 0; i < bitset.size(); i++) {
+  for (usize i = 0; i < bitset.size(); i++)
+  {
     SOUL_TEST_ASSERT_TRUE(bitset.test(i)) << ", Index : " << i;
     SOUL_TEST_ASSERT_TRUE(bitset[i]) << ", Index : " << i;
   }
 
   SOUL_TEST_ASSERT_EQ(bitset.find_first().unwrap(), 0);
   SOUL_TEST_ASSERT_EQ(bitset.find_last().unwrap(), BitCount - 1);
-  for (usize i = 0; i < BitCount - 1; i++) {
+  for (usize i = 0; i < BitCount - 1; i++)
+  {
     SOUL_TEST_ASSERT_EQ(bitset.find_next(i).unwrap(), i + 1) << ", Index : " << i;
     SOUL_TEST_ASSERT_EQ(bitset.find_prev(i + 1).unwrap(), i) << ", Index : " << i;
   }
@@ -52,7 +56,8 @@ template <usize BitCount, soul::ts_bit_block BlockT>
 auto verify_bitset(const soul::Bitset<BitCount, BlockT> bitset, const std::set<u64>& positions)
   -> void
 {
-  for (usize position = 0; position < BitCount; position++) {
+  for (usize position = 0; position < BitCount; position++)
+  {
     const auto expected = positions.contains(position);
     SOUL_TEST_ASSERT_EQ(bitset.test(position), expected) << ", Position : " << position;
     SOUL_TEST_ASSERT_EQ(bitset[position], expected) << ", Position : " << position;
@@ -67,10 +72,12 @@ auto verify_bitset(const soul::Bitset<BitCount, BlockT> bitset, const std::set<u
 template <usize BitCount, typename BlockT = void>
 auto test_bitset_constructor() -> void
 {
-  if constexpr (std::is_void_v<BlockT>) {
+  if constexpr (std::is_void_v<BlockT>)
+  {
     soul::Bitset<BitCount> bitset;
     verify_empty_bitset(bitset);
-  } else {
+  } else
+  {
     soul::Bitset<BitCount, BlockT> bitset;
     verify_empty_bitset(bitset);
   }
@@ -96,7 +103,8 @@ auto test_bitset_set(const std::set<u64>& positions) -> void
     soul::Bitset<BitCount, BlockT>>;
 
   Bitset bitset;
-  for (auto position : positions) {
+  for (auto position : positions)
+  {
     bitset.set(position);
     SOUL_TEST_ASSERT_TRUE(bitset.test(position));
     SOUL_TEST_ASSERT_TRUE(bitset[position]);
@@ -116,8 +124,10 @@ template <usize BitCount, soul::ts_bit_block BlockT>
 auto generate_position_set(const soul::Bitset<BitCount, BlockT>& bitset) -> std::set<u64>
 {
   std::set<u64> result;
-  for (u32 position = 0; position < BitCount; position++) {
-    if (bitset.test(position)) {
+  for (u32 position = 0; position < BitCount; position++)
+  {
+    if (bitset.test(position))
+    {
       result.insert(position);
     }
   }
@@ -132,7 +142,8 @@ auto generate_random_bitset(soul::Bitset<BitCount, BlockT>& bitset, const usize 
   std::vector<u32> vec(BitCount);
   std::iota(vec.begin(), vec.end(), 0);
   std::ranges::shuffle(vec, random_engine);
-  for (usize i = 0; i < set_count; i++) {
+  for (usize i = 0; i < set_count; i++)
+  {
     bitset.set(vec[i]);
   }
 }
@@ -141,7 +152,8 @@ template <usize BitCount, soul::ts_bit_block BlockT = soul::default_block_type_t
 auto generate_bitset(const std::set<u64>& positions) -> soul::Bitset<BitCount, BlockT>
 {
   soul::Bitset<BitCount, BlockT> result;
-  for (auto position : positions) {
+  for (auto position : positions)
+  {
     result.set(position);
   }
   return result;
@@ -167,12 +179,14 @@ public:
 
 TEST_F(TestBitsetManipulation, TestBitsetSetFalse)
 {
-  auto test_set_false = []<usize BitCount, soul::ts_bit_block BlockT>(
-                          soul::Bitset<BitCount, BlockT> bitset,
-                          const std::set<u64> removed_positions) {
+  auto test_set_false =
+    []<usize BitCount, soul::ts_bit_block BlockT>(
+      soul::Bitset<BitCount, BlockT> bitset, const std::set<u64> removed_positions)
+  {
     std::set<u64> expected_set = generate_position_set(bitset);
 
-    for (auto position : removed_positions) {
+    for (auto position : removed_positions)
+    {
       bitset.set(position, false);
       expected_set.erase(position);
     }
@@ -190,10 +204,11 @@ TEST_F(TestBitsetManipulation, TestBitsetSetFalse)
 TEST_F(TestBitsetManipulation, TestBitsetSetAll)
 {
   auto test_set_all =
-    []<usize BitCount, soul::ts_bit_block BlockT>(soul::Bitset<BitCount, BlockT> bitset) {
-      bitset.set();
-      verify_full_bitset(bitset);
-    };
+    []<usize BitCount, soul::ts_bit_block BlockT>(soul::Bitset<BitCount, BlockT> bitset)
+  {
+    bitset.set();
+    verify_full_bitset(bitset);
+  };
 
   SOUL_TEST_RUN(test_set_all(empty_bitset));
   SOUL_TEST_RUN(test_set_all(filled_bitset1));
@@ -205,10 +220,11 @@ TEST_F(TestBitsetManipulation, TestBitsetSetAll)
 TEST_F(TestBitsetManipulation, TestBitsetReset)
 {
   auto test_reset =
-    []<usize BitCount, soul::ts_bit_block BlockT>(soul::Bitset<BitCount, BlockT> bitset) {
-      bitset.reset();
-      verify_empty_bitset(bitset);
-    };
+    []<usize BitCount, soul::ts_bit_block BlockT>(soul::Bitset<BitCount, BlockT> bitset)
+  {
+    bitset.reset();
+    verify_empty_bitset(bitset);
+  };
 
   SOUL_TEST_RUN(test_reset(empty_bitset));
   SOUL_TEST_RUN(test_reset(filled_bitset1));
@@ -220,16 +236,19 @@ TEST_F(TestBitsetManipulation, TestBitsetReset)
 TEST_F(TestBitsetManipulation, TestBitsetFlip)
 {
   auto test_flip =
-    []<usize BitCount, soul::ts_bit_block BlockT>(soul::Bitset<BitCount, BlockT> bitset) {
-      std::set<u64> expected_result;
-      for (usize i = 0; i < BitCount; i++) {
-        if (!bitset.test(i)) {
-          expected_result.insert(i);
-        }
+    []<usize BitCount, soul::ts_bit_block BlockT>(soul::Bitset<BitCount, BlockT> bitset)
+  {
+    std::set<u64> expected_result;
+    for (usize i = 0; i < BitCount; i++)
+    {
+      if (!bitset.test(i))
+      {
+        expected_result.insert(i);
       }
-      bitset.flip();
-      verify_bitset(bitset, expected_result);
-    };
+    }
+    bitset.flip();
+    verify_bitset(bitset, expected_result);
+  };
 
   SOUL_TEST_RUN(test_flip(empty_bitset));
   SOUL_TEST_RUN(test_flip(filled_bitset1));
@@ -241,15 +260,18 @@ TEST_F(TestBitsetManipulation, TestBitsetFlip)
 TEST(TestBitsetOperator, TestBitsetOperatorNegate)
 {
   auto test_operator_negate =
-    []<usize BitCount, soul::ts_bit_block BlockT>(soul::Bitset<BitCount, BlockT> bitset) {
-      std::set<u64> expected_result;
-      for (usize i = 0; i < BitCount; i++) {
-        if (!bitset.test(i)) {
-          expected_result.insert(i);
-        }
+    []<usize BitCount, soul::ts_bit_block BlockT>(soul::Bitset<BitCount, BlockT> bitset)
+  {
+    std::set<u64> expected_result;
+    for (usize i = 0; i < BitCount; i++)
+    {
+      if (!bitset.test(i))
+      {
+        expected_result.insert(i);
       }
-      verify_bitset(~bitset, expected_result);
-    };
+    }
+    verify_bitset(~bitset, expected_result);
+  };
 
   SOUL_TEST_RUN(test_operator_negate(generate_bitset<100>({0, 99})));
   SOUL_TEST_RUN(test_operator_negate(generate_bitset<100>({})));
@@ -262,7 +284,8 @@ TEST(TestBitsetOperator, TestBitsetOperatorAnd)
   auto test_operator_and = []<usize BitCount, soul::ts_bit_block BlockT>(
                              soul::Bitset<BitCount, BlockT> bitset1,
                              soul::Bitset<BitCount, BlockT> bitset2,
-                             const std::set<u64> expected_result) {
+                             const std::set<u64> expected_result)
+  {
     soul::Bitset<BitCount, BlockT> bitset_result = bitset1 & bitset2;
     verify_bitset(bitset_result, expected_result);
     bitset1 &= bitset2;
@@ -286,7 +309,8 @@ TEST(TestBitsetOperator, TestBitsetOperatorOr)
   auto test_operator_or = []<usize BitCount, soul::ts_bit_block BlockT>(
                             soul::Bitset<BitCount, BlockT> bitset1,
                             soul::Bitset<BitCount, BlockT> bitset2,
-                            const std::set<u64> expected_result) {
+                            const std::set<u64> expected_result)
+  {
     soul::Bitset<BitCount, BlockT> bitset_result = bitset1 | bitset2;
     verify_bitset(bitset_result, expected_result);
     bitset1 |= bitset2;
@@ -308,12 +332,15 @@ TEST(TestBitsetOperator, TestBitsetOperatorOr)
 
 TEST(TestBitsetOperator, TestBitsetOperatorXor)
 {
-  auto test_operator_xor = []<usize BitCount, soul::ts_bit_block BlockT>(
-                             soul::Bitset<BitCount, BlockT> bitset1,
-                             soul::Bitset<BitCount, BlockT> bitset2) {
+  auto test_operator_xor =
+    []<usize BitCount, soul::ts_bit_block BlockT>(
+      soul::Bitset<BitCount, BlockT> bitset1, soul::Bitset<BitCount, BlockT> bitset2)
+  {
     std::set<u64> expected_result;
-    for (usize i = 0; i < BitCount; i++) {
-      if (bitset1.test(i) != bitset2.test(i)) {
+    for (usize i = 0; i < BitCount; i++)
+    {
+      if (bitset1.test(i) != bitset2.test(i))
+      {
         expected_result.insert(i);
       }
     }
@@ -336,19 +363,26 @@ TEST(TestBitsetOperator, TestBitsetOperatorXor)
 TEST(TestBitsetForEach, TestBitsetForEach)
 {
   auto test_for_each =
-    []<usize BitCount, soul::ts_bit_block BlockT>(soul::Bitset<BitCount, BlockT> bitset) {
-      std::vector<usize> expected_positions;
-      for (usize i = 0; i < BitCount; i++) {
-        if (bitset.test(i)) {
-          expected_positions.push_back(i);
-        }
+    []<usize BitCount, soul::ts_bit_block BlockT>(soul::Bitset<BitCount, BlockT> bitset)
+  {
+    std::vector<usize> expected_positions;
+    for (usize i = 0; i < BitCount; i++)
+    {
+      if (bitset.test(i))
+      {
+        expected_positions.push_back(i);
       }
+    }
 
-      std::vector<usize> positions;
-      bitset.for_each([&positions](usize position) { positions.push_back(position); });
+    std::vector<usize> positions;
+    bitset.for_each(
+      [&positions](usize position)
+      {
+        positions.push_back(position);
+      });
 
-      SOUL_TEST_ASSERT_TRUE(std::ranges::equal(positions, expected_positions));
-    };
+    SOUL_TEST_ASSERT_TRUE(std::ranges::equal(positions, expected_positions));
+  };
 
   SOUL_TEST_RUN(test_for_each(generate_bitset<100>({0, 99})));
   SOUL_TEST_RUN(test_for_each(generate_bitset<100>({})));
@@ -359,24 +393,38 @@ TEST(TestBitsetForEach, TestBitsetForEach)
 TEST(TestBitSetFindIf, TestBitSetFindIf)
 {
   auto test_find_if = []<usize BitCount, soul::ts_bit_block BlockT>(
-                        soul::Bitset<BitCount, BlockT> bitset, std::vector<usize> test_positions) {
+                        soul::Bitset<BitCount, BlockT> bitset, std::vector<usize> test_positions)
+  {
     std::vector<usize> expected_positions;
-    for (usize i = 0; i < BitCount; i++) {
-      if (bitset.test(i)) {
+    for (usize i = 0; i < BitCount; i++)
+    {
+      if (bitset.test(i))
+      {
         expected_positions.push_back(i);
       }
     }
 
     std::vector<usize> positions;
-    bitset.for_each([&positions](usize position) { positions.push_back(position); });
+    bitset.for_each(
+      [&positions](usize position)
+      {
+        positions.push_back(position);
+      });
 
     SOUL_TEST_ASSERT_TRUE(std::ranges::equal(positions, expected_positions));
 
-    for (auto position : test_positions) {
-      const auto find_result = bitset.find_if([position](usize bit) { return bit == position; });
-      if (position < BitCount && bitset.test(position)) {
+    for (auto position : test_positions)
+    {
+      const auto find_result = bitset.find_if(
+        [position](usize bit)
+        {
+          return bit == position;
+        });
+      if (position < BitCount && bitset.test(position))
+      {
         SOUL_TEST_ASSERT_EQ(find_result.unwrap(), position);
-      } else {
+      } else
+      {
         SOUL_TEST_ASSERT_FALSE(find_result.is_some());
       }
     }

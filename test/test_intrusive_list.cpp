@@ -16,14 +16,21 @@ namespace soul
   }
 } // namespace soul
 
-struct IntNode : public soul::IntrusiveListNode {
+struct IntNode : public soul::IntrusiveListNode
+{
   int x;
 
   IntNode(int x = 0) : x(x) {}
 
-  operator int() const { return x; }
+  operator int() const
+  {
+    return x;
+  }
 
-  auto operator==(const IntNode& rhs) const -> b8 { return x == rhs.x; }
+  auto operator==(const IntNode& rhs) const -> b8
+  {
+    return x == rhs.x;
+  }
 };
 
 template <typename T>
@@ -47,7 +54,8 @@ auto verify_sequence(
 {
   SOUL_TEST_ASSERT_EQ(test_list.empty(), expected_values.empty());
   SOUL_TEST_ASSERT_EQ(test_list.size(), expected_values.size());
-  if (!expected_values.empty()) {
+  if (!expected_values.empty())
+  {
     SOUL_TEST_ASSERT_EQ(test_list.front(), expected_values.front());
     SOUL_TEST_ASSERT_EQ(test_list.back(), expected_values.back());
   }
@@ -60,11 +68,15 @@ auto verify_sequence(
     expected_values.crbegin(), expected_values.crend(), test_list.rbegin(), test_list.rend()));
   SOUL_TEST_ASSERT_TRUE(std::equal(
     expected_values.crbegin(), expected_values.crend(), test_list.crbegin(), test_list.crend()));
-  SOUL_TEST_ASSERT_TRUE(
-    std::all_of(expected_objects.cbegin(), expected_objects.cend(), [&test_list](const T* val) {
+  SOUL_TEST_ASSERT_TRUE(std::all_of(
+    expected_objects.cbegin(),
+    expected_objects.cend(),
+    [&test_list](const T* val)
+    {
       return test_list.contains(*val);
     }));
-  for (usize obj_idx = 0; obj_idx < expected_objects.size(); obj_idx++) {
+  for (usize obj_idx = 0; obj_idx < expected_objects.size(); obj_idx++)
+  {
     auto location = test_list.locate(*expected_objects[obj_idx]);
     SOUL_TEST_ASSERT_EQ(std::distance(test_list.begin(), location), obj_idx);
     auto const_location = test_list.locate(*static_cast<const T*>(expected_objects[obj_idx]));
@@ -75,25 +87,29 @@ auto verify_sequence(
 TEST(TestIntrusiveListPushBack, TestIntrusiveListPushBack)
 {
   auto test_push_back =
-    []<typename T>(soul::IntrusiveList<T>& test_list, std::vector<T>& new_values) {
-      SOUL_TEST_ASSERT_NE(new_values.size(), 0);
-      std::vector<T> expected_values(test_list.cbegin(), test_list.cend());
-      expected_values.insert(expected_values.end(), new_values.cbegin(), new_values.cend());
+    []<typename T>(soul::IntrusiveList<T>& test_list, std::vector<T>& new_values)
+  {
+    SOUL_TEST_ASSERT_NE(new_values.size(), 0);
+    std::vector<T> expected_values(test_list.cbegin(), test_list.cend());
+    expected_values.insert(expected_values.end(), new_values.cbegin(), new_values.cend());
 
-      std::vector<T*> expected_objects;
-      expected_objects.reserve(expected_values.size());
-      for (T& val : test_list) {
-        expected_objects.push_back(&val);
-      }
-      for (T& val : new_values) {
-        expected_objects.push_back(&val);
-      }
+    std::vector<T*> expected_objects;
+    expected_objects.reserve(expected_values.size());
+    for (T& val : test_list)
+    {
+      expected_objects.push_back(&val);
+    }
+    for (T& val : new_values)
+    {
+      expected_objects.push_back(&val);
+    }
 
-      for (T& val : new_values) {
-        test_list.push_back(val);
-      }
-      verify_sequence(test_list, expected_values, expected_objects);
-    };
+    for (T& val : new_values)
+    {
+      test_list.push_back(val);
+    }
+    verify_sequence(test_list, expected_values, expected_objects);
+  };
 
   soul::IntrusiveList<IntNode> list;
   auto vec_val_single = generate_random_sequence<IntNode>(1);
@@ -107,25 +123,29 @@ TEST(TestIntrusiveListPushBack, TestIntrusiveListPushBack)
 TEST(TestIntrusiveListPushFront, TestIntrusiveListPushFront)
 {
   auto test_push_front =
-    []<typename T>(soul::IntrusiveList<T>& test_list, std::vector<T>& new_values) {
-      SOUL_TEST_ASSERT_NE(new_values.size(), 0);
-      std::vector<T> expected_values(new_values.crbegin(), new_values.crend());
-      expected_values.insert(expected_values.end(), test_list.cbegin(), test_list.cend());
+    []<typename T>(soul::IntrusiveList<T>& test_list, std::vector<T>& new_values)
+  {
+    SOUL_TEST_ASSERT_NE(new_values.size(), 0);
+    std::vector<T> expected_values(new_values.crbegin(), new_values.crend());
+    expected_values.insert(expected_values.end(), test_list.cbegin(), test_list.cend());
 
-      std::vector<T*> expected_objects;
-      expected_objects.reserve(expected_values.size());
-      for (T& val : new_values | std::views::reverse) {
-        expected_objects.push_back(&val);
-      }
-      for (T& val : test_list) {
-        expected_objects.push_back(&val);
-      }
+    std::vector<T*> expected_objects;
+    expected_objects.reserve(expected_values.size());
+    for (T& val : new_values | std::views::reverse)
+    {
+      expected_objects.push_back(&val);
+    }
+    for (T& val : test_list)
+    {
+      expected_objects.push_back(&val);
+    }
 
-      for (T& val : new_values) {
-        test_list.push_front(val);
-      }
-      verify_sequence(test_list, expected_values, expected_objects);
-    };
+    for (T& val : new_values)
+    {
+      test_list.push_front(val);
+    }
+    verify_sequence(test_list, expected_values, expected_objects);
+  };
 
   soul::IntrusiveList<IntNode> list;
   auto vec_val_single = generate_random_sequence<IntNode>(1);
@@ -141,7 +161,8 @@ auto generate_random_intrusive_list(
   soul::IntrusiveList<T>& list, std::vector<T>& vec, const usize size) -> void
 {
   vec = generate_random_sequence<T>(size);
-  for (T& val : vec) {
+  for (T& val : vec)
+  {
     list.push_back(val);
   }
 }
@@ -158,12 +179,19 @@ auto get_vector_values(const std::vector<T*> objects) -> std::vector<T>
   std::vector<T> result;
   result.reserve(objects.size());
   std::transform(
-    objects.begin(), objects.end(), std::back_inserter(result), [](T* val) -> T& { return *val; });
+    objects.begin(),
+    objects.end(),
+    std::back_inserter(result),
+    [](T* val) -> T&
+    {
+      return *val;
+    });
   return result;
 }
 
 template <typename T>
-struct RandomIntrusiveList {
+struct RandomIntrusiveList
+{
   soul::IntrusiveList<T> list;
   std::vector<T> pool;
 
@@ -177,14 +205,16 @@ struct RandomIntrusiveList {
 
 TEST(TestIntrusiveListPopBack, TestIntrusiveListPopBack)
 {
-  auto test_pop_front = []<typename T>(soul::IntrusiveList<T>& test_list) {
+  auto test_pop_front = []<typename T>(soul::IntrusiveList<T>& test_list)
+  {
     SOUL_TEST_ASSERT_FALSE(test_list.empty());
     std::vector<T> expected_values(test_list.begin(), test_list.end());
     expected_values.pop_back();
 
     std::vector<T*> expected_objects;
     expected_objects.reserve(test_list.size());
-    for (T& val : test_list) {
+    for (T& val : test_list)
+    {
       expected_objects.push_back(&val);
     }
     expected_objects.pop_back();
@@ -207,17 +237,23 @@ TEST(TestIntrusiveListPopBack, TestIntrusiveListPopBack)
 
 TEST(TestIntrusiveListPopFront, TestIntrusiveListPopFront)
 {
-  auto test_pop_back = []<typename T>(soul::IntrusiveList<T>& test_list) {
+  auto test_pop_back = []<typename T>(soul::IntrusiveList<T>& test_list)
+  {
     SOUL_TEST_ASSERT_FALSE(test_list.empty());
     std::vector<T*> expected_objects;
     expected_objects.reserve(test_list.size() - 1);
-    for (auto it = std::next(test_list.begin(), 1); it != test_list.end(); ++it) {
+    for (auto it = std::next(test_list.begin(), 1); it != test_list.end(); ++it)
+    {
       expected_objects.push_back(&(*it));
     }
 
     std::vector<T> expected_values;
     std::ranges::for_each(
-      expected_objects, [&expected_values](T* objects) { expected_values.push_back(*objects); });
+      expected_objects,
+      [&expected_values](T* objects)
+      {
+        expected_values.push_back(*objects);
+      });
     test_list.pop_front();
     verify_sequence(test_list, expected_values, expected_objects);
   };
@@ -235,10 +271,9 @@ TEST(TestIntrusiveListPopFront, TestIntrusiveListPopFront)
 
 TEST(TestIntrusiveListInsert, TestIntrusiveListInsert)
 {
-  auto test_insert = []<typename T>(
-                       soul::IntrusiveList<T>& test_list,
-                       usize position,
-                       std::vector<T>& new_objects) {
+  auto test_insert =
+    []<typename T>(soul::IntrusiveList<T>& test_list, usize position, std::vector<T>& new_objects)
+  {
     std::vector<T*> expected_objects;
     expected_objects.reserve(test_list.size() + new_objects.size());
     std::transform(
@@ -257,7 +292,8 @@ TEST(TestIntrusiveListInsert, TestIntrusiveListInsert)
     std::vector<T> expected_values = get_vector_values(expected_objects);
 
     auto insert_pos = std::next(test_list.begin(), position);
-    for (T& object : new_objects) {
+    for (T& object : new_objects)
+    {
       auto iterator = test_list.insert(insert_pos, object);
       SOUL_TEST_ASSERT_EQ(*iterator, object);
     }
@@ -279,7 +315,8 @@ TEST(TestIntrusiveListInsert, TestIntrusiveListInsert)
 
 TEST(TestIntrusiveListRemove, TestIntrusiveListRemove)
 {
-  auto test_remove = []<typename T>(soul::IntrusiveList<T>& list, usize position) {
+  auto test_remove = []<typename T>(soul::IntrusiveList<T>& list, usize position)
+  {
     std::vector<T*> expected_objects;
     expected_objects.reserve(list.size() - 1);
     std::transform(
@@ -309,7 +346,8 @@ TEST(TestIntrusiveListRemove, TestIntrusiveListRemove)
 
 TEST(TestIntrusiveListErase, TestIntrusiveListEraseSingle)
 {
-  auto test_erase_single = []<typename T>(soul::IntrusiveList<T>& test_list, usize position) {
+  auto test_erase_single = []<typename T>(soul::IntrusiveList<T>& test_list, usize position)
+  {
     std::vector<T*> expected_objects;
     expected_objects.reserve(test_list.size() - 1);
     std::transform(
@@ -339,24 +377,24 @@ TEST(TestIntrusiveListErase, TestIntrusiveListEraseSingle)
 
 TEST(TestIntrusiveListErase, TestIntrusiveListEraseRange)
 {
-  auto test_erase_range =
-    []<typename T>(soul::IntrusiveList<T>& test_list, usize first, usize last) {
-      std::vector<T*> expected_objects;
-      expected_objects.reserve(test_list.size() - (last - first));
-      std::transform(
-        test_list.begin(),
-        std::next(test_list.begin(), first),
-        std::back_inserter(expected_objects),
-        to_pointer<T>);
-      std::transform(
-        std::next(test_list.begin(), last),
-        test_list.end(),
-        std::back_inserter(expected_objects),
-        to_pointer<T>);
-      std::vector<T> expected_values = get_vector_values(expected_objects);
-      test_list.erase(std::next(test_list.begin(), first), std::next(test_list.begin(), last));
-      verify_sequence(test_list, expected_values, expected_objects);
-    };
+  auto test_erase_range = []<typename T>(soul::IntrusiveList<T>& test_list, usize first, usize last)
+  {
+    std::vector<T*> expected_objects;
+    expected_objects.reserve(test_list.size() - (last - first));
+    std::transform(
+      test_list.begin(),
+      std::next(test_list.begin(), first),
+      std::back_inserter(expected_objects),
+      to_pointer<T>);
+    std::transform(
+      std::next(test_list.begin(), last),
+      test_list.end(),
+      std::back_inserter(expected_objects),
+      to_pointer<T>);
+    std::vector<T> expected_values = get_vector_values(expected_objects);
+    test_list.erase(std::next(test_list.begin(), first), std::next(test_list.begin(), last));
+    verify_sequence(test_list, expected_values, expected_objects);
+  };
 
   RandomIntrusiveList<IntNode> random_list(10);
   SOUL_TEST_RUN(test_erase_range(random_list.list, 5, 10));
@@ -382,7 +420,8 @@ TEST_F(TestIntrusiveListSplice, TestIntrusiveListSpliceValue)
                              soul::IntrusiveList<T>& src_list,
                              soul::IntrusiveList<T>& dst_list,
                              usize src_position,
-                             usize dst_position) {
+                             usize dst_position)
+  {
     SOUL_TEST_ASSERT_NE(std::next(src_list.begin(), src_position), src_list.end());
     std::vector<T*> src_expected_objects;
     src_expected_objects.reserve(src_list.size() - 1);
@@ -444,31 +483,32 @@ TEST_F(TestIntrusiveListSplice, TestIntrusiveListSpliceList)
 {
   auto test_splice_list =
     []<typename T>(
-      soul::IntrusiveList<T>& src_list, soul::IntrusiveList<T>& dst_list, usize position) {
-      std::vector<T*> src_expected_objects;
+      soul::IntrusiveList<T>& src_list, soul::IntrusiveList<T>& dst_list, usize position)
+  {
+    std::vector<T*> src_expected_objects;
 
-      std::vector<T> src_expected_values;
+    std::vector<T> src_expected_values;
 
-      std::vector<T*> dst_expected_objects;
-      std::transform(
-        dst_list.begin(),
-        std::next(dst_list.begin(), position),
-        std::back_inserter(dst_expected_objects),
-        to_pointer<T>);
-      std::transform(
-        src_list.begin(), src_list.end(), std::back_inserter(dst_expected_objects), to_pointer<T>);
-      std::transform(
-        std::next(dst_list.begin(), position),
-        dst_list.end(),
-        std::back_inserter(dst_expected_objects),
-        to_pointer<T>);
-      std::vector<T> dst_expected_values = get_vector_values(dst_expected_objects);
+    std::vector<T*> dst_expected_objects;
+    std::transform(
+      dst_list.begin(),
+      std::next(dst_list.begin(), position),
+      std::back_inserter(dst_expected_objects),
+      to_pointer<T>);
+    std::transform(
+      src_list.begin(), src_list.end(), std::back_inserter(dst_expected_objects), to_pointer<T>);
+    std::transform(
+      std::next(dst_list.begin(), position),
+      dst_list.end(),
+      std::back_inserter(dst_expected_objects),
+      to_pointer<T>);
+    std::vector<T> dst_expected_values = get_vector_values(dst_expected_objects);
 
-      dst_list.splice(std::next(dst_list.begin(), position), src_list);
+    dst_list.splice(std::next(dst_list.begin(), position), src_list);
 
-      SOUL_TEST_RUN(verify_sequence(src_list, src_expected_values, src_expected_objects));
-      SOUL_TEST_RUN(verify_sequence(dst_list, dst_expected_values, dst_expected_objects));
-    };
+    SOUL_TEST_RUN(verify_sequence(src_list, src_expected_values, src_expected_objects));
+    SOUL_TEST_RUN(verify_sequence(dst_list, dst_expected_values, dst_expected_objects));
+  };
 
   SOUL_TEST_RUN(
     test_splice_list(random_list2.list, random_list1.list, random_list1.list.size() / 2));
@@ -486,7 +526,8 @@ TEST_F(TestIntrusiveListSplice, TestIntrusiveListSpliceListSingle)
                                    soul::IntrusiveList<T>& src_list,
                                    soul::IntrusiveList<T>& dst_list,
                                    usize src_position,
-                                   usize dst_position) {
+                                   usize dst_position)
+  {
     SOUL_TEST_ASSERT_NE(std::next(src_list.begin(), src_position), src_list.end());
     std::vector<T*> src_expected_objects;
     src_expected_objects.reserve(src_list.size() - 1);
@@ -553,7 +594,8 @@ TEST_F(TestIntrusiveListSplice, TestIntrusiveListSpliceRange)
                                   soul::IntrusiveList<T>& dst_list,
                                   usize src_position_start,
                                   usize src_position_end,
-                                  usize dst_position) {
+                                  usize dst_position)
+  {
     std::vector<T*> src_expected_objects;
     src_expected_objects.reserve(src_list.size() - (src_position_end - src_position_start));
     std::transform(
@@ -619,7 +661,8 @@ TEST_F(TestIntrusiveListSplice, TestIntrusiveListSpliceRange)
 
 TEST(TestIntrusiveListClear, TestIntrusiveListClear)
 {
-  auto test_clear = []<typename T>(soul::IntrusiveList<T>& list) {
+  auto test_clear = []<typename T>(soul::IntrusiveList<T>& list)
+  {
     list.clear();
     std::vector<T> empty_values;
     std::vector<T*> empty_objects;

@@ -5,7 +5,8 @@
 class CameraManipulator
 {
 public:
-  struct Config {
+  struct Config
+  {
     float zoom_speed;
     float orbit_speed;
 
@@ -15,13 +16,14 @@ public:
   explicit CameraManipulator(
     const Config& config,
     soul::vec3f32 position = soul::vec3f32(),
-    soul::vec3f32 target = soul::vec3f32(),
-    soul::vec3f32 up = soul::vec3f32());
+    soul::vec3f32 target   = soul::vec3f32(),
+    soul::vec3f32 up       = soul::vec3f32());
 
-  auto set_camera(soul::vec3f32 camera_position, soul::vec3f32 camera_target, soul::vec3f32 camera_up)
-    -> void;
+  auto set_camera(
+    soul::vec3f32 camera_position, soul::vec3f32 camera_target, soul::vec3f32 camera_up) -> void;
   auto get_camera(
-    soul::vec3f32* camera_position, soul::vec3f32* camera_target, soul::vec3f32* camera_up) const -> void;
+    soul::vec3f32* camera_position, soul::vec3f32* camera_target, soul::vec3f32* camera_up) const
+    -> void;
   auto get_position() -> soul::vec3f32;
   auto get_camera_target() const -> soul::vec3f32;
   auto set_camera_target(soul::vec3f32 target) -> void;
@@ -35,9 +37,9 @@ public:
 
 private:
   soul::vec3f32 position_ = soul::vec3f32();
-  soul::vec3f32 target_ = soul::vec3f32();
-  soul::vec3f32 up_ = soul::vec3f32();
-  float distance_ = 0.0f;
+  soul::vec3f32 target_   = soul::vec3f32();
+  soul::vec3f32 up_       = soul::vec3f32();
+  float distance_         = 0.0f;
 
   float min_distance_;
 

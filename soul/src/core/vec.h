@@ -11,11 +11,13 @@ namespace soul
   struct Vec;
 
   template <typename T>
-  struct Vec<T, 1> {
+  struct Vec<T, 1>
+  {
     static constexpr int DIMENSION = 1;
-    using value_type = T;
+    using value_type               = T;
 
-    union {
+    union
+    {
       T data[1];
       T x;
       T r;
@@ -56,6 +58,7 @@ namespace soul
     {
       return data[index];
     }
+
     [[nodiscard]]
     constexpr auto
     operator[](int index) const noexcept -> const T&
@@ -65,19 +68,27 @@ namespace soul
   };
 
   template <typename T>
-  struct Vec<T, 2> {
+  struct Vec<T, 2>
+  {
     static constexpr u8 DIMENSION = 2;
-    using value_type = T;
+    using value_type              = T;
 
-    union {
+    union
+    {
       T data[2];
-      struct {
+
+      struct
+      {
         T x, y;
       };
-      struct {
+
+      struct
+      {
         T r, g;
       };
-      struct {
+
+      struct
+      {
         T s, t;
       };
     };
@@ -135,19 +146,27 @@ namespace soul
   };
 
   template <typename T>
-  struct Vec<T, 3> {
+  struct Vec<T, 3>
+  {
     static constexpr u8 DIMENSION = 3;
-    using value_type = T;
+    using value_type              = T;
 
-    union {
+    union
+    {
       T data[3];
-      struct {
+
+      struct
+      {
         T x, y, z;
       };
-      struct {
+
+      struct
+      {
         T r, g, b;
       };
-      struct {
+
+      struct
+      {
         T s, t, p;
       };
     };
@@ -177,10 +196,12 @@ namespace soul
     constexpr Vec(X x, Y y, Z z) noexcept : x{T(x)}, y{T(y)}, z{T(z)}
     {
     }
+
     template <typename XY, typename Z>
     constexpr Vec(Vec<XY, 2> xy, Z z) noexcept : x{T(xy.x)}, y{T(xy.y)}, z{T(z)}
     {
     }
+
     template <typename X, typename YZ>
     constexpr Vec(X x, Vec<YZ, 2> yz) noexcept : x{T(x)}, y{T(yz.x)}, z{T(yz.y)}
     {
@@ -202,6 +223,7 @@ namespace soul
     {
       return data[index];
     }
+
     [[nodiscard]]
     constexpr auto
     operator[](u8 index) const noexcept -> const T&
@@ -213,19 +235,27 @@ namespace soul
   };
 
   template <typename T>
-  struct Vec<T, 4> {
+  struct Vec<T, 4>
+  {
     static constexpr u8 DIMENSION = 4;
-    using value_type = T;
+    using value_type              = T;
 
-    union {
+    union
+    {
       T data[4];
-      struct {
+
+      struct
+      {
         T x, y, z, w;
       };
-      struct {
+
+      struct
+      {
         T r, g, b, a;
       };
-      struct {
+
+      struct
+      {
         T s, t, p, q;
       };
     };
@@ -256,27 +286,33 @@ namespace soul
     constexpr Vec(X x, Y y, Z z, W w) noexcept : x{T(x)}, y{T(y)}, z{T(z)}, w{T(w)}
     {
     }
+
     template <typename XY, typename Z, typename W>
     constexpr Vec(Vec<XY, 2> xy, Z z, W w) noexcept : x{T(xy.x)}, y{T(xy.y)}, z{T(z)}, w{T(w)}
     {
     }
+
     template <typename X, typename YZ, typename W>
     constexpr Vec(X x, Vec<YZ, 2> yz, W w) noexcept : x{T(x)}, y{T(yz.x)}, z{T(yz.y)}, w{T(w)}
     {
     }
+
     template <typename X, typename Y, typename ZW>
     constexpr Vec(X x, Y y, Vec<ZW, 2> zw) noexcept : x{T(x)}, y{T(y)}, z{T(zw.x)}, w{T(zw.y)}
     {
     }
+
     template <typename XY, typename ZW>
     constexpr Vec(Vec<XY, 2> xy, Vec<ZW, 2> zw) noexcept
         : x{T(xy.x)}, y{T(xy.y)}, z{T(zw.x)}, w{T(zw.y)}
     {
     }
+
     template <typename XYZ, typename W>
     constexpr Vec(Vec<XYZ, 3> xyz, W w) noexcept : x{T(xyz.x)}, y{T(xyz.y)}, z{T(xyz.z)}, w{T(w)}
     {
     }
+
     template <typename X, typename YZW>
     constexpr Vec(X x, Vec<YZW, 3> yzw) noexcept : x{T(x)}, y{T(yzw.x)}, z{T(yzw.y)}, w{T(yzw.z)}
     {
@@ -298,12 +334,14 @@ namespace soul
     {
       return data[index];
     }
+
     [[nodiscard]]
     constexpr auto
     operator[](u8 index) const noexcept -> const T&
     {
       return data[index];
     }
+
 #include "vec4_swizzles.inl"
   };
 
@@ -384,13 +422,17 @@ namespace soul
   constexpr auto
   operator-(const Vec<T, DimensionV> v) noexcept
   {
-    if constexpr (DimensionV == 1) {
+    if constexpr (DimensionV == 1)
+    {
       return Vec<T, DimensionV>{-v.x};
-    } else if constexpr (DimensionV == 2) {
+    } else if constexpr (DimensionV == 2)
+    {
       return Vec<T, DimensionV>{-v.x, -v.y};
-    } else if constexpr (DimensionV == 3) {
+    } else if constexpr (DimensionV == 3)
+    {
       return Vec<T, DimensionV>{-v.x, -v.y, -v.z};
-    } else {
+    } else
+    {
       return Vec<T, DimensionV>{-v.x, -v.y, -v.z, -v.w};
     }
   }
@@ -401,13 +443,17 @@ namespace soul
   constexpr auto
   operator!(const Vec<T, DimensionV> v) noexcept
   {
-    if constexpr (DimensionV == 1) {
+    if constexpr (DimensionV == 1)
+    {
       return vec1b8{!v.x};
-    } else if constexpr (DimensionV == 2) {
+    } else if constexpr (DimensionV == 2)
+    {
       return vec2b8{!v.x, !v.y};
-    } else if constexpr (DimensionV == 3) {
+    } else if constexpr (DimensionV == 3)
+    {
       return vec3b8{!v.x, !v.y, !v.z};
-    } else {
+    } else
+    {
       return vec4b8{!v.x, !v.y, !v.z, !v.w};
     }
   }
@@ -418,13 +464,17 @@ namespace soul
   constexpr auto
   operator~(const Vec<T, DimensionV> v) noexcept
   {
-    if constexpr (DimensionV == 1) {
+    if constexpr (DimensionV == 1)
+    {
       return Vec<T, DimensionV>{~v.x};
-    } else if constexpr (DimensionV == 2) {
+    } else if constexpr (DimensionV == 2)
+    {
       return Vec<T, DimensionV>{~v.x, ~v.y};
-    } else if constexpr (DimensionV == 3) {
+    } else if constexpr (DimensionV == 3)
+    {
       return Vec<T, DimensionV>{~v.x, ~v.y, ~v.z};
-    } else {
+    } else
+    {
       return Vec<T, DimensionV>{~v.x, ~v.y, ~v.z, ~v.w};
     }
   }
@@ -439,13 +489,17 @@ namespace soul
   constexpr auto
   operator+(const Vec<T, DimensionV>& lhs, const Vec<T, DimensionV>& rhs) -> Vec<T, DimensionV>
   {
-    if constexpr (DimensionV == 1) {
+    if constexpr (DimensionV == 1)
+    {
       return Vec<T, DimensionV>{lhs.x + rhs.x};
-    } else if constexpr (DimensionV == 2) {
+    } else if constexpr (DimensionV == 2)
+    {
       return Vec<T, DimensionV>{lhs.x + rhs.x, lhs.y + rhs.y};
-    } else if constexpr (DimensionV == 3) {
+    } else if constexpr (DimensionV == 3)
+    {
       return Vec<T, DimensionV>{lhs.x + rhs.x, lhs.y + rhs.y, lhs.z + rhs.z};
-    } else if constexpr (DimensionV == 4) {
+    } else if constexpr (DimensionV == 4)
+    {
       return Vec<T, DimensionV>{lhs.x + rhs.x, lhs.y + rhs.y, lhs.z + rhs.z, lhs.w + rhs.w};
     }
   }
@@ -474,13 +528,17 @@ namespace soul
   constexpr auto
   operator-(const Vec<T, DimensionV>& lhs, const Vec<T, DimensionV>& rhs) -> Vec<T, DimensionV>
   {
-    if constexpr (DimensionV == 1) {
+    if constexpr (DimensionV == 1)
+    {
       return Vec<T, DimensionV>{lhs.x - rhs.x};
-    } else if constexpr (DimensionV == 2) {
+    } else if constexpr (DimensionV == 2)
+    {
       return Vec<T, DimensionV>{lhs.x - rhs.x, lhs.y - rhs.y};
-    } else if constexpr (DimensionV == 3) {
+    } else if constexpr (DimensionV == 3)
+    {
       return Vec<T, DimensionV>{lhs.x - rhs.x, lhs.y - rhs.y, lhs.z - rhs.z};
-    } else if constexpr (DimensionV == 4) {
+    } else if constexpr (DimensionV == 4)
+    {
       return Vec<T, DimensionV>{lhs.x - rhs.x, lhs.y - rhs.y, lhs.z - rhs.z, lhs.w - rhs.w};
     }
   }
@@ -509,13 +567,17 @@ namespace soul
   constexpr auto
   operator*(const Vec<T, DimensionV>& lhs, const Vec<T, DimensionV>& rhs) -> Vec<T, DimensionV>
   {
-    if constexpr (DimensionV == 1) {
+    if constexpr (DimensionV == 1)
+    {
       return Vec<T, DimensionV>{lhs.x * rhs.x};
-    } else if constexpr (DimensionV == 2) {
+    } else if constexpr (DimensionV == 2)
+    {
       return Vec<T, DimensionV>{lhs.x * rhs.x, lhs.y * rhs.y};
-    } else if constexpr (DimensionV == 3) {
+    } else if constexpr (DimensionV == 3)
+    {
       return Vec<T, DimensionV>{lhs.x * rhs.x, lhs.y * rhs.y, lhs.z * rhs.z};
-    } else if constexpr (DimensionV == 4) {
+    } else if constexpr (DimensionV == 4)
+    {
       return Vec<T, DimensionV>{lhs.x * rhs.x, lhs.y * rhs.y, lhs.z * rhs.z, lhs.w * rhs.w};
     }
   }
@@ -544,13 +606,17 @@ namespace soul
   constexpr auto
   operator/(const Vec<T, DimensionV>& lhs, const Vec<T, DimensionV>& rhs) -> Vec<T, DimensionV>
   {
-    if constexpr (DimensionV == 1) {
+    if constexpr (DimensionV == 1)
+    {
       return Vec<T, DimensionV>{lhs.x / rhs.x};
-    } else if constexpr (DimensionV == 2) {
+    } else if constexpr (DimensionV == 2)
+    {
       return Vec<T, DimensionV>{lhs.x / rhs.x, lhs.y / rhs.y};
-    } else if constexpr (DimensionV == 3) {
+    } else if constexpr (DimensionV == 3)
+    {
       return Vec<T, DimensionV>{lhs.x / rhs.x, lhs.y / rhs.y, lhs.z / rhs.z};
-    } else if constexpr (DimensionV == 4) {
+    } else if constexpr (DimensionV == 4)
+    {
       return Vec<T, DimensionV>{lhs.x / rhs.x, lhs.y / rhs.y, lhs.z / rhs.z, lhs.w / rhs.w};
     }
   }
@@ -579,13 +645,17 @@ namespace soul
   constexpr auto
   operator%(const Vec<T, DimensionV>& lhs, const Vec<T, DimensionV>& rhs) -> Vec<T, DimensionV>
   {
-    if constexpr (DimensionV == 1) {
+    if constexpr (DimensionV == 1)
+    {
       return Vec<T, DimensionV>{lhs.x % rhs.x};
-    } else if constexpr (DimensionV == 2) {
+    } else if constexpr (DimensionV == 2)
+    {
       return Vec<T, DimensionV>{lhs.x % rhs.x, lhs.y % rhs.y};
-    } else if constexpr (DimensionV == 3) {
+    } else if constexpr (DimensionV == 3)
+    {
       return Vec<T, DimensionV>{lhs.x % rhs.x, lhs.y % rhs.y, lhs.z % rhs.z};
-    } else if constexpr (DimensionV == 4) {
+    } else if constexpr (DimensionV == 4)
+    {
       return Vec<T, DimensionV>{lhs.x % rhs.x, lhs.y % rhs.y, lhs.z % rhs.z, lhs.w % rhs.w};
     }
   }
@@ -614,13 +684,17 @@ namespace soul
   constexpr auto
   operator<<(const Vec<T, DimensionV>& lhs, const Vec<T, DimensionV>& rhs) -> Vec<T, DimensionV>
   {
-    if constexpr (DimensionV == 1) {
+    if constexpr (DimensionV == 1)
+    {
       return Vec<T, DimensionV>{lhs.x << rhs.x};
-    } else if constexpr (DimensionV == 2) {
+    } else if constexpr (DimensionV == 2)
+    {
       return Vec<T, DimensionV>{lhs.x << rhs.x, lhs.y << rhs.y};
-    } else if constexpr (DimensionV == 3) {
+    } else if constexpr (DimensionV == 3)
+    {
       return Vec<T, DimensionV>{lhs.x << rhs.x, lhs.y << rhs.y, lhs.z << rhs.z};
-    } else if constexpr (DimensionV == 4) {
+    } else if constexpr (DimensionV == 4)
+    {
       return Vec<T, DimensionV>{lhs.x << rhs.x, lhs.y << rhs.y, lhs.z << rhs.z, lhs.w << rhs.w};
     }
   }
@@ -649,13 +723,17 @@ namespace soul
   constexpr auto
   operator>>(const Vec<T, DimensionV>& lhs, const Vec<T, DimensionV>& rhs) -> Vec<T, DimensionV>
   {
-    if constexpr (DimensionV == 1) {
+    if constexpr (DimensionV == 1)
+    {
       return Vec<T, DimensionV>{lhs.x >> rhs.x};
-    } else if constexpr (DimensionV == 2) {
+    } else if constexpr (DimensionV == 2)
+    {
       return Vec<T, DimensionV>{lhs.x >> rhs.x, lhs.y >> rhs.y};
-    } else if constexpr (DimensionV == 3) {
+    } else if constexpr (DimensionV == 3)
+    {
       return Vec<T, DimensionV>{lhs.x >> rhs.x, lhs.y >> rhs.y, lhs.z >> rhs.z};
-    } else if constexpr (DimensionV == 4) {
+    } else if constexpr (DimensionV == 4)
+    {
       return Vec<T, DimensionV>{lhs.x >> rhs.x, lhs.y >> rhs.y, lhs.z >> rhs.z, lhs.w >> rhs.w};
     }
   }
@@ -684,13 +762,17 @@ namespace soul
   constexpr auto
   operator|(const Vec<T, DimensionV>& lhs, const Vec<T, DimensionV>& rhs) -> Vec<T, DimensionV>
   {
-    if constexpr (DimensionV == 1) {
+    if constexpr (DimensionV == 1)
+    {
       return Vec<T, DimensionV>{lhs.x | rhs.x};
-    } else if constexpr (DimensionV == 2) {
+    } else if constexpr (DimensionV == 2)
+    {
       return Vec<T, DimensionV>{lhs.x | rhs.x, lhs.y | rhs.y};
-    } else if constexpr (DimensionV == 3) {
+    } else if constexpr (DimensionV == 3)
+    {
       return Vec<T, DimensionV>{lhs.x | rhs.x, lhs.y | rhs.y, lhs.z | rhs.z};
-    } else if constexpr (DimensionV == 4) {
+    } else if constexpr (DimensionV == 4)
+    {
       return Vec<T, DimensionV>{lhs.x | rhs.x, lhs.y | rhs.y, lhs.z | rhs.z, lhs.w | rhs.w};
     }
   }
@@ -719,13 +801,17 @@ namespace soul
   constexpr auto
   operator&(const Vec<T, DimensionV>& lhs, const Vec<T, DimensionV>& rhs) -> Vec<T, DimensionV>
   {
-    if constexpr (DimensionV == 1) {
+    if constexpr (DimensionV == 1)
+    {
       return Vec<T, DimensionV>{lhs.x & rhs.x};
-    } else if constexpr (DimensionV == 2) {
+    } else if constexpr (DimensionV == 2)
+    {
       return Vec<T, DimensionV>{lhs.x & rhs.x, lhs.y & rhs.y};
-    } else if constexpr (DimensionV == 3) {
+    } else if constexpr (DimensionV == 3)
+    {
       return Vec<T, DimensionV>{lhs.x & rhs.x, lhs.y & rhs.y, lhs.z & rhs.z};
-    } else if constexpr (DimensionV == 4) {
+    } else if constexpr (DimensionV == 4)
+    {
       return Vec<T, DimensionV>{lhs.x & rhs.x, lhs.y & rhs.y, lhs.z & rhs.z, lhs.w & rhs.w};
     }
   }
@@ -754,13 +840,17 @@ namespace soul
   constexpr auto
   operator^(const Vec<T, DimensionV>& lhs, const Vec<T, DimensionV>& rhs) -> Vec<T, DimensionV>
   {
-    if constexpr (DimensionV == 1) {
+    if constexpr (DimensionV == 1)
+    {
       return Vec<T, DimensionV>{lhs.x ^ rhs.x};
-    } else if constexpr (DimensionV == 2) {
+    } else if constexpr (DimensionV == 2)
+    {
       return Vec<T, DimensionV>{lhs.x ^ rhs.x, lhs.y ^ rhs.y};
-    } else if constexpr (DimensionV == 3) {
+    } else if constexpr (DimensionV == 3)
+    {
       return Vec<T, DimensionV>{lhs.x ^ rhs.x, lhs.y ^ rhs.y, lhs.z ^ rhs.z};
-    } else if constexpr (DimensionV == 4) {
+    } else if constexpr (DimensionV == 4)
+    {
       return Vec<T, DimensionV>{lhs.x ^ rhs.x, lhs.y ^ rhs.y, lhs.z ^ rhs.z, lhs.w ^ rhs.w};
     }
   }
@@ -789,13 +879,17 @@ namespace soul
   constexpr auto
   operator||(const Vec<T, DimensionV>& lhs, const Vec<T, DimensionV>& rhs)
   {
-    if constexpr (DimensionV == 1) {
+    if constexpr (DimensionV == 1)
+    {
       return vec1b8{lhs.x || rhs.x};
-    } else if constexpr (DimensionV == 2) {
+    } else if constexpr (DimensionV == 2)
+    {
       return vec2b8{lhs.x || rhs.x, lhs.y || rhs.y};
-    } else if constexpr (DimensionV == 3) {
+    } else if constexpr (DimensionV == 3)
+    {
       return vec3b8{lhs.x || rhs.x, lhs.y || rhs.y, lhs.z || rhs.z};
-    } else if constexpr (DimensionV == 4) {
+    } else if constexpr (DimensionV == 4)
+    {
       return vec4b8{lhs.x || rhs.x, lhs.y || rhs.y, lhs.z || rhs.z, lhs.w || rhs.w};
     }
   }
@@ -824,13 +918,17 @@ namespace soul
   constexpr auto
   operator&&(const Vec<T, DimensionV>& lhs, const Vec<T, DimensionV>& rhs)
   {
-    if constexpr (DimensionV == 1) {
+    if constexpr (DimensionV == 1)
+    {
       return vec1b8{lhs.x && rhs.x};
-    } else if constexpr (DimensionV == 2) {
+    } else if constexpr (DimensionV == 2)
+    {
       return vec2b8{lhs.x && rhs.x, lhs.y && rhs.y};
-    } else if constexpr (DimensionV == 3) {
+    } else if constexpr (DimensionV == 3)
+    {
       return vec3b8{lhs.x && rhs.x, lhs.y && rhs.y, lhs.z && rhs.z};
-    } else if constexpr (DimensionV == 4) {
+    } else if constexpr (DimensionV == 4)
+    {
       return vec4b8{lhs.x && rhs.x, lhs.y && rhs.y, lhs.z && rhs.z, lhs.w && rhs.w};
     }
   }
@@ -859,13 +957,17 @@ namespace soul
   constexpr auto
   operator==(const Vec<T, DimensionV>& lhs, const Vec<T, DimensionV>& rhs)
   {
-    if constexpr (DimensionV == 1) {
+    if constexpr (DimensionV == 1)
+    {
       return vec1b8{lhs.x == rhs.x};
-    } else if constexpr (DimensionV == 2) {
+    } else if constexpr (DimensionV == 2)
+    {
       return vec2b8{lhs.x == rhs.x, lhs.y == rhs.y};
-    } else if constexpr (DimensionV == 3) {
+    } else if constexpr (DimensionV == 3)
+    {
       return vec3b8{lhs.x == rhs.x, lhs.y == rhs.y, lhs.z == rhs.z};
-    } else if constexpr (DimensionV == 4) {
+    } else if constexpr (DimensionV == 4)
+    {
       return vec4b8{lhs.x == rhs.x, lhs.y == rhs.y, lhs.z == rhs.z, lhs.w == rhs.w};
     }
   }
@@ -894,13 +996,17 @@ namespace soul
   constexpr auto
   operator!=(const Vec<T, DimensionV>& lhs, const Vec<T, DimensionV>& rhs)
   {
-    if constexpr (DimensionV == 1) {
+    if constexpr (DimensionV == 1)
+    {
       return vec1b8{lhs.x != rhs.x};
-    } else if constexpr (DimensionV == 2) {
+    } else if constexpr (DimensionV == 2)
+    {
       return vec2b8{lhs.x != rhs.x, lhs.y != rhs.y};
-    } else if constexpr (DimensionV == 3) {
+    } else if constexpr (DimensionV == 3)
+    {
       return vec3b8{lhs.x != rhs.x, lhs.y != rhs.y, lhs.z != rhs.z};
-    } else if constexpr (DimensionV == 4) {
+    } else if constexpr (DimensionV == 4)
+    {
       return vec4b8{lhs.x != rhs.x, lhs.y != rhs.y, lhs.z != rhs.z, lhs.w != rhs.w};
     }
   }
@@ -929,13 +1035,17 @@ namespace soul
   constexpr auto
   operator<(const Vec<T, DimensionV>& lhs, const Vec<T, DimensionV>& rhs)
   {
-    if constexpr (DimensionV == 1) {
+    if constexpr (DimensionV == 1)
+    {
       return vec1b8{lhs.x < rhs.x};
-    } else if constexpr (DimensionV == 2) {
+    } else if constexpr (DimensionV == 2)
+    {
       return vec2b8{lhs.x < rhs.x, lhs.y < rhs.y};
-    } else if constexpr (DimensionV == 3) {
+    } else if constexpr (DimensionV == 3)
+    {
       return vec3b8{lhs.x < rhs.x, lhs.y < rhs.y, lhs.z < rhs.z};
-    } else if constexpr (DimensionV == 4) {
+    } else if constexpr (DimensionV == 4)
+    {
       return vec4b8{lhs.x < rhs.x, lhs.y < rhs.y, lhs.z < rhs.z, lhs.w < rhs.w};
     }
   }
@@ -964,13 +1074,17 @@ namespace soul
   constexpr auto
   operator>(const Vec<T, DimensionV>& lhs, const Vec<T, DimensionV>& rhs)
   {
-    if constexpr (DimensionV == 1) {
+    if constexpr (DimensionV == 1)
+    {
       return vec1b8{lhs.x > rhs.x};
-    } else if constexpr (DimensionV == 2) {
+    } else if constexpr (DimensionV == 2)
+    {
       return vec2b8{lhs.x > rhs.x, lhs.y > rhs.y};
-    } else if constexpr (DimensionV == 3) {
+    } else if constexpr (DimensionV == 3)
+    {
       return vec3b8{lhs.x > rhs.x, lhs.y > rhs.y, lhs.z > rhs.z};
-    } else if constexpr (DimensionV == 4) {
+    } else if constexpr (DimensionV == 4)
+    {
       return vec4b8{lhs.x > rhs.x, lhs.y > rhs.y, lhs.z > rhs.z, lhs.w > rhs.w};
     }
   }
@@ -999,13 +1113,17 @@ namespace soul
   constexpr auto
   operator<=(const Vec<T, DimensionV>& lhs, const Vec<T, DimensionV>& rhs)
   {
-    if constexpr (DimensionV == 1) {
+    if constexpr (DimensionV == 1)
+    {
       return vec1b8{lhs.x <= rhs.x};
-    } else if constexpr (DimensionV == 2) {
+    } else if constexpr (DimensionV == 2)
+    {
       return vec2b8{lhs.x <= rhs.x, lhs.y <= rhs.y};
-    } else if constexpr (DimensionV == 3) {
+    } else if constexpr (DimensionV == 3)
+    {
       return vec3b8{lhs.x <= rhs.x, lhs.y <= rhs.y, lhs.z <= rhs.z};
-    } else if constexpr (DimensionV == 4) {
+    } else if constexpr (DimensionV == 4)
+    {
       return vec4b8{lhs.x <= rhs.x, lhs.y <= rhs.y, lhs.z <= rhs.z, lhs.w <= rhs.w};
     }
   }
@@ -1034,13 +1152,17 @@ namespace soul
   constexpr auto
   operator>=(const Vec<T, DimensionV>& lhs, const Vec<T, DimensionV>& rhs)
   {
-    if constexpr (DimensionV == 1) {
+    if constexpr (DimensionV == 1)
+    {
       return vec1b8{lhs.x >= rhs.x};
-    } else if constexpr (DimensionV == 2) {
+    } else if constexpr (DimensionV == 2)
+    {
       return vec2b8{lhs.x >= rhs.x, lhs.y >= rhs.y};
-    } else if constexpr (DimensionV == 3) {
+    } else if constexpr (DimensionV == 3)
+    {
       return vec3b8{lhs.x >= rhs.x, lhs.y >= rhs.y, lhs.z >= rhs.z};
-    } else if constexpr (DimensionV == 4) {
+    } else if constexpr (DimensionV == 4)
+    {
       return vec4b8{lhs.x >= rhs.x, lhs.y >= rhs.y, lhs.z >= rhs.z, lhs.w >= rhs.w};
     }
   }
@@ -1069,13 +1191,16 @@ namespace soul
     -> Vec<T, DimensionV>
   {
     lhs.x += rhs.x;
-    if constexpr (DimensionV >= 2) {
+    if constexpr (DimensionV >= 2)
+    {
       lhs.y += rhs.y;
     }
-    if constexpr (DimensionV >= 3) {
+    if constexpr (DimensionV >= 3)
+    {
       lhs.z += rhs.z;
     }
-    if constexpr (DimensionV >= 4) {
+    if constexpr (DimensionV >= 4)
+    {
       lhs.w += rhs.w;
     }
     return lhs;
@@ -1094,13 +1219,16 @@ namespace soul
     -> Vec<T, DimensionV>
   {
     lhs.x -= rhs.x;
-    if constexpr (DimensionV >= 2) {
+    if constexpr (DimensionV >= 2)
+    {
       lhs.y -= rhs.y;
     }
-    if constexpr (DimensionV >= 3) {
+    if constexpr (DimensionV >= 3)
+    {
       lhs.z -= rhs.z;
     }
-    if constexpr (DimensionV >= 4) {
+    if constexpr (DimensionV >= 4)
+    {
       lhs.w -= rhs.w;
     }
     return lhs;
@@ -1119,13 +1247,16 @@ namespace soul
     -> Vec<T, DimensionV>
   {
     lhs.x *= rhs.x;
-    if constexpr (DimensionV >= 2) {
+    if constexpr (DimensionV >= 2)
+    {
       lhs.y *= rhs.y;
     }
-    if constexpr (DimensionV >= 3) {
+    if constexpr (DimensionV >= 3)
+    {
       lhs.z *= rhs.z;
     }
-    if constexpr (DimensionV >= 4) {
+    if constexpr (DimensionV >= 4)
+    {
       lhs.w *= rhs.w;
     }
     return lhs;
@@ -1144,13 +1275,16 @@ namespace soul
     -> Vec<T, DimensionV>
   {
     lhs.x /= rhs.x;
-    if constexpr (DimensionV >= 2) {
+    if constexpr (DimensionV >= 2)
+    {
       lhs.y /= rhs.y;
     }
-    if constexpr (DimensionV >= 3) {
+    if constexpr (DimensionV >= 3)
+    {
       lhs.z /= rhs.z;
     }
-    if constexpr (DimensionV >= 4) {
+    if constexpr (DimensionV >= 4)
+    {
       lhs.w /= rhs.w;
     }
     return lhs;
@@ -1169,13 +1303,16 @@ namespace soul
     -> Vec<T, DimensionV>
   {
     lhs.x %= rhs.x;
-    if constexpr (DimensionV >= 2) {
+    if constexpr (DimensionV >= 2)
+    {
       lhs.y %= rhs.y;
     }
-    if constexpr (DimensionV >= 3) {
+    if constexpr (DimensionV >= 3)
+    {
       lhs.z %= rhs.z;
     }
-    if constexpr (DimensionV >= 4) {
+    if constexpr (DimensionV >= 4)
+    {
       lhs.w %= rhs.w;
     }
     return lhs;
@@ -1194,13 +1331,16 @@ namespace soul
     -> Vec<T, DimensionV>
   {
     lhs.x <<= rhs.x;
-    if constexpr (DimensionV >= 2) {
+    if constexpr (DimensionV >= 2)
+    {
       lhs.y <<= rhs.y;
     }
-    if constexpr (DimensionV >= 3) {
+    if constexpr (DimensionV >= 3)
+    {
       lhs.z <<= rhs.z;
     }
-    if constexpr (DimensionV >= 4) {
+    if constexpr (DimensionV >= 4)
+    {
       lhs.w <<= rhs.w;
     }
     return lhs;
@@ -1219,13 +1359,16 @@ namespace soul
     -> Vec<T, DimensionV>
   {
     lhs.x >>= rhs.x;
-    if constexpr (DimensionV >= 2) {
+    if constexpr (DimensionV >= 2)
+    {
       lhs.y >>= rhs.y;
     }
-    if constexpr (DimensionV >= 3) {
+    if constexpr (DimensionV >= 3)
+    {
       lhs.z >>= rhs.z;
     }
-    if constexpr (DimensionV >= 4) {
+    if constexpr (DimensionV >= 4)
+    {
       lhs.w >>= rhs.w;
     }
     return lhs;
@@ -1244,13 +1387,16 @@ namespace soul
     -> Vec<T, DimensionV>
   {
     lhs.x |= rhs.x;
-    if constexpr (DimensionV >= 2) {
+    if constexpr (DimensionV >= 2)
+    {
       lhs.y |= rhs.y;
     }
-    if constexpr (DimensionV >= 3) {
+    if constexpr (DimensionV >= 3)
+    {
       lhs.z |= rhs.z;
     }
-    if constexpr (DimensionV >= 4) {
+    if constexpr (DimensionV >= 4)
+    {
       lhs.w |= rhs.w;
     }
     return lhs;
@@ -1269,13 +1415,16 @@ namespace soul
     -> Vec<T, DimensionV>
   {
     lhs.x &= rhs.x;
-    if constexpr (DimensionV >= 2) {
+    if constexpr (DimensionV >= 2)
+    {
       lhs.y &= rhs.y;
     }
-    if constexpr (DimensionV >= 3) {
+    if constexpr (DimensionV >= 3)
+    {
       lhs.z &= rhs.z;
     }
-    if constexpr (DimensionV >= 4) {
+    if constexpr (DimensionV >= 4)
+    {
       lhs.w &= rhs.w;
     }
     return lhs;
@@ -1294,13 +1443,16 @@ namespace soul
     -> Vec<T, DimensionV>
   {
     lhs.x ^= rhs.x;
-    if constexpr (DimensionV >= 2) {
+    if constexpr (DimensionV >= 2)
+    {
       lhs.y ^= rhs.y;
     }
-    if constexpr (DimensionV >= 3) {
+    if constexpr (DimensionV >= 3)
+    {
       lhs.z ^= rhs.z;
     }
-    if constexpr (DimensionV >= 4) {
+    if constexpr (DimensionV >= 4)
+    {
       lhs.w ^= rhs.w;
     }
     return lhs;
@@ -1331,12 +1483,14 @@ namespace soul
   [[nodiscard]] constexpr auto none(const vec2b8 v) -> b8 { return !any(v); }
   [[nodiscard]] constexpr auto none(const vec3b8 v) -> b8 { return !any(v); }
   [[nodiscard]] constexpr auto none(const vec4b8 v) -> b8 { return !any(v); }
+
   // clang-format on
 
   template <typename T, u8 DimensionV>
   constexpr void soul_op_hash_combine(auto& hasher, const Vec<T, DimensionV>& val)
   {
-    const auto hash_combine = [&hasher, &val]<usize... idx>(std::index_sequence<idx...>) {
+    const auto hash_combine = [&hasher, &val]<usize... idx>(std::index_sequence<idx...>)
+    {
       ((hasher.combine(val[idx])), ...);
     };
     return hash_combine(std::make_index_sequence<DimensionV>());

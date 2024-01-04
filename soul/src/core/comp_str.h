@@ -6,6 +6,7 @@
 namespace soul
 {
   class CompStr;
+
   inline namespace literals
   {
     consteval auto operator""_str(const char* literal, usize length) -> CompStr;

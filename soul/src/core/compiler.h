@@ -4,8 +4,17 @@
 
 namespace soul
 {
-  enum class Compiler : uint8_t { MSVC, COUNT };
-  enum class Endianess : uint8_t { BIG, LITTLE, COUNT };
+  enum class Compiler : uint8_t
+  {
+    MSVC,
+    COUNT
+  };
+  enum class Endianess : uint8_t
+  {
+    BIG,
+    LITTLE,
+    COUNT
+  };
 } // namespace soul
 
 #if defined(_MSC_VER)
@@ -23,9 +32,11 @@ namespace soul
 #  include <csignal>
 #  include <cstdlib>
 #  define SOUL_DEBUG_BREAK()                                                                       \
-    do {                                                                                           \
+    do                                                                                             \
+    {                                                                                              \
       raise(SIGSEGV);                                                                              \
-    } while (0)
+    }                                                                                              \
+    while (0)
 #endif //_MSC_VER
 
 #define SOUL_NOOP ((void)0)
@@ -42,20 +53,20 @@ namespace soul
 #  define SOUL_UNROLL
 #  define SOUL_NOUNROLL
 #else
-#  define SOUL_UNROLL _Pragma("unroll")
+#  define SOUL_UNROLL   _Pragma("unroll")
 #  define SOUL_NOUNROLL _Pragma("nounroll")
 #endif
 
 #if __has_builtin(__builtin_expect)
 #  ifdef __cplusplus
-#    define SOUL_LIKELY(exp) (__builtin_expect(!!(exp), true))
+#    define SOUL_LIKELY(exp)   (__builtin_expect(!!(exp), true))
 #    define SOUL_UNLIKELY(exp) (__builtin_expect(!!(exp), false))
 #  else
-#    define SOUL_LIKELY(exp) (__builtin_expect(!!(exp), 1))
+#    define SOUL_LIKELY(exp)   (__builtin_expect(!!(exp), 1))
 #    define SOUL_UNLIKELY(exp) (__builtin_expect(!!(exp), 0))
 #  endif
 #else
-#  define SOUL_LIKELY(exp) (!!(exp))
+#  define SOUL_LIKELY(exp)   (!!(exp))
 #  define SOUL_UNLIKELY(exp) (!!(exp))
 #endif
 
@@ -74,10 +85,10 @@ namespace soul
 #endif
 
 #if __has_attribute(maybe_unused)
-#  define SOUL_UNUSED [[maybe_unused]]
+#  define SOUL_UNUSED            [[maybe_unused]]
 #  define SOUL_UNUSED_IN_RELEASE [[maybe_unused]]
 #elif __has_attribute(unused)
-#  define SOUL_UNUSED __attribute__((unused))
+#  define SOUL_UNUSED            __attribute__((unused))
 #  define SOUL_UNUSED_IN_RELEASE __attribute__((unused))
 #else
 #  define SOUL_UNUSED
@@ -129,7 +140,8 @@ namespace soul
   inline auto pop_count_16(const uint16_t val) -> size_t
   {
     static_assert(COMPILER == Compiler::MSVC);
-    if constexpr (COMPILER == Compiler::MSVC) {
+    if constexpr (COMPILER == Compiler::MSVC)
+    {
       return __popcnt16(val);
     }
   }
@@ -137,7 +149,8 @@ namespace soul
   inline auto pop_count_32(const uint32_t val) -> size_t
   {
     static_assert(COMPILER == Compiler::MSVC);
-    if constexpr (COMPILER == Compiler::MSVC) {
+    if constexpr (COMPILER == Compiler::MSVC)
+    {
       return __popcnt(val);
     }
   }
@@ -145,7 +158,8 @@ namespace soul
   inline auto pop_count_64(const uint64_t val) -> size_t
   {
     static_assert(COMPILER == Compiler::MSVC);
-    if constexpr (COMPILER == Compiler::MSVC) {
+    if constexpr (COMPILER == Compiler::MSVC)
+    {
       return __popcnt64(val);
     }
   }

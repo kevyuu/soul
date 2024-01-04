@@ -22,25 +22,25 @@ using namespace soul::literals;
 constexpr usize TEST_INLINE_CAPACITY = 32;
 using TestString = soul::BasicString<soul::memory::Allocator, TEST_INLINE_CAPACITY>;
 
-constexpr const char* TEST_SHORT_STR = "abcdef";
-constexpr auto TEST_SHORT_STR_VIEW = soul::StringView{"abcdef"_str};
+constexpr const char* TEST_SHORT_STR     = "abcdef";
+constexpr auto TEST_SHORT_STR_VIEW       = soul::StringView{"abcdef"_str};
 constexpr const auto TEST_SHORT_STR_SIZE = soul::str_length(TEST_SHORT_STR);
 static_assert(TEST_SHORT_STR_SIZE + 1 < TEST_INLINE_CAPACITY);
 
-constexpr const char* TEST_SHORT_STR2 = "adefghbc";
-constexpr auto TEST_SHORT_STR_VIEW2 = soul::StringView{"abefghbc"_str};
+constexpr const char* TEST_SHORT_STR2     = "adefghbc";
+constexpr auto TEST_SHORT_STR_VIEW2       = soul::StringView{"abefghbc"_str};
 constexpr const auto TEST_SHORT_STR_SIZE2 = soul::str_length(TEST_SHORT_STR2);
 static_assert(TEST_SHORT_STR_SIZE2 + 1 < TEST_INLINE_CAPACITY);
 
 constexpr const char* TEST_MAX_INLINE_STR = "abcdefghijklmnopqrstvuwxyz12345";
-constexpr auto TEST_MAX_INLINE_STR_VIEW = soul::StringView{"abcdefghijklmnopqrstvuwxyz12345"_str};
+constexpr auto TEST_MAX_INLINE_STR_VIEW   = soul::StringView{"abcdefghijklmnopqrstvuwxyz12345"_str};
 static_assert(soul::str_length(TEST_MAX_INLINE_STR) == (TEST_INLINE_CAPACITY - 1));
 
 constexpr const char* TEST_MAX_INLINE_STR2 = "12345abcdefghijklmnopqrstvuwxyz";
 constexpr auto TEST_MAX_INLINE_STR_VIEW2 = soul::StringView{"12345abcdefghijklmnopqrstvuwxyz"_str};
 static_assert(soul::str_length(TEST_MAX_INLINE_STR2) == (TEST_INLINE_CAPACITY - 1));
 
-constexpr const char* TEST_LONG_STR = R"(
+constexpr const char* TEST_LONG_STR     = R"(
 Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do 
 eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut 
 enim ad minim veniam, quis nostrud exercitation ullamco laboris 
@@ -53,7 +53,7 @@ constexpr const auto TEST_LONG_STR_SIZE = soul::str_length(TEST_LONG_STR);
 constexpr const auto TEST_LONG_STR_VIEW = soul::StringView{TEST_LONG_STR, TEST_LONG_STR_SIZE};
 static_assert(TEST_LONG_STR_SIZE + 1 > TEST_INLINE_CAPACITY);
 
-constexpr const char* TEST_LONG_STR2 = R"(
+constexpr const char* TEST_LONG_STR2     = R"(
 Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do 
 eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut 
 enim ad minim veniam, quis nostrud exercitation ullamco laboris 
@@ -72,9 +72,11 @@ concept cstring_source = soul::is_same_v<T, TestString> || std::is_same_v<T, con
 template <cstring_source T>
 auto construct_cstring(const T& src) -> TestString
 {
-  if constexpr (soul::is_same_v<T, TestString>) {
+  if constexpr (soul::is_same_v<T, TestString>)
+  {
     return src.clone();
-  } else {
+  } else
+  {
     return TestString::From(src);
   }
 }
@@ -113,7 +115,8 @@ TEST(TestStringConstruction, TestDefaultConstructor)
 
 TEST(TestStringConstruction, TestConstructionFromStringView)
 {
-  const auto test_construction_from = [](StringView str_view) {
+  const auto test_construction_from = [](StringView str_view)
+  {
     const auto cstring = TestString::From(str_view);
     SOUL_TEST_RUN(verify_equal(cstring, str_view));
   };
@@ -132,7 +135,8 @@ TEST(TestStringConstruction, TestStringConstructionFromLiteral)
 
 TEST(TestStringConstruction, TestConstructionWithSize)
 {
-  const auto test_construction_with_size = [](usize size) {
+  const auto test_construction_with_size = [](usize size)
+  {
     const auto test_string = TestString::WithSize(size);
     SOUL_TEST_ASSERT_EQ(test_string.size(), size);
   };
@@ -179,7 +183,8 @@ TEST(TestStringConstruction, TestConstructionReservedFormat)
 
 TEST(TestStringConstruction, TestConstructionWithCapacity)
 {
-  const auto test_construction_with_capacity = [](usize capacity) {
+  const auto test_construction_with_capacity = [](usize capacity)
+  {
     const auto test_string = TestString::WithCapacity(capacity);
     SOUL_TEST_ASSERT_GE(test_string.capacity(), capacity);
   };
@@ -229,16 +234,16 @@ TEST(TestStringConstruction, TestMoveConstructor)
 class TestStringManipulation : public testing::Test
 {
 public:
-  TestString test_const_segment_string = TestString::From(TEST_SHORT_STR);
+  TestString test_const_segment_string  = TestString::From(TEST_SHORT_STR);
   TestString test_const_segment_string2 = TestString::From(TEST_LONG_STR);
 
-  TestString test_short_string = TestString::UnsharedFrom(TEST_SHORT_STR);
+  TestString test_short_string  = TestString::UnsharedFrom(TEST_SHORT_STR);
   TestString test_short_string2 = TestString::UnsharedFrom(TEST_SHORT_STR2);
 
-  TestString test_max_inline_string = TestString::UnsharedFrom(TEST_MAX_INLINE_STR);
+  TestString test_max_inline_string  = TestString::UnsharedFrom(TEST_MAX_INLINE_STR);
   TestString test_max_inline_string2 = TestString::UnsharedFrom(TEST_MAX_INLINE_STR2);
 
-  TestString test_long_string = TestString::UnsharedFrom(TEST_LONG_STR);
+  TestString test_long_string  = TestString::UnsharedFrom(TEST_LONG_STR);
   TestString test_long_string2 = TestString::UnsharedFrom(TEST_LONG_STR2);
 };
 
@@ -277,9 +282,10 @@ TEST_F(TestStringManipulation, TestMoveAssignemnt)
 
 TEST_F(TestStringManipulation, TestAssignCompStr)
 {
-  const auto test_assign_comp_str = [](const TestString& sample_string, CompStr comp_str) {
+  const auto test_assign_comp_str = [](const TestString& sample_string, CompStr comp_str)
+  {
     auto test_string = sample_string.clone();
-    test_string = comp_str;
+    test_string      = comp_str;
     SOUL_TEST_RUN(verify_equal(test_string, TestString(comp_str)));
   };
   SOUL_TEST_RUN(test_assign_comp_str(test_const_segment_string, "test"_str));
@@ -366,7 +372,8 @@ TEST_F(TestStringManipulation, TestStringSwap)
 
 TEST_F(TestStringManipulation, TestReserve)
 {
-  const auto test_reserve = [](const TestString& string_src, usize new_capacity) {
+  const auto test_reserve = [](const TestString& string_src, usize new_capacity)
+  {
     auto test_string = string_src.clone();
     test_string.reserve(new_capacity);
     SOUL_TEST_ASSERT_GE(test_string.capacity(), new_capacity);
@@ -401,7 +408,8 @@ TEST_F(TestStringManipulation, TestReserve)
 
 TEST_F(TestStringManipulation, TestClear)
 {
-  const auto test_clear = [](const TestString& sample_string) {
+  const auto test_clear = [](const TestString& sample_string)
+  {
     auto test_string = sample_string.clone();
     test_string.clear();
     verify_equal(test_string, "");
@@ -416,7 +424,8 @@ TEST_F(TestStringManipulation, TestClear)
 
 TEST_F(TestStringManipulation, TestPushBack)
 {
-  const auto test_push_back = [](const TestString& sample_string, char c) {
+  const auto test_push_back = [](const TestString& sample_string, char c)
+  {
     auto test_string = sample_string.clone();
     std::string expected_string(sample_string.data());
     test_string.push_back(c);
@@ -432,7 +441,8 @@ TEST_F(TestStringManipulation, TestPushBack)
 
 TEST_F(TestStringManipulation, TestAppendCharArr)
 {
-  const auto test_append = [](const TestString& sample_string, const char* extra_str) {
+  const auto test_append = [](const TestString& sample_string, const char* extra_str)
+  {
     auto test_string = sample_string.clone();
     std::string expected_string(sample_string.data());
     test_string.append(extra_str);
@@ -468,7 +478,8 @@ TEST_F(TestStringManipulation, TestAppendCharArr)
 
 TEST_F(TestStringManipulation, TestAppend)
 {
-  const auto test_append = [](const TestString& sample_string, const TestString& extra_string) {
+  const auto test_append = [](const TestString& sample_string, const TestString& extra_string)
+  {
     auto test_string = sample_string.clone();
     std::string expected_string(sample_string.data());
     test_string.append(extra_string.data());
@@ -506,13 +517,14 @@ TEST_F(TestStringManipulation, TestAppendFormat)
 {
   const auto test_append_format =
     []<typename... Args>(
-      const TestString& sample_string, std::format_string<Args...> fmt, Args&&... args) {
-      auto test_string = sample_string.clone();
-      const auto expected_string =
-        std::string(sample_string.data()) + std::vformat(fmt.get(), std::make_format_args(args...));
-      test_string.appendf(std::move(fmt), std::forward<Args>(args)...);
-      verify_equal(test_string, expected_string.data());
-    };
+      const TestString& sample_string, std::format_string<Args...> fmt, Args&&... args)
+  {
+    auto test_string = sample_string.clone();
+    const auto expected_string =
+      std::string(sample_string.data()) + std::vformat(fmt.get(), std::make_format_args(args...));
+    test_string.appendf(std::move(fmt), std::forward<Args>(args)...);
+    verify_equal(test_string, expected_string.data());
+  };
 
   SOUL_TEST_RUN(test_append_format(test_const_segment_string, "ab{}ef", "cd"));
   SOUL_TEST_RUN(
@@ -536,7 +548,8 @@ TEST_F(TestStringManipulation, TestAppendFormat)
 
 TEST_F(TestStringManipulation, TestAssign)
 {
-  const auto test_assign = [](const TestString& sample_string, StringView assigned_str_view) {
+  const auto test_assign = [](const TestString& sample_string, StringView assigned_str_view)
+  {
     auto test_string = sample_string.clone();
     test_string.assign(assigned_str_view);
     verify_equal(test_string, assigned_str_view);
@@ -572,12 +585,13 @@ TEST_F(TestStringManipulation, TestAssignFormat)
 {
   const auto test_assign_format =
     []<typename... Args>(
-      const TestString& sample_string, std::format_string<Args...> fmt, Args&&... args) {
-      auto test_string = sample_string.clone();
-      const auto expected_string = std::vformat(fmt.get(), std::make_format_args(args...));
-      test_string.assignf(std::move(fmt), std::forward<Args>(args)...);
-      verify_equal(test_string, expected_string.data());
-    };
+      const TestString& sample_string, std::format_string<Args...> fmt, Args&&... args)
+  {
+    auto test_string           = sample_string.clone();
+    const auto expected_string = std::vformat(fmt.get(), std::make_format_args(args...));
+    test_string.assignf(std::move(fmt), std::forward<Args>(args)...);
+    verify_equal(test_string, expected_string.data());
+  };
 
   SOUL_TEST_RUN(test_assign_format(test_const_segment_string, "ab{}ef", "cd"));
   SOUL_TEST_RUN(
@@ -611,16 +625,16 @@ TEST(TestStringFormat, TestStringFormat)
 
 TEST(TestStringHash, TestStringHash)
 {
-  TestString test_const_segment_string = TestString::From(TEST_SHORT_STR);
+  TestString test_const_segment_string  = TestString::From(TEST_SHORT_STR);
   TestString test_const_segment_string2 = TestString::From(TEST_LONG_STR);
 
-  TestString test_short_string = TestString::UnsharedFrom(TEST_SHORT_STR);
+  TestString test_short_string  = TestString::UnsharedFrom(TEST_SHORT_STR);
   TestString test_short_string2 = TestString::UnsharedFrom(TEST_SHORT_STR2);
 
-  TestString test_max_inline_string = TestString::UnsharedFrom(TEST_MAX_INLINE_STR);
+  TestString test_max_inline_string  = TestString::UnsharedFrom(TEST_MAX_INLINE_STR);
   TestString test_max_inline_string2 = TestString::UnsharedFrom(TEST_MAX_INLINE_STR2);
 
-  TestString test_long_string = TestString::UnsharedFrom(TEST_LONG_STR);
+  TestString test_long_string  = TestString::UnsharedFrom(TEST_LONG_STR);
   TestString test_long_string2 = TestString::UnsharedFrom(TEST_LONG_STR2);
 
   SOUL_TEST_ASSERT_EQ(soul::hash(test_const_segment_string), soul::hash(test_const_segment_string));

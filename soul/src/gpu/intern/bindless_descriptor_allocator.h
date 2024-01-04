@@ -16,7 +16,8 @@ namespace soul::gpu
 namespace soul::gpu::impl
 {
 
-  struct BindlessDescriptorSets {
+  struct BindlessDescriptorSets
+  {
     VkDescriptorSet vk_handles[BINDLESS_SET_COUNT];
   };
 
@@ -27,10 +28,10 @@ namespace soul::gpu::impl
       u32 capacity,
       VkDescriptorType descriptor_type,
       memory::Allocator* allocator = runtime::get_context_allocator());
-    BindlessDescriptorSet(const BindlessDescriptorSet&) = delete;
-    BindlessDescriptorSet(BindlessDescriptorSet&&) = delete;
+    BindlessDescriptorSet(const BindlessDescriptorSet&)                    = delete;
+    BindlessDescriptorSet(BindlessDescriptorSet&&)                         = delete;
     auto operator=(const BindlessDescriptorSet&) -> BindlessDescriptorSet& = delete;
-    auto operator=(BindlessDescriptorSet&&) -> BindlessDescriptorSet& = delete;
+    auto operator=(BindlessDescriptorSet&&) -> BindlessDescriptorSet&      = delete;
     auto init(VkDevice device, VkDescriptorPool descriptor_pool) -> void;
     auto create_descriptor(VkDevice device, const VkDescriptorBufferInfo& buffer_info)
       -> DescriptorID;
@@ -38,11 +39,17 @@ namespace soul::gpu::impl
       -> DescriptorID;
     auto create_descriptor(VkDevice device, VkAccelerationStructureKHR as) -> DescriptorID;
     auto destroy_descriptor(VkDevice device, DescriptorID id) -> void;
-    auto get_descriptor_set() const -> VkDescriptorSet { return descriptor_set_; }
+
+    auto get_descriptor_set() const -> VkDescriptorSet
+    {
+      return descriptor_set_;
+    }
+
     auto get_descriptor_set_layout() const -> VkDescriptorSetLayout
     {
       return descriptor_set_layout_;
     }
+
     ~BindlessDescriptorSet();
 
   private:
@@ -51,7 +58,7 @@ namespace soul::gpu::impl
     u32* list_;
     u32 capacity_;
     VkDescriptorType descriptor_type_;
-    VkDescriptorSet descriptor_set_ = VK_NULL_HANDLE;
+    VkDescriptorSet descriptor_set_              = VK_NULL_HANDLE;
     VkDescriptorSetLayout descriptor_set_layout_ = VK_NULL_HANDLE;
     RWSpinMutex mutex_;
   };
@@ -95,7 +102,10 @@ namespace soul::gpu::impl
 
     auto destroy_as_descriptor(DescriptorID id) -> void;
 
-    auto get_pipeline_layout() const -> VkPipelineLayout { return pipeline_layout_; }
+    auto get_pipeline_layout() const -> VkPipelineLayout
+    {
+      return pipeline_layout_;
+    }
 
     auto get_bindless_descriptor_sets() const -> BindlessDescriptorSets
     {
@@ -109,10 +119,10 @@ namespace soul::gpu::impl
 
   private:
     static constexpr u32 STORAGE_BUFFER_DESCRIPTOR_COUNT = 512u * 1024;
-    static constexpr u32 SAMPLER_DESCRIPTOR_COUNT = 4u * 1024;
-    static constexpr u32 SAMPLED_IMAGE_DESCRIPTOR_COUNT = 512u * 1024;
-    static constexpr u32 STORAGE_IMAGE_DESCRIPTOR_COUNT = 512u * 1024;
-    static constexpr u32 AS_DESCRIPTOR_COUNT = 512u;
+    static constexpr u32 SAMPLER_DESCRIPTOR_COUNT        = 4u * 1024;
+    static constexpr u32 SAMPLED_IMAGE_DESCRIPTOR_COUNT  = 512u * 1024;
+    static constexpr u32 STORAGE_IMAGE_DESCRIPTOR_COUNT  = 512u * 1024;
+    static constexpr u32 AS_DESCRIPTOR_COUNT             = 512u;
 
     VkDescriptorPool descriptor_pool_ = VK_NULL_HANDLE;
     BindlessDescriptorSet storage_buffer_descriptor_set_;
@@ -121,7 +131,7 @@ namespace soul::gpu::impl
     BindlessDescriptorSet storage_image_descriptor_set_;
     BindlessDescriptorSet as_descriptor_set_;
     VkPipelineLayout pipeline_layout_ = VK_NULL_HANDLE;
-    VkDevice device_ = VK_NULL_HANDLE;
+    VkDevice device_                  = VK_NULL_HANDLE;
   };
 
 } // namespace soul::gpu::impl

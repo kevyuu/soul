@@ -13,11 +13,14 @@ namespace soul
   class Result;
 
   template <typename T, typename OkT = match_any, typename ErrT = match_any>
-  inline constexpr b8 is_result_v = []() {
-    if constexpr (!is_specialization_v<T, Result>) {
+  inline constexpr b8 is_result_v = []()
+  {
+    if constexpr (!is_specialization_v<T, Result>)
+    {
       return false;
-    } else {
-      constexpr b8 is_ok_type_match = is_match_v<OkT, typename T::ok_type>;
+    } else
+    {
+      constexpr b8 is_ok_type_match  = is_match_v<OkT, typename T::ok_type>;
       constexpr b8 is_err_type_match = is_match_v<ErrT, typename T::err_type>;
       return is_ok_type_match && is_err_type_match;
     }
@@ -45,7 +48,7 @@ namespace soul
       !can_result_trivial_copy_v && can_copy_or_clone_v<OkT> && can_copy_or_clone_v<ErrT>;
 
   public:
-    using ok_type = OkT;
+    using ok_type  = OkT;
     using err_type = ErrT;
 
     constexpr Result(const Result& other) noexcept
@@ -61,9 +64,11 @@ namespace soul
         : state_(other.state_)
     {
       SOUL_ASSERT(0, other.state_ != State::VALUELESS, "Cannot move from a valueless object");
-      if (state_ == State::OK) {
+      if (state_ == State::OK)
+      {
         relocate_at(&ok_val_, std::move(other.ok_val_));
-      } else if (state_ == State::ERR) {
+      } else if (state_ == State::ERR)
+      {
         relocate_at(&err_val_, std::move(other.err_val_));
       }
       other.state_ = State::VALUELESS;
@@ -82,19 +87,25 @@ namespace soul
     {
       SOUL_ASSERT(0, other.state_ != State::VALUELESS, "Cannot move from a valueless object");
 
-      if (state_ == other.state_) {
-        if (state_ == State::OK) {
+      if (state_ == other.state_)
+      {
+        if (state_ == State::OK)
+        {
           ok_val_ = std::move(other.ok_val_);
-        } else {
+        } else
+        {
           err_val_ = std::move(other.err_val_);
         }
         other.cleanup_for_not_valueless();
-      } else {
+      } else
+      {
         cleanup_for_not_valueless();
         state_ = other.state_;
-        if (other.state_ == State::OK) {
+        if (other.state_ == State::OK)
+        {
           relocate_at(&ok_val_, std::move(other.ok_val_));
-        } else if (other.state_ == State::ERR) {
+        } else if (other.state_ == State::ERR)
+        {
           relocate_at(&err_val_, std::move(other.err_val_));
         }
       }
@@ -110,7 +121,8 @@ namespace soul
     constexpr ~Result() noexcept
       requires(!can_result_trivial_destruct_v)
     {
-      if (state_ != State::VALUELESS) {
+      if (state_ != State::VALUELESS)
+      {
         cleanup_for_not_valueless();
       }
     }
@@ -122,19 +134,25 @@ namespace soul
         lhs.state_ != State::VALUELESS && rhs.state_ != State::VALUELESS,
         "Cannot swap valueless result");
       using std::swap;
-      if (lhs.state_ == rhs.state_) {
-        if (lhs.state_ == State::OK) {
+      if (lhs.state_ == rhs.state_)
+      {
+        if (lhs.state_ == State::OK)
+        {
           swap(lhs.ok_val_, rhs.ok_val_);
-        } else {
+        } else
+        {
           swap(lhs.err_val_, rhs.err_val_);
         }
-      } else {
-        if (lhs.state_ == State::OK) {
+      } else
+      {
+        if (lhs.state_ == State::OK)
+        {
           OkT ok_val_tmp = std::move(lhs.ok_val_);
           destroy_at(&lhs.ok_val_);
           relocate_at(&lhs.err_val_, std::move(rhs.err_val_));
           construct_at(&rhs.ok_val_, std::move(ok_val_tmp));
-        } else {
+        } else
+        {
           ErrT err_val_tmp = std::move(lhs.err_val_);
           destroy_at(&lhs.err_val_);
           relocate_at(&lhs.ok_val_, std::move(rhs.ok_val_));
@@ -230,7 +248,8 @@ namespace soul
       static_assert(
         can_trivial_copy_v<OkT>,
         "Ok type must be trivially copyable to use transform on lvalue reference");
-      if (is_ok()) {
+      if (is_ok())
+      {
         return ok_val_;
       }
       return default_val;
@@ -239,7 +258,8 @@ namespace soul
     [[nodiscard]]
     constexpr auto unwrap_or(OwnRef<OkT> default_val) && -> OkT
     {
-      if (is_ok()) {
+      if (is_ok())
+      {
         return std::move(ok_val_);
       }
       return default_val;
@@ -252,7 +272,8 @@ namespace soul
       static_assert(
         can_trivial_copy_v<OkT>,
         "Ok type must be trivially copyable to use transform on lvalue reference");
-      if (is_ok()) {
+      if (is_ok())
+      {
         return ok_val_;
       }
       return std::invoke(fn);
@@ -262,7 +283,8 @@ namespace soul
     [[nodiscard]]
     constexpr auto unwrap_or_else(Fn fn) && -> OkT
     {
-      if (is_ok()) {
+      if (is_ok())
+      {
         return std::move(ok_val_);
       }
       return std::invoke(fn);
@@ -276,7 +298,8 @@ namespace soul
       static_assert(
         can_trivial_copy_v<ErrT>,
         "Error type must be trivially copyable to use transform on lvalue reference");
-      if (is_ok()) {
+      if (is_ok())
+      {
         return std::invoke(fn, ok_val_);
       }
       return FnReturnT::Err(err_val_);
@@ -290,7 +313,8 @@ namespace soul
       static_assert(
         can_trivial_copy_v<ErrT>,
         "Error type must be trivially copyable to use transform on lvalue reference");
-      if (is_ok()) {
+      if (is_ok())
+      {
         return std::invoke(fn, ok_val_);
       }
       return FnReturnT::Err(err_val_);
@@ -301,7 +325,8 @@ namespace soul
     constexpr auto and_then(Fn fn) && -> FnReturnT
       requires(is_result_v<FnReturnT, match_any, ErrT>)
     {
-      if (is_ok()) {
+      if (is_ok())
+      {
         return std::invoke(fn, std::move(ok_val_));
       }
       return FnReturnT::Err(std::move(err_val_));
@@ -319,8 +344,13 @@ namespace soul
         can_trivial_copy_v<ErrT>,
         "Error type must be trivially copyable to use transform on lvalue reference");
       using ReturnT = Result<FnReturnT, ErrT>;
-      if (is_ok()) {
-        return ReturnT::Generate([&, this] { return std::invoke(fn, ok_val_); });
+      if (is_ok())
+      {
+        return ReturnT::Generate(
+          [&, this]
+          {
+            return std::invoke(fn, ok_val_);
+          });
       }
       return ReturnT::Err(err_val_);
     }
@@ -333,8 +363,13 @@ namespace soul
         can_trivial_copy_v<ErrT>,
         "Error type must be trivially copyable to use transform on lvalue reference");
       using ReturnT = Result<FnReturnT, ErrT>;
-      if (is_ok()) {
-        return ReturnT::Generate([&, this] { return std::invoke(fn, ok_val_); });
+      if (is_ok())
+      {
+        return ReturnT::Generate(
+          [&, this]
+          {
+            return std::invoke(fn, ok_val_);
+          });
       }
       return ReturnT::Err(err_val_);
     }
@@ -344,8 +379,13 @@ namespace soul
     constexpr auto transform(Fn fn) && -> Result<FnReturnT, ErrT>
     {
       using ReturnT = Result<FnReturnT, ErrT>;
-      if (is_ok()) {
-        return ReturnT::Generate([&, this] { return std::invoke(fn, std::move(ok_val_)); });
+      if (is_ok())
+      {
+        return ReturnT::Generate(
+          [&, this]
+          {
+            return std::invoke(fn, std::move(ok_val_));
+          });
       }
       return ReturnT::Err(std::move(err_val_));
     }
@@ -361,7 +401,8 @@ namespace soul
       static_assert(
         can_trivial_copy_v<OkT>,
         "Ok type must be trivially copyable to use this method on lvalue reference");
-      if (is_ok()) {
+      if (is_ok())
+      {
         return FnReturnT::Ok(ok_val_);
       }
       return std::invoke(fn, err_val_);
@@ -374,7 +415,8 @@ namespace soul
       static_assert(
         can_trivial_copy_v<OkT>,
         "Ok type must be trivially copyable to use this method on lvalue reference");
-      if (is_ok()) {
+      if (is_ok())
+      {
         return FnReturnT::Ok(ok_val_);
       }
       return std::invoke(fn, err_val_);
@@ -384,7 +426,8 @@ namespace soul
     [[nodiscard]]
     constexpr auto or_else(Fn fn) && -> FnReturnT
     {
-      if (is_ok()) {
+      if (is_ok())
+      {
         return FnReturnT::Ok(std::move(ok_val_));
       }
       return std::invoke(fn, std::move(err_val_));
@@ -421,25 +464,41 @@ namespace soul
     }
 
   private:
-    union {
+    union
+    {
       OkT ok_val_;
       ErrT err_val_;
     };
-    enum class State : u8 { OK, ERR, VALUELESS, COUNT };
+    enum class State : u8
+    {
+      OK,
+      ERR,
+      VALUELESS,
+      COUNT
+    };
     State state_;
 
-    struct Construct {
-      struct Ok {
+    struct Construct
+    {
+      struct Ok
+      {
       };
-      struct Err {
+
+      struct Err
+      {
       };
-      struct InitGenerate {
+
+      struct InitGenerate
+      {
       };
-      struct InitGenerateErr {
+
+      struct InitGenerateErr
+      {
       };
-      static constexpr auto ok = Ok{};
-      static constexpr auto err = Err{};
-      static constexpr auto init_generate = InitGenerate{};
+
+      static constexpr auto ok                = Ok{};
+      static constexpr auto err               = Err{};
+      static constexpr auto init_generate     = InitGenerate{};
       static constexpr auto init_generate_err = InitGenerateErr{};
     };
 
@@ -470,9 +529,11 @@ namespace soul
         : state_(other.state_)
     {
       SOUL_ASSERT(0, other.state_ != State::VALUELESS, "Cannot copy from valueless object");
-      if (other.state_ == State::OK) {
+      if (other.state_ == State::OK)
+      {
         duplicate_at(&ok_val_, other.ok_val_);
-      } else if (other.state_ == State::ERR) {
+      } else if (other.state_ == State::ERR)
+      {
         duplicate_at(&err_val_, other.err_val_);
       }
     }
@@ -481,18 +542,24 @@ namespace soul
       requires(can_result_clone_v)
     {
       SOUL_ASSERT(0, other.state_ != State::VALUELESS, "Cannot copy from valueless object");
-      if (state_ == other.state_) {
-        if (state_ == State::OK) {
+      if (state_ == other.state_)
+      {
+        if (state_ == State::OK)
+        {
           duplicate_from(ptrof(ok_val_), other.ok_val_);
-        } else {
+        } else
+        {
           duplicate_from(ptrof(err_val_), other.err_val_);
         }
-      } else {
+      } else
+      {
         cleanup_for_not_valueless();
 
-        if (other.state_ == State::OK) {
+        if (other.state_ == State::OK)
+        {
           duplicate_at(&ok_val_, other.ok_val_);
-        } else {
+        } else
+        {
           duplicate_at(&err_val_, other.err_val_);
         }
         state_ = other.state_;
@@ -502,9 +569,11 @@ namespace soul
 
     constexpr void cleanup_for_not_valueless()
     {
-      if (state_ == State::OK) {
+      if (state_ == State::OK)
+      {
         destroy_at(&ok_val_);
-      } else if (state_ == State::ERR) {
+      } else if (state_ == State::ERR)
+      {
         destroy_at(&err_val_);
       }
     }
@@ -515,10 +584,12 @@ namespace soul
     -> b8
     requires(can_compare_equality_v<OkT> && can_compare_equality_v<ErrT>)
   {
-    if (left.is_ok() != right.is_ok()) {
+    if (left.is_ok() != right.is_ok())
+    {
       return false;
     }
-    if (left.is_ok()) {
+    if (left.is_ok())
+    {
       return left.ok_ref() == right.ok_ref();
     }
     return left.err_ref() == right.err_ref();

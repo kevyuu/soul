@@ -28,7 +28,11 @@ namespace soul
     void clone_from(const this_type& other);
 
     auto swap(PackedPool& other) noexcept -> void;
-    static auto swap(PackedPool& a, PackedPool& b) noexcept -> void { a.swap(b); }
+
+    static auto swap(PackedPool& a, PackedPool& b) noexcept -> void
+    {
+      a.swap(b);
+    }
 
     auto reserve(soul_size capacity) -> void;
     auto add(const T& datum) -> PackedID;
@@ -70,6 +74,7 @@ namespace soul
     {
       return size_;
     }
+
     [[nodiscard]]
     auto capacity() const noexcept -> soul_size
     {
@@ -89,6 +94,7 @@ namespace soul
     {
       return buffer_;
     }
+
     [[nodiscard]]
     auto end() noexcept -> T*
     {
@@ -100,6 +106,7 @@ namespace soul
     {
       return buffer_;
     }
+
     [[nodiscard]]
     auto end() const -> const T*
     {
@@ -114,10 +121,10 @@ namespace soul
 
     memory::Allocator* allocator_ = nullptr;
     IndexPool internal_indexes_;
-    PoolID* pool_ids_ = nullptr;
-    T* buffer_ = nullptr;
+    PoolID* pool_ids_   = nullptr;
+    T* buffer_          = nullptr;
     soul_size capacity_ = 0;
-    soul_size size_ = 0;
+    soul_size size_     = 0;
   };
 
   template <typename T>
@@ -204,13 +211,14 @@ namespace soul
     SOUL_ASSERT(0, capacity > capacity_);
 
     T* oldBuffer = buffer_;
-    buffer_ = static_cast<T*>(allocator_->allocate(capacity * sizeof(T), alignof(T)));
+    buffer_      = static_cast<T*>(allocator_->allocate(capacity * sizeof(T), alignof(T)));
 
     PoolID* oldPoolIDs = pool_ids_;
     pool_ids_ =
       static_cast<PoolID*>(allocator_->allocate(capacity * sizeof(PoolID), alignof(PoolID)));
 
-    if (oldBuffer != nullptr) {
+    if (oldBuffer != nullptr)
+    {
       Move(oldBuffer, oldBuffer + capacity_, buffer_);
       allocator_->deallocate(oldBuffer);
       SOUL_ASSERT(0, oldPoolIDs != nullptr);
@@ -223,12 +231,13 @@ namespace soul
   template <typename T>
   auto PackedPool<T>::add(const T& datum) -> PackedID
   {
-    if (size_ == capacity_) {
+    if (size_ == capacity_)
+    {
       reserve(capacity_ * 2 + 1);
     }
 
     new (buffer_ + size_) T(datum);
-    const auto id = internal_indexes_.create(size_);
+    const auto id    = internal_indexes_.create(size_);
     pool_ids_[size_] = id;
     size_++;
 
@@ -238,11 +247,12 @@ namespace soul
   template <typename T>
   auto PackedPool<T>::add(T&& datum) -> PackedID
   {
-    if (size_ == capacity_) {
+    if (size_ == capacity_)
+    {
       reserve(capacity_ * 2 + 1);
     }
     new (buffer_ + size_) T(std::move(datum));
-    const auto id = internal_indexes_.create(size_);
+    const auto id    = internal_indexes_.create(size_);
     pool_ids_[size_] = id;
     size_++;
 
@@ -252,7 +262,8 @@ namespace soul
   template <typename T>
   auto PackedPool<T>::append(const PackedPool<T>& other) -> void
   {
-    for (const T& datum : other) {
+    for (const T& datum : other)
+    {
       add(datum);
     }
   }
@@ -260,9 +271,9 @@ namespace soul
   template <typename T>
   auto PackedPool<T>::remove(PackedID id) -> void
   {
-    auto internalIndex = internal_indexes_[id];
-    buffer_[internalIndex] = buffer_[size_ - 1];
-    pool_ids_[internalIndex] = pool_ids_[size_ - 1];
+    auto internalIndex                          = internal_indexes_[id];
+    buffer_[internalIndex]                      = buffer_[size_ - 1];
+    pool_ids_[internalIndex]                    = pool_ids_[size_ - 1];
     internal_indexes_[pool_ids_[internalIndex]] = internalIndex;
     size_--;
   }

@@ -18,8 +18,8 @@ namespace soul
   }
 } // namespace soul
 
-using OptInt = soul::Option<int>;
-using OptObj = soul::Option<TestObject>;
+using OptInt     = soul::Option<int>;
+using OptObj     = soul::Option<TestObject>;
 using OptListObj = soul::Option<ListTestObject>;
 
 template <typename T>
@@ -33,7 +33,8 @@ template <typename T>
 auto verify_option_equal(const soul::Option<T>& opt1, const soul::Option<T>& opt2)
 {
   SOUL_TEST_ASSERT_EQ(opt1.is_some(), opt2.is_some());
-  if (opt1.is_some() && opt2.is_some()) {
+  if (opt1.is_some() && opt2.is_some())
+  {
     SOUL_TEST_ASSERT_EQ(opt1.some_ref(), opt2.some_ref());
   }
   SOUL_TEST_ASSERT_EQ(opt1, opt2);
@@ -52,7 +53,8 @@ auto test_construction_some(const T& val)
   auto option = soul::Option<T>::Some(soul::duplicate(val));
   SOUL_TEST_ASSERT_TRUE(option.is_some());
   SOUL_TEST_ASSERT_EQ(option.some_ref(), val);
-  if constexpr (soul::can_trivial_copy_v<T>) {
+  if constexpr (soul::can_trivial_copy_v<T>)
+  {
     SOUL_TEST_ASSERT_EQ(option.unwrap(), val);
   }
   SOUL_TEST_ASSERT_EQ(std::move(option).unwrap(), val);
@@ -62,8 +64,12 @@ TEST(TestOptionConstruction, TestConstructionSome)
 {
   SOUL_TEST_RUN(test_construction_some<int>(5));
   SOUL_TEST_RUN(test_construction_some<TestObject>(TestObject(5)));
-  SOUL_TEST_RUN(test_construction_some<ListTestObject>(
-    ListTestObject::GenerateN([] { return TestObject(10); }, 5)));
+  SOUL_TEST_RUN(test_construction_some<ListTestObject>(ListTestObject::GenerateN(
+    []
+    {
+      return TestObject(10);
+    },
+    5)));
 }
 
 template <soul::typeset T>
@@ -86,7 +92,10 @@ auto test_clone(const soul::Option<T>& opt_src)
   verify_option_equal<T>(opt_dst, opt_src);
 }
 
-auto test_object_factory = [] { return TestObject(3); };
+auto test_object_factory = []
+{
+  return TestObject(3);
+};
 
 TEST(TestOptionConstruction, TestClone)
 {
@@ -119,7 +128,7 @@ template <typename T>
 auto test_copy_assignment(const soul::Option<T>& opt_src, const soul::Option<T>& sample_opt_dst)
 {
   auto opt_dst = sample_opt_dst;
-  opt_dst = opt_src;
+  opt_dst      = opt_src;
   verify_option_equal<T>(opt_dst, opt_src);
 }
 
@@ -141,7 +150,7 @@ auto test_clone_from(const soul::Option<T>& opt_src, const soul::Option<T>& samp
 
 TEST(TestOptionConstruction, TestCloneFrom)
 {
-  const auto test_some_optobj = OptObj::Some(TestObject(4));
+  const auto test_some_optobj  = OptObj::Some(TestObject(4));
   const auto test_some_optobj2 = OptObj::Some(TestObject(4));
   SOUL_TEST_RUN(test_clone_from(OptObj(), test_some_optobj));
   SOUL_TEST_RUN(test_clone_from(test_some_optobj, OptObj()));
@@ -164,13 +173,13 @@ auto test_move_assignment(
 {
   auto opt_src = sample_opt_src.clone();
   auto opt_dst = sample_opt_dst.clone();
-  opt_dst = std::move(opt_src);
+  opt_dst      = std::move(opt_src);
   verify_option_equal<T>(opt_dst, sample_opt_src);
 }
 
 TEST(TestOptionAssignment, TestMoveAssignment)
 {
-  const auto test_some_optobj = OptObj::Some(TestObject(4));
+  const auto test_some_optobj  = OptObj::Some(TestObject(4));
   const auto test_some_optobj2 = OptObj::Some(TestObject(4));
   SOUL_TEST_RUN(test_move_assignment(OptObj(), test_some_optobj));
   SOUL_TEST_RUN(test_move_assignment(test_some_optobj, OptObj()));
@@ -216,20 +225,56 @@ TEST(TestOptionUnwrapOrElse, TestUnwrapOrElse)
 {
   {
     auto test_opt_some = OptInt::Some(10);
-    SOUL_TEST_ASSERT_EQ(test_opt_some.unwrap_or_else([] { return 5; }), 10);
+    SOUL_TEST_ASSERT_EQ(
+      test_opt_some.unwrap_or_else(
+        []
+        {
+          return 5;
+        }),
+      10);
   }
 
   {
     auto test_opt_none = OptInt();
-    SOUL_TEST_ASSERT_EQ(test_opt_none.unwrap_or_else([] { return 5; }), 5);
+    SOUL_TEST_ASSERT_EQ(
+      test_opt_none.unwrap_or_else(
+        []
+        {
+          return 5;
+        }),
+      5);
   }
 
-  SOUL_TEST_ASSERT_EQ(OptInt::Some(3).unwrap_or_else([] { return 5; }), 3);
-  SOUL_TEST_ASSERT_EQ(OptInt().unwrap_or_else([]() { return 5; }), 5);
+  SOUL_TEST_ASSERT_EQ(
+    OptInt::Some(3).unwrap_or_else(
+      []
+      {
+        return 5;
+      }),
+    3);
+  SOUL_TEST_ASSERT_EQ(
+    OptInt().unwrap_or_else(
+      []()
+      {
+        return 5;
+      }),
+    5);
 
   SOUL_TEST_ASSERT_EQ(
-    OptObj::Some(TestObject(3)).unwrap_or_else([] { return TestObject(5); }), TestObject(3));
-  SOUL_TEST_ASSERT_EQ(OptObj().unwrap_or_else([] { return TestObject(5); }), TestObject(5));
+    OptObj::Some(TestObject(3))
+      .unwrap_or_else(
+        []
+        {
+          return TestObject(5);
+        }),
+    TestObject(3));
+  SOUL_TEST_ASSERT_EQ(
+    OptObj().unwrap_or_else(
+      []
+      {
+        return TestObject(5);
+      }),
+    TestObject(5));
 
   const auto test_listobj1 = ListTestObject::GenerateN(test_object_factory, 3);
   const auto test_listobj2 = ListTestObject::GenerateN(test_object_factory, 10);
@@ -243,25 +288,49 @@ TEST(TestOptionAndThen, TestAndThen)
 {
   {
     const auto opt_int_none = OptInt();
-    const auto result = opt_int_none.and_then([](const int val) { return OptInt::Some(val + 1); });
+    const auto result       = opt_int_none.and_then(
+      [](const int val)
+      {
+        return OptInt::Some(val + 1);
+      });
     verify_option_equal(result, OptInt());
   }
 
   {
-    const auto opt_some_listtestobj =
-      OptListObj::Some(ListTestObject::GenerateN([] { return TestObject(5); }, 10));
-    const auto result = opt_some_listtestobj.and_then(
-      [](const ListTestObject& val) { return soul::Option<usize>::Some(val.size()); });
+    const auto opt_some_listtestobj = OptListObj::Some(ListTestObject::GenerateN(
+      []
+      {
+        return TestObject(5);
+      },
+      10));
+    const auto result               = opt_some_listtestobj.and_then(
+      [](const ListTestObject& val)
+      {
+        return soul::Option<usize>::Some(val.size());
+      });
     verify_option_equal(result, soul::Option<usize>::Some(10));
   }
 
   {
-    const auto result = OptObj::Some(TestObject(10)).and_then([](TestObject&& test_object) {
-      return OptListObj::Some(
-        ListTestObject::GenerateN([&test_object] { return test_object.clone(); }, 10));
-    });
+    const auto result = OptObj::Some(TestObject(10))
+                          .and_then(
+                            [](TestObject&& test_object)
+                            {
+                              return OptListObj::Some(ListTestObject::GenerateN(
+                                [&test_object]
+                                {
+                                  return test_object.clone();
+                                },
+                                10));
+                            });
     verify_option_equal(
-      result, OptListObj::Some(ListTestObject::GenerateN([] { return TestObject(10); }, 10)));
+      result,
+      OptListObj::Some(ListTestObject::GenerateN(
+        []
+        {
+          return TestObject(10);
+        },
+        10)));
   }
 }
 
@@ -269,54 +338,101 @@ TEST(TestOptionTransform, TestTransform)
 {
   {
     const auto opt_int_none = OptInt();
-    const auto result = opt_int_none.transform([](const int val) { return val + 1; });
+    const auto result       = opt_int_none.transform(
+      [](const int val)
+      {
+        return val + 1;
+      });
     verify_option_equal(result, OptInt());
   }
 
   {
-    const auto opt_some_listtestobj =
-      OptListObj::Some(ListTestObject::GenerateN([] { return TestObject(5); }, 10));
-    const auto result =
-      opt_some_listtestobj.transform([](const ListTestObject& val) { return val.size(); });
+    const auto opt_some_listtestobj = OptListObj::Some(ListTestObject::GenerateN(
+      []
+      {
+        return TestObject(5);
+      },
+      10));
+    const auto result               = opt_some_listtestobj.transform(
+      [](const ListTestObject& val)
+      {
+        return val.size();
+      });
     verify_option_equal(result, soul::Option<usize>::Some(10));
   }
 
   {
-    auto generate_list_test_object = [](TestObject&& test_object) -> ListTestObject {
-      return ListTestObject::GenerateN([&test_object] { return test_object.clone(); }, 10);
+    auto generate_list_test_object = [](TestObject&& test_object) -> ListTestObject
+    {
+      return ListTestObject::GenerateN(
+        [&test_object]
+        {
+          return test_object.clone();
+        },
+        10);
     };
     const auto result = OptObj::Some(TestObject(10)).transform(generate_list_test_object);
     verify_option_equal(
-      result, OptListObj::Some(ListTestObject::GenerateN([] { return TestObject(10); }, 10)));
+      result,
+      OptListObj::Some(ListTestObject::GenerateN(
+        []
+        {
+          return TestObject(10);
+        },
+        10)));
   }
 }
 
 TEST(TestOptionOrElse, TestOrElse)
 {
   {
-    const auto result = OptInt().or_else([] { return OptInt::Some(3); });
+    const auto result = OptInt().or_else(
+      []
+      {
+        return OptInt::Some(3);
+      });
     verify_option_equal(result, OptInt::Some(3));
   }
 
   {
     const auto opt_int_some = OptInt::Some(5);
-    const auto result = opt_int_some.or_else([] { return OptInt::Some(3); });
+    const auto result       = opt_int_some.or_else(
+      []
+      {
+        return OptInt::Some(3);
+      });
     verify_option_equal(result, OptInt::Some(5));
   }
 
   {
     const auto expected_list_object = ListTestObject::From(
-      std::views::iota(3, 10) | std::views::transform([](i32 val) { return TestObject(val); }));
+      std::views::iota(3, 10) | std::views::transform(
+                                  [](i32 val)
+                                  {
+                                    return TestObject(val);
+                                  }));
     const auto expected_opt = OptListObj::Some(expected_list_object.clone());
-    const auto result = OptListObj().or_else([&] { return expected_opt.clone(); });
+    const auto result       = OptListObj().or_else(
+      [&]
+      {
+        return expected_opt.clone();
+      });
     verify_option_equal(result, expected_opt);
   }
 
   {
     const auto expected_list_object = ListTestObject::From(
-      std::views::iota(3, 10) | std::views::transform([](i32 val) { return TestObject(val); }));
+      std::views::iota(3, 10) | std::views::transform(
+                                  [](i32 val)
+                                  {
+                                    return TestObject(val);
+                                  }));
     const auto expected_opt = OptListObj::Some(expected_list_object.clone());
-    const auto result = expected_opt.clone().or_else([&] { return OptListObj(); });
+    const auto result       = expected_opt.clone().or_else(
+      [&]
+      {
+        return OptListObj();
+      });
     verify_option_equal(result, expected_opt);
   }
 }
@@ -327,8 +443,12 @@ TEST(TestOptionReset, TestReset)
   opt_int_none.reset();
   verify_option_equal(opt_int_none, OptInt());
 
-  auto opt_some_listtestobj =
-    OptListObj::Some(ListTestObject::GenerateN([] { return TestObject(5); }, 10));
+  auto opt_some_listtestobj = OptListObj::Some(ListTestObject::GenerateN(
+    []
+    {
+      return TestObject(5);
+    },
+    10));
   opt_some_listtestobj.reset();
   verify_option_equal(opt_some_listtestobj, OptListObj());
 }
@@ -336,14 +456,20 @@ TEST(TestOptionReset, TestReset)
 TEST(TestOptionIsSomeAnd, TestIsSomeAnd)
 {
   {
-    auto is_some_fn = [](int val) { return val == 5; };
+    auto is_some_fn = [](int val)
+    {
+      return val == 5;
+    };
     SOUL_TEST_ASSERT_TRUE(OptInt::Some(5).is_some_and(is_some_fn));
     SOUL_TEST_ASSERT_FALSE(OptInt::Some(3).is_some_and(is_some_fn));
     SOUL_TEST_ASSERT_FALSE(OptInt().is_some_and(is_some_fn));
   }
 
   {
-    auto is_some_fn = [](const TestObject& val) { return val == TestObject(5); };
+    auto is_some_fn = [](const TestObject& val)
+    {
+      return val == TestObject(5);
+    };
     SOUL_TEST_ASSERT_TRUE(OptObj::Some(TestObject(5)).is_some_and(is_some_fn));
     SOUL_TEST_ASSERT_FALSE(OptObj::Some(TestObject(3)).is_some_and(is_some_fn));
     SOUL_TEST_ASSERT_FALSE(OptObj().is_some_and(is_some_fn));
@@ -362,7 +488,7 @@ auto test_swap(const soul::Option<T>& sample_opt_lhs, const soul::Option<T>& sam
 
 TEST(TestOptionSwap, TestSwap)
 {
-  const auto test_some_optobj = OptObj::Some(TestObject(4));
+  const auto test_some_optobj  = OptObj::Some(TestObject(4));
   const auto test_some_optobj2 = OptObj::Some(TestObject(4));
   SOUL_TEST_RUN(test_swap(OptObj(), test_some_optobj));
   SOUL_TEST_RUN(test_swap(test_some_optobj, OptObj()));

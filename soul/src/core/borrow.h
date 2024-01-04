@@ -6,8 +6,9 @@ namespace soul
 {
 
   template <typename T, typename BorrowedT>
-  struct BorrowTrait {
-    static constexpr b8 available = false;
+  struct BorrowTrait
+  {
+    static constexpr b8 available                       = false;
     static constexpr auto Borrow(const T&) -> BorrowedT = delete;
   };
 

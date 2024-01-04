@@ -1,7 +1,7 @@
 #pragma once
 
 // TODO: Figure out how to do it without single header library
-#define VMA_STATIC_VULKAN_FUNCTIONS 0
+#define VMA_STATIC_VULKAN_FUNCTIONS  0
 #define VMA_DYNAMIC_VULKAN_FUNCTIONS 0
 #define VK_NO_PROTOTYPES
 #pragma warning(push, 0)
@@ -22,7 +22,8 @@ namespace soul::gpu::impl
   struct BlasGroup;
   struct Tlas;
 
-  struct Sampler {
+  struct Sampler
+  {
   };
 
   struct Program;
@@ -40,31 +41,33 @@ namespace soul::gpu::impl
 namespace soul::gpu
 {
 
-  struct GPUAddressStub {
+  struct GPUAddressStub
+  {
   };
 
   using GPUAddress = ID<GPUAddressStub, VkDeviceAddress, 0>;
   static_assert(sizeof(GPUAddress) == sizeof(u64), "GPUAddress size is not the same as u64");
 
-  using TexturePool = ConcurrentObjectPool<impl::Texture>;
-  using BufferPool = ConcurrentObjectPool<impl::Buffer>;
-  using BlasPool = ConcurrentObjectPool<impl::Blas>;
-  using BlasGroupPool = ConcurrentObjectPool<impl::BlasGroup>;
-  using TlasPool = ConcurrentObjectPool<impl::Tlas>;
-  using ShaderPool = ConcurrentObjectPool<impl::Shader>;
+  using TexturePool     = ConcurrentObjectPool<impl::Texture>;
+  using BufferPool      = ConcurrentObjectPool<impl::Buffer>;
+  using BlasPool        = ConcurrentObjectPool<impl::Blas>;
+  using BlasGroupPool   = ConcurrentObjectPool<impl::BlasGroup>;
+  using TlasPool        = ConcurrentObjectPool<impl::Tlas>;
+  using ShaderPool      = ConcurrentObjectPool<impl::Shader>;
   using ShaderTablePool = ConcurrentObjectPool<impl::ShaderTable>;
 
   // ID
-  using TextureID = ID<impl::Texture, TexturePool::ID, TexturePool::NULLVAL>;
-  using BufferID = ID<impl::Buffer, BufferPool::ID, BufferPool::NULLVAL>;
-  using BlasID = ID<impl::Blas, BlasPool::ID, BlasPool::NULLVAL>;
+  using TextureID   = ID<impl::Texture, TexturePool::ID, TexturePool::NULLVAL>;
+  using BufferID    = ID<impl::Buffer, BufferPool::ID, BufferPool::NULLVAL>;
+  using BlasID      = ID<impl::Blas, BlasPool::ID, BlasPool::NULLVAL>;
   using BlasGroupID = ID<impl::BlasGroup, BlasGroupPool::ID, BlasGroupPool::NULLVAL>;
-  using TlasID = ID<impl::Tlas, TlasPool::ID, TlasPool::NULLVAL>;
+  using TlasID      = ID<impl::Tlas, TlasPool::ID, TlasPool::NULLVAL>;
 
   struct Descriptor;
   using DescriptorID = ID<Descriptor, u32>;
 
-  struct SamplerID {
+  struct SamplerID
+  {
     VkSampler vkHandle = VK_NULL_HANDLE;
     DescriptorID descriptorID;
 
@@ -81,7 +84,7 @@ namespace soul::gpu
     }
   };
 
-  using ProgramID = ID<impl::Program, u16>;
+  using ProgramID     = ID<impl::Program, u16>;
   using ShaderTableID = ID<impl::ShaderTable, ShaderTablePool::ID, ShaderTablePool::NULLVAL>;
 
 } // namespace soul::gpu

@@ -9,7 +9,8 @@
 namespace soul::math
 {
   template <ts_arithmetic T>
-  struct Quaternion {
+  struct Quaternion
+  {
     T x, y, z, w;
 
     constexpr Quaternion() noexcept : x(0), y(0), z(0), w(1) {}
@@ -263,7 +264,8 @@ namespace soul::math
   constexpr auto normalize(const Quaternion<T>& q) -> Quaternion<T>
   {
     T len = length(q);
-    if (len <= T(0)) {
+    if (len <= T(0))
+    {
       return Quaternion<T>(T(0), T(0), T(0), T(1));
     }
     return q * (T(1) / len);
@@ -303,17 +305,20 @@ namespace soul::math
 
     // If cosTheta < 0, the interpolation will take the long way around the sphere.
     // To fix this, one Quaternion must be negated.
-    if (cos_theta < T(0)) {
-      q2 = -q2;
+    if (cos_theta < T(0))
+    {
+      q2        = -q2;
       cos_theta = -cos_theta;
     }
 
     // Perform a linear interpolation when cosTheta is close to 1 to avoid side effect of sin(angle)
     // becoming a zero denominator
-    if (cos_theta > T(1) - std::numeric_limits<T>::epsilon()) {
+    if (cos_theta > T(1) - std::numeric_limits<T>::epsilon())
+    {
       // Linear interpolation
       return lerp(q1, q2, t);
-    } else {
+    } else
+    {
       // Essential Mathematics, page 467
       T angle = acos(cos_theta);
       return (sin((T(1) - t) * angle) * q1 + sin(t * angle) * q2) / sin(angle);
@@ -333,7 +338,8 @@ namespace soul::math
     T x = q.w * q.w - q.x * q.x - q.y * q.y + q.z * q.z;
 
     // Handle sigularity, avoid atan2(0,0)
-    if (abs(x) < std::numeric_limits<T>::epsilon() && abs(y) < std::numeric_limits<T>::epsilon()) {
+    if (abs(x) < std::numeric_limits<T>::epsilon() && abs(y) < std::numeric_limits<T>::epsilon())
+    {
       return T(T(2) * atan2(q.x, q.w));
     }
 
@@ -395,20 +401,23 @@ namespace soul::math
     T cosTheta = dot(orig, dest);
     Vec<T, 3> axis;
 
-    if (cosTheta >= T(1) - std::numeric_limits<T>::epsilon()) {
+    if (cosTheta >= T(1) - std::numeric_limits<T>::epsilon())
+    {
       // orig and dest point in the same direction
       return Quaternion<T>::identity();
     }
 
-    if (cosTheta < T(-1) + std::numeric_limits<T>::epsilon()) {
+    if (cosTheta < T(-1) + std::numeric_limits<T>::epsilon())
+    {
       // special case when vectors in opposite directions :
       // there is no "ideal" rotation axis
       // So guess one; any will do as long as it's perpendicular to start
       // This implementation favors a rotation around the Up axis (Y),
       // since it's often what you want to do.
       axis = cross(vector<T, 3>(0, 0, 1), orig);
-      if (dot(axis, axis) < std::numeric_limits<T>::epsilon()) { // bad luck, they were parallel,
-                                                                 // try again!
+      if (dot(axis, axis) < std::numeric_limits<T>::epsilon())
+      { // bad luck, they were parallel,
+        // try again!
         axis = cross(vector<T, 3>(1, 0, 0), orig);
       }
 
@@ -419,7 +428,7 @@ namespace soul::math
     // Implementation from Stan Melax's Game Programming Gems 1 article
     axis = cross(orig, dest);
 
-    T s = sqrt((T(1) + cosTheta) * T(2));
+    T s    = sqrt((T(1) + cosTheta) * T(2));
     T invs = T(1) / s;
 
     return Quaternion<T>(axis.x * invs, axis.y * invs, axis.z * invs, s * T(0.5f));
@@ -455,25 +464,29 @@ namespace soul::math
     T four_z_squared_minus1 = m[2][2] - m[0][0] - m[1][1];
     T four_w_squared_minus1 = m[0][0] + m[1][1] + m[2][2];
 
-    int biggest_index = 0;
+    int biggest_index             = 0;
     T four_biggest_squared_minus1 = four_w_squared_minus1;
-    if (four_x_squared_minus1 > four_biggest_squared_minus1) {
+    if (four_x_squared_minus1 > four_biggest_squared_minus1)
+    {
       four_biggest_squared_minus1 = four_x_squared_minus1;
-      biggest_index = 1;
+      biggest_index               = 1;
     }
-    if (four_y_squared_minus1 > four_biggest_squared_minus1) {
+    if (four_y_squared_minus1 > four_biggest_squared_minus1)
+    {
       four_biggest_squared_minus1 = four_y_squared_minus1;
-      biggest_index = 2;
+      biggest_index               = 2;
     }
-    if (four_z_squared_minus1 > four_biggest_squared_minus1) {
+    if (four_z_squared_minus1 > four_biggest_squared_minus1)
+    {
       four_biggest_squared_minus1 = four_z_squared_minus1;
-      biggest_index = 3;
+      biggest_index               = 3;
     }
 
     T biggestVal = sqrt(four_biggest_squared_minus1 + T(1)) * T(0.5);
-    T mult = T(0.25) / biggestVal;
+    T mult       = T(0.25) / biggestVal;
 
-    switch (biggest_index) {
+    switch (biggest_index)
+    {
     case 0:
       return Quaternion<T>(
         (m[2][1] - m[1][2]) * mult,

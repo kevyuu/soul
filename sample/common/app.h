@@ -19,21 +19,25 @@ namespace soul::gpu
   class GLFWWsi;
 } // namespace soul::gpu
 
-struct ScreenDimension {
+struct ScreenDimension
+{
   i32 width;
   i32 height;
 };
 
-struct AppConfig {
+struct AppConfig
+{
   soul::Option<ScreenDimension> screen_dimension = soul::nilopt;
-  bool enable_imgui = false;
+  bool enable_imgui                              = false;
 };
 
-struct WindowData {
+struct WindowData
+{
   bool resized = false;
 };
 
-struct RuntimeInitializer {
+struct RuntimeInitializer
+{
   explicit RuntimeInitializer(const soul::runtime::Config& config);
 };
 
@@ -41,10 +45,10 @@ class App
 {
 public:
   explicit App(const AppConfig& app_config);
-  App(const App&) = delete;
+  App(const App&)                    = delete;
   auto operator=(const App&) -> App& = delete;
-  App(App&& app) = delete;
-  auto operator=(App&& app) -> App& = delete;
+  App(App&& app)                     = delete;
+  auto operator=(App&& app) -> App&  = delete;
   virtual ~App();
 
   auto run() -> void;

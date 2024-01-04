@@ -4,7 +4,6 @@
 #include <cstdint>
 #include <limits>
 
-
 #include "core/builtins.h"
 #include "core/compiler.h"
 #include "core/panic.h"
@@ -21,19 +20,33 @@ namespace soul
   concept ts_bit_block = std::unsigned_integral<T>;
 
   template <typename T, usize N>
-  struct RawBuffer {
+  struct RawBuffer
+  {
     alignas(T) std::byte buffer[sizeof(T) * N];
 
-    auto data() -> T* { return reinterpret_cast<T*>(buffer); }
+    auto data() -> T*
+    {
+      return reinterpret_cast<T*>(buffer);
+    }
 
-    auto data() const -> const T* { return reinterpret_cast<const T*>(buffer); }
+    auto data() const -> const T*
+    {
+      return reinterpret_cast<const T*>(buffer);
+    }
   };
 
   template <typename T>
-  struct RawBuffer<T, 0> {
-    auto data() -> T* { return nullptr; }
+  struct RawBuffer<T, 0>
+  {
+    auto data() -> T*
+    {
+      return nullptr;
+    }
 
-    auto data() const -> const T* { return nullptr; }
+    auto data() const -> const T*
+    {
+      return nullptr;
+    }
   };
 
   template <typename PointerDst, typename PointerSrc>
@@ -41,7 +54,8 @@ namespace soul
   constexpr auto cast(PointerSrc srcPtr) -> PointerDst
   {
     using Dst = std::remove_pointer_t<PointerDst>;
-    if constexpr (!std::is_same_v<PointerDst, void*>) {
+    if constexpr (!std::is_same_v<PointerDst, void*>)
+    {
       SOUL_ASSERT(
         0,
         reinterpret_cast<uptr>(srcPtr) % alignof(Dst) == 0,
@@ -82,7 +96,8 @@ namespace soul
     typename ResourceType,
     typename IDType,
     IDType NullValue = std::numeric_limits<IDType>::max()>
-  struct ID {
+  struct ID
+  {
     using store_type = IDType;
     IDType id;
 
@@ -108,15 +123,22 @@ namespace soul
     {
       return id == NullValue;
     }
+
     [[nodiscard]]
     auto is_valid() const -> bool
     {
       return id != NullValue;
     }
 
-    static constexpr auto null() -> ID { return ID(NullValue); }
+    static constexpr auto null() -> ID
+    {
+      return ID(NullValue);
+    }
 
-    friend void soul_op_hash_combine(auto& hasher, const ID& val) { hasher.combine(val.id); }
+    friend void soul_op_hash_combine(auto& hasher, const ID& val)
+    {
+      hasher.combine(val.id);
+    }
   };
 
   template <ts_flag Flag>
@@ -138,7 +160,10 @@ namespace soul
 
       constexpr auto operator==(const Iterator& other) const -> bool = default;
 
-      constexpr auto operator*() const -> Flag { return Flag(index_); }
+      constexpr auto operator*() const -> Flag
+      {
+        return Flag(index_);
+      }
 
     private:
       store_type index_;
@@ -149,6 +174,7 @@ namespace soul
     {
       return Iterator(0);
     }
+
     [[nodiscard]]
     auto end() const -> Iterator
     {
@@ -157,9 +183,15 @@ namespace soul
 
     constexpr FlagIter() = default;
 
-    static auto Iterates() -> FlagIter { return FlagIter(); }
+    static auto Iterates() -> FlagIter
+    {
+      return FlagIter();
+    }
 
-    static auto Count() -> u64 { return to_underlying(Flag::COUNT); }
+    static auto Count() -> u64
+    {
+      return to_underlying(Flag::COUNT);
+    }
   };
 
 } // namespace soul

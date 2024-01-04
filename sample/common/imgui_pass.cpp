@@ -68,18 +68,19 @@ ImGuiRenderGraphPass::ImGuiRenderGraphPass(soul::gpu::System* gpu_system) : gpu_
 {
 
   const auto shader_source = gpu::ShaderSource::From(gpu::ShaderString{String::From(IMGUI_HLSL)});
-  const auto search_path = Path::From("shaders/"_str);
+  const auto search_path   = Path::From("shaders/"_str);
   constexpr auto entry_points = soul::Array{
     gpu::ShaderEntryPoint{gpu::ShaderStage::VERTEX, "vs_main"_str},
     gpu::ShaderEntryPoint{gpu::ShaderStage::FRAGMENT, "ps_main"_str},
   };
   const gpu::ProgramDesc program_desc = {
     .search_paths = u32cspan(&search_path, 1),
-    .sources = u32cspan(&shader_source, 1),
+    .sources      = u32cspan(&shader_source, 1),
     .entry_points = entry_points.cspan<u32>(),
   };
   auto result = gpu_system_->create_program(program_desc);
-  if (result.is_err()) {
+  if (result.is_err())
+  {
     SOUL_PANIC("Fail to create program");
   }
   program_id_ = result.ok_ref();
@@ -92,13 +93,13 @@ ImGuiRenderGraphPass::ImGuiRenderGraphPass(soul::gpu::System* gpu_system) : gpu_
 
   const gpu::TextureRegionUpdate region = {
     .subresource = {.layer_count = 1},
-    .extent = {soul::cast<u32>(width), soul::cast<u32>(height), 1},
+    .extent      = {soul::cast<u32>(width), soul::cast<u32>(height), 1},
   };
 
   const gpu::TextureLoadDesc load_desc = {
-    .data = font_pixels,
+    .data      = font_pixels,
     .data_size = soul::cast<usize>(width) * height * 4 * sizeof(char),
-    .regions = u32cspan(&region, 1),
+    .regions   = u32cspan(&region, 1),
   };
 
   const auto font_tex_desc = gpu::TextureDesc::d2(
@@ -127,15 +128,16 @@ void ImGuiRenderGraphPass::add_pass(
   soul::gpu::TextureNodeID render_target, soul::gpu::RenderGraph& render_graph)
 {
   const vec2u32 viewport = gpu_system_->get_swapchain_extent();
-  const auto& draw_data = *ImGui::GetDrawData();
+  const auto& draw_data  = *ImGui::GetDrawData();
 
-  if (draw_data.TotalVtxCount == 0) {
+  if (draw_data.TotalVtxCount == 0)
+  {
     return;
   }
 
   const gpu::RGColorAttachmentDesc color_attachment_desc = {
     .node_id = render_target,
-    .clear = false,
+    .clear   = false,
   };
 
   SOUL_ASSERT(0, draw_data.TotalVtxCount > 0 && draw_data.TotalIdxCount > 0);
@@ -144,24 +146,29 @@ void ImGuiRenderGraphPass::add_pass(
   const gpu::BufferNodeID index_buffer_node_id = render_graph.create_buffer(
     "ImGui Index", {.size = sizeof(ImDrawIdx) * draw_data.TotalIdxCount});
 
-  struct Transform {
+  struct Transform
+  {
     float scale[2];
     float translate[2];
   };
+
   const gpu::BufferNodeID transform_buffer_node_id =
     render_graph.create_buffer("ImGui Transform Buffer", {.size = sizeof(Transform)});
 
-  struct UpdatePassParameter {
+  struct UpdatePassParameter
+  {
     gpu::BufferNodeID vertex_buffer;
     gpu::BufferNodeID index_buffer;
     gpu::BufferNodeID transform_buffer;
   };
+
   const auto update_pass_parameter =
     render_graph
       .add_non_shader_pass<UpdatePassParameter>(
         "Update Texture Pass",
         gpu::QueueType::TRANSFER,
-        [=](auto& parameter, auto& builder) {
+        [=](auto& parameter, auto& builder)
+        {
           parameter.vertex_buffer =
             builder.add_dst_buffer(vertex_buffer_node_id, gpu::TransferDataSource::CPU);
           parameter.index_buffer =
@@ -169,14 +176,16 @@ void ImGuiRenderGraphPass::add_pass(
           parameter.transform_buffer =
             builder.add_dst_buffer(transform_buffer_node_id, gpu::TransferDataSource::CPU);
         },
-        [this, draw_data](const auto& parameter, auto& registry, auto& command_list) {
+        [this, draw_data](const auto& parameter, auto& registry, auto& command_list)
+        {
           runtime::ScopeAllocator scope_allocator("Imgui Update Pass execute");
           using Command = gpu::RenderCommandUpdateBuffer;
           {
             // update vertex_buffer
             Vector<ImDrawVert> im_draw_verts(&scope_allocator);
             im_draw_verts.reserve(draw_data.TotalVtxCount);
-            for (auto cmd_list_idx = 0; cmd_list_idx < draw_data.CmdListsCount; cmd_list_idx++) {
+            for (auto cmd_list_idx = 0; cmd_list_idx < draw_data.CmdListsCount; cmd_list_idx++)
+            {
               ImDrawList* cmd_list = draw_data.CmdLists[cmd_list_idx];
               std::ranges::copy(cmd_list->VtxBuffer, std::back_inserter(im_draw_verts));
             }
@@ -185,15 +194,16 @@ void ImGuiRenderGraphPass::add_pass(
             };
             command_list.push(Command{
               .dst_buffer = registry.get_buffer(parameter.vertex_buffer),
-              .data = im_draw_verts.data(),
-              .regions = u32cspan(&region, 1),
+              .data       = im_draw_verts.data(),
+              .regions    = u32cspan(&region, 1),
             });
           }
           {
             // update index_buffer
             Vector<ImDrawIdx> im_draw_indexes(&scope_allocator);
             im_draw_indexes.reserve(draw_data.TotalIdxCount);
-            for (auto cmd_list_idx = 0; cmd_list_idx < draw_data.CmdListsCount; cmd_list_idx++) {
+            for (auto cmd_list_idx = 0; cmd_list_idx < draw_data.CmdListsCount; cmd_list_idx++)
+            {
               ImDrawList* cmd_list = draw_data.CmdLists[cmd_list_idx];
               std::ranges::copy(cmd_list->IdxBuffer, std::back_inserter(im_draw_indexes));
             }
@@ -202,8 +212,8 @@ void ImGuiRenderGraphPass::add_pass(
             };
             command_list.push(Command{
               .dst_buffer = registry.get_buffer(parameter.index_buffer),
-              .data = im_draw_indexes.data(),
-              .regions = u32cspan(&region, 1),
+              .data       = im_draw_indexes.data(),
+              .regions    = u32cspan(&region, 1),
             });
           }
 
@@ -220,30 +230,34 @@ void ImGuiRenderGraphPass::add_pass(
             const gpu::BufferRegionCopy region = {.size = sizeof(Transform)};
             command_list.template push<Command>({
               .dst_buffer = registry.get_buffer(parameter.transform_buffer),
-              .data = &transform,
-              .regions = u32cspan(&region, 1),
+              .data       = &transform,
+              .regions    = u32cspan(&region, 1),
             });
           }
         })
       .get_parameter();
 
-  struct RenderPassParameter {
+  struct RenderPassParameter
+  {
     gpu::BufferNodeID vertex_buffer;
     gpu::BufferNodeID index_buffer;
     gpu::BufferNodeID transform_buffer;
   };
+
   render_graph.add_raster_pass<RenderPassParameter>(
     "ImGui Render Pass",
     gpu::RGRenderTargetDesc(viewport, color_attachment_desc),
-    [update_pass_parameter](auto& parameter, auto& builder) {
-      parameter.vertex_buffer = builder.add_vertex_buffer(update_pass_parameter.vertex_buffer);
-      parameter.index_buffer = builder.add_index_buffer(update_pass_parameter.index_buffer);
+    [update_pass_parameter](auto& parameter, auto& builder)
+    {
+      parameter.vertex_buffer    = builder.add_vertex_buffer(update_pass_parameter.vertex_buffer);
+      parameter.index_buffer     = builder.add_index_buffer(update_pass_parameter.index_buffer);
       parameter.transform_buffer = builder.add_shader_buffer(
         update_pass_parameter.transform_buffer,
         {gpu::ShaderStage::VERTEX},
         gpu::ShaderBufferReadUsage::STORAGE);
     },
-    [viewport, &draw_data, this](const auto& parameter, auto& registry, auto& command_list) {
+    [viewport, &draw_data, this](const auto& parameter, auto& registry, auto& command_list)
+    {
       runtime::ScopeAllocator scope_allocator("Imgui Render Pass Execute Scope Allocator");
       gpu::GraphicPipelineStateDesc pipeline_desc = {
         .program_id = program_id_,
@@ -256,45 +270,46 @@ void ImGuiRenderGraphPass::add_pass(
             .list =
               {
                 {.binding = 0,
-                 .offset = offsetof(ImDrawVert, pos),
-                 .type = gpu::VertexElementType::FLOAT2},
+                 .offset  = offsetof(ImDrawVert, pos),
+                 .type    = gpu::VertexElementType::FLOAT2},
                 {.binding = 0,
-                 .offset = offsetof(ImDrawVert, uv),
-                 .type = gpu::VertexElementType::FLOAT2},
+                 .offset  = offsetof(ImDrawVert, uv),
+                 .type    = gpu::VertexElementType::FLOAT2},
                 {
                   .binding = 0,
-                  .offset = offsetof(ImDrawVert, col),
-                  .type = gpu::VertexElementType::UINT,
+                  .offset  = offsetof(ImDrawVert, col),
+                  .type    = gpu::VertexElementType::UINT,
                 },
               },
           },
         .viewport =
           {
-            .width = static_cast<float>(viewport.x),
+            .width  = static_cast<float>(viewport.x),
             .height = static_cast<float>(viewport.y),
           },
         .color_attachment_count = 1,
         .color_attachments =
           {
             .list = {{
-              .blend_enable = true,
+              .blend_enable           = true,
               .src_color_blend_factor = gpu::BlendFactor::SRC_ALPHA,
               .dst_color_blend_factor = gpu::BlendFactor::ONE_MINUS_SRC_ALPHA,
-              .color_blend_op = gpu::BlendOp::ADD,
+              .color_blend_op         = gpu::BlendOp::ADD,
               .src_alpha_blend_factor = gpu::BlendFactor::ONE,
               .dst_alpha_blend_factor = gpu::BlendFactor::ZERO,
-              .alpha_blend_op = gpu::BlendOp::ADD,
+              .alpha_blend_op         = gpu::BlendOp::ADD,
             }},
           },
       };
 
       const ImVec2 clip_offset = draw_data.DisplayPos;
-      const ImVec2 clip_scale = draw_data.FramebufferScale;
+      const ImVec2 clip_scale  = draw_data.FramebufferScale;
 
       auto global_vtx_offset = 0;
       auto global_idx_offset = 0;
 
-      struct PushConstant {
+      struct PushConstant
+      {
         gpu::DescriptorID transform_descriptor_id;
         gpu::DescriptorID texture_descriptor_id;
         gpu::DescriptorID sampler_descriptor_id;
@@ -304,13 +319,17 @@ void ImGuiRenderGraphPass::add_pass(
       using Command = gpu::RenderCommandDrawIndex;
       Vector<Command> commands;
 
-      for (auto n = 0; n < draw_data.CmdListsCount; n++) {
+      for (auto n = 0; n < draw_data.CmdListsCount; n++)
+      {
         const ImDrawList& cmd_list = *draw_data.CmdLists[n];
-        for (auto cmd_i = 0; cmd_i < cmd_list.CmdBuffer.Size; cmd_i++) {
+        for (auto cmd_i = 0; cmd_i < cmd_list.CmdBuffer.Size; cmd_i++)
+        {
           const ImDrawCmd& cmd = cmd_list.CmdBuffer[cmd_i];
-          if (cmd.UserCallback != NULL) {
+          if (cmd.UserCallback != NULL)
+          {
             SOUL_NOT_IMPLEMENTED();
-          } else {
+          } else
+          {
             // Project scissor/clipping rectangles into framebuffer space
             ImVec4 clip_rect;
             clip_rect.x = (cmd.ClipRect.x - clip_offset.x) * clip_scale.x;
@@ -321,11 +340,14 @@ void ImGuiRenderGraphPass::add_pass(
             if (
               clip_rect.x < static_cast<float>(viewport.x) &&
               clip_rect.y < static_cast<float>(viewport.y) && clip_rect.z >= 0.0f &&
-              clip_rect.w >= 0.0f) {
-              if (clip_rect.x < 0.0f) {
+              clip_rect.w >= 0.0f)
+            {
+              if (clip_rect.x < 0.0f)
+              {
                 clip_rect.x = 0.0f;
               }
-              if (clip_rect.y < 0.0f) {
+              if (clip_rect.y < 0.0f)
+              {
                 clip_rect.y = 0.0f;
               }
 
@@ -335,7 +357,7 @@ void ImGuiRenderGraphPass::add_pass(
                   static_cast<uint32_t>(clip_rect.z - clip_rect.x),
                   static_cast<uint32_t>(clip_rect.w - clip_rect.y)}};
 
-              gpu::TextureID texture_id = *static_cast<gpu::TextureID*>(cmd.TextureId);
+              gpu::TextureID texture_id        = *static_cast<gpu::TextureID*>(cmd.TextureId);
               const PushConstant push_constant = {
                 .transform_descriptor_id = gpu_system_->get_ssbo_descriptor_id(
                   registry.get_buffer(parameter.transform_buffer)),
@@ -351,15 +373,15 @@ void ImGuiRenderGraphPass::add_pass(
                 sizeof(ImDrawIdx) == 2 ? gpu::IndexType::UINT16 : gpu::IndexType::UINT32;
 
               const Command command = {
-                .pipeline_state_id = registry.get_pipeline_state(pipeline_desc),
+                .pipeline_state_id  = registry.get_pipeline_state(pipeline_desc),
                 .push_constant_data = &push_constants.back(),
                 .push_constant_size = sizeof(PushConstant),
-                .vertex_buffer_ids = {registry.get_buffer(parameter.vertex_buffer)},
-                .vertex_offsets = {soul::cast<u16>(cmd.VtxOffset + global_vtx_offset)},
-                .index_buffer_id = registry.get_buffer(parameter.index_buffer),
-                .index_type = INDEX_TYPE,
-                .first_index = first_index,
-                .index_count = soul::cast<u16>(cmd.ElemCount),
+                .vertex_buffer_ids  = {registry.get_buffer(parameter.vertex_buffer)},
+                .vertex_offsets     = {soul::cast<u16>(cmd.VtxOffset + global_vtx_offset)},
+                .index_buffer_id    = registry.get_buffer(parameter.index_buffer),
+                .index_type         = INDEX_TYPE,
+                .first_index        = first_index,
+                .index_count        = soul::cast<u16>(cmd.ElemCount),
               };
               commands.push_back(command);
             }

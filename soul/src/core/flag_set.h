@@ -10,11 +10,13 @@ namespace soul
   class FlagSet;
 
   template <class T>
-  struct is_flag_set : std::false_type {
+  struct is_flag_set : std::false_type
+  {
   };
 
   template <ts_flag Flag>
-  struct is_flag_set<FlagSet<Flag>> : std::true_type {
+  struct is_flag_set<FlagSet<Flag>> : std::true_type
+  {
   };
 
   template <typename T>
@@ -30,9 +32,9 @@ namespace soul
   class FlagSet
   {
   public:
-    using flag_type = Flag;
+    using flag_type                   = Flag;
     static constexpr usize FLAG_COUNT = to_underlying(Flag::COUNT);
-    using store_type = Bitset<FLAG_COUNT>;
+    using store_type                  = Bitset<FLAG_COUNT>;
 
     // Default constructor (all 0s)
     constexpr FlagSet() noexcept = default;
@@ -138,7 +140,8 @@ namespace soul
   template <ts_flag Flag>
   constexpr FlagSet<Flag>::FlagSet(const std::initializer_list<flag_type> init_list)
   {
-    for (const auto val : init_list) {
+    for (const auto val : init_list)
+    {
       flags_.set(to_underlying(val));
     }
   }
@@ -202,8 +205,9 @@ namespace soul
   {
     std::remove_cv_t<DstFlags> dst_flags{};
     store_type flags = flags_;
-    auto pos = flags_.find_first();
-    while (pos.is_some()) {
+    auto pos         = flags_.find_first();
+    while (pos.is_some())
+    {
       dst_flags |= mapping[pos.unwrap()];
       pos = flags_.find_next(pos.unwrap());
     }
@@ -214,7 +218,10 @@ namespace soul
   template <ts_fn<void, Flag> T>
   constexpr auto FlagSet<Flag>::for_each(T func) const -> void
   {
-    auto new_func = [func = std::move(func)](usize bit) { func(flag_type(bit)); };
+    auto new_func = [func = std::move(func)](usize bit)
+    {
+      func(flag_type(bit));
+    };
     flags_.for_each(new_func);
   }
 
@@ -222,9 +229,15 @@ namespace soul
   template <ts_fn<b8, Flag> T>
   constexpr auto FlagSet<Flag>::find_if(T func) const -> Option<Flag>
   {
-    auto new_func = [func = std::move(func)](usize bit) -> b8 { return func(flag_type(bit)); };
+    auto new_func = [func = std::move(func)](usize bit) -> b8
+    {
+      return func(flag_type(bit));
+    };
     return flags_.find_if(new_func).transform(
-      [](usize position) { return static_cast<Flag>(position); });
+      [](usize position)
+      {
+        return static_cast<Flag>(position);
+      });
   }
 
   template <ts_flag Flag>
@@ -232,7 +245,8 @@ namespace soul
     const std::initializer_list<flag_type> init_list) -> store_type
   {
     store_type result;
-    for (auto val : init_list) {
+    for (auto val : init_list)
+    {
       result.set(to_underlying(val));
     }
     return result;

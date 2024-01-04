@@ -3,6 +3,7 @@
 #include "util.h"
 
 using namespace soul;
+
 TEST(TestStrConstruction, TestStrConstruction)
 {
   const auto test_str1 = "test"_str;

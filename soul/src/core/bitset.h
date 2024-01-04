@@ -73,9 +73,9 @@ namespace soul
 
       constexpr auto operator==(const this_type& x) const -> b8;
 
-      static constexpr usize BITS_PER_BLOCK = sizeof(BlockType) * 8;
+      static constexpr usize BITS_PER_BLOCK      = sizeof(BlockType) * 8;
       static constexpr usize BITS_PER_BLOCK_MASK = BITS_PER_BLOCK - 1;
-      static constexpr usize BLOCK_COUNT = BlockCountV;
+      static constexpr usize BLOCK_COUNT         = BlockCountV;
 
       static constexpr auto GetBlockIndex(usize index) -> usize;
 
@@ -88,18 +88,21 @@ namespace soul
     template <ts_fn<void, usize> Fn>
     constexpr auto BitsetImpl<BlockCountV, BlockType>::for_each(Fn fn) const -> void
     {
-      for (usize block_index = 0; block_index < BlockCountV; block_index++) {
-        auto block = blocks_[block_index];
-        auto get_next_block = [](const BlockType prev_block, usize prev_pos) -> BlockType {
+      for (usize block_index = 0; block_index < BlockCountV; block_index++)
+      {
+        auto block          = blocks_[block_index];
+        auto get_next_block = [](const BlockType prev_block, usize prev_pos) -> BlockType
+        {
           const BlockType mask = ~static_cast<BlockType>(cast<BlockType>(1) << prev_pos);
           return prev_block & mask;
         };
-        auto pos = util::get_first_one_bit_pos(block);
+        auto pos                     = util::get_first_one_bit_pos(block);
         const auto block_start_index = block_index * BITS_PER_BLOCK;
-        while (pos.is_some()) {
+        while (pos.is_some())
+        {
           fn(block_start_index + static_cast<usize>(pos.unwrap()));
           block = get_next_block(block, pos.unwrap());
-          pos = util::get_first_one_bit_pos(block);
+          pos   = util::get_first_one_bit_pos(block);
         }
       }
     }
@@ -123,7 +126,8 @@ namespace soul
     template <size_t BlockCountV, ts_bit_block BlockType>
     constexpr auto BitsetImpl<BlockCountV, BlockType>::operator&=(const this_type& rhs) -> void
     {
-      for (usize i = 0; i < BlockCountV; i++) {
+      for (usize i = 0; i < BlockCountV; i++)
+      {
         blocks_[i] &= rhs.blocks_[i];
       }
     }
@@ -131,7 +135,8 @@ namespace soul
     template <size_t BlockCountV, ts_bit_block BlockType>
     constexpr auto BitsetImpl<BlockCountV, BlockType>::operator|=(const this_type& rhs) -> void
     {
-      for (usize i = 0; i < BlockCountV; i++) {
+      for (usize i = 0; i < BlockCountV; i++)
+      {
         blocks_[i] |= rhs.blocks_[i];
       }
     }
@@ -139,7 +144,8 @@ namespace soul
     template <size_t BlockCountV, ts_bit_block BlockType>
     constexpr auto BitsetImpl<BlockCountV, BlockType>::operator^=(const this_type& rhs) -> void
     {
-      for (usize i = 0; i < BlockCountV; i++) {
+      for (usize i = 0; i < BlockCountV; i++)
+      {
         blocks_[i] ^= rhs.blocks_[i];
       }
     }
@@ -147,7 +153,8 @@ namespace soul
     template <size_t BlockCountV, ts_bit_block BlockType>
     constexpr auto BitsetImpl<BlockCountV, BlockType>::flip() -> void
     {
-      for (usize i = 0; i < BlockCountV; i++) {
+      for (usize i = 0; i < BlockCountV; i++)
+      {
         blocks_[i] = ~blocks_[i];
       }
     }
@@ -155,7 +162,8 @@ namespace soul
     template <size_t BlockCountV, ts_bit_block BlockType>
     constexpr auto BitsetImpl<BlockCountV, BlockType>::set() -> void
     {
-      for (usize i = 0; i < BlockCountV; i++) {
+      for (usize i = 0; i < BlockCountV; i++)
+      {
         blocks_[i] = static_cast<BlockType>(~cast<BlockType>(0));
       }
     }
@@ -163,9 +171,11 @@ namespace soul
     template <size_t BlockCountV, ts_bit_block BlockType>
     constexpr auto BitsetImpl<BlockCountV, BlockType>::set(const usize index, const b8 val) -> void
     {
-      if (val) {
+      if (val)
+      {
         blocks_[GetBlockIndex(index)] |= GetBlockOneMask(index);
-      } else {
+      } else
+      {
         blocks_[GetBlockIndex(index)] &= ~GetBlockOneMask(index);
       }
     }
@@ -173,7 +183,8 @@ namespace soul
     template <size_t BlockCountV, ts_bit_block BlockType>
     constexpr auto BitsetImpl<BlockCountV, BlockType>::reset() -> void
     {
-      for (usize i = 0; i < BlockCountV; i++) {
+      for (usize i = 0; i < BlockCountV; i++)
+      {
         blocks_[i] = 0;
       }
     }
@@ -181,8 +192,10 @@ namespace soul
     template <size_t BlockCountV, ts_bit_block BlockType>
     constexpr auto BitsetImpl<BlockCountV, BlockType>::operator==(const this_type& x) const -> b8
     {
-      for (usize i = 0; i < BlockCountV; i++) {
-        if (blocks_[i] != x.blocks_[i]) {
+      for (usize i = 0; i < BlockCountV; i++)
+      {
+        if (blocks_[i] != x.blocks_[i])
+        {
           return false;
         }
       }
@@ -192,8 +205,10 @@ namespace soul
     template <size_t BlockCountV, ts_bit_block BlockType>
     constexpr auto BitsetImpl<BlockCountV, BlockType>::any() const -> b8
     {
-      for (usize i = 0; i < BlockCountV; i++) {
-        if (blocks_[i]) {
+      for (usize i = 0; i < BlockCountV; i++)
+      {
+        if (blocks_[i])
+        {
           return true;
         }
       }
@@ -210,7 +225,8 @@ namespace soul
     constexpr auto BitsetImpl<BlockCountV, BlockType>::count() const -> usize
     {
       usize n = 0;
-      for (usize i = 0; i < BlockCountV; i++) {
+      for (usize i = 0; i < BlockCountV; i++)
+      {
         n += util::get_one_bit_count(blocks_[i]);
       }
       return n;
@@ -219,9 +235,11 @@ namespace soul
     template <size_t BlockCountV, ts_bit_block BlockType>
     constexpr auto BitsetImpl<BlockCountV, BlockType>::find_first() const -> Option<usize>
     {
-      for (usize block_index = 0; block_index < BlockCountV; block_index++) {
+      for (usize block_index = 0; block_index < BlockCountV; block_index++)
+      {
         const auto pos = util::get_first_one_bit_pos(blocks_[block_index]);
-        if (pos.is_some()) {
+        if (pos.is_some())
+        {
           return Option<usize>::Some((block_index * BITS_PER_BLOCK) + pos.unwrap());
         }
       }
@@ -233,19 +251,23 @@ namespace soul
       -> Option<usize>
     {
       const auto start_find_index = last_find_index + 1;
-      auto block_index = GetBlockIndex(start_find_index);
-      const usize block_offset = GetBlockOffset(start_find_index);
-      if (block_index < BlockCountV) {
+      auto block_index            = GetBlockIndex(start_find_index);
+      const usize block_offset    = GetBlockOffset(start_find_index);
+      if (block_index < BlockCountV)
+      {
         const auto mask = static_cast<BlockType>(~cast<BlockType>(0) << block_offset);
         BlockType block = blocks_[block_index] & mask;
-        while (true) {
+        while (true)
+        {
           const auto next_bit = util::get_first_one_bit_pos(block);
-          if (next_bit.is_some()) {
+          if (next_bit.is_some())
+          {
             return Option<usize>::Some((block_index * BITS_PER_BLOCK) + next_bit.unwrap());
           }
 
           block_index += 1;
-          if (block_index >= BlockCountV) {
+          if (block_index >= BlockCountV)
+          {
             break;
           }
           block = blocks_[block_index];
@@ -258,9 +280,11 @@ namespace soul
     template <size_t BlockCountV, ts_bit_block BlockType>
     constexpr auto BitsetImpl<BlockCountV, BlockType>::find_last() const -> Option<usize>
     {
-      for (auto block_index = BlockCountV; block_index > 0; --block_index) {
+      for (auto block_index = BlockCountV; block_index > 0; --block_index)
+      {
         const auto last_bit = util::get_last_one_bit_pos(blocks_[block_index - 1]);
-        if (last_bit.is_some()) {
+        if (last_bit.is_some())
+        {
           return Option<usize>::Some((block_index - 1) * BITS_PER_BLOCK + last_bit.unwrap());
         }
       }
@@ -271,17 +295,21 @@ namespace soul
     constexpr auto BitsetImpl<BlockCountV, BlockType>::find_prev(const usize last_find_index) const
       -> Option<usize>
     {
-      if (last_find_index > 0) {
-        auto block_index = GetBlockIndex(last_find_index);
+      if (last_find_index > 0)
+      {
+        auto block_index   = GetBlockIndex(last_find_index);
         usize block_offset = GetBlockOffset(last_find_index);
 
         BlockType block = blocks_[block_index] & ((cast<BlockType>(1) << block_offset) - 1);
-        while (true) {
+        while (true)
+        {
           const auto last_bit = util::get_last_one_bit_pos(block);
-          if (last_bit.is_some()) {
+          if (last_bit.is_some())
+          {
             return Option<usize>::Some((block_index * BITS_PER_BLOCK) + last_bit.unwrap());
           }
-          if (block_index == 0) {
+          if (block_index == 0)
+          {
             break;
           }
           block_index -= 1;
@@ -296,20 +324,24 @@ namespace soul
     template <ts_fn<b8, usize> Fn>
     constexpr auto BitsetImpl<BlockCountV, BlockType>::find_if(Fn fn) const -> Option<usize>
     {
-      for (usize block_index = 0; block_index < BlockCountV; block_index++) {
-        auto block = blocks_[block_index];
-        auto get_next_block = [](const BlockType prev_block, usize prev_pos) -> BlockType {
+      for (usize block_index = 0; block_index < BlockCountV; block_index++)
+      {
+        auto block          = blocks_[block_index];
+        auto get_next_block = [](const BlockType prev_block, usize prev_pos) -> BlockType
+        {
           const BlockType mask = ~static_cast<BlockType>(cast<BlockType>(1) << prev_pos);
           return prev_block & mask;
         };
-        auto pos = util::get_first_one_bit_pos(block);
+        auto pos                     = util::get_first_one_bit_pos(block);
         const auto block_start_index = block_index * BITS_PER_BLOCK;
-        while (pos.is_some()) {
-          if (fn(block_start_index + static_cast<usize>(pos.unwrap()))) {
+        while (pos.is_some())
+        {
+          if (fn(block_start_index + static_cast<usize>(pos.unwrap())))
+          {
             return Option<usize>::Some(block_start_index + static_cast<usize>(pos.unwrap()));
           }
           block = get_next_block(block, pos.unwrap());
-          pos = util::get_first_one_bit_pos(block);
+          pos   = util::get_first_one_bit_pos(block);
         }
       }
       return nilopt;
@@ -355,8 +387,8 @@ namespace soul
     static_assert(BitCount != 0);
     using base_type =
       impl::BitsetImpl<impl::get_block_count(BitCount, sizeof(BlockType)), BlockType>;
-    using this_type = Bitset<BitCount, BlockType>;
-    using value_type = b8;
+    using this_type      = Bitset<BitCount, BlockType>;
+    using value_type     = b8;
     using reference_type = BitRef<BlockType>;
 
     constexpr auto operator[](usize index) const -> value_type;
@@ -516,7 +548,8 @@ namespace soul
   template <usize BitCount, ts_bit_block BlockType>
   constexpr auto Bitset<BitCount, BlockType>::clear_unused_bits() -> void
   {
-    if constexpr ((BitCount & base_type::BITS_PER_BLOCK_MASK) || (BitCount == 0)) {
+    if constexpr ((BitCount & base_type::BITS_PER_BLOCK_MASK) || (BitCount == 0))
+    {
       constexpr auto clear_mask =
         ~(static_cast<BlockType>(~static_cast<BlockType>(0))
           << (BitCount & base_type::BITS_PER_BLOCK_MASK));

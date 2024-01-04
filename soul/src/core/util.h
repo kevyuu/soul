@@ -14,36 +14,46 @@ namespace soul::util
   template <std::unsigned_integral T>
   constexpr auto get_first_one_bit_pos(T x) noexcept -> Option<u32>
   {
-    if (x == 0) {
+    if (x == 0)
+    {
       return nilopt;
     }
     constexpr u32 bit_count = sizeof(T) * 8;
     static_assert(bit_count <= 64);
-    if (x) {
+    if (x)
+    {
       uint32_t n = 1;
-      if constexpr (bit_count > 32) {
-        if ((x & 0xFFFFFFFF) == 0) {
+      if constexpr (bit_count > 32)
+      {
+        if ((x & 0xFFFFFFFF) == 0)
+        {
           n += 32;
           x >>= 32;
         }
       }
-      if constexpr (bit_count > 16) {
-        if ((x & 0xFFFF) == 0) {
+      if constexpr (bit_count > 16)
+      {
+        if ((x & 0xFFFF) == 0)
+        {
           n += 16;
           x >>= 16;
         }
       }
-      if constexpr (bit_count > 8) {
-        if ((x & 0xFF) == 0) {
+      if constexpr (bit_count > 8)
+      {
+        if ((x & 0xFF) == 0)
+        {
           n += 8;
           x >>= 8;
         }
       }
-      if ((x & 0x0F) == 0) {
+      if ((x & 0x0F) == 0)
+      {
         n += 4;
         x >>= 4;
       }
-      if ((x & 0x03) == 0) {
+      if ((x & 0x03) == 0)
+      {
         n += 2;
         x >>= 2;
       }
@@ -58,35 +68,45 @@ namespace soul::util
   {
     constexpr u32 bit_count = sizeof(T) * 8;
     static_assert(bit_count <= 64);
-    if (x) {
+    if (x)
+    {
       u32 n = 0;
-      if constexpr (bit_count > 32) {
-        if (x & 0xFFFFFFFF00000000) {
+      if constexpr (bit_count > 32)
+      {
+        if (x & 0xFFFFFFFF00000000)
+        {
           n += 32;
           x >>= 32;
         }
       }
-      if constexpr (bit_count > 16) {
-        if (x & 0xFFFF0000) {
+      if constexpr (bit_count > 16)
+      {
+        if (x & 0xFFFF0000)
+        {
           n += 16;
           x >>= 16;
         }
       }
-      if constexpr (bit_count > 8) {
-        if (x & 0xFF00) {
+      if constexpr (bit_count > 8)
+      {
+        if (x & 0xFF00)
+        {
           n += 8;
           x >>= 8;
         }
       }
-      if (x & 0xFFF0) {
+      if (x & 0xFFF0)
+      {
         n += 4;
         x >>= 4;
       }
-      if (x & 0xFFFC) {
+      if (x & 0xFFFC)
+      {
         n += 2;
         x >>= 2;
       }
-      if (x & 0xFFFE) {
+      if (x & 0xFFFE)
+      {
         n += 1;
       }
       return Option<u32>::Some(n);
@@ -97,9 +117,11 @@ namespace soul::util
   template <std::unsigned_integral T>
   constexpr auto get_one_bit_count(T x) noexcept -> usize
   {
-    if (std::is_constant_evaluated()) {
+    if (std::is_constant_evaluated())
+    {
       usize count = 0;
-      while (x) {
+      while (x)
+      {
         auto bit_pos = get_first_one_bit_pos(x).unwrap();
         count++;
         x &= ~(static_cast<T>(1) << bit_pos);
@@ -108,10 +130,12 @@ namespace soul::util
     }
     // ReSharper disable once CppUnreachableCode
     static_assert(sizeof(T) <= 8);
-    if constexpr (std::same_as<T, u8> || std::same_as<T, u16>) {
+    if constexpr (std::same_as<T, u8> || std::same_as<T, u16>)
+    {
       return pop_count_16(x);
     }
-    if constexpr (std::same_as<T, u32>) {
+    if constexpr (std::same_as<T, u32>)
+    {
       return pop_count_32(x);
     }
     return pop_count_64(x);
@@ -120,7 +144,8 @@ namespace soul::util
   template <std::unsigned_integral Integral, ts_fn<void, u32> Fn>
   auto for_each_one_bit_pos(Integral value, const Fn& func) -> void
   {
-    while (value) {
+    while (value)
+    {
       auto bit_pos = get_first_one_bit_pos(value).unwrap();
       func(bit_pos);
       value &= ~(static_cast<Integral>(1) << bit_pos);
@@ -140,14 +165,20 @@ namespace soul::util
   }
 
   template <ts_fn<void> Fn>
-  struct ScopeExit {
+  struct ScopeExit
+  {
     explicit ScopeExit(Fn f) : f(f) {}
 
-    ScopeExit(const ScopeExit&) = delete;
+    ScopeExit(const ScopeExit&)                    = delete;
     auto operator=(const ScopeExit&) -> ScopeExit& = delete;
-    ScopeExit(ScopeExit&&) = delete;
-    auto operator=(ScopeExit&&) -> ScopeExit& = delete;
-    ~ScopeExit() { f(); }
+    ScopeExit(ScopeExit&&)                         = delete;
+    auto operator=(ScopeExit&&) -> ScopeExit&      = delete;
+
+    ~ScopeExit()
+    {
+      f();
+    }
+
     Fn f;
   };
 
@@ -157,16 +188,21 @@ namespace soul::util
     return ScopeExit<F>(f);
   };
 
-#define STRING_JOIN2(arg1, arg2) DO_STRING_JOIN2(arg1, arg2)
+#define STRING_JOIN2(arg1, arg2)    DO_STRING_JOIN2(arg1, arg2)
 #define DO_STRING_JOIN2(arg1, arg2) arg1##arg2
 #define SCOPE_EXIT(code)                                                                           \
-  auto STRING_JOIN2(scope_exit_, __LINE__) = soul::util::make_scope_exit([=]() { code; })
+  auto STRING_JOIN2(scope_exit_, __LINE__) = soul::util::make_scope_exit(                          \
+    [=]()                                                                                          \
+    {                                                                                              \
+      code;                                                                                        \
+    })
 
   constexpr auto hash_fnv1_bytes(
     const u8* data, const usize size, const u64 initial = 0xcbf29ce484222325ull) -> u64
   {
     auto hash = initial;
-    for (u32 i = 0; i < size; i++) {
+    for (u32 i = 0; i < size; i++)
+    {
       hash = (hash * 0x100000001b3ull) ^ data[i];
     }
     return hash;
@@ -190,9 +226,9 @@ namespace soul::util
     x ^= x << 1u;
 
     u32 t = x;
-    x = y;
-    y = z;
-    z = t ^ x ^ y;
+    x     = y;
+    y     = z;
+    z     = t ^ x ^ y;
 
     return z;
   }
@@ -200,7 +236,8 @@ namespace soul::util
   [[nodiscard]]
   inline auto get_random_color() -> vec3f32
   {
-    auto get_random_float = []() -> f32 {
+    auto get_random_float = []() -> f32
+    {
       return f32(get_random_u32()) / f32(std::numeric_limits<u32>::max());
     };
     return {get_random_float(), get_random_float(), get_random_float()};
@@ -215,12 +252,14 @@ namespace soul::util
   // All leading zero will not be count as digit, '0' will have 1 digit count
   constexpr auto digit_count(usize val, usize base = 10) -> usize
   {
-    if (val == 0) {
+    if (val == 0)
+    {
       return 1;
     }
     usize number_of_digits = 0;
 
-    while (val != 0) {
+    while (val != 0)
+    {
       number_of_digits++;
       val /= base;
     }
@@ -235,13 +274,13 @@ namespace soul::util
     u64 lb = static_cast<u32>(*b);
     u64 hi{};
     u64 lo{};
-    u64 rh = ha * hb;
+    u64 rh  = ha * hb;
     u64 rm0 = ha * lb;
     u64 rm1 = hb * la;
-    u64 rl = la * lb;
-    u64 t = rl + (rm0 << 32U);
-    auto c = static_cast<u64>(t < rl);
-    lo = t + (rm1 << 32U);
+    u64 rl  = la * lb;
+    u64 t   = rl + (rm0 << 32U);
+    auto c  = static_cast<u64>(t < rl);
+    lo      = t + (rm1 << 32U);
     c += static_cast<u64>(lo < t);
     hi = rh + (rm0 >> 32U) + (rm1 >> 32U) + c;
     *a = lo;
@@ -250,9 +289,11 @@ namespace soul::util
 
   constexpr void mul128(u64* a, u64* b)
   {
-    if (std::is_constant_evaluated()) {
+    if (std::is_constant_evaluated())
+    {
       mul128_nonbuiltin(a, b);
-    } else {
+    } else
+    {
 #if defined(__SIZEOF_INT128__)
       __uint128_t r = *a;
       r *= *b;

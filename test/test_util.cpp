@@ -91,13 +91,18 @@ TEST(TestCoreUtil, TestGetOneBitCount)
 TEST(TestCoreUtil, TestForEachOneBitPos)
 {
   auto test_for_each_one_bit_pos =
-    []<std::integral T>(T val, const std::vector<u32>& expected_value) {
-      std::vector<u32> bit_pos;
-      soul::util::for_each_one_bit_pos(
-        val, [&bit_pos](const usize position) { bit_pos.push_back(position); });
+    []<std::integral T>(T val, const std::vector<u32>& expected_value)
+  {
+    std::vector<u32> bit_pos;
+    soul::util::for_each_one_bit_pos(
+      val,
+      [&bit_pos](const usize position)
+      {
+        bit_pos.push_back(position);
+      });
 
-      SOUL_TEST_ASSERT_TRUE(std::ranges::equal(bit_pos, expected_value));
-    };
+    SOUL_TEST_ASSERT_TRUE(std::ranges::equal(bit_pos, expected_value));
+  };
 
   SOUL_TEST_RUN(test_for_each_one_bit_pos(u8{0b1000'0000}, std::vector<u32>({7})));
   SOUL_TEST_RUN(test_for_each_one_bit_pos(u8{0}, std::vector<u32>()));
@@ -127,7 +132,7 @@ TEST(TestCoreUtil, TestUnalignedLoad)
     SOUL_TEST_ASSERT_EQ(
       soul::util::unaligned_load32(reinterpret_cast<const soul::byte*>(&test)), test);
 
-    const auto* test_bytes = reinterpret_cast<const soul::byte*>(&test);
+    const auto* test_bytes                   = reinterpret_cast<const soul::byte*>(&test);
     const soul::byte test_unaligned_bytes[5] = {
       0,
       test_bytes[0],
@@ -144,7 +149,7 @@ TEST(TestCoreUtil, TestUnalignedLoad)
     SOUL_TEST_ASSERT_EQ(
       soul::util::unaligned_load64(reinterpret_cast<const soul::byte*>(&test)), test);
 
-    const auto* test_bytes = reinterpret_cast<const soul::byte*>(&test);
+    const auto* test_bytes                   = reinterpret_cast<const soul::byte*>(&test);
     const soul::byte test_unaligned_bytes[9] = {
       0,
       test_bytes[0],

@@ -2,7 +2,8 @@
 
 namespace soul::math
 {
-  enum class Handedness {
+  enum class Handedness
+  {
     RightHanded,
     LeftHanded,
   };
