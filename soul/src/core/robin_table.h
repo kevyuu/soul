@@ -385,7 +385,7 @@ namespace soul
       }
     }
 
-    void do_insert(OwnRef<EntryT, true> entry_ref)
+    void do_insert(OwnRef<EntryT> entry_ref)
     {
       EntryT entry_tmp            = std::move(entry_ref);
       const auto hash_code        = hash_fn_(get_key_fn_(entry_tmp));
@@ -711,7 +711,7 @@ namespace soul
       }
     }
 
-    void insert(OwnRef<EntryT, true> entry)
+    void insert(OwnRef<EntryT> entry)
     {
       if (size_ + 1 > capacity_)
       {

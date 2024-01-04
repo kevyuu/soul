@@ -94,7 +94,7 @@ namespace soul
       hash_table_.reserve(capacity);
     }
 
-    void insert(OwnRef<KeyT, true> key, OwnRef<ValT, true> value)
+    void insert(OwnRef<KeyT> key, OwnRef<ValT> value)
     {
       return hash_table_.insert(EntryT{.key = std::move(key), .value = std::move(value)});
     }

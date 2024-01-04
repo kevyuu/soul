@@ -5,7 +5,7 @@
 
 namespace soul
 {
-  template <typename T, b8 swappable = false>
+  template <typename T>
   class OwnRef
   {
   public:
@@ -51,11 +51,11 @@ namespace soul
     T&& ref_; // NOLINT(cppcoreguidelines-avoid-const-or-ref-data-members)
   };
 
-  template <ts_copy T, b8 swappable>
-  class OwnRef<T, swappable>
+  template <ts_copy T>
+  class OwnRef<T>
   {
   private:
-    using ref_type = std::conditional_t<swappable, T, const T&>;
+    using ref_type = const T&;
 
   public:
     constexpr OwnRef(const T& ref) : ref_(ref) {} // NOLINT
