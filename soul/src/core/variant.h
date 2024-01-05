@@ -6,6 +6,7 @@
 #include "core/type.h"
 #include "core/type_traits.h"
 #include "core/uninitialized.h"
+#include <type_traits>
 
 namespace soul
 {
@@ -137,8 +138,9 @@ namespace soul
     static constexpr b8 can_variant_nontrivial_destruct = (can_nontrivial_destruct_v<Ts> || ...);
     static constexpr b8 can_variant_hash_combine        = (impl_soul_op_hash_combine_v<Ts> && ...);
 
-    template <typeset T>
-    static inline b8 constexpr is_variant_alt_v = get_type_count_v<T, Ts...> == 1;
+    template <typename T>
+    static inline b8 constexpr is_variant_alt_v =
+      !same_as<T, Variant> && get_type_count_v<T, Ts...> == 1;
 
     template <typeset T>
     static inline b8 constexpr assert_is_variant_alt_v = []
@@ -171,6 +173,20 @@ namespace soul
       other.active_index_ = none_index;
     }
 
+    template <typename T>
+    constexpr Variant(const T& val) // NOLINT(hicpp-explicit-conversions)
+      requires(is_variant_alt_v<T> && ts_copy<T>)
+        : storage_(OwnRef<T>(val)), active_index_(get_type_index_v<T, Ts...>)
+    {
+    }
+
+    template <typename T>
+      requires(is_variant_alt_v<T> && !ts_copy<T>)
+    constexpr Variant(T&& val) // NOLINT(hicpp-explicit-conversions) // NOLINT
+        : storage_(OwnRef<T>(std::move(val))), active_index_(get_type_index_v<T, Ts...>) // NOLINT
+    {
+    }
+
     constexpr auto operator=(const Variant& other) -> Variant&
       requires(can_variant_trivial_copy)
     = default;
@@ -184,6 +200,22 @@ namespace soul
     {
       Variant(std::move(other)).swap(*this);
       return *this;
+    }
+
+    template <typename T>
+      requires(is_variant_alt_v<T> && ts_copy<T>)
+    constexpr auto operator=(const T& val) noexcept -> Variant&
+    {
+      cleanup_for_not_none();
+      assign_for_none(val);
+    }
+
+    template <typename T>
+      requires(is_variant_alt_v<T> && !ts_copy<T>)
+    constexpr auto operator=(T&& val) noexcept -> Variant&
+    {
+      cleanup_for_not_none();
+      assign_for_none(std::move(val)); // NOLINT
     }
 
     constexpr ~Variant()
