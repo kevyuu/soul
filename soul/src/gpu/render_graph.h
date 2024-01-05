@@ -771,7 +771,7 @@ namespace soul::gpu
     friend class impl::RenderGraphExecution;
   };
 
-  template <PipelineFlags pipeline_flags, typename Parameter, typename Execute>
+  template <PipelineFlags pipeline_flags, typename Parameter, typename ExecuteFn>
   class PassNode final : public PassBaseNode
   {
   public:
@@ -782,8 +782,8 @@ namespace soul::gpu
     auto operator=(PassNode&&) -> PassNode&      = delete;
     ~PassNode() override                         = default;
 
-    PassNode(const char* name, const QueueType queue_type, Execute&& execute)
-        : PassBaseNode(name, pipeline_flags, queue_type), execute_(std::forward<Execute>(execute))
+    PassNode(const char* name, const QueueType queue_type, const ExecuteFn& execute)
+        : PassBaseNode(name, pipeline_flags, queue_type), execute_(execute)
     {
     }
 
@@ -807,7 +807,7 @@ namespace soul::gpu
     }
 
     Parameter parameter_;
-    Execute execute_;
+    ExecuteFn execute_;
     friend class RenderGraph;
   };
 
@@ -829,17 +829,21 @@ namespace soul::gpu
 
     ~RenderGraph();
 
-    template <typename Parameter, PipelineFlags pipeline_flags, typename Setup, typename Executable>
-    auto add_pass(const char* name, QueueType queue_type, Setup&& setup, Executable&& execute)
+    template <
+      typename Parameter,
+      PipelineFlags pipeline_flags,
+      typename SetupFn,
+      typename ExecuteFn>
+    auto add_pass(
+      const char* name, QueueType queue_type, const SetupFn& setup, const ExecuteFn& execute)
       -> const auto&
     {
-      static_assert(pass_setup<Setup, Parameter, pipeline_flags>);
-      static_assert(pass_executable<Executable, Parameter, pipeline_flags>);
+      static_assert(pass_setup<SetupFn, Parameter, pipeline_flags>);
+      static_assert(pass_executable<ExecuteFn, Parameter, pipeline_flags>);
 
-      using Node = PassNode<pipeline_flags, Parameter, Executable>;
+      using Node = PassNode<pipeline_flags, Parameter, ExecuteFn>;
 
-      auto node_ptr =
-        allocator_->create<Node>(name, queue_type, std::forward<Executable>(execute)).unwrap();
+      auto node_ptr = allocator_->create<Node>(name, queue_type, execute).unwrap();
 
       auto node_base_ptr = NotNull<PassBaseNode*>(node_ptr);
 
@@ -853,21 +857,19 @@ namespace soul::gpu
       return *node_ptr;
     }
 
-    template <typename Parameter, typename Setup, typename Executable>
+    template <typename Parameter, typename SetupFn, typename ExecuteFn>
     auto add_raster_pass(
       const char* name,
       const RGRenderTargetDesc& render_target,
-      Setup&& setup,
-      Executable&& execute) -> const auto&
+      const SetupFn& setup,
+      const ExecuteFn& execute) -> const auto&
     {
-      static_assert(raster_pass_setup<Setup, Parameter>);
-      static_assert(raster_pass_executable<Executable, Parameter>);
+      static_assert(raster_pass_setup<SetupFn, Parameter>);
+      static_assert(raster_pass_executable<ExecuteFn, Parameter>);
 
       constexpr auto pipeline_flags = PipelineFlags{PipelineType::RASTER};
-      using Node                    = PassNode<pipeline_flags, Parameter, Executable>;
-      const auto node_ptr =
-        allocator_->create<Node>(name, QueueType::GRAPHIC, std::forward<Executable>(execute))
-          .unwrap();
+      using Node                    = PassNode<pipeline_flags, Parameter, ExecuteFn>;
+      const auto node_ptr = allocator_->create<Node>(name, QueueType::GRAPHIC, execute).unwrap();
       const auto node_base_ptr = NotNull<PassBaseNode*>(node_ptr);
       pass_nodes_.push_back(node_base_ptr);
       const auto pass_node_id = PassNodeID(pass_nodes_.size() - 1);
@@ -878,35 +880,36 @@ namespace soul::gpu
       return *node_ptr;
     }
 
-    template <typename Parameter, typename Setup, typename Executable>
-    auto add_compute_pass(const char* name, Setup&& setup, Executable&& execute) -> const auto&
+    template <typename Parameter, typename SetupFn, typename ExecuteFn>
+    auto add_compute_pass(const char* name, const SetupFn& setup, const ExecuteFn& execute) -> const
+      auto&
     {
-      static_assert(compute_pass_setup<Setup, Parameter>);
-      static_assert(compute_pass_executable<Executable, Parameter>);
+      static_assert(compute_pass_setup<SetupFn, Parameter>);
+      static_assert(compute_pass_executable<ExecuteFn, Parameter>);
 
-      return add_pass<Parameter, PIPELINE_FLAGS_COMPUTE>(
-        name, QueueType::COMPUTE, std::forward<Setup>(setup), std::forward<Executable>(execute));
+      return add_pass<Parameter, PIPELINE_FLAGS_COMPUTE>(name, QueueType::COMPUTE, setup, execute);
     }
 
-    template <typename Parameter, typename Setup, typename Executable>
+    template <typename Parameter, typename SetupFn, typename ExecuteFn>
     auto add_non_shader_pass(
-      const char* name, QueueType queue_type, Setup&& setup, Executable&& execute) -> const auto&
+      const char* name, QueueType queue_type, const SetupFn& setup, const ExecuteFn& execute)
+      -> const auto&
     {
-      static_assert(non_shader_pass_setup<Setup, Parameter>);
-      static_assert(non_shader_pass_executable<Executable, Parameter>);
+      static_assert(non_shader_pass_setup<SetupFn, Parameter>);
+      static_assert(non_shader_pass_executable<ExecuteFn, Parameter>);
 
-      return add_pass<Parameter, PIPELINE_FLAGS_NON_SHADER>(
-        name, queue_type, std::forward<Setup>(setup), std::forward<Executable>(execute));
+      return add_pass<Parameter, PIPELINE_FLAGS_NON_SHADER>(name, queue_type, setup, execute);
     }
 
-    template <typename Parameter, typename Setup, typename Executable>
-    auto add_ray_tracing_pass(const char* name, Setup&& setup, Executable&& execute) -> const auto&
+    template <typename Parameter, typename SetupFn, typename ExecuteFn>
+    auto add_ray_tracing_pass(const char* name, const SetupFn& setup, const ExecuteFn& execute)
+      -> const auto&
     {
-      static_assert(ray_tracing_pass_setup<Setup, Parameter>);
-      static_assert(ray_tracing_pass_executable<Executable, Parameter>);
+      static_assert(ray_tracing_pass_setup<SetupFn, Parameter>);
+      static_assert(ray_tracing_pass_executable<ExecuteFn, Parameter>);
 
       return add_pass<Parameter, PIPELINE_FLAGS_RAY_TRACING>(
-        name, QueueType::COMPUTE, std::forward<Setup>(setup), std::forward<Executable>(execute));
+        name, QueueType::COMPUTE, setup, execute);
     }
 
     auto import_texture(const char* name, TextureID texture_id) -> TextureNodeID;
@@ -1252,8 +1255,8 @@ namespace soul::gpu
     pass_node_->render_target_.sample_count = render_target_desc.sample_count;
   }
 
-  template <PipelineFlags pipeline_flags, typename Parameter, typename Execute>
-  void PassNode<pipeline_flags, Parameter, Execute>::execute(
+  template <PipelineFlags pipeline_flags, typename Parameter, typename ExecuteFn>
+  void PassNode<pipeline_flags, Parameter, ExecuteFn>::execute(
     NotNull<RenderGraphRegistry*> registry,
     NotNull<impl::RenderCompiler*> render_compiler,
     const VkRenderPassBeginInfo* render_pass_begin_info,

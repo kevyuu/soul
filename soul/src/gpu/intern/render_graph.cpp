@@ -7,14 +7,14 @@ namespace soul::gpu
 
   using namespace impl;
 
-  TextureNodeID RenderGraph::import_texture(const char* name, TextureID texture_id)
+  auto RenderGraph::import_texture(const char* name, TextureID texture_id) -> TextureNodeID
   {
     const auto resource_index = soul::cast<u32>(
       external_textures_.add(RGExternalTexture({.name = name, .texture_id = texture_id})));
     return create_resource_node<RGResourceType::TEXTURE>(RGResourceID::external_id(resource_index));
   }
 
-  TextureNodeID RenderGraph::create_texture(const char* name, const RGTextureDesc& desc)
+  auto RenderGraph::create_texture(const char* name, const RGTextureDesc& desc) -> TextureNodeID
   {
     const auto resource_index = soul::cast<u32>(internal_textures_.add(RGInternalTexture{
       .name         = name,
@@ -29,7 +29,7 @@ namespace soul::gpu
     return create_resource_node<RGResourceType::TEXTURE>(RGResourceID::internal_id(resource_index));
   }
 
-  BufferNodeID RenderGraph::import_buffer(const char* name, const BufferID buffer_id)
+  auto RenderGraph::import_buffer(const char* name, const BufferID buffer_id) -> BufferNodeID
   {
     const auto resource_index = soul::cast<u32>(external_buffers_.add(RGExternalBuffer{
       .name      = name,
@@ -38,7 +38,7 @@ namespace soul::gpu
     return create_resource_node<RGResourceType::BUFFER>(RGResourceID::external_id(resource_index));
   }
 
-  BufferNodeID RenderGraph::create_buffer(const char* name, const RGBufferDesc& desc)
+  auto RenderGraph::create_buffer(const char* name, const RGBufferDesc& desc) -> BufferNodeID
   {
     SOUL_ASSERT_FORMAT(
       0, desc.size > 0, "Render Graph buffer size must be greater than zero!, name = {}", name);
@@ -48,7 +48,7 @@ namespace soul::gpu
     return create_resource_node<RGResourceType::BUFFER>(RGResourceID::internal_id(resource_index));
   }
 
-  TlasNodeID RenderGraph::import_tlas(const char* name, TlasID tlas_id)
+  auto RenderGraph::import_tlas(const char* name, TlasID tlas_id) -> TlasNodeID
   {
     const auto resource_index =
       soul::cast<u32>(external_tlas_list_.add(RGExternalTlas{.name = name, .tlas_id = tlas_id}));
@@ -56,7 +56,8 @@ namespace soul::gpu
     return create_resource_node<RGResourceType::TLAS>(RGResourceID::external_id(resource_index));
   }
 
-  BlasGroupNodeID RenderGraph::import_blas_group(const char* name, BlasGroupID blas_group_id)
+  auto RenderGraph::import_blas_group(const char* name, BlasGroupID blas_group_id)
+    -> BlasGroupNodeID
   {
     const auto resource_index = soul::cast<u32>(external_blas_group_list_.add(
       RGExternalBlasGroup{.name = name, .blas_group_id = blas_group_id}));
@@ -65,8 +66,8 @@ namespace soul::gpu
       RGResourceID::external_id(resource_index));
   }
 
-  RGTextureDesc RenderGraph::get_texture_desc(
-    TextureNodeID node_id, const gpu::System& system) const
+  auto RenderGraph::get_texture_desc(TextureNodeID node_id, const gpu::System& system) const
+    -> RGTextureDesc
   {
     const auto& node = get_resource_node(node_id.id);
     if (node.resource_id.is_external())
@@ -97,7 +98,8 @@ namespace soul::gpu
     };
   }
 
-  RGBufferDesc RenderGraph::get_buffer_desc(BufferNodeID node_id, const gpu::System& system) const
+  auto RenderGraph::get_buffer_desc(BufferNodeID node_id, const gpu::System& system) const
+    -> RGBufferDesc
   {
     const auto& node = get_resource_node(node_id.id);
     if (node.resource_id.is_external())
@@ -110,8 +112,8 @@ namespace soul::gpu
     return {.size = internal_buffer.size};
   }
 
-  ResourceNodeID RenderGraph::create_resource_node(
-    RGResourceType resource_type, impl::RGResourceID resource_id)
+  auto RenderGraph::create_resource_node(
+    RGResourceType resource_type, impl::RGResourceID resource_id) -> ResourceNodeID
   {
     return ResourceNodeID(resource_nodes_.add(ResourceNode(resource_type, resource_id)));
   }
@@ -129,8 +131,8 @@ namespace soul::gpu
     get_resource_node(resource_node_id).readers.push_back(pass_node_id);
   }
 
-  ResourceNodeID RenderGraph::write_resource_node(
-    ResourceNodeID resource_node_id, PassNodeID pass_node_id)
+  auto RenderGraph::write_resource_node(ResourceNodeID resource_node_id, PassNodeID pass_node_id)
+    -> ResourceNodeID
   {
     auto resource_node_ref = [this, resource_node_id]() -> ResourceNode&
     {
@@ -148,17 +150,17 @@ namespace soul::gpu
     return resource_node_ref().write_target_node;
   }
 
-  const impl::ResourceNode& RenderGraph::get_resource_node(ResourceNodeID node_id) const
+  auto RenderGraph::get_resource_node(ResourceNodeID node_id) const -> const impl::ResourceNode&
   {
     return resource_nodes_[node_id.id];
   }
 
-  impl::ResourceNode& RenderGraph::get_resource_node(ResourceNodeID node_id)
+  auto RenderGraph::get_resource_node(ResourceNodeID node_id) -> impl::ResourceNode&
   {
     return resource_nodes_[node_id.id];
   }
 
-  Span<const impl::ResourceNode*> RenderGraph::get_resource_nodes() const
+  auto RenderGraph::get_resource_nodes() const -> Span<const impl::ResourceNode*>
   {
     return resource_nodes_.cspan();
   }
