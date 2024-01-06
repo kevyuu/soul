@@ -288,35 +288,80 @@ namespace soul::gpu
     COUNT
   };
 
-  enum class TextureFormat : u16
+  enum class TextureFormat : uint16_t
   {
+    // 8-bits per element
     R8,
+    R8_SNORM,
+    R8UI,
+    R8I,
+    STENCIL8,
 
+    // 16-bits per element
+    R16F,
+    R16UI,
+    R16I,
+    RG8,
+    RG8_SNORM,
+    RG8UI,
+    RG8I,
+    RGB565,
+    RGB5_A1,
+    RGBA4,
     DEPTH16,
 
+    // 24-bits per element
     RGB8,
+    SRGB8,
+    RGB8_SNORM,
+    RGB8UI,
+    RGB8I,
     DEPTH24,
 
-    RGBA8UI,
-    RGBA8,
-    BGRA8,
-    RG16UI,
-    DEPTH24_STENCIL8UI,
-    DEPTH32F,
-    RGBA16F,
+    // 32-bits per element
+    R32F,
     R32UI,
+    R32I,
+    RG16F,
+    RG16UI,
+    RG16I,
+    R11F_G11F_B10F,
+    RGB9_E5,
+    RGBA8,
     SRGBA8,
     SBGRA8,
+    RGBA8_SNORM,
+    RGB10_A2,
+    RGBA8UI,
+    RGBA8I,
+    DEPTH32F,
+    DEPTH24_STENCIL8,
+    DEPTH32F_STENCIL8,
 
-    RGB16,
+    // 48-bits per element
     RGB16F,
     RGB16UI,
     RGB16I,
-    R11F_G11F_B10F,
 
+    // 64-bits per element
+    RG32F,
+    RG32UI,
+    RG32I,
+    RGBA16F,
+    RGBA16UI,
+    RGBA16I,
+
+    // 96-bits per element
     RGB32F,
+    RGB32UI,
+    RGB32I,
 
-    COUNT
+    // 128-bits per element
+    RGBA32F,
+    RGBA32UI,
+    RGBA32I,
+
+    COUNT,
   };
 
   enum class TextureFilter : u8
