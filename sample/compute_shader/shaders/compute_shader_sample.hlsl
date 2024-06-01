@@ -14,6 +14,6 @@ void cs_main(uint3 dispatch_thread_id : SV_DispatchThreadID)
     value.x = ((f32(texel_coord.x) + push_constant.t * speed) % push_constant.dimension.x) / push_constant.dimension.x;
     value.y = f32(texel_coord.y) / push_constant.dimension.y;
 
-    RWTexture2D<float4> out_texture = get_rw_texture_2d_float4(push_constant.output_uav_gpu_handle);
+    RWTexture2D<vec4f32> out_texture = get_rw_texture_2d_vec4f32(push_constant.output_uav_gpu_handle);
     out_texture[texel_coord] = value;
 }

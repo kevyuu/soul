@@ -3,8 +3,10 @@
 #include <limits>
 
 #include "core/compiler.h"
+#include "core/matrix.h"
 #include "core/vec.h"
 
+#include "math/matrix.h"
 #include "math/vec.h"
 
 namespace soul::math
@@ -56,7 +58,25 @@ namespace soul::math
     {
       return (min + max) / 2.0f;
     }
+
+    [[nodiscard]]
+    auto
+    operator==(const AABB& rhs) const -> bool
+    {
+      return all(min == rhs.min) && all(max == rhs.max);
+    }
   };
+
+  SOUL_ALWAYS_INLINE auto transform(AABB aabb, const mat4f32& mat) -> AABB
+  {
+    vec4f32 corner_a = math::mul(mat, vec4f32(aabb.min, 1));
+    vec4f32 corner_b = math::mul(mat, vec4f32(aabb.max, 1));
+
+    return {
+      math::min(corner_a.xyz(), corner_b.xyz()),
+      math::max(corner_a.xyz(), corner_b.xyz()),
+    };
+  }
 
   SOUL_ALWAYS_INLINE auto combine(AABB aabb, vec3f32 point) -> AABB
   {

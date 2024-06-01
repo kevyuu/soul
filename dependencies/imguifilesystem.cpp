@@ -339,9 +339,9 @@ namespace ImGuiFs
         realpath(path, rv);
       }
       // printf("GetAbsolutePath(\"%s\",\"%s\");\n",path,rv);fflush(stdout);
-#else //_WIN32
-      // fprintf(stderr,"GetAbsolutePath(\"%s\"); (len:%d)\n",path,(int) strlen(path)); // TO
-      // remove!
+#else  //_WIN32
+       // fprintf(stderr,"GetAbsolutePath(\"%s\"); (len:%d)\n",path,(int) strlen(path)); // TO
+       // remove!
       static const int bufferSize =
         DIRENT_MAX_PATH +
         1; // 4097 is good (PATH_MAX should be in <limits.h>, or something like that)
@@ -2103,7 +2103,7 @@ namespace ImGuiFs
   }
 #  endif // (defined(__EMSCRIPTEN__) && defined(EMSCRIPTEN_SAVE_SHELL))
 #endif   // IMGUIFS_NO_EXTRA_METHODS
-       //-------------------------------------------------------------------------------------------------------
+  //-------------------------------------------------------------------------------------------------------
 
   // Internal
   // usage----------------------------------------------------------------------------------------
@@ -3521,7 +3521,7 @@ namespace ImGuiFs
           // const FolderInfo* fi = I.history.getCurrentFolderInfo();
           const bool acceptZipFilesForBrowsing =
             !isBrowsingInsideZipFile; //(fi && (fi->splitPathIndexOfZipFile<0 ||
-                                      //fi->splitPathIndexOfZipFile>fi->splitPathIndex));
+                                      // fi->splitPathIndexOfZipFile>fi->splitPathIndex));
           bool isZipFile = false;
           bool hasZipExtension = false;
 
@@ -3670,7 +3670,7 @@ namespace ImGuiFs
         lastTwoButtonsWidth = ImGui::CalcTextSize("Save Cancel").x +
                               2.0f * (style.FramePadding.x + style.ItemSpacing.x) +
                               style.WindowPadding.x;
-        ImGui::PushItemWidth(ImGui::GetContentRegionAvailWidth() - lastTwoButtonsWidth);
+        ImGui::PushItemWidth(ImGui::GetContentRegionAvail().x - lastTwoButtonsWidth);
         ImGui::InputText("##saveFileNameDialog", &I.saveFileName[0], MAX_FILENAME_BYTES);
         if (
           ImGui::IsItemHovered() && I.mustFilterSaveFilePathWithFileFilterExtensionString &&
@@ -3694,7 +3694,7 @@ namespace ImGuiFs
         lastTwoButtonsWidth = ImGui::CalcTextSize("Select Cancel").x +
                               2.0f * (style.FramePadding.x + style.ItemSpacing.x) +
                               style.WindowPadding.x;
-        ImGui::PushItemWidth(ImGui::GetContentRegionAvailWidth() - lastTwoButtonsWidth);
+        ImGui::PushItemWidth(ImGui::GetContentRegionAvail().x - lastTwoButtonsWidth);
         ImGui::InputText(
           "##selectFileNameDialog",
           &I.saveFileName[0],

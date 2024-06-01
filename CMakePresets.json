@@ -78,6 +78,7 @@
         "CMAKE_BUILD_TYPE": "Release",
         "SOUL_LOG_LEVEL": "INFO",
         "SOUL_LOG_ENABLE": true,
+        "SOUL_ASSERT_ENABLE": true,
         "SOUL_VULKAN_VALIDATION_ENABLE": false
       },
       "hidden": true
@@ -185,6 +186,18 @@
         "Release",
         "Clang",
         "VCPKG"
+      ]
+    },
+    {
+      "name": "x64-Release-Clang-Tracy",
+      "description": "x64(Release) with Clang and Tracy enabled",
+      "inherits": [
+        "base",
+        "x64",
+        "Release",
+        "Clang",
+        "VCPKG",
+        "Profile-Tracy"
       ]
     },
     {

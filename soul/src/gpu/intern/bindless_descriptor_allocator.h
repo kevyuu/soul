@@ -109,12 +109,13 @@ namespace soul::gpu::impl
 
     auto get_bindless_descriptor_sets() const -> BindlessDescriptorSets
     {
-      return {
-        {storage_buffer_descriptor_set_.get_descriptor_set(),
-         sampler_descriptor_set_.get_descriptor_set(),
-         sampled_image_descriptor_set_.get_descriptor_set(),
-         storage_image_descriptor_set_.get_descriptor_set(),
-         as_descriptor_set_.get_descriptor_set()}};
+      return {{
+        storage_buffer_descriptor_set_.get_descriptor_set(),
+        sampler_descriptor_set_.get_descriptor_set(),
+        sampled_image_descriptor_set_.get_descriptor_set(),
+        storage_image_descriptor_set_.get_descriptor_set(),
+        as_descriptor_set_.get_descriptor_set(),
+      }};
     }
 
   private:

@@ -2,9 +2,12 @@
 
 #include "core/compiler.h"
 #include "core/matrix.h"
+#include "core/vec.h"
 
 #include "math/common.h"
 #include "math/constant.h"
+#include "math/scalar.h"
+#include "math/vec.h"
 
 namespace soul::math
 {
@@ -365,7 +368,7 @@ namespace soul::math
   /// Extract the euler angles in radians from a quaternion (pitch as x, yaw as y, roll as z).
   template <typename T>
   [[nodiscard]]
-  constexpr auto euler_angles(const Quaternion<T>& q) -> Vec<T, 3>
+  constexpr auto into_euler_angles(const Quaternion<T>& q) -> Vec<T, 3>
   {
     return Vec<T, 3>(pitch(q), yaw(q), roll(q));
   }

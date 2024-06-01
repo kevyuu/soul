@@ -5,11 +5,14 @@
     {
       "name": "glfw3",
       "version>=": "3.3.7"
+    }, 
+    {
+      "name": "tracy",
+      "version>=": "0.10.0"
     },
     "directxtk",
     "vulkan-memory-allocator",
     "volk",
-    "tracy",
     "argparse",
     "gtest",
     "benchmark"

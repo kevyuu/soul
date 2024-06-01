@@ -6,6 +6,7 @@
 #include "bindless_descriptor_allocator.h"
 #include "enum_mapping.h"
 #include "gpu/intern/vk_check.h"
+#include <vulkan/vulkan_core.h>
 
 namespace soul::gpu::impl
 {
@@ -25,18 +26,23 @@ namespace soul::gpu::impl
 
   BindlessDescriptorAllocator::~BindlessDescriptorAllocator()
   {
-    if (device_ != VK_NULL_HANDLE && descriptor_pool_ != VK_NULL_HANDLE)
+    if (device_ != VK_NULL_HANDLE)
     {
+      vkDestroyPipelineLayout(device_, pipeline_layout_, nullptr);
       vkDestroyDescriptorPool(device_, descriptor_pool_, nullptr);
     } else
     {
-      SOUL_ASSERT(0, device_ == VK_NULL_HANDLE && descriptor_pool_ == VK_NULL_HANDLE);
+      SOUL_ASSERT(
+        0,
+        device_ == VK_NULL_HANDLE && descriptor_pool_ == VK_NULL_HANDLE &&
+          pipeline_layout_ == VK_NULL_HANDLE);
     }
   }
 
-  auto BindlessDescriptorAllocator::init(VkDevice device) -> void
+  void BindlessDescriptorAllocator::init(VkDevice device)
   {
-    device_                                 = device;
+    device_ = device;
+
     const VkDescriptorPoolSize pool_sizes[] = {
       {
         .type            = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
@@ -59,6 +65,7 @@ namespace soul::gpu::impl
         .descriptorCount = AS_DESCRIPTOR_COUNT,
       },
     };
+
     const VkDescriptorPoolCreateInfo pool_info = {
       .sType         = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
       .flags         = VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT,
@@ -66,6 +73,7 @@ namespace soul::gpu::impl
       .poolSizeCount = std::size(pool_sizes),
       .pPoolSizes    = pool_sizes,
     };
+
     SOUL_VK_CHECK(
       vkCreateDescriptorPool(device, &pool_info, nullptr, &descriptor_pool_),
       "Fail to create descriptor pool");
@@ -89,7 +97,10 @@ namespace soul::gpu::impl
       as_descriptor_set_.get_descriptor_set_layout();
 
     VkPushConstantRange push_constant_range = {
-      .stageFlags = VK_SHADER_STAGE_ALL, .offset = 0, .size = PUSH_CONSTANT_SIZE};
+      .stageFlags = VK_SHADER_STAGE_ALL,
+      .offset     = 0,
+      .size       = PUSH_CONSTANT_SIZE,
+    };
 
     const VkPipelineLayoutCreateInfo pipeline_layout_info = {
       .sType                  = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
@@ -108,11 +119,14 @@ namespace soul::gpu::impl
     -> DescriptorID
   {
     const VkDescriptorBufferInfo buffer_info = {
-      .buffer = buffer, .offset = 0, .range = VK_WHOLE_SIZE};
+      .buffer = buffer,
+      .offset = 0,
+      .range  = VK_WHOLE_SIZE,
+    };
     return storage_buffer_descriptor_set_.create_descriptor(device_, buffer_info);
   }
 
-  auto BindlessDescriptorAllocator::destroy_storage_buffer_descriptor(DescriptorID id) -> void
+  void BindlessDescriptorAllocator::destroy_storage_buffer_descriptor(DescriptorID id)
   {
     storage_buffer_descriptor_set_.destroy_descriptor(device_, id);
   }
@@ -128,7 +142,7 @@ namespace soul::gpu::impl
     return sampled_image_descriptor_set_.create_descriptor(device_, image_info);
   }
 
-  auto BindlessDescriptorAllocator::destroy_sampled_image_descriptor(DescriptorID id) -> void
+  void BindlessDescriptorAllocator::destroy_sampled_image_descriptor(DescriptorID id)
   {
     sampled_image_descriptor_set_.destroy_descriptor(device_, id);
   }
@@ -141,10 +155,11 @@ namespace soul::gpu::impl
       .imageView   = image_view,
       .imageLayout = VK_IMAGE_LAYOUT_GENERAL,
     };
-    return storage_image_descriptor_set_.create_descriptor(device_, image_info);
+    const auto descriptor_id = storage_image_descriptor_set_.create_descriptor(device_, image_info);
+    return descriptor_id;
   }
 
-  auto BindlessDescriptorAllocator::destroy_storage_image_descriptor(DescriptorID id) -> void
+  void BindlessDescriptorAllocator::destroy_storage_image_descriptor(DescriptorID id)
   {
     storage_image_descriptor_set_.destroy_descriptor(device_, id);
   }
@@ -155,7 +170,7 @@ namespace soul::gpu::impl
     return sampler_descriptor_set_.create_descriptor(device_, image_info);
   }
 
-  auto BindlessDescriptorAllocator::destroy_sampler_descriptor(DescriptorID id) -> void
+  void BindlessDescriptorAllocator::destroy_sampler_descriptor(DescriptorID id)
   {
     sampler_descriptor_set_.destroy_descriptor(device_, id);
   }
@@ -166,7 +181,7 @@ namespace soul::gpu::impl
     return as_descriptor_set_.create_descriptor(device_, as);
   }
 
-  auto BindlessDescriptorAllocator::destroy_as_descriptor(DescriptorID id) -> void
+  void BindlessDescriptorAllocator::destroy_as_descriptor(DescriptorID id)
   {
     as_descriptor_set_.destroy_descriptor(device_, id);
   }
@@ -185,7 +200,7 @@ namespace soul::gpu::impl
     }
   }
 
-  auto BindlessDescriptorSet::init(VkDevice device, VkDescriptorPool descriptor_pool) -> void
+  void BindlessDescriptorSet::init(VkDevice device, VkDescriptorPool descriptor_pool)
   {
     const VkDescriptorSetLayoutBinding binding = {
       .binding         = 0,
@@ -198,19 +213,19 @@ namespace soul::gpu::impl
       VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT |   // NOLINT
       VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT | // NOLINT
       VK_DESCRIPTOR_BINDING_UPDATE_UNUSED_WHILE_PENDING_BIT;
-
     const VkDescriptorSetLayoutBindingFlagsCreateInfo flag_info = {
       .sType         = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO,
       .bindingCount  = 1,
-      .pBindingFlags = &flags};
+      .pBindingFlags = &flags,
+    };
 
     const VkDescriptorSetLayoutCreateInfo set_layout_info = {
       .sType        = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
       .pNext        = &flag_info,
       .flags        = VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT,
       .bindingCount = 1,
-      .pBindings    = &binding};
-
+      .pBindings    = &binding,
+    };
     SOUL_VK_CHECK(
       vkCreateDescriptorSetLayout(device, &set_layout_info, nullptr, &descriptor_set_layout_),
       "Fail to create descriptor set layout");
@@ -289,23 +304,12 @@ namespace soul::gpu::impl
     return DescriptorID(index);
   }
 
-  auto BindlessDescriptorSet::destroy_descriptor(VkDevice device, DescriptorID id) -> void
+  void BindlessDescriptorSet::destroy_descriptor(VkDevice device, DescriptorID id)
   {
     if (id.is_null())
     {
       return;
     }
-    const VkCopyDescriptorSet copy_descriptor_set = {
-      .sType           = VK_STRUCTURE_TYPE_COPY_DESCRIPTOR_SET,
-      .srcSet          = descriptor_set_,
-      .srcBinding      = 0,
-      .srcArrayElement = 0,
-      .dstSet          = descriptor_set_,
-      .dstBinding      = 0,
-      .dstArrayElement = id.id,
-      .descriptorCount = 1,
-    };
-    vkUpdateDescriptorSets(device, 0, nullptr, 1, &copy_descriptor_set);
     list_[id.id] = free_head_;
     free_head_   = id.id;
   }

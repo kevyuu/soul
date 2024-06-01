@@ -165,43 +165,47 @@ class RTBasicSampleApp final : public App
       auto instance_buffer = render_graph.create_buffer(
         "Instance buffer", {.size = sizeof(gpu::RTInstanceDesc) * instances_.size()});
 
-      struct UploadInstanceBufferParameter
+      struct UploadParameter
       {
         gpu::BufferNodeID instance_buffer;
       };
 
-      instance_buffer = render_graph
-                          .add_non_shader_pass<UploadInstanceBufferParameter>(
-                            "Upload instance buffer",
-                            gpu::QueueType::TRANSFER,
-                            [instance_buffer](auto& parameter, auto& builder)
-                            {
-                              parameter.instance_buffer = builder.add_dst_buffer(instance_buffer);
-                            },
-                            [this](const auto& parameter, const auto& registry, auto& command_list)
-                            {
-                              Vector<gpu::RTInstanceDesc> instance_descs;
-                              for (const auto& instance : instances_)
-                              {
-                                instance_descs.emplace_back(
-                                  instance.transform,
-                                  instance.obj_index,
-                                  0xFF,
-                                  0,
-                                  gpu::RTGeometryInstanceFlags{
-                                    gpu::RTGeometryInstanceFlag::TRIANGLE_FACING_CULL_DISABLE},
-                                  gpu_system_->get_gpu_address(blas_ids_[instance.obj_index]));
-                              }
-                              const gpu::BufferRegionCopy region = {
-                                .size = sizeof(gpu::RTInstanceDesc) * instances_.size()};
-                              command_list.push(gpu::RenderCommandUpdateBuffer{
-                                .dst_buffer = registry.get_buffer(parameter.instance_buffer),
-                                .data       = instance_descs.data(),
-                                .regions    = u32cspan(&region, 1),
-                              });
-                            })
-                          .get_parameter()
-                          .instance_buffer;
+      const auto& upload_parameter =
+        render_graph
+          .add_non_shader_pass<UploadParameter>(
+            "Upload instance buffer",
+            gpu::QueueType::TRANSFER,
+            [instance_buffer](auto& parameter, auto& builder)
+            {
+              parameter.instance_buffer = builder.add_dst_buffer(instance_buffer);
+            },
+            [this](const auto& parameter, const auto& registry, auto& command_list)
+            {
+              Vector<gpu::RTInstanceDesc> instance_descs;
+              for (const auto& instance : instances_)
+              {
+                instance_descs.emplace_back(
+                  instance.transform,
+                  instance.obj_index,
+                  0xFF,
+                  0,
+                  gpu::RTGeometryInstanceFlags{
+                    gpu::RTGeometryInstanceFlag::TRIANGLE_FACING_CULL_DISABLE},
+                  gpu_system_->get_gpu_address(blas_ids_[instance.obj_index]));
+              }
+
+              const gpu::BufferRegionCopy region = {
+                .size = sizeof(gpu::RTInstanceDesc) * instances_.size()};
+
+              command_list.push(gpu::RenderCommandUpdateBuffer{
+                .dst_buffer = registry.get_buffer(parameter.instance_buffer),
+                .data       = instance_descs.data(),
+                .regions    = u32cspan(&region, 1),
+              });
+            })
+          .get_parameter();
+
+      instance_buffer = upload_parameter.instance_buffer;
 
       struct BuildTlasParameter
       {
@@ -215,6 +219,7 @@ class RTBasicSampleApp final : public App
           .add_non_shader_pass<BuildTlasParameter>(
             "Build Tlas Pass",
             gpu::QueueType::COMPUTE,
+
             [blas_group_node_id, tlas_node_id, instance_buffer](auto& parameter, auto& builder)
             {
               parameter.blas_group_node_id = builder.add_as_build_input(blas_group_node_id);
@@ -252,15 +257,16 @@ class RTBasicSampleApp final : public App
       math::perspective(math::radians(45.0f), math::fdiv(viewport.x, viewport.y), 0.1f, 10000.0f);
     const auto projection_inverse = math::inverse(projection);
     const auto view_inverse       = math::inverse(camera_man_.get_view_matrix());
-    gpu_scene_                    = {
-                         .gpu_obj_buffer_descriptor_id = gpu_system_->get_ssbo_descriptor_id(gpu_obj_buffer_),
-                         .camera_position              = camera_man_.get_position(),
-                         .view_inverse                 = view_inverse,
-                         .projection_inverse           = projection_inverse,
-                         .clear_color                  = clear_color_,
-                         .light_position               = light_.position,
-                         .light_intensity              = light_.intensity,
-                         .light_type                   = light_.type,
+
+    gpu_scene_ = {
+      .gpu_obj_buffer_descriptor_id = gpu_system_->get_ssbo_descriptor_id(gpu_obj_buffer_),
+      .camera_position              = camera_man_.get_position(),
+      .view_inverse                 = view_inverse,
+      .projection_inverse           = projection_inverse,
+      .clear_color                  = clear_color_,
+      .light_position               = light_.position,
+      .light_intensity              = light_.intensity,
+      .light_type                   = light_.type,
     };
 
     const auto scene_upload_parameter =

@@ -79,6 +79,6 @@ namespace soul
     }                                                                                              \
     while (0)
 #else
-#  define SOUL_ASSERT(paranoia, test, ...) ((void)0)
-#  define SOUL_PANIC(...)                  ((void)0)
+#  define SOUL_ASSERT_FORMAT(paranoia, test, ...) ((void)0)
+#  define SOUL_PANIC_FORMAT(...)                  ((void)0)
 #endif

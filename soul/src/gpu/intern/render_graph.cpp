@@ -1,11 +1,38 @@
 #include "gpu/render_graph.h"
 #include "core/panic_format.h"
+#include "gpu/render_graph_registry.h"
 #include "gpu/system.h"
+#include "gpu/type.h"
 
 namespace soul::gpu
 {
 
   using namespace impl;
+
+  auto RenderGraph::clear_texture(
+    QueueType queue_type, TextureNodeID texture, ClearValue clear_value) -> TextureNodeID
+  {
+    struct ClearParameter
+    {
+      TextureNodeID clear_texture;
+    };
+
+    const auto& pass = add_non_shader_pass<ClearParameter>(
+      "Clear Texture Pass",
+      queue_type,
+      [texture](ClearParameter& parameter, auto& builder)
+      {
+        parameter.clear_texture = builder.add_dst_texture(texture);
+      },
+      [clear_value](const ClearParameter& parameter, auto& registry, auto& command_list)
+      {
+        command_list.template push<RenderCommandClearTexture>({
+          .dst_texture = registry.get_texture(parameter.clear_texture),
+          .clear_value = clear_value,
+        });
+      });
+    return pass.get_parameter().clear_texture;
+  }
 
   auto RenderGraph::import_texture(const char* name, TextureID texture_id) -> TextureNodeID
   {

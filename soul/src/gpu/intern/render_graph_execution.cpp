@@ -1,17 +1,25 @@
-#include <algorithm>
 #include <numeric>
-#include <ranges>
 
 #include <volk.h>
 
+#include "core/compiler.h"
 #include "gpu/intern/enum_mapping.h"
 #include "gpu/intern/render_compiler.h"
 #include "gpu/intern/render_graph_execution.h"
+#include "gpu/intern/vk_str.h"
 #include "gpu/render_graph.h"
 #include "gpu/render_graph_registry.h"
 #include "gpu/system.h"
+#include "gpu/type.h"
 #include "runtime/runtime.h"
 #include "runtime/scope_allocator.h"
+
+#if defined(RENDER_GRAPH_EXECUTION_LOG_ENABLE)
+#  include "core/log.h"
+#  define SOUL_LOG_RG_EXEC(...) soul::impl::log_info(__FILE__, __LINE__, ##__VA_ARGS__)
+#else
+#  define SOUL_LOG_RG_EXEC(...) SOUL_NOOP
+#endif
 
 namespace soul::gpu::impl
 {
@@ -118,10 +126,6 @@ namespace soul::gpu::impl
 
     for (const auto& resource_node : resource_nodes)
     {
-      if (resource_node.creator.is_null())
-      {
-        continue;
-      }
 
       for (const auto pass_node_id : resource_node.readers)
       {
@@ -168,6 +172,11 @@ namespace soul::gpu::impl
     const PassNodeID dst_node_id,
     const DependencyType dependency_type)
   {
+    if (src_node_id.is_null() || dst_node_id.is_null())
+    {
+      return;
+    }
+
     if (get_dependency_flags(src_node_id, dst_node_id).none())
     {
       dependencies_[dst_node_id.id].push_back(src_node_id);
@@ -207,6 +216,47 @@ namespace soul::gpu::impl
   {
     SOUL_ASSERT_MAIN_THREAD();
     SOUL_PROFILE_ZONE_WITH_NAME("Render Graph Execution Init");
+
+    SOUL_LOG_RG_EXEC("Resource Node Info :");
+    SOUL_LOG_RG_EXEC("=========================================");
+    for (u32 resource_i = 0; resource_i < render_graph_->get_resource_nodes().size(); resource_i++)
+    {
+      const auto& resource_node = render_graph_->get_resource_nodes()[resource_i];
+      SOUL_LOG_RG_EXEC("- {}", resource_i);
+      if (resource_node.writer.is_valid())
+      {
+        SOUL_LOG_RG_EXEC(
+          ">> >> Writer : {}",
+          render_graph_->get_pass_nodes()[resource_node.writer.id]->get_name());
+      } else
+      {
+        SOUL_LOG_RG_EXEC(">> >> Writer : None");
+      }
+      SOUL_LOG_RG_EXEC(">> >> Reader :");
+      for (const auto reader_pass_node_id : resource_node.readers)
+      {
+        SOUL_ASSERT(reader_pass_node_id.is_valid(), "Must be valid pass node");
+        SOUL_LOG_RG_EXEC(
+          "---- {}", render_graph_->get_pass_nodes()[reader_pass_node_id.id]->get_name());
+      }
+    }
+
+    SOUL_LOG_RG_EXEC(">> Dependency Level");
+    SOUL_LOG_RG_EXEC("=========================================");
+    for (u32 pass_i = 0; pass_i < render_graph_->get_pass_nodes().size(); pass_i++)
+    {
+      const auto pass_node_id = PassNodeID(pass_i);
+      SOUL_LOG_RG_EXEC(
+        "- {} : {}",
+        render_graph_->get_pass_nodes()[pass_i]->get_name(),
+        pass_dependency_graph_.get_dependency_level(pass_node_id));
+      SOUL_LOG_RG_EXEC(">> >> Dependencies :");
+      for (const auto dependency_node_id : pass_dependency_graph_.get_dependencies(pass_node_id))
+      {
+        SOUL_LOG_RG_EXEC(
+          "---- {}", render_graph_->get_pass_nodes()[dependency_node_id.id]->get_name());
+      }
+    }
 
     compute_active_passes();
     compute_pass_order();
@@ -267,6 +317,7 @@ namespace soul::gpu::impl
       texture_info.view             = texture_view_infos_.data() + view_offset;
       texture_info.mip_levels       = internal_textures[texture_info_idx].mip_levels;
       texture_info.layers           = internal_textures[texture_info_idx].layer_count;
+      texture_info.name             = internal_textures[texture_info_idx].name;
       view_offset += texture_info.get_view_count();
     }
 
@@ -280,6 +331,7 @@ namespace soul::gpu::impl
         gpu_system_->get_texture(external_textures[texture_info_idx].texture_id).desc;
       texture_info.mip_levels = desc.mip_levels;
       texture_info.layers     = desc.layer_count;
+      texture_info.name       = desc.name;
       view_offset += texture_info.get_view_count();
     }
 
@@ -290,6 +342,7 @@ namespace soul::gpu::impl
       const auto pass_queue_type = pass_node.get_queue_type();
       PassExecInfo& pass_info    = pass_infos_[pass_index];
       pass_info.pass_node        = &pass_node;
+      pass_info.name             = StringView(pass_node.name_);
 
       init_shader_buffers(pass_node.get_buffer_read_accesses(), pass_node_id, pass_queue_type);
       init_shader_buffers(pass_node.get_buffer_write_accesses(), pass_node_id, pass_queue_type);
@@ -330,6 +383,22 @@ namespace soul::gpu::impl
 
         update_buffer_info(
           pass_queue_type, {BufferUsage::INDEX}, pass_node_id, &buffer_infos_[buffer_info_id]);
+      }
+
+      for (const BufferNodeID node_id : pass_node.get_indirect_command_buffers())
+      {
+        SOUL_ASSERT(0, node_id.is_valid());
+
+        const auto buffer_info_id = get_buffer_info_index(node_id);
+
+        pass_info.buffer_accesses.push_back(BufferAccess{
+          .stage_flags     = {PipelineStage::DRAW_INDIRECT},
+          .access_flags    = {AccessType::INDIRECT_COMMAND_READ},
+          .buffer_info_idx = buffer_info_id,
+        });
+
+        update_buffer_info(
+          pass_queue_type, {BufferUsage::INDIRECT}, pass_node_id, &buffer_infos_[buffer_info_id]);
       }
 
       const auto& [dimension, sampleCount, colorAttachments, resolveAttachments, depthStencilAttachment] =
@@ -671,6 +740,14 @@ namespace soul::gpu::impl
       return node1_dependency_level < node2_dependency_level;
     };
     std::ranges::sort(pass_order_, pass_compare_func);
+
+    SOUL_LOG_RG_EXEC(">> Pass Order: ");
+    SOUL_LOG_RG_EXEC("=========================================");
+
+    for (const auto pass_node_id : pass_order_)
+    {
+      SOUL_LOG_RG_EXEC("- {}", render_graph_->get_pass_nodes()[pass_node_id.id]->get_name());
+    }
   }
 
   auto RenderGraphExecution::create_render_pass(const u32 pass_index) -> VkRenderPass
@@ -780,9 +857,9 @@ namespace soul::gpu::impl
 
   void RenderGraphExecution::sync_external()
   {
-    for (VkEvent& event : external_events_)
+    for (auto& event : external_event_idxs_)
     {
-      event = VK_NULL_HANDLE;
+      event = nilopt;
     }
 
     for (auto& texture_info : texture_infos_)
@@ -810,7 +887,7 @@ namespace soul::gpu::impl
             view_info.cache_state = texture.cache_state;
             if (gpu_system_->is_owned_by_presentation_engine(texture_id))
             {
-              view_info.pending_event = VK_NULL_HANDLE;
+              view_info.pending_event_idx = nilopt;
               view_info.pending_semaphore.assign(
                 &gpu_system_->get_frame_context().image_available_semaphore);
             } else if (external_queue_type == first_queue_type)
@@ -821,18 +898,19 @@ namespace soul::gpu::impl
               {
                 return;
               }
-              VkEvent& external_event = external_events_[first_queue_type];
-              if (external_event == VK_NULL_HANDLE && external_queue_type != QueueType::TRANSFER)
+              Option<u32>& external_event = external_event_idxs_[first_queue_type];
+              if (!external_event.is_some() && external_queue_type != QueueType::TRANSFER)
               {
-                external_event = gpu_system_->create_event();
+                external_event = event_infos_.size();
+                event_infos_.push_back(EventInfo{gpu_system_->create_event(), {}});
               }
-              view_info.pending_event = external_event;
+              view_info.pending_event_idx = external_event;
               view_info.pending_semaphore.assign(TimelineSemaphore::null());
               external_events_stage_flags_[first_queue_type] |=
                 texture.cache_state.unavailable_pipeline_stages;
             } else if (external_queue_type != QueueType::NONE)
             {
-              view_info.pending_event = VK_NULL_HANDLE;
+              view_info.pending_event_idx = nilopt;
               view_info.pending_semaphore.assign(
                 command_queues_->ref(external_queue_type).get_timeline_semaphore());
             }
@@ -874,18 +952,19 @@ namespace soul::gpu::impl
         {
           return;
         }
-        VkEvent& external_event = external_events_[first_queue_type];
-        if (external_event == VK_NULL_HANDLE && external_queue_type != QueueType::TRANSFER)
+        auto& external_event_idx = external_event_idxs_[first_queue_type];
+        if (external_event_idx == nilopt && external_queue_type != QueueType::TRANSFER)
         {
-          external_event = gpu_system_->create_event();
+          external_event_idx = event_infos_.size();
+          event_infos_.push_back(EventInfo{gpu_system_->create_event(), {}});
         }
-        resource_exec_info.pending_event = external_event;
+        resource_exec_info.pending_event_idx = external_event_idx;
         external_events_stage_flags_[first_queue_type] |=
           external_cache_state.unavailable_pipeline_stages;
         resource_exec_info.pending_semaphore.assign(TimelineSemaphore::null());
       } else if (external_queue_type != QueueType::COUNT)
       {
-        resource_exec_info.pending_event = VK_NULL_HANDLE;
+        resource_exec_info.pending_event_idx = nilopt;
         resource_exec_info.pending_semaphore.assign(
           command_queues_->ref(external_queue_type).get_timeline_semaphore());
       }
@@ -922,13 +1001,13 @@ namespace soul::gpu::impl
     // Sync events
     for (const auto queue_type : FlagIter<QueueType>())
     {
-      if (external_events_[queue_type] != VK_NULL_HANDLE)
+      if (external_event_idxs_[queue_type] != nilopt)
       {
         const auto sync_event_command_buffer = command_pools_->request_command_buffer(queue_type);
-        vkCmdSetEvent(
-          sync_event_command_buffer.get_vk_handle(),
-          external_events_[queue_type],
-          vk_cast(external_events_stage_flags_[queue_type]));
+        set_event(
+          sync_event_command_buffer,
+          external_event_idxs_[queue_type].some_ref(),
+          external_events_stage_flags_[queue_type]);
         command_queues_->ref(queue_type).submit(sync_event_command_buffer);
       }
     }
@@ -936,20 +1015,20 @@ namespace soul::gpu::impl
 
   void RenderGraphExecution::execute_pass(const u32 pass_index, PrimaryCommandBuffer command_buffer)
   {
-    SOUL_PROFILE_ZONE();
-    const auto& pass_node                   = *render_graph_->get_pass_nodes()[pass_index];
-    const auto pipeline_flags               = pass_node.get_pipeline_flags();
-    VkRenderPass render_pass                = VK_NULL_HANDLE;
-    const RGRenderTarget& render_target     = pass_node.get_render_target();
-    const VkRenderPassBeginInfo* begin_info = nullptr;
+    SOUL_PROFILE_ZONE_WITH_NAME(pass_infos_[pass_index].name.data());
+    const auto& pass_node               = *render_graph_->get_pass_nodes()[pass_index];
+    const auto pipeline_flags           = pass_node.get_pipeline_flags();
+    VkRenderPass render_pass            = VK_NULL_HANDLE;
+    const RGRenderTarget& render_target = pass_node.get_render_target();
+
+    VkClearValue clear_values[2 * MAX_COLOR_ATTACHMENT_PER_SHADER + 1];
+    VkRenderPassBeginInfo render_pass_begin_info = {};
 
     if (pipeline_flags.test(PipelineType::RASTER))
     {
+      u32 clear_count           = 0;
       render_pass               = create_render_pass(pass_index);
       VkFramebuffer framebuffer = create_framebuffer(pass_index, render_pass);
-
-      VkClearValue clear_values[2 * MAX_COLOR_ATTACHMENT_PER_SHADER + 1];
-      u32 clear_count = 0;
 
       for (const ColorAttachment& attachment : render_target.color_attachments)
       {
@@ -971,14 +1050,14 @@ namespace soul::gpu::impl
           clear_value.depth_stencil.depth, clear_value.depth_stencil.stencil};
       }
 
-      const VkRenderPassBeginInfo render_pass_begin_info = {
+      render_pass_begin_info = {
         .sType           = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
         .renderPass      = render_pass,
         .framebuffer     = framebuffer,
         .renderArea      = {.extent = {render_target.dimension.x, render_target.dimension.y}},
         .clearValueCount = clear_count,
-        .pClearValues    = clear_values};
-      begin_info = &render_pass_begin_info;
+        .pClearValues    = clear_values,
+      };
     }
     auto registry =
       RenderGraphRegistry::New(gpu_system_, this, render_pass, render_target.sample_count);
@@ -1000,13 +1079,15 @@ namespace soul::gpu::impl
           render_compiler.bind_descriptor_sets(bind_point);
         }
       });
-    pass_node.execute(&registry, &render_compiler, begin_info, command_pools_, gpu_system_);
+    pass_node.execute(
+      &registry, &render_compiler, &render_pass_begin_info, command_pools_, gpu_system_);
   }
 
   void RenderGraphExecution::run()
   {
     SOUL_ASSERT_MAIN_THREAD();
     SOUL_PROFILE_ZONE();
+    SOUL_LOG_RG_EXEC("Run Render Graph\n\n\n");
 
     sync_external();
 
@@ -1024,6 +1105,10 @@ namespace soul::gpu::impl
 
     for (const auto pass_node_id : pass_order_)
     {
+      SOUL_LOG_RG_EXEC(">> Evaluate pass : {}", pass_infos_[pass_node_id.id].name);
+      SOUL_LOG_RG_EXEC("=========================================");
+      SCOPE_EXIT(SOUL_LOG_RG_EXEC("=========================================\n"));
+
       const auto pass_index = pass_node_id.id;
       runtime::ScopeAllocator passNodeScopeAllocator(
         "Pass Node Scope Allocator", runtime::get_temp_allocator());
@@ -1043,8 +1128,10 @@ namespace soul::gpu::impl
       };
       vkCmdBeginDebugUtilsLabelEXT(cmd_buffer.get_vk_handle(), &passLabel);
 
+      pipeline_barriers.clear();
       pipeline_buffer_barriers.clear();
       pipeline_image_barriers.clear();
+      event_barriers.clear();
       event_buffer_barriers.clear();
       event_image_barriers.clear();
       semaphore_layout_barriers.clear();
@@ -1059,6 +1146,7 @@ namespace soul::gpu::impl
       for (const auto& barrier : pass_info.resource_accesses)
       {
         ResourceExecInfo& resource_info = resource_infos_[barrier.resource_info_idx];
+
         if (resource_info.cache_state.unavailable_accesses.any())
         {
           for (auto& access_flags : resource_info.cache_state.visible_access_matrix)
@@ -1076,6 +1164,8 @@ namespace soul::gpu::impl
           is_semaphore_null(resource_info.pending_semaphore) && unavailable_accesses.none() &&
           !resource_info.cache_state.need_invalidate(barrier.stage_flags, barrier.access_flags))
         {
+          resource_info.cache_state.commit_access(
+            current_queue_type, barrier.stage_flags, barrier.access_flags);
           continue;
         }
 
@@ -1097,15 +1187,19 @@ namespace soul::gpu::impl
           VkMemoryBarrier mem_barrier = {
             .sType         = VK_STRUCTURE_TYPE_MEMORY_BARRIER,
             .srcAccessMask = vk_cast(unavailable_accesses),
-            .dstAccessMask = vk_cast(barrier.access_flags)};
+            .dstAccessMask = vk_cast(barrier.access_flags),
+          };
 
-          if (resource_info.pending_event != VK_NULL_HANDLE)
+          if (resource_info.pending_event_idx != nilopt)
           {
             event_barriers.push_back(mem_barrier);
-            events.push_back(resource_info.pending_event);
-            event_src_stage_flags |= unavailable_pipeline_stages;
+            wait_event(
+              events,
+              event_src_stage_flags,
+              resource_info.pending_event_idx.some_ref(),
+              pass_node_id);
             event_dst_stage_flags |= barrier.stage_flags;
-            resource_info.pending_event = VK_NULL_HANDLE;
+            resource_info.pending_event_idx = nilopt;
           } else
           {
             pipeline_barriers.push_back(mem_barrier);
@@ -1132,6 +1226,8 @@ namespace soul::gpu::impl
           buffer_info.cache_state.unavailable_accesses.none() &&
           !buffer_info.cache_state.need_invalidate(barrier.stage_flags, barrier.access_flags))
         {
+          buffer_info.cache_state.commit_access(
+            current_queue_type, barrier.stage_flags, barrier.access_flags);
           continue;
         }
 
@@ -1151,6 +1247,7 @@ namespace soul::gpu::impl
           {
             SOUL_ASSERT(0, buffer_info.cache_state.unavailable_accesses.none());
           }
+          SOUL_ASSERT(0, !buffer_info.cache_state.unavailable_accesses.test(AccessType::AS_WRITE));
           VkBufferMemoryBarrier mem_barrier = {
             .sType               = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER,
             .srcAccessMask       = vk_cast(buffer_info.cache_state.unavailable_accesses),
@@ -1159,15 +1256,20 @@ namespace soul::gpu::impl
             .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
             .buffer              = gpu_system_->get_buffer(buffer_info.buffer_id).vk_handle,
             .offset              = 0,
-            .size                = VK_WHOLE_SIZE};
+            .size                = VK_WHOLE_SIZE,
+          };
 
-          if (buffer_info.pending_event != VK_NULL_HANDLE)
+          if (buffer_info.pending_event_idx != nilopt)
           {
             event_buffer_barriers.push_back(mem_barrier);
-            events.push_back(buffer_info.pending_event);
-            event_src_stage_flags |= buffer_info.cache_state.unavailable_pipeline_stages;
+            const EventInfo& event_info = event_infos_[buffer_info.pending_event_idx.some_ref()];
+            wait_event(
+              events,
+              event_src_stage_flags,
+              buffer_info.pending_event_idx.some_ref(),
+              pass_node_id);
             event_dst_stage_flags |= barrier.stage_flags;
-            buffer_info.pending_event = VK_NULL_HANDLE;
+            buffer_info.pending_event_idx = nilopt;
           } else
           {
             pipeline_buffer_barriers.push_back(mem_barrier);
@@ -1188,6 +1290,9 @@ namespace soul::gpu::impl
 
       for (const TextureAccess& barrier : pass_info.texture_accesses)
       {
+        SOUL_LOG_RG_EXEC(
+          "Texture Access Barrier, Name : {}", texture_infos_[barrier.texture_info_idx].name);
+
         TextureExecInfo& texture_info  = texture_infos_[barrier.texture_info_idx];
         auto& texture                  = gpu_system_->get_texture(texture_info.texture_id);
         TextureViewExecInfo& view_info = *texture_info.get_view(barrier.view);
@@ -1203,6 +1308,8 @@ namespace soul::gpu::impl
           !view_info.cache_state.need_invalidate(barrier.stage_flags, barrier.access_flags) &&
           unavailable_accesses.none())
         {
+          view_info.cache_state.commit_access(
+            queue_owner, barrier.stage_flags, barrier.access_flags);
           continue;
         }
 
@@ -1236,6 +1343,11 @@ namespace soul::gpu::impl
             mem_barrier.srcAccessMask = 0;
             mem_barrier.dstAccessMask = vk_cast(barrier.access_flags);
             semaphore_layout_barriers.push_back(mem_barrier);
+            SOUL_LOG_RG_EXEC(
+              "Semaphore Layout Barrier for : {:#x} From : {}, To : {}",
+              u64(mem_barrier.image),
+              to_string(mem_barrier.oldLayout),
+              to_string(mem_barrier.newLayout));
 
             view_info.cache_state.commit_wait_event_or_barrier(
               current_queue_type,
@@ -1249,19 +1361,41 @@ namespace soul::gpu::impl
         {
           const auto dst_access_flags = barrier.access_flags;
 
+          AccessFlags src_access = unavailable_accesses;
+          if (unavailable_accesses == AccessFlags{AccessType::SHADER_WRITE})
+          {
+            src_access.set(AccessType::SHADER_READ);
+          }
           mem_barrier.srcAccessMask = vk_cast(unavailable_accesses);
           mem_barrier.dstAccessMask = vk_cast(dst_access_flags);
 
-          if (view_info.pending_event != VK_NULL_HANDLE)
+          SOUL_ASSERT(0, !unavailable_accesses.test(AccessType::AS_WRITE));
+          if (view_info.pending_event_idx != nilopt)
           {
             event_image_barriers.push_back(mem_barrier);
-            events.push_back(view_info.pending_event);
-            event_src_stage_flags |= unavailable_pipeline_stages;
+
+            const EventInfo& event_info = event_infos_[view_info.pending_event_idx.some_ref()];
+            wait_event(
+              events, event_src_stage_flags, view_info.pending_event_idx.some_ref(), pass_node_id);
             event_dst_stage_flags |= barrier.stage_flags;
-            view_info.pending_event = VK_NULL_HANDLE;
+            view_info.pending_event_idx = nilopt;
+            SOUL_LOG_RG_EXEC(
+              "Event Barrier for : {:#x} From : {}, To : {}, Src Access : {:#x}, Dst Access : "
+              "{:#x}",
+              u64(mem_barrier.image),
+              to_string(mem_barrier.oldLayout),
+              to_string(mem_barrier.newLayout),
+              u64(mem_barrier.srcAccessMask),
+              u64(mem_barrier.dstAccessMask));
           } else
           {
             pipeline_image_barriers.push_back(mem_barrier);
+            SOUL_LOG_RG_EXEC(
+              "Pipeline Image Barrier : {:#x} From : {}, To : {}",
+              u64(mem_barrier.image),
+              to_string(mem_barrier.oldLayout),
+              to_string(mem_barrier.newLayout));
+
             pipeline_src_stage_flags |= unavailable_pipeline_stages;
             pipeline_dst_stage_flags |= barrier.stage_flags;
           }
@@ -1277,6 +1411,33 @@ namespace soul::gpu::impl
 
         view_info.layout = barrier.layout;
         view_info.cache_state.commit_access(queue_owner, barrier.stage_flags, barrier.access_flags);
+      }
+
+      if (!semaphore_layout_barriers.empty())
+      {
+        SOUL_LOG_RG_EXEC("\n");
+        SOUL_LOG_RG_EXEC(">>> Semaphore Layout Barrier:");
+        SOUL_LOG_RG_EXEC("Src Stage : {}", u64(vk_cast(semaphore_dst_stage_flags)));
+        SOUL_LOG_RG_EXEC("Dst Stage : {}", u64(vk_cast(semaphore_dst_stage_flags)));
+        SOUL_LOG_RG_EXEC("Semaphore Layout Barrier List : ");
+        vkCmdPipelineBarrier(
+          cmd_buffer.get_vk_handle(),
+          vk_cast(semaphore_dst_stage_flags),
+          vk_cast(semaphore_dst_stage_flags),
+          0,
+          0,
+          nullptr,
+          0,
+          nullptr,
+          soul::cast<u32>(semaphore_layout_barriers.size()),
+          semaphore_layout_barriers.data());
+
+        SOUL_LOG_RG_EXEC(
+          "Semaphore Layout Barrier For Pass : {}, Size : {}, src stage : {}, dst stage : {}",
+          pass_info.name,
+          semaphore_layout_barriers.size(),
+          u64(vk_cast(semaphore_dst_stage_flags)),
+          u64(vk_cast(semaphore_dst_stage_flags)));
       }
 
       if (!pipeline_buffer_barriers.empty() || !pipeline_image_barriers.empty())
@@ -1301,6 +1462,24 @@ namespace soul::gpu::impl
 
       if (!events.empty())
       {
+        SOUL_LOG_RG_EXEC("\n");
+        SOUL_LOG_RG_EXEC(">>> Events:");
+        SOUL_LOG_RG_EXEC("Src Stage : {}", u64(vk_cast(event_src_stage_flags)));
+        SOUL_LOG_RG_EXEC("Dst Stage : {}", u64(vk_cast(event_dst_stage_flags)));
+        SOUL_LOG_RG_EXEC("Event List : ");
+
+        for (auto event : events)
+        {
+          SOUL_LOG_RG_EXEC("{:#x}", u64(event));
+        }
+
+        SOUL_LOG_RG_EXEC(
+          "Wait Events For Pass : {}, Size : {}, src stage : {}, dst stage : {}",
+          pass_info.name,
+          events.size(),
+          u64(vk_cast(event_src_stage_flags)),
+          u64(vk_cast(event_dst_stage_flags)));
+
         vkCmdWaitEvents(
           cmd_buffer.get_vk_handle(),
           soul::cast<u32>(events.size()),
@@ -1313,21 +1492,6 @@ namespace soul::gpu::impl
           event_buffer_barriers.data(),
           soul::cast<u32>(event_image_barriers.size()),
           event_image_barriers.data());
-      }
-
-      if (!semaphore_layout_barriers.empty())
-      {
-        vkCmdPipelineBarrier(
-          cmd_buffer.get_vk_handle(),
-          vk_cast(semaphore_dst_stage_flags),
-          vk_cast(semaphore_dst_stage_flags),
-          0,
-          0,
-          nullptr,
-          0,
-          nullptr,
-          soul::cast<u32>(semaphore_layout_barriers.size()),
-          semaphore_layout_barriers.data());
       }
 
       execute_pass(pass_index, cmd_buffer);
@@ -1374,7 +1538,7 @@ namespace soul::gpu::impl
         }
       }
 
-      VkEvent event = VK_NULL_HANDLE;
+      Option<u32> event_idx = nilopt;
       PipelineStageFlags unsync_write_stage_flags;
 
       for (QueueType queue_type : FlagIter<QueueType>())
@@ -1383,8 +1547,8 @@ namespace soul::gpu::impl
           is_queue_type_dependent[queue_type] && queue_type == pass_node->get_queue_type() &&
           queue_type != QueueType::TRANSFER)
         {
-          event = gpu_system_->create_event();
-          garbage_events.push_back(event);
+          event_idx = event_infos_.size();
+          event_infos_.push_back(EventInfo{gpu_system_->create_event(), {}});
         }
       }
 
@@ -1404,7 +1568,7 @@ namespace soul::gpu::impl
             pending_semaphores.push_back(&buffer_info.pending_semaphore);
           } else
           {
-            buffer_info.pending_event = event;
+            buffer_info.pending_event_idx = event_idx;
             unsync_write_stage_flags |= barrier.stage_flags;
           }
         }
@@ -1425,7 +1589,7 @@ namespace soul::gpu::impl
             pending_semaphores.push_back(&texture_view_info.pending_semaphore);
           } else
           {
-            texture_view_info.pending_event = event;
+            texture_view_info.pending_event_idx = event_idx;
             unsync_write_stage_flags |= barrier.stage_flags;
           }
         }
@@ -1446,15 +1610,16 @@ namespace soul::gpu::impl
             pending_semaphores.push_back(&resource_info.pending_semaphore);
           } else
           {
-            resource_info.pending_event = event;
+            resource_info.pending_event_idx = event_idx;
             unsync_write_stage_flags |= access.stage_flags;
           }
         }
       }
 
-      if (event != VK_NULL_HANDLE)
+      if (event_idx != nilopt)
       {
-        vkCmdSetEvent(cmd_buffer.get_vk_handle(), event, vk_cast(unsync_write_stage_flags));
+        set_event(cmd_buffer, event_idx.some_ref(), unsync_write_stage_flags);
+        SOUL_LOG_RG_EXEC("Set Event : {:#x}", u64(event_infos_[event_idx.some_ref()].vk_handle));
       }
 
       vkCmdEndDebugUtilsLabelEXT(cmd_buffer.get_vk_handle());
@@ -1634,12 +1799,9 @@ namespace soul::gpu::impl
 
   void RenderGraphExecution::cleanup()
   {
-    for (const auto event : external_events_)
+    for (const auto& event_info : event_infos_)
     {
-      if (event != VK_NULL_HANDLE)
-      {
-        gpu_system_->destroy_event(event);
-      }
+      gpu_system_->destroy_event(event_info.vk_handle);
     }
 
     for (const auto& texture_info : internal_texture_infos_)
@@ -1837,6 +1999,30 @@ namespace soul::gpu::impl
       update_resource_info(
         queue_type, PassNodeID(pass_node_id), &resource_infos_[resource_info_id]);
     }
+  }
+
+  void RenderGraphExecution::wait_event(
+    Vector<VkEvent>& events,
+    PipelineStageFlags& stage_flags,
+    u32 event_idx,
+    PassNodeID pass_node_id)
+  {
+    EventInfo& event_info = event_infos_[event_idx];
+    if (event_info.last_wait_pass_node_id == pass_node_id)
+    {
+      return;
+    }
+    event_info.last_wait_pass_node_id = pass_node_id;
+    stage_flags |= event_info.src_stage_flags;
+    events.push_back(event_info.vk_handle);
+  }
+
+  void RenderGraphExecution::set_event(
+    PrimaryCommandBuffer command_buffer, u32 event_idx, PipelineStageFlags stage_flags)
+  {
+    EventInfo& event_info = event_infos_[event_idx];
+    vkCmdSetEvent(command_buffer.get_vk_handle(), event_info.vk_handle, vk_cast(stage_flags));
+    event_info.src_stage_flags = stage_flags;
   }
 
 } // namespace soul::gpu::impl

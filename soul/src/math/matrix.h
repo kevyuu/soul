@@ -4,6 +4,7 @@
 
 #include "math/common.h"
 #include "math/quaternion.h"
+#include "math/vec.h"
 
 namespace soul::math
 {

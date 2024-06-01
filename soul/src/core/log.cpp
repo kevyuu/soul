@@ -1,4 +1,4 @@
-#include <iostream>
+#include <fstream>
 
 #include "core/log.h"
 #include "core/mutex.h"
@@ -37,6 +37,7 @@ namespace soul::impl
 
     auto get_output_stream(LogLevel log_level) -> std::ostream&
     {
+      static const std::ofstream file("log.txt");
       if (log_level == LogLevel::FATAL && log_level == LogLevel::ERROR)
       {
         return std::cerr;

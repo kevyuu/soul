@@ -1,4 +1,5 @@
 #include <volk.h>
+#include "core/profile.h"
 #include "gpu/type.h"
 #include <vulkan/vulkan_core.h>
 
@@ -63,6 +64,7 @@ namespace soul::gpu::impl
       COMPILE_PACKET(RenderCommandDrawIndexedIndirect);
       COMPILE_PACKET(RenderCommandUpdateTexture);
       COMPILE_PACKET(RenderCommandCopyTexture);
+      COMPILE_PACKET(RenderCommandClearTexture);
       COMPILE_PACKET(RenderCommandUpdateBuffer);
       COMPILE_PACKET(RenderCommandCopyBuffer);
       COMPILE_PACKET(RenderCommandDispatch);
@@ -126,7 +128,12 @@ namespace soul::gpu::impl
     vkCmdBindIndexBuffer(
       command_buffer_, index_buffer.vk_handle, command.index_offset, vk_cast(command.index_type));
     vkCmdDrawIndexed(
-      command_buffer_, command.index_count, 1, command.first_index, command.vertex_offsets[0], 1);
+      command_buffer_,
+      command.index_count,
+      command.instance_count,
+      command.first_index,
+      command.vertex_offsets[0],
+      command.first_instance);
   }
 
   void RenderCompiler::compile_command(const RenderCommandDrawIndexedIndirect& command)
@@ -244,6 +251,63 @@ namespace soul::gpu::impl
       image_copies.data());
   }
 
+  void RenderCompiler::compile_command(const RenderCommandClearTexture& command)
+  {
+    SOUL_PROFILE_ZONE();
+    const auto& dst_texture    = gpu_system_->get_texture(command.dst_texture);
+    const auto dst_aspect_mask = vk_cast_format_to_aspect_flags(dst_texture.desc.format);
+
+    const VkImageSubresourceRange subresource_range = [&]
+    {
+      if (command.subresource_range.is_some())
+      {
+        const auto range = command.subresource_range.some_ref();
+        return VkImageSubresourceRange{
+          .aspectMask     = dst_aspect_mask,
+          .baseMipLevel   = range.base_mip_level,
+          .levelCount     = range.level_count,
+          .baseArrayLayer = range.base_array_layer,
+          .layerCount     = range.layer_count,
+        };
+      } else
+      {
+        return VkImageSubresourceRange{
+          .aspectMask     = dst_aspect_mask,
+          .baseMipLevel   = 0,
+          .levelCount     = VK_REMAINING_MIP_LEVELS,
+          .baseArrayLayer = 0,
+          .layerCount     = VK_REMAINING_ARRAY_LAYERS,
+        };
+      }
+    }();
+
+    if ((dst_aspect_mask & VK_IMAGE_ASPECT_DEPTH_BIT) != 0u)
+    {
+      const VkClearDepthStencilValue vk_clear_value = {
+        command.clear_value.depth_stencil.depth,
+        command.clear_value.depth_stencil.stencil,
+      };
+      vkCmdClearDepthStencilImage(
+        command_buffer_,
+        dst_texture.vk_handle,
+        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+        &vk_clear_value,
+        1,
+        &subresource_range);
+    } else
+    {
+      VkClearColorValue vk_clear_value;
+      memcpy(&vk_clear_value, &command.clear_value, sizeof(vk_clear_value));
+      vkCmdClearColorImage(
+        command_buffer_,
+        dst_texture.vk_handle,
+        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+        &vk_clear_value,
+        1,
+        &subresource_range);
+    }
+  }
+
   auto RenderCompiler::compile_command(const RenderCommandUpdateBuffer& command) -> void
   {
     const auto gpu_allocator = gpu_system_->get_gpu_allocator();
@@ -317,6 +381,15 @@ namespace soul::gpu::impl
       command_buffer_, command.group_count.x, command.group_count.y, command.group_count.z);
   }
 
+  auto RenderCompiler::compile_command(const RenderCommandDispatchIndirect& command) -> void
+  {
+    SOUL_PROFILE_ZONE();
+    apply_push_constant(command.push_constant);
+    apply_pipeline_state(command.pipeline_state_id);
+    vkCmdDispatchIndirect(
+      command_buffer_, gpu_system_->get_buffer(command.buffer).vk_handle, command.offset);
+  }
+
   auto RenderCompiler::compile_command(const RenderCommandRayTrace& command) -> void
   {
     SOUL_PROFILE_ZONE();
@@ -343,7 +416,7 @@ namespace soul::gpu::impl
 
     const BufferDesc scratch_buffer_desc = {
       .size        = size_info.buildScratchSize,
-      .usage_flags = {BufferUsage::AS_SCRATCH_BUFFER},
+      .usage_flags = {BufferUsage::AS_SCRATCH_BUFFER, BufferUsage::STORAGE},
       .queue_flags = {QueueType::COMPUTE},
       .memory_option =
         MemoryOption{
@@ -373,7 +446,10 @@ namespace soul::gpu::impl
       .dstAccelerationStructure = tlas.vk_handle,
       .geometryCount            = 1,
       .pGeometries              = &as_geometry,
-      .scratchData              = {.deviceAddress = scratch_buffer_address.id},
+      .scratchData =
+        {
+          .deviceAddress = scratch_buffer_address.id,
+        },
     };
     const VkAccelerationStructureBuildRangeInfoKHR build_offset_info{
       build_desc.instance_count, build_desc.instance_offset, 0, 0};
@@ -488,8 +564,9 @@ namespace soul::gpu::impl
       const auto scratch_size = blas_build.build_mode == RTBuildMode::REBUILD
                                   ? size_info.buildScratchSize
                                   : size_info.updateScratchSize;
+      SOUL_ASSERT(
+        scratch_size < command.max_build_memory_size, "Scratch size exeeds max_build_memory_size");
       build_scratch_sizes.push_back(scratch_size);
-      SOUL_LOG_INFO("Scratch size = {}", scratch_size);
       total_size += scratch_size;
     }
 
@@ -513,8 +590,6 @@ namespace soul::gpu::impl
       auto current_scratch_size = build_scratch_sizes[build_idx];
       if (current_build_scratch_size + current_scratch_size > command.max_build_memory_size)
       {
-        // TODO: Add barrier after each build because they use the same scratch buffer
-        SOUL_PANIC("Barrier between blas build command is not implemented yet!");
         vkCmdBuildAccelerationStructuresKHR(
           command_buffer_,
           current_build_count,
@@ -523,6 +598,30 @@ namespace soul::gpu::impl
         current_build_count        = 0;
         current_build_base_idx     = build_idx;
         current_build_scratch_size = 0;
+
+        const VkBufferMemoryBarrier mem_barrier = {
+          .sType         = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER,
+          .srcAccessMask = VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR |
+                           VK_ACCESS_ACCELERATION_STRUCTURE_WRITE_BIT_KHR,
+          .dstAccessMask = VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR |
+                           VK_ACCESS_ACCELERATION_STRUCTURE_WRITE_BIT_KHR,
+          .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+          .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+          .buffer              = gpu_system_->get_buffer(scratch_buffer).vk_handle,
+          .offset              = 0,
+          .size                = VK_WHOLE_SIZE,
+        };
+        vkCmdPipelineBarrier(
+          command_buffer_,
+          VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR,
+          VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR,
+          0,
+          0,
+          nullptr,
+          1,
+          &mem_barrier,
+          0,
+          nullptr);
       }
       build_infos[build_idx].scratchData.deviceAddress =
         scratch_buffer_addr + current_build_scratch_size;
@@ -561,6 +660,7 @@ namespace soul::gpu::impl
   auto RenderCompiler::apply_push_constant(const void* push_constant_data, u32 push_constant_size)
     -> void
   {
+    SOUL_ASSERT(0, push_constant_size <= PUSH_CONSTANT_SIZE, "");
     if (push_constant_data == nullptr)
     {
       return;
@@ -575,4 +675,20 @@ namespace soul::gpu::impl
       push_constant_data);
   }
 
+  void RenderCompiler::apply_push_constant(Span<const byte*> push_constant)
+  {
+    SOUL_ASSERT(0, push_constant.size_in_bytes() <= PUSH_CONSTANT_SIZE, "");
+    if (push_constant.data() == nullptr)
+    {
+      return;
+    }
+    SOUL_PROFILE_ZONE();
+    vkCmdPushConstants(
+      command_buffer_,
+      gpu_system_->get_bindless_pipeline_layout(),
+      VK_SHADER_STAGE_ALL,
+      0,
+      push_constant.size(),
+      push_constant.data());
+  }
 } // namespace soul::gpu::impl

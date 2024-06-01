@@ -24,9 +24,10 @@ namespace soul::gpu
     struct Config
     {
       WSI* wsi                  = nullptr;
+      b8 use_srgb_swapchain     = false;
       u16 max_frame_in_flight   = 0;
       u16 thread_count          = 0;
-      usize transient_pool_size = 100 * ONE_MEGABYTE;
+      usize transient_pool_size = 50 * ONE_MEGABYTE;
     };
 
     void init(const Config& config);
@@ -106,11 +107,9 @@ namespace soul::gpu
 
     auto get_ssbo_descriptor_id(BufferID buffer_id) const -> DescriptorID;
     auto get_srv_descriptor_id(
-      TextureID texture_id, Option<SubresourceIndex> subresource_index = nilopt)
-      -> DescriptorID;
+      TextureID texture_id, Option<SubresourceIndex> subresource_index = nilopt) -> DescriptorID;
     auto get_uav_descriptor_id(
-      TextureID texture_id, Option<SubresourceIndex> subresource_index = nilopt)
-      -> DescriptorID;
+      TextureID texture_id, Option<SubresourceIndex> subresource_index = nilopt) -> DescriptorID;
     auto get_sampler_descriptor_id(SamplerID sampler_id) const -> DescriptorID;
     auto get_as_descriptor_id(TlasID tlas_id) const -> DescriptorID;
 

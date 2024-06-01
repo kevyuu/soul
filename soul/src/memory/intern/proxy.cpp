@@ -19,7 +19,7 @@ namespace soul::memory
   auto ProfileProxy::on_post_allocate(const Allocation allocation) -> Allocation
   {
     SOUL_MEMPROFILE_REGISTER_ALLOCATION(
-      _name, _currentAlloc.tag, allocation.addr, _currentAlloc.size);
+      name_, current_alloc_.tag, allocation.addr, current_alloc_.size);
     return allocation;
   }
 
@@ -29,13 +29,13 @@ namespace soul::memory
     {
       return dealloc_param;
     }
-    SOUL_MEMPROFILE_REGISTER_DEALLOCATION(_name, deallocParam.addr, deallocParam.size);
+    SOUL_MEMPROFILE_REGISTER_DEALLOCATION(name_, dealloc_param.addr, dealloc_param.size);
     return dealloc_param;
   }
 
   void ProfileProxy::on_pre_cleanup()
   {
-    SOUL_MEMPROFILE_DEREGISTER_ALLOCATOR(_name);
+    SOUL_MEMPROFILE_DEREGISTER_ALLOCATOR(name_);
   }
 
 } // namespace soul::memory

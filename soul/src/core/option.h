@@ -60,7 +60,7 @@ namespace soul
       }
 
       [[nodiscard]]
-      constexpr auto unwrap_or(OwnRef<T> default_val) const& -> val_ret_type
+      constexpr auto unwrap_or(T default_val) const& -> val_ret_type
         requires(can_trivial_copy_v<Option<T>>)
       {
         auto& opt = get_option();
@@ -68,11 +68,11 @@ namespace soul
         {
           return opt.some_ref();
         }
-        return default_val;
+        return val_ret_type(default_val);
       }
 
       [[nodiscard]]
-      constexpr auto unwrap_or(OwnRef<T> default_val) && -> val_ret_type
+      constexpr auto unwrap_or(T default_val) && -> val_ret_type
       {
         auto& opt = get_option();
         if (opt.is_some())
@@ -551,6 +551,12 @@ namespace soul
       return left.some_ref() == right.some_ref();
     }
     return left.is_some() == right.is_some();
+  }
+
+  template <typeset T>
+  constexpr auto operator==(const Option<T>& left, NilOpt /* nilopt */) noexcept -> b8
+  {
+    return !left.is_some();
   }
 
   template <typeset T>

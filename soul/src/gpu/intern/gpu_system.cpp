@@ -25,6 +25,7 @@
 #include "gpu/wsi.h"
 #include "math/math.h"
 #include "memory/allocator.h"
+#include "runtime/runtime.h"
 #include "runtime/scope_allocator.h"
 #include "runtime/system.h"
 
@@ -40,9 +41,14 @@
 
 static constexpr const char* RESOURCE_HLSL = R"HLSL(
 #define SOULSL_CONST_FUNCTION
+#define SOULSL_INLINE
+
+#define SOULSL_SSBO_BINDING [[vk::binding(0, 0)]]
+#define SOULSL_SRV_BINDING [[vk::binding(0, 2)]]
 
 typedef int i32;
 typedef int64_t i64;
+typedef uint16_t u16;
 typedef uint u32;
 typedef uint64_t u64;
 typedef bool b8;
@@ -51,6 +57,9 @@ typedef half f16;
 typedef float f32;
 typedef double f64;
 
+typedef vector <uint16_t, 2> vec2u16;
+typedef vector <uint16_t, 3> vec3u16;
+typedef vector <uint16_t, 4> vec4u16;
 
 typedef vector <int, 2> vec2i32;
 typedef vector <int, 3> vec3i32;
@@ -80,7 +89,6 @@ typedef matrix <float, 2, 2> mat2f32;
 typedef matrix <float, 3, 3> mat3f32;
 typedef matrix <float, 4, 4> mat4f32;
 
-
 namespace soulsl
 {
   static const uint UINT_MAX = 4294967295;
@@ -101,20 +109,43 @@ namespace soulsl
 }
 
 [[vk::binding(0, 0)]] ByteAddressBuffer global_buffer_arr[];
+[[vk::binding(0, 0)]] RWByteAddressBuffer global_rw_buffer_arr[];
 [[vk::binding(0, 1)]] SamplerState global_sampler_arr[];
-[[vk::binding(0, 2)]] Texture2D global_texture_2d_arr[];
-[[vk::binding(0, 2)]] Texture3D global_texture_3d_arr[];
-[[vk::binding(0, 2)]] TextureCube global_texture_cube_arr[];
-[[vk::binding(0, 3)]] RWTexture2D<float4> global_rw_texture_2d_float4_arr[];
+
+// srv bindings
+SOULSL_SRV_BINDING Texture2D global_texture_2d_arr[];
+
+SOULSL_SRV_BINDING Texture2D<u32> global_texture_2d_u32_arr[];
+
+SOULSL_SRV_BINDING Texture3D global_texture_3d_arr[];
+
+SOULSL_SRV_BINDING TextureCube global_texture_cube_arr[];
+
+// uav bindings
+[[vk::binding(0, 3)]] RWTexture2D<f32> global_rw_texture_2d_f32_arr[];
+[[vk::binding(0, 3)]] RWTexture2D<vec2f32> global_rw_texture_2d_vec2f32_arr[];
+[[vk::binding(0, 3)]] RWTexture2D<vec3f32> global_rw_texture_2d_vec3f32_arr[];
+[[vk::binding(0, 3)]] RWTexture2D<vec4f32> global_rw_texture_2d_vec4f32_arr[];
+[[vk::binding(0, 3)]] RWTexture2D<u32> global_rw_texture_2d_u32_arr[];
 
 template<typename T>
 T get_buffer(soulsl::DescriptorID descriptor_id, uint offset) {
 	return global_buffer_arr[descriptor_id.id].Load<T>(offset);
 }
 
+RWByteAddressBuffer get_rw_buffer(soulsl::DescriptorID descriptor_id) {
+	return global_rw_buffer_arr[descriptor_id.id];
+}
+
 template<typename T>
 T get_buffer_array(soulsl::DescriptorID descriptor_id, uint index) {
   return global_buffer_arr[descriptor_id.id].Load<T>(index * sizeof(T));
+}
+
+template<typename T>
+T get_buffer_array_with_offset(soulsl::DescriptorID descriptor_id, u32 offset)
+{
+  return global_buffer_arr[descriptor_id.id].Load<T>(offset);
 }
 
 SamplerState get_sampler(soulsl::DescriptorID descriptor_id) {
@@ -125,6 +156,10 @@ Texture2D get_texture_2d(soulsl::DescriptorID descriptor_id) {
 	return global_texture_2d_arr[descriptor_id.id];
 }
 
+Texture2D<u32> get_texture_2d_u32(soulsl::DescriptorID descriptor_id) {
+	return global_texture_2d_u32_arr[descriptor_id.id];
+}
+
 Texture3D get_texture_3d(soulsl::DescriptorID descriptor_id) {
   return global_texture_3d_arr[descriptor_id.id];
 }
@@ -133,8 +168,40 @@ TextureCube get_texture_cube(soulsl::DescriptorID descriptor_id) {
   return global_texture_cube_arr[descriptor_id.id];
 }
 
-RWTexture2D<float4> get_rw_texture_2d_float4(soulsl::DescriptorID descriptor_id) {
-  return global_rw_texture_2d_float4_arr[descriptor_id.id];
+RWTexture2D<f32> get_rw_texture_2d_f32(soulsl::DescriptorID descriptor_id) {
+  return global_rw_texture_2d_f32_arr[descriptor_id.id];
+}
+
+RWTexture2D<vec2f32> get_rw_texture_2d_vec2f32(soulsl::DescriptorID descriptor_id) {
+  return global_rw_texture_2d_vec2f32_arr[descriptor_id.id];
+}
+
+RWTexture2D<vec3f32> get_rw_texture_2d_vec3f32(soulsl::DescriptorID descriptor_id) {
+  return global_rw_texture_2d_vec3f32_arr[descriptor_id.id];
+}
+
+RWTexture2D<vec4f32> get_rw_texture_2d_vec4f32(soulsl::DescriptorID descriptor_id) {
+  return global_rw_texture_2d_vec4f32_arr[descriptor_id.id];
+}
+
+RWTexture2D<u32> get_rw_texture_2d_u32(soulsl::DescriptorID descriptor_id) {
+  return global_rw_texture_2d_u32_arr[descriptor_id.id];
+}
+
+template <typename T>
+vec2u32 get_texture_dimension(Texture2D<T> texture) {
+  u32 width;
+  u32 height;
+  texture.GetDimensions(width, height);
+  return vec2u32(width, height);
+}
+
+template <typename T>
+vec2u32 get_rw_texture_dimension(RWTexture2D<T> texture) {
+  u32 width;
+  u32 height;
+  texture.GetDimensions(width, height);
+  return vec2u32(width, height);
 }
 
 )HLSL";
@@ -191,7 +258,8 @@ namespace soul::gpu
           std::min(capabilities.maxImageExtent.height, dimension.y))};
     };
 
-    auto pick_surface_format(VkPhysicalDevice physical_device, VkSurfaceKHR surface)
+    auto pick_surface_format(
+      VkPhysicalDevice physical_device, VkSurfaceKHR surface, b8 use_srgb_swapchain)
       -> VkSurfaceFormatKHR
     {
       runtime::ScopeAllocator<> scope_allocator("GPU::System::init::pickSurfaceFormat");
@@ -205,8 +273,11 @@ namespace soul::gpu
       for (const VkSurfaceFormatKHR surface_format : formats)
       {
         if (
-          surface_format.format == VK_FORMAT_B8G8R8A8_SRGB &&
+          use_srgb_swapchain && surface_format.format == VK_FORMAT_B8G8R8A8_SRGB &&
           surface_format.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR)
+        {
+          return surface_format;
+        } else if (surface_format.format == VK_FORMAT_R8G8B8A8_UNORM)
         {
           return surface_format;
         }
@@ -534,12 +605,16 @@ namespace soul::gpu
 
         VkPhysicalDeviceAccelerationStructureFeaturesKHR accel_features = {
           .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR,
-          .pNext = nullptr};
+          .pNext = nullptr,
+        };
         VkPhysicalDeviceDescriptorIndexingFeatures indexing_features = {
           .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES_EXT,
-          .pNext = &accel_features};
+          .pNext = &accel_features,
+        };
         VkPhysicalDeviceFeatures2 device_features{
-          .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2, .pNext = &indexing_features};
+          .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2,
+          .pNext = &indexing_features,
+        };
         vkGetPhysicalDeviceFeatures2(device, &device_features);
         const auto bindless_supported = indexing_features.descriptorBindingPartiallyBound &&
                                         indexing_features.runtimeDescriptorArray;
@@ -721,7 +796,9 @@ namespace soul::gpu
 
       vkGetPhysicalDeviceProperties(db->physical_device, &db->physical_device_properties);
       VkPhysicalDeviceProperties2 physical_device_properties2 = {
-        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2, .pNext = &db->as_properties};
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2,
+        .pNext = &db->as_properties,
+      };
       vkGetPhysicalDeviceProperties2(db->physical_device, &physical_device_properties2);
       vkGetPhysicalDeviceMemoryProperties(
         db->physical_device, &db->physical_device_memory_properties);
@@ -821,8 +898,10 @@ namespace soul::gpu
         .geometryShader           = VK_TRUE,
         .multiDrawIndirect        = VK_TRUE,
         .fillModeNonSolid         = VK_TRUE,
+        .samplerAnisotropy        = VK_TRUE,
         .fragmentStoresAndAtomics = VK_TRUE,
         .shaderInt64              = VK_TRUE,
+        .shaderInt16              = VK_TRUE,
       };
 
       VkPhysicalDeviceRayQueryFeaturesKHR ray_query_features = {
@@ -834,6 +913,7 @@ namespace soul::gpu
         .sType              = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_FEATURES_KHR,
         .pNext              = &ray_query_features,
         .rayTracingPipeline = VK_TRUE,
+        .rayTraversalPrimitiveCulling = VK_TRUE,
       };
 
       VkPhysicalDeviceAccelerationStructureFeaturesKHR as_features = {
@@ -844,9 +924,10 @@ namespace soul::gpu
       };
 
       VkPhysicalDeviceVulkan13Features device_1_3_features = {
-        .sType            = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES,
-        .pNext            = &as_features,
-        .synchronization2 = VK_TRUE,
+        .sType                          = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES,
+        .pNext                          = &as_features,
+        .shaderDemoteToHelperInvocation = VK_TRUE,
+        .synchronization2               = VK_TRUE,
       };
 
       VkPhysicalDeviceVulkan12Features device_1_2_features = {
@@ -863,6 +944,7 @@ namespace soul::gpu
         .timelineSemaphore                             = VK_TRUE,
         .bufferDeviceAddress                           = VK_TRUE,
         .vulkanMemoryModel                             = VK_TRUE,
+        .vulkanMemoryModelDeviceScope                  = VK_TRUE,
       };
 
       const VkPhysicalDeviceFeatures2 device_features2 = {
@@ -903,9 +985,10 @@ namespace soul::gpu
     {
       _db.swapchain.wsi           = wsi;
       const auto framebuffer_size = wsi->get_framebuffer_size();
-      db->swapchain.format        = pick_surface_format(db->physical_device, db->surface);
-      db->swapchain.extent        = pick_surface_extent(db->surface_caps, framebuffer_size);
-      db->swapchain.image_count   = [db]()
+      db->swapchain.format =
+        pick_surface_format(db->physical_device, db->surface, config_.use_srgb_swapchain);
+      db->swapchain.extent      = pick_surface_extent(db->surface_caps, framebuffer_size);
+      db->swapchain.image_count = [db]()
       {
         auto image_count = db->surface_caps.minImageCount + 1;
         if (db->surface_caps.maxImageCount > 0 && image_count > db->surface_caps.maxImageCount)
@@ -991,7 +1074,7 @@ namespace soul::gpu
           const auto texture_id = TextureID(db->texture_pool.create(Texture{
             .desc = TextureDesc::d2(
               "Swapchain Texture",
-              TextureFormat::SBGRA8,
+              TextureFormat::RGBA8,
               1,
               {},
               {},
@@ -1079,7 +1162,6 @@ namespace soul::gpu
   auto System::init_frame_context(const Config& config) -> void
   {
     SOUL_ASSERT_MAIN_THREAD();
-    SOUL_LOG_INFO("Frame Context Init");
     _db.frame_contexts.reserve(config.max_frame_in_flight);
     for (auto i = 0; i < _db.frame_contexts.capacity(); i++)
     {
@@ -1297,6 +1379,10 @@ namespace soul::gpu
   auto System::destroy_texture(TextureID id) -> void
   {
     SOUL_ASSERT_MAIN_THREAD();
+    if (id.is_null())
+    {
+      return;
+    }
     get_frame_context().garbages.textures.push_back(id);
   }
 
@@ -1582,7 +1668,8 @@ namespace soul::gpu
 
   auto System::create_transient_buffer(const BufferDesc& desc) -> BufferID
   {
-    const auto buffer_id = create_buffer(desc, true);
+    const b8 use_linear_pool = desc.size < config_.transient_pool_size;
+    const auto buffer_id     = create_buffer(desc, false);
     get_frame_context().garbages.buffers.push_back(buffer_id);
 
     return buffer_id;
@@ -1667,9 +1754,12 @@ namespace soul::gpu
           _db.gpu_allocator, &buffer_info, &alloc_create_info, &vk_handle, &allocation, nullptr),
         "Fail to create buffer");
     }
+    SOUL_ASSERT(vk_handle != VK_NULL_HANDLE, "vmaCreateBuffer return null VkHandle");
+    SOUL_ASSERT(allocation != VK_NULL_HANDLE, "vmaCreateBuffer return null VmaAllocation");
     const auto buffer_id = BufferID(_db.buffer_pool.create(Buffer{
-      .desc = desc, .vk_handle = vk_handle, .allocation = allocation
-
+      .desc       = desc,
+      .vk_handle  = vk_handle,
+      .allocation = allocation,
     }));
     Buffer& buffer       = get_buffer(buffer_id);
 
@@ -1772,6 +1862,10 @@ namespace soul::gpu
   auto System::destroy_buffer(BufferID id) -> void
   {
     SOUL_ASSERT_MAIN_THREAD();
+    if (id.is_null())
+    {
+      return;
+    }
     get_frame_context().garbages.buffers.push_back(id);
   }
 
@@ -2169,6 +2263,8 @@ namespace soul::gpu
       arguments.push_back(L"-HV");
       arguments.push_back(L"2021");
       arguments.push_back(L"-spirv");
+      arguments.push_back(L"-enable-16bit-types");
+      arguments.push_back(L"-O3");
 
       // Matrix order
       arguments.push_back(L"-fspv-use-legacy-buffer-matrix-order");
@@ -2180,6 +2276,7 @@ namespace soul::gpu
       arguments.push_back(L"-fspv-extension=SPV_EXT_descriptor_indexing");
       arguments.push_back(L"-fspv-extension=SPV_KHR_ray_tracing");
       arguments.push_back(L"-fspv-extension=SPV_KHR_ray_query");
+      arguments.push_back(L"-fspv-extension=SPV_EXT_demote_to_helper_invocation");
 
       const auto entry_point_name_size = entry_point.name.size() + 1;
       auto* entry_point_wide_chars = scope_allocator.allocate_array<wchar_t>(entry_point_name_size);
@@ -2237,7 +2334,6 @@ namespace soul::gpu
       {
         result_op->GetStatus(&hres);
       }
-
       wrl::ComPtr<IDxcBlobUtf8> pErrors = nullptr;
       // Note that d3dcompiler would return null if no errors or warnings are present.
       // IDxcCompiler3::Compile will always return an error buffer,
@@ -3021,6 +3117,7 @@ namespace soul::gpu
     wait_semaphores_.clear();
     wait_timeline_values_.clear();
     wait_stages_.clear();
+    vkDeviceWaitIdle(device_);
   }
 
   auto CommandQueue::present(
@@ -3439,7 +3536,7 @@ namespace soul::gpu
         return TextureID(_db.texture_pool.create(Texture{
           .desc = TextureDesc::d2(
             "Swapchain Texture",
-            TextureFormat::SBGRA8,
+            TextureFormat::RGBA8,
             1,
             {},
             {},
@@ -3514,7 +3611,7 @@ namespace soul::gpu
 
   auto SecondaryCommandBuffer::end() -> void
   {
-    vkEndCommandBuffer(vk_handle_);
+    SOUL_VK_CHECK(vkEndCommandBuffer(vk_handle_));
   }
 
   auto CommandPool::init(
@@ -3528,7 +3625,9 @@ namespace soul::gpu
       .flags            = VK_COMMAND_POOL_CREATE_TRANSIENT_BIT,
       .queueFamilyIndex = queue_family_index,
     };
-    vkCreateCommandPool(device_, &cmd_pool_create_info, nullptr, &vk_handle_);
+    SOUL_VK_CHECK(
+      vkCreateCommandPool(device_, &cmd_pool_create_info, nullptr, &vk_handle_),
+      "Create command pool fail");
     count_ = 0;
   }
 
@@ -3556,7 +3655,7 @@ namespace soul::gpu
 
   auto CommandPool::reset() -> void
   {
-    vkResetCommandPool(device_, vk_handle_, 0);
+    SOUL_VK_CHECK(vkResetCommandPool(device_, vk_handle_, 0), "Reset Command Pool Fail");
     count_ = 0;
   }
 
@@ -3630,7 +3729,7 @@ namespace soul::gpu
       .pInheritanceInfo = &inheritance_info,
     };
 
-    vkBeginCommandBuffer(cmd_buffer, &begin_info);
+    SOUL_VK_CHECK(vkBeginCommandBuffer(cmd_buffer, &begin_info), "Begin Command Buffer Fail");
 
     return SecondaryCommandBuffer(cmd_buffer);
   }
@@ -3729,6 +3828,7 @@ namespace soul::gpu
     gpu_allocator_ = gpu_allocator;
     command_pools_ = command_pools;
     thread_contexts_.resize(runtime::get_thread_count());
+
     for (auto& context : thread_contexts_)
     {
       memory::Allocator* default_allocator = get_default_allocator();
@@ -3888,7 +3988,8 @@ namespace soul::gpu
     const VkImageSubresourceRange range = {
       .aspectMask = vk_cast_format_to_aspect_flags(texture.desc.format),
       .levelCount = texture.desc.mip_levels,
-      .layerCount = 1};
+      .layerCount = 1,
+    };
     if (range.aspectMask & VK_IMAGE_ASPECT_DEPTH_BIT)
     {
       const VkClearDepthStencilValue vk_clear_value = {
@@ -4297,7 +4398,7 @@ namespace soul::gpu
         flags(flags.to_uint32()),
         blas_gpu_address(blas_gpu_address)
   {
-    const auto vk_transform = math::transpose(in_transform);
+    const auto vk_transform = in_transform;
     std::memcpy(transform, &vk_transform, sizeof(transform));
   }
 } // namespace soul::gpu

@@ -119,10 +119,6 @@ App::App(const AppConfig& app_config)
   unsigned char* font_pixels;
   io.Fonts->GetTexDataAsRGBA32(&font_pixels, &width, &height);
 
-  if (runtime::get_context_allocator() != &default_allocator_)
-  {
-    std::cout << "Context allocator is null" << std::endl;
-  }
   if (app_config.enable_imgui)
   {
     imgui_render_graph_pass_ =

@@ -2,8 +2,8 @@
 
 #if defined(SOUL_PROFILE_CPU_BACKEND_TRACY)
 
-#  include <Tracy.hpp>
-#  include <TracyC.h>
+#  include <tracy/Tracy.hpp>
+#  include <tracy/TracyC.h>
 
 struct FrameProfileScope
 {
@@ -15,13 +15,13 @@ struct FrameProfileScope
 
   ~FrameProfileScope()
   {
-    FrameMark
+    FrameMark;
   }
 };
 
 #  define SOUL_PROFILE_FRAME()           FrameProfileScope()
-#  define SOUL_PROFILE_ZONE()            ZoneScoped(void) 0
-#  define SOUL_PROFILE_ZONE_WITH_NAME(x) ZoneScopedN(x)(void) 0
+#  define SOUL_PROFILE_ZONE()            ZoneScoped
+#  define SOUL_PROFILE_ZONE_WITH_NAME(x) ZoneScopedN(x)
 #  define SOUL_PROFILE_THREAD_SET_NAME(x)                                                          \
     do                                                                                             \
     {                                                                                              \

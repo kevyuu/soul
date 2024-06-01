@@ -22,7 +22,7 @@ namespace soul
     }
 
     [[nodiscard]]
-    auto clone() -> Path
+    auto clone() const -> Path
     {
       return Path(*this);
     }
@@ -109,6 +109,11 @@ namespace soul
     {
       const base_type& lhs_base = lhs;
       return Path(lhs / base_type(str.begin(), str.end()));
+    }
+
+    friend void soul_op_hash_combine(auto& hasher, const Path& path)
+    {
+      hasher.combine(std::filesystem::hash_value(path));
     }
 
   private:

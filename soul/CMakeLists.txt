@@ -22,6 +22,7 @@ set(SOUL_SOURCES
     src/memory/intern/linear_allocator.cpp
     src/runtime/intern/runtime_system.cpp
     src/runtime/intern/task_deque.cpp
+    src/misc/image_data.cpp
     "$<$<STREQUAL:${CMAKE_SYSTEM_NAME},Darwin>:${SOUL_SOURCES_OSX}>"
     "$<$<STREQUAL:${CMAKE_SYSTEM_NAME},Windows>:${SOUL_SOURCES_WINDOWS}>")
 
@@ -115,3 +116,21 @@ target_precompile_headers(
   <random>
   <shared_mutex>
   <thread>)
+
+set(SOUL_APP_SOURCES
+    src/app/input_state.cpp
+    src/app/window.cpp
+    src/app/gui.cpp
+    src/app/app.cpp)
+
+add_library(soul_app STATIC ${SOUL_APP_SOURCES})
+target_include_directories(soul_app PUBLIC src ${PROJECT_SOURCE_DIR}/dependencies)
+target_link_system_libraries(
+  soul_app
+  PUBLIC
+  soul
+  PRIVATE
+  imgui
+  imguizmo
+  glfw)
+target_compile_definitions(soul_app PRIVATE IMGUI_USER_CONFIG="app/impl/soul_imconfig.h")

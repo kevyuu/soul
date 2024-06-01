@@ -122,10 +122,12 @@ include(${CMAKE_CURRENT_LIST_DIR}/cmake_lib/SystemLink.cmake)
 enable_testing()
 
 add_subdirectory(dependencies)
+include_directories(SYSTEM dependencies)
 
 add_subdirectory(soul)
 add_subdirectory(sample)
 add_subdirectory(test)
+add_subdirectory(renderlab)
 
 if(IS_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}/benchmark_sandbox")
   add_subdirectory(benchmark_sandbox)

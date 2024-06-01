@@ -9,6 +9,8 @@
 #include "core/type_traits.h"
 #include "core/util.h"
 
+#include <iostream>
+
 namespace soul
 {
 
@@ -241,6 +243,13 @@ namespace soul
   constexpr void soul_op_hash_combine(Hasher& hasher, b8 val)
   {
     const u64 val64 = val ? 1 : 0;
+    hasher.combine_u64(val64);
+  }
+
+  template <typename T>
+  constexpr void soul_op_hash_combine(Hasher& hasher, const T* val)
+  {
+    const u64 val64 = std::bit_cast<u64>(val);
     hasher.combine_u64(val64);
   }
 

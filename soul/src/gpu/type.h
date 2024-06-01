@@ -1,8 +1,10 @@
 #pragma once
 
+#include "core/architecture.h"
 #include "core/flag_map.h"
 #include "core/flag_set.h"
 #include "core/hash_map.h"
+#include "core/log.h"
 #include "core/path.h"
 #include "core/pool.h"
 #include "core/sbo_vector.h"
@@ -20,6 +22,7 @@
 #include "gpu/intern/bindless_descriptor_allocator.h"
 #include "gpu/object_cache.h"
 #include "gpu/object_pool.h"
+#include <vulkan/vulkan_core.h>
 
 namespace soul::gpu
 {
@@ -131,6 +134,21 @@ namespace soul::gpu
   using VertexElementFlags = u8;
   static_assert(VERTEX_ELEMENT_ENUM_END_BIT - 1 <= std::numeric_limits<VertexElementFlags>::max());
 
+  enum class PipelineType : u8
+  {
+    NON_SHADER,
+    RASTER,
+    COMPUTE,
+    RAY_TRACING,
+    COUNT
+  };
+
+  using PipelineFlags                       = FlagSet<PipelineType>;
+  constexpr auto PIPELINE_FLAGS_NON_SHADER  = PipelineFlags{PipelineType::NON_SHADER};
+  constexpr auto PIPELINE_FLAGS_RASTER      = PipelineFlags({PipelineType::RASTER});
+  constexpr auto PIPELINE_FLAGS_COMPUTE     = PipelineFlags{PipelineType::COMPUTE};
+  constexpr auto PIPELINE_FLAGS_RAY_TRACING = PipelineFlags{PipelineType::RAY_TRACING};
+
   enum class ShaderStage : u8
   {
     VERTEX,
@@ -144,10 +162,31 @@ namespace soul::gpu
   };
 
   using ShaderStageFlags = FlagSet<ShaderStage>;
+  constexpr ShaderStageFlags SHADER_STAGES_RASTER =
+    ShaderStageFlags({ShaderStage::VERTEX, ShaderStage::GEOMETRY, ShaderStage::FRAGMENT});
   constexpr ShaderStageFlags SHADER_STAGES_VERTEX_FRAGMENT =
     ShaderStageFlags({ShaderStage::VERTEX, ShaderStage::FRAGMENT});
   constexpr ShaderStageFlags SHADER_STAGES_RAY_TRACING =
     ShaderStageFlags({ShaderStage::RAYGEN, ShaderStage::MISS, ShaderStage::CLOSEST_HIT});
+
+  template <PipelineFlags pipeline_flags>
+  constexpr auto get_all_shader_stages() -> ShaderStageFlags
+  {
+    ShaderStageFlags result;
+    if (pipeline_flags.test(PipelineType::RASTER))
+    {
+      result |= {ShaderStage::VERTEX, ShaderStage::GEOMETRY, ShaderStage::FRAGMENT};
+    }
+    if (pipeline_flags.test(PipelineType::COMPUTE))
+    {
+      result |= {ShaderStage::COMPUTE};
+    }
+    if (pipeline_flags.test(PipelineType::RAY_TRACING))
+    {
+      result |= SHADER_STAGES_RAY_TRACING;
+    }
+    return result;
+  };
 
   enum class ShaderGroup : u8
   {
@@ -216,22 +255,8 @@ namespace soul::gpu
     AccessType::TRANSFER_WRITE,
     AccessType::HOST_WRITE,
     AccessType::MEMORY_WRITE,
-    AccessType::AS_WRITE};
-
-  enum class PipelineType : u8
-  {
-    NON_SHADER,
-    RASTER,
-    COMPUTE,
-    RAY_TRACING,
-    COUNT
+    AccessType::AS_WRITE,
   };
-
-  using PipelineFlags                       = FlagSet<PipelineType>;
-  constexpr auto PIPELINE_FLAGS_NON_SHADER  = PipelineFlags{PipelineType::NON_SHADER};
-  constexpr auto PIPELINE_FLAGS_RASTER      = PipelineFlags({PipelineType::RASTER});
-  constexpr auto PIPELINE_FLAGS_COMPUTE     = PipelineFlags{PipelineType::COMPUTE};
-  constexpr auto PIPELINE_FLAGS_RAY_TRACING = PipelineFlags{PipelineType::RAY_TRACING};
 
   enum class QueueType : u8
   {
@@ -479,42 +504,50 @@ namespace soul::gpu
 
   struct ClearValue
   {
-    union Color
+    union ColorData
     {
       vec4f32 float32;
       vec4u32 uint32;
       vec4i32 int32;
 
-      Color() : float32() {}
+      ColorData() : float32() {}
 
-      explicit Color(vec4f32 val) : float32(val) {}
+      explicit ColorData(vec4f32 val) : float32(val) {}
 
-      explicit Color(vec4u32 val) : uint32(val) {}
+      explicit ColorData(vec4u32 val) : uint32(val) {}
 
-      explicit Color(vec4i32 val) : int32(val) {}
-    } color;
+      explicit ColorData(vec4i32 val) : int32(val) {}
+    } ColorData;
 
-    struct DepthStencil
+    struct DepthStencilData
     {
-      f32 depth      = 0.0f;
-      u32 stencil    = 0;
-      DepthStencil() = default;
+      f32 depth          = 0.0f;
+      u32 stencil        = 0;
+      DepthStencilData() = default;
 
-      DepthStencil(const f32 depth, const u32 stencil) : depth(depth), stencil(stencil) {}
+      DepthStencilData(const f32 depth, const u32 stencil) : depth(depth), stencil(stencil) {}
     } depth_stencil;
 
     ClearValue() = default;
 
-    ClearValue(vec4f32 color, f32 depth, u32 stencil) : color(color), depth_stencil(depth, stencil)
+    ClearValue(vec4f32 ColorData, f32 depth, u32 stencil)
+        : ColorData(ColorData), depth_stencil(depth, stencil)
     {
     }
 
-    ClearValue(vec4u32 color, f32 depth, u32 stencil) : color(color), depth_stencil(depth, stencil)
+    ClearValue(vec4u32 ColorData, f32 depth, u32 stencil)
+        : ColorData(ColorData), depth_stencil(depth, stencil)
     {
     }
 
-    ClearValue(vec4i32 color, f32 depth, u32 stencil) : color(color), depth_stencil(depth, stencil)
+    ClearValue(vec4i32 ColorData, f32 depth, u32 stencil)
+        : ColorData(ColorData), depth_stencil(depth, stencil)
     {
+    }
+
+    static auto Color(vec4f32 color) -> ClearValue
+    {
+      return ClearValue(color, 0, 0);
     }
   };
 
@@ -682,7 +715,16 @@ namespace soul::gpu
     const char* name                   = nullptr;
   };
 
+  struct TextureSubresourceRange
+  {
+    u32 base_mip_level;
+    u32 level_count;
+    u32 base_array_layer;
+    u32 layer_count;
+  };
+
   struct TextureSubresourceLayers
+
   {
     u32 mip_level;
     u32 base_array_layer;
@@ -696,6 +738,15 @@ namespace soul::gpu
     TextureSubresourceLayers dst_subresource = {};
     Offset3D dst_offset;
     Extent3D extent;
+
+    static auto Texture2D(vec2u32 extent_xy) -> TextureRegionCopy
+    {
+      return {
+        .src_subresource = {.layer_count = 1},
+        .dst_subresource = {.layer_count = 1},
+        .extent          = vec3u32(extent_xy, 1),
+      };
+    }
   };
 
   struct TextureRegionUpdate
@@ -870,6 +921,13 @@ namespace soul::gpu
     u32 first_index    = 0; ///< base index within the index_buffer.
     i32 vertex_offset  = 0; ///< value added to the vertex index before indesing into vertex buffer.
     u32 first_instance = 0; ///< instance ID of the first instance to draw.
+  };
+
+  struct DispatchIndirectCommand
+  {
+    u32 x = 0;
+    u32 y = 0;
+    u32 z = 0;
   };
 
   enum class RTBuildMode : u8
@@ -1465,6 +1523,7 @@ namespace soul::gpu
       {
         if (queue_owner != QueueType::COUNT && queue_owner != queue_type)
         {
+          SOUL_LOG_INFO("Queue owner mismatch");
           return;
         }
         if ((sync_stages & src_stages).none())
@@ -1479,8 +1538,8 @@ namespace soul::gpu
         {
           return;
         }
-        queue_owner                 = queue_type;
-        sync_stages                 = dst_stages;
+        queue_owner = queue_type;
+        sync_stages |= dst_stages;
         unavailable_pipeline_stages = {};
         unavailable_accesses        = {};
         if (layout_change)
@@ -1864,7 +1923,11 @@ namespace soul::gpu
         VmaAllocation allocation;
       };
 
-      struct alignas(SOUL_CACHELINE_SIZE) ThreadContext
+      // TODO(kevinyu): This should be alignas(SOUL_CACHELINE_SIZE), but malloc does not
+      // allocate memory with alignment more than sizeof(void*) causing problem, should
+      // add alignas(SOUL_CACHELINE_SIZE) back, once we have an alternative memory allocator_
+      // that could allocate memory with better alignment support
+      struct ThreadContext
       {
         PrimaryCommandBuffer transfer_command_buffer;
         PrimaryCommandBuffer clear_command_buffer;
@@ -1898,7 +1961,11 @@ namespace soul::gpu
         -> void;
 
     private:
-      struct alignas(SOUL_CACHELINE_SIZE) ThreadContext
+      // TODO(kevinyu): This should be alignas(SOUL_CACHELINE_SIZE), but malloc does not
+      // allocate memory with alignment more than sizeof(void*) causing problem, should
+      // add alignas(SOUL_CACHELINE_SIZE) back, once we have an alternative memory allocator_
+      // that could allocate memory with better alignment support
+      struct ThreadContext
       {
         FlagMap<QueueType, Vector<VkImageMemoryBarrier>> image_barriers_;
         FlagMap<QueueType, QueueFlags> sync_dst_queues_;
@@ -1916,6 +1983,8 @@ namespace soul::gpu
 
         ~ThreadContext() {} // NOLINT
       };
+
+      // static_assert(alignof(ThreadContext) == SOUL_CACHELINE_SIZE);
 
       Vector<ThreadContext> thread_contexts_;
     };
@@ -1981,10 +2050,13 @@ namespace soul::gpu
       VkPhysicalDevice physical_device                                       = VK_NULL_HANDLE;
       VkPhysicalDeviceProperties physical_device_properties                  = {};
       VkPhysicalDeviceRayTracingPipelinePropertiesKHR ray_tracing_properties = {
-        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_PROPERTIES_KHR};
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_PROPERTIES_KHR,
+        .pNext = nullptr,
+      };
       VkPhysicalDeviceAccelerationStructurePropertiesKHR as_properties = {
         .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_PROPERTIES_KHR,
-        .pNext = &ray_tracing_properties};
+        .pNext = &ray_tracing_properties,
+      };
       GPUProperties gpu_properties                                       = {};
       VkPhysicalDeviceMemoryProperties physical_device_memory_properties = {};
       VkPhysicalDeviceFeatures physical_device_features                  = {};
@@ -2053,9 +2125,11 @@ namespace soul::gpu
     DRAW_INDEXED_INDIRECT,
     COPY_TEXTURE,
     UPDATE_TEXTURE,
+    CLEAR_TEXTURE,
     UPDATE_BUFFER,
     COPY_BUFFER,
     DISPATCH,
+    DISPATCH_INDIRECT,
     CLEAR_COLOR,
     RAY_TRACE,
     BUILD_TLAS,
@@ -2104,6 +2178,8 @@ namespace soul::gpu
     IndexType index_type = IndexType::UINT16;
     u32 first_index      = 0;
     u32 index_count      = 0;
+    u32 instance_count   = 1;
+    u32 first_instance   = 0;
   };
 
   struct RenderCommandDrawIndexedIndirect
@@ -2141,6 +2217,14 @@ namespace soul::gpu
     Span<const TextureRegionCopy*, u32> regions = nilspan;
   };
 
+  struct RenderCommandClearTexture : RenderCommandTyped<RenderCommandType::CLEAR_TEXTURE>
+  {
+    static constexpr PipelineType PIPELINE_TYPE = PipelineType::NON_SHADER;
+    TextureID dst_texture                       = TextureID::null();
+    ClearValue clear_value;
+    Option<TextureSubresourceRange> subresource_range;
+  };
+
   struct RenderCommandUpdateBuffer : RenderCommandTyped<RenderCommandType::UPDATE_BUFFER>
   {
     static constexpr PipelineType PIPELINE_TYPE = PipelineType::NON_SHADER;
@@ -2166,7 +2250,19 @@ namespace soul::gpu
     vec3u32 group_count;
   };
 
+  struct RenderCommandDispatchIndirect : RenderCommandTyped<RenderCommandType::DISPATCH_INDIRECT>
+  {
+    static constexpr PipelineType PIPELINE_TYPE = PipelineType::COMPUTE;
+    PipelineStateID pipeline_state_id;
+    Span<const byte*> push_constant = {nullptr, 0};
+    gpu::BufferID buffer;
+    usize offset = 0;
+  };
+
+  static_assert(ts_pointer<const void*>);
+
   struct RenderCommandRayTrace : RenderCommandTyped<RenderCommandType::RAY_TRACE>
+
   {
     static constexpr PipelineType PIPELINE_TYPE = PipelineType::RAY_TRACING;
     ShaderTableID shader_table_id;

@@ -79,8 +79,9 @@ namespace soul
     }                                                                                              \
     while (0)
 #else
-#  define SOUL_ASSERT(paranoia, test, ...) ((void)0)
-#  define SOUL_PANIC(...)                  ((void)0)
-#  define SOUL_NOT_IMPLEMENTED()           ((void)0)
-#  define SOUL_ASSERT_BOUND_CHECK()        ((void)0)
+#  define SOUL_ASSERT(paranoia, test, ...)                        ((void)0)
+#  define SOUL_PANIC(...)                                         ((void)0)
+#  define SOUL_NOT_IMPLEMENTED()                                  ((void)0)
+#  define SOUL_ASSERT_UPPER_BOUND_CHECK(index, upper_bound_index) ((void)0)
+#  define SOUL_ASSERT_LOWER_BOUND_CHECK(index, lower_bound_index) ((void)0)
 #endif

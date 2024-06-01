@@ -39,8 +39,8 @@ namespace soul::gpu::impl
     QueueFlags queue_flags;
     BufferID buffer_id;
 
-    VkEvent pending_event       = VK_NULL_HANDLE;
-    Semaphore pending_semaphore = Semaphore::From(TimelineSemaphore::null());
+    Option<u32> pending_event_idx = nilopt;
+    Semaphore pending_semaphore   = Semaphore::From(TimelineSemaphore::null());
     ResourceCacheState cache_state;
 
     Vector<PassNodeID> passes;
@@ -49,8 +49,8 @@ namespace soul::gpu::impl
 
   struct TextureViewExecInfo
   {
-    VkEvent pending_event       = VK_NULL_HANDLE;
-    Semaphore pending_semaphore = Semaphore::From(TimelineSemaphore::null());
+    Option<u32> pending_event_idx = nilopt;
+    Semaphore pending_semaphore   = Semaphore::From(TimelineSemaphore::null());
     ResourceCacheState cache_state;
     Vector<PassNodeID> passes;
     u32 pass_counter     = 0;
@@ -67,6 +67,7 @@ namespace soul::gpu::impl
     TextureViewExecInfo* view = nullptr;
     u32 mip_levels            = 0;
     u32 layers                = 0;
+    const char* name;
 
     [[nodiscard]]
     auto get_view_count() const -> usize
@@ -93,8 +94,8 @@ namespace soul::gpu::impl
     PassNodeID last_pass;
     QueueFlags queue_flags;
 
-    VkEvent pending_event       = VK_NULL_HANDLE;
-    Semaphore pending_semaphore = Semaphore::From(TimelineSemaphore::null());
+    Option<u32> pending_event_idx = nilopt;
+    Semaphore pending_semaphore   = Semaphore::From(TimelineSemaphore::null());
     ResourceCacheState cache_state;
 
     Vector<PassNodeID> passes;
@@ -120,6 +121,7 @@ namespace soul::gpu::impl
     using NodeDependencyMatrix = FlagMap<DependencyType, BitVector<>>;
 
     PassDependencyGraph(usize pass_node_count, std::span<const ResourceNode> resource_nodes);
+
     [[nodiscard]]
     auto get_dependency_flags(PassNodeID src_node_id, PassNodeID dst_node_id) const
       -> DependencyFlags;
@@ -153,8 +155,10 @@ namespace soul::gpu::impl
     Vector<usize> dependency_levels_;
 
     static constexpr auto UNINITIALIZED_DEPENDENCY_LEVEL = ~0u;
+
     [[nodiscard]]
     auto get_pass_node_count() const -> usize;
+
     [[nodiscard]]
     auto get_dependency_matrix_index(PassNodeID src_node_id, PassNodeID dst_node_id) const -> usize;
 
@@ -167,6 +171,14 @@ namespace soul::gpu::impl
     Vector<BufferAccess> buffer_accesses;
     Vector<TextureAccess> texture_accesses;
     Vector<ResourceAccess> resource_accesses;
+    StringView name = ""_str;
+  };
+
+  struct EventInfo
+  {
+    VkEvent vk_handle;
+    PipelineStageFlags src_stage_flags;
+    PassNodeID last_wait_pass_node_id;
   };
 
   class RenderGraphExecution
@@ -242,7 +254,7 @@ namespace soul::gpu::impl
     NotNull<const RenderGraph*> render_graph_;
     NotNull<System*> gpu_system_;
 
-    FlagMap<QueueType, VkEvent> external_events_;
+    FlagMap<QueueType, Option<u32>> external_event_idxs_;
     FlagMap<QueueType, PipelineStageFlags> external_events_stage_flags_;
     NotNull<CommandQueues*> command_queues_;
     NotNull<CommandPools*> command_pools_;
@@ -261,6 +273,8 @@ namespace soul::gpu::impl
     Span<ResourceExecInfo*> external_blas_group_resource_infos_ = nilspan;
 
     Vector<PassExecInfo> pass_infos_;
+
+    Vector<EventInfo> event_infos_;
 
     PassDependencyGraph pass_dependency_graph_;
     BitVector<> active_passes_;
@@ -309,6 +323,15 @@ namespace soul::gpu::impl
       std::span<const ShaderBlasGroupReadAccess> access_list,
       PassNodeID pass_node_id,
       QueueType queue_type);
+
+    void wait_event(
+      Vector<VkEvent>& events,
+      PipelineStageFlags& stage_flags,
+      u32 event_idx,
+      PassNodeID pass_node_id);
+
+    void set_event(
+      PrimaryCommandBuffer command_buffer, u32 event_idx, PipelineStageFlags stage_flags);
   };
 
 } // namespace soul::gpu::impl

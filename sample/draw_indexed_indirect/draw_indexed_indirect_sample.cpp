@@ -424,9 +424,6 @@ public:
       index_data_.data());
     gpu_system_->flush_buffer(index_buffer_);
 
-    SOUL_LOG_INFO(
-      "Indirrect buffer size: {}",
-      indirect_commands_.size() * sizeof(gpu::DrawIndexedIndirectCommand));
     indirect_buffer_ = gpu_system_->create_buffer(
       {
         .size        = indirect_commands_.size() * sizeof(gpu::DrawIndexedIndirectCommand),

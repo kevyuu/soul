@@ -1,6 +1,7 @@
 #pragma once
 
 #include "gpu/render_graph.h"
+#include "gpu/sl_type.h"
 #include "gpu/type.h"
 #include <vulkan/vulkan_core.h>
 
@@ -43,6 +44,11 @@ namespace soul::gpu
     auto get_tlas(TlasNodeID tlas_node_id) const -> TlasID;
     auto get_pipeline_state(const GraphicPipelineStateDesc& desc) -> PipelineStateID;
     auto get_pipeline_state(const ComputePipelineStateDesc& desc) -> PipelineStateID;
+
+    auto get_srv_descriptor_id(gpu::TextureNodeID node_id) -> soulsl::DescriptorID;
+    auto get_uav_descriptor_id(gpu::TextureNodeID node_id) -> soulsl::DescriptorID;
+    auto get_ssbo_descriptor_id(gpu::BufferNodeID node_id) -> soulsl::DescriptorID;
+    auto get_tlas_descriptor_id(gpu::TlasNodeID node_id) -> soulsl::DescriptorID;
 
   private:
     NotNull<System*> system_;

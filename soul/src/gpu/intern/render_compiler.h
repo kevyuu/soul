@@ -57,9 +57,11 @@ namespace soul::gpu::impl
     void compile_command(const RenderCommandDrawIndexedIndirect& command);
     void compile_command(const RenderCommandUpdateTexture& command);
     void compile_command(const RenderCommandCopyTexture& command);
+    void compile_command(const RenderCommandClearTexture& command);
     void compile_command(const RenderCommandUpdateBuffer& command);
     void compile_command(const RenderCommandCopyBuffer& command);
     void compile_command(const RenderCommandDispatch& command);
+    void compile_command(const RenderCommandDispatchIndirect& command);
     void compile_command(const RenderCommandBuildBlas& command);
     void compile_command(const RenderCommandBatchBuildBlas& command);
     void compile_command(const RenderCommandBuildTlas& command);
@@ -69,6 +71,7 @@ namespace soul::gpu::impl
     auto apply_pipeline_state(PipelineStateID pipeline_state_id) -> void;
     auto apply_pipeline_state(VkPipeline pipeline, VkPipelineBindPoint pipeline_bind_point) -> void;
     auto apply_push_constant(const void* push_constant_data, u32 push_constant_size) -> void;
+    void apply_push_constant(Span<const byte*> push_constant);
 
     NotNull<System*> gpu_system_;
     VkCommandBuffer command_buffer_;

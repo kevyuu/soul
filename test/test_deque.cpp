@@ -36,11 +36,6 @@ auto verify_equal(const DequeT& lhs, const DequeT& rhs)
   SOUL_TEST_ASSERT_EQ(lhs.size(), rhs.size());
   for (auto i = 0; i < lhs.size(); i++)
   {
-    if (lhs[i] != rhs[i])
-    {
-
-      SOUL_LOG_INFO("i : {}", i);
-    }
     SOUL_TEST_ASSERT_EQ(lhs[i], rhs[i]);
   }
   if (lhs.size() > 0)
@@ -296,14 +291,6 @@ void test_deque_push_back(const soul::Deque<T>& sample_deque, const T& val)
   {
     test_copy1.push_back(val);
     SOUL_TEST_ASSERT_EQ(test_copy1.size(), test_deque.size() + 1);
-    for (usize i = 0; i < test_deque.size(); i++)
-    {
-      if (test_deque[i] != test_copy1[i])
-      {
-        SOUL_LOG_INFO(
-          "idx : {}, test_deque item : {}, test_copy1 item : {}", i, test_deque[i], test_copy1[i]);
-      }
-    }
     SOUL_TEST_ASSERT_TRUE(std::equal(test_deque.begin(), test_deque.end(), test_copy1.begin()));
     SOUL_TEST_ASSERT_EQ(test_copy1.back_ref(), val);
   }

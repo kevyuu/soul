@@ -156,6 +156,7 @@ namespace soul::gpu
     u16 layer_count                 = 1;
     TextureSampleCount sample_count = TextureSampleCount::COUNT_1;
     b8 clear                        = false;
+
     ClearValue clear_value;
 
     static auto create_d2(
@@ -217,7 +218,8 @@ namespace soul::gpu
 
   struct RGBufferDesc
   {
-    usize size = 0;
+    usize size         = 0;
+    void* initial_data = nullptr;
   };
 
   struct RGColorAttachmentDesc
@@ -540,6 +542,14 @@ namespace soul::gpu
       ShaderTextureWriteUsage usage_type,
       SubresourceIndexRange view = SubresourceIndexRange()) -> TextureNodeID;
 
+    auto add_srv(TextureNodeID node_id) -> TextureNodeID;
+
+    auto add_uav(TextureNodeID node_id) -> TextureNodeID;
+
+    auto add_read_ssbo(BufferNodeID node_id) -> BufferNodeID;
+
+    auto add_write_ssbo(BufferNodeID node_id) -> BufferNodeID;
+
     auto add_shader_tlas(TlasNodeID node_id, ShaderStageFlags stage_flags) -> TlasNodeID;
 
     auto add_shader_blas_group(BlasGroupNodeID node_id, ShaderStageFlags stage_flags)
@@ -554,6 +564,8 @@ namespace soul::gpu
     auto add_dst_buffer(
       BufferNodeID node_id, TransferDataSource data_source = TransferDataSource::GPU)
       -> BufferNodeID;
+
+    auto add_indirect_command_buffer(BufferNodeID node_id) -> BufferNodeID;
 
     auto add_src_texture(TextureNodeID node_id) -> TextureNodeID;
 
@@ -627,6 +639,12 @@ namespace soul::gpu
     auto get_index_buffers() const -> Span<const BufferNodeID*>
     {
       return index_buffers_.cspan();
+    }
+
+    [[nodiscard]]
+    auto get_indirect_command_buffers() const -> Span<const BufferNodeID*>
+    {
+      return indirect_command_buffers_.cspan();
     }
 
     [[nodiscard]]
@@ -762,6 +780,7 @@ namespace soul::gpu
     Vector<ShaderBlasGroupReadAccess> shader_blas_group_read_accesses_;
     Vector<BufferNodeID> vertex_buffers_;
     Vector<BufferNodeID> index_buffers_;
+    Vector<BufferNodeID> indirect_command_buffers_;
 
     RGRenderTarget render_target_;
 
@@ -911,6 +930,9 @@ namespace soul::gpu
       return add_pass<Parameter, PIPELINE_FLAGS_RAY_TRACING>(
         name, QueueType::COMPUTE, setup, execute);
     }
+
+    auto clear_texture(QueueType queue_type, TextureNodeID texture, ClearValue clear_value)
+      -> TextureNodeID;
 
     auto import_texture(const char* name, TextureID texture_id) -> TextureNodeID;
     auto create_texture(const char* name, const RGTextureDesc& desc) -> TextureNodeID;
@@ -1098,10 +1120,47 @@ namespace soul::gpu
   }
 
   template <PipelineFlags pipeline_flags>
+  auto RGDependencyBuilder<pipeline_flags>::add_srv(TextureNodeID node_id) -> TextureNodeID
+  {
+    static_assert(pipeline_flags.test_any(
+      {PipelineType::RASTER, PipelineType::COMPUTE, PipelineType::RAY_TRACING}));
+    static constexpr auto shader_stages = get_all_shader_stages<pipeline_flags>();
+    return add_shader_texture(node_id, shader_stages, ShaderTextureReadUsage::UNIFORM);
+  }
+
+  template <PipelineFlags pipeline_flags>
+  auto RGDependencyBuilder<pipeline_flags>::add_uav(TextureNodeID node_id) -> TextureNodeID
+  {
+    static_assert(pipeline_flags.test_any(
+      {PipelineType::RASTER, PipelineType::COMPUTE, PipelineType::RAY_TRACING}));
+    static constexpr auto shader_stages = get_all_shader_stages<pipeline_flags>();
+    return add_shader_texture(node_id, shader_stages, ShaderTextureWriteUsage::STORAGE);
+  }
+
+  template <PipelineFlags pipeline_flags>
+  auto RGDependencyBuilder<pipeline_flags>::add_read_ssbo(BufferNodeID node_id) -> BufferNodeID
+  {
+    static_assert(pipeline_flags.test_any(
+      {PipelineType::RASTER, PipelineType::COMPUTE, PipelineType::RAY_TRACING}));
+    static constexpr auto shader_stages = get_all_shader_stages<pipeline_flags>();
+    return add_shader_buffer(node_id, shader_stages, ShaderBufferReadUsage::STORAGE);
+  }
+
+  template <PipelineFlags pipeline_flags>
+  auto RGDependencyBuilder<pipeline_flags>::add_write_ssbo(BufferNodeID node_id) -> BufferNodeID
+  {
+    static_assert(pipeline_flags.test_any(
+      {PipelineType::RASTER, PipelineType::COMPUTE, PipelineType::RAY_TRACING}));
+    static constexpr auto shader_stages = get_all_shader_stages<pipeline_flags>();
+    return add_shader_buffer(node_id, shader_stages, ShaderBufferWriteUsage::STORAGE);
+  }
+
+  template <PipelineFlags pipeline_flags>
   auto RGDependencyBuilder<pipeline_flags>::add_shader_tlas(
     TlasNodeID node_id, ShaderStageFlags stage_flags) -> TlasNodeID
   {
-    static_assert(pipeline_flags.test_any({PipelineType::RAY_TRACING}));
+    static_assert(pipeline_flags.test_any(
+      {PipelineType::RASTER, PipelineType::COMPUTE, PipelineType::RAY_TRACING}));
     render_graph_->read_resource_node(node_id, pass_id_);
     pass_node_->shader_tlas_read_accesses_.push_back(ShaderTlasReadAccess{node_id, stage_flags});
     return node_id;
@@ -1153,6 +1212,16 @@ namespace soul::gpu
     pass_node_->destination_buffers_.push_back(TransferDstBufferAccess{
       .data_source = data_source, .input_node_id = node_id, .output_node_id = out_node_id});
     return out_node_id;
+  }
+
+  template <PipelineFlags pipeline_flags>
+  auto RGDependencyBuilder<pipeline_flags>::add_indirect_command_buffer(BufferNodeID node_id)
+    -> BufferNodeID
+  {
+    static_assert(pipeline_flags.test(PipelineType::COMPUTE));
+    render_graph_->read_resource_node(node_id, pass_id_);
+    pass_node_->indirect_command_buffers_.push_back(node_id);
+    return node_id;
   }
 
   template <PipelineFlags pipeline_flags>
@@ -1242,10 +1311,18 @@ namespace soul::gpu
     if (render_target_desc.depth_stencil_attachment.node_id.is_valid())
     {
       const auto& depth_desc = render_target_desc.depth_stencil_attachment;
-      const TextureNodeID out_node_id =
-        depth_desc.depth_write_enable
-          ? depth_desc.node_id
-          : render_graph_->write_resource_node(depth_desc.node_id, pass_id_);
+
+      const TextureNodeID out_node_id = [&]()
+      {
+        if (depth_desc.depth_write_enable)
+        {
+          return render_graph_->write_resource_node(depth_desc.node_id, pass_id_);
+        } else
+        {
+          render_graph_->read_resource_node(depth_desc.node_id, pass_id_);
+          return depth_desc.node_id;
+        }
+      }();
 
       pass_node_->render_target_.depth_stencil_attachment = {
         .out_node_id = out_node_id, .desc = depth_desc};

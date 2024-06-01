@@ -39,7 +39,7 @@ void rgen_main()
 	RaytracingAccelerationStructure rs = get_as(push_constant.as_descriptor_id);
 	TraceRay(rs, RAY_FLAG_FORCE_OPAQUE, 0xff, 0, 0, 0, rayDesc, payload);
 
-	RWTexture2D<float4> image = get_rw_texture_2d_float4(push_constant.image_descriptor_id);\
+	RWTexture2D<vec4f32> image = get_rw_texture_2d_vec4f32(push_constant.image_descriptor_id);\
 	f32 gamma = 1. / 2.2;
 	float4 color = pow(float4(payload.hit_value, 0.0), float4(gamma, gamma, gamma, gamma));
 	image[int2(LaunchID.xy)] = float4(color);
