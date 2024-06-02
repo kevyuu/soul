@@ -39,7 +39,7 @@ namespace renderlab
     const auto viewport = scene.get_viewport();
 
     const gpu::TextureNodeID output_texture = render_graph->create_texture(
-      "Tone Map Output Texture",
+      "Tone Map Output Texture"_str,
       gpu::RGTextureDesc::create_d2(gpu::TextureFormat::RGBA8, 1, viewport));
 
     struct ComputePassParameter
@@ -49,7 +49,7 @@ namespace renderlab
     };
 
     const auto& compute_pass = render_graph->add_compute_pass<ComputePassParameter>(
-      "Tone Map Pass",
+      "Tone Map Pass"_str,
       [&scene, &inputs, output_texture](ComputePassParameter& parameter, auto& builder)
       {
         parameter.input_texture  = builder.add_srv(inputs.textures[INPUT]);

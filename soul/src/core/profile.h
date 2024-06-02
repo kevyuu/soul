@@ -22,6 +22,7 @@ struct FrameProfileScope
 #  define SOUL_PROFILE_FRAME()           FrameProfileScope()
 #  define SOUL_PROFILE_ZONE()            ZoneScoped
 #  define SOUL_PROFILE_ZONE_WITH_NAME(x) ZoneScopedN(x)
+#  define SOUL_PROFILE_ZONE_TEXT(x)      ZoneText(x.data(), x.size())
 #  define SOUL_PROFILE_THREAD_SET_NAME(x)                                                          \
     do                                                                                             \
     {                                                                                              \
@@ -53,6 +54,7 @@ uint32_t GetOsThreadId();
 #  define SOUL_PROFILE_FRAME()           NVTXScope nvtx_scope("Frame")
 #  define SOUL_PROFILE_ZONE()            NVTXScope nvtx_scope(__FUNCTION__)
 #  define SOUL_PROFILE_ZONE_WITH_NAME(x) NVTXScope(x)
+#  define SOUL_PROFILE_ZONE_TEXT(x)      SOUL_NOOP
 #  define SOUL_PROFILE_THREAD_SET_NAME(x)                                                          \
     do                                                                                             \
     {                                                                                              \
@@ -67,6 +69,7 @@ uint32_t GetOsThreadId();
 #  define SOUL_PROFILE_FRAME()                 SOUL_NOOP
 #  define SOUL_PROFILE_ZONE()                  SOUL_NOOP
 #  define SOUL_PROFILE_ZONE_WITH_NAME(x)       SOUL_NOOP
+#  define SOUL_PROFILE_ZONE_TEXT(x)            SOUL_NOOP
 #  define SOUL_PROFILE_THREAD_SET_NAME(x)      SOUL_NOOP
 #  define SOUL_LOCKABLE(type, var_name)        type var_name
 #  define SOUL_SHARED_LOCKABLE(type, var_name) type var_name

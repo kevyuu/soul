@@ -12,7 +12,7 @@ namespace soul::memory
   {
     usize size      = 0;
     usize alignment = 0;
-    const char* tag = nullptr;
+    StringView tag  = {nullptr, 0};
   };
 
   struct DeallocateParam
@@ -47,7 +47,7 @@ namespace soul::memory
       return size;
     }
 
-    virtual void on_pre_init(const char* name) = 0;
+    virtual void on_pre_init(StringView name) = 0;
 
     virtual void on_post_init() = 0;
 
@@ -73,7 +73,7 @@ namespace soul::memory
 
     explicit NoOpProxy(const Config& /* config */) {}
 
-    void on_pre_init(const char* name) override {}
+    void on_pre_init(StringView name) override {}
 
     void on_post_init() override {}
 
@@ -164,7 +164,7 @@ namespace soul::memory
       return base_size;
     }
 
-    void on_pre_init(const char* name) override
+    void on_pre_init(StringView name) override
     {
       proxy1_.on_pre_init(name);
       proxy2_.on_pre_init(name);
@@ -253,7 +253,7 @@ namespace soul::memory
 
     CounterProxy() = default;
 
-    void on_pre_init(const char* /* name */) override
+    void on_pre_init(StringView /* name */) override
     {
       _counter = 0;
     }
@@ -305,7 +305,7 @@ namespace soul::memory
     {
     }
 
-    void on_pre_init(const char* name) override {}
+    void on_pre_init(StringView name) override {}
 
     void on_post_init() override {}
 
@@ -365,7 +365,7 @@ namespace soul::memory
       return size - 2ull * GUARD_SIZE;
     }
 
-    void on_pre_init(const char* name) override {}
+    void on_pre_init(StringView name) override {}
 
     void on_post_init() override {}
 
@@ -426,7 +426,7 @@ namespace soul::memory
 
     explicit ProfileProxy(const Config& /* config */) {}
 
-    void on_pre_init(const char* name) override;
+    void on_pre_init(StringView name) override;
 
     void on_post_init() override {}
 
@@ -443,7 +443,7 @@ namespace soul::memory
     void on_post_cleanup() override {}
 
   private:
-    const char* name_ = nullptr;
+    StringView name_ = {nullptr, 0};
     AllocateParam current_alloc_;
   };
 
@@ -456,7 +456,7 @@ namespace soul::memory
 
     explicit MutexProxy(const Config& /* config */) {}
 
-    void on_pre_init(const char* name) override {}
+    void on_pre_init(StringView name) override {}
 
     void on_post_init() override {}
 
@@ -507,7 +507,7 @@ namespace soul::memory
     }
 
     template <typename Cproxy>
-    explicit ProxyAllocator(const char* name, BackingAllocator* allocator, Cproxy&& proxy)
+    explicit ProxyAllocator(CompStr name, BackingAllocator* allocator, Cproxy&& proxy)
         : Allocator(name), allocator(allocator), proxy_(std::forward<Cproxy>(proxy))
     {
       proxy_.on_pre_init(name);
@@ -531,7 +531,7 @@ namespace soul::memory
       proxy_.on_post_cleanup();
     }
 
-    auto try_allocate(const usize size, const usize alignment, const char* tag)
+    auto try_allocate(const usize size, const usize alignment, StringView tag)
       -> Allocation override
     {
       if (size == 0)

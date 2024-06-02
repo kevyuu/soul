@@ -58,6 +58,7 @@ struct PSOutput
   [[vk::location(1)]] vec4f32 normal_roughness : SV_Target1;
   [[vk::location(2)]] vec3f32 motion_curve : SV_Target2;
   [[vk::location(3)]] u32 mesh_index : SV_Target3;
+  [[vk::location(4)]] vec3f32 emissive : SV_TARGET4;
 };
 
 vec2f32 compute_motion_vector(
@@ -108,5 +109,6 @@ f32 compute_curvature(vec3f32 normal)
     vec4f32(material_instance.normal * 0.5 + 0.5, material_instance.roughness);
   output.motion_curve = vec3f32(motion_vector, compute_curvature(input.tbn_matrix._m02_m12_m22));
   output.mesh_index   = instance.mesh_id;
+  output.emissive = vec3f32(material_instance.emissive);
   return output;
 }

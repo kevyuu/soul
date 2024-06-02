@@ -10,7 +10,7 @@ namespace soul::memory
   public:
     LinearAllocator() = delete;
 
-    LinearAllocator(const char* name, usize size, Allocator* backing_allocator);
+    LinearAllocator(CompStr name, usize size, Allocator* backing_allocator);
 
     LinearAllocator(const LinearAllocator& other) = delete;
 
@@ -24,7 +24,7 @@ namespace soul::memory
 
     void reset() override;
 
-    auto try_allocate(usize size, usize alignment, const char* tag) -> Allocation override;
+    auto try_allocate(usize size, usize alignment, StringView tag) -> Allocation override;
 
     auto get_allocation_size(void* addr) const -> usize override;
 

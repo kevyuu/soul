@@ -2,8 +2,9 @@
 
 #include "core/type.h"
 
-#include "gpu/type.h"
 #include "gpu/wsi.h"
+
+#include "gpu/impl/vulkan/type.h"
 
 struct GLFWwindow;
 

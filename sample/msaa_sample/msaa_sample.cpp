@@ -78,7 +78,7 @@ class MSAASample final : public App
       {
         const gpu::RGColorAttachmentDesc color_attachment_desc = {
           .node_id = render_graph.create_texture(
-            "MSAA Color Target",
+            "MSAA Color Target"_str,
             gpu::RGTextureDesc::create_d2(
               gpu::TextureFormat::RGBA8,
               1,
@@ -91,14 +91,14 @@ class MSAASample final : public App
 
         const gpu::RGResolveAttachmentDesc resolve_attachment_desc = {
           .node_id = render_graph.create_texture(
-            "MSAA Resolve Target",
+            "MSAA Resolve Target"_str,
             gpu::RGTextureDesc::create_d2(
               gpu::TextureFormat::RGBA8, 1, sample_render_target_dim, true)),
         };
 
         const gpu::RGDepthStencilAttachmentDesc depth_attachment_desc = {
           .node_id = render_graph.create_texture(
-            "MSAA Depth Target",
+            "MSAA Depth Target"_str,
             gpu::RGTextureDesc::create_d2(
               gpu::TextureFormat::DEPTH32F,
               1,
@@ -118,7 +118,7 @@ class MSAASample final : public App
 
       const gpu::RGColorAttachmentDesc color_attachment_desc = {
         .node_id = render_graph.create_texture(
-          "Color Target",
+          "Color Target"_str,
           gpu::RGTextureDesc::create_d2(
             gpu::TextureFormat::RGBA8, 1, sample_render_target_dim, true, gpu::ClearValue())),
         .clear = true,
@@ -126,7 +126,7 @@ class MSAASample final : public App
 
       const gpu::RGDepthStencilAttachmentDesc depth_attachment_desc = {
         .node_id = render_graph.create_texture(
-          "Depth Target",
+          "Depth Target"_str,
           gpu::RGTextureDesc::create_d2(
             gpu::TextureFormat::DEPTH32F, 1, sample_render_target_dim, true, gpu::ClearValue())),
         .clear = true,
@@ -141,7 +141,7 @@ class MSAASample final : public App
     };
 
     const auto& msaa_render_node = render_graph.add_raster_pass<RenderPassParameter>(
-      "Render Pass",
+      "Render Pass"_str,
       sample_render_target_desc,
       [](auto& parameter, auto& builder) {
 
@@ -235,21 +235,21 @@ public:
     program_id_ = result.ok_ref();
 
     vertex_buffer_id_ = gpu_system_->create_buffer(
+      "Vertex buffer"_str,
       {
         .size        = sizeof(Vertex) * std::size(VERTICES),
         .usage_flags = {gpu::BufferUsage::VERTEX},
         .queue_flags = {gpu::QueueType::GRAPHIC},
-        .name        = "Vertex buffer",
       },
       VERTICES);
     gpu_system_->flush_buffer(vertex_buffer_id_);
 
     index_buffer_id_ = gpu_system_->create_buffer(
+      "Index buffer"_str,
       {
         .size        = sizeof(Index) * std::size(INDICES),
         .usage_flags = {gpu::BufferUsage::INDEX},
         .queue_flags = {gpu::QueueType::GRAPHIC},
-        .name        = "Index buffer",
       },
       INDICES);
     gpu_system_->flush_buffer(index_buffer_id_);

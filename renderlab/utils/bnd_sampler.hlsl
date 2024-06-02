@@ -15,7 +15,7 @@ f32 sample_blue_noise(
   sample_dimension = sample_dimension % 4;
 
   // xor index based on optimized ranking
-  f32 rank                = scrambling_ranking_tex.Load(vec3i32(coord.x, coord.y, 0)).b;
+  f32 rank                = scrambling_ranking_tex.Load(vec3i32(coord.x, coord.y, 0).b);
   i32 ranked_sample_index = sample_index ^ i32(clamp(rank * 256.0f, 0.0f, 255.0f));
 
   // fetch value in sequence

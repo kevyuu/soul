@@ -2,8 +2,9 @@
 
 #include "core/result.h"
 #include "core/string.h"
-#include "gpu/intern/bindless_descriptor_allocator.h"
-#include "gpu/type.h"
+
+#include "gpu/impl/vulkan/bindless_descriptor_allocator.h"
+#include "gpu/impl/vulkan/type.h"
 
 namespace soul::gpu::impl
 {
@@ -37,62 +38,64 @@ namespace soul::gpu
 
     void shutdown();
 
-    auto create_buffer(const BufferDesc& desc) -> BufferID;
-    auto create_buffer(const BufferDesc& desc, const void* data) -> BufferID;
-    auto create_transient_buffer(const BufferDesc& desc) -> BufferID;
+    auto create_buffer(String&& name, const BufferDesc& desc) -> BufferID;
+    auto create_buffer(String&& name, const BufferDesc& desc, const void* data) -> BufferID;
+    auto create_transient_buffer(String&& name, const BufferDesc& desc) -> BufferID;
     void flush_buffer(BufferID buffer_id);
     void destroy_buffer_descriptor(BufferID buffer_id);
     void destroy_buffer(BufferID buffer_id);
-    auto get_buffer(BufferID buffer_id) -> impl::Buffer&;
-    auto get_buffer(BufferID buffer_id) const -> const impl::Buffer&;
+    auto buffer_ref(BufferID buffer_id) -> impl::Buffer&;
+    auto buffer_cref(BufferID buffer_id) const -> const impl::Buffer&;
     auto get_gpu_address(BufferID buffer_id, usize offset = 0) const -> GPUAddress;
-    auto buffer_desc_ref(BufferID buffer_id) const -> const BufferDesc&;
+    auto buffer_desc_cref(BufferID buffer_id) const -> const BufferDesc&;
 
-    auto create_texture(const TextureDesc& desc) -> TextureID;
-    auto create_texture(const TextureDesc& desc, const TextureLoadDesc& load_desc) -> TextureID;
-    auto create_texture(const TextureDesc& desc, ClearValue clear_value) -> TextureID;
+    auto create_texture(String&& name, const TextureDesc& desc) -> TextureID;
+    auto create_texture(String&& name, const TextureDesc& desc, const TextureLoadDesc& load_desc)
+      -> TextureID;
+    auto create_texture(String&& name, const TextureDesc& desc, ClearValue clear_value)
+      -> TextureID;
     void flush_texture(TextureID texture_id, TextureUsageFlags usage_flags);
     auto get_texture_mip_levels(TextureID texture_id) const -> u32;
-    auto get_texture_desc(TextureID texture_id) const -> const TextureDesc&;
     void destroy_texture_descriptor(TextureID texture_id);
     void destroy_texture(TextureID texture_id);
-    auto get_texture(TextureID texture_id) -> impl::Texture&;
-    auto get_texture(TextureID texture_id) const -> const impl::Texture&;
+    auto texture_ref(TextureID texture_id) -> impl::Texture&;
+    auto texture_cref(TextureID texture_id) const -> const impl::Texture&;
     auto get_texture_view(TextureID texture_id, u32 level, u32 layer = 0) -> impl::TextureView;
     auto get_texture_view(TextureID texture_id, SubresourceIndex subresource_index)
       -> impl::TextureView;
     auto get_texture_view(TextureID texture_id, Option<SubresourceIndex> subresource)
       -> impl::TextureView;
-    auto texture_desc_ref(TextureID texture_id) const -> const TextureDesc&;
+    auto texture_desc_cref(TextureID texture_id) const -> const TextureDesc&;
+    auto texture_name_view(TextureID texture_id) const -> StringView;
 
     auto get_blas_size_requirement(const BlasBuildDesc& build_desc) -> usize;
-    auto create_blas(const BlasDesc& desc, BlasGroupID blas_group_id = BlasGroupID::null())
+    auto create_blas(
+      String&& name, const BlasDesc& desc, BlasGroupID blas_group_id = BlasGroupID::Null())
       -> BlasID;
     void destroy_blas(BlasID blas_id);
-    auto get_blas(BlasID blas_id) const -> const impl::Blas&;
-    auto get_blas(BlasID blas_id) -> impl::Blas&;
+    auto blas_cref(BlasID blas_id) const -> const impl::Blas&;
+    auto blas_ref(BlasID blas_id) -> impl::Blas&;
     auto get_gpu_address(BlasID blas_id) const -> GPUAddress;
 
-    auto create_blas_group(const char* name) -> BlasGroupID;
+    auto create_blas_group(String&& name) -> BlasGroupID;
     void destroy_blas_group(BlasGroupID blas_group_id);
-    auto get_blas_group(BlasGroupID blas_group_id) const -> const impl::BlasGroup&;
-    auto get_blas_group(BlasGroupID blas_group_id) -> impl::BlasGroup&;
+    auto blas_group_cref(BlasGroupID blas_group_id) const -> const impl::BlasGroup&;
+    auto blas_group_ref(BlasGroupID blas_group_id) -> impl::BlasGroup&;
 
     auto get_tlas_size_requirement(const TlasBuildDesc& build_desc) -> usize;
-    auto create_tlas(const TlasDesc& desc) -> TlasID;
+    auto create_tlas(String&& name, const TlasDesc& desc) -> TlasID;
     void destroy_tlas(TlasID tlas_id);
-    auto get_tlas(TlasID tlas_id) const -> const impl::Tlas&;
-    auto get_tlas(TlasID tlas_id) -> impl::Tlas&;
+    auto tlas_cref(TlasID tlas_id) const -> const impl::Tlas&;
+    auto tlas_ref(TlasID tlas_id) -> impl::Tlas&;
 
     auto create_program(const ProgramDesc& program_desc) -> Result<ProgramID, Error>;
-    auto get_program(ProgramID program_id) const -> const impl::Program&;
-    auto get_program(ProgramID program_id) -> impl::Program&;
     void destroy_program(ProgramID program_id);
 
-    auto create_shader_table(const ShaderTableDesc& shader_table_desc) -> ShaderTableID;
+    auto create_shader_table(String&& name, const ShaderTableDesc& shader_table_desc)
+      -> ShaderTableID;
     void destroy_shader_table(ShaderTableID shader_table_id);
-    auto get_shader_table(ShaderTableID shader_table_id) const -> const impl::ShaderTable&;
-    auto get_shader_table(ShaderTableID shader_table_id) -> impl::ShaderTable&;
+    auto shader_table_cref(ShaderTableID shader_table_id) const -> const impl::ShaderTable&;
+    auto shader_table_ref(ShaderTableID shader_table_id) -> impl::ShaderTable&;
 
     auto request_pipeline_state(
       const GraphicPipelineStateDesc& desc,
@@ -139,14 +142,14 @@ namespace soul::gpu
 
     auto get_queue_data_from_queue_flags(QueueFlags flags) const -> impl::QueueData;
 
-    impl::Database _db;
-
     friend class impl::RenderCompiler;
     friend class impl::RenderGraphExecution;
 
   private:
+    impl::Database _db;
+
     auto is_owned_by_presentation_engine(TextureID texture_id) -> b8;
-    auto create_buffer(const BufferDesc& desc, b8 use_linear_pool) -> BufferID;
+    auto create_buffer(String&& name, const BufferDesc& desc, b8 use_linear_pool) -> BufferID;
     auto create_staging_buffer(usize size) -> BufferID;
     auto get_gpu_allocator() -> VmaAllocator;
 

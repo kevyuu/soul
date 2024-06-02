@@ -50,7 +50,6 @@ namespace
 
     const auto usage        = gpu::TextureUsageFlags({gpu::TextureUsage::SAMPLED});
     const auto texture_desc = gpu::TextureDesc::d2(
-      "",
       gpu::TextureFormat::RGBA32F,
       1,
       usage,
@@ -73,7 +72,7 @@ namespace
       .regions         = {&region_load, 1},
       .generate_mipmap = false,
     };
-    const auto texture_id = gpu_system->create_texture(texture_desc, load_desc);
+    const auto texture_id = gpu_system->create_texture(""_str, texture_desc, load_desc);
     gpu_system->flush_texture(texture_id, usage);
     return texture_id;
   }
@@ -133,13 +132,11 @@ namespace renderlab
     const auto mip_levels =
       std::max<u16>(cast<u16>(math::floor_log2(std::max(desc.dimension.x, desc.dimension.y))), 1);
     const auto gpu_texture_desc = gpu::TextureDesc::d2(
-      "",
       desc.format,
       mip_levels,
       usage,
       {
         gpu::QueueType::GRAPHIC,
-        gpu::QueueType::COMPUTE,
       },
       desc.dimension);
 
@@ -157,8 +154,8 @@ namespace renderlab
       .regions         = {&region_load, 1},
       .generate_mipmap = true,
     };
-    const auto index =
-      material_textures_.add(gpu_system_->create_texture(gpu_texture_desc, load_desc));
+    const auto index = material_textures_.add(
+      gpu_system_->create_texture(String::From(desc.name), gpu_texture_desc, load_desc));
     gpu_system_->flush_texture(material_textures_[index], usage);
     return MaterialTextureID(index);
   };
@@ -447,27 +444,31 @@ namespace renderlab
     }
     const auto world_transforms          = entity_manager_.world_transform_cspan();
     const auto new_world_matrixes_buffer = gpu_system_->create_buffer(
+      "World Transforms"_str,
       {
         .size        = entity_manager_.world_transform_cspan().size_in_bytes(),
         .usage_flags = {gpu::BufferUsage::STORAGE},
         .queue_flags = {gpu::QueueType::GRAPHIC, gpu::QueueType::COMPUTE},
-        .name        = "World Transforms",
+
       },
       world_transforms.data());
-    if (render_data_.prev_world_matrixes_buffer.is_valid())
+    if (!render_data_.prev_world_matrixes_buffer.is_null())
     {
-      // gpu_system_->destroy_buffer(render_data_.prev_world_matrixes_buffer);
+      if (render_data_.prev_world_matrixes_buffer != render_data_.world_matrixes_buffer)
+      {
+        gpu_system_->destroy_buffer(render_data_.prev_world_matrixes_buffer);
+      }
       render_data_.prev_world_matrixes_buffer = render_data_.world_matrixes_buffer;
     } else
     {
       render_data_.prev_world_matrixes_buffer = new_world_matrixes_buffer;
     }
     render_data_.prev_world_matrixes_buffer_node = render_graph->import_buffer(
-      "Prev world transform buffer", render_data_.prev_world_matrixes_buffer);
+      "Prev world transform buffer"_str, render_data_.prev_world_matrixes_buffer);
 
     render_data_.world_matrixes_buffer = new_world_matrixes_buffer;
     render_data_.world_matrixes_buffer_node =
-      render_graph->import_buffer("Wolrd transform buffer", render_data_.world_matrixes_buffer);
+      render_graph->import_buffer("Wolrd transform buffer"_str, render_data_.world_matrixes_buffer);
   }
 
   void Scene::prepare_normal_matrixes_buffer_node(NotNull<gpu::RenderGraph*> render_graph)
@@ -478,38 +479,43 @@ namespace renderlab
     }
     const auto normal_transforms          = entity_manager_.normal_transform_cspan();
     const auto new_normal_matrixes_buffer = gpu_system_->create_buffer(
+      "Normal matrixes"_str,
       {
         .size        = normal_transforms.size_in_bytes(),
         .usage_flags = {gpu::BufferUsage::STORAGE},
         .queue_flags = {gpu::QueueType::GRAPHIC, gpu::QueueType::COMPUTE},
-        .name        = "Normal matrixes",
+
       },
       normal_transforms.data());
-    if (render_data_.prev_normal_matrixes_buffer.is_valid())
+    if (!render_data_.prev_normal_matrixes_buffer.is_null())
     {
-      // gpu_system_->destroy_buffer(render_data_.prev_normal_matrixes_buffer);
+      if (render_data_.prev_normal_matrixes_buffer != render_data_.normal_matrixes_buffer)
+      {
+        gpu_system_->destroy_buffer(render_data_.prev_normal_matrixes_buffer);
+      }
       render_data_.prev_normal_matrixes_buffer = render_data_.normal_matrixes_buffer;
     } else
     {
       render_data_.prev_normal_matrixes_buffer = new_normal_matrixes_buffer;
     }
     render_data_.prev_normal_matrixes_buffer_node = render_graph->import_buffer(
-      "Prev normal matrixes buffer", render_data_.prev_normal_matrixes_buffer);
+      "Prev normal matrixes buffer"_str, render_data_.prev_normal_matrixes_buffer);
 
-    render_data_.normal_matrixes_buffer = new_normal_matrixes_buffer;
-    render_data_.normal_matrixes_buffer_node =
-      render_graph->import_buffer("Normal matrixes buffer", render_data_.normal_matrixes_buffer);
+    render_data_.normal_matrixes_buffer      = new_normal_matrixes_buffer;
+    render_data_.normal_matrixes_buffer_node = render_graph->import_buffer(
+      "Normal matrixes buffer"_str, render_data_.normal_matrixes_buffer);
   }
 
   void Scene::prepare_geometry_buffer(NotNull<gpu::RenderGraph*> render_graph)
   {
     if (update_flags_.test(UpdateType::MESH_CHANGED))
     {
-      if (render_data_.static_vertex_buffer.is_valid())
+      if (!render_data_.static_vertex_buffer.is_null())
       {
         gpu_system_->destroy_buffer(render_data_.static_vertex_buffer);
       }
       render_data_.static_vertex_buffer = gpu_system_->create_buffer(
+        "Static Vertex buffer"_str,
         {
           .size = vertices_.size_in_bytes(),
           .usage_flags =
@@ -519,15 +525,15 @@ namespace renderlab
               gpu::BufferUsage::AS_BUILD_INPUT,
             },
           .queue_flags = {gpu::QueueType::GRAPHIC, gpu::QueueType::COMPUTE},
-          .name        = "Static Vertex buffer",
         },
         vertices_.data());
 
-      if (render_data_.index_buffer.is_valid())
+      if (!render_data_.index_buffer.is_null())
       {
         gpu_system_->destroy_buffer(render_data_.index_buffer);
       }
       render_data_.index_buffer = gpu_system_->create_buffer(
+        "Index Buffer"_str,
         {
           .size = indexes_.size_in_bytes(),
           .usage_flags =
@@ -537,7 +543,6 @@ namespace renderlab
               gpu::BufferUsage::AS_BUILD_INPUT,
             },
           .queue_flags = {gpu::QueueType::GRAPHIC, gpu::QueueType::COMPUTE},
-          .name        = "Index Buffer",
         },
         indexes_.data());
 
@@ -550,16 +555,16 @@ namespace renderlab
   {
     if (update_flags_.test(UpdateType::MATERIAL_CHANGED))
     {
-      if (render_data_.material_buffer.is_valid())
+      if (!render_data_.material_buffer.is_null())
       {
         gpu_system_->destroy_buffer(render_data_.material_buffer);
       }
       render_data_.material_buffer = gpu_system_->create_buffer(
+        "Material Buffer"_str,
         {
           .size        = materials_.size_in_bytes(),
           .usage_flags = {gpu::BufferUsage::STORAGE},
           .queue_flags = {gpu::QueueType::GRAPHIC, gpu::QueueType::COMPUTE},
-          .name        = "Material Buffer",
         },
         materials_.data());
       gpu_system_->flush_buffer(render_data_.material_buffer);
@@ -570,7 +575,7 @@ namespace renderlab
   {
     if (update_flags_.test(UpdateType::RENDERABLE_CHANGED))
     {
-      if (render_data_.mesh_instances_buffer.is_valid())
+      if (!render_data_.mesh_instances_buffer.is_null())
       {
         gpu_system_->destroy_buffer(render_data_.mesh_instances_buffer);
       }
@@ -596,11 +601,11 @@ namespace renderlab
         });
 
       render_data_.mesh_instances_buffer = gpu_system_->create_buffer(
+        "Mesh instance buffer"_str,
         {
           .size        = render_data_.mesh_instances.size_in_bytes(),
           .usage_flags = {gpu::BufferUsage::STORAGE},
           .queue_flags = {gpu::QueueType::GRAPHIC, gpu::QueueType::COMPUTE},
-          .name        = "Mesh instance buffer",
         },
         render_data_.mesh_instances.data());
       gpu_system_->flush_buffer(render_data_.mesh_instances_buffer);
@@ -609,7 +614,7 @@ namespace renderlab
 
   void Scene::prepare_light_instance_buffer(NotNull<gpu::RenderGraph*> render_graph)
   {
-    if (render_data_.light_instance_buffer.is_valid())
+    if (!render_data_.light_instance_buffer.is_null())
     {
       gpu_system_->destroy_buffer(render_data_.light_instance_buffer);
     }
@@ -633,16 +638,16 @@ namespace renderlab
 
     if (render_data_.light_instances.empty())
     {
-      render_data_.light_instance_buffer = gpu::BufferID::null();
+      render_data_.light_instance_buffer = gpu::BufferID::Null();
       return;
     }
 
     render_data_.light_instance_buffer = gpu_system_->create_buffer(
+      "Light instance buffer"_str,
       {
         .size        = render_data_.light_instances.size_in_bytes(),
         .usage_flags = {gpu::BufferUsage::STORAGE},
         .queue_flags = {gpu::QueueType::GRAPHIC, gpu::QueueType::COMPUTE},
-        .name        = "Light instance buffer",
       },
       render_data_.light_instances.data());
     gpu_system_->flush_buffer(render_data_.light_instance_buffer);
@@ -687,11 +692,11 @@ namespace renderlab
         }
 
         const gpu::BufferID buffer = gpu_system_->create_buffer(
+          "Indirect buffer"_str,
           {
             .size        = draw_commands[index_type].size_in_bytes(),
             .usage_flags = {gpu::BufferUsage::INDIRECT},
             .queue_flags = {gpu::QueueType::GRAPHIC},
-            .name        = "Indirect buffer",
           },
           draw_commands[index_type].data());
         gpu_system_->flush_buffer(buffer);
@@ -708,7 +713,7 @@ namespace renderlab
   void Scene::prepare_gpu_scene(NotNull<gpu::RenderGraph*> render_graph)
   {
     const auto scene_buffer_node = render_graph->create_buffer(
-      "GPU scene buffer",
+      "GPU scene buffer"_str,
       {
         .size = sizeof(GPUScene),
       });
@@ -785,31 +790,31 @@ namespace renderlab
     };
 
     const auto& node = render_graph->add_non_shader_pass<Parameter>(
-      "GPUScene upload", gpu::QueueType::TRANSFER, setup_fn, execute_fn);
+      "GPUScene upload"_str, gpu::QueueType::TRANSFER, setup_fn, execute_fn);
     render_data_.scene_buffer_node = node.get_parameter().scene_buffer;
   }
 
   void Scene::prepare_blas(NotNull<gpu::RenderGraph*> render_graph)
   {
 
-    runtime::ScopeAllocator scope_allocator("prepare blas");
+    runtime::ScopeAllocator scope_allocator("prepare blas"_str);
     if (!update_flags_.test(UpdateType::MESH_CHANGED))
     {
-      if (render_data_.blas_group_id.is_valid())
+      if (!render_data_.blas_group_id.is_null())
       {
         render_data_.blas_group_node_id =
-          render_graph->import_blas_group("Blas Group", render_data_.blas_group_id);
+          render_graph->import_blas_group("Blas Group"_str, render_data_.blas_group_id);
       }
       return;
     }
 
-    if (render_data_.blas_group_id.is_valid())
+    if (!render_data_.blas_group_id.is_null())
     {
       gpu_system_->destroy_blas_group(render_data_.blas_group_id);
     }
     render_data_.blas_ids.clear();
 
-    render_data_.blas_group_id = gpu_system_->create_blas_group("Blas Group");
+    render_data_.blas_group_id = gpu_system_->create_blas_group("Blas Group"_str);
     for (const auto& mesh_group : mesh_groups_)
     {
       const auto geometry_descs = Vector<gpu::RTGeometryDesc>::Transform(
@@ -839,11 +844,11 @@ namespace renderlab
       const auto blas_size = gpu_system_->get_blas_size_requirement(build_desc);
 
       render_data_.blas_ids.push_back(
-        gpu_system_->create_blas({.size = blas_size}, render_data_.blas_group_id));
+        gpu_system_->create_blas("Unnamed"_str, {.size = blas_size}, render_data_.blas_group_id));
     }
 
     render_data_.blas_group_node_id =
-      render_graph->import_blas_group("Blas Group", render_data_.blas_group_id);
+      render_graph->import_blas_group("Blas Group"_str, render_data_.blas_group_id);
 
     struct BuildBlasParameter
     {
@@ -851,7 +856,7 @@ namespace renderlab
     };
 
     const auto& build_pass = render_graph->add_non_shader_pass<BuildBlasParameter>(
-      "Build blas group",
+      "Build blas group"_str,
       gpu::QueueType::COMPUTE,
       [&render_data = render_data_](auto& parameter, auto& builder)
       {
@@ -859,7 +864,7 @@ namespace renderlab
       },
       [this](const auto& parameter, const auto& registry, auto& command_list)
       {
-        runtime::ScopeAllocator scope_allocator("build blas execute");
+        runtime::ScopeAllocator scope_allocator("build blas execute"_str);
 
         const auto geometry_desc_count = std::accumulate(
           mesh_groups_.begin(),
@@ -908,7 +913,7 @@ namespace renderlab
           }
 
           render_commands.push_back(gpu::RenderCommandBuildBlas{
-            .src_blas_id = gpu::BlasID::null(),
+            .src_blas_id = gpu::BlasID(),
             .dst_blas_id = render_data_.blas_ids[mesh_group_idx],
             .build_mode  = gpu::RTBuildMode::REBUILD,
             .build_desc  = {
@@ -930,7 +935,7 @@ namespace renderlab
   void Scene::prepare_tlas(NotNull<gpu::RenderGraph*> render_graph)
   {
     render_data_.rt_instance_descs.clear();
-    if (render_data_.tlas_id.is_valid())
+    if (!render_data_.tlas_id.is_null())
     {
       gpu_system_->destroy_tlas(render_data_.tlas_id);
     }
@@ -942,7 +947,7 @@ namespace renderlab
 
     // Upload instances pass
     gpu::BufferNodeID instance_buffer_node = render_graph->create_buffer(
-      "Instance buffer",
+      "Instance buffer"_str,
       {
         .size = sizeof(gpu::RTInstanceDesc) * render_data_.mesh_instances.size(),
       });
@@ -953,7 +958,7 @@ namespace renderlab
     };
 
     const auto& upload_pass = render_graph->add_non_shader_pass<UploadParameter>(
-      "Upload instance buffer",
+      "Upload instance buffer"_str,
       gpu::QueueType::TRANSFER,
 
       // SetupFn
@@ -1004,12 +1009,13 @@ namespace renderlab
       .instance_count = soul::cast<u32>(render_data_.mesh_instances.size()),
     });
 
-    render_data_.tlas_id = gpu_system_->create_tlas({
-      .name = "Tlas",
-      .size = tlas_size,
-    });
+    render_data_.tlas_id = gpu_system_->create_tlas(
+      "Scene Tlas"_str,
+      {
+        .size = tlas_size,
+      });
 
-    render_data_.tlas_node_id = render_graph->import_tlas("Tlas", render_data_.tlas_id);
+    render_data_.tlas_node_id = render_graph->import_tlas("Tlas"_str, render_data_.tlas_id);
 
     struct BuildParameter
     {
@@ -1019,7 +1025,7 @@ namespace renderlab
     };
 
     const auto& build_pass = render_graph->add_non_shader_pass<BuildParameter>(
-      "Build Tlas",
+      "Build Tlas"_str,
       gpu::QueueType::COMPUTE,
 
       // SetupFn:
@@ -1077,7 +1083,7 @@ namespace renderlab
     NotNull<gpu::RGRasterDependencyBuilder*> dependency_builder) const -> gpu::BufferNodeID
   {
 
-    if (render_data_.world_matrixes_buffer.is_valid())
+    if (!render_data_.world_matrixes_buffer.is_null())
     {
       dependency_builder->add_shader_buffer(
         render_data_.world_matrixes_buffer_node,
@@ -1109,7 +1115,7 @@ namespace renderlab
     NotNull<gpu::RGComputeDependencyBuilder*> dependency_builder) const -> gpu::BufferNodeID
   {
 
-    if (render_data_.world_matrixes_buffer.is_valid())
+    if (!render_data_.world_matrixes_buffer.is_null())
     {
       dependency_builder->add_shader_buffer(
         render_data_.world_matrixes_buffer_node,
@@ -1138,7 +1144,7 @@ namespace renderlab
     NotNull<gpu::RGRayTracingDependencyBuilder*> dependency_builder) const -> gpu::BufferNodeID
   {
 
-    if (render_data_.world_matrixes_buffer.is_valid())
+    if (!render_data_.world_matrixes_buffer.is_null())
     {
       dependency_builder->add_shader_buffer(
         render_data_.world_matrixes_buffer_node,

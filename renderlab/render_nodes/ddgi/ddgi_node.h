@@ -1,12 +1,11 @@
 #pragma once
 
 #include "gpu/sl_type.h"
+using namespace soul;
 
 #include "ddgi.shared.hlsl"
 #include "math/aabb.h"
 #include "render_node.h"
-
-using namespace soul;
 
 namespace soul::gpu
 {

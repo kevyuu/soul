@@ -62,7 +62,6 @@ namespace renderlab
 
     const auto usage        = gpu::TextureUsageFlags({gpu::TextureUsage::SAMPLED});
     const auto texture_desc = gpu::TextureDesc::d2(
-      "",
       format,
       1,
       usage,
@@ -92,7 +91,7 @@ namespace renderlab
   void RenderPipeline::create_constant_texture(
     String&& name, const gpu::TextureDesc& desc, const gpu::TextureLoadDesc& load_desc)
   {
-    const auto texture_id = gpu_system_->create_texture(desc, load_desc);
+    const auto texture_id = gpu_system_->create_texture(name.clone(), desc, load_desc);
     gpu_system_->flush_texture(texture_id, desc.usage_flags);
 
     render_constant_.texture_names.push_back(name.clone());
@@ -102,7 +101,7 @@ namespace renderlab
   void RenderPipeline::create_constant_buffer(
     String&& name, const gpu::BufferDesc& desc, const void* data)
   {
-    const auto buffer_id = gpu_system_->create_buffer(desc, data);
+    const auto buffer_id = gpu_system_->create_buffer(name.clone(), desc, data);
     gpu_system_->flush_buffer(buffer_id);
 
     render_constant_.buffer_names.push_back(name.clone());
@@ -156,7 +155,7 @@ namespace renderlab
     node_outputs_.reserve(render_node_contexts_.size());
 
     gpu::TextureNodeID overlay_texture_node = render_graph->create_texture(
-      "Overlay Texture Node",
+      "Overlay Texture Node"_str,
       gpu::RGTextureDesc::create_d2(
         gpu::TextureFormat::RGBA8,
         1,
@@ -224,7 +223,7 @@ namespace renderlab
     }();
 
     auto output_texture = render_graph->create_texture(
-      "Render Pipeline Output Texture",
+      "Render Pipeline Output Texture"_str,
       gpu::RGTextureDesc::create_d2(
         gpu::TextureFormat::RGBA8,
         1,
@@ -235,7 +234,7 @@ namespace renderlab
     if (input_texture.is_valid())
     {
       const auto& output_pass_node = render_graph->add_compute_pass<RenderPipelineParameter>(
-        "Render Pipeline Output Pass",
+        "Render Pipeline Output Pass"_str,
         [&](auto& parameter, auto& builder)
         {
           parameter.input_texture   = builder.add_srv(input_texture);

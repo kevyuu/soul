@@ -19,8 +19,8 @@ namespace renderlab
       -> const auto&
     {
       return render_graph->add_non_shader_pass<CopyTexturePassParameter>(
-        name.c_str(),
-        gpu::QueueType::TRANSFER,
+        name,
+        gpu::QueueType::GRAPHIC,
         [=](auto& parameter, auto& builder)
         {
           parameter.src_node_id = builder.add_src_texture(input_param.src_node_id);
@@ -46,8 +46,8 @@ namespace renderlab
       Span<const CopyTexturePassParameter*> input_params) -> const auto&
     {
       return render_graph->add_non_shader_pass<BatchCopyTexturePassParameter>(
-        name.c_str(),
-        gpu::QueueType::TRANSFER,
+        name,
+        gpu::QueueType::GRAPHIC,
         [&](auto& parameter, auto& builder)
         {
           for (const auto& input_param : input_params)
@@ -81,7 +81,8 @@ namespace renderlab
 
     {
       const auto src_texture_desc = render_graph->get_texture_desc(src_node_id, gpu_system);
-      const auto dst_node         = render_graph->create_texture(name.c_str(), src_texture_desc);
+      const auto dst_node =
+        render_graph->create_texture(String::From(name.c_str()), src_texture_desc);
 
       const auto region_copy = gpu::TextureRegionCopy{
         .src_subresource = {.layer_count = src_texture_desc.layer_count},

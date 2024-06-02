@@ -17,6 +17,7 @@ set(RENDERLAB_SOURCES
     demo/pica_pica_demo.cpp
     editor/store.cpp
     editor/view.cpp
+    editor/panels/comfy_graph_editor_panel.cpp
     editor/panels/menu_bar.cpp
     editor/panels/entity_property_panel.cpp
     editor/panels/render_pipeline_panel.cpp
@@ -65,6 +66,7 @@ set(RENDERLAB_SHADERS
     utils/math.hlsl
     utils/reprojection.hlsl
     utils/color_helpers.hlsl
+    utils/sampling/sample_generator.hlsl
     render_nodes/common/brdf.hlsl
     render_nodes/common/edge_stopping.hlsl
     render_nodes/common/lighting.hlsl

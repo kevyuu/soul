@@ -3,7 +3,7 @@
 #include "render_nodes/common/lighting.hlsl"
 #include "render_nodes/common/ray_query.hlsl"
 
-#include "utils/bnd_sampler.hlsl"
+#include "utils/sampling/sample_generator.hlsl"
 #include "utils/math.hlsl"
 
 #include "scene.hlsl"
@@ -16,16 +16,6 @@ groupshared u32 group_visibility;
 vec2f32 TexelIndexToUV(vec2u32 index, vec2u32 texture_size)
 {
   return vec2f32(index + 0.5) / texture_size;
-}
-
-vec2f32 next_sample(vec2i32 coord)
-{
-  Texture2D sobol_tex              = get_texture_2d(push_constant.sobol_texture);
-  Texture2D scrambling_ranking_tex = get_texture_2d(push_constant.scrambling_ranking_texture);
-
-  return vec2f32(
-    sample_blue_noise(coord, i32(push_constant.num_frames), 0, sobol_tex, scrambling_ranking_tex),
-    sample_blue_noise(coord, i32(push_constant.num_frames), 1, sobol_tex, scrambling_ranking_tex));
 }
 
 [numthreads(RAY_QUERY_WORK_GROUP_SIZE_X, RAY_QUERY_WORK_GROUP_SIZE_Y, 1)] void cs_main(
@@ -58,14 +48,20 @@ vec2f32 next_sample(vec2i32 coord)
   const mat4f32 inv_proj_view_mat = camera_data.inv_proj_view_mat;
   const vec3f32 world_position    = world_position_from_depth(uv, ndc_depth, inv_proj_view_mat);
 
+  BlueNoiseSampleGenerator sample_generator = BlueNoiseSampleGenerator::New(
+    push_constant.sobol_texture,
+    push_constant.scrambling_ranking_texture,
+    texel_coord,
+    i32(push_constant.num_frames));
+
   u32 result = 0;
   if (ndc_depth != 1.0f && scene.light_count > 0)
   {
     const GPULightInstance light_instance = scene.get_light_instance(u32(0));
-    vec2f32 rng_val                       = next_sample(texel_coord);
+    vec2f32 rng_val                       = sample_generator.sample_2d();
     LightRaySample ray_sample = sample_sun_light(light_instance, world_position, rng_val);
-    result =
-      query_visibility(scene.get_tlas(), world_position + n * 0.05f, ray_sample.direction, ray_sample.distance);
+    result                    = query_visibility(
+      scene.get_tlas(), world_position + n * 0.05f, ray_sample.direction, ray_sample.distance);
   }
 
   InterlockedOr(group_visibility, result << group_index);

@@ -2,9 +2,11 @@
 
 #include "core/span.h"
 #include "core/type_traits.h"
+
+#include "memory/allocator.h"
+
 #include "gpu/command_list.h"
 #include "gpu/type.h"
-#include "memory/allocator.h"
 
 namespace soul::gpu
 {
@@ -378,7 +380,7 @@ namespace soul::gpu
   {
     struct RGInternalTexture
     {
-      const char* name                = nullptr;
+      String name                     = String();
       TextureType type                = TextureType::D2;
       TextureFormat format            = TextureFormat::COUNT;
       vec3u32 extent                  = {};
@@ -397,7 +399,7 @@ namespace soul::gpu
 
     struct RGExternalTexture
     {
-      const char* name = nullptr;
+      String name;
       TextureID texture_id;
       b8 clear               = false;
       ClearValue clear_value = {};
@@ -405,27 +407,27 @@ namespace soul::gpu
 
     struct RGInternalBuffer
     {
-      const char* name = nullptr;
-      usize size       = 0;
-      b8 clear         = false;
+      String name;
+      usize size = 0;
+      b8 clear   = false;
     };
 
     struct RGExternalBuffer
     {
-      const char* name = nullptr;
+      String name;
       BufferID buffer_id;
       b8 clear = false;
     };
 
     struct RGExternalTlas
     {
-      const char* name = nullptr;
+      String name;
       TlasID tlas_id;
     };
 
     struct RGExternalBlasGroup
     {
-      const char* name = nullptr;
+      String name;
       BlasGroupID blas_group_id;
     };
 
@@ -600,8 +602,8 @@ namespace soul::gpu
   class PassBaseNode
   {
   public:
-    PassBaseNode(const char* name, const PipelineFlags pipeline_flags, const QueueType queue_type)
-        : name_(name), pipeline_flags_(pipeline_flags), queue_type_(queue_type)
+    PassBaseNode(String&& name, const PipelineFlags pipeline_flags, const QueueType queue_type)
+        : name_(std::move(name)), pipeline_flags_(pipeline_flags), queue_type_(queue_type)
     {
     }
 
@@ -612,9 +614,9 @@ namespace soul::gpu
     virtual ~PassBaseNode()                              = default;
 
     [[nodiscard]]
-    auto get_name() const -> const char*
+    auto name_view() const -> StringView
     {
-      return name_;
+      return name_.cspan();
     }
 
     [[nodiscard]]
@@ -750,7 +752,7 @@ namespace soul::gpu
     }
 
   protected:
-    const char* name_ = nullptr;
+    String name_;
     PipelineFlags pipeline_flags_;
     QueueType queue_type_;
 
@@ -801,8 +803,8 @@ namespace soul::gpu
     auto operator=(PassNode&&) -> PassNode&      = delete;
     ~PassNode() override                         = default;
 
-    PassNode(const char* name, const QueueType queue_type, const ExecuteFn& execute)
-        : PassBaseNode(name, pipeline_flags, queue_type), execute_(execute)
+    PassNode(String&& name, const QueueType queue_type, const ExecuteFn& execute)
+        : PassBaseNode(std::move(name), pipeline_flags, queue_type), execute_(execute)
     {
     }
 
@@ -854,15 +856,15 @@ namespace soul::gpu
       typename SetupFn,
       typename ExecuteFn>
     auto add_pass(
-      const char* name, QueueType queue_type, const SetupFn& setup, const ExecuteFn& execute)
-      -> const auto&
+      String&& name, QueueType queue_type, const SetupFn& setup, const ExecuteFn& execute) -> const
+      auto&
     {
       static_assert(pass_setup<SetupFn, Parameter, pipeline_flags>);
       static_assert(pass_executable<ExecuteFn, Parameter, pipeline_flags>);
 
       using Node = PassNode<pipeline_flags, Parameter, ExecuteFn>;
 
-      auto node_ptr = allocator_->create<Node>(name, queue_type, execute).unwrap();
+      auto node_ptr = allocator_->create<Node>(std::move(name), queue_type, execute).unwrap();
 
       auto node_base_ptr = NotNull<PassBaseNode*>(node_ptr);
 
@@ -878,7 +880,7 @@ namespace soul::gpu
 
     template <typename Parameter, typename SetupFn, typename ExecuteFn>
     auto add_raster_pass(
-      const char* name,
+      String&& name,
       const RGRenderTargetDesc& render_target,
       const SetupFn& setup,
       const ExecuteFn& execute) -> const auto&
@@ -888,7 +890,8 @@ namespace soul::gpu
 
       constexpr auto pipeline_flags = PipelineFlags{PipelineType::RASTER};
       using Node                    = PassNode<pipeline_flags, Parameter, ExecuteFn>;
-      const auto node_ptr = allocator_->create<Node>(name, QueueType::GRAPHIC, execute).unwrap();
+      const auto node_ptr =
+        allocator_->create<Node>(std::move(name), QueueType::GRAPHIC, execute).unwrap();
       const auto node_base_ptr = NotNull<PassBaseNode*>(node_ptr);
       pass_nodes_.push_back(node_base_ptr);
       const auto pass_node_id = PassNodeID(pass_nodes_.size() - 1);
@@ -900,48 +903,50 @@ namespace soul::gpu
     }
 
     template <typename Parameter, typename SetupFn, typename ExecuteFn>
-    auto add_compute_pass(const char* name, const SetupFn& setup, const ExecuteFn& execute) -> const
+    auto add_compute_pass(String&& name, const SetupFn& setup, const ExecuteFn& execute) -> const
       auto&
     {
       static_assert(compute_pass_setup<SetupFn, Parameter>);
       static_assert(compute_pass_executable<ExecuteFn, Parameter>);
 
-      return add_pass<Parameter, PIPELINE_FLAGS_COMPUTE>(name, QueueType::COMPUTE, setup, execute);
+      return add_pass<Parameter, PIPELINE_FLAGS_COMPUTE>(
+        std::move(name), QueueType::GRAPHIC, setup, execute);
     }
 
     template <typename Parameter, typename SetupFn, typename ExecuteFn>
     auto add_non_shader_pass(
-      const char* name, QueueType queue_type, const SetupFn& setup, const ExecuteFn& execute)
-      -> const auto&
+      String&& name, QueueType queue_type, const SetupFn& setup, const ExecuteFn& execute) -> const
+      auto&
     {
       static_assert(non_shader_pass_setup<SetupFn, Parameter>);
       static_assert(non_shader_pass_executable<ExecuteFn, Parameter>);
 
-      return add_pass<Parameter, PIPELINE_FLAGS_NON_SHADER>(name, queue_type, setup, execute);
+      return add_pass<Parameter, PIPELINE_FLAGS_NON_SHADER>(
+        std::move(name), queue_type, setup, execute);
     }
 
     template <typename Parameter, typename SetupFn, typename ExecuteFn>
-    auto add_ray_tracing_pass(const char* name, const SetupFn& setup, const ExecuteFn& execute)
+    auto add_ray_tracing_pass(String&& name, const SetupFn& setup, const ExecuteFn& execute)
       -> const auto&
     {
       static_assert(ray_tracing_pass_setup<SetupFn, Parameter>);
       static_assert(ray_tracing_pass_executable<ExecuteFn, Parameter>);
 
       return add_pass<Parameter, PIPELINE_FLAGS_RAY_TRACING>(
-        name, QueueType::COMPUTE, setup, execute);
+        std::move(name), QueueType::COMPUTE, setup, execute);
     }
 
     auto clear_texture(QueueType queue_type, TextureNodeID texture, ClearValue clear_value)
       -> TextureNodeID;
 
-    auto import_texture(const char* name, TextureID texture_id) -> TextureNodeID;
-    auto create_texture(const char* name, const RGTextureDesc& desc) -> TextureNodeID;
+    auto import_texture(String&& name, TextureID texture_id) -> TextureNodeID;
+    auto create_texture(String&& name, const RGTextureDesc& desc) -> TextureNodeID;
 
-    auto import_buffer(const char* name, BufferID buffer_id) -> BufferNodeID;
-    auto create_buffer(const char* name, const RGBufferDesc& desc) -> BufferNodeID;
+    auto import_buffer(String&& name, BufferID buffer_id) -> BufferNodeID;
+    auto create_buffer(String&& name, const RGBufferDesc& desc) -> BufferNodeID;
 
-    auto import_tlas(const char* name, TlasID tlas_id) -> TlasNodeID;
-    auto import_blas_group(const char* name, BlasGroupID blas_group_id) -> BlasGroupNodeID;
+    auto import_tlas(String&& name, TlasID tlas_id) -> TlasNodeID;
+    auto import_blas_group(String&& name, BlasGroupID blas_group_id) -> BlasGroupNodeID;
 
     [[nodiscard]]
     auto get_pass_nodes() const -> const Vector<NotNull<PassBaseNode*>>&

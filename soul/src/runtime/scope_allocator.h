@@ -1,5 +1,6 @@
 #pragma once
 
+#include "core/comp_str.h"
 #include "core/vector.h"
 #include "memory/allocator.h"
 #include "runtime/runtime.h"
@@ -14,7 +15,7 @@ namespace soul::runtime
     ScopeAllocator() = delete;
 
     explicit ScopeAllocator(
-      const char* name                    = "Unnamed",
+      CompStr name                        = "Unnamed"_str,
       BackingAllocator* backing_allocator = get_temp_allocator(),
       Allocator* fallback_allocator       = get_default_allocator());
 
@@ -30,7 +31,7 @@ namespace soul::runtime
 
     void reset() override;
 
-    auto try_allocate(usize size, usize alignment, const char* tag) -> memory::Allocation override;
+    auto try_allocate(usize size, usize alignment, StringView tag) -> memory::Allocation override;
 
     auto get_allocation_size(void* addr) const -> usize override;
 
@@ -50,7 +51,7 @@ namespace soul::runtime
 
   template <typename BackingAllocator>
   ScopeAllocator<BackingAllocator>::ScopeAllocator(
-    const char* name, BackingAllocator* backing_allocator, Allocator* fallback_allocator)
+    CompStr name, BackingAllocator* backing_allocator, Allocator* fallback_allocator)
       : Allocator(name),
         backing_allocator_(backing_allocator),
         scope_base_addr_(backing_allocator_->get_marker()),
@@ -76,7 +77,7 @@ namespace soul::runtime
   }
 
   template <typename BackingAllocator>
-  auto ScopeAllocator<BackingAllocator>::try_allocate(usize size, usize alignment, const char* tag)
+  auto ScopeAllocator<BackingAllocator>::try_allocate(usize size, usize alignment, StringView tag)
     -> memory::Allocation
   {
     memory::Allocation allocation = backing_allocator_->try_allocate(size, alignment, tag);

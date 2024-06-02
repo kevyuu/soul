@@ -48,7 +48,7 @@ namespace renderlab
     setup_images(viewport);
 
     gpu::TextureNodeID ray_query_result_texture_node = render_graph->create_texture(
-      "Rtao Ray Query Output",
+      "Rtao Ray Query Output"_str,
       gpu::RGTextureDesc::create_d2(
         gpu::TextureFormat::R32UI,
         1,
@@ -119,13 +119,13 @@ namespace renderlab
     };
 
     const auto& ray_query_node = render_graph->add_compute_pass<RayQueryParameter>(
-      "AO Ray Query Pass", ray_query_setup_fn, ray_query_execute_fn);
+      "AO Ray Query Pass"_str, ray_query_setup_fn, ray_query_execute_fn);
 
     ray_query_result_texture_node = ray_query_node.get_parameter().output_texture;
 
     // Init Dispatch Args Pass
     auto filter_dispatch_arg_buffer_node = render_graph->create_buffer(
-      "Filter Dispatch Args", {.size = sizeof(gpu::DispatchIndirectCommand)});
+      "Filter Dispatch Args"_str, {.size = sizeof(gpu::DispatchIndirectCommand)});
 
     struct InitDispatchArgsParameter
     {
@@ -159,23 +159,23 @@ namespace renderlab
     };
 
     const auto& init_dispatch_args_pass = render_graph->add_compute_pass<InitDispatchArgsParameter>(
-      "AO Init Dispatch Arg", init_dispatch_args_setup_fn, init_dispatch_args_execute_fn);
+      "AO Init Dispatch Arg"_str, init_dispatch_args_setup_fn, init_dispatch_args_execute_fn);
 
     filter_dispatch_arg_buffer_node =
       init_dispatch_args_pass.get_parameter().filter_dispatch_arg_buffer;
 
     // Temporal Denoise pass
     auto temporal_accumulation_output_texture_node = render_graph->create_texture(
-      "AO Temporal Accumulation Output",
+      "AO Temporal Accumulation Output"_str,
       gpu::RGTextureDesc::create_d2(gpu::TextureFormat::R16F, 1, viewport));
 
     auto feedback_ao_texture_node =
-      render_graph->import_texture("Feedback AO", feedback_ao_texture_id_);
+      render_graph->import_texture("Feedback AO"_str, feedback_ao_texture_id_);
 
     auto history_length_texture_node = render_graph->import_texture(
-      "History Length Ouptut", history_length_texture_ids_[frame_id % 2]);
+      "History Length Ouptut"_str, history_length_texture_ids_[frame_id % 2]);
     auto moment_length_history_texture_node = render_graph->import_texture(
-      "Prev History Length", history_length_texture_ids_[(frame_id + 1) % 2]);
+      "Prev History Length"_str, history_length_texture_ids_[(frame_id + 1) % 2]);
 
     const vec2u32 temporal_dispatch_count = {
       math::ceil(f32(viewport.x) / TEMPORAL_ACCUMULATION_WORK_GROUP_SIZE_X),
@@ -184,7 +184,7 @@ namespace renderlab
 
     const auto max_coords = temporal_dispatch_count.x * temporal_dispatch_count.y;
     auto filter_coords_buffer_node =
-      render_graph->create_buffer("Filter Texcoords", {.size = sizeof(vec2u32) * max_coords});
+      render_graph->create_buffer("Filter Texcoords"_str, {.size = sizeof(vec2u32) * max_coords});
 
     struct TemporalAccumulationParameter
     {
@@ -294,7 +294,7 @@ namespace renderlab
 
     const auto& temporal_accumulation_pass =
       render_graph->add_compute_pass<TemporalAccumulationParameter>(
-        "AO Temporal Accumulation", temporal_denoise_setup_fn, temporal_denoise_execute_fn);
+        "AO Temporal Accumulation"_str, temporal_denoise_setup_fn, temporal_denoise_execute_fn);
 
     temporal_accumulation_output_texture_node =
       temporal_accumulation_pass.get_parameter().output_val_texture;
@@ -316,7 +316,7 @@ namespace renderlab
     };
 
     gpu::TextureNodeID horizontal_blur_output_node = render_graph->create_texture(
-      "Horizontal Bilateral Blur Output",
+      "Horizontal Bilateral Blur Output"_str,
       gpu::RGTextureDesc::create_d2(gpu::TextureFormat::R16F, 1, viewport));
 
     horizontal_blur_output_node = render_graph->clear_texture(
@@ -325,7 +325,7 @@ namespace renderlab
       gpu::ClearValue(vec4f32(1, 0, 0, 0), 1, 1));
 
     const auto& horizontal_blur_pass = render_graph->add_compute_pass<BilateralBlurParameter>(
-      "AO Horizontal Blur Pass",
+      "AO Horizontal Blur Pass"_str,
       [&](BilateralBlurParameter& parameter, auto& builder)
       {
         parameter.filter_dispatch_arg_buffer =
@@ -362,7 +362,7 @@ namespace renderlab
     horizontal_blur_output_node = horizontal_blur_pass.get_parameter().output_texture;
 
     const auto& vertical_blur_pass = render_graph->add_compute_pass<BilateralBlurParameter>(
-      "AO Vertical Blur Pass",
+      "AO Vertical Blur Pass"_str,
       [&](BilateralBlurParameter& parameter, auto& builder)
       {
         parameter.filter_dispatch_arg_buffer =
@@ -435,24 +435,10 @@ namespace renderlab
     viewport_ = viewport;
 
     gpu_system_->destroy_texture(feedback_ao_texture_id_);
-    feedback_ao_texture_id_ = gpu_system_->create_texture(gpu::TextureDesc::d2(
-      "Moment Texture",
-      gpu::TextureFormat::R16F,
-      1,
-      {
-        gpu::TextureUsage::STORAGE,
-        gpu::TextureUsage::SAMPLED,
-      },
-      {
-        gpu::QueueType::COMPUTE,
-      },
-      viewport));
+    feedback_ao_texture_id_ = gpu_system_->create_texture(
+      "Moment Texture"_str,
+      gpu::TextureDesc::d2(
 
-    for (auto& texture_id : history_length_texture_ids_)
-    {
-      gpu_system_->destroy_texture(texture_id);
-      texture_id = gpu_system_->create_texture(gpu::TextureDesc::d2(
-        "Filter Output Texture",
         gpu::TextureFormat::R16F,
         1,
         {
@@ -463,6 +449,24 @@ namespace renderlab
           gpu::QueueType::COMPUTE,
         },
         viewport));
+
+    for (auto& texture_id : history_length_texture_ids_)
+    {
+      gpu_system_->destroy_texture(texture_id);
+      texture_id = gpu_system_->create_texture(
+        "Filter Output Texture"_str,
+        gpu::TextureDesc::d2(
+
+          gpu::TextureFormat::R16F,
+          1,
+          {
+            gpu::TextureUsage::STORAGE,
+            gpu::TextureUsage::SAMPLED,
+          },
+          {
+            gpu::QueueType::COMPUTE,
+          },
+          viewport));
     }
   }
 } // namespace renderlab

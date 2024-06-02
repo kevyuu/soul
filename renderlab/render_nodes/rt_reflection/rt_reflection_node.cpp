@@ -47,9 +47,9 @@ namespace renderlab
       .raygen_group = {.entry_point = 0},
       .miss_groups  = u32cspan(miss_groups.data(), miss_groups.size()),
       .hit_groups   = u32cspan(&hit_group, 1),
-      .name         = "Shader Table",
     };
-    shader_table_id_ = gpu_system_->create_shader_table(shader_table_desc);
+    shader_table_id_ =
+      gpu_system_->create_shader_table("Ray Traced Reflection Shader Table"_str, shader_table_desc);
 
     init_dispatch_args_program_id_ = util::create_compute_program(
       gpu_system_, "render_nodes/rt_reflection/init_dispatch_args_main.hlsl"_str);
@@ -72,7 +72,7 @@ namespace renderlab
     setup_images(viewport);
 
     gpu::TextureNodeID ray_trace_result_texture_node = render_graph->create_texture(
-      "RayTraced Relection Output",
+      "RayTraced Relection Output"_str,
       gpu::RGTextureDesc::create_d2(gpu::TextureFormat::RGBA16F, 1, {viewport.x, viewport.y}));
 
     // RayQuery Pass
@@ -137,16 +137,16 @@ namespace renderlab
     };
 
     const auto& ray_trace_node = render_graph->add_ray_tracing_pass<RayTraceParameter>(
-      "Reflection Ray Tracing Pass", ray_trace_setup_fn, ray_trace_execute_fn);
+      "Reflection Ray Tracing Pass"_str, ray_trace_setup_fn, ray_trace_execute_fn);
 
     ray_trace_result_texture_node = ray_trace_node.get_parameter().output_texture;
 
     // Init Dispatch Args Pass
     auto filter_dispatch_arg_buffer_node = render_graph->create_buffer(
-      "Filter Dispatch Args", {.size = sizeof(gpu::DispatchIndirectCommand)});
+      "Filter Dispatch Args"_str, {.size = sizeof(gpu::DispatchIndirectCommand)});
 
     auto copy_dispatch_arg_buffer_node = render_graph->create_buffer(
-      "Copy Dispatch Args", {.size = sizeof(gpu::DispatchIndirectCommand)});
+      "Copy Dispatch Args"_str, {.size = sizeof(gpu::DispatchIndirectCommand)});
 
     struct InitDispatchArgsParameter
     {
@@ -192,7 +192,7 @@ namespace renderlab
     };
 
     const auto& init_dispatch_args_pass = render_graph->add_compute_pass<InitDispatchArgsParameter>(
-      "Init Dispatch Args", init_dispatch_args_setup_fn, init_dispatch_args_execute_fn);
+      "Init Dispatch Args"_str, init_dispatch_args_setup_fn, init_dispatch_args_execute_fn);
 
     filter_dispatch_arg_buffer_node =
       init_dispatch_args_pass.get_parameter().filter_dispatch_arg_buffer;
@@ -202,13 +202,13 @@ namespace renderlab
 
     // Temporal Acummulation pass
     auto temporal_accumulation_output_texture_node = render_graph->import_texture(
-      "Temporal Acummulation Output", temporal_accumulation_output_texture_);
+      "Temporal Acummulation Output"_str, temporal_accumulation_output_texture_);
     auto atrous_feedback_texture_node =
-      render_graph->import_texture("History Temporal Accumulation", atrous_feedback_texture_);
+      render_graph->import_texture("History Temporal Accumulation"_str, atrous_feedback_texture_);
     auto moment_length_ouptut_texture_node =
-      render_graph->import_texture("Moment Length Ouptut", moment_textures_[frame_id % 2]);
-    auto moment_length_history_texture_node =
-      render_graph->import_texture("Moment Length History", moment_textures_[(frame_id + 1) % 2]);
+      render_graph->import_texture("Moment Length Ouptut"_str, moment_textures_[frame_id % 2]);
+    auto moment_length_history_texture_node = render_graph->import_texture(
+      "Moment Length History"_str, moment_textures_[(frame_id + 1) % 2]);
 
     const vec2u32 temporal_dispatch_count = {
       math::ceil(f32(viewport.x) / TEMPORAL_ACCUMULATION_WORK_GROUP_SIZE_X),
@@ -217,9 +217,9 @@ namespace renderlab
 
     const auto max_coords = temporal_dispatch_count.x * temporal_dispatch_count.y;
     auto filter_coords_buffer_node =
-      render_graph->create_buffer("Filter Texcoords", {.size = sizeof(vec2u32) * max_coords});
+      render_graph->create_buffer("Filter Texcoords"_str, {.size = sizeof(vec2u32) * max_coords});
     auto copy_coords_buffer_node =
-      render_graph->create_buffer("Copy Texcoords", {.size = sizeof(vec2u32) * max_coords});
+      render_graph->create_buffer("Copy Texcoords"_str, {.size = sizeof(vec2u32) * max_coords});
 
     struct TemporalAcummulationParameter
     {
@@ -343,7 +343,9 @@ namespace renderlab
 
     const auto& temporal_accumulation_pass =
       render_graph->add_compute_pass<TemporalAcummulationParameter>(
-        "Temporal Acummulation", temporal_accumulation_setup_fn, temporal_accumulation_execute_fn);
+        "Ray Traced Reflection Temporal Accumulation"_str,
+        temporal_accumulation_setup_fn,
+        temporal_accumulation_execute_fn);
     temporal_accumulation_output_texture_node =
       temporal_accumulation_pass.get_parameter().output_color_variance_texture;
     filter_dispatch_arg_buffer_node =
@@ -356,10 +358,10 @@ namespace renderlab
     // Atrous Filter
     Array<gpu::TextureNodeID, 2> atrous_ping_pong_texture_nodes = {
       render_graph->create_texture(
-        "Atrous Ping Pong Texture 0",
+        "Atrous Ping Pong Texture 0"_str,
         gpu::RGTextureDesc::create_d2(gpu::TextureFormat::RGBA16F, 1, viewport)),
       render_graph->create_texture(
-        "Atrous Ping Pong Texture 1",
+        "Atrous Ping Pong Texture 1"_str,
         gpu::RGTextureDesc::create_d2(gpu::TextureFormat::RGBA16F, 1, viewport)),
     };
 
@@ -441,7 +443,7 @@ namespace renderlab
       };
 
       const auto& filter_node = render_graph->add_compute_pass<FilterParameter>(
-        "Filter pass", filter_setup_fn, filter_execute_fn);
+        "Filter pass"_str, filter_setup_fn, filter_execute_fn);
 
       atrous_input = filter_node.get_parameter().output_texture;
       if (filter_i != feedback_iteration)
@@ -501,8 +503,25 @@ namespace renderlab
     for (gpu::TextureID& texture_id : moment_textures_)
     {
       gpu_system_->destroy_texture(texture_id);
-      texture_id = gpu_system_->create_texture(gpu::TextureDesc::d2(
-        "Moment Texture",
+      texture_id = gpu_system_->create_texture(
+        "Moment Texture"_str,
+        gpu::TextureDesc::d2(
+          gpu::TextureFormat::RGBA16F,
+          1,
+          {
+            gpu::TextureUsage::STORAGE,
+            gpu::TextureUsage::SAMPLED,
+          },
+          {
+            gpu::QueueType::COMPUTE,
+          },
+          viewport));
+    }
+
+    gpu_system_->destroy_texture(temporal_accumulation_output_texture_);
+    temporal_accumulation_output_texture_ = gpu_system_->create_texture(
+      "Reprojection Output Texture"_str,
+      gpu::TextureDesc::d2(
         gpu::TextureFormat::RGBA16F,
         1,
         {
@@ -513,34 +532,21 @@ namespace renderlab
           gpu::QueueType::COMPUTE,
         },
         viewport));
-    }
-
-    gpu_system_->destroy_texture(temporal_accumulation_output_texture_);
-    temporal_accumulation_output_texture_ = gpu_system_->create_texture(gpu::TextureDesc::d2(
-      "Reprojection Output Texture",
-      gpu::TextureFormat::RGBA16F,
-      1,
-      {
-        gpu::TextureUsage::STORAGE,
-        gpu::TextureUsage::SAMPLED,
-      },
-      {
-        gpu::QueueType::COMPUTE,
-      },
-      viewport));
 
     gpu_system_->destroy_texture(atrous_feedback_texture_);
-    atrous_feedback_texture_ = gpu_system_->create_texture(gpu::TextureDesc::d2(
-      "Filter Output Texture",
-      gpu::TextureFormat::RGBA16F,
-      1,
-      {
-        gpu::TextureUsage::STORAGE,
-        gpu::TextureUsage::SAMPLED,
-      },
-      {
-        gpu::QueueType::COMPUTE,
-      },
-      viewport));
+    atrous_feedback_texture_ = gpu_system_->create_texture(
+      "Filter Output Texture"_str,
+      gpu::TextureDesc::d2(
+
+        gpu::TextureFormat::RGBA16F,
+        1,
+        {
+          gpu::TextureUsage::STORAGE,
+          gpu::TextureUsage::SAMPLED,
+        },
+        {
+          gpu::QueueType::COMPUTE,
+        },
+        viewport));
   }
 } // namespace renderlab

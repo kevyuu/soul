@@ -92,7 +92,7 @@ class RTBasicSampleApp final : public App
       ImGui::End();
     }
 
-    auto blas_group_node_id = render_graph.import_blas_group("Blas Group", blas_group_id_);
+    auto blas_group_node_id = render_graph.import_blas_group("Blas Group"_str, blas_group_id_);
     if (need_rebuild_blas_)
     {
       struct BuildBlasParameter
@@ -103,7 +103,7 @@ class RTBasicSampleApp final : public App
       blas_group_node_id =
         render_graph
           .add_non_shader_pass<BuildBlasParameter>(
-            "Build blas group",
+            "Build blas group"_str,
             gpu::QueueType::COMPUTE,
             [blas_group_node_id](auto& parameter, auto& builder)
             {
@@ -111,7 +111,7 @@ class RTBasicSampleApp final : public App
             },
             [this](const auto& parameter, const auto& registry, auto& command_list)
             {
-              runtime::ScopeAllocator scope_allocator("build blas execute");
+              runtime::ScopeAllocator scope_allocator("build blas execute"_str);
               Vector<gpu::RenderCommandBuildBlas> render_commands(&scope_allocator);
               for (usize model_idx = 0; model_idx < models_.size(); model_idx++)
               {
@@ -136,7 +136,7 @@ class RTBasicSampleApp final : public App
                   });
 
                 render_commands.push_back(gpu::RenderCommandBuildBlas{
-                  .src_blas_id = gpu::BlasID::null(),
+                  .src_blas_id = gpu::BlasID(),
                   .dst_blas_id = blas_ids_[model_idx],
                   .build_mode  = gpu::RTBuildMode::REBUILD,
                   .build_desc =
@@ -159,11 +159,11 @@ class RTBasicSampleApp final : public App
       need_rebuild_blas_ = false;
     }
 
-    auto tlas_node_id = render_graph.import_tlas("Tlas", tlas_id_);
+    auto tlas_node_id = render_graph.import_tlas("Tlas"_str, tlas_id_);
     if (need_rebuild_tlas_)
     {
       auto instance_buffer = render_graph.create_buffer(
-        "Instance buffer", {.size = sizeof(gpu::RTInstanceDesc) * instances_.size()});
+        "Instance buffer"_str, {.size = sizeof(gpu::RTInstanceDesc) * instances_.size()});
 
       struct UploadParameter
       {
@@ -173,7 +173,7 @@ class RTBasicSampleApp final : public App
       const auto& upload_parameter =
         render_graph
           .add_non_shader_pass<UploadParameter>(
-            "Upload instance buffer",
+            "Upload instance buffer"_str,
             gpu::QueueType::TRANSFER,
             [instance_buffer](auto& parameter, auto& builder)
             {
@@ -217,7 +217,7 @@ class RTBasicSampleApp final : public App
       tlas_node_id =
         render_graph
           .add_non_shader_pass<BuildTlasParameter>(
-            "Build Tlas Pass",
+            "Build Tlas Pass"_str,
             gpu::QueueType::COMPUTE,
 
             [blas_group_node_id, tlas_node_id, instance_buffer](auto& parameter, auto& builder)
@@ -246,7 +246,7 @@ class RTBasicSampleApp final : public App
     const vec2u32 viewport = gpu_system_->get_swapchain_extent();
 
     const auto scene_buffer =
-      render_graph.create_buffer("Scene Buffer", {.size = sizeof(RTObjScene)});
+      render_graph.create_buffer("Scene Buffer"_str, {.size = sizeof(RTObjScene)});
 
     struct GPUSceneUploadPassParameter
     {
@@ -272,7 +272,7 @@ class RTBasicSampleApp final : public App
     const auto scene_upload_parameter =
       render_graph
         .add_non_shader_pass<GPUSceneUploadPassParameter>(
-          "GPUScene upload",
+          "GPUScene upload"_str,
           gpu::QueueType::TRANSFER,
           [scene_buffer](auto& parameter, auto& builder)
           {
@@ -292,7 +292,7 @@ class RTBasicSampleApp final : public App
         .get_parameter();
 
     const gpu::TextureNodeID target_texture = render_graph.create_texture(
-      "Target Texture",
+      "Target Texture"_str,
       gpu::RGTextureDesc::create_d2(
         gpu::TextureFormat::RGBA8,
         1,
@@ -311,7 +311,7 @@ class RTBasicSampleApp final : public App
     const auto rt_pass_param =
       render_graph
         .add_ray_tracing_pass<RayTracingPassParameter>(
-          "Ray Tracing Pass",
+          "Ray Tracing Pass"_str,
           [target_texture, scene_upload_parameter, tlas_node_id, blas_group_node_id](
             auto& parameter, auto& builder)
           {
@@ -366,20 +366,18 @@ class RTBasicSampleApp final : public App
       .usage_flags =
         {gpu::BufferUsage::VERTEX, gpu::BufferUsage::STORAGE, gpu::BufferUsage::AS_BUILD_INPUT},
       .queue_flags = {gpu::QueueType::GRAPHIC},
-      .name        = "Vertex buffer",
     };
-    const auto vertex_buffer =
-      gpu_system_->create_buffer(vertex_buffer_desc, obj_loader.vertices.data());
+    const auto vertex_buffer = gpu_system_->create_buffer(
+      "Vertex Buffer"_str, vertex_buffer_desc, obj_loader.vertices.data());
 
     const gpu::BufferDesc index_buffer_desc = {
       .size = obj_loader.indices.size() * sizeof(IndexObj),
       .usage_flags =
         {gpu::BufferUsage::INDEX, gpu::BufferUsage::STORAGE, gpu::BufferUsage::AS_BUILD_INPUT},
       .queue_flags = {gpu::QueueType::GRAPHIC},
-      .name        = "Index buffer",
     };
     const auto index_buffer =
-      gpu_system_->create_buffer(index_buffer_desc, obj_loader.indices.data());
+      gpu_system_->create_buffer("Index Buffer"_str, index_buffer_desc, obj_loader.indices.data());
 
     for (const auto& texture_name : obj_loader.textures)
     {
@@ -396,7 +394,6 @@ class RTBasicSampleApp final : public App
         STBI_rgb_alpha);
 
       const gpu::TextureDesc texture_desc = gpu::TextureDesc::d2(
-        texture.name.data(),
         gpu::TextureFormat::SRGBA8,
         1,
         {gpu::TextureUsage::SAMPLED},
@@ -415,7 +412,8 @@ class RTBasicSampleApp final : public App
         .generate_mipmap = true,
       };
 
-      texture.texture_id = gpu_system_->create_texture(texture_desc, load_desc);
+      texture.texture_id =
+        gpu_system_->create_texture(String::From(texture_name.data()), texture_desc, load_desc);
 
       stbi_image_free(texture_pixels);
     }
@@ -435,7 +433,7 @@ class RTBasicSampleApp final : public App
         .illum         = material.illum,
         .diffuse_texture_id =
           material.texture_id == -1
-            ? gpu::DescriptorID::null()
+            ? gpu::DescriptorID()
             : gpu_system_->get_srv_descriptor_id(textures_[material.texture_id].texture_id),
       });
     }
@@ -444,19 +442,17 @@ class RTBasicSampleApp final : public App
       .size        = gpu_materials.size() * sizeof(WavefrontMaterial),
       .usage_flags = {gpu::BufferUsage::STORAGE},
       .queue_flags = {gpu::QueueType::GRAPHIC},
-      .name        = "Material buffer",
     };
     const auto material_buffer =
-      gpu_system_->create_buffer(material_buffer_desc, gpu_materials.data());
+      gpu_system_->create_buffer("Material Buffer"_str, material_buffer_desc, gpu_materials.data());
 
     const gpu::BufferDesc material_indices_buffer_desc = {
       .size        = obj_loader.mat_indexes.size() * sizeof(MaterialIndexObj),
       .usage_flags = {gpu::BufferUsage::STORAGE},
       .queue_flags = {gpu::QueueType::GRAPHIC},
-      .name        = "Material indices buffer",
     };
-    const auto material_indices_buffer =
-      gpu_system_->create_buffer(material_indices_buffer_desc, obj_loader.mat_indexes.data());
+    const auto material_indices_buffer = gpu_system_->create_buffer(
+      "Material Indices Buffer"_str, material_indices_buffer_desc, obj_loader.mat_indexes.data());
 
     const RTObjDesc gpu_obj_desc = {
       .vertex_descriptor_id   = gpu_system_->get_ssbo_descriptor_id(vertex_buffer),
@@ -482,18 +478,18 @@ class RTBasicSampleApp final : public App
   auto create_gpu_obj_desc_buffer() -> void
   {
     gpu_obj_buffer_ = gpu_system_->create_buffer(
+      "RTObj buffer"_str,
       {
         .size        = sizeof(RTObjDesc) * gpu_obj_descs_.size(),
         .usage_flags = {gpu::BufferUsage::STORAGE},
         .queue_flags = {gpu::QueueType::GRAPHIC},
-        .name        = "RTObj buffer",
       },
       gpu_obj_descs_.data());
   }
 
   auto create_blas() -> void
   {
-    blas_group_id_ = gpu_system_->create_blas_group("Blas Group");
+    blas_group_id_ = gpu_system_->create_blas_group("Blas Group"_str);
 
     for (const auto& model : models_)
     {
@@ -509,7 +505,8 @@ class RTBasicSampleApp final : public App
           }}};
       const gpu::BlasBuildDesc build_desc = {.geometry_count = 1, .geometry_descs = &geom_desc};
       const auto blas_size                = gpu_system_->get_blas_size_requirement(build_desc);
-      blas_ids_.push_back(gpu_system_->create_blas({.size = blas_size}, blas_group_id_));
+      blas_ids_.push_back(
+        gpu_system_->create_blas("Blas"_str, {.size = blas_size}, blas_group_id_));
     }
   }
 
@@ -519,7 +516,7 @@ class RTBasicSampleApp final : public App
       .build_flags    = {gpu::RTBuildFlag::PREFER_FAST_BUILD},
       .instance_count = soul::cast<u32>(instances_.size()),
     });
-    tlas_id_             = gpu_system_->create_tlas({.name = "Tlas", .size = tlas_size});
+    tlas_id_             = gpu_system_->create_tlas("Tlas"_str, {.size = tlas_size});
   }
 
 public:
@@ -558,9 +555,8 @@ public:
       .raygen_group = {.entry_point = 0},
       .miss_groups  = u32cspan(miss_groups.data(), miss_groups.size()),
       .hit_groups   = u32cspan(&hit_group, 1),
-      .name         = "Shader Table",
     };
-    shader_table_id_ = gpu_system_->create_shader_table(shader_table_desc);
+    shader_table_id_ = gpu_system_->create_shader_table("Shader Table"_str, shader_table_desc);
 
     sampler_id_ = gpu_system_->request_sampler(
       gpu::SamplerDesc::same_filter_wrap(gpu::TextureFilter::LINEAR, gpu::TextureWrap::REPEAT));

@@ -60,9 +60,9 @@ namespace renderlab
       .raygen_group = {.entry_point = 0},
       .miss_groups  = u32cspan(miss_groups.data(), miss_groups.size()),
       .hit_groups   = u32cspan(&hit_group, 1),
-      .name         = "Shader Table",
     };
-    shader_table_id_ = gpu_system_->create_shader_table(shader_table_desc);
+    shader_table_id_ =
+      gpu_system_->create_shader_table("DDGI Ray Trace Shader Table"_str, shader_table_desc);
 
     probe_update_program_id_ =
       util::create_compute_program(gpu_system_, "render_nodes/ddgi/probe_update_main.hlsl"_str);
@@ -74,11 +74,6 @@ namespace renderlab
       util::create_raster_program(gpu_system_, "render_nodes/ddgi/probe_overlay_main.hlsl"_str);
     ray_overlay_program_id_ =
       util::create_raster_program(gpu_system_, "render_nodes/ddgi/ray_overlay_main.hlsl"_str);
-
-    const auto& probe_update_program = gpu_system_->get_program(probe_update_program_id_);
-    const auto& probe_border_update_program =
-      gpu_system_->get_program(probe_border_update_program_id_);
-    const auto& sample_irradiance_program = gpu_system_->get_program(sample_irradiance_program_id_);
 
     probe_count_         = vec3i32(24, 14, 20);
     grid_step_           = vec3f32(1.0f);
@@ -156,24 +151,24 @@ namespace renderlab
     const vec2u32 rt_dimension = {volume_.rays_per_probe, probe_count};
 
     const gpu::TextureNodeID ray_radiance_texture = render_graph->create_texture(
-      "Ray Tracing Radiance Texture",
+      "Ray Tracing Radiance Texture"_str,
       gpu::RGTextureDesc::create_d2(gpu::TextureFormat::RGBA16F, 1, rt_dimension));
 
     const gpu::TextureNodeID ray_dir_dist_texture = render_graph->create_texture(
-      "Ray Tracing Direction Distance Texture",
+      "Ray Tracing Direction Distance Texture"_str,
       gpu::RGTextureDesc::create_d2(gpu::TextureFormat::RGBA16F, 1, rt_dimension));
 
     const auto history_irradiance_probe_texture = render_graph->import_texture(
-      "History Irradiance Probe Texture", history_radiance_probe_texture_);
+      "History Irradiance Probe Texture"_str, history_radiance_probe_texture_);
     const auto history_depth_probe_texture =
-      render_graph->import_texture("History Depth Probe Texture", history_depth_probe_texture_);
+      render_graph->import_texture("History Depth Probe Texture"_str, history_depth_probe_texture_);
 
     vec2u32 probe_dimension = {volume_.probe_map_texture_width, volume_.probe_map_texture_height};
     const auto radiance_probe_texture = render_graph->create_texture(
-      "Radiance Probe Texture",
+      "Radiance Probe Texture"_str,
       gpu::RGTextureDesc::create_d2(gpu::TextureFormat::RGBA16F, 1, probe_dimension));
     const auto depth_probe_texture = render_graph->create_texture(
-      "Depth Probe Texture",
+      "Depth Probe Texture"_str,
       gpu::RGTextureDesc::create_d2(gpu::TextureFormat::RG16F, 1, probe_dimension));
 
     struct RayTracingPassParameter
@@ -189,7 +184,7 @@ namespace renderlab
     };
 
     const auto& ray_trace_node = render_graph->add_ray_tracing_pass<RayTracingPassParameter>(
-      "DDGI Ray Tracing Pass",
+      "DDGI Ray Tracing Pass"_str,
       [&, ray_radiance_texture, ray_dir_dist_texture](auto& parameter, auto& builder)
       {
         const auto& render_data                  = scene.render_data_cref();
@@ -254,7 +249,7 @@ namespace renderlab
     };
 
     const auto& probe_update_node = render_graph->add_compute_pass<ProbeUpdateParameter>(
-      "Probe Update Pass",
+      "Probe Update Pass"_str,
       [&](auto& parameter, auto& builder)
       {
         parameter.irradiance_texture =
@@ -303,7 +298,7 @@ namespace renderlab
     };
 
     const auto& border_update_node = render_graph->add_compute_pass<ProbeBorderUpdateParameter>(
-      "Probe Border Update Pass",
+      "Probe Border Update Pass"_str,
       [&](auto& parameter, auto& builder)
       {
         parameter.irradiance_probe_texture =
@@ -332,7 +327,7 @@ namespace renderlab
       });
 
     const auto sample_irradiance_texture = render_graph->create_texture(
-      "Sample Irradiance Texture",
+      "Sample Irradiance Texture"_str,
       gpu::RGTextureDesc::create_d2(gpu::TextureFormat::RGBA16F, 1, viewport));
 
     struct SampleIrradianceParameter
@@ -346,7 +341,7 @@ namespace renderlab
     };
 
     const auto& sample_irradiance_node = render_graph->add_compute_pass<SampleIrradianceParameter>(
-      "Sample Irradiance Pass",
+      "Sample Irradiance Pass"_str,
       [&](auto& parameter, auto& builder)
       {
         parameter.scene_buffer  = scene.build_scene_dependencies(&builder);
@@ -425,7 +420,7 @@ namespace renderlab
       gpu::TextureNodeID depth_probe_texture;
     };
 
-    SOUL_ASSERT(inputs.overlay_texture.is_valid(), "");
+    SOUL_ASSERT(!inputs.overlay_texture.is_null(), "");
 
     const gpu::RGColorAttachmentDesc color_attachment_desc = {
       .node_id = inputs.overlay_texture,
@@ -434,7 +429,7 @@ namespace renderlab
     const gpu::RGDepthStencilAttachmentDesc depth_stencil_desc = {.node_id = depth_texture_node};
 
     const auto& probe_overlay_pass = render_graph->add_raster_pass<ProbeOverlayParameter>(
-      "Probe Overlay Render Pass",
+      "Probe Overlay Render Pass"_str,
       gpu::RGRenderTargetDesc(viewport, color_attachment_desc, depth_stencil_desc),
       [&, this](auto& parameter, auto& builder)
       {
@@ -523,7 +518,7 @@ namespace renderlab
     };
 
     const auto& ray_overlay_pass = render_graph->add_raster_pass<RayOverlayParameter>(
-      "Ray Overlay Render Pass",
+      "Ray Overlay Render Pass"_str,
       gpu::RGRenderTargetDesc(
         viewport,
         {.node_id = overlay_texture},
@@ -719,28 +714,31 @@ namespace renderlab
 
     vec2u32 probe_dimension = {volume_.probe_map_texture_width, volume_.probe_map_texture_height};
 
-    if (history_radiance_probe_texture_.is_valid())
+    if (!history_radiance_probe_texture_.is_null())
     {
       gpu_system_->destroy_texture(history_radiance_probe_texture_);
     }
-    history_radiance_probe_texture_ = gpu_system_->create_texture(gpu::TextureDesc::d2(
-      "History Radiance Probe Texture",
-      gpu::TextureFormat::RGBA16F,
-      1,
-      {gpu::TextureUsage::STORAGE, gpu::TextureUsage::SAMPLED, gpu::TextureUsage::TRANSFER_DST},
-      {gpu::QueueType::COMPUTE, gpu::QueueType::TRANSFER},
-      probe_dimension));
+    history_radiance_probe_texture_ = gpu_system_->create_texture(
+      "History Radiance Probe Texture"_str,
+      gpu::TextureDesc::d2(
 
-    if (history_depth_probe_texture_.is_valid())
+        gpu::TextureFormat::RGBA16F,
+        1,
+        {gpu::TextureUsage::STORAGE, gpu::TextureUsage::SAMPLED, gpu::TextureUsage::TRANSFER_DST},
+        {gpu::QueueType::GRAPHIC},
+        probe_dimension));
+
+    if (!history_depth_probe_texture_.is_null())
     {
       gpu_system_->destroy_texture(history_depth_probe_texture_);
     }
-    history_depth_probe_texture_ = gpu_system_->create_texture(gpu::TextureDesc::d2(
-      "History Depth Probe Texture",
-      gpu::TextureFormat::RG16F,
-      1,
-      {gpu::TextureUsage::STORAGE, gpu::TextureUsage::SAMPLED, gpu::TextureUsage::TRANSFER_DST},
-      {gpu::QueueType::COMPUTE, gpu::QueueType::TRANSFER},
-      probe_dimension));
+    history_depth_probe_texture_ = gpu_system_->create_texture(
+      "History Depth Probe Texture"_str,
+      gpu::TextureDesc::d2(
+        gpu::TextureFormat::RG16F,
+        1,
+        {gpu::TextureUsage::STORAGE, gpu::TextureUsage::SAMPLED, gpu::TextureUsage::TRANSFER_DST},
+        {gpu::QueueType::GRAPHIC},
+        probe_dimension));
   }
 } // namespace renderlab

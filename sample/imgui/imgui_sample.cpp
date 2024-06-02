@@ -21,7 +21,7 @@ class ImguiSampleApp final : public App
 
     const vec2u32 viewport                 = gpu_system_->get_swapchain_extent();
     const gpu::TextureNodeID blank_texture = render_graph.create_texture(
-      "Blank Texture",
+      "Blank Texture"_str,
       gpu::RGTextureDesc::create_d2(gpu::TextureFormat::RGBA8, 1, viewport, true, {}));
     return texture_2d_pass_.add_pass({blank_texture, render_target}, render_graph);
   }

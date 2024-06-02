@@ -90,7 +90,7 @@ class DrawIndexedIndirectSampleApp final : public App
     const vec2u32 viewport = gpu_system_->get_swapchain_extent();
 
     const auto scene_buffer =
-      render_graph.create_buffer("Scene Buffer", {.size = sizeof(RasterObjScene)});
+      render_graph.create_buffer("Scene Buffer"_str, {.size = sizeof(RasterObjScene)});
 
     const auto projection = math::perspective(
       math::radians(45.0f), math::fdiv(viewport.x, viewport.y), 0.1f, 1000000000.0f);
@@ -121,7 +121,7 @@ class DrawIndexedIndirectSampleApp final : public App
     const auto scene_upload_parameter =
       render_graph
         .add_non_shader_pass<RasterSceneUploadPassParameter>(
-          "GPUScene upload",
+          "GPUScene upload"_str,
           gpu::QueueType::TRANSFER,
           [scene_buffer](auto& parameter, auto& builder)
           {
@@ -159,13 +159,13 @@ class DrawIndexedIndirectSampleApp final : public App
     clear_value.depth_stencil.depth                               = 1.0f;
     const gpu::RGDepthStencilAttachmentDesc depth_attachment_desc = {
       .node_id = render_graph.create_texture(
-        "Depth Target",
+        "Depth Target"_str,
         gpu::RGTextureDesc::create_d2(gpu::TextureFormat::DEPTH32F, 1, {viewport.x, viewport.y})),
       .clear       = true,
       .clear_value = clear_value,
     };
     const auto& raster_node = render_graph.add_raster_pass<RasterPassParameter>(
-      "Render Pass",
+      "Render Pass"_str,
       gpu::RGRenderTargetDesc(viewport, color_attachment_desc, depth_attachment_desc),
       [raster_scene_buffer = scene_upload_parameter.buffer](auto& parameter, auto& builder)
       {
@@ -281,7 +281,6 @@ class DrawIndexedIndirectSampleApp final : public App
         STBI_rgb_alpha);
 
       const gpu::TextureDesc texture_desc = gpu::TextureDesc::d2(
-        texture.name.data(),
         gpu::TextureFormat::SRGBA8,
         1,
         {gpu::TextureUsage::SAMPLED},
@@ -300,7 +299,8 @@ class DrawIndexedIndirectSampleApp final : public App
         .generate_mipmap = true,
       };
 
-      texture.texture_id = gpu_system_->create_texture(texture_desc, load_desc);
+      texture.texture_id =
+        gpu_system_->create_texture(String::From(texture_name.data()), texture_desc, load_desc);
 
       stbi_image_free(texture_pixels);
     }
@@ -330,20 +330,18 @@ class DrawIndexedIndirectSampleApp final : public App
       .size        = gpu_materials.size() * sizeof(WavefrontMaterial),
       .usage_flags = {gpu::BufferUsage::STORAGE},
       .queue_flags = {gpu::QueueType::GRAPHIC},
-      .name        = "Material buffer",
     };
     const auto material_buffer =
-      gpu_system_->create_buffer(material_buffer_desc, gpu_materials.data());
+      gpu_system_->create_buffer("Material Buffer"_str, material_buffer_desc, gpu_materials.data());
     gpu_system_->flush_buffer(material_buffer);
 
     const gpu::BufferDesc material_indices_buffer_desc = {
       .size        = obj_loader.mat_indexes.size() * sizeof(MaterialIndexObj),
       .usage_flags = {gpu::BufferUsage::STORAGE},
       .queue_flags = {gpu::QueueType::GRAPHIC},
-      .name        = "Material indices buffer",
     };
-    const auto material_indices_buffer =
-      gpu_system_->create_buffer(material_indices_buffer_desc, obj_loader.mat_indexes.data());
+    const auto material_indices_buffer = gpu_system_->create_buffer(
+      "Material Indices Buffer"_str, material_indices_buffer_desc, obj_loader.mat_indexes.data());
     gpu_system_->flush_buffer(material_indices_buffer);
 
     instances_.push_back(RasterObjInstanceData{
@@ -404,42 +402,42 @@ public:
       {0.0f, 1.0f, 0.0f});
 
     vertex_buffer_ = gpu_system_->create_buffer(
+      "Vertex buffer"_str,
       {
         .size        = vertex_data_.size() * sizeof(VertexObj),
         .usage_flags = {gpu::BufferUsage::VERTEX},
         .queue_flags = {gpu::QueueType::GRAPHIC},
-        .name        = "Vertex buffer",
       },
       vertex_data_.data());
     gpu_system_->flush_buffer(vertex_buffer_);
 
     index_buffer_ = gpu_system_->create_buffer(
+      "Index buffer"_str,
       {
         .size = index_data_.size() * sizeof(IndexObj),
         .usage_flags =
           {gpu::BufferUsage::INDEX, gpu::BufferUsage::STORAGE, gpu::BufferUsage::AS_BUILD_INPUT},
         .queue_flags = {gpu::QueueType::GRAPHIC},
-        .name        = "Index buffer",
       },
       index_data_.data());
     gpu_system_->flush_buffer(index_buffer_);
 
     indirect_buffer_ = gpu_system_->create_buffer(
+      "Index buffer"_str,
       {
         .size        = indirect_commands_.size() * sizeof(gpu::DrawIndexedIndirectCommand),
         .usage_flags = {gpu::BufferUsage::INDIRECT},
         .queue_flags = {gpu::QueueType::GRAPHIC},
-        .name        = "Index buffer",
       },
       indirect_commands_.data());
     gpu_system_->flush_buffer(indirect_buffer_);
 
     instance_buffer_ = gpu_system_->create_buffer(
+      "Instance data"_str,
       {
         .size        = instances_.size() * sizeof(RasterObjInstanceData),
         .usage_flags = {gpu::BufferUsage::STORAGE},
         .queue_flags = {gpu::QueueType::GRAPHIC},
-        .name        = "Instance data",
       },
       instances_.data());
     gpu_system_->flush_buffer(instance_buffer_);

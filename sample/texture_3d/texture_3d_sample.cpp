@@ -233,7 +233,7 @@ class Texture3DSampleApp final : public App
     const vec2u32 viewport = gpu_system_->get_swapchain_extent();
 
     gpu::TextureNodeID noise_texture_node =
-      render_graph.import_texture("Noise Texture", test_texture_id_);
+      render_graph.import_texture("Noise Texture"_str, test_texture_id_);
     if (update_noise_texture)
     {
       struct UpdatePassParameter
@@ -244,7 +244,7 @@ class Texture3DSampleApp final : public App
       const auto update_pass_parameter =
         render_graph
           .add_non_shader_pass<UpdatePassParameter>(
-            "Update Noise Texture",
+            "Update Noise Texture"_str,
             gpu::QueueType::TRANSFER,
             [noise_texture_node](auto& parameter, auto& builder)
             {
@@ -253,7 +253,7 @@ class Texture3DSampleApp final : public App
             },
             [](const auto& parameter, auto& registry, auto& command_list)
             {
-              runtime::ScopeAllocator scope_allocator("Update Noise Execution");
+              runtime::ScopeAllocator scope_allocator("Update Noise Execution"_str);
               const auto* data = create_noise_data(DIMENSION, scope_allocator);
               const gpu::TextureRegionUpdate region_load = {
                 .subresource = {.layer_count = 1},
@@ -281,11 +281,11 @@ class Texture3DSampleApp final : public App
     };
 
     const auto copy_dst_texture_node = render_graph.create_texture(
-      "Copy Dst Texture", gpu::RGTextureDesc::create_d3(gpu::TextureFormat::R8, 1, DIMENSION));
+      "Copy Dst Texture"_str, gpu::RGTextureDesc::create_d3(gpu::TextureFormat::R8, 1, DIMENSION));
     const auto copy_pass_parameter =
       render_graph
         .add_non_shader_pass<CopyPassParameter>(
-          "Copy Pass Parameter",
+          "Copy Pass Parameter"_str,
           gpu::QueueType::TRANSFER,
           [=](auto& parameter, auto& builder)
           {
@@ -317,7 +317,7 @@ class Texture3DSampleApp final : public App
     };
 
     const auto& raster_node = render_graph.add_raster_pass<RenderPassParameter>(
-      "Render Pass",
+      "Render Pass"_str,
       gpu::RGRenderTargetDesc(viewport, color_attachment_desc),
       [noise_texture_node](auto& parameter, auto& builder)
       {
@@ -393,7 +393,7 @@ class Texture3DSampleApp final : public App
 public:
   explicit Texture3DSampleApp(const AppConfig& app_config) : App(app_config)
   {
-    runtime::ScopeAllocator scope_allocator("Texture 3D Sample App");
+    runtime::ScopeAllocator scope_allocator("Texture 3D Sample App"_str);
     const auto shader_source =
       gpu::ShaderSource::From(gpu::ShaderFile{.path = Path::From("texture_3d_sample.hlsl"_str)});
     const auto search_path  = Path::From("shaders/"_str);
@@ -414,21 +414,21 @@ public:
     program_id_ = result.ok_ref();
 
     vertex_buffer_id_ = gpu_system_->create_buffer(
+      "Vertex buffer"_str,
       {
         .size        = sizeof(Vertex) * std::size(VERTICES),
         .usage_flags = {gpu::BufferUsage::VERTEX},
         .queue_flags = {gpu::QueueType::GRAPHIC},
-        .name        = "Vertex buffer",
       },
       VERTICES);
     gpu_system_->flush_buffer(vertex_buffer_id_);
 
     index_buffer_id_ = gpu_system_->create_buffer(
+      "Index buffer"_str,
       {
         .size        = sizeof(Index) * std::size(INDICES),
         .usage_flags = {gpu::BufferUsage::INDEX},
         .queue_flags = {gpu::QueueType::GRAPHIC},
-        .name        = "Index buffer",
       },
       INDICES);
     gpu_system_->flush_buffer(index_buffer_id_);
@@ -446,8 +446,8 @@ public:
       };
 
       test_texture_id_ = gpu_system_->create_texture(
+        "Test texture"_str,
         gpu::TextureDesc::d3(
-          "Test texture",
           gpu::TextureFormat::R8,
           1,
           {gpu::TextureUsage::SAMPLED, gpu::TextureUsage::TRANSFER_SRC},

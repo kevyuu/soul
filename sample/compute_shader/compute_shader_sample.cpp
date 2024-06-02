@@ -26,7 +26,7 @@ class ComputeShaderSampleApp final : public App
     const vec2u32 viewport = gpu_system_->get_swapchain_extent();
 
     const gpu::TextureNodeID target_texture = render_graph.create_texture(
-      "Target Texture",
+      "Target Texture"_str,
       gpu::RGTextureDesc::create_d2(
         gpu::TextureFormat::RGBA8,
         1,
@@ -40,7 +40,7 @@ class ComputeShaderSampleApp final : public App
     };
 
     const auto& compute_node = render_graph.add_compute_pass<ComputePassParameter>(
-      "Compute Pass",
+      "Compute Pass"_str,
       [target_texture](auto& parameter, auto& builder)
       {
         parameter.target_texture = builder.add_shader_texture(

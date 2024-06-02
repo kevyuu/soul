@@ -504,7 +504,7 @@ namespace soul::app
   void Window::set_window_title(StringView title)
   {
     runtime::ScopeAllocator scope_allocator(
-      "soul::app::set_window_title", runtime::get_temp_allocator());
+      "soul::app::set_window_title"_str, runtime::get_temp_allocator());
     const char* title_cstr = get_or_create_cstr(title, ptrof(scope_allocator));
     glfwSetWindowTitle(glfw_window_, title_cstr);
   }

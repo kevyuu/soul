@@ -50,7 +50,7 @@ class IndexBufferSampleApp final : public App
     };
 
     const auto& raster_node = render_graph.add_raster_pass<PassParameter>(
-      "Triangle Test",
+      "Triangle Test"_str,
       gpu::RGRenderTargetDesc(viewport, color_attachment_desc),
       [](auto& parameter, auto& builder) {
 
@@ -125,18 +125,22 @@ public:
     }
     program_id_       = result.ok_ref();
     vertex_buffer_id_ = gpu_system_->create_buffer(
-      {.size        = std::size(VERTICES) * sizeof(Vertex),
-       .usage_flags = {gpu::BufferUsage::VERTEX},
-       .queue_flags = {gpu::QueueType::GRAPHIC},
-       .name        = "Vertex buffer"},
+      "Vertex buffer"_str,
+      {
+        .size        = std::size(VERTICES) * sizeof(Vertex),
+        .usage_flags = {gpu::BufferUsage::VERTEX},
+        .queue_flags = {gpu::QueueType::GRAPHIC},
+      },
       VERTICES);
     gpu_system_->flush_buffer(vertex_buffer_id_);
 
     index_buffer_id_ = gpu_system_->create_buffer(
-      {.size        = std::size(INDICES) * sizeof(Index),
-       .usage_flags = {gpu::BufferUsage::INDEX},
-       .queue_flags = {gpu::QueueType::GRAPHIC},
-       .name        = "Index buffer"},
+      "Index buffer"_str,
+      {
+        .size        = std::size(INDICES) * sizeof(Index),
+        .usage_flags = {gpu::BufferUsage::INDEX},
+        .queue_flags = {gpu::QueueType::GRAPHIC},
+      },
       INDICES);
     gpu_system_->flush_buffer(index_buffer_id_);
   }

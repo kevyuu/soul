@@ -64,7 +64,7 @@ class Texture3DSampleApp final : public App
     const vec2u32 viewport = gpu_system_->get_swapchain_extent();
 
     const auto persistent_texture_node_id =
-      render_graph.import_texture("Persistent Texture", test_texture_id_);
+      render_graph.import_texture("Persistent Texture"_str, test_texture_id_);
 
     struct UpdatePassParameter
     {
@@ -74,7 +74,7 @@ class Texture3DSampleApp final : public App
     const auto update_pass_parameter =
       render_graph
         .add_non_shader_pass<UpdatePassParameter>(
-          "Update Texture Pass",
+          "Update Texture Pass"_str,
           gpu::QueueType::TRANSFER,
           [=](auto& parameter, auto& builder)
           {
@@ -96,7 +96,7 @@ class Texture3DSampleApp final : public App
         .get_parameter();
 
     const auto dst_texture_node_id = render_graph.create_texture(
-      "Copy dst texture",
+      "Copy dst texture"_str,
       gpu::RGTextureDesc::create_d2(gpu::TextureFormat::RGBA8, 1, {width_, height_}));
 
     struct CopyPassParameter
@@ -108,7 +108,7 @@ class Texture3DSampleApp final : public App
     auto copy_pass_parameter =
       render_graph
         .add_non_shader_pass<CopyPassParameter>(
-          "Copy Texture Pass",
+          "Copy Texture Pass"_str,
           gpu::QueueType::TRANSFER,
           [=](auto& parameter, auto& builder)
           {
@@ -138,7 +138,7 @@ class Texture3DSampleApp final : public App
     };
 
     const auto& raster_node = render_graph.add_raster_pass<RenderPassParameter>(
-      "Render Pass",
+      "Render Pass"_str,
       gpu::RGRenderTargetDesc(viewport, color_attachment_desc),
       [copy_pass_parameter](auto& parameter, auto& builder)
       {
@@ -240,21 +240,21 @@ public:
     program_id_ = result.ok_ref();
 
     vertex_buffer_id_ = gpu_system_->create_buffer(
+      "Vertex buffer"_str,
       {
         .size        = sizeof(Vertex) * std::size(VERTICES),
         .usage_flags = {gpu::BufferUsage::VERTEX},
         .queue_flags = {gpu::QueueType::GRAPHIC},
-        .name        = "Vertex buffer",
       },
       VERTICES);
     gpu_system_->flush_buffer(vertex_buffer_id_);
 
     index_buffer_id_ = gpu_system_->create_buffer(
+      "Index buffer"_str,
       {
         .size        = sizeof(Index) * std::size(INDICES),
         .usage_flags = {gpu::BufferUsage::INDEX},
         .queue_flags = {gpu::QueueType::GRAPHIC},
-        .name        = "Index buffer",
       },
       INDICES);
     gpu_system_->flush_buffer(index_buffer_id_);
@@ -266,15 +266,16 @@ public:
       height_            = height;
       channel_count_     = channel_count;
 
-      test_texture_id_ = gpu_system_->create_texture(gpu::TextureDesc::d2(
-        "Test texture",
-        gpu::TextureFormat::RGBA8,
-        1,
-        {gpu::TextureUsage::SAMPLED,
-         gpu::TextureUsage::TRANSFER_SRC,
-         gpu::TextureUsage::TRANSFER_DST},
-        {gpu::QueueType::GRAPHIC},
-        {static_cast<u32>(width), static_cast<u32>(height)}));
+      test_texture_id_ = gpu_system_->create_texture(
+        "Test Texture"_str,
+        gpu::TextureDesc::d2(
+          gpu::TextureFormat::RGBA8,
+          1,
+          {gpu::TextureUsage::SAMPLED,
+           gpu::TextureUsage::TRANSFER_SRC,
+           gpu::TextureUsage::TRANSFER_DST},
+          {gpu::QueueType::GRAPHIC},
+          {static_cast<u32>(width), static_cast<u32>(height)}));
       test_sampler_id_ = gpu_system_->request_sampler(
         gpu::SamplerDesc::same_filter_wrap(gpu::TextureFilter::LINEAR, gpu::TextureWrap::REPEAT));
     }

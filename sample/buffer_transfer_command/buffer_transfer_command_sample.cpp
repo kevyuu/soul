@@ -4,10 +4,9 @@
 #include "gpu/type.h"
 #include "math/math.h"
 
+#include "app.h"
 #include "builtins.h"
 #include "shaders/transform.hlsl"
-
-#include <app.h>
 
 #include <array>
 #include <ranges>
@@ -92,12 +91,12 @@ class BufferTransferCommandSample final : public App
     const auto elapsed_seconds_float = get_elapsed_seconds();
 
     const auto transform_buffer_q1 =
-      render_graph.import_buffer("Transform Buffer Q1", transform_q1_buffer_id_);
+      render_graph.import_buffer("Transform Buffer Q1"_str, transform_q1_buffer_id_);
     const auto transform_buffer_q2 =
-      render_graph.import_buffer("Transform Buffer Q2", transform_q2_buffer_id_);
+      render_graph.import_buffer("Transform Buffer Q2"_str, transform_q2_buffer_id_);
 
     const auto transient_transform_buffer = render_graph.create_buffer(
-      "Transient Transform Buffer",
+      "Transient Transform Buffer"_str,
       {
         .size = transient_transforms_.size() * sizeof(Transform),
       });
@@ -112,7 +111,7 @@ class BufferTransferCommandSample final : public App
     UpdatePassParameter update_pass_parameter =
       render_graph
         .add_non_shader_pass<UpdatePassParameter>(
-          "Update Transform Pass",
+          "Update Transform Pass"_str,
           gpu::QueueType::TRANSFER,
           [=](auto& parameter, auto& builder)
           {
@@ -182,7 +181,7 @@ class BufferTransferCommandSample final : public App
     };
 
     const auto copy_transform_buffer = render_graph.create_buffer(
-      "Copy Transform Buffer",
+      "Copy Transform Buffer"_str,
       {
         .size = (transforms_q1_.size() + transforms_q2_.size() + transient_transforms_.size()) *
                 sizeof(Transform),
@@ -190,7 +189,7 @@ class BufferTransferCommandSample final : public App
     CopyPassParameter copy_pass_parameter =
       render_graph
         .add_non_shader_pass<CopyPassParameter>(
-          "Copy Transform Buffer",
+          "Copy Transform Buffer"_str,
           gpu::QueueType::TRANSFER,
           [=](auto& parameter, auto& builder)
           {
@@ -243,7 +242,7 @@ class BufferTransferCommandSample final : public App
     };
 
     const auto& raster_node = render_graph.add_raster_pass<RenderPassParameter>(
-      "Render Pass",
+      "Render Pass"_str,
       gpu::RGRenderTargetDesc(viewport, color_attachment_desc),
       [copy_pass_parameter](auto& parameter, auto& builder)
       {
@@ -356,37 +355,38 @@ public:
     program_id_ = result.ok_ref();
 
     vertex_buffer_id_ = gpu_system_->create_buffer(
+      "Vertex buffer"_str,
       {
         .size        = sizeof(Vertex) * std::size(VERTICES),
         .usage_flags = {gpu::BufferUsage::VERTEX},
         .queue_flags = {gpu::QueueType::GRAPHIC},
-        .name        = "Vertex buffer",
       },
       VERTICES);
     gpu_system_->flush_buffer(vertex_buffer_id_);
 
     index_buffer_id_ = gpu_system_->create_buffer(
+      "Index buffer"_str,
       {
         .size        = sizeof(Index) * std::size(INDICES),
         .usage_flags = {gpu::BufferUsage::INDEX},
         .queue_flags = {gpu::QueueType::GRAPHIC},
-        .name        = "Index buffer",
       },
       INDICES);
     gpu_system_->flush_buffer(index_buffer_id_);
 
     fill_transform_vector(transforms_q1_, -1.0f, -1.0f, 0.0f, 0.0f, ROW_COUNT, COL_COUNT);
     transform_q1_buffer_id_ = gpu_system_->create_buffer(
+      "Transform q1 buffer"_str,
       {
         .size        = TRANSFORM_COUNT * sizeof(Transform),
         .usage_flags = {gpu::BufferUsage::STORAGE, gpu::BufferUsage::TRANSFER_SRC},
         .queue_flags = {gpu::QueueType::GRAPHIC, gpu::QueueType::TRANSFER},
-        .name        = "Transform q1 buffer",
       },
       transforms_q1_.data());
 
     fill_transform_vector(transforms_q2_, 0.0f, -1.0f, 1.0f, 0.0f, ROW_COUNT, COL_COUNT);
     transform_q2_buffer_id_ = gpu_system_->create_buffer(
+      "Transform q2 buffer"_str,
       {
         .size        = TRANSFORM_COUNT * sizeof(Transform),
         .usage_flags = {gpu::BufferUsage::STORAGE, gpu::BufferUsage::TRANSFER_SRC},
@@ -395,7 +395,6 @@ public:
           gpu::MemoryOption{
             .required  = {gpu::MemoryProperty::HOST_COHERENT},
             .preferred = {gpu::MemoryProperty::DEVICE_LOCAL}},
-        .name = "Transform q2 buffer",
       },
       transforms_q2_.data());
 

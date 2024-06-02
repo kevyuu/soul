@@ -1,4 +1,5 @@
 #include "app/gui.h"
+#include "app/imnodes.h"
 #include "app/impl/gui_texture_id.h"
 #include "app/input_state.h"
 
@@ -368,7 +369,6 @@ namespace soul::app
 
       const auto usage        = gpu::TextureUsageFlags({gpu::TextureUsage::SAMPLED});
       const auto texture_desc = gpu::TextureDesc::d2(
-        "",
         format,
         1,
         usage,
@@ -391,7 +391,7 @@ namespace soul::app
         .regions         = {&region_load, 1},
         .generate_mipmap = false,
       };
-      const auto texture_id = gpu_system->create_texture(texture_desc, load_desc);
+      const auto texture_id = gpu_system->create_texture(""_str, texture_desc, load_desc);
       gpu_system->flush_texture(texture_id, usage);
 
       textures.insert(path.clone(), texture_id);
@@ -551,20 +551,19 @@ namespace soul::app
     };
 
     const auto font_tex_desc = gpu::TextureDesc::d2(
-      "Font Texture",
       gpu::TextureFormat::RGBA8,
       1,
       {gpu::TextureUsage::SAMPLED},
       {gpu::QueueType::GRAPHIC},
       vec2u32(width, height));
 
-    auto font_texture_id = gpu_system->create_texture(font_tex_desc, load_desc);
+    auto font_texture_id = gpu_system->create_texture("Font Texture"_str, font_tex_desc, load_desc);
     gpu_system->flush_texture(font_texture_id, {gpu::TextureUsage::SAMPLED});
     const auto font_sampler_id = gpu_system->request_sampler(gpu::SamplerDesc::same_filter_wrap(
       gpu::TextureFilter::LINEAR, gpu::TextureWrap::CLAMP_TO_EDGE));
     io.Fonts->TexID            = GuiTextureID(font_texture_id);
 
-    io.FontGlobalScale = 1.5f;
+    io.FontGlobalScale = 1.0f;
 
     impl_ = allocator_
               ->generate(
@@ -658,9 +657,9 @@ namespace soul::app
 
     SOUL_ASSERT(0, draw_data.TotalVtxCount > 0 && draw_data.TotalIdxCount > 0);
     const gpu::BufferNodeID vertex_buffer_node_id = render_graph->create_buffer(
-      "ImGui Vertex", {.size = sizeof(ImDrawVert) * draw_data.TotalVtxCount});
+      "ImGui Vertex"_str, {.size = sizeof(ImDrawVert) * draw_data.TotalVtxCount});
     const gpu::BufferNodeID index_buffer_node_id = render_graph->create_buffer(
-      "ImGui Index", {.size = sizeof(ImDrawIdx) * draw_data.TotalIdxCount});
+      "ImGui Index"_str, {.size = sizeof(ImDrawIdx) * draw_data.TotalIdxCount});
 
     struct Transform
     {
@@ -669,7 +668,7 @@ namespace soul::app
     };
 
     const gpu::BufferNodeID transform_buffer_node_id =
-      render_graph->create_buffer("ImGui Transform Buffer", {.size = sizeof(Transform)});
+      render_graph->create_buffer("ImGui Transform Buffer"_str, {.size = sizeof(Transform)});
 
     struct UpdatePassParameter
     {
@@ -681,7 +680,7 @@ namespace soul::app
     const auto update_pass_parameter =
       render_graph
         ->add_non_shader_pass<UpdatePassParameter>(
-          "Update Texture Pass",
+          "Update Texture Pass"_str,
           gpu::QueueType::TRANSFER,
           [=](auto& parameter, auto& builder)
           {
@@ -694,7 +693,7 @@ namespace soul::app
           },
           [this, &draw_data](const auto& parameter, auto& registry, auto& command_list)
           {
-            runtime::ScopeAllocator scope_allocator("Imgui Update Pass execute");
+            runtime::ScopeAllocator scope_allocator("Imgui Update Pass execute"_str);
             using Command = gpu::RenderCommandUpdateBuffer;
             {
               // update vertex_buffer
@@ -761,7 +760,7 @@ namespace soul::app
     };
 
     render_graph->add_raster_pass<RenderPassParameter>(
-      "ImGui Render Pass",
+      "ImGui Render Pass"_str,
       gpu::RGRenderTargetDesc(viewport, color_attachment_desc),
       [this, update_pass_parameter](auto& parameter, auto& builder)
       {
@@ -781,7 +780,7 @@ namespace soul::app
       },
       [viewport, &draw_data, this](const auto& parameter, auto& registry, auto& command_list)
       {
-        runtime::ScopeAllocator scope_allocator("Imgui Render Pass Execute Scope Allocator");
+        runtime::ScopeAllocator scope_allocator("Imgui Render Pass Execute Scope Allocator"_str);
         gpu::GraphicPipelineStateDesc pipeline_desc = {
           .program_id = impl_->program_id,
           .input_bindings =
@@ -1312,7 +1311,7 @@ namespace soul::app
   // ----------------------------------------------------------------------------
   auto Gui::input_text(CompStr label, String& text, usize text_length_limit) -> b8
   {
-    runtime::ScopeAllocator scope_allocator("Input Text");
+    runtime::ScopeAllocator scope_allocator("Input Text"_str);
     char* buffer = scope_allocator.allocate_array<char>(text_length_limit);
     std::memcpy(buffer, text.c_str(), text.size() + 1);
     const b8 is_change = ImGui::InputText(label.c_str(), buffer, text_length_limit);

@@ -1,9 +1,11 @@
 #pragma once
 
-#include "gpu/intern/render_compiler.h"
-#include "gpu/system.h"
-#include "gpu/type.h"
 #include <vulkan/vulkan_core.h>
+
+#include "gpu/system.h"
+
+#include "gpu/impl/vulkan/render_compiler.h"
+#include "gpu/impl/vulkan/type.h"
 
 namespace soul::gpu
 {

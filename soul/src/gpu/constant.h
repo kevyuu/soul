@@ -19,9 +19,8 @@ namespace soul::gpu
     MAX_COLOR_ATTACHMENT_PER_SHADER + MAX_RESOLVE_ATTACHMENT_PER_SHADER +
     MAX_INPUT_ATTACHMENT_PER_SHADER + MAX_DEPTH_ATTACHMENT_PER_SHADER;
 
-  constexpr u32 MAX_DYNAMIC_BUFFER_PER_SET = 6;
-  constexpr u32 MAX_SIGNAL_SEMAPHORE       = 4;
-  constexpr u32 MAX_VERTEX_BINDING         = 16;
+  constexpr u32 MAX_SIGNAL_SEMAPHORE = 4;
+  constexpr u32 MAX_VERTEX_BINDING   = 16;
 
   constexpr u32 PUSH_CONSTANT_SIZE                  = 256;
   constexpr u32 BINDLESS_SET_COUNT                  = 5;

@@ -6,7 +6,7 @@ namespace soul::app
 {
 
   AppRuntime::AppRuntime()
-      : malloc_allocator_("Default Allocator"),
+      : malloc_allocator_("Default Allocator"_str),
         default_allocator_(
           &malloc_allocator_,
           runtime::DefaultAllocatorProxy::Config(
@@ -15,10 +15,10 @@ namespace soul::app
             memory::CounterProxy::Config(),
             memory::ClearValuesProxy::Config{u8{0xFA}, u8{0xFF}},
             memory::BoundGuardProxy::Config())),
-        page_allocator_("Page allocator"),
+        page_allocator_("Page allocator"_str),
         proxy_page_allocator_(&page_allocator_, memory::ProfileProxy::Config()),
         linear_allocator_(
-          "Main Thread Temporary Allocator", 10 * ONE_MEGABYTE, &proxy_page_allocator_),
+          "Main Thread Temporary Allocator"_str, 10 * ONE_MEGABYTE, &proxy_page_allocator_),
         temp_allocator_(&linear_allocator_, runtime::TempProxy::Config())
   {
     runtime::init({0, 4096, &temp_allocator_, 20 * ONE_MEGABYTE, &default_allocator_});
@@ -76,7 +76,7 @@ namespace soul::app
     gpu::RenderGraph render_graph;
 
     const auto swapchain_texture_node_id =
-      render_graph.import_texture("Swapchain Texture", gpu_system_.get_swapchain_texture());
+      render_graph.import_texture("Swapchain Texture"_str, gpu_system_.get_swapchain_texture());
     on_render_frame(&render_graph);
     gui_->render_frame(&render_graph, swapchain_texture_node_id, cpu_timer_.delta_in_seconds());
     gpu_system_.execute(render_graph);

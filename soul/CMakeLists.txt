@@ -1,27 +1,28 @@
 set(PUBLIC_HEADER_DIR src)
 
-set(SOUL_SOURCES_OSX src/memory/intern/osx/page_allocator.cpp)
+set(SOUL_SOURCES_OSX src/memory/impl/osx/page_allocator.cpp)
 
-set(SOUL_SOURCES_WINDOWS src/memory/intern/windows/page_allocator.cpp)
+set(SOUL_SOURCES_WINDOWS src/memory/impl/windows/page_allocator.cpp)
 
 set(SOUL_SOURCES
     src/core/log.cpp
     src/core/panic.cpp
     src/core/panic_format.cpp
-    src/gpu/intern/common.cpp
-    src/gpu/intern/glfw_wsi.cpp
-    src/gpu/intern/gpu_system.cpp
-    src/gpu/intern/render_graph.cpp
-    src/gpu/intern/render_graph_registry.cpp
-    src/gpu/intern/render_graph_execution.cpp
-    src/gpu/intern/render_graph_registry.cpp
-    src/gpu/intern/render_compiler.cpp
-    src/gpu/intern/bindless_descriptor_allocator.cpp
-    src/memory/intern/malloc_allocator.cpp
-    src/memory/intern/proxy.cpp
-    src/memory/intern/linear_allocator.cpp
-    src/runtime/intern/runtime_system.cpp
-    src/runtime/intern/task_deque.cpp
+    src/gpu/impl/vulkan/common.cpp
+    src/gpu/impl/vulkan/glfw_wsi.cpp
+    src/gpu/impl/vulkan/gpu_system.cpp
+    src/gpu/impl/vulkan/render_graph.cpp
+    src/gpu/impl/vulkan/render_graph_registry.cpp
+    src/gpu/impl/vulkan/render_graph_execution.cpp
+    src/gpu/impl/vulkan/render_graph_registry.cpp
+    src/gpu/impl/vulkan/render_compiler.cpp
+    src/gpu/impl/vulkan/bindless_descriptor_allocator.cpp
+    src/gpu/impl/vulkan/vma_impl.cpp
+    src/memory/impl/malloc_allocator.cpp
+    src/memory/impl/proxy.cpp
+    src/memory/impl/linear_allocator.cpp
+    src/runtime/impl/runtime_system.cpp
+    src/runtime/impl/task_deque.cpp
     src/misc/image_data.cpp
     "$<$<STREQUAL:${CMAKE_SYSTEM_NAME},Darwin>:${SOUL_SOURCES_OSX}>"
     "$<$<STREQUAL:${CMAKE_SYSTEM_NAME},Windows>:${SOUL_SOURCES_WINDOWS}>")

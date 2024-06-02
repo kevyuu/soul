@@ -7,7 +7,7 @@ int TestAllocator::freeCountAll      = 0;
 size_t TestAllocator::allocVolumeAll = 0;
 void* TestAllocator::lastAllocation  = nullptr;
 
-auto TestAllocator::try_allocate(usize size, usize alignment, const char* tag)
+auto TestAllocator::try_allocate(usize size, usize alignment, StringView tag)
   -> soul::memory::Allocation
 {
   if (size == 0)

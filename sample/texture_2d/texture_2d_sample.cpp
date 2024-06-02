@@ -54,7 +54,7 @@ class Texture2DSampleApp final : public App
     };
 
     const auto& raster_node = render_graph.add_raster_pass<RenderPassParameter>(
-      "Render Pass",
+      "Render Pass"_str,
       gpu::RGRenderTargetDesc(viewport, color_attachment_desc),
       [this](auto& parameter, auto& builder) {},
       [viewport, this](const auto& /* parameter */, auto& registry, auto& command_list)
@@ -150,21 +150,21 @@ public:
     program_id_ = result.ok_ref();
 
     vertex_buffer_id_ = gpu_system_->create_buffer(
+      "Vertex buffer"_str,
       {
         .size        = sizeof(Vertex) * std::size(VERTICES),
         .usage_flags = {gpu::BufferUsage::VERTEX},
         .queue_flags = {gpu::QueueType::GRAPHIC},
-        .name        = "Vertex buffer",
       },
       VERTICES);
     gpu_system_->flush_buffer(vertex_buffer_id_);
 
     index_buffer_id_ = gpu_system_->create_buffer(
+      "Index buffer"_str,
       {
         .size        = sizeof(Index) * std::size(INDICES),
         .usage_flags = {gpu::BufferUsage::INDEX},
         .queue_flags = {gpu::QueueType::GRAPHIC},
-        .name        = "Index buffer",
       },
       INDICES);
     gpu_system_->flush_buffer(index_buffer_id_);
@@ -186,8 +186,8 @@ public:
       };
 
       test_texture_id_ = gpu_system_->create_texture(
+        "Test Texture"_str,
         gpu::TextureDesc::d2(
-          "Test texture",
           gpu::TextureFormat::RGBA8,
           1,
           {gpu::TextureUsage::SAMPLED},

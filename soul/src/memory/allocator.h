@@ -1,8 +1,10 @@
 #pragma once
 
+#include "core/comp_str.h"
 #include "core/not_null.h"
 #include "core/option.h"
 #include "core/panic.h"
+#include "core/string_view.h"
 #include "core/type.h"
 
 namespace soul::memory
@@ -23,7 +25,7 @@ namespace soul::memory
   public:
     Allocator() = delete;
 
-    explicit Allocator(const char* name) : name_(name) {}
+    explicit Allocator(CompStr name) : name_(name) {}
 
     Allocator(const Allocator& other) = delete;
 
@@ -35,7 +37,7 @@ namespace soul::memory
 
     virtual ~Allocator() = default;
 
-    virtual auto try_allocate(usize size, usize alignment, const char* tag) -> Allocation = 0;
+    virtual auto try_allocate(usize size, usize alignment, StringView tag) -> Allocation = 0;
 
     virtual void deallocate(void* addr) = 0;
 
@@ -44,7 +46,7 @@ namespace soul::memory
     virtual void reset() = 0;
 
     [[nodiscard]]
-    auto name() const -> const char*
+    auto name() const -> CompStr
     {
       return name_;
     }
@@ -52,12 +54,12 @@ namespace soul::memory
     [[nodiscard]]
     auto allocate(const usize size, const usize alignment) -> void*
     {
-      const Allocation allocation = try_allocate(size, alignment, "untagged");
+      const Allocation allocation = try_allocate(size, alignment, "untagged"_str);
       return allocation.addr;
     }
 
     [[nodiscard]]
-    auto allocate(const usize size, const usize alignment, const char* tag) -> void*
+    auto allocate(const usize size, const usize alignment, StringView tag) -> void*
     {
       const Allocation allocation = try_allocate(size, alignment, tag);
       return allocation.addr;
@@ -65,7 +67,7 @@ namespace soul::memory
 
     template <typename T>
     [[nodiscard]]
-    auto allocate_array(const usize count, const char* tag = "untagged") -> T*
+    auto allocate_array(const usize count, StringView tag = "untagged"_str) -> T*
     {
       const Allocation allocation = try_allocate(count * sizeof(T), alignof(T), tag);
       // NOLINT(bugprone-sizeof-expression)
@@ -82,7 +84,7 @@ namespace soul::memory
     [[nodiscard]]
     auto create(Args&&... args) -> MaybeNull<Type*>
     {
-      Allocation allocation = try_allocate(sizeof(Type), alignof(Type), "untagged");
+      Allocation allocation = try_allocate(sizeof(Type), alignof(Type), "untagged"_str);
       return allocation.addr ? new (allocation.addr) Type(std::forward<Args>(args)...) : nullptr;
     }
 
@@ -90,7 +92,7 @@ namespace soul::memory
     [[nodiscard]]
     auto generate(Fn fn) -> MaybeNull<T*>
     {
-      Allocation allocation = try_allocate(sizeof(T), alignof(T), "untagged");
+      Allocation allocation = try_allocate(sizeof(T), alignof(T), "untagged"_str);
       return allocation.addr ? new (allocation.addr) T(std::invoke(fn)) : nullptr;
     }
 
@@ -107,7 +109,7 @@ namespace soul::memory
     }
 
   private:
-    const char* name_ = nullptr;
+    CompStr name_;
   };
 
   template <typename T>

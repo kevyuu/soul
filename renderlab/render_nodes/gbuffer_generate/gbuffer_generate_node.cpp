@@ -52,34 +52,40 @@ namespace renderlab
     const auto prev_meshid_gbuffers           = meshid_gbuffers_[(frame_index + 1) % 2];
 
     const auto prev_normal_roughness_gbuffers_node = render_graph->import_texture(
-      "Prev Normal Roughness GBuffers", prev_normal_roughness_gbuffers);
+      "Prev Normal Roughness GBuffers"_str, prev_normal_roughness_gbuffers);
     const auto prev_motion_curve_gbuffers_node =
-      render_graph->import_texture("Prev Motion LinearZ GBuffers", prev_motion_curve_gbuffers);
+      render_graph->import_texture("Prev Motion LinearZ GBuffers"_str, prev_motion_curve_gbuffers);
     const auto prev_meshid_gbuffers_node =
-      render_graph->import_texture("Prev MeshID GBuffers", prev_meshid_gbuffers);
+      render_graph->import_texture("Prev MeshID GBuffers"_str, prev_meshid_gbuffers);
 
     const auto current_depth_gbuffer_node = render_graph->create_texture(
-      "Depth Texture", gpu::RGTextureDesc::create_d2(gpu::TextureFormat::DEPTH32F, 1, viewport));
+      "Depth Texture"_str,
+      gpu::RGTextureDesc::create_d2(gpu::TextureFormat::DEPTH32F, 1, viewport));
     const auto prev_depth_gbuffers_node =
-      render_graph->import_texture("Prev Depth GBuffers", prev_depth_texture_);
+      render_graph->import_texture("Prev Depth GBuffers"_str, prev_depth_texture_);
 
     const gpu::RGColorAttachmentDesc albedo_metal_texture = {
-      .node_id = render_graph->import_texture("Albedo Metal GBuffers", albedo_metal_gbuffer_),
+      .node_id = render_graph->import_texture("Albedo Metal GBuffers"_str, albedo_metal_gbuffer_),
       .clear   = true,
     };
     const gpu::RGColorAttachmentDesc normal_roughness_texture = {
-      .node_id =
-        render_graph->import_texture("GBuffer_Normal_Roughness", current_normal_roughness_gbuffers),
+      .node_id = render_graph->import_texture(
+        "GBuffer_Normal_Roughness"_str, current_normal_roughness_gbuffers),
       .clear = true,
     };
     const gpu::RGColorAttachmentDesc motion_curve_texture = {
       .node_id =
-        render_graph->import_texture("GBuffer_motion_curve", current_motion_curve_gbuffers),
+        render_graph->import_texture("GBuffer_motion_curve"_str, current_motion_curve_gbuffers),
       .clear = true,
     };
     const gpu::RGColorAttachmentDesc mesh_id_texture = {
-      .node_id = render_graph->import_texture("GBuffer_MeshID", current_meshid_gbuffers),
+      .node_id = render_graph->import_texture("GBuffer_MeshID"_str, current_meshid_gbuffers),
       .clear   = true,
+    };
+    const gpu::RGColorAttachmentDesc emissive_texture = {
+      .node_id = render_graph->create_texture(
+        "GBuffer Emissive"_str,
+        gpu::RGTextureDesc::create_d2(gpu::TextureFormat::RGBA16F, 1, viewport)),
     };
 
     auto clear_value                                              = gpu::ClearValue();
@@ -92,15 +98,16 @@ namespace renderlab
 
     gpu::RGRenderTargetDesc render_target_desc;
     render_target_desc.dimension = viewport;
-    render_target_desc.color_attachments.reserve(4);
+    render_target_desc.color_attachments.reserve(5);
     render_target_desc.color_attachments.push_back(albedo_metal_texture);
     render_target_desc.color_attachments.push_back(normal_roughness_texture);
     render_target_desc.color_attachments.push_back(motion_curve_texture);
     render_target_desc.color_attachments.push_back(mesh_id_texture);
+    render_target_desc.color_attachments.push_back(emissive_texture);
     render_target_desc.depth_stencil_attachment = depth_attachment_desc;
 
     const auto& pass = render_graph->add_raster_pass<Parameter>(
-      "GBuffer Generate Pass",
+      "GBuffer Generate Pass"_str,
       render_target_desc,
       [&scene](auto& parameter, auto& builder)
       {
@@ -124,7 +131,7 @@ namespace renderlab
               .height = static_cast<float>(viewport.y),
             },
           .scissor                = {.extent = viewport},
-          .color_attachment_count = 4,
+          .color_attachment_count = 5,
           .depth_stencil_attachment =
             {
               .depth_test_enable  = true,
@@ -153,6 +160,7 @@ namespace renderlab
     outputs.textures.insert(String(GBUFFER_NORMAL_ROUGHNESS), pass.get_color_attachment_node_id(1));
     outputs.textures.insert(String(GBUFFER_MOTION_CURVE), pass.get_color_attachment_node_id(2));
     outputs.textures.insert(String(GBUFFER_MESHID), pass.get_color_attachment_node_id(3));
+    outputs.textures.insert(String(GBUFFER_EMISSIVE), pass.get_color_attachment_node_id(4));
     outputs.textures.insert(String(GBUFFER_DEPTH), pass.get_depth_stencil_attachment_node_id());
 
     outputs.textures.insert(
@@ -161,7 +169,7 @@ namespace renderlab
     outputs.textures.insert(String(PREV_GBUFFER_MESHID), prev_meshid_gbuffers_node);
     outputs.textures.insert(String(PREV_GBUFFER_DEPTH), prev_depth_gbuffers_node);
     return outputs;
-  }
+  } // namespace renderlab
 
   void GBufferGenerateNode::on_gui_render(NotNull<app::Gui*> gui) {}
 
@@ -185,24 +193,10 @@ namespace renderlab
 
     viewport_ = viewport;
 
-    albedo_metal_gbuffer_ = gpu_system_->create_texture(gpu::TextureDesc::d2(
-      "albedo_metal_gbuffers",
-      gpu::TextureFormat::RGBA8,
-      1,
-      {
-        gpu::TextureUsage::COLOR_ATTACHMENT,
-        gpu::TextureUsage::SAMPLED,
-      },
-      {
-        gpu::QueueType::GRAPHIC,
-        gpu::QueueType::COMPUTE,
-      },
-      viewport));
+    albedo_metal_gbuffer_ = gpu_system_->create_texture(
+      "albedo_metal_gbuffers"_str,
+      gpu::TextureDesc::d2(
 
-    for (gpu::TextureID& texture_id : normal_roughness_gbuffers_)
-    {
-      texture_id = gpu_system_->create_texture(gpu::TextureDesc::d2(
-        "normal_rougness_gbuffers",
         gpu::TextureFormat::RGBA8,
         1,
         {
@@ -211,59 +205,79 @@ namespace renderlab
         },
         {
           gpu::QueueType::GRAPHIC,
-          gpu::QueueType::COMPUTE,
         },
         viewport));
+
+    for (gpu::TextureID& texture_id : normal_roughness_gbuffers_)
+    {
+      texture_id = gpu_system_->create_texture(
+        "normal_rougness_gbuffers"_str,
+        gpu::TextureDesc::d2(
+
+          gpu::TextureFormat::RGBA8,
+          1,
+          {
+            gpu::TextureUsage::COLOR_ATTACHMENT,
+            gpu::TextureUsage::SAMPLED,
+          },
+          {
+            gpu::QueueType::GRAPHIC,
+          },
+          viewport));
     }
 
     for (gpu::TextureID& texture_id : motion_curve_gbuffers_)
     {
-      texture_id = gpu_system_->create_texture(gpu::TextureDesc::d2(
-        "motion_curve_gbuffers",
-        gpu::TextureFormat::RGBA16F,
-        1,
-        {
-          gpu::TextureUsage::COLOR_ATTACHMENT,
-          gpu::TextureUsage::SAMPLED,
-        },
-        {
-          gpu::QueueType::GRAPHIC,
-          gpu::QueueType::COMPUTE,
-        },
-        viewport));
+      texture_id = gpu_system_->create_texture(
+        "motion_curve_gbuffers"_str,
+        gpu::TextureDesc::d2(
+
+          gpu::TextureFormat::RGBA16F,
+          1,
+          {
+            gpu::TextureUsage::COLOR_ATTACHMENT,
+            gpu::TextureUsage::SAMPLED,
+          },
+          {
+            gpu::QueueType::GRAPHIC,
+          },
+          viewport));
     }
 
     for (gpu::TextureID& texture_id : meshid_gbuffers_)
     {
-      texture_id = gpu_system_->create_texture(gpu::TextureDesc::d2(
-        "meshid_gbuffers",
-        gpu::TextureFormat::R32UI,
+      texture_id = gpu_system_->create_texture(
+        "meshid_gbuffers"_str,
+        gpu::TextureDesc::d2(
+
+          gpu::TextureFormat::R32UI,
+          1,
+          {
+            gpu::TextureUsage::COLOR_ATTACHMENT,
+            gpu::TextureUsage::SAMPLED,
+          },
+          {
+            gpu::QueueType::GRAPHIC,
+          },
+          viewport));
+    }
+
+    prev_depth_texture_ = gpu_system_->create_texture(
+      "prev depth gbuffer"_str,
+      gpu::TextureDesc::d2(
+
+        gpu::TextureFormat::DEPTH32F,
         1,
         {
-          gpu::TextureUsage::COLOR_ATTACHMENT,
+          gpu::TextureUsage::DEPTH_STENCIL_ATTACHMENT,
           gpu::TextureUsage::SAMPLED,
+          gpu::TextureUsage::TRANSFER_DST,
         },
         {
           gpu::QueueType::GRAPHIC,
           gpu::QueueType::COMPUTE,
+          gpu::QueueType::TRANSFER,
         },
         viewport));
-    }
-
-    prev_depth_texture_ = gpu_system_->create_texture(gpu::TextureDesc::d2(
-      "prev depth gbuffer",
-      gpu::TextureFormat::DEPTH32F,
-      1,
-      {
-        gpu::TextureUsage::DEPTH_STENCIL_ATTACHMENT,
-        gpu::TextureUsage::SAMPLED,
-        gpu::TextureUsage::TRANSFER_DST,
-      },
-      {
-        gpu::QueueType::GRAPHIC,
-        gpu::QueueType::COMPUTE,
-        gpu::QueueType::TRANSFER,
-      },
-      viewport));
   }
 } // namespace renderlab

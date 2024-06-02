@@ -17,7 +17,7 @@ namespace soul
 {
   auto get_default_allocator() -> memory::Allocator*
   {
-    static TestAllocator test_allocator("Test default allocator");
+    static TestAllocator test_allocator("Test default allocator"_str);
     return &test_allocator;
   }
 } // namespace soul
@@ -393,7 +393,7 @@ TEST_F(TestVectorManipulation, TestVectorCloneFrom)
   SOUL_TEST_RUN(
     test_assignment_operator(vector_list_testobj_arr, vector_list_testobj_arr.size() - 3));
 
-  TestAllocator test_allocator("Test Allocator For Copy Assignment Operator");
+  TestAllocator test_allocator("Test Allocator For Copy Assignment Operator"_str);
   VectorObj test_different_allocator(&test_allocator);
   SOUL_TEST_RUN(test_assignment_operator(test_different_allocator, 5));
   SOUL_TEST_RUN(test_assignment_operator(test_different_allocator, 7));
@@ -430,7 +430,7 @@ TEST_F(TestVectorManipulation, TestVectorMoveAssignmentOperator)
   SOUL_TEST_RUN(
     test_move_assignment_operator(vector_list_testobj_arr, vector_list_testobj_arr.size() - 3));
 
-  TestAllocator test_allocator("Test Allocator For Move Assignment Operator");
+  TestAllocator test_allocator("Test Allocator For Move Assignment Operator"_str);
   VectorObj test_different_allocator(&test_allocator);
   SOUL_TEST_RUN(test_move_assignment_operator(test_different_allocator, 5));
   SOUL_TEST_RUN(test_move_assignment_operator(test_different_allocator, 7));

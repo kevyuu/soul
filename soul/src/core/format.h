@@ -1,6 +1,7 @@
 #pragma once
 
 #include "core/builtins.h"
+#include "core/rid.h"
 
 using namespace soul;
 
@@ -43,4 +44,15 @@ struct std::formatter<soul::Matrix<T, R, C>> // NOLINT
   }
 };
 
-;
+template <typename TagT, u8 GenerationBitCountV>
+struct std::formatter<soul::RID<TagT, GenerationBitCountV>> // NOLINT
+    : std::formatter<u64>
+{
+  template <typename FormatContext>
+  auto format(const RID<TagT, GenerationBitCountV>& val, FormatContext& ctx) const
+  {
+    auto out = ctx.out();
+    out      = std::format_to(out, "{}|{}", val.generation(), val.index());
+    return out;
+  }
+};

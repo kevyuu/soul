@@ -18,7 +18,7 @@ namespace soul
 {
   auto get_default_allocator() -> memory::Allocator*
   {
-    static TestAllocator test_allocator("Test default allocator");
+    static TestAllocator test_allocator("Test default allocator"_str);
     return &test_allocator;
   }
 } // namespace soul
@@ -402,7 +402,7 @@ TEST(TestSBOVectorSetAllocator, TestSBOVectorSetAllocator)
 template <typename T, usize N = soul::get_sbo_vector_default_inline_element_count<T>()>
 void test_copy_assignment_operator(const usize src_size, const usize dst_size)
 {
-  TestAllocator test_allocator("Test Allocator For Copy Assignment Operator");
+  TestAllocator test_allocator("Test Allocator For Copy Assignment Operator"_str);
   const auto src_sequence = generate_random_sequence<T>(src_size);
   const auto dst_sequence = generate_random_sequence<T>(dst_size);
 
@@ -451,7 +451,7 @@ TEST(TestSBOVectorCopyAssignmentOperator, TestSBOVectorCopyAssignmentOperator)
 template <typename T, usize N = soul::get_sbo_vector_default_inline_element_count<T>()>
 void test_move_assignment_operator(const usize src_size, const usize dst_size)
 {
-  TestAllocator test_allocator("Test Allocator For Move Assignment Operator");
+  TestAllocator test_allocator("Test Allocator For Move Assignment Operator"_str);
   const auto src_sequence = generate_random_sequence<T>(src_size);
   const auto dst_sequence = generate_random_sequence<T>(dst_size);
 

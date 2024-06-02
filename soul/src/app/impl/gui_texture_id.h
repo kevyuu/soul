@@ -1,5 +1,6 @@
 #pragma once
 
+#include <vcruntime.h>
 #include "gpu/id.h"
 #include "gpu/render_graph.h"
 
@@ -16,6 +17,11 @@ namespace soul::app
   struct GuiTextureID
   {
     using InternalID = Variant<soul::gpu::TextureID, soul::gpu::TextureNodeID, NilGuiTexture>;
+
+    GuiTextureID(i32 val) // NOLINT
+        : id(InternalID::From(nil_gui_texture))
+    {
+    }
 
     GuiTextureID() : id(InternalID::From(nil_gui_texture)) {}
 
@@ -47,6 +53,20 @@ namespace soul::app
     auto get_texture_node_id() const -> gpu::TextureNodeID
     {
       return id.ref<gpu::TextureNodeID>();
+    }
+
+    [[nodiscard]] explicit operator intptr_t() const
+    {
+      if (id.has_value<NilGuiTexture>())
+      {
+        return 0;
+      } else if (is_texture_id())
+      {
+        return id.ref<gpu::TextureID>().index();
+      } else
+      {
+        return id.ref<gpu::TextureNodeID>().id.id;
+      }
     }
 
     InternalID id;

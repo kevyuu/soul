@@ -39,7 +39,7 @@ namespace renderlab
     const auto viewport = scene.get_viewport();
 
     const gpu::TextureNodeID output_texture = render_graph->create_texture(
-      "Deferred Shading Output Texture",
+      "Deferred Shading Output Texture"_str,
       gpu::RGTextureDesc::create_d2(gpu::TextureFormat::RGBA16F, 1, viewport));
 
     struct ComputePassParameter
@@ -50,6 +50,7 @@ namespace renderlab
       gpu::TextureNodeID albedo_metallic_texture;
       gpu::TextureNodeID motion_curve_texture;
       gpu::TextureNodeID normal_roughness_texture;
+      gpu::TextureNodeID emissive_texture;
       gpu::TextureNodeID depth_texture;
       gpu::TextureNodeID indirect_diffuse_texture;
       gpu::TextureNodeID indirect_specular_texture;
@@ -57,7 +58,7 @@ namespace renderlab
     };
 
     const auto& compute_pass = render_graph->add_compute_pass<ComputePassParameter>(
-      "Deferred Shading Pass",
+      "Deferred Shading Pass"_str,
       [&scene, &inputs, output_texture](ComputePassParameter& parameter, auto& builder)
       {
         parameter.scene_buffer = scene.build_scene_dependencies(&builder);
@@ -68,7 +69,8 @@ namespace renderlab
         parameter.motion_curve_texture    = builder.add_srv(inputs.textures[MOTION_CURVE_INPUT]);
         parameter.normal_roughness_texture =
           builder.add_srv(inputs.textures[NORMAL_ROUGHNESS_INPUT]);
-        parameter.depth_texture = builder.add_srv(inputs.textures[DEPTH_INPUT]);
+        parameter.emissive_texture = builder.add_srv(inputs.textures[EMISSIVE_INPUT]);
+        parameter.depth_texture    = builder.add_srv(inputs.textures[DEPTH_INPUT]);
         parameter.indirect_diffuse_texture =
           builder.add_srv(inputs.textures[INDIRECT_DIFFUSE_INPUT]);
         parameter.indirect_specular_texture =
@@ -90,7 +92,8 @@ namespace renderlab
           .motion_curve_texture = registry.get_srv_descriptor_id(parameter.motion_curve_texture),
           .normal_roughness_texture =
             registry.get_srv_descriptor_id(parameter.normal_roughness_texture),
-          .depth_texture = registry.get_srv_descriptor_id(parameter.depth_texture),
+          .emissive_texture = registry.get_srv_descriptor_id(parameter.emissive_texture),
+          .depth_texture    = registry.get_srv_descriptor_id(parameter.depth_texture),
           .indirect_diffuse_texture =
             registry.get_srv_descriptor_id(parameter.indirect_diffuse_texture),
           .indirect_specular_texture =

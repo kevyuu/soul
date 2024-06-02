@@ -406,7 +406,7 @@ namespace renderlab
 
     auto load_texels = [import_context](const cgltf_texture& src_texture) -> ImageData
     {
-      soul::runtime::ScopeAllocator<> scope_allocator("Loading texture");
+      soul::runtime::ScopeAllocator<> scope_allocator("Loading texture"_str);
       const cgltf_buffer_view* bv = src_texture.image->buffer_view;
       const auto data = soul::cast<const u8**>(bv != nullptr ? &bv->buffer->data : nullptr);
 
@@ -461,8 +461,8 @@ namespace renderlab
     material_desc.roughness_factor = mr_config.roughness_factor;
     material_desc.metallic_factor  = mr_config.metallic_factor;
     const auto emissive_strength   = src_material.has_emissive_strength != 0
-                                       ? 0.0f
-                                       : src_material.emissive_strength.emissive_strength;
+                                       ? src_material.emissive_strength.emissive_strength
+                                       : 0;
     SOUL_LOG_INFO(
       "Emissive material, Name : {}, strength : {}", material_desc.name, emissive_strength);
     material_desc.emissive_factor =
@@ -491,7 +491,7 @@ namespace renderlab
   auto GLTFImporter::create_mesh_group(const cgltf_mesh& src_mesh, ImportContext import_context)
     -> MeshGroupID
   {
-    runtime::ScopeAllocator scope_allocator("GLTFImporter::create_mesh");
+    runtime::ScopeAllocator scope_allocator("GLTFImporter::create_mesh"_str);
     auto get_mesh_desc = [&, import_context](const cgltf_primitive& src_primitive) -> MeshDesc
     {
       const auto index_data     = create_index_data_from_primitive(src_primitive, &scope_allocator);

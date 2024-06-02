@@ -58,7 +58,7 @@ LightRaySample sample_sun_light(
   vec3f32 light_tangent   = normalize(cross(light_dir, vec3f32(0.0f, 1.0f, 0.0f)));
   vec3f32 light_bitangent = normalize(cross(light_tangent, light_dir));
 
-  vec2f32 disk_point = sample_disk_polar(rng_val) * 0.08;
+  vec2f32 disk_point = sample_disk_polar(rng_val) * 0.12;
   vec3f32 ray_direction =
     normalize(light_dir + disk_point.x * light_tangent + disk_point.y * light_bitangent);
 

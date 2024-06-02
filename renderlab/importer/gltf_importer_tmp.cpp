@@ -534,7 +534,7 @@ namespace soul_fila
   static soul::gpu::BufferID create_index_buffer(
     soul::gpu::System& gpu_system, const cgltf_accessor& indices)
   {
-    soul::runtime::ScopeAllocator<> scope_allocator("Create Index Buffer");
+    soul::runtime::ScopeAllocator<> scope_allocator("Create Index Buffer"_str);
 
     const auto buffer_data_raw =
       soul::cast<const uint8*>(indices.buffer_view->buffer->data) + compute_binding_offset(indices);
@@ -1119,7 +1119,7 @@ namespace soul_fila
         for (cgltf_size primitive_index = 0; primitive_index < src_mesh.primitives_count;
              primitive_index++)
         {
-          soul::runtime::ScopeAllocator<> primitive_scope_allocator("Loading Attribute Allocation");
+          soul::runtime::ScopeAllocator<> primitive_scope_allocator("Loading Attribute Allocation"_str);
 
           const cgltf_primitive& src_primitive = src_mesh.primitives[primitive_index];
 
@@ -1509,7 +1509,7 @@ namespace soul_fila
           auto load_texels =
             [this](const cgltf_texture& src_texture) -> std::tuple<const byte*, vec2u32, uint32>
           {
-            soul::runtime::ScopeAllocator<> scope_allocator("Loading texture");
+            soul::runtime::ScopeAllocator<> scope_allocator("Loading texture"_str);
             const cgltf_buffer_view* bv = src_texture.image->buffer_view;
             const auto data = soul::cast<const uint8**>(bv ? &bv->buffer->data : nullptr);
 

@@ -123,9 +123,9 @@ vec3f32 evaluate_punctual_light(
 }
 
 
-[shader("closesthit")] void rchit_main(inout Payload payload, in float2 attribs)
+[shader("closesthit")] void rchit_main(inout Payload payload, in BuiltInTriangleIntersectionAttributes attribs)
 {
-  const vec3f32 barycentrics = vec3f32(1.0f - attribs.x - attribs.y, attribs.x, attribs.y);
+  const vec3f32 barycentrics = vec3f32(1.0f - attribs.barycentrics.x - attribs.barycentrics.y, attribs.barycentrics.x, attribs.barycentrics.y);
   GPUScene scene             = get_buffer<GPUScene>(push_constant.gpu_scene_id, 0);
 
   const MeshGeometryID mesh_geometry_id = MeshGeometryID::New(InstanceID(), GeometryIndex());

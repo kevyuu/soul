@@ -80,7 +80,7 @@ RuntimeInitializer::RuntimeInitializer(const soul::runtime::Config& config)
 };
 
 App::App(const AppConfig& app_config)
-    : malloc_allocator_("Default Allocator"),
+    : malloc_allocator_("Default Allocator"_str),
       default_allocator_(
         &malloc_allocator_,
         runtime::DefaultAllocatorProxy::Config(
@@ -89,10 +89,10 @@ App::App(const AppConfig& app_config)
           memory::CounterProxy::Config(),
           memory::ClearValuesProxy::Config{u8{0xFA}, u8{0xFF}},
           memory::BoundGuardProxy::Config())),
-      page_allocator_("Page allocator"),
+      page_allocator_("Page allocator"_str),
       proxy_page_allocator_(&page_allocator_, memory::ProfileProxy::Config()),
       linear_allocator_(
-        "Main Thread Temporary Allocator", 10 * ONE_MEGABYTE, &proxy_page_allocator_),
+        "Main Thread Temporary Allocator"_str, 10 * ONE_MEGABYTE, &proxy_page_allocator_),
       temp_allocator_(&linear_allocator_, runtime::TempProxy::Config()),
       runtime_initializer_({0, 4096, &temp_allocator_, 20 * ONE_MEGABYTE, &default_allocator_}),
       window_(init_glfw_and_create_window(app_config, &window_data_)),
@@ -192,7 +192,7 @@ auto App::run() -> void
     }
 
     const auto swapchain_texture_node_id =
-      render_graph.import_texture("Swapchain Texture", gpu_system_->get_swapchain_texture());
+      render_graph.import_texture("Swapchain Texture"_str, gpu_system_->get_swapchain_texture());
     const auto render_target_node_id = render(swapchain_texture_node_id, render_graph);
 
     ImGui::Render();

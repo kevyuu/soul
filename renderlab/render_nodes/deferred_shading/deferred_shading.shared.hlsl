@@ -12,6 +12,7 @@ struct DeferredShadingPC
   soulsl::DescriptorID albedo_metallic_texture;
   soulsl::DescriptorID motion_curve_texture;
   soulsl::DescriptorID normal_roughness_texture; 
+  soulsl::DescriptorID emissive_texture;
   soulsl::DescriptorID depth_texture;
   soulsl::DescriptorID indirect_diffuse_texture;
   soulsl::DescriptorID indirect_specular_texture;

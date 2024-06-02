@@ -103,7 +103,7 @@ class TextureCubeSampleApp final : public App
     };
 
     const auto& raster_node = render_graph.add_raster_pass<RenderPassParameter>(
-      "Render texture cube pass",
+      "Render texture cube pass"_str,
       gpu::RGRenderTargetDesc(viewport, color_attachment_desc),
       [this](auto& parameter, auto& builder) {
 
@@ -168,7 +168,7 @@ class TextureCubeSampleApp final : public App
 public:
   explicit TextureCubeSampleApp(const AppConfig& app_config) : App(app_config)
   {
-    runtime::ScopeAllocator scope_allocator("Texture Cube Sample App");
+    runtime::ScopeAllocator scope_allocator("Texture Cube Sample App"_str);
     const auto shader_source =
       gpu::ShaderSource::From(gpu::ShaderFile{.path = Path::From("texture_cube_sample.hlsl"_str)});
     const auto search_path      = Path::From("shaders/"_str);
@@ -189,26 +189,26 @@ public:
     program_id_ = result.ok_ref();
 
     skybox_vertex_buffer_id_ = gpu_system_->create_buffer(
+      "Skybox vertex buffer"_str,
       {
         .size        = sizeof(SkyboxVertex) * std::size(SKYBOX_VERTICES),
         .usage_flags = {gpu::BufferUsage::VERTEX},
         .queue_flags = {gpu::QueueType::GRAPHIC},
-        .name        = "Skybox vertex buffer",
       },
       SKYBOX_VERTICES);
     gpu_system_->flush_buffer(skybox_vertex_buffer_id_);
 
     skybox_index_buffer_id_ = gpu_system_->create_buffer(
+      "Skybox index buffer"_str,
       {
         .size        = sizeof(SkyboxIndex) * std::size(SKYBOX_INDICES),
         .usage_flags = {gpu::BufferUsage::INDEX},
         .queue_flags = {gpu::QueueType::GRAPHIC},
-        .name        = "Skybox index buffer",
       },
       SKYBOX_INDICES);
     gpu_system_->flush_buffer(skybox_index_buffer_id_);
 
-    auto create_cube_map = [this](const char* path, const char* name) -> gpu::TextureID
+    auto create_cube_map = [this](const char* path, String&& name) -> gpu::TextureID
     {
       using namespace std;
       ifstream file(path, ios::binary);
@@ -224,7 +224,6 @@ public:
         "");
 
       const auto tex_desc = gpu::TextureDesc::cube(
-        name,
         gpu::TextureFormat::RGBA8,
         nmips,
         {gpu::TextureUsage::SAMPLED},
@@ -259,13 +258,13 @@ public:
         .regions   = region_loads.cspan<u32>(),
       };
 
-      const auto texture_id = gpu_system_->create_texture(tex_desc, load_desc);
+      const auto texture_id = gpu_system_->create_texture(std::move(name), tex_desc, load_desc);
       gpu_system_->flush_texture(texture_id, {gpu::TextureUsage::SAMPLED});
 
       return texture_id;
     };
 
-    skybox_texture_ = create_cube_map("assets/cubemap_yokohama_rgba.ktx", "Default env IBL");
+    skybox_texture_ = create_cube_map("assets/cubemap_yokohama_rgba.ktx", "Default env IBL"_str);
     skybox_sampler_ = gpu_system_->request_sampler(gpu::SamplerDesc::same_filter_wrap(
       gpu::TextureFilter::LINEAR, gpu::TextureWrap::CLAMP_TO_EDGE));
   }

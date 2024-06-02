@@ -9,7 +9,7 @@
 #include "scene.hlsl"
 #include "type.shared.hlsl"
 
-struct GIPayload
+struct [raypayload] Payload
 {
   vec3f32 irradiance;
   f32 hit_distance;
@@ -23,12 +23,7 @@ GPUScene get_scene()
   return get_buffer<GPUScene>(push_constant.gpu_scene_id, 0);
 }
 
-vec2u32 generate_rng_val(vec2u32 id, u32 frame_idx)
-{
-  u32 s0 = (id.x << 16) | id.y;
-  u32 s1 = frame_idx;
-  return vec2u32(pcg_hash(s0), pcg_hash(s1));
-}
+vec2u32 generate_rng_val(vec2u32 id, u32 frame_idx);
 
 [shader("raygeneration")] void rgen_main()
 {
@@ -57,7 +52,7 @@ vec2u32 generate_rng_val(vec2u32 id, u32 frame_idx)
 
   u32 flags = RAY_FLAG_FORCE_OPAQUE;
 
-  GIPayload payload;
+  Payload payload;
   payload.irradiance   = vec3f32(0, 0, 0);
   payload.hit_distance = ray_desc.TMax;
   payload.rng_val      = generate_rng_val(texel_coord, push_constant.frame_idx);
@@ -67,7 +62,7 @@ vec2u32 generate_rng_val(vec2u32 id, u32 frame_idx)
   direction_depth_output_texture[texel_coord] = vec4f32(ray_desc.Direction, payload.hit_distance);
 }
 
-  [shader("miss")] void rmiss_main(inout GIPayload payload)
+  [shader("miss")] void rmiss_main(inout Payload payload)
 {
   GPUScene scene     = get_scene();
   EnvMap env_map     = scene.get_env_map();
@@ -142,9 +137,9 @@ vec3f32 evaluate_gi(
            depth_probe_texture);
 }
 
-[shader("closesthit")] void rchit_main(inout GIPayload payload, in float2 attribs)
+[shader("closesthit")] void rchit_main(inout Payload payload, in BuiltInTriangleIntersectionAttributes attribs)
 {
-  const vec3f32 barycentrics = vec3f32(1.0f - attribs.x - attribs.y, attribs.x, attribs.y);
+  const vec3f32 barycentrics = vec3f32(1.0f - attribs.barycentrics.x - attribs.barycentrics.y, attribs.barycentrics.x, attribs.barycentrics.y);
   GPUScene scene             = get_buffer<GPUScene>(push_constant.gpu_scene_id, 0);
   const DdgiVolume ddgi      = push_constant.ddgi_volume;
 
@@ -191,4 +186,11 @@ vec3f32 evaluate_gi(
     payload.irradiance   = irradiance;
     payload.hit_distance = RayTCurrent();
   }
+}
+
+vec2u32 generate_rng_val(vec2u32 id, u32 frame_idx)
+{
+  u32 s0 = (id.x << 16) | id.y;
+  u32 s1 = frame_idx;
+  return vec2u32(pcg_hash(s0), pcg_hash(s1));
 }

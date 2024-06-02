@@ -103,14 +103,13 @@ ImGuiRenderGraphPass::ImGuiRenderGraphPass(soul::gpu::System* gpu_system) : gpu_
   };
 
   const auto font_tex_desc = gpu::TextureDesc::d2(
-    "Font Texture",
     gpu::TextureFormat::RGBA8,
     1,
     {gpu::TextureUsage::SAMPLED},
     {gpu::QueueType::GRAPHIC},
     vec2u32(width, height));
 
-  font_texture_id_ = gpu_system_->create_texture(font_tex_desc, load_desc);
+  font_texture_id_ = gpu_system_->create_texture("Font Texture"_str, font_tex_desc, load_desc);
   gpu_system_->flush_texture(font_texture_id_, {gpu::TextureUsage::SAMPLED});
   font_sampler_id_ = gpu_system->request_sampler(gpu::SamplerDesc::same_filter_wrap(
     gpu::TextureFilter::LINEAR, gpu::TextureWrap::CLAMP_TO_EDGE));
@@ -142,9 +141,9 @@ void ImGuiRenderGraphPass::add_pass(
 
   SOUL_ASSERT(0, draw_data.TotalVtxCount > 0 && draw_data.TotalIdxCount > 0);
   const gpu::BufferNodeID vertex_buffer_node_id = render_graph.create_buffer(
-    "ImGui Vertex", {.size = sizeof(ImDrawVert) * draw_data.TotalVtxCount});
+    "ImGui Vertex"_str, {.size = sizeof(ImDrawVert) * draw_data.TotalVtxCount});
   const gpu::BufferNodeID index_buffer_node_id = render_graph.create_buffer(
-    "ImGui Index", {.size = sizeof(ImDrawIdx) * draw_data.TotalIdxCount});
+    "ImGui Index"_str, {.size = sizeof(ImDrawIdx) * draw_data.TotalIdxCount});
 
   struct Transform
   {
@@ -153,7 +152,7 @@ void ImGuiRenderGraphPass::add_pass(
   };
 
   const gpu::BufferNodeID transform_buffer_node_id =
-    render_graph.create_buffer("ImGui Transform Buffer", {.size = sizeof(Transform)});
+    render_graph.create_buffer("ImGui Transform Buffer"_str, {.size = sizeof(Transform)});
 
   struct UpdatePassParameter
   {
@@ -165,7 +164,7 @@ void ImGuiRenderGraphPass::add_pass(
   const auto update_pass_parameter =
     render_graph
       .add_non_shader_pass<UpdatePassParameter>(
-        "Update Texture Pass",
+        "Update Texture Pass"_str,
         gpu::QueueType::TRANSFER,
         [=](auto& parameter, auto& builder)
         {
@@ -178,7 +177,7 @@ void ImGuiRenderGraphPass::add_pass(
         },
         [this, draw_data](const auto& parameter, auto& registry, auto& command_list)
         {
-          runtime::ScopeAllocator scope_allocator("Imgui Update Pass execute");
+          runtime::ScopeAllocator scope_allocator("Imgui Update Pass execute"_str);
           using Command = gpu::RenderCommandUpdateBuffer;
           {
             // update vertex_buffer
@@ -245,7 +244,7 @@ void ImGuiRenderGraphPass::add_pass(
   };
 
   render_graph.add_raster_pass<RenderPassParameter>(
-    "ImGui Render Pass",
+    "ImGui Render Pass"_str,
     gpu::RGRenderTargetDesc(viewport, color_attachment_desc),
     [update_pass_parameter](auto& parameter, auto& builder)
     {
@@ -258,7 +257,7 @@ void ImGuiRenderGraphPass::add_pass(
     },
     [viewport, &draw_data, this](const auto& parameter, auto& registry, auto& command_list)
     {
-      runtime::ScopeAllocator scope_allocator("Imgui Render Pass Execute Scope Allocator");
+      runtime::ScopeAllocator scope_allocator("Imgui Render Pass Execute Scope Allocator"_str);
       gpu::GraphicPipelineStateDesc pipeline_desc = {
         .program_id = program_id_,
         .input_bindings =

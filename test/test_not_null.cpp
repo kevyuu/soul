@@ -13,7 +13,7 @@ namespace soul
 {
   auto get_default_allocator() -> memory::Allocator*
   {
-    static TestAllocator test_allocator("Test default allocator");
+    static TestAllocator test_allocator("Test default allocator"_str);
     return &test_allocator;
   }
 

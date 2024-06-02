@@ -117,7 +117,7 @@ namespace renderlab
 
   auto MeshPreprocessor::GenerateVertexes(const MeshDesc& mesh_desc) -> Result
   {
-    runtime::ScopeAllocator scope_allocator("generate_static_vertex_data");
+    runtime::ScopeAllocator scope_allocator("generate_static_vertex_data"_str);
 
     const u32 max_index = mesh_desc.indexes.visit(
       [](const auto& data) -> u32

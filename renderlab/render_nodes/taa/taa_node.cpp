@@ -43,10 +43,10 @@ namespace renderlab
     const auto frame_id = scene.render_data_cref().num_frames;
 
     const auto output_texture_node =
-      render_graph->import_texture("Output Texture", color_textures_[frame_id % 2]);
+      render_graph->import_texture("Output Texture"_str, color_textures_[frame_id % 2]);
 
-    const auto history_color_texture_node =
-      render_graph->import_texture("History Color Texture", color_textures_[(frame_id + 1) % 2]);
+    const auto history_color_texture_node = render_graph->import_texture(
+      "History Color Texture"_str, color_textures_[(frame_id + 1) % 2]);
 
     struct ComputePassParameter
     {
@@ -59,7 +59,7 @@ namespace renderlab
     };
 
     const auto& compute_pass = render_graph->add_compute_pass<ComputePassParameter>(
-      "TAA Pass",
+      "TAA Pass"_str,
       [&](ComputePassParameter& parameter, auto& builder)
       {
         parameter.scene_buffer          = scene.build_scene_dependencies(&builder);
@@ -129,18 +129,20 @@ namespace renderlab
     for (gpu::TextureID& texture_id : color_textures_)
     {
       gpu_system_->destroy_texture(texture_id);
-      texture_id = gpu_system_->create_texture(gpu::TextureDesc::d2(
-        "Moment Texture",
-        gpu::TextureFormat::RGBA16F,
-        1,
-        {
-          gpu::TextureUsage::STORAGE,
-          gpu::TextureUsage::SAMPLED,
-        },
-        {
-          gpu::QueueType::COMPUTE,
-        },
-        viewport));
+      texture_id = gpu_system_->create_texture(
+        "Moment Texture"_str,
+        gpu::TextureDesc::d2(
+
+          gpu::TextureFormat::RGBA16F,
+          1,
+          {
+            gpu::TextureUsage::STORAGE,
+            gpu::TextureUsage::SAMPLED,
+          },
+          {
+            gpu::QueueType::COMPUTE,
+          },
+          viewport));
     }
   }
 

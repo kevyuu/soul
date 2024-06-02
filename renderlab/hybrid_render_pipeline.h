@@ -33,7 +33,6 @@ namespace renderlab
 
       const auto usage        = gpu::TextureUsageFlags({gpu::TextureUsage::SAMPLED});
       const auto texture_desc = gpu::TextureDesc::d2(
-        "",
         gpu::TextureFormat::RG16F,
         1,
         usage,
@@ -109,7 +108,6 @@ namespace renderlab
           .size        = sizeof(Vertex) * std::size(QUAD_VERTICES),
           .usage_flags = {gpu::BufferUsage::VERTEX},
           .queue_flags = {gpu::QueueType::GRAPHIC},
-          .name        = "Quad vertex buffer",
         },
         QUAD_VERTICES);
 
@@ -119,7 +117,6 @@ namespace renderlab
           .size        = sizeof(Index) * std::size(QUAD_INDICES),
           .usage_flags = {gpu::BufferUsage::INDEX},
           .queue_flags = {gpu::QueueType::GRAPHIC},
-          .name        = "Quad index buffer",
         },
         QUAD_INDICES);
 
@@ -145,7 +142,6 @@ namespace renderlab
           .size        = sizeof(vec3f32) * std::size(UNIT_CUBE_VERTICES),
           .usage_flags = {gpu::BufferUsage::VERTEX},
           .queue_flags = {gpu::QueueType::GRAPHIC},
-          .name        = "Cube vertex buffer",
         },
         UNIT_CUBE_VERTICES);
 
@@ -155,7 +151,6 @@ namespace renderlab
           .size        = sizeof(Index) * std::size(UNIT_CUBE_INDICES),
           .usage_flags = {gpu::BufferUsage::INDEX},
           .queue_flags = {gpu::QueueType::GRAPHIC},
-          .name        = "Cube index buffer",
         },
         UNIT_CUBE_INDICES);
 
@@ -374,6 +369,11 @@ namespace renderlab
         GBufferGenerateNode::GBUFFER_NORMAL_ROUGHNESS,
         deferred_shading_node_name,
         DeferredShadingNode::NORMAL_ROUGHNESS_INPUT);
+      render_pipeline.add_texture_edge(
+        gbuffer_node_name,
+        GBufferGenerateNode::GBUFFER_EMISSIVE,
+        deferred_shading_node_name,
+        DeferredShadingNode::EMISSIVE_INPUT);
       render_pipeline.add_texture_edge(
         gbuffer_node_name,
         GBufferGenerateNode::GBUFFER_DEPTH,

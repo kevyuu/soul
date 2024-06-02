@@ -2,6 +2,7 @@
 #include "editor/view.h"
 
 #include "app/gui.h"
+#include "editor/panels/comfy_graph_editor_panel.h"
 #include "editor/panels/entity_property_panel.h"
 #include "editor/panels/render_pipeline_panel.h"
 #include "editor/panels/scene_hierarchy_panel.h"
@@ -32,6 +33,7 @@ namespace renderlab
       const auto scene_hierarchy_dock_id = left_dock_splits.ref<0>();
       const auto entity_property_dock_id = left_dock_splits.ref<1>();
 
+      gui->dock_builder_dock_window(ComfyGraphEditorPanel::LABEL, viewport_dock_id);
       gui->dock_builder_dock_window(ViewportPanel::LABEL, viewport_dock_id);
       gui->dock_builder_dock_window(SceneHierarchyPanel::LABEL, scene_hierarchy_dock_id);
       gui->dock_builder_dock_window(EntityPropertyPanel::LABEL, entity_property_dock_id);
@@ -43,6 +45,7 @@ namespace renderlab
     gui->dock_space(dock_id);
     gui->end_window();
 
+    comfy_graph_editor_panel_.on_gui_render(gui);
     viewport_panel_.on_gui_render(gui);
     scene_hierarchy_panel_.on_gui_render(gui);
     entity_property_panel_.on_gui_render(gui);

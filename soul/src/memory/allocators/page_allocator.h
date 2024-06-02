@@ -10,7 +10,7 @@ namespace soul::memory
   public:
     PageAllocator() = delete;
 
-    explicit PageAllocator(const char* name);
+    explicit PageAllocator(CompStr name);
 
     PageAllocator(const PageAllocator& other) = delete;
 
@@ -24,7 +24,7 @@ namespace soul::memory
 
     void reset() override;
 
-    auto try_allocate(usize size, usize alignment, const char* tag) -> Allocation override;
+    auto try_allocate(usize size, usize alignment, StringView tag) -> Allocation override;
 
     [[nodiscard]]
     auto get_allocation_size(void* addr) const -> usize override;

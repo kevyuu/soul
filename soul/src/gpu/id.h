@@ -1,70 +1,30 @@
 #pragma once
 
-// TODO: Figure out how to do it without single header library
-#define VMA_STATIC_VULKAN_FUNCTIONS  0
-#define VMA_DYNAMIC_VULKAN_FUNCTIONS 0
-#define VK_NO_PROTOTYPES
 #pragma warning(push, 0)
+#define VK_NO_PROTOTYPES
 #include <vk_mem_alloc.h>
 #pragma warning(pop)
 
+#include "core/rid.h"
 #include "core/type.h"
 #include "core/type_traits.h"
 
-#include "object_cache.h"
-#include "object_pool.h"
-
-namespace soul::gpu::impl
-{
-  struct Texture;
-  struct Buffer;
-  struct Blas;
-  struct BlasGroup;
-  struct Tlas;
-
-  struct Sampler
-  {
-  };
-
-  struct Program;
-  struct BinarySemaphore;
-  struct Database;
-  struct PipelineState;
-  struct ShaderArgSet;
-  struct Shader;
-  struct Program;
-  struct ShaderTable;
-  struct BinarySemaphore;
-
-} // namespace soul::gpu::impl
-
 namespace soul::gpu
 {
-
-  struct GPUAddressStub
-  {
-  };
-
-  using GPUAddress = ID<GPUAddressStub, VkDeviceAddress, 0>;
-  static_assert(sizeof(GPUAddress) == sizeof(u64), "GPUAddress size is not the same as u64");
-
-  using TexturePool     = ConcurrentObjectPool<impl::Texture>;
-  using BufferPool      = ConcurrentObjectPool<impl::Buffer>;
-  using BlasPool        = ConcurrentObjectPool<impl::Blas>;
-  using BlasGroupPool   = ConcurrentObjectPool<impl::BlasGroup>;
-  using TlasPool        = ConcurrentObjectPool<impl::Tlas>;
-  using ShaderPool      = ConcurrentObjectPool<impl::Shader>;
-  using ShaderTablePool = ConcurrentObjectPool<impl::ShaderTable>;
+  using GPUAddress   = ID<struct gpu_address_tag, u64, 0>;
+  using DescriptorID = ID<struct descriptor_id_tag, u32>;
 
   // ID
-  using TextureID   = ID<impl::Texture, TexturePool::ID, TexturePool::NULLVAL>;
-  using BufferID    = ID<impl::Buffer, BufferPool::ID, BufferPool::NULLVAL>;
-  using BlasID      = ID<impl::Blas, BlasPool::ID, BlasPool::NULLVAL>;
-  using BlasGroupID = ID<impl::BlasGroup, BlasGroupPool::ID, BlasGroupPool::NULLVAL>;
-  using TlasID      = ID<impl::Tlas, TlasPool::ID, TlasPool::NULLVAL>;
+  using TextureID   = RID<struct texture_id_tag>;
+  using BufferID    = RID<struct buffer_id_tag>;
+  using BlasID      = RID<struct blas_id_tag>;
+  using BlasGroupID = RID<struct blas_group_id_tag>;
+  using TlasID      = RID<struct tlas_id_tag>;
 
-  struct Descriptor;
-  using DescriptorID = ID<Descriptor, u32>;
+  using PipelineStateID = RID<struct pipeline_state_id_tag>;
+  using ProgramID       = RID<struct program_id_tag>;
+  using ShaderID        = RID<struct shader_id_tag>;
+  using ShaderTableID   = RID<struct shader_id_tag>;
 
   struct SamplerID
   {
@@ -83,8 +43,5 @@ namespace soul::gpu
       return !this->is_null();
     }
   };
-
-  using ProgramID     = ID<impl::Program, u16>;
-  using ShaderTableID = ID<impl::ShaderTable, ShaderTablePool::ID, ShaderTablePool::NULLVAL>;
 
 } // namespace soul::gpu

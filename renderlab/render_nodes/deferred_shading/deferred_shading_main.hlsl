@@ -73,6 +73,7 @@ vec3f32 compute_indirect_specular_lighting(
   Texture2D albedo_metallic_texture  = get_texture_2d(push_constant.albedo_metallic_texture);
   Texture2D motion_curve_texture     = get_texture_2d(push_constant.motion_curve_texture);
   Texture2D normal_roughness_texture = get_texture_2d(push_constant.normal_roughness_texture);
+  Texture2D emissive_texture         = get_texture_2d(push_constant.emissive_texture);
   Texture2D depth_texture            = get_texture_2d(push_constant.depth_texture);
   Texture2D light_visibility_texture = get_texture_2d(push_constant.light_visibility_texture);
   Texture2D ao_texture               = get_texture_2d(push_constant.ao_texture);
@@ -88,16 +89,18 @@ vec3f32 compute_indirect_specular_lighting(
   const f32 curvature             = motion_curve.z;
   const vec4f32 normal_roughness  = normal_roughness_texture.Load(load_index);
 
-  const vec3f32 albedo = albedo_metallic.xyz;
-  const f32 metallic   = albedo_metallic.w;
-  const vec3f32 n      = normal_roughness.xyz * 2.0 - 1.0;
-  const f32 roughness  = normal_roughness.w;
+  const vec3f32 albedo   = albedo_metallic.xyz;
+  const f32 metallic     = albedo_metallic.w;
+  const vec3f32 n        = normal_roughness.xyz * 2.0 - 1.0;
+  const f32 roughness    = normal_roughness.w;
+  const vec3f32 emissive = emissive_texture.Load(load_index);
 
   MaterialInstance material_instance;
   material_instance.albedo    = albedo;
   material_instance.metallic  = metallic;
   material_instance.roughness = roughness;
   material_instance.normal    = n;
+  material_instance.emissive  = emissive;
 
   const f32 ndc_depth             = depth_texture.Load(load_index).x;
   const mat4f32 inv_proj_view_mat = camera_data.inv_proj_view_mat;
@@ -112,13 +115,19 @@ vec3f32 compute_indirect_specular_lighting(
 
   if (ndc_depth != 1.0f)
   {
-    visibility = light_visibility_texture.Load(visibility_coord).r;
-    for (u32 light_index = 0; light_index < scene.light_count; light_index++)
+    if (any(material_instance.emissive != vec3f32(0, 0, 0)))
     {
-      const GPULightInstance light_instance = scene.get_light_instance(light_index);
-      irradiance +=
-        evaluate_irradiance_from_light(wo, world_position, light_instance, material_instance) *
-        visibility;
+      irradiance += material_instance.emissive;
+    }
+    else {
+      visibility = light_visibility_texture.Load(visibility_coord).r;
+      for (u32 light_index = 0; light_index < scene.light_count; light_index++)
+      {
+        const GPULightInstance light_instance = scene.get_light_instance(light_index);
+        irradiance +=
+          evaluate_irradiance_from_light(wo, world_position, light_instance, material_instance) *
+          visibility;
+      }
     }
     ao = ao_texture.Load(load_index).r;
 

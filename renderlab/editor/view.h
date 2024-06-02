@@ -1,6 +1,7 @@
 #pragma once
 
 #include "editor/panel.h"
+#include "editor/panels/comfy_graph_editor_panel.h"
 #include "editor/panels/entity_property_panel.h"
 #include "editor/panels/menu_bar.h"
 #include "editor/panels/render_pipeline_panel.h"
@@ -28,6 +29,7 @@ namespace renderlab
     NotNull<EditorStore*> store_;
     MenuBar menu_bar_;
     ViewportPanel viewport_panel_;
+    ComfyGraphEditorPanel comfy_graph_editor_panel_;
     SceneHierarchyPanel scene_hierarchy_panel_;
     EntityPropertyPanel entity_property_panel_;
     RenderPipelinePanel render_pipeline_panel_;
@@ -38,6 +40,7 @@ namespace renderlab
         : store_(store),
           menu_bar_(store),
           viewport_panel_(store),
+          comfy_graph_editor_panel_(store),
           scene_hierarchy_panel_(store),
           entity_property_panel_(store),
           render_pipeline_panel_(store),

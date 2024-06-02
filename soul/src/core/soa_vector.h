@@ -185,6 +185,24 @@ namespace soul
       return structure_buffers_.template ref<StructureIndexV>()[element_index];
     }
 
+    template <usize StrucureIndexV>
+    [[nodiscard]]
+    constexpr auto back_cref() const -> const type_at_t<StrucureIndexV>&
+    {
+      SOUL_ASSERT(0, !empty(), "");
+      const auto element_index = size() - 1;
+      return structure_buffers_.template ref<StrucureIndexV>()[element_index];
+    }
+
+    template <usize StructureIndexV>
+    [[nodiscard]]
+    constexpr auto back_ref() -> type_at_t<StructureIndexV>&
+    {
+      SOUL_ASSERT(0, !empty(), "");
+      const auto element_index = size() - 1;
+      return structure_buffers_.template ref<StructureIndexV>()[element_index];
+    }
+
     template <typename Fn>
     void for_each(usize element_index, Fn fn)
     {

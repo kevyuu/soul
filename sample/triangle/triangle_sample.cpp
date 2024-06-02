@@ -26,7 +26,7 @@ class TriangleSampleApp final : public App
     };
 
     const auto& raster_node = render_graph.add_raster_pass<PassParameter>(
-      "Triangle Test",
+      "Triangle Test"_str,
       gpu::RGRenderTargetDesc(viewport, color_attachment_desc),
       [](auto& parameter, auto& builder) -> void
       {

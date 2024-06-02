@@ -86,21 +86,21 @@ Texture2DRGPass::Texture2DRGPass(gpu::System* gpu_system) : gpu_system_(gpu_syst
   program_id_ = result.ok_ref();
 
   vertex_buffer_id_ = gpu_system_->create_buffer(
+    "Texture2DRGPass vertex buffer"_str,
     {
       .size        = sizeof(Vertex) * std::size(VERTICES),
       .usage_flags = {gpu::BufferUsage::VERTEX},
       .queue_flags = {gpu::QueueType::GRAPHIC},
-      .name        = "Texture2DRGPass vertex buffer",
     },
     VERTICES);
   gpu_system_->flush_buffer(vertex_buffer_id_);
 
   index_buffer_id_ = gpu_system_->create_buffer(
+    "Texture2DRGPass index buffer"_str,
     {
       .size        = sizeof(Index) * std::size(INDICES),
       .usage_flags = {gpu::BufferUsage::INDEX},
       .queue_flags = {gpu::QueueType::GRAPHIC},
-      .name        = "Texture2DRGPass index buffer",
     },
     INDICES);
   gpu_system_->flush_buffer(index_buffer_id_);
@@ -121,7 +121,7 @@ auto Texture2DRGPass::add_pass(const Parameter& parameter, gpu::RenderGraph& ren
   const vec2u32 viewport = gpu_system_->get_swapchain_extent();
 
   const auto& raster_node = render_graph.add_raster_pass<Parameter>(
-    "Render Pass Parameter",
+    "Render Pass Parameter"_str,
     gpu::RGRenderTargetDesc(viewport, color_attachment_desc),
     [this, in_parameter = parameter](auto& parameter, auto& builder)
     {

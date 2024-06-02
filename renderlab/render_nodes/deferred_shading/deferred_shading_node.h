@@ -1,11 +1,10 @@
 #pragma once
 
 #include "gpu/sl_type.h"
+using namespace soul;
 
 #include "deferred_shading.shared.hlsl"
 #include "render_node.h"
-
-using namespace soul;
 
 namespace soul::gpu
 {
@@ -36,6 +35,7 @@ namespace renderlab
     static constexpr auto ALBEDO_METALLIC_INPUT   = "albedo_metallic"_str;
     static constexpr auto NORMAL_ROUGHNESS_INPUT  = "normal_roughness"_str;
     static constexpr auto MOTION_CURVE_INPUT      = "motion_curve"_str;
+    static constexpr auto EMISSIVE_INPUT          = "emissive_input"_str;
     static constexpr auto DEPTH_INPUT             = "depth"_str;
     static constexpr auto INDIRECT_DIFFUSE_INPUT  = "indirect_diffuse"_str;
     static constexpr auto INDIRECT_SPECULAR_INPUT = "indirect_specular"_str;

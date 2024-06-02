@@ -11,8 +11,17 @@ set(IMGUI_SOURCES
     imgui/imgui_tables.cpp)
 add_library(imgui INTERFACE)
 target_sources(imgui INTERFACE $<BUILD_INTERFACE:${IMGUI_SOURCES}>)
-target_include_directories(imgui INTERFACE ${CMAKE_CURRENT_SOURCE_DIR})
+target_include_directories(imgui INTERFACE ${CMAKE_CURRENT_SOURCE_DIR} imgui)
 target_compile_definitions(imgui INTERFACE IMGUI_DEFINE_MATH_OPERATORS)
+
+set(IMGUI_NODE_EDITOR_SOURCES
+    imgui-node-editor/crude_json.cpp
+    imgui-node-editor/imgui_canvas.cpp
+    imgui-node-editor/imgui_node_editor.cpp
+    imgui-node-editor/imgui_node_editor_api.cpp)
+add_library(imgui_node_editor INTERFACE)
+target_sources(imgui_node_editor INTERFACE $<BUILD_INTERFACE:${IMGUI_NODE_EDITOR_SOURCES}>)
+target_include_directories(imgui_node_editor INTERFACE ${CMAKE_CURRENT_SOURCE_DIR})
 
 # Imgui addons
 add_library(imgui_filesystem STATIC imguifilesystem.cpp)

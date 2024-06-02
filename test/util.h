@@ -310,9 +310,9 @@ static_assert(soul::ts_clone<ListTestObject>);
 class TestAllocator : public soul::memory::Allocator
 {
 public:
-  explicit TestAllocator(const char* name = "Test Malloc Allocator") : Allocator(name) {}
+  explicit TestAllocator(CompStr name = "Test Malloc allocator"_str) : Allocator(name) {}
 
-  auto try_allocate(usize size, usize alignment, const char* tag)
+  auto try_allocate(usize size, usize alignment, StringView tag)
     -> soul::memory::Allocation override;
   auto get_allocation_size(void* addr) const -> usize override;
   auto deallocate(void* addr) -> void override;
