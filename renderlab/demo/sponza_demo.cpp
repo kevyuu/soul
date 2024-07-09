@@ -10,10 +10,10 @@ namespace renderlab
   void SponzaDemo::load_scene(NotNull<Scene*> scene)
   {
     GLTFImporter importer;
-    const auto interior_path = Path::From("C:/Users/kevin/Dev/asset/AIUE_vol1_04.glb"_str);
+    const auto interior_path = Path::From("C:/Users/kevin/Dev/asset/AIUE_vol1_06.glb"_str);
     const auto sponza_path   = Path::From("C:/Users/kevin/Dev/asset/sponza.glb"_str);
 
-    importer.import(sponza_path, scene);
+    importer.import(interior_path, scene);
     light_entity_id_    = scene->create_entity(EntityDesc{
          .name            = "Light"_str,
          .local_transform = mat4f32::Identity(),

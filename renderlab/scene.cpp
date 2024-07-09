@@ -923,7 +923,7 @@ namespace renderlab
             }});
         }
 
-        static constexpr auto MAX_BLAS_BUILD_MEMORY = 1ull << 27;
+        static constexpr auto MAX_BLAS_BUILD_MEMORY = 1ull << 28;
         command_list.push(gpu::RenderCommandBatchBuildBlas{
           .builds                = u32cspan(render_commands.data(), render_commands.size()),
           .max_build_memory_size = MAX_BLAS_BUILD_MEMORY,

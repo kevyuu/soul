@@ -2874,7 +2874,7 @@ namespace soul::gpu
                   .sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_TRIANGLES_DATA_KHR,
                   .vertexFormat = vk_cast(triangle_desc.vertex_format),
                   .vertexStride = triangle_desc.vertex_stride,
-                  .maxVertex    = triangle_desc.vertex_count - 1,
+                  .maxVertex    = triangle_desc.vertex_count,
                   .indexType    = vk_cast(triangle_desc.index_type),
                 },
             };
