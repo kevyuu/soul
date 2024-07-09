@@ -12,5 +12,5 @@ Video Demo:
 https://www.youtube.com/watch?v=qsXRj9AflO4
 
 Screenshots:
-![](teasser_images/teaser.png)
+![](teaser_images/teaser.png)
 
