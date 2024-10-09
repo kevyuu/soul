@@ -160,23 +160,6 @@ namespace renderlab
         //     math::compose_transform(
         //       new_world_position.xyz(), world_transform.rotation, world_transform.scale));
         // }
-
-        if (gui->gizmo(
-              camera_view_mat,
-              {
-                .fovy_degrees = 45.0f,
-                .aspect_ratio = math::fdiv(scene_viewport.x, scene_viewport.y),
-                .z_near       = camera_data.near_z,
-                .z_far        = camera_data.far_z,
-              },
-              image_offset,
-              image_size,
-              gizmo_op_,
-              app::Gui::GizmoMode::LOCAL,
-              &local_transform_mat))
-        {
-          store_->set_local_transform(selected_entity_id, local_transform_mat);
-        }
       }
 
       if (gui->is_key_pressed(soul::app::KeyboardKey::G))

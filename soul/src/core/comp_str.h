@@ -50,11 +50,11 @@ namespace soul
   inline namespace literals
   {
     [[nodiscard]]
-    consteval auto
-    operator""_str(const char* literal, usize length) -> CompStr
+    consteval auto operator""_str(const char* literal, usize length) -> CompStr
     {
       return CompStr(literal, length);
     }
+
   } // namespace literals
 
 } // namespace soul

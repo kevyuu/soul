@@ -16,7 +16,6 @@
 #include <volk.h>
 #include <dxc/dxcapi.h>
 #include <vk_mem_alloc.h>
-#include <vulkan/vulkan_core.h>
 #include <wrl/client.h>
 
 #include "core/compiler.h"
@@ -264,8 +263,9 @@ namespace soul::gpu
     };
 
     auto pick_surface_format(
-      VkPhysicalDevice physical_device, VkSurfaceKHR surface, b8 use_srgb_swapchain)
-      -> VkSurfaceFormatKHR
+      VkPhysicalDevice physical_device,
+      VkSurfaceKHR surface,
+      b8 use_srgb_swapchain) -> VkSurfaceFormatKHR
     {
       runtime::ScopeAllocator<> scope_allocator("GPU::System::init::pickSurfaceFormat"_str);
       SOUL_LOG_INFO("Picking surface format.");
@@ -475,8 +475,7 @@ namespace soul::gpu
 #ifdef SOUL_OS_APPLE
         "VK_MVK_macos_surface",
 #endif // SOUL_
-        VK_EXT_DEBUG_UTILS_EXTENSION_NAME
-      };
+        VK_EXT_DEBUG_UTILS_EXTENSION_NAME};
 
 #ifdef SOUL_VULKAN_VALIDATION_ENABLE
       static constexpr const char* REQUIRED_LAYERS[] = {
@@ -1193,7 +1192,12 @@ namespace soul::gpu
 
   void System::shutdown()
   {
+    for (auto& frame_context : _db.frame_contexts)
+    {
+      frame_context.command_pools.shutdown();
+    }
     vkDeviceWaitIdle(_db.device);
+    vkDestroyDevice(_db.device, nullptr);
     vkDestroyInstance(_db.instance, nullptr);
   }
 
@@ -2931,8 +2935,8 @@ namespace soul::gpu
   }
 
   auto System::get_as_build_size_info(
-    const VkAccelerationStructureBuildGeometryInfoKHR& build_info, const u32* max_primitives_counts)
-    -> VkAccelerationStructureBuildSizesInfoKHR
+    const VkAccelerationStructureBuildGeometryInfoKHR& build_info,
+    const u32* max_primitives_counts) -> VkAccelerationStructureBuildSizesInfoKHR
   {
     VkAccelerationStructureBuildSizesInfoKHR size_info = {
       .sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_SIZES_INFO_KHR};
@@ -3636,6 +3640,11 @@ namespace soul::gpu
     count_ = 0;
   }
 
+  void CommandPool::shutdown()
+  {
+    vkDestroyCommandPool(device_, vk_handle_, nullptr);
+  }
+
   auto CommandPools::init(VkDevice device, const CommandQueues& queues, usize thread_count) -> void
   {
     SOUL_ASSERT_MAIN_THREAD();
@@ -3659,6 +3668,22 @@ namespace soul::gpu
     }
 
     runtime::pop_allocator();
+  }
+
+  void CommandPools::shutdown()
+  {
+    for (auto& pool : secondary_pools_)
+    {
+      pool.shutdown();
+    }
+
+    for (auto& pools : primary_pools_)
+    {
+      for (const auto queue_type : FlagIter<QueueType>())
+      {
+        pools[queue_type].shutdown();
+      }
+    }
   }
 
   auto CommandPools::reset() -> void
@@ -3688,8 +3713,9 @@ namespace soul::gpu
   }
 
   auto CommandPools::request_secondary_command_buffer(
-    VkRenderPass render_pass, const uint32_t subpass, VkFramebuffer framebuffer)
-    -> SecondaryCommandBuffer
+    VkRenderPass render_pass,
+    const uint32_t subpass,
+    VkFramebuffer framebuffer) -> SecondaryCommandBuffer
   {
     const auto cmd_buffer = secondary_pools_[runtime::get_thread_id()].request();
     const VkCommandBufferInheritanceInfo inheritance_info = {

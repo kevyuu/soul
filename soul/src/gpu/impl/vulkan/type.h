@@ -563,9 +563,10 @@ namespace soul::gpu::impl
       allocator_initializer_.end();
     }
 
-    auto init(VkDevice device, VkCommandBufferLevel level, u32 queue_family_index) -> void;
-    auto reset() -> void;
+    void init(VkDevice device, VkCommandBufferLevel level, u32 queue_family_index);
+    void reset();
     auto request() -> VkCommandBuffer;
+    void shutdown();
 
   private:
     runtime::AllocatorInitializer allocator_initializer_;
@@ -586,12 +587,14 @@ namespace soul::gpu::impl
     }
 
     auto init(VkDevice device, const CommandQueues& queues, usize thread_count) -> void;
+    void shutdown();
     auto reset() -> void;
 
     auto request_command_buffer(QueueType queue_type) -> PrimaryCommandBuffer;
     auto request_secondary_command_buffer(
-      VkRenderPass render_pass, uint32_t subpass, VkFramebuffer framebuffer)
-      -> SecondaryCommandBuffer;
+      VkRenderPass render_pass,
+      uint32_t subpass,
+      VkFramebuffer framebuffer) -> SecondaryCommandBuffer;
 
   private:
     memory::Allocator* allocator_;

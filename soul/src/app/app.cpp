@@ -29,8 +29,13 @@ namespace soul::app
     runtime::shutdown();
   }
 
-  App::App() : window_(Window::Desc{}, this), gpu_system_(runtime::get_context_allocator())
+  App::App(StringView name)
+      : name_(String::From(name)),
+        storage_path_(Path::From(""_str)),
+        window_(Window::Desc{.title = String::From(name)}, this),
+        gpu_system_(runtime::get_context_allocator())
   {
+    init_storage_path();
     const gpu::System::Config config = {
       .wsi                 = &window_.wsi_ref(),
       .max_frame_in_flight = 3,
@@ -58,6 +63,11 @@ namespace soul::app
   auto App::gpu_system_ref() -> gpu::System&
   {
     return gpu_system_;
+  }
+
+  auto App::storage_path_cref() -> const Path&
+  {
+    return storage_path_;
   }
 
   void App::handle_window_size_change()

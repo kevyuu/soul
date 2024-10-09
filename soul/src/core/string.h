@@ -180,8 +180,9 @@ namespace soul
     template <typename... Args>
     [[nodiscard]]
     static constexpr auto ReservedFormat(
-      NotNull<AllocatorT*> allocator, std::format_string<Args...> fmt, Args&&... args)
-      -> BasicString
+      NotNull<AllocatorT*> allocator,
+      std::format_string<Args...> fmt,
+      Args&&... args) -> BasicString
     {
       return BasicString(
         Construct::reserved_format, allocator, std::move(fmt), std::forward<Args>(args)...);
@@ -189,8 +190,8 @@ namespace soul
 
     [[nodiscard]]
     static constexpr auto From(
-      NotNull<const char*> str, NotNull<AllocatorT*> allocator = get_default_allocator())
-      -> BasicString
+      NotNull<const char*> str,
+      NotNull<AllocatorT*> allocator = get_default_allocator()) -> BasicString
     {
       return BasicString(Construct::from, StringView{str, strlen(str)}, allocator);
     }
@@ -204,8 +205,8 @@ namespace soul
 
     [[nodiscard]]
     static constexpr auto UnsharedFrom(
-      NotNull<const char*> str, NotNull<AllocatorT*> allocator = get_default_allocator())
-      -> BasicString
+      NotNull<const char*> str,
+      NotNull<AllocatorT*> allocator = get_default_allocator()) -> BasicString
     {
       return BasicString(Construct::unshared_from, StringView{str, strlen(str)}, allocator);
     }
@@ -281,6 +282,13 @@ namespace soul
           unreachable();
         }
       }
+    }
+
+    constexpr void resize(usize new_size)
+    {
+      ensure_capacity(new_size + 1);
+      size_         = new_size;
+      data()[size_] = '\0';
     }
 
     constexpr void clear()
@@ -491,7 +499,11 @@ namespace soul
         : allocator_(allocator), size_(str_view.size())
     {
       const char* str = str_view.data();
-      if (is_in_const_segment(str) && str_view.is_null_terminated())
+      if (str_view.size() == 0)
+      {
+        storage_.data = const_cast<pointer>(""); // NOLINT
+        capacity_     = 0;
+      } else if (is_in_const_segment(str) && str_view.is_null_terminated())
       {
         storage_.data = const_cast<pointer>(str); // NOLINT
         capacity_     = 0;

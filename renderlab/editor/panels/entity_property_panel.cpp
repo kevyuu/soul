@@ -5,10 +5,13 @@
 #include "editor/store.h"
 
 #include "app/gui.h"
+#include "app/icons.h"
 #include "math/math.h"
 #include "math/matrix.h"
 #include "math/quaternion.h"
 #include "type.shared.hlsl"
+
+#include <imgui/imgui.h>
 
 namespace renderlab
 {
@@ -26,6 +29,7 @@ namespace renderlab
             app::Gui::WindowFlag::NO_SCROLLBAR,
           }))
     {
+      gui->button(ICON_MD_SEARCH);
       const auto active_entity_id = store_->get_selected_entity();
       if (!active_entity_id.is_null())
       {

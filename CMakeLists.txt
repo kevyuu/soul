@@ -91,31 +91,14 @@ else()
   message(FATAL_ERROR "Vulkan library not found!")
 endif()
 
-# ==================================================================================================
-# Try to find NVTX
-# ==================================================================================================
-message(STATUS $ENV{NVTOOLSEXT_PATH})
-find_library(
-  NVTX
-  NAMES nvToolsExt64_1
-  PATHS "$ENV{NVTOOLSEXT_PATH}" ENV NVTOOLSEXT_PATH
-  PATH_SUFFIXES "lib/x64")
-
-if(NVTX)
-  message(STATUS "Found NVTX library : ${NVTX}.")
-  set(NVTX_INCLUDE_DIR "$ENV{NVTOOLSEXT_PATH}/include")
-  message(STATUS "NVTX include dir : ${NVTX_INCLUDE_DIR}")
-else()
-  message(STATUS "NVTX library not found")
-endif()
-
 find_package(glfw3 CONFIG REQUIRED)
-find_package(unofficial-vulkan-memory-allocator CONFIG REQUIRED)
-add_library(vk_mem_alloc ALIAS unofficial::vulkan-memory-allocator::vulkan-memory-allocator)
+find_package(VulkanMemoryAllocator CONFIG REQUIRED)
+add_library(vk_mem_alloc ALIAS GPUOpen::VulkanMemoryAllocator)
 find_package(volk REQUIRED)
 find_package(Threads REQUIRED)
 find_package(Tracy CONFIG REQUIRED)
 find_package(gtest CONFIG REQUIRED)
+find_package(yyjson CONFIG REQUIRED)
 
 include(${CMAKE_CURRENT_LIST_DIR}/cmake_lib/SystemLink.cmake)
 
@@ -128,6 +111,7 @@ add_subdirectory(soul)
 add_subdirectory(sample)
 add_subdirectory(test)
 add_subdirectory(renderlab)
+add_subdirectory(khaos)
 
 if(IS_DIRECTORY "${CMAKE_CURRENT_LIST_DIR}/benchmark_sandbox")
   add_subdirectory(benchmark_sandbox)

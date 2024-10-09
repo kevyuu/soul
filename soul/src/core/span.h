@@ -367,8 +367,7 @@ namespace soul
 
   template <typename T, typename Size1T, typename Size2T>
   [[nodiscard]]
-  auto
-  operator==(Span<T, Size1T> lhs, Span<T, Size2T> rhs) -> b8
+  auto operator==(Span<T, Size1T> lhs, Span<T, Size2T> rhs) -> b8
   {
     if (lhs.size() != rhs.size())
     {

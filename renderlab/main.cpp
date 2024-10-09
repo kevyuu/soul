@@ -30,7 +30,8 @@ namespace renderlab
 
   public:
     RenderlabApp()
-        : scene_(Scene::Create(&gpu_system_ref())),
+        : app::App("Renderlab"_str),
+          scene_(Scene::Create(&gpu_system_ref())),
           editor_store_(&scene_),
           editor_view_(&editor_store_)
     {

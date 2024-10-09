@@ -1,5 +1,4 @@
 #include <volk.h>
-#include <vulkan/vulkan_core.h>
 
 #include "core/log.h"
 #include "core/profile.h"
@@ -33,8 +32,8 @@ namespace soul::gpu::impl
   }
 
   auto RenderCompiler::begin_render_pass(
-    const VkRenderPassBeginInfo& render_pass_begin_info, const VkSubpassContents subpass_contents)
-    -> void
+    const VkRenderPassBeginInfo& render_pass_begin_info,
+    const VkSubpassContents subpass_contents) -> void
   {
     vkCmdBeginRenderPass(command_buffer_, &render_pass_begin_info, subpass_contents);
   }

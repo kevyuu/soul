@@ -1,7 +1,5 @@
 #pragma once
 
-#include <vulkan/vulkan_core.h>
-
 #include "core/architecture.h"
 #include "core/chunked_sparse_pool.h"
 #include "core/flag_map.h"
@@ -614,8 +612,7 @@ namespace soul::gpu
       }
 
       [[nodiscard]]
-      auto
-      operator*() const -> value_type
+      auto operator*() const -> value_type
       {
         return SubresourceIndex(mip_, layer_);
       }
@@ -632,8 +629,7 @@ namespace soul::gpu
       }
 
       [[nodiscard]]
-      auto
-      operator++(int) -> ConstIterator
+      auto operator++(int) -> ConstIterator
       {
         const ConstIterator t{mip_, layer_, mip_end_};
         this->operator++();

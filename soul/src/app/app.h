@@ -43,13 +43,15 @@ namespace soul::app
   {
   private:
     AppRuntime app_runtime_;
+    String name_;
+    Path storage_path_;
     Window window_;
     gpu::System gpu_system_;
     Gui* gui_;
     CpuTimer cpu_timer_;
 
   public:
-    App();
+    explicit App(StringView name);
 
     App(const App&) = delete;
 
@@ -78,6 +80,10 @@ namespace soul::app
     auto gui_ref() -> Gui&;
 
     auto gpu_system_ref() -> gpu::System&;
+
+    auto storage_path_cref() -> const Path&;
+
+    void init_storage_path();
 
   private:
     void handle_window_size_change() override;

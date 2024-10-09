@@ -93,6 +93,11 @@ namespace renderlab
       gpu::BufferNodeID scene_buffer_node;
 
       usize num_frames = 0;
+
+      void rasterize(
+        const RasterizeDesc& desc,
+        NotNull<gpu::RenderGraphRegistry*> registry,
+        NotNull<gpu::RasterCommandList*> command_list) const;
     };
 
   private:

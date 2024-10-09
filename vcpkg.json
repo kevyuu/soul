@@ -11,11 +11,14 @@
       "version>=": "0.10.0"
     },
     "directxtk",
+    "cpp-httplib",
     "vulkan-memory-allocator",
     "volk",
     "argparse",
     "gtest",
-    "benchmark"
+    "benchmark",
+    "yyjson",
+    "curl"
   ],
-  "builtin-baseline": "faed44dfa013088fe1910908a8a65887622f412f"
+  "builtin-baseline": "adb391bd2cb05fdaef1ccef375dd50d998f01cc0"
 }

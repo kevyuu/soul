@@ -384,7 +384,7 @@ class RTBasicSampleApp final : public App
       textures_.push_back(Texture{});
       auto& texture           = textures_.back();
       texture.name            = String::From(texture_name.c_str());
-      const auto texture_path = get_media_path() / "textures" / texture_name;
+      const auto texture_path = get_media_path() / "textures"_str / texture_name;
       int texture_width, texture_height, texture_channel_count;
       stbi_uc* texture_pixels = stbi_load(
         texture_path.string().c_str(),

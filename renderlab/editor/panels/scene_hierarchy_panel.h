@@ -1,7 +1,10 @@
 #pragma once
 
 #include "core/comp_str.h"
+#include "core/string.h"
+
 #include "editor/panel.h"
+
 namespace renderlab
 {
   class EditorStore;
@@ -10,6 +13,7 @@ namespace renderlab
   {
   private:
     NotNull<EditorStore*> store_;
+    String search_text_;
 
   public:
     static constexpr CompStr LABEL = "Scene Hierarchy"_str;

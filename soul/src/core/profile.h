@@ -33,8 +33,8 @@ struct FrameProfileScope
 #  define SOUL_SHARED_LOCKABLE(type, varname) TracySharedLockable(type, varname)
 
 #elif defined(SOUL_PROFILE_CPU_BACKEND_NVTX)
-#  include <nvToolsExt.h>
 #  include "core/type.h"
+#  include <nvtx3/nvToolsExt.h>
 
 struct NVTXScope
 {

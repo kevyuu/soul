@@ -18,4 +18,5 @@ namespace soul
 
     using usize = u64;
   } // namespace builtin
+
 } // namespace soul

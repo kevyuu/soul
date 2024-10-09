@@ -1,7 +1,5 @@
 #pragma once
 
-#include <vulkan/vulkan_core.h>
-
 #include "gpu/render_graph.h"
 #include "gpu/sl_type.h"
 

@@ -15,8 +15,8 @@
 #include "gpu/wsi.h"
 
 #include <atomic>
+#include <volk.h>
 #include <GLFW/glfw3.h>
-#include <vulkan/vulkan_core.h>
 
 namespace soul::app
 {

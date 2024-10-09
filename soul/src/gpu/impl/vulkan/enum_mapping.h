@@ -1,7 +1,5 @@
 #pragma once
 
-#include <vulkan/vulkan_core.h>
-
 #include "core/compiler.h"
 #include "core/type.h"
 
@@ -471,8 +469,8 @@ namespace soul::gpu
   }
 
   constexpr auto get_vk_subresource_layers(
-    const TextureSubresourceLayers& subresource_layers, const VkImageAspectFlags aspect_flags)
-    -> VkImageSubresourceLayers
+    const TextureSubresourceLayers& subresource_layers,
+    const VkImageAspectFlags aspect_flags) -> VkImageSubresourceLayers
   {
     return {
       .aspectMask     = aspect_flags,

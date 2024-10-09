@@ -1,9 +1,9 @@
-[submodule "dependencies/imgui"]
-	path = dependencies/imgui
-	url = https://github.com/ocornut/imgui.git
 [submodule "dependencies/vcpkg"]
 	path = dependencies/vcpkg
 	url = https://github.com/microsoft/vcpkg.git
 [submodule "dependencies/imgui-node-editor"]
 	path = dependencies/imgui-node-editor
 	url = https://github.com/thedmd/imgui-node-editor
+[submodule "dependencies/NVTX"]
+	path = dependencies/NVTX
+	url = https://github.com/NVIDIA/NVTX

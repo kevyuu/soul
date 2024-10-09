@@ -15,6 +15,10 @@ namespace soul
     auto operator=(Path&& other) noexcept -> Path& = default;
     constexpr ~Path()                              = default;
 
+    explicit Path(std::filesystem::path&& path) : std::filesystem::path(std::move(path)) {}
+
+    explicit Path(const std::filesystem::path& path) : std::filesystem::path(path) {}
+
     [[nodiscard]]
     static auto From(StringView string_view) -> Path
     {
@@ -98,6 +102,8 @@ namespace soul
 
     friend auto operator<=>(const Path& lhs, const Path& rhs) noexcept = default;
 
+    friend auto operator/(const Path& lhs, const char* rhs) -> Path = delete;
+
     friend auto operator/(const Path& lhs, const Path& rhs) -> Path
     {
       const base_type& lhs_base = lhs;
@@ -117,8 +123,6 @@ namespace soul
     }
 
   private:
-    explicit Path(std::filesystem::path&& path) : std::filesystem::path(std::move(path)) {}
-
     Path(const Path& other) = default;
 
     auto operator=(const Path& other) -> Path& = default;

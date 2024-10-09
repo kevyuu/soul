@@ -1238,4 +1238,76 @@ namespace renderlab
       });
     }
   }
+
+  void Scene::RenderData::rasterize(
+    const RasterizeDesc& desc,
+    NotNull<gpu::RenderGraphRegistry*> registry,
+    NotNull<gpu::RasterCommandList*> command_list) const
+  {
+    if (draw_args_list.empty())
+    {
+      return;
+    }
+
+    const gpu::GraphicPipelineStateDesc pipeline_desc = {
+      .program_id = desc.program_id,
+      .input_bindings =
+        {
+          .list = {{.stride = sizeof(StaticVertexData)}},
+        },
+      .input_attributes =
+        {
+          .list =
+            {
+              {
+                .binding = 0,
+                .offset  = offsetof(StaticVertexData, position),
+                .type    = gpu::VertexElementType::FLOAT3,
+              },
+              {
+                .binding = 0,
+                .offset  = offsetof(StaticVertexData, normal),
+                .type    = gpu::VertexElementType::FLOAT3,
+              },
+              {
+                .binding = 0,
+                .offset  = offsetof(StaticVertexData, tangent),
+                .type    = gpu::VertexElementType::FLOAT4,
+              },
+              {
+                .binding = 0,
+                .offset  = offsetof(StaticVertexData, tex_coord),
+                .type    = gpu::VertexElementType::FLOAT2,
+              },
+            },
+        },
+      .viewport = desc.viewport,
+      .scissor  = desc.scissor,
+      .raster =
+        {
+          .cull_mode  = {gpu::CullMode::BACK},
+          .front_face = gpu::FrontFace::COUNTER_CLOCKWISE,
+        },
+      .color_attachment_count   = desc.color_attachment_count,
+      .color_attachments        = desc.color_attachments,
+      .depth_stencil_attachment = desc.depth_stencil_attachment,
+    };
+    const auto pipeline_state_id = registry->get_pipeline_state(pipeline_desc);
+
+    for (const auto& draw_arg : draw_args_list)
+    {
+      command_list->push(gpu::RenderCommandDrawIndexedIndirect{
+        .pipeline_state_id  = pipeline_state_id,
+        .push_constant_data = desc.push_constant_data,
+        .push_constant_size = desc.push_constant_size,
+        .vertex_buffer_ids  = {static_vertex_buffer},
+        .index_buffer_id    = index_buffer,
+        .index_type         = draw_arg.index_type,
+        .buffer_id          = draw_arg.buffer,
+        .offset             = 0,
+        .draw_count         = cast<u32>(draw_arg.count),
+        .stride             = sizeof(gpu::DrawIndexedIndirectCommand),
+      });
+    }
+  }
 } // namespace renderlab

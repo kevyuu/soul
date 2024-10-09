@@ -5,31 +5,42 @@
 
 #include "env_map.hlsl"
 
+struct AssetData
+{
+  soulsl::DescriptorID material_buffer;
+  soulsl::DescriptorID vertices;
+  soulsl::DescriptorID indexes;
+};
+
 struct GPUScene
 {
 
+  // Scene data
   soulsl::DescriptorID world_matrixes_buffer;
   soulsl::DescriptorID normal_matrixes_buffer;
   soulsl::DescriptorID prev_world_matrixes_buffer;
   soulsl::DescriptorID prev_normal_matrixes_buffer;
-
   soulsl::DescriptorID mesh_instance_buffer;
 
+  // Mesh System
+  // Asset Data
   soulsl::DescriptorID vertices;
   soulsl::DescriptorID indexes;
 
+  // Material System
+  // Asset Data
   soulsl::DescriptorID material_buffer;
-  EnvMapData env_map_data;
 
+  // Scene Data
+  EnvMapData env_map_data;
   soulsl::DescriptorID linear_repeat_sampler;
   soulsl::DescriptorID linear_clamp_sampler;
   soulsl::DescriptorID nearest_clamp_sampler;
 
+  // Scene Data
   soulsl::DescriptorID tlas;
-
   GPUCameraData camera_data;
   GPUCameraData prev_camera_data;
-
   u64 light_count;
   soulsl::DescriptorID light_instance_buffer;
 

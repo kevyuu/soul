@@ -2,7 +2,8 @@ set(PUBLIC_HEADER_DIR src)
 
 set(SOUL_SOURCES_OSX src/memory/impl/osx/page_allocator.cpp)
 
-set(SOUL_SOURCES_WINDOWS src/memory/impl/windows/page_allocator.cpp)
+set(SOUL_SOURCES_WINDOWS src/memory/impl/windows/page_allocator.cpp
+                         src/app/impl/windows_platform/app.cpp)
 
 set(SOUL_SOURCES
     src/core/log.cpp
@@ -23,18 +24,19 @@ set(SOUL_SOURCES
     src/memory/impl/linear_allocator.cpp
     src/runtime/impl/runtime_system.cpp
     src/runtime/impl/task_deque.cpp
+    src/misc/filesystem.cpp
     src/misc/image_data.cpp
+    src/misc/json.cpp
     "$<$<STREQUAL:${CMAKE_SYSTEM_NAME},Darwin>:${SOUL_SOURCES_OSX}>"
     "$<$<STREQUAL:${CMAKE_SYSTEM_NAME},Windows>:${SOUL_SOURCES_WINDOWS}>")
 
 add_library(soul STATIC ${SOUL_SOURCES})
-target_include_directories(soul PUBLIC src ${NVTX_INCLUDE_DIR} ${PROJECT_SOURCE_DIR}/dependencies)
+target_include_directories(soul PUBLIC src ${PROJECT_SOURCE_DIR}/dependencies)
 target_link_system_libraries(
   soul
   PUBLIC
   glfw
-  ${NVTX}
-  Vulkan::Vulkan
+  nvtx3-cpp
   volk::volk
   vk_mem_alloc
   Tracy::TracyClient
@@ -131,6 +133,7 @@ target_link_system_libraries(
   PUBLIC
   soul
   PRIVATE
+  yyjson::yyjson
   imgui
   imguizmo
   glfw)

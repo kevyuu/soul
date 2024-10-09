@@ -3,9 +3,9 @@
 #include "app/input_state.h"
 
 #include "core/comp_str.h"
+#include "core/string_view.h"
 #include "gpu/render_graph.h"
 
-#include "core/builtins.h"
 #include "core/config.h"
 #include "core/tuple.h"
 #include "core/type.h"
@@ -44,6 +44,36 @@ namespace soul::app
     using WindowFlags = FlagSet<WindowFlag>;
     static constexpr auto WINDOW_FLAGS_DEFAULT =
       WindowFlags{WindowFlag::SHOW_TITLE_BAR, WindowFlag::ALLOW_MOVE};
+
+    enum class InputFlag
+    {
+      CHARS_DECIMAL,
+      CHARS_HEXADECIMAL,
+      CHARS_SCIENTIFIC,
+      CHARS_UPPERCASE,
+      CHARS_NO_BLANK,
+
+      ALLOW_TAB_INPUT,
+      ENTER_RETURNS_TRUE,
+
+      ESCAPE_CLEARS_ALL,
+
+      CTRL_ENTER_FOR_NEW_LINE,
+
+      READ_ONLY,
+      PASSWORD,
+      ALWAYS_OVERWRITE,
+      AUTO_SELECT_ALL,
+      PARSE_EMPTY_REF_VAL,
+      DISPLAY_EMPTY_REF_VAL,
+
+      NO_HORIZONTAL_SCROLL,
+      NO_UNDO_REDO,
+
+      COUNT,
+    };
+    using InputFlags                         = FlagSet<InputFlag>;
+    static constexpr auto INPUT_FLAG_DEFAULT = InputFlags{};
 
     enum class Direction
     {
@@ -136,21 +166,16 @@ namespace soul::app
 
     void on_window_focus_event(b8 focused);
 
-    auto begin_main_menu_bar() -> b8;
-
-    void end_main_menu_bar();
-
-    auto begin_menu(CompStr label) -> b8;
-
-    void end_menu();
-
-    auto menu_item(CompStr label) -> b8;
-
     void begin_dock_window();
 
+    // ----------------------------------------------------------------------------
+    // Window
+    // ----------------------------------------------------------------------------
     auto begin_window(
-      CompStr label, vec2f32 size, vec2f32 pos = {0, 0}, WindowFlags flags = WINDOW_FLAGS_DEFAULT)
-      -> b8;
+      CompStr label,
+      vec2f32 size,
+      vec2f32 pos       = {0, 0},
+      WindowFlags flags = WINDOW_FLAGS_DEFAULT) -> b8;
 
     void end_window();
 
@@ -159,20 +184,6 @@ namespace soul::app
 
     [[nodiscard]]
     auto get_window_size() const -> vec2f32;
-
-    auto begin_popup(CompStr label) -> b8;
-
-    auto begin_popup_modal(CompStr label) -> b8;
-
-    void end_popup();
-
-    void open_popup(CompStr label);
-
-    void close_current_popup();
-
-    void set_item_default_focus();
-
-    auto get_id(CompStr label) -> GuiID;
 
     // ----------------------------------------------------------------------------
     // Dock
@@ -196,6 +207,10 @@ namespace soul::app
 
     void text(StringView text);
 
+    void text_disabled(StringView text);
+
+    void text_colored(StringView text, vec4f32 color);
+
     void label_text(CompStr label, StringView text);
 
     void separator_text(CompStr label);
@@ -204,6 +219,8 @@ namespace soul::app
     // Widgets: Main
     // ----------------------------------------------------------------------------
     auto button(CompStr label, vec2f32 size = {0, 0}) -> b8;
+
+    auto button(StringView label, vec2f32 size = {0, 0}) -> b8;
 
     auto image_button(
       CompStr label,
@@ -228,7 +245,8 @@ namespace soul::app
     // ----------------------------------------------------------------------------
     // Widgets: Input
     // ----------------------------------------------------------------------------
-    auto input_text(CompStr label, String& text, usize text_length_limit) -> b8;
+
+    auto input_text(CompStr label, String* text) -> b8;
 
     auto input_text(CompStr label, Span<char*> buffer) -> b8;
 
@@ -276,6 +294,36 @@ namespace soul::app
 
     auto slider_vec4f32(
       CompStr label, NotNull<vec4f32*> val, f32 v_min, f32 v_max, SliderFlags flags = {}) -> b8;
+
+    // ----------------------------------------------------------------------------
+    // Widgets: Menu Bar
+    // ----------------------------------------------------------------------------
+    auto begin_main_menu_bar() -> b8;
+
+    void end_main_menu_bar();
+
+    auto begin_menu(CompStr label) -> b8;
+
+    void end_menu();
+
+    auto menu_item(CompStr label) -> b8;
+
+    // ----------------------------------------------------------------------------
+    // Popup
+    // ----------------------------------------------------------------------------
+    auto begin_popup(CompStr label) -> b8;
+
+    auto begin_popup_modal(CompStr label) -> b8;
+
+    void end_popup();
+
+    void open_popup(CompStr label);
+
+    void close_current_popup();
+
+    void set_item_default_focus();
+
+    auto get_id(CompStr label) -> GuiID;
 
     // ----------------------------------------------------------------------------
     // Widgets: Color
@@ -347,9 +395,9 @@ namespace soul::app
 
     void unindent(f32 indent_w = 0.0_f32);
 
-    // ----------------------------------------------------------------------------
-    // Input
-    // ----------------------------------------------------------------------------
+    void push_item_width(f32 width);
+
+    void pop_item_width();
 
     [[nodiscard]]
     auto is_item_clicked() -> b8;
@@ -394,9 +442,12 @@ namespace soul::app
     [[nodiscard]]
     auto is_key_pressed(KeyboardKey key, b8 repeat = true) const -> b8;
 
-    [[nodiscard]] auto is_key_released(KeyboardKey) const -> b8;
+    [[nodiscard]]
+    auto is_key_released(KeyboardKey) const -> b8;
 
     void set_cursor_pos(vec2f32 pos);
+
+    void push_id(StringView id);
 
     void push_id(i32 id);
 
@@ -404,5 +455,8 @@ namespace soul::app
 
     [[nodiscard]]
     auto get_frame_rate() const -> f32;
+
+    [[nodiscard]]
+    auto get_display_size() const -> vec2f32;
   };
 } // namespace soul::app

@@ -255,15 +255,14 @@ namespace std
       return std::bit_cast<soul::f16, soul::u16>(0x3c00);
     }
 
-    static constexpr int min_exponent              = -13;
-    static constexpr int min_exponent10            = -4;
-    static constexpr int max_exponent              = 16;
-    static constexpr int max_exponent10            = 4;
-    static constexpr bool has_infinity             = true;
-    static constexpr bool has_quiet_NaN            = true;
-    static constexpr bool has_signaling_NaN        = true;
-    static constexpr float_denorm_style has_denorm = denorm_absent;
-    static constexpr bool has_denorm_loss          = false;
+    static constexpr int min_exponent       = -13;
+    static constexpr int min_exponent10     = -4;
+    static constexpr int max_exponent       = 16;
+    static constexpr int max_exponent10     = 4;
+    static constexpr bool has_infinity      = true;
+    static constexpr bool has_quiet_NaN     = true;
+    static constexpr bool has_signaling_NaN = true;
+    static constexpr bool has_denorm_loss   = false;
 
     static constexpr auto infinity() noexcept -> soul::f16
     {

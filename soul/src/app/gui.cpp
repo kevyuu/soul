@@ -1,3 +1,8 @@
+#include "app/impl/codicon_symbol.embed.h"
+#include <imgui/imgui.h>
+#include <imgui/imgui_internal.h>
+#include <imguizmo/ImGuizmo.h>
+
 #include "app/gui.h"
 #include "app/imnodes.h"
 #include "app/impl/gui_texture_id.h"
@@ -19,12 +24,11 @@
 #include "math/matrix.h"
 #include "runtime/scope_allocator.h"
 
-#include "impl/soul_imconfig.h"
-#include <imgui/imgui.h>
-#include <imgui/imgui_internal.h>
-#include <imguizmo/ImGuizmo.h>
+#include "icons.h"
 
-#include <iostream>
+#include "impl/material_icon.embed.h"
+#include "impl/roboto_regular.embed.h"
+#include "impl/soul_imconfig.h"
 
 using namespace soul::literals;
 
@@ -278,6 +282,24 @@ namespace soul::app
       });
     }
 
+    auto InputTextCallback(ImGuiInputTextCallbackData* data) -> int
+    {
+      String* str = static_cast<String*>(data->UserData);
+      if (data->EventFlag == ImGuiInputTextFlags_CallbackResize)
+      {
+        SOUL_ASSERT(0, data->Buf == str->c_str());
+        str->resize(data->BufTextLen);
+        data->Buf = (char*)str->c_str();
+      }
+      return 0;
+    }
+
+    [[nodiscard]]
+    auto into_imgui_vec(vec4f32 color) -> ImVec4
+    {
+      return ImVec4(color.x, color.y, color.z, color.w);
+    }
+
     [[nodiscard]]
     auto into_imgui_size(vec2f32 size) -> ImVec2
     {
@@ -439,9 +461,9 @@ namespace soul::app
       colors[ImGuiCol_ResizeGripActive]      = ImVec4(0.40f, 0.44f, 0.47f, 1.00f);
       colors[ImGuiCol_Tab]                   = ImVec4(0.00f, 0.00f, 0.00f, 0.52f);
       colors[ImGuiCol_TabHovered]            = ImVec4(0.14f, 0.14f, 0.14f, 1.00f);
-      colors[ImGuiCol_TabActive]             = ImVec4(0.20f, 0.20f, 0.20f, 0.36f);
-      colors[ImGuiCol_TabUnfocused]          = ImVec4(0.00f, 0.00f, 0.00f, 0.52f);
-      colors[ImGuiCol_TabUnfocusedActive]    = ImVec4(0.14f, 0.14f, 0.14f, 1.00f);
+      colors[ImGuiCol_TabSelected]           = ImVec4(0.20f, 0.20f, 0.20f, 0.36f);
+      colors[ImGuiCol_TabDimmed]             = ImVec4(0.00f, 0.00f, 0.00f, 0.52f);
+      colors[ImGuiCol_TabDimmedSelected]     = ImVec4(0.14f, 0.14f, 0.14f, 1.00f);
       colors[ImGuiCol_DockingPreview]        = ImVec4(0.33f, 0.67f, 0.86f, 1.00f);
       colors[ImGuiCol_DockingEmptyBg]        = ImVec4(1.00f, 0.00f, 0.00f, 1.00f);
       colors[ImGuiCol_PlotLines]             = ImVec4(1.00f, 0.00f, 0.00f, 1.00f);
@@ -453,7 +475,7 @@ namespace soul::app
       colors[ImGuiCol_TableBorderLight]      = ImVec4(0.28f, 0.28f, 0.28f, 0.29f);
       colors[ImGuiCol_TableRowBg]            = ImVec4(0.00f, 0.00f, 0.00f, 0.00f);
       colors[ImGuiCol_TableRowBgAlt]         = ImVec4(1.00f, 1.00f, 1.00f, 0.06f);
-      colors[ImGuiCol_TextSelectedBg]        = ImVec4(0.20f, 0.22f, 0.23f, 1.00f);
+      colors[ImGuiCol_TextSelectedBg]        = ImVec4(0.258f, 0.422f, 0.711f, 1.000f);
       colors[ImGuiCol_DragDropTarget]        = ImVec4(0.33f, 0.67f, 0.86f, 1.00f);
       colors[ImGuiCol_NavHighlight]          = ImVec4(1.00f, 0.00f, 0.00f, 1.00f);
       colors[ImGuiCol_NavWindowingHighlight] = ImVec4(1.00f, 0.00f, 0.00f, 0.70f);
@@ -515,7 +537,22 @@ namespace soul::app
     ImGui::SetCurrentContext(imgui_context);
     ImGuiIO& io = ImGui::GetIO();
     io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
-    io.IniFilename = nullptr;
+    io.IniFilename = "imgui.ini";
+
+    ImFontConfig font_config;
+    io.Fonts->AddFontFromMemoryTTF(
+      (void*)g_RobotoRegular, sizeof(g_RobotoRegular), 16.0f, &font_config);
+    ImFontConfig icon_font_config;
+    icon_font_config.MergeMode         = true;
+    icon_font_config.GlyphOffset       = {0, 3};
+    icon_font_config.PixelSnapH        = true;
+    static const ImWchar icon_ranges[] = {ICON_MIN_MD, ICON_MAX_16_MD, 0};
+    io.Fonts->AddFontFromMemoryTTF(
+      (void*)g_MaterialIcons_Regular_ttf,
+      sizeof(g_MaterialIcons_Regular_ttf),
+      18.0f,
+      &icon_font_config,
+      icon_ranges);
 
     const auto shader_source = gpu::ShaderSource::From(gpu::ShaderString(String::From(IMGUI_HLSL)));
     const auto search_path   = Path::From("shaders/"_str);
@@ -1079,7 +1116,7 @@ namespace soul::app
     const b8 open          = ImGui::Begin(label.c_str(), nullptr, imgui_flags);
     if (open)
     {
-      ImGui::PushItemWidth(-230.0f);
+      ImGui::PushItemWidth(-130.0f);
     }
     return open;
   }
@@ -1189,6 +1226,16 @@ namespace soul::app
     ImGui::Text(text.data().unwrap().get());
   }
 
+  void Gui::text_disabled(StringView text)
+  {
+    ImGui::TextDisabled(text.data().unwrap().get());
+  }
+
+  void Gui::text_colored(StringView text, vec4f32 color)
+  {
+    ImGui::TextColored(into_imgui_vec(color), text.data());
+  }
+
   void Gui::label_text(CompStr label, StringView text)
   {
     SOUL_ASSERT(0, text.is_null_terminated());
@@ -1206,6 +1253,12 @@ namespace soul::app
   auto Gui::button(CompStr label, vec2f32 size) -> b8
   {
     return ImGui::Button(label.c_str(), into_imgui_size(size));
+  }
+
+  auto Gui::button(StringView label, vec2f32 size) -> b8
+  {
+    SOUL_ASSERT(0, label.is_null_terminated());
+    return ImGui::Button(label.data(), into_imgui_size(size));
   }
 
   auto Gui::image_button(
@@ -1309,13 +1362,16 @@ namespace soul::app
   // ----------------------------------------------------------------------------
   // Widgets: Input
   // ----------------------------------------------------------------------------
-  auto Gui::input_text(CompStr label, String& text, usize text_length_limit) -> b8
+  auto Gui::input_text(CompStr label, String* text) -> b8
   {
-    runtime::ScopeAllocator scope_allocator("Input Text"_str);
-    char* buffer = scope_allocator.allocate_array<char>(text_length_limit);
-    std::memcpy(buffer, text.c_str(), text.size() + 1);
-    const b8 is_change = ImGui::InputText(label.c_str(), buffer, text_length_limit);
-    text.assign(buffer);
+    text->reserve(text->size() + 1);
+    const b8 is_change = ImGui::InputText(
+      label.c_str(),
+      text->data(),
+      text->size() + 1,
+      ImGuiInputTextFlags_CallbackResize,
+      InputTextCallback,
+      text);
     return is_change;
   }
 
@@ -1603,9 +1659,16 @@ namespace soul::app
     ImGui::Unindent(indent_w);
   }
 
-  // ----------------------------------------------------------------------------
-  // Input
-  // ----------------------------------------------------------------------------
+  void Gui::push_item_width(f32 width)
+  {
+    ImGui::PushItemWidth(width);
+  }
+
+  void Gui::pop_item_width()
+  {
+    ImGui::PopItemWidth();
+  }
+
   auto Gui::is_item_clicked() -> b8
   {
     return ImGui::IsItemClicked();
@@ -1690,6 +1753,11 @@ namespace soul::app
     ImGui::SetCursorPos(into_imgui_size(pos));
   }
 
+  void Gui::push_id(StringView id)
+  {
+    ImGui::PushID(id.begin(), id.end());
+  }
+
   void Gui::push_id(i32 id)
   {
     ImGui::PushID(id);
@@ -1703,5 +1771,11 @@ namespace soul::app
   auto Gui::get_frame_rate() const -> f32
   {
     return ImGui::GetIO().Framerate;
+  }
+
+  auto Gui::get_display_size() const -> vec2f32
+  {
+    auto display_size = ImGui::GetIO().DisplaySize;
+    return {display_size.x, display_size.y};
   }
 } // namespace soul::app

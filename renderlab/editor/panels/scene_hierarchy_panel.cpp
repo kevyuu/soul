@@ -1,6 +1,7 @@
 #include "scene_hierarchy_panel.h"
 
 #include "app/gui.h"
+#include "app/icons.h"
 
 #include "editor/store.h"
 #include "type.h"
@@ -62,6 +63,7 @@ namespace renderlab
             app::Gui::WindowFlag::ALLOW_MOVE,
           }))
     {
+      gui->input_text(ICON_MD_SEARCH, &search_text_);
       impl::render_entity_tree_node(store_->scene_ref().get_root_entity_id(), store_, gui);
     }
     gui->end_window();
