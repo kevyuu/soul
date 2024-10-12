@@ -24,6 +24,10 @@ namespace khaos
       gui->dock_space(dock_id);
       gui->end_window();
       connection_panel_.on_gui_render(gui, store);
+      game_panel_.on_gui_render(gui, store);
+      game_setting_panel_.on_gui_render(gui, store);
+      journey_list_panel_.on_gui_render(gui, store);
+      gui->show_demo_window();
     }
   }
 

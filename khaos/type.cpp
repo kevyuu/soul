@@ -1,5 +1,6 @@
 #include "type.h"
 
+#include "core/log.h"
 #include "misc/json.h"
 
 namespace khaos
@@ -214,25 +215,48 @@ namespace khaos
       seed);
   }
 
-  auto soul_op_build_json(JsonBuilderRef builder, const ProjectMetadata& project_metadata)
-    -> JsonRef
+  auto soul_op_build_json(JsonDoc* doc, const ProjectMetadata& project_metadata) -> JsonObjectRef
   {
-    auto json_ref = builder.create_json_empty_object();
-    json_ref.add("Name"_str, project_metadata.name.cspan());
-    json_ref.add("Path"_str, StringView(project_metadata.path.string().c_str()));
+    auto json_ref = doc->create_empty_object();
+    json_ref.add("name"_str, project_metadata.name.cspan());
+    const auto std_string = project_metadata.path.string();
+    json_ref.add("path"_str, StringView(std_string.c_str()));
     return json_ref;
   }
 
-  auto soul_op_build_json(JsonBuilderRef builder, const AppSetting& setting) -> JsonRef
+  auto soul_op_build_json(JsonDoc* doc, const Message& message) -> JsonObjectRef
   {
-    auto json_ref = builder.create_json_empty_object();
+    auto json_ref = doc->create_empty_object();
+    json_ref.add("role"_str, ROLE_LABELS[message.role]);
+    json_ref.add("content"_str, message.content.cspan());
+    return json_ref;
+  }
+
+  auto soul_op_build_json(JsonDoc* doc, const Journey& journey) -> JsonObjectRef
+  {
+    auto json_ref = doc->create_empty_object();
+    json_ref.add("message"_str, doc->create_array(journey.messages.cspan()));
+    return json_ref;
+  }
+
+  auto soul_op_build_json(JsonDoc* doc, const AppSetting& setting) -> JsonObjectRef
+  {
+    auto json_ref = doc->create_empty_object();
     json_ref.add("api_url"_str, setting.api_url.cspan());
     json_ref.add("context_token_count"_str, setting.context_token_count);
     json_ref.add("response_token_count"_str, setting.response_token_count);
     json_ref.add("active_prompt_format"_str, setting.active_prompt_format.cspan());
     json_ref.add("active_sampler"_str, setting.active_sampler.cspan());
-    json_ref.add(
-      "project_metadatas"_str, builder.create_json_array(setting.project_metadatas.cspan()));
+    json_ref.add("project_metadatas"_str, doc->create_array(setting.project_metadatas.cspan()));
+    return json_ref;
+  }
+
+  auto soul_op_build_json(JsonDoc* doc, const Project& project) -> JsonObjectRef
+  {
+    auto json_ref = doc->create_empty_object();
+    json_ref.add("name"_str, project.name.cspan());
+    json_ref.add("header_prompt"_str, project.header_prompt.cspan());
+    json_ref.add("first_message"_str, doc->create_object(project.first_message));
     return json_ref;
   }
 
@@ -250,6 +274,51 @@ auto soul_op_construct_from_json<ProjectMetadata>(JsonReadRef val_ref) -> Projec
 }
 
 template <>
+auto soul_op_construct_from_json<Message>(JsonReadRef val_ref) -> Message
+{
+  SOUL_LOG_INFO("Role : {}", val_ref.ref("role"_str).as_string_view());
+  SOUL_LOG_INFO("Content : {}", val_ref.ref("content"_str).as_string_view());
+  return Message{
+    .role    = ROLE_LABELS.find_first_key_with_val(val_ref.ref("role"_str).as_string_view()),
+    .content = String::From(val_ref.ref("content"_str).as_string_view()),
+  };
+}
+
+template <>
+auto soul_op_construct_from_json<Journey>(JsonReadRef val_ref) -> Journey
+{
+  auto journey = Journey{
+    .name      = "New Journey"_str,
+    .user_name = "Kevin"_str,
+    .messages  = Vector<Message>(),
+  };
+  val_ref.ref("messages"_str)
+    .as_array_for_each(
+      [&](u32 idx, JsonReadRef message_json_ref)
+      {
+        journey.messages.push_back(soul_op_construct_from_json<Message>(message_json_ref));
+      });
+  return journey;
+}
+
+template <>
+auto soul_op_construct_from_json<Project>(JsonReadRef val_ref) -> Project
+{
+  auto project = Project{
+    .name          = String::From(val_ref.ref("name"_str).as_string_view()),
+    .header_prompt = String::From(val_ref.ref("header_prompt"_str).as_string_view()),
+    .first_message = soul_op_construct_from_json<Message>(val_ref.ref("first_message"_str)),
+    .journeys      = Vector<Journey>()};
+  val_ref.ref("journeys"_str)
+    .as_array_for_each(
+      [&](u32 idx, JsonReadRef journey_json_ref)
+      {
+        project.journeys.push_back(soul_op_construct_from_json<Journey>(journey_json_ref));
+      });
+  return project;
+}
+
+template <>
 auto soul_op_construct_from_json<AppSetting>(JsonReadRef val_ref) -> AppSetting
 {
   auto setting = AppSetting{
@@ -260,12 +329,13 @@ auto soul_op_construct_from_json<AppSetting>(JsonReadRef val_ref) -> AppSetting
     .active_sampler       = String::From(val_ref.ref("active_sampler"_str).as_string_view()),
     .project_metadatas    = Vector<ProjectMetadata>(),
   };
-  val_ref.as_array_for_each(
-    [&](u32 idx, JsonReadRef metadata_json_ref)
-    {
-      setting.project_metadatas.push_back(
-        soul_op_construct_from_json<ProjectMetadata>(metadata_json_ref));
-    });
+  val_ref.ref("project_metadatas"_str)
+    .as_array_for_each(
+      [&](u32 idx, JsonReadRef metadata_json_ref)
+      {
+        setting.project_metadatas.push_back(
+          soul_op_construct_from_json<ProjectMetadata>(metadata_json_ref));
+      });
   return setting;
 }
 

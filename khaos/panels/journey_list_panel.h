@@ -12,13 +12,16 @@ namespace soul::app
 
 namespace khaos
 {
-  class ChatbotSettingPanel
+  class Store;
+
+  class JourneyListPanel
   {
   public:
-    ChatbotSettingPanel() = default;
-    void on_gui_render(NotNull<soul::app::Gui*> gui);
+    JourneyListPanel() = default;
+    void on_gui_render(NotNull<soul::app::Gui*> gui, Store* store);
 
   private:
-    String api_url_;
+    String header_prompt_;
+    String first_message_;
   };
 } // namespace khaos

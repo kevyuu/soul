@@ -44,6 +44,11 @@ namespace soul
       return {data_, size_};
     }
 
+    auto operator==(const Span<const char*>& other) const -> b8
+    {
+      return Span<const char*>(*this) == other;
+    }
+
     friend consteval auto literals::operator""_str(const char* literal, usize length) -> CompStr;
   };
 

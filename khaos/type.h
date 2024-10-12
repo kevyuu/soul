@@ -1,5 +1,6 @@
 #pragma once
 
+#include "core/flag_map.h"
 #include "core/path.h"
 #include "core/string.h"
 #include "core/vector.h"
@@ -14,6 +15,8 @@ namespace khaos
   {
     String name;
     Path path;
+
+    friend auto soul_op_build_json(JsonDoc* doc, const ProjectMetadata& metadata) -> JsonObjectRef;
   };
 
   struct Sampler
@@ -95,24 +98,51 @@ namespace khaos
     ASSISTANT,
     COUNT
   };
+  static constexpr FlagMap<Role, CompStr> ROLE_LABELS = {
+    "SYSTEM"_str,
+    "USER"_str,
+    "ASSISTANT"_str,
+  };
 
   struct Message
   {
     Role role;
     String content;
+
+    auto clone() const -> Message
+    {
+      return Message{
+        .role    = role,
+        .content = content.clone(),
+      };
+    }
+
+    void clone_from(const Message& other)
+    {
+      role = other.role;
+      content.clone_from(other.content);
+    }
+
+    friend auto soul_op_build_json(JsonDoc* doc, const Message& message) -> JsonObjectRef;
   };
 
   struct Journey
   {
+    String name;
+    String user_name;
     Vector<Message> messages;
+
+    friend auto soul_op_build_json(JsonDoc* doc, const Journey& journey) -> JsonObjectRef;
   };
 
-  struct World
+  struct Project
   {
     String name;
     String header_prompt;
-    Message first_message;
+    Message first_message = {Role::ASSISTANT, String::From(""_str)};
     Vector<Journey> journeys;
+
+    friend auto soul_op_build_json(JsonDoc* doc, const Project& project) -> JsonObjectRef;
   };
 
   struct AppSetting
@@ -124,7 +154,7 @@ namespace khaos
     String active_sampler       = "Big O"_str;
     Vector<ProjectMetadata> project_metadatas;
 
-    friend auto soul_op_build_json(JsonBuilderRef builder, const AppSetting& setting) -> JsonRef;
+    friend auto soul_op_build_json(JsonDoc* doc, const AppSetting& setting) -> JsonObjectRef;
   };
 
   struct CompletionRequest
@@ -140,12 +170,13 @@ auto soul_op_construct_from_json<khaos::ProjectMetadata>(JsonReadRef val_ref)
   -> khaos::ProjectMetadata;
 
 template <>
-auto soul_op_construct_from_json<khaos::AppSetting>(JsonReadRef val_ref)
-  -> khaos::AppSetting;
+auto soul_op_construct_from_json<khaos::Project>(JsonReadRef val_ref) -> khaos::Project;
 
 template <>
-auto soul_op_construct_from_json<khaos::PromptFormat>(JsonReadRef val_ref)
-  -> khaos::PromptFormat;
+auto soul_op_construct_from_json<khaos::AppSetting>(JsonReadRef val_ref) -> khaos::AppSetting;
+
+template <>
+auto soul_op_construct_from_json<khaos::PromptFormat>(JsonReadRef val_ref) -> khaos::PromptFormat;
 
 template <>
 auto soul_op_construct_from_json<khaos::Sampler>(JsonReadRef val_ref) -> khaos::Sampler;

@@ -54,14 +54,7 @@ namespace renderlab
 
   void SceneHierarchyPanel::on_gui_render(NotNull<app::Gui*> gui)
   {
-    if (gui->begin_window(
-          LABEL,
-          vec2f32(1400, 1040),
-          vec2f32(20, 40),
-          {
-            app::Gui::WindowFlag::SHOW_TITLE_BAR,
-            app::Gui::WindowFlag::ALLOW_MOVE,
-          }))
+    if (gui->begin_window(LABEL, vec2f32(1400, 1040), vec2f32(20, 40)))
     {
       gui->input_text(ICON_MD_SEARCH, &search_text_);
       impl::render_entity_tree_node(store_->scene_ref().get_root_entity_id(), store_, gui);

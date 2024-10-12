@@ -1,9 +1,8 @@
 #pragma once
 
-#include "type.h"
+#include "panels/new_project_popup.h"
 
 #include "core/not_null.h"
-#include "core/string.h"
 
 using namespace soul;
 
@@ -18,6 +17,9 @@ namespace khaos
 
   class ProjectSelectionPanel
   {
+  private:
+    NewProjectPopup new_project_popup;
+
   public:
     ProjectSelectionPanel() = default;
     void on_gui_render(NotNull<soul::app::Gui*> gui, NotNull<Store*> store);

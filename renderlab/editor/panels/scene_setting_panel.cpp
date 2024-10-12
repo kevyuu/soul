@@ -12,14 +12,7 @@ namespace renderlab
 
   void SceneSettingPanel::on_gui_render(NotNull<app::Gui*> gui)
   {
-    if (gui->begin_window(
-          LABEL,
-          vec2f32(1400, 1040),
-          vec2f32(20, 40),
-          {
-            app::Gui::WindowFlag::SHOW_TITLE_BAR,
-            app::Gui::WindowFlag::ALLOW_MOVE,
-          }))
+    if (gui->begin_window(LABEL, vec2f32(1400, 1040), vec2f32(20, 40)))
     {
       if (gui->begin_tab_bar("Scene Settings Tab Bar"_str))
       {

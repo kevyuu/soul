@@ -1,29 +1,32 @@
 #include "store.h"
+#include "type.h"
 
 #include "core/array.h"
 #include "core/log.h"
+
+#include "gpu/gpu.h"
+
 #include "misc/filesystem.h"
+#include "misc/image_data.h"
 #include "misc/json.h"
-#include "type.h"
 
 #include <algorithm>
 #include <filesystem>
-#include <fstream>
-#include <iostream>
-#include <random>
 
 namespace khaos
 {
-  Store::Store(const Path& storage_path)
+  Store::Store(const Path& storage_path, NotNull<gpu::System*> gpu_system)
       : storage_path_(storage_path.clone()),
         app_setting_path_(storage_path / "app_setting.json"_str),
         prompt_format_path_(storage_path_ / "prompt_format_settings"_str),
         sampler_path_(storage_path_ / "sampler_settings"_str),
-        active_prompt_format_index_(0),
-        active_sampler_index_(0),
+        active_project_path_(Path::From(""_str)),
         api_url_("http://127.0.0.1:5000"_str),
         context_token_count_(16384),
-        response_token_count_(250)
+        response_token_count_(250),
+        active_prompt_format_index_(0),
+        active_sampler_index_(0),
+        gpu_system_(gpu_system)
   {
     static const auto PROMPT_FORMAT_SETTINGS = Array{
       PromptFormat{
@@ -140,7 +143,9 @@ namespace khaos
 
     if (!std::filesystem::is_regular_file(app_setting_path_))
     {
-      const String json_string = to_json_string(AppSetting());
+      JsonDoc doc;
+      const auto ref         = doc.create_root_object(AppSetting());
+      const auto json_string = doc.dump();
       write_to_file(app_setting_path_, json_string.cspan());
     }
 
@@ -150,6 +155,7 @@ namespace khaos
       api_url_               = std::move(app_setting.api_url);
       context_token_count_   = app_setting.context_token_count;
       response_token_count_  = app_setting.response_token_count;
+      project_metadatas_     = std::move(app_setting.project_metadatas);
       select_prompt_format(app_setting.active_prompt_format.cspan());
       select_sampler(app_setting.active_sampler.cspan());
     }
@@ -313,9 +319,159 @@ namespace khaos
     sort_sampler_settings();
   }
 
+  [[nodiscard]]
+  auto Store::header_prompt_cspan() const -> StringView
+  {
+    return active_project_.some_ref().header_prompt.cspan();
+  }
+
+  void Store::set_header_prompt(StringView header_prompt)
+  {
+    active_project_.some_ref().header_prompt.assign(header_prompt);
+    save_project();
+  }
+
+  [[nodiscard]]
+  auto Store::first_message_cspan() const -> StringView
+  {
+    return active_project_.some_ref().first_message.content.cspan();
+  }
+
+  void Store::set_first_message(StringView first_message)
+  {
+    active_project_.some_ref().first_message.content.assign(first_message);
+    save_project();
+  }
+
   auto Store::is_any_project_active() const -> b8
   {
     return active_project_.is_some();
+  }
+
+  auto Store::active_journey_cref() const -> const Journey&
+  {
+    return active_journey_.some_ref();
+  }
+
+  auto Store::project_metadatas_cspan() const -> Span<const ProjectMetadata*>
+  {
+    return project_metadatas_.cspan();
+  }
+
+  void Store::create_new_project(StringView name, const Path& path)
+  {
+    JsonDoc doc;
+    const auto ref               = doc.create_root_object(Project());
+    const String json_string     = doc.dump();
+    const auto project_directory = path / name;
+    const auto filename          = String::Format("{}.kosmos", name);
+    project_metadatas_.push_back(ProjectMetadata{
+      .name = String::From(name),
+      .path = project_directory / filename.cspan(),
+    });
+    std::filesystem::create_directory(project_directory);
+    write_to_file(project_metadatas_.back().path, json_string.cspan());
+    save_app_settings();
+    load_project(project_metadatas_.back().path);
+  }
+
+  void Store::load_project(const Path& path)
+  {
+    const auto project_json_string = get_file_content(path);
+    active_project_                = from_json_string<Project>(project_json_string.cspan());
+    active_project_path_           = path.parent_path();
+    active_project_filepath_       = path.clone();
+    load_background();
+  }
+
+  void Store::save_project()
+  {
+    JsonDoc doc;
+    doc.create_root_object(active_project_.some_ref());
+    const auto project_json_string = doc.dump();
+    write_to_file(active_project_filepath_, project_json_string.cspan());
+  }
+
+  [[nodiscard]]
+  auto Store::is_any_journey_active() const -> b8
+  {
+    return active_journey_.is_some();
+  }
+
+  void Store::create_new_journey()
+  {
+    active_journey_ = Journey{
+      .name      = "Journey"_str,
+      .user_name = "Kevin"_str,
+      .messages  = Vector<Message>(),
+    };
+    active_journey_.some_ref().messages.push_back(active_project_.some_ref().first_message.clone());
+  }
+
+  auto Store::load_texture(const Path& path) -> gpu::TextureID
+  {
+    SOUL_LOG_INFO("Load texture : {}", path.string());
+    const auto& image_data          = ImageData::FromFile(path, 4);
+    const gpu::TextureFormat format = [&]
+    {
+      if (image_data.channel_count() == 1)
+      {
+        return gpu::TextureFormat::R8;
+      } else
+      {
+        SOUL_ASSERT(0, image_data.channel_count() == 4);
+        return gpu::TextureFormat::RGBA8;
+      }
+    }();
+
+    const auto usage        = gpu::TextureUsageFlags({gpu::TextureUsage::SAMPLED});
+    const auto texture_desc = gpu::TextureDesc::d2(
+      format,
+      1,
+      usage,
+      {
+        gpu::QueueType::GRAPHIC,
+        gpu::QueueType::COMPUTE,
+      },
+      image_data.dimension());
+
+    const gpu::TextureRegionUpdate region_load = {
+      .subresource = {.layer_count = 1},
+      .extent      = vec3u32(image_data.dimension(), 1),
+    };
+
+    const auto raw_data = image_data.cspan();
+
+    const gpu::TextureLoadDesc load_desc = {
+      .data            = raw_data.data(),
+      .data_size       = raw_data.size_in_bytes(),
+      .regions         = {&region_load, 1},
+      .generate_mipmap = false,
+    };
+
+    const auto texture_id = gpu_system_->create_texture(""_str, texture_desc, load_desc);
+    gpu_system_->flush_texture(texture_id, texture_desc.usage_flags);
+    return texture_id;
+  }
+
+  void Store::load_background()
+  {
+    background_texture_id =
+      load_texture(active_project_path_ / "backgrounds"_str / "tavern day.jpg"_str);
+  }
+
+  void Store::save_app_settings()
+  {
+    JsonDoc doc;
+    JsonObjectRef ref = doc.create_root_empty_object();
+    ref.add("api_url"_str, api_url_.cspan());
+    ref.add("context_token_count"_str, context_token_count_);
+    ref.add("response_token_count"_str, response_token_count_);
+    ref.add("active_prompt_format"_str, prompt_formats_[active_prompt_format_index_].name.cspan());
+    ref.add("active_sampler"_str, samplers_[active_sampler_index_].name.cspan());
+    ref.add("project_metadatas"_str, doc.create_array(project_metadatas_.cspan()));
+    const auto json_string = doc.dump();
+    write_to_file(app_setting_path_, json_string.cspan());
   }
 
   void Store::sort_sampler_settings()

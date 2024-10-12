@@ -65,8 +65,7 @@ namespace soul
     constexpr auto flip(flag_type bit) -> FlagSet&;
 
     [[nodiscard]]
-    constexpr auto
-    operator[](flag_type bit) const -> b8;
+    constexpr auto operator[](flag_type bit) const -> b8;
 
     constexpr auto operator|=(FlagSet flag) -> FlagSet&;
 
@@ -75,8 +74,7 @@ namespace soul
     constexpr auto operator^=(FlagSet flag) -> FlagSet&;
 
     [[nodiscard]]
-    constexpr auto
-    operator~() const -> FlagSet;
+    constexpr auto operator~() const -> FlagSet;
 
     constexpr auto operator==(const FlagSet& other) const -> bool = default;
 
@@ -105,6 +103,11 @@ namespace soul
 
     [[nodiscard]]
     constexpr auto none() const -> b8;
+
+    template <usize IFlagCount = FLAG_COUNT>
+      requires(IFlagCount <= 32)
+    [[nodiscard]]
+    constexpr auto to_i32() const -> i32;
 
     template <usize IFlagCount = FLAG_COUNT>
       requires(IFlagCount <= 32)
@@ -180,6 +183,14 @@ namespace soul
   constexpr auto FlagSet<Flag>::none() const -> b8
   {
     return flags_.none();
+  }
+
+  template <ts_flag Flag>
+  template <usize IFlagCount>
+    requires(IFlagCount <= 32)
+  constexpr auto FlagSet<Flag>::to_i32() const -> i32
+  {
+    return flags_.to_i32();
   }
 
   template <ts_flag Flag>

@@ -37,6 +37,7 @@ Checks: "
 
         -modernize-avoid-c-arrays,
         -modernize-return-braced-init-list,
+        -modernize-use-nodiscard,
 
         -readability-avoid-const-params-in-decls,
         -readability-convert-member-functions-to-static,

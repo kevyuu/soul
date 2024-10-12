@@ -53,8 +53,9 @@ namespace soul
 
     [[nodiscard]]
     static auto FillN(
-      usize size, const value_type& val, AllocatorT& allocator = *get_default_allocator())
-      -> this_type
+      usize size,
+      const value_type& val,
+      AllocatorT& allocator = *get_default_allocator()) -> this_type
       requires ts_copy<T>;
 
     template <ts_generate_fn<T> Fn>
@@ -209,12 +210,10 @@ namespace soul
     auto back() const noexcept -> const_reference;
 
     [[nodiscard]]
-    auto
-    operator[](usize idx) -> reference;
+    auto operator[](usize idx) -> reference;
 
     [[nodiscard]]
-    auto
-    operator[](usize idx) const -> const_reference;
+    auto operator[](usize idx) const -> const_reference;
 
   private:
     SOUL_NO_UNIQUE_ADDRESS RawBuffer<T, InlineSizeV> stack_storage_;
@@ -473,7 +472,7 @@ namespace soul
       this_type(std::move(other)).swap(*this);
     } else
     {
-      this_type(other, *allocator_).swap(*this);
+      unreachable();
     }
     return *this;
   }

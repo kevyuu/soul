@@ -382,4 +382,5 @@ namespace soul
     }
     return true;
   }
+
 } // namespace soul

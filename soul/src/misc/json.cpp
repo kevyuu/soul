@@ -1,6 +1,7 @@
 #include "misc/json.h"
 #include <yyjson.h>
 #include "core/integer.h"
+#include "core/string_view.h"
 
 namespace soul
 {
@@ -29,6 +30,11 @@ namespace soul
   auto JsonReadRef::ref(StringView key) const -> JsonReadRef
   {
     return JsonReadRef(yyjson_obj_getn(val_ptr_, key.begin(), key.size()));
+  }
+
+  auto JsonReadRef::as_raw() const -> StringView
+  {
+    return StringView(yyjson_get_raw(val_ptr_), yyjson_get_len(val_ptr_));
   }
 
   auto JsonReadRef::as_string_view() const -> StringView

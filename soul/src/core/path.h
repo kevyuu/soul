@@ -2,6 +2,7 @@
 
 #include <filesystem>
 #include "core/string.h"
+#include "core/string_view.h"
 #include "core/type_traits.h"
 
 namespace soul

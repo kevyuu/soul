@@ -4,6 +4,9 @@
 #include "core/type.h"
 #include "core/type_traits.h"
 
+#include <iostream>
+#include <string_view>
+
 namespace soul
 {
 
@@ -169,6 +172,22 @@ namespace soul
     constexpr auto crend() const -> const_reverse_iterator
     {
       return buffer_.crend();
+    }
+
+    template <typename CompareValT>
+    constexpr auto find_first_key_with_val(const CompareValT& val) const -> EnumT
+    {
+      for (u32 i = 0; i < COUNT; i++)
+      {
+        std::cout << "find first key" << std::endl;
+        std::cout << buffer_[i].data() << std::endl;
+        std::cout << std::string_view(val.data(), val.size()) << std::endl;
+        if (buffer_[i] == val)
+        {
+          return EnumT(i);
+        }
+      }
+      return EnumT::COUNT;
     }
 
     soul::Array<ValT, COUNT> buffer_;

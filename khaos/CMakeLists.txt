@@ -4,8 +4,12 @@ set(KHAOS_SOURCES
     store.cpp
     view.cpp
     panels/chatbot_setting_panel.cpp
+    panels/game_setting_panel.cpp
+    panels/new_project_popup.cpp
     panels/project_selection_panel.cpp
+    panels/game_panel.cpp
     panels/menu_bar.cpp
+    panels/journey_list_panel.cpp
     services/text_completion_api.cpp)
 
 add_executable(khaos ${KHAOS_SOURCES})

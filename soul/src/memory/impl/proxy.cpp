@@ -6,7 +6,7 @@ namespace soul::memory
 {
   void ProfileProxy::on_pre_init(StringView name)
   {
-    SOUL_MEMPROFILE_REGISTER_ALLOCATOR(name);
+    SOUL_MEMPROFILE_REGISTER_ALLOCATOR(name.data());
     name_ = name;
   }
 
@@ -19,7 +19,7 @@ namespace soul::memory
   auto ProfileProxy::on_post_allocate(const Allocation allocation) -> Allocation
   {
     SOUL_MEMPROFILE_REGISTER_ALLOCATION(
-      name_, current_alloc_.tag, allocation.addr, current_alloc_.size);
+      name_.data(), current_alloc_.tag, allocation.addr, current_alloc_.size);
     return allocation;
   }
 
@@ -29,7 +29,7 @@ namespace soul::memory
     {
       return dealloc_param;
     }
-    SOUL_MEMPROFILE_REGISTER_DEALLOCATION(name_, dealloc_param.addr, dealloc_param.size);
+    SOUL_MEMPROFILE_REGISTER_DEALLOCATION(name_.data(), dealloc_param.addr, dealloc_param.size);
     return dealloc_param;
   }
 

@@ -141,6 +141,20 @@
         constexpr ImVec4(const MyVec4& f) : x(f.x), y(f.y), z(f.z), w(f.w) {}   \
         operator MyVec4() const { return MyVec4(x,y,z,w); }
 */
+#define IM_VEC2_CLASS_EXTRA                                                                        \
+  constexpr ImVec2(soul::vec2f32 f) : x(f.x), y(f.y) {}                                            \
+  operator vec2f32() const                                                                         \
+  {                                                                                                \
+    return vec2f32(x, y);                                                                          \
+  }
+
+#define IM_VEC4_CLASS_EXTRA                                                                        \
+  constexpr ImVec4(const vec4f32& f) : x(f.x), y(f.y), z(f.z), w(f.w) {}                           \
+  operator vec4f32() const                                                                         \
+  {                                                                                                \
+    return vec4f32(x, y, z, w);                                                                    \
+  }
+
 //---- ...Or use Dear ImGui's own very basic math operators.
 // #define IMGUI_DEFINE_MATH_OPERATORS
 
@@ -164,6 +178,7 @@
 // debugging.)
 // #define IM_DEBUG_BREAK  IM_ASSERT(0)
 // #define IM_DEBUG_BREAK  __debugbreak()
+#define IM_DEBUG_BREAK SOUL_DEBUG_BREAK
 
 //---- Debug Tools: Enable slower asserts
 // #define IMGUI_DEBUG_PARANOID
@@ -178,3 +193,10 @@ namespace ImGui
 */
 #define ImTextureID        soul::app::GuiTextureID
 #define NULL_IM_TEXTURE_ID soul::app::nil_gui_texture
+
+#define IM_STRV_CLASS_EXTRA                                                                        \
+  ImStrv(soul::StringView str_view) : Begin(str_view.begin()), End(str_view.end()) {}              \
+  operator StringView() const                                                                      \
+  {                                                                                                \
+    return StringView(Begin, End - Begin);                                                         \
+  }

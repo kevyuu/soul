@@ -7,3 +7,6 @@
 [submodule "dependencies/NVTX"]
 	path = dependencies/NVTX
 	url = https://github.com/NVIDIA/NVTX
+[submodule "dependencies/imgui"]
+	path = dependencies/imgui
+	url = https://github.com/kevyuu/imgui

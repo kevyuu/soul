@@ -25,9 +25,9 @@ namespace renderlab
           LABEL,
           vec2f32{1900, 1040},
           vec2f32(20, 40),
-          {app::Gui::WindowFlag::SHOW_TITLE_BAR,
-           app::Gui::WindowFlag::ALLOW_MOVE,
-           app::Gui::WindowFlag::NO_SCROLLBAR}))
+          {
+            app::Gui::WindowFlag::NO_SCROLLBAR,
+          }))
     {
 
       gui->text(String::Format("FPS : {}", gui->get_frame_rate()).cspan());

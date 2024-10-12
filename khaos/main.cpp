@@ -20,7 +20,7 @@ namespace khaos
   {
   private:
   public:
-    ArdentgineApp() : App("Astel"_str), store_(storage_path_cref()) {};
+    ArdentgineApp() : App("Khaos"_str), store_(storage_path_cref(), &gpu_system_ref()) {};
 
   private:
     void on_render_frame(NotNull<gpu::RenderGraph*> /*render_graph*/) override

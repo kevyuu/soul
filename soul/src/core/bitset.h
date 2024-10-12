@@ -6,6 +6,8 @@
 #include "core/type.h"
 #include "core/util.h"
 
+#include <bit>
+
 namespace soul
 {
   namespace impl
@@ -45,6 +47,11 @@ namespace soul
 
       template <ts_fn<void, usize> Fn>
       constexpr auto for_each(Fn fn) const -> void;
+
+      template <usize IBlockCount = BlockCountV, ts_bit_block IBlockType = BlockType>
+        requires(IBlockCount == 1 && sizeof(BlockType) <= 4)
+      [[nodiscard]]
+      constexpr auto to_i32() const -> i32;
 
       template <usize IBlockCount = BlockCountV, ts_bit_block IBlockType = BlockType>
         requires(IBlockCount == 1 && sizeof(BlockType) <= 4)
@@ -104,6 +111,20 @@ namespace soul
           block = get_next_block(block, pos.unwrap());
           pos   = util::get_first_one_bit_pos(block);
         }
+      }
+    }
+
+    template <size_t BlockCountV, ts_bit_block BlockType>
+    template <usize IBlockCountV, ts_bit_block IBlockType>
+      requires(IBlockCountV == 1 && sizeof(BlockType) <= 4)
+    constexpr auto BitsetImpl<BlockCountV, BlockType>::to_i32() const -> i32
+    {
+      if constexpr (sizeof(BlockType) == 4)
+      {
+        return std::bit_cast<i32>(blocks_[0]);
+      } else
+      {
+        return blocks_[0];
       }
     }
 
@@ -559,24 +580,24 @@ namespace soul
 
   template <usize BitCount, ts_bit_block BlockType>
   constexpr auto operator&(
-    const Bitset<BitCount, BlockType>& lhs, const Bitset<BitCount, BlockType>& rhs)
-    -> Bitset<BitCount, BlockType>
+    const Bitset<BitCount, BlockType>& lhs,
+    const Bitset<BitCount, BlockType>& rhs) -> Bitset<BitCount, BlockType>
   {
     return Bitset<BitCount, BlockType>(lhs).operator&=(rhs);
   }
 
   template <usize BitCount, ts_bit_block BlockType>
   constexpr auto operator|(
-    const Bitset<BitCount, BlockType>& lhs, const Bitset<BitCount, BlockType>& rhs)
-    -> Bitset<BitCount, BlockType>
+    const Bitset<BitCount, BlockType>& lhs,
+    const Bitset<BitCount, BlockType>& rhs) -> Bitset<BitCount, BlockType>
   {
     return Bitset<BitCount, BlockType>(lhs).operator|=(rhs);
   }
 
   template <usize BitCount, ts_bit_block BlockType>
   constexpr auto operator^(
-    const Bitset<BitCount, BlockType>& lhs, const Bitset<BitCount, BlockType>& rhs)
-    -> Bitset<BitCount, BlockType>
+    const Bitset<BitCount, BlockType>& lhs,
+    const Bitset<BitCount, BlockType>& rhs) -> Bitset<BitCount, BlockType>
   {
     return Bitset<BitCount, BlockType>(lhs).operator^=(rhs);
   }

@@ -3,6 +3,7 @@
 #include "app/input_state.h"
 
 #include "core/comp_str.h"
+#include "core/floating_point.h"
 #include "core/string_view.h"
 #include "gpu/render_graph.h"
 
@@ -30,20 +31,152 @@ namespace soul::app
   class Gui
   {
   public:
-    enum class WindowFlag
+    enum class ColorVar : u8
     {
-      SHOW_TITLE_BAR,
-      ALLOW_MOVE,
-      SET_FOCUS,
-      CLOSE_BUTTON,
-      NO_RESIZE,
-      AUTO_RESIZE,
-      NO_SCROLLBAR,
+      TEXT,
+      TEXT_DISABLED,
+      WINDOW_BG,
+      CHILD_BG,
+      POPUP_BG,
+      BORDER,
+      BORDER_SHADOW,
+      FRAME_BG,
+      FRAME_BG_HOVERED,
+      FRAME_BG_ACTIVE,
+      TITLE_BG,
+      TITLE_BG_ACTIVE,
+      TITLE_BG_COLLAPSED,
+      MENU_BAR_BG,
+      SCROLLBAR_BG,
+      SCROLLBAR_GRAB,
+      SCROLLBAR_GRAB_HOVERED,
+      SCROLLBAR_GRAB_ACTIVE,
+      CHECK_MARK,
+      SLIDER_GRAB,
+      SLIDER_GRAB_ACTIVE,
+      BUTTON,
+      BUTTON_HOVERED,
+      BUTTON_ACTIVE,
+      HEADER,
+      HEADER_HOVERED,
+      HEADER_ACTIVE,
+      SEPARATOR,
+      SEPARATOR_HOVERED,
+      SEPARATOR_ACTIVE,
+      RESIZE_GRIP,
+      RESIZE_GRIP_HOVERED,
+      RESIZE_GRIP_ACTIVE,
+      TAB_HOVERED,
+      TAB,
+      TAB_SELECTED,
+      TAB_SELECTED_OVERLINE,
+      TAB_DIMMED,
+      TAB_DIMMED_SELECTED,
+      TAB_DIMMED_SELECTED_OVERLINE,
+      DOCKING_PREVIEW,
+      DOCKING_EMPTY_BG,
+      PLOT_LINES,
+      PLOT_LINES_HOVERED,
+      PLOT_HISTOGRAM,
+      PLOT_HISTOGRAM_HOVERED,
+      TABLE_HEADER_BG,
+      TABLE_BORDER_STRONG,
+      TABLE_BORDER_LIGHT,
+      TABLE_ROW_BG,
+      TABLE_ROW_BG_ALT,
+      TEXT_LINK,
+      TEXT_SELECTED_BG,
+      DRAG_DROP_TARGET,
+      NAV_HIGHLIGHT,
+      NAV_WINDOWING_HIGHLIGHT,
+      NAV_WINDOWING_DIM_BG,
+      MODAL_WINDOW_DIM_BG,
+      COUNT
+    };
+
+    enum class StyleVar : u8
+    {
+      ALPHA,
+      DISABLED_ALPHA,
+      WINDOW_PADDING,
+      WINDOW_ROUNDING,
+      WINDOW_BORDER_SIZE,
+      WINDOW_MIN_SIZE,
+      WINDOW_TITLE_ALIGN,
+      CHILD_ROUNDING,
+      CHILD_BORDER_SIZE,
+      POPUP_ROUNDING,
+      POPUP_BORDER_SIZE,
+      FRAME_PADDING,
+      FRAME_ROUNDING,
+      FRAME_BORDER_SIZE,
+      ITEM_SPACING,
+      ITEM_INNER_SPACING,
+      INDENT_SPACING,
+      CELL_PADDING,
+      SCROLLBAR_SIZE,
+      SCROLLBAR_ROUNDING,
+      GRAB_MIN_SIZE,
+      GRAB_ROUNDING,
+      TAB_ROUNDING,
+      TAB_BORDER_SIZE,
+      TAB_BAR_BORDER_SIZE,
+      TAB_BAR_OVERLINE_SIZE,
+      TABLE_ANGLED_HEADERS_ANGLE,
+      TABLE_ANGLED_HEADERS_TEXT_ALIGN,
+      BUTTON_TEXT_ALIGN,
+      SELECTABLE_TEXT_ALIGN,
+      SEPARATOR_TEXT_BORDER_SIZE,
+      SEPARATOR_TEXT_ALIGN,
+      SEPARATOR_TEXT_PADDING,
+      DOCKING_SEPARATOR_SIZE,
       COUNT,
     };
-    using WindowFlags = FlagSet<WindowFlag>;
-    static constexpr auto WINDOW_FLAGS_DEFAULT =
-      WindowFlags{WindowFlag::SHOW_TITLE_BAR, WindowFlag::ALLOW_MOVE};
+
+    enum class WindowFlag
+    {
+      NO_TITLE_BAR,
+      NO_RESIZE,
+      NO_MOVE,
+      NO_SCROLLBAR,
+      NO_SCROLL_WITH_MOUSE,
+
+      NO_COLLAPSE,
+
+      ALWAYS_AUTO_RESIZE,
+      NO_BACKGROUND,
+
+      NO_SAVED_SETTINGS,
+      NO_MOUSE_INPUTS,
+      MENU_BAR,
+      HORIZONTAL_SCROLLBAR,
+
+      NO_FOCUS_ON_APPEARING,
+      NO_BRING_TO_FRONT_ON_FOCUS,
+
+      ALWAYS_VERTICAL_SCROLLBAR,
+      ALWAYS_HORIZONTAL_SCROLLBAR,
+      NO_NAV_INPUTS,
+      NO_NAV_FOCUS,
+
+      UNSAVED_DOCUMENT,
+
+      NO_DOCKING,
+      COUNT,
+    };
+    using WindowFlags                                = FlagSet<WindowFlag>;
+    static constexpr WindowFlags WINDOW_FLAGS_NO_NAV = {
+      WindowFlag::NO_NAV_INPUTS, WindowFlag::NO_NAV_INPUTS};
+    static constexpr WindowFlags WINDOW_FALGS_NO_DECORATION = {
+      WindowFlag::NO_TITLE_BAR,
+      WindowFlag::NO_RESIZE,
+      WindowFlag::NO_SCROLLBAR,
+      WindowFlag::NO_COLLAPSE};
+    static constexpr WindowFlags WINDOW_FLAGS_NO_INPUTS = {
+      WindowFlag::NO_MOUSE_INPUTS,
+      WindowFlag::NO_NAV_INPUTS,
+      WindowFlag::NO_NAV_FOCUS,
+    };
 
     enum class InputFlag
     {
@@ -72,8 +205,18 @@ namespace soul::app
 
       COUNT,
     };
-    using InputFlags                         = FlagSet<InputFlag>;
-    static constexpr auto INPUT_FLAG_DEFAULT = InputFlags{};
+    using InputFlags = FlagSet<InputFlag>;
+
+    enum class FocusedFlag : u8
+    {
+      CHILD_WINDOWS,
+      ROOT_WINDOW,
+      ANY_WINDOW,
+      NO_POPUP_HIERARCHY,
+      DOCK_HIERARCHY,
+      COUNT,
+    };
+    using FocusedFlags = FlagSet<FocusedFlag>;
 
     enum class Direction
     {
@@ -166,28 +309,142 @@ namespace soul::app
 
     void on_window_focus_event(b8 focused);
 
-    void begin_dock_window();
-
     // ----------------------------------------------------------------------------
     // Window
     // ----------------------------------------------------------------------------
+    enum class LayoutCond : u8
+    {
+      ALWAYS,
+      ONCE,
+      FIRST_USE_EVER,
+      APPEARING,
+      COUNT,
+    };
+
     auto begin_window(
-      CompStr label,
+      StringView label,
       vec2f32 size,
-      vec2f32 pos       = {0, 0},
-      WindowFlags flags = WINDOW_FLAGS_DEFAULT) -> b8;
+      vec2f32 pos            = {0, 0},
+      WindowFlags flags      = {},
+      LayoutCond layout_cond = LayoutCond::FIRST_USE_EVER) -> b8;
 
     void end_window();
 
-    [[nodiscard]]
-    auto get_window_pos() const -> vec2f32;
+    enum class ChildWindowFlag : u8
+    {
+      BORDERS,
+      ALWAYS_USE_WINDOW_PADDING,
+      RESIZE_X,
+      RESIZE_Y,
+      AUTO_RESIZE_X,
+      AUTO_RESIZE_Y,
+      ALWAYS_AUTO_RESIZE,
+      FRAME_STYLE,
+      NAV_FLATTENED,
+      COUNT,
+    };
+    using ChildWindowFlags = FlagSet<ChildWindowFlag>;
 
-    [[nodiscard]]
-    auto get_window_size() const -> vec2f32;
+    auto begin_child_window(
+      StringView label,
+      vec2f32 size                        = vec2f32(0, 0),
+      ChildWindowFlags child_window_flags = {},
+      WindowFlags window_flags            = {}) -> b8;
+
+    void end_child_window();
+
+    // ----------------------------------------------------------------------------
+    // Parameter Stacks (Shared)
+    // ----------------------------------------------------------------------------
+    void push_style_color(ColorVar color_var, vec4f32 color);
+
+    void pop_style_color();
+
+    void push_style_var(StyleVar style_var, vec2f32 value);
+
+    void pop_style_var();
+
+    void push_font_size(f32 font_size);
+
+    void pop_font_size();
+
+    // ----------------------------------------------------------------------------
+    // Parameter Stacks (Window)
+    // ----------------------------------------------------------------------------
+    void push_item_width(f32 item_width);
+
+    void pop_item_width();
+
+    void set_next_item_width(f32 item_width);
+
+    auto calc_item_width() -> f32;
+
+    void push_text_wrap_pos(f32 wrap_local_pos_x = 0.0f);
+
+    void pop_text_wrap_pos();
+
+    // ----------------------------------------------------------------------------
+    // Layout cursor positioning
+    // ----------------------------------------------------------------------------
+    auto get_cursor_screen_pos() const -> vec2f32;
+
+    void set_cursor_screen_pos(const vec2f32& pos);
+
+    auto get_content_region_avail() const -> vec2f32;
+
+    auto get_cursor_pos() -> vec2f32;
+
+    void set_cursor_pos(const vec2f32& local_pos);
+
+    void set_cursor_pos_x(f32 local_x);
+
+    void set_cursor_pos_y(f32 local_y);
+
+    auto get_frame_padding() const -> vec2f32;
+
+    auto get_frame_height() const -> f32;
+
+    auto get_frame_height(f32 font_size) const -> f32;
+
+    // ----------------------------------------------------------------------------
+    // Other layout functions
+    // ----------------------------------------------------------------------------
+    void separator();
+
+    void same_line(f32 offset_from_start_x = 0.0_f32, f32 spacing = -1.0_f32);
+
+    void new_line();
+
+    void spacing();
+
+    void dummy(vec2f32 size);
+
+    void indent(f32 indent_w = 0.0_f32);
+
+    void unindent(f32 indent_w = 0.0_f32);
+
+    void begin_group();
+
+    void end_group();
+
+    void align_text_to_frame_padding();
+
+    // ----------------------------------------------------------------------------
+    // ID stack / scopes
+    // ----------------------------------------------------------------------------
+    void push_id(StringView id);
+
+    void push_id(i32 id);
+
+    void pop_id();
+
+    auto get_id(StringView label) -> GuiID;
 
     // ----------------------------------------------------------------------------
     // Dock
     // ----------------------------------------------------------------------------
+    void begin_dock_window();
+
     auto dock_space(GuiID gui_id) -> GuiID;
 
     auto dock_builder_is_node_exist(GuiID dock_id) -> b8;
@@ -205,25 +462,33 @@ namespace soul::app
     // Widgets: Text
     // ----------------------------------------------------------------------------
 
-    void text(StringView text);
+    void text(StringView label);
 
-    void text_disabled(StringView text);
+    void text(StringView label, f32 font_size);
 
-    void text_colored(StringView text, vec4f32 color);
+    void text_disabled(StringView label);
 
-    void label_text(CompStr label, StringView text);
+    void text_colored(StringView label, vec4f32 color);
 
-    void separator_text(CompStr label);
+    void text_colored(StringView label, vec4f32 color, f32 font_size);
+
+    void text_wrapped(StringView label);
+
+    void text_wrapped(StringView label, f32 font_size);
+
+    void label_text(StringView label, StringView text);
+
+    void separator_text(StringView label);
 
     // ----------------------------------------------------------------------------
     // Widgets: Main
     // ----------------------------------------------------------------------------
-    auto button(CompStr label, vec2f32 size = {0, 0}) -> b8;
+    auto invisible_button(StringView label, vec2f32 size = {0, 0}) -> b8;
 
     auto button(StringView label, vec2f32 size = {0, 0}) -> b8;
 
     auto image_button(
-      CompStr label,
+      StringView label,
       gpu::TextureID texture_id,
       vec4f32 tint_normal,
       vec4f32 tint_hovered,
@@ -231,40 +496,50 @@ namespace soul::app
       vec2f32 size = {}) -> b8;
 
     auto image_button(
-      CompStr label,
+      StringView label,
       const Path& path,
       vec4f32 tint_normal,
       vec4f32 tint_hovered,
       vec4f32 tint_pressed,
       vec2f32 size = {}) -> b8;
 
-    auto checkbox(CompStr label, NotNull<b8*> value) -> b8;
+    auto checkbox(StringView label, NotNull<b8*> value) -> b8;
 
-    auto radio_button(CompStr label, NotNull<i32*> val, i32 button_val) -> b8;
+    auto radio_button(StringView label, NotNull<i32*> val, i32 button_val) -> b8;
 
     // ----------------------------------------------------------------------------
     // Widgets: Input
     // ----------------------------------------------------------------------------
 
-    auto input_text(CompStr label, String* text) -> b8;
+    auto input_text(StringView label, String* text, InputFlags flags = {}) -> b8;
 
-    auto input_text(CompStr label, Span<char*> buffer) -> b8;
+    auto input_text_multiline(StringView label, String* text, vec2f32 size = vec2f32(0, 0)) -> b8;
 
-    auto input_i32(CompStr label, NotNull<i32*> value) -> b8;
+    auto input_text(StringView label, Span<char*> buffer) -> b8;
 
-    auto input_f32(CompStr label, NotNull<f32*> value) -> b8;
+    auto input_i32(StringView label, NotNull<i32*> value) -> b8;
 
-    auto input_vec3f32(CompStr label, NotNull<vec3f32*> value) -> b8;
+    auto input_f32(StringView label, NotNull<f32*> value) -> b8;
 
-    auto input_vec3i32(CompStr label, NotNull<vec3i32*> value) -> b8;
+    auto input_vec3f32(StringView label, NotNull<vec3f32*> value) -> b8;
+
+    auto input_vec3i32(StringView label, NotNull<vec3i32*> value) -> b8;
 
     // ----------------------------------------------------------------------------
     // Widgets: Combo
     // ----------------------------------------------------------------------------
 
-    auto begin_combo(CompStr label, StringView preview) -> b8;
+    auto begin_combo(StringView label, StringView preview) -> b8;
 
     void end_combo();
+
+    // ----------------------------------------------------------------------------
+    // Widgets: Listbox
+    // ----------------------------------------------------------------------------
+
+    auto begin_list_box(StringView label, const vec2f32 size = {}) -> b8;
+
+    void end_list_box();
 
     // ----------------------------------------------------------------------------
     // Widgets: Slider
@@ -280,20 +555,20 @@ namespace soul::app
 
     using SliderFlags = FlagSet<SliderFlag>;
 
-    auto slider_i32(CompStr label, NotNull<i32*> val, i32 min, i32 max, SliderFlags flags = {})
+    auto slider_i32(StringView label, NotNull<i32*> val, i32 min, i32 max, SliderFlags flags = {})
       -> b8;
 
-    auto slider_f32(CompStr label, NotNull<f32*> val, f32 v_min, f32 v_max, SliderFlags flags = {})
-      -> b8;
+    auto slider_f32(
+      StringView label, NotNull<f32*> val, f32 v_min, f32 v_max, SliderFlags flags = {}) -> b8;
 
     auto slider_vec2f32(
-      CompStr label, NotNull<vec2f32*> val, f32 v_min, f32 v_max, SliderFlags flags = {}) -> b8;
+      StringView label, NotNull<vec2f32*> val, f32 v_min, f32 v_max, SliderFlags flags = {}) -> b8;
 
     auto slider_vec3f32(
-      CompStr label, NotNull<vec3f32*> val, f32 v_min, f32 v_max, SliderFlags flags = {}) -> b8;
+      StringView label, NotNull<vec3f32*> val, f32 v_min, f32 v_max, SliderFlags flags = {}) -> b8;
 
     auto slider_vec4f32(
-      CompStr label, NotNull<vec4f32*> val, f32 v_min, f32 v_max, SliderFlags flags = {}) -> b8;
+      StringView label, NotNull<vec4f32*> val, f32 v_min, f32 v_max, SliderFlags flags = {}) -> b8;
 
     // ----------------------------------------------------------------------------
     // Widgets: Menu Bar
@@ -302,38 +577,152 @@ namespace soul::app
 
     void end_main_menu_bar();
 
-    auto begin_menu(CompStr label) -> b8;
+    auto begin_menu(StringView label) -> b8;
 
     void end_menu();
 
-    auto menu_item(CompStr label) -> b8;
+    auto menu_item(StringView label) -> b8;
 
     // ----------------------------------------------------------------------------
     // Popup
     // ----------------------------------------------------------------------------
-    auto begin_popup(CompStr label) -> b8;
+    auto begin_popup(StringView label) -> b8;
 
-    auto begin_popup_modal(CompStr label) -> b8;
+    auto begin_popup_modal(StringView label) -> b8;
 
     void end_popup();
 
-    void open_popup(CompStr label);
+    void open_popup(StringView label);
 
     void close_current_popup();
 
     void set_item_default_focus();
 
-    auto get_id(CompStr label) -> GuiID;
+    // ----------------------------------------------------------------------------
+    // Tables
+    // ----------------------------------------------------------------------------
+    enum class TableFlag : u8
+    {
+      RESIZABLE,
+      REORDERABLE,
+      HIDEABLE,
+      SORTABLE,
+      NO_SAVED_SETTINGS,
+      CONTEXT_MENU_IN_BODY,
+      ROW_BG,
+      BORDERS_INNER_H,
+      BORDERS_OUTER_H,
+      BORDERS_INNER_V,
+      BORDERS_OUTER_V,
+      NO_BORDERS_IN_BODY,
+      NO_BORDERS_IN_BODY_UNTIL_RESIZE,
+      SIZING_FIXED_FIT,
+      SIZING_FIXED_SAME,
+      SIZING_STRETCH_SAME,
+      NO_HOST_EXTEND_X,
+      NO_HOST_EXTEND_Y,
+      NO_KEEP_COLUMNS_VISIBLE,
+      PRECISE_WIDTHS,
+      NO_CLIP,
+      PAD_OUTER_X,
+      NO_PAD_OUTER_X,
+      NO_PAD_INNER_X,
+      SCROLL_X,
+      SCROLL_Y,
+      SORT_MULTI,
+      SORT_TRISTATE,
+      HIGHLIGHT_HOVERED_COLUMN,
+      COUNT,
+    };
+    using TableFlags = FlagSet<TableFlag>;
+
+    enum class TableColumnFlag : u8
+    {
+      DISABLED,
+      DEFAULT_HIDE,
+      DEFAULT_SORT,
+      WIDTH_STRETCH,
+      WIDTH_FIXED,
+      NO_RESIZE,
+      NO_REORDER,
+      NO_HIDE,
+      NO_CLIP,
+      NO_SORT,
+      NO_SORT_ASCENDING,
+      NO_SORT_DESCENDING,
+      NO_HEADER_LABEL,
+      NO_HEADER_WIDTH,
+      PREFER_SORT_ASCENDING,
+      PREFER_SORT_DESCENDING,
+      INDENT_ENABLE,
+      INDENT_DISABLE,
+      ANGLED_HEADER,
+      IS_ENABLED,
+      IS_VISIBLE,
+      IS_SORTED,
+      IS_HOVERED,
+      COUNT,
+    };
+    using TableColumnFlags = FlagSet<TableColumnFlag>;
+
+    enum class TableRowFlag : u8
+    {
+      HEADERS,
+      COUNT
+    };
+    using TableRowFlags = FlagSet<TableRowFlag>;
+
+    auto begin_table(
+      StringView str_id,
+      u32 columns,
+      TableFlags flags          = {},
+      const vec2f32& outer_size = vec2f32(0.0f, 0.0f),
+      f32 inner_width           = 0.0f) -> b8;
+
+    void end_table();
+
+    void table_next_row(TableRowFlags row_flags = {}, f32 min_row_height = 0.0f);
+
+    auto table_next_column() -> b8;
+
+    auto table_set_column_index(u32 column_n) -> b8;
+
+    void table_setup_column(
+      StringView label,
+      TableColumnFlags flags   = {},
+      f32 init_width_or_weight = 0.0f,
+      GuiID user_id            = GuiID());
+
+    void table_setup_scroll_freeze(i32 cols, i32 rows);
+
+    void table_header(StringView label);
+
+    void table_headers_row();
+
+    void table_angled_headers_row();
 
     // ----------------------------------------------------------------------------
     // Widgets: Color
     // ----------------------------------------------------------------------------
-    auto color_edit3(CompStr label, NotNull<vec3f32*> value) -> b8;
+    auto color_edit3(StringView label, NotNull<vec3f32*> value) -> b8;
 
     // ----------------------------------------------------------------------------
     // Widgets: Selectable
     // ----------------------------------------------------------------------------
-    auto selectable(StringView label, b8 selected) -> b8;
+    enum class SelectableFlag : u8
+    {
+      NO_AUTO_CLOSE_POPUPS,
+      SPAN_ALL_COLUMNS,
+      ALLOW_DOUBLE_CLICK,
+      DISABLED,
+      ALLOW_OVERLAP,
+      HIGHLIGHT,
+      COUNT,
+    };
+    using SelectableFlags = FlagSet<SelectableFlag>;
+
+    auto selectable(
+      StringView label, b8 selected, SelectableFlags flags = {}, vec2f32 size = {0, 0}) -> b8;
 
     auto gizmo(
       const mat4f32& view,
@@ -364,11 +753,11 @@ namespace soul::app
     // ----------------------------------------------------------------------------
     // TabBar
     // ----------------------------------------------------------------------------
-    auto begin_tab_bar(CompStr label) -> b8;
+    auto begin_tab_bar(StringView label) -> b8;
 
     void end_tab_bar();
 
-    auto begin_tab_item(CompStr label) -> b8;
+    auto begin_tab_item(StringView label) -> b8;
 
     void end_tab_item();
 
@@ -379,31 +768,57 @@ namespace soul::app
     void show_style_editor();
 
     // ----------------------------------------------------------------------------
-    // Layout
+    // Item/Widgets Utilities and Query Functions
     // ----------------------------------------------------------------------------
-    void separator();
-
-    void same_line(f32 offset_from_start_x = 0.0_f32, f32 spacing = -1.0_f32);
-
-    void new_line();
-
-    void spacing();
-
-    void dummy(vec2f32 size);
-
-    void indent(f32 indent_w = 0.0_f32);
-
-    void unindent(f32 indent_w = 0.0_f32);
-
-    void push_item_width(f32 width);
-
-    void pop_item_width();
 
     [[nodiscard]]
-    auto is_item_clicked() -> b8;
+    auto is_item_hovered() -> b8;
+
+    [[nodiscard]]
+    auto is_item_active() -> b8;
+
+    [[nodiscard]]
+    auto is_item_focused() -> b8;
+
+    [[nodiscard]]
+    auto is_item_clicked(MouseButton mouse_button = MouseButton::LEFT) -> b8;
+
+    [[nodiscard]]
+    auto is_item_visible() -> b8;
+
+    [[nodiscard]]
+    auto is_item_edited() -> b8;
+
+    [[nodiscard]]
+    auto is_item_activated() -> b8;
+
+    [[nodiscard]]
+    auto is_item_deactivated() -> b8;
+
+    [[nodiscard]]
+    auto is_item_deactivated_after_edit() -> b8;
+
+    // ----------------------------------------------------------------------------
+    // Window Utilities and Query Functions
+    // ----------------------------------------------------------------------------
+
+    [[nodiscard]]
+    auto is_window_appearing() const -> b8;
+
+    [[nodiscard]]
+    auto is_window_collapsed() const -> b8;
+
+    [[nodiscard]]
+    auto is_window_focused(FocusedFlags focused_flags = {}) const -> b8;
 
     [[nodiscard]]
     auto is_window_hovered() const -> b8;
+
+    [[nodiscard]]
+    auto get_window_pos() const -> vec2f32;
+
+    [[nodiscard]]
+    auto get_window_size() const -> vec2f32;
 
     [[nodiscard]]
     auto is_mouse_down(MouseButton mouse_button) const -> b8;
@@ -445,18 +860,19 @@ namespace soul::app
     [[nodiscard]]
     auto is_key_released(KeyboardKey) const -> b8;
 
-    void set_cursor_pos(vec2f32 pos);
-
-    void push_id(StringView id);
-
-    void push_id(i32 id);
-
-    void pop_id();
-
     [[nodiscard]]
     auto get_frame_rate() const -> f32;
 
     [[nodiscard]]
     auto get_display_size() const -> vec2f32;
+
+    auto open_file_dialog(
+      StringView name,
+      const Path& initial_path     = Path::From(""_str),
+      StringView filter_name       = "File"_str,
+      StringView filter_extensions = "*"_str) -> Option<Path>;
+
+    auto open_folder_dialog(StringView name, const Path& default_path = Path::From(""_str))
+      -> Option<Path>;
   };
 } // namespace soul::app

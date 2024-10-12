@@ -3,16 +3,24 @@
 #include "core/path.h"
 #include "core/string_view.h"
 #include "core/vector.h"
+
+#include "gpu/id.h"
+
 #include "type.h"
 
 using namespace soul;
+
+namespace soul::gpu
+{
+  class System;
+}
 
 namespace khaos
 {
   class Store
   {
   public:
-    explicit Store(const Path& storage_path);
+    explicit Store(const Path& storage_path, NotNull<gpu::System*> gpu_system);
 
     [[nodiscard]]
     auto api_url_string_view() const -> StringView;
@@ -68,7 +76,38 @@ namespace khaos
     void delete_sampler();
 
     [[nodiscard]]
+    auto header_prompt_cspan() const -> StringView;
+
+    void set_header_prompt(StringView header_prompt);
+
+    [[nodiscard]]
+    auto first_message_cspan() const -> StringView;
+
+    void set_first_message(StringView first_message);
+
+    [[nodiscard]]
     auto is_any_project_active() const -> b8;
+
+    auto project_metadatas_cspan() const -> Span<const ProjectMetadata*>;
+
+    void create_new_project(StringView name, const Path& path);
+
+    void load_project(const Path& path);
+
+    void save_project();
+
+    [[nodiscard]]
+    auto is_any_journey_active() const -> b8;
+
+    void create_new_journey();
+
+    auto active_journey_cref() const -> const Journey&;
+
+    void send_user_input(StringView label);
+
+    void save_app_settings();
+
+    gpu::TextureID background_texture_id;
 
   private:
     Path storage_path_;
@@ -76,7 +115,9 @@ namespace khaos
     Path prompt_format_path_;
     Path sampler_path_;
     Vector<ProjectMetadata> project_metadatas_;
-    Option<ProjectMetadata> active_project_;
+    Option<Project> active_project_;
+    Path active_project_path_;
+    Path active_project_filepath_ = Path::From(""_str);
     Vector<PromptFormat> prompt_formats_;
     Vector<Sampler> samplers_;
 
@@ -86,10 +127,16 @@ namespace khaos
     u32 active_prompt_format_index_;
     u32 active_sampler_index_;
 
+    Option<Journey> active_journey_;
+
     void sort_format_settings();
     void save_setting_to_file(const PromptFormat& setting);
     void sort_sampler_settings();
     void save_setting_to_file(const Sampler& setting);
+    auto load_texture(const Path& path) -> gpu::TextureID;
+    void load_background();
+
+    NotNull<gpu::System*> gpu_system_;
   };
 
 } // namespace khaos

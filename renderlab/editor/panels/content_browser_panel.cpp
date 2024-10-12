@@ -22,8 +22,6 @@ namespace renderlab
           vec2f32(1400, 1040),
           vec2f32(20, 40),
           {
-            app::Gui::WindowFlag::SHOW_TITLE_BAR,
-            app::Gui::WindowFlag::ALLOW_MOVE,
             app::Gui::WindowFlag::NO_SCROLLBAR,
           }))
     {
