@@ -7,6 +7,151 @@
 
 namespace soul
 {
+  template <ts_pointer T, ts_unsigned_integral SizeT>
+  class Span;
+
+  namespace impl
+  {
+    template <ts_pointer T, ts_unsigned_integral SizeT>
+    class SpanBase
+    {
+    public:
+      using value_type             = remove_pointer_t<T>;
+      using pointer                = value_type*;
+      using const_pointer          = const value_type*;
+      using reference              = value_type&;
+      using const_reference        = const value_type&;
+      using iterator               = value_type*;
+      using const_iterator         = const value_type*;
+      using reverse_iterator       = std::reverse_iterator<iterator>;
+      using const_reverse_iterator = std::reverse_iterator<const_iterator>;
+      using size_type              = SizeT;
+
+      constexpr SpanBase(MaybeNull<pointer> data, size_type size) : data_(data), size_(size)
+      {
+        SOUL_ASSERT(
+          0, (size != 0 && data != nullptr) || (size == 0), "Non zero size cannot hold nullptr");
+      }
+
+      constexpr SpanBase(NotNull<pointer> data, size_type size) : data_(data), size_(size) {}
+
+      constexpr SpanBase(pointer data, size_type size) : data_(data), size_(size)
+      {
+        SOUL_ASSERT(
+          0, (size != 0 && data != nullptr) || (size == 0), "Non zero size cannot hold nullptr");
+      }
+
+      constexpr auto data() -> pointer
+      {
+        return data_;
+      }
+
+      constexpr auto data() const -> const_pointer
+      {
+        return data_;
+      }
+
+      constexpr auto size() const -> usize
+      {
+        return size_;
+      }
+
+      [[nodiscard]]
+      constexpr auto begin() -> iterator
+      {
+        return data_;
+      }
+
+      [[nodiscard]]
+      constexpr auto begin() const -> const_iterator
+      {
+        return data_;
+      }
+
+      [[nodiscard]]
+      constexpr auto cbegin() const -> const_iterator
+      {
+        return data_;
+      }
+
+      [[nodiscard]]
+      constexpr auto end() -> iterator
+      {
+        return data_ + size_;
+      }
+
+      [[nodiscard]]
+      constexpr auto end() const -> const_iterator
+      {
+        return data_ + size_;
+      }
+
+      [[nodiscard]]
+      constexpr auto cend() const -> const_iterator
+      {
+        return data_ + size_;
+      }
+
+      [[nodiscard]]
+      constexpr auto rbegin() -> reverse_iterator
+      {
+        return reverse_iterator(end());
+      }
+
+      [[nodiscard]]
+      constexpr auto rbegin() const -> const_reverse_iterator
+      {
+        return const_reverse_iterator(cend());
+      }
+
+      [[nodiscard]]
+      constexpr auto crbegin() const -> const_reverse_iterator
+      {
+        return const_reverse_iterator(cend());
+      }
+
+      [[nodiscard]]
+      constexpr auto rend() -> reverse_iterator
+      {
+        return reverse_iterator(begin());
+      }
+
+      [[nodiscard]]
+      constexpr auto rend() const -> const_reverse_iterator
+      {
+        return const_reverse_iterator(cbegin());
+      }
+
+      [[nodiscard]]
+      constexpr auto crend() const -> const_reverse_iterator
+      {
+        return const_reverse_iterator(cbegin());
+      }
+
+      constexpr auto operator[](usize idx) -> reference
+      {
+        SOUL_ASSERT_UPPER_BOUND_CHECK(idx, size_);
+        return data_[idx];
+      }
+
+      constexpr auto operator[](usize idx) const -> const_reference
+      {
+        SOUL_ASSERT_UPPER_BOUND_CHECK(idx, size_);
+        return data_[idx];
+      }
+
+      [[nodiscard]]
+      constexpr auto size_in_bytes() const noexcept -> size_type
+      {
+        return size_ * sizeof(remove_pointer_t<pointer>);
+      }
+
+    protected:
+      pointer data_;
+      usize size_;
+    };
+  } // namespace impl
+
   struct NilSpan
   {
   };
@@ -14,7 +159,7 @@ namespace soul
   constexpr auto nilspan = NilSpan{};
 
   template <ts_pointer T, ts_unsigned_integral SizeT = usize>
-  class Span
+  class Span : public impl::SpanBase<T, SizeT>
   {
   public:
     using value_type             = remove_pointer_t<T>;
@@ -30,28 +175,15 @@ namespace soul
 
     Span() = delete;
 
-    constexpr explicit Span(const char* data)
-      requires(same_as<T, const char*>)
-        : data_(data == nullptr ? "" : data), size_(data == nullptr ? 0 : strlen(data))
-    {
-    }
-
-    [[nodiscard]]
-    constexpr auto is_null_terminated() const -> b8
-      requires(same_as<T, const char*>)
-    {
-      return data_[size_] == '\0';
-    }
-
-    constexpr Span(MaybeNull<pointer> data, size_type size) : data_(data), size_(size)
+    constexpr Span(MaybeNull<pointer> data, size_type size) : impl::SpanBase<T, SizeT>(data, size)
     {
       SOUL_ASSERT(
         0, (size != 0 && data != nullptr) || (size == 0), "Non zero size cannot hold nullptr");
     }
 
-    constexpr Span(NotNull<pointer> data, size_type size) : data_(data), size_(size) {}
+    constexpr Span(NotNull<pointer> data, size_type size) : impl::SpanBase<T, SizeT>(data, size) {}
 
-    constexpr Span(pointer data, size_type size) : data_(data), size_(size)
+    constexpr Span(pointer data, size_type size) : impl::SpanBase<T, SizeT>(data, size)
     {
       SOUL_ASSERT(
         0, (size != 0 && data != nullptr) || (size == 0), "Non zero size cannot hold nullptr");
@@ -60,119 +192,11 @@ namespace soul
     template <typename U>
     constexpr Span(Span<U, SizeT> other) // NOLINT
       requires(can_convert_v<U, T>)
-        : data_(other.begin()), size_(other.size())
+        : impl::SpanBase<T, SizeT>(other.begin(), other.size())
     {
     }
 
     constexpr Span(NilSpan /* nil */) : Span(nullptr, 0) {} // NOLINT
-
-    [[nodiscard]]
-    constexpr auto begin() -> iterator
-    {
-      return data_;
-    }
-
-    [[nodiscard]]
-    constexpr auto begin() const -> const_iterator
-    {
-      return data_;
-    }
-
-    [[nodiscard]]
-    constexpr auto cbegin() const -> const_iterator
-    {
-      return data_;
-    }
-
-    [[nodiscard]]
-    constexpr auto end() -> iterator
-    {
-      return data_ + size_;
-    }
-
-    [[nodiscard]]
-    constexpr auto end() const -> const_iterator
-    {
-      return data_ + size_;
-    }
-
-    [[nodiscard]]
-    constexpr auto cend() const -> const_iterator
-    {
-      return data_ + size_;
-    }
-
-    [[nodiscard]]
-    constexpr auto rbegin() -> reverse_iterator
-    {
-      return reverse_iterator(end());
-    }
-
-    [[nodiscard]]
-    constexpr auto rbegin() const -> const_reverse_iterator
-    {
-      return const_reverse_iterator(cend());
-    }
-
-    [[nodiscard]]
-    constexpr auto crbegin() const -> const_reverse_iterator
-    {
-      return const_reverse_iterator(cend());
-    }
-
-    [[nodiscard]]
-    constexpr auto rend() -> reverse_iterator
-    {
-      return reverse_iterator(begin());
-    }
-
-    [[nodiscard]]
-    constexpr auto rend() const -> const_reverse_iterator
-    {
-      return const_reverse_iterator(cbegin());
-    }
-
-    [[nodiscard]]
-    constexpr auto crend() const -> const_reverse_iterator
-    {
-      return const_reverse_iterator(cbegin());
-    }
-
-    constexpr auto operator[](usize idx) -> reference
-    {
-      SOUL_ASSERT_UPPER_BOUND_CHECK(idx, size_);
-      return data_[idx];
-    }
-
-    constexpr auto operator[](usize idx) const -> const_reference
-    {
-      SOUL_ASSERT_UPPER_BOUND_CHECK(idx, size_);
-      return data_[idx];
-    }
-
-    [[nodiscard]]
-    constexpr auto data() noexcept -> MaybeNull<pointer>
-    {
-      return data_;
-    }
-
-    [[nodiscard]]
-    constexpr auto data() const noexcept -> MaybeNull<const_pointer>
-    {
-      return data_;
-    }
-
-    [[nodiscard]]
-    constexpr auto size() const noexcept -> size_type
-    {
-      return size_;
-    }
-
-    [[nodiscard]]
-    constexpr auto size_in_bytes() const noexcept -> size_type
-    {
-      return size_ * sizeof(remove_pointer_t<pointer>);
-    }
 
     friend constexpr void soul_op_hash_combine(auto& hasher, Span span)
     {
@@ -183,6 +207,9 @@ namespace soul
     pointer data_;
     size_type size_;
   };
+
+  template <>
+  class Span<const char*, usize>;
 
   template <typename T, typename PointerT = match_any, typename SizeT = match_any>
   inline constexpr b8 is_span_v = []

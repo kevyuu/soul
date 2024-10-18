@@ -1,11 +1,21 @@
 #pragma once
 
 #include "core/comp_str.h"
+#include "core/config.h"
 #include "core/string.h"
 #include "core/string_view.h"
-
 #include "core/type_traits.h"
+#include "core/vector.h"
+
 #include "yyjson.h"
+
+namespace soul
+{
+  class JsonReadRef;
+};
+
+template <typename T>
+auto soul_op_construct_from_json(soul::JsonReadRef val_ref) -> T;
 
 namespace soul
 {
@@ -78,7 +88,7 @@ namespace soul
     auto as_b8_or(b8 default_val) const -> b8;
 
     template <ts_fn<void, u64, JsonReadRef> Fn>
-    void as_array_for_each(Fn fn)
+    void as_array_for_each(Fn fn) const
     {
       yyjson_val* hit = nullptr;
       u32 max         = 0;
@@ -89,8 +99,23 @@ namespace soul
       }
     }
 
+    template <typename T>
+    auto into_vector(NotNull<memory::Allocator*> allocator = get_default_allocator()) const
+      -> Vector<T>
+    {
+      Vector<T> result(allocator);
+      yyjson_val* hit = nullptr;
+      u32 max         = 0;
+      u32 idx         = 0;
+      yyjson_arr_foreach(val_ptr_, idx, max, hit)
+      {
+        result.push_back(soul_op_construct_from_json<T>(JsonReadRef(hit)));
+      }
+      return result;
+    }
+
     template <ts_fn<void, StringView, JsonReadRef> Fn>
-    void as_object_for_each(Fn fn)
+    void as_object_for_each(Fn fn) const
     {
       yyjson_val* key = nullptr;
       yyjson_val* val = nullptr;
@@ -156,6 +181,16 @@ namespace soul
     void add(CompStr key, u64 val)
     {
       yyjson_mut_obj_add_uint(doc_, val_, key.c_str(), val);
+    }
+
+    void add(CompStr key, f64 val)
+    {
+      yyjson_mut_obj_add_real(doc_, val_, key.c_str(), val);
+    }
+
+    void add(CompStr key, b8 val)
+    {
+      yyjson_mut_obj_add_bool(doc_, val_, key.c_str(), val);
     }
 
     operator JsonRef() const // NOLINT
@@ -301,9 +336,9 @@ namespace soul
       yyjson_mut_doc_set_root(doc_, ref.get_val());
     }
 
-    auto dump() -> String
+    auto dump(NotNull<memory::Allocator*> allocator = get_default_allocator()) -> String
     {
-      return String::From(yyjson_mut_write(doc_, 0, nullptr));
+      return String::From(yyjson_mut_write(doc_, 0, nullptr), allocator);
     }
 
   private:
@@ -311,8 +346,41 @@ namespace soul
   };
 } // namespace soul
 
-template <typename T>
-auto soul_op_construct_from_json(soul::JsonReadRef val_ref) -> T;
+template <>
+inline auto soul_op_construct_from_json<soul::String>(soul::JsonReadRef val_ref) -> soul::String
+{
+  return soul::String::From(val_ref.as_string_view());
+}
+
+template <>
+inline auto soul_op_construct_from_json<soul::b8>(soul::JsonReadRef val_ref) -> soul::b8
+{
+  return val_ref.as_b8();
+}
+
+template <>
+inline auto soul_op_construct_from_json<soul::i32>(soul::JsonReadRef val_ref) -> soul::i32
+{
+  return val_ref.as_i32();
+}
+
+template <>
+inline auto soul_op_construct_from_json<soul::u32>(soul::JsonReadRef val_ref) -> soul::u32
+{
+  return val_ref.as_u32();
+}
+
+template <>
+inline auto soul_op_construct_from_json<soul::i64>(soul::JsonReadRef val_ref) -> soul::i64
+{
+  return val_ref.as_i64();
+}
+
+template <>
+inline auto soul_op_construct_from_json<soul::u64>(soul::JsonReadRef val_ref) -> soul::u64
+{
+  return val_ref.as_u64();
+}
 
 namespace soul
 {
@@ -336,6 +404,11 @@ namespace soul
     {
       json_ref.append(soul_op_build_json(builder, val));
     }
+  }
+
+  inline auto soul_op_build_json(JsonDoc* doc, const String& str) -> JsonRef
+  {
+    return doc->create_string(str.cspan());
   }
 
 } // namespace soul

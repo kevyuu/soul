@@ -1,8 +1,9 @@
 #include "new_project_popup.h"
-#include <filesystem>
+#include "store.h"
 
 #include "app/gui.h"
-#include "store.h"
+
+#include <filesystem>
 
 namespace khaos
 {

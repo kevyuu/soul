@@ -1,7 +1,6 @@
 #pragma once
 
 #include "core/builtins.h"
-#include "core/span.h"
 
 namespace soul
 {
@@ -37,16 +36,6 @@ namespace soul
     constexpr auto c_str() const -> const char*
     {
       return data_;
-    }
-
-    constexpr operator Span<const char*>() const // NOLINT(hicpp-explicit-conversions)
-    {
-      return {data_, size_};
-    }
-
-    auto operator==(const Span<const char*>& other) const -> b8
-    {
-      return Span<const char*>(*this) == other;
     }
 
     friend consteval auto literals::operator""_str(const char* literal, usize length) -> CompStr;

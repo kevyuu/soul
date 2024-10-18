@@ -9,24 +9,25 @@ set(SOUL_SOURCES
     src/core/log.cpp
     src/core/panic.cpp
     src/core/panic_format.cpp
+    src/gpu/impl/vulkan/bindless_descriptor_allocator.cpp
     src/gpu/impl/vulkan/common.cpp
     src/gpu/impl/vulkan/glfw_wsi.cpp
     src/gpu/impl/vulkan/gpu_system.cpp
+    src/gpu/impl/vulkan/render_compiler.cpp
     src/gpu/impl/vulkan/render_graph.cpp
-    src/gpu/impl/vulkan/render_graph_registry.cpp
     src/gpu/impl/vulkan/render_graph_execution.cpp
     src/gpu/impl/vulkan/render_graph_registry.cpp
-    src/gpu/impl/vulkan/render_compiler.cpp
-    src/gpu/impl/vulkan/bindless_descriptor_allocator.cpp
+    src/gpu/impl/vulkan/render_graph_registry.cpp
     src/gpu/impl/vulkan/vma_impl.cpp
+    src/memory/impl/linear_allocator.cpp
     src/memory/impl/malloc_allocator.cpp
     src/memory/impl/proxy.cpp
-    src/memory/impl/linear_allocator.cpp
-    src/runtime/impl/runtime_system.cpp
-    src/runtime/impl/task_deque.cpp
     src/misc/filesystem.cpp
     src/misc/image_data.cpp
     src/misc/json.cpp
+    src/misc/string_util.cpp
+    src/runtime/impl/runtime_system.cpp
+    src/runtime/impl/task_deque.cpp
     "$<$<STREQUAL:${CMAKE_SYSTEM_NAME},Darwin>:${SOUL_SOURCES_OSX}>"
     "$<$<STREQUAL:${CMAKE_SYSTEM_NAME},Windows>:${SOUL_SOURCES_WINDOWS}>")
 

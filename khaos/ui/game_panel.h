@@ -18,11 +18,13 @@ namespace khaos
   {
   public:
     GamePanel() = default;
-    void on_gui_render(NotNull<soul::app::Gui*> gui, Store* store);
+    void on_gui_render(NotNull<soul::app::Gui*> gui, NotNull<Store*> store);
 
   private:
     String user_input;
     String test_input;
+
+    void render_game_side_mode(NotNull<app::Gui*> gui, NotNull<Store*> store);
   };
 
 } // namespace khaos

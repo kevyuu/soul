@@ -1,4 +1,4 @@
-#include "panels/game_setting_panel.h"
+#include "ui/game_setting_panel.h"
 #include "store.h"
 
 #include "app/gui.h"

@@ -1241,6 +1241,12 @@ namespace soul::app
     ImGui::SetCursorPosY(local_y);
   }
 
+  auto Gui::get_item_spacing() const -> vec2f32
+  {
+    const auto& style = impl_->imgui_context->Style;
+    return style.ItemSpacing;
+  }
+
   auto Gui::get_frame_padding() const -> vec2f32
   {
     const auto& style = impl_->imgui_context->Style;
@@ -1250,6 +1256,11 @@ namespace soul::app
   auto Gui::get_frame_height() const -> f32
   {
     return ImGui::GetFrameHeight();
+  }
+
+  auto Gui::get_frame_height_with_spacing() const -> f32
+  {
+    return ImGui::GetFrameHeightWithSpacing();
   }
 
   auto Gui::get_frame_height(f32 font_size) const -> f32
@@ -1413,7 +1424,9 @@ namespace soul::app
 
   void Gui::text_wrapped(StringView label)
   {
-    ImGui::TextWrapped("%s", label.data());
+    ImGui::PushTextWrapPos(0.0f);
+    ImGui::TextUnformatted(label);
+    ImGui::PopTextWrapPos();
   }
 
   void Gui::text_wrapped(StringView label, f32 font_size)
@@ -1426,7 +1439,34 @@ namespace soul::app
   void Gui::label_text(StringView label, StringView text)
   {
     SOUL_ASSERT(0, text.is_null_terminated());
-    ImGui::LabelText(label, "%s", text.data().unwrap().get()); // NOLINT
+    ImGui::LabelText(label, "%s", text.data()); // NOLINT
+  }
+
+  void Gui::subtext_wrapped(StringView text)
+  {
+    same_line(0, 0);
+    f32 scale            = ImGui::GetIO().FontGlobalScale;
+    f32 width_left       = ImGui::GetContentRegionAvail().x;
+    const char* end_line = ImGui::GetFont()->CalcWordWrapPositionA(
+      scale, StringView(text.begin(), text.end() - text.begin()), width_left);
+    ImGui::TextUnformatted(StringView(text.begin(), end_line - text.begin()));
+    width_left              = ImGui::GetContentRegionAvail().x;
+    const char* text_cursor = nullptr;
+    while (end_line < text.end())
+    {
+      text_cursor = end_line;
+      if (*text_cursor == ' ')
+      {
+        ++text_cursor;
+      } // skip a space at start of line
+      end_line = ImGui::GetFont()->CalcWordWrapPositionA(
+        scale, StringView(text_cursor, text.end() - text_cursor), width_left);
+      if (text_cursor == end_line)
+      {
+        end_line++;
+      }
+      ImGui::TextUnformatted(StringView(text_cursor, end_line - text_cursor));
+    }
   }
 
   void Gui::separator_text(StringView label)
@@ -1441,6 +1481,14 @@ namespace soul::app
   auto Gui::button(StringView label, vec2f32 size) -> b8
   {
     return ImGui::Button(label, size);
+  }
+
+  auto Gui::frameless_button(StringView label) -> b8
+  {
+    push_style_color(ColorVar::BUTTON, vec4f32(0, 0, 0, 0));
+    const auto pressed = ImGui::Button(label);
+    pop_style_color();
+    return pressed;
   }
 
   auto Gui::image_button(
@@ -1568,6 +1616,23 @@ namespace soul::app
       ImGuiInputTextFlags_CallbackResize,
       InputTextCallback,
       text);
+    return is_change;
+  }
+
+  auto Gui::input_text_multiline_full_width(StringView label, String* text, f32 height) -> b8
+  {
+    push_id(label);
+    this->text(label);
+    text->reserve(text->size() + 1);
+    const b8 is_change = ImGui::InputTextMultiline(
+      StringView(""_str),
+      text->data(),
+      text->size() + 1,
+      vec2f32(get_content_region_avail().x, height),
+      ImGuiInputTextFlags_CallbackResize,
+      InputTextCallback,
+      text);
+    pop_id();
     return is_change;
   }
 
@@ -1891,7 +1956,7 @@ namespace soul::app
       reinterpret_cast<const void*>(id), // NOLINT
       into_imgui_tree_node_flags(flags),
       "%s",
-      name.data().unwrap().get());
+      name.data());
   }
 
   void Gui::tree_push(u64 id)
@@ -1989,6 +2054,16 @@ namespace soul::app
   auto Gui::is_item_deactivated_after_edit() -> b8
   {
     return ImGui::IsItemDeactivatedAfterEdit();
+  }
+
+  void Gui::begin_disabled(b8 disable)
+  {
+    ImGui::BeginDisabled(disable);
+  }
+
+  void Gui::end_disabled()
+  {
+    ImGui::EndDisabled();
   }
 
   // ----------------------------------------------------------------------------

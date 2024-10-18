@@ -121,7 +121,8 @@ namespace soul::runtime
 
     static auto get() -> System&
     {
-      [[clang::no_destroy]] static System instance;
+      [[clang::no_destroy]]
+      static System instance;
       return instance;
     }
 
@@ -136,6 +137,8 @@ namespace soul::runtime
     void deallocate(void* addr, u32 size);
 
     auto get_temp_allocator() -> TempAllocator*;
+
+    auto is_worker_thread() const -> b8;
 
   private:
     auto create_task(TaskID parent, TaskFunc func) -> TaskID;

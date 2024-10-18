@@ -1,4 +1,4 @@
-#include "panels/project_selection_panel.h"
+#include "ui/project_selection_panel.h"
 #include "store.h"
 
 #include "app/gui.h"
@@ -30,7 +30,14 @@ namespace khaos
         new_project_popup.open(gui);
       }
       gui->same_line();
-      gui->button("Add"_str);
+      if (gui->button("Import"_str))
+      {
+        const auto result =
+          gui->open_file_dialog(""_str, Path::From(""_str), "File"_str, ".kosmos"_str);
+        if (result.is_some())
+        {
+        }
+      }
 
       const auto project_metadatas = store->project_metadatas_cspan();
       if (gui->begin_table(
@@ -58,11 +65,8 @@ namespace khaos
           {
             store->load_project(project_metadata.path);
           }
-          gui->same_line();
-          gui->button("Remove"_str);
           gui->pop_id();
         }
-
         gui->end_table();
       }
     }

@@ -165,6 +165,11 @@ namespace soul::runtime
     db_.thread_contexts[0].task_deque.reset();
   }
 
+  auto System::is_worker_thread() const -> b8
+  {
+    return db_.g_thread_context != nullptr;
+  }
+
   void System::init(const Config& config)
   {
     db_.default_allocator   = config.defaultAllocator;

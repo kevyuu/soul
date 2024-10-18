@@ -327,6 +327,15 @@ namespace soul
       return *this;
     }
 
+    constexpr auto append(StringView str_view) -> BasicString&
+    {
+      const auto extra_size = str_view.size();
+      ensure_capacity(size_ + extra_size + 1);
+      std::memcpy(data() + size_, str_view.data(), extra_size + 1);
+      size_ += extra_size;
+      return *this;
+    }
+
     template <typename... Args>
     constexpr void appendf(std::format_string<Args...> fmt, Args&&... args)
     {

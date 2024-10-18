@@ -5,6 +5,7 @@
 #include "core/builtins.h"
 #include "core/compiler.h"
 #include "core/span.h"
+#include "core/string_view.h"
 #include "core/type.h"
 #include "core/type_traits.h"
 #include "core/util.h"
@@ -35,7 +36,7 @@ namespace soul
       return (static_cast<u64>(p[0]) << 16U) | (static_cast<u64>(p[k >> 1U]) << 8U) | p[k - 1];
     };
 
-    const byte* p = bytes.data().unwrap();
+    const byte* p = bytes.data();
     u64 seed      = SECRETS[0];
     u64 a{};
     u64 b{};
@@ -93,9 +94,7 @@ namespace soul
 
   template <typename T>
   inline constexpr b8 impl_soul_op_hash_combine_v = requires(Hasher& h, const T& val) {
-    {
-      soul_op_hash_combine(h, val)
-    } -> same_as<void>;
+    { soul_op_hash_combine(h, val) } -> same_as<void>;
   };
 
   class Hasher

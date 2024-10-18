@@ -99,6 +99,11 @@ namespace soul::runtime
     return System::get().allocate(size, alignment);
   }
 
+  inline auto is_worker_thread() -> b8
+  {
+    return System::get().is_worker_thread();
+  }
+
   inline void deallocate(void* addr, u32 size)
   {
     return System::get().deallocate(addr, size);

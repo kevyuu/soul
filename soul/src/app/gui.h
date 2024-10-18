@@ -400,9 +400,13 @@ namespace soul::app
 
     void set_cursor_pos_y(f32 local_y);
 
+    auto get_item_spacing() const -> vec2f32;
+
     auto get_frame_padding() const -> vec2f32;
 
     auto get_frame_height() const -> f32;
+
+    auto get_frame_height_with_spacing() const -> f32;
 
     auto get_frame_height(f32 font_size) const -> f32;
 
@@ -476,6 +480,8 @@ namespace soul::app
 
     void text_wrapped(StringView label, f32 font_size);
 
+    void subtext_wrapped(StringView label);
+
     void label_text(StringView label, StringView text);
 
     void separator_text(StringView label);
@@ -486,6 +492,8 @@ namespace soul::app
     auto invisible_button(StringView label, vec2f32 size = {0, 0}) -> b8;
 
     auto button(StringView label, vec2f32 size = {0, 0}) -> b8;
+
+    auto frameless_button(StringView label) -> b8;
 
     auto image_button(
       StringView label,
@@ -514,6 +522,8 @@ namespace soul::app
     auto input_text(StringView label, String* text, InputFlags flags = {}) -> b8;
 
     auto input_text_multiline(StringView label, String* text, vec2f32 size = vec2f32(0, 0)) -> b8;
+
+    auto input_text_multiline_full_width(StringView label, String* text, f32 height) -> b8;
 
     auto input_text(StringView label, Span<char*> buffer) -> b8;
 
@@ -797,6 +807,10 @@ namespace soul::app
 
     [[nodiscard]]
     auto is_item_deactivated_after_edit() -> b8;
+
+    void begin_disabled(b8 disable);
+
+    void end_disabled();
 
     // ----------------------------------------------------------------------------
     // Window Utilities and Query Functions

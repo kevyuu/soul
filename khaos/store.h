@@ -6,6 +6,7 @@
 
 #include "gpu/id.h"
 
+#include "text_completion_system.h"
 #include "type.h"
 
 using namespace soul;
@@ -76,6 +77,16 @@ namespace khaos
     void delete_sampler();
 
     [[nodiscard]]
+    auto impersonate_action_prompt_cspan() -> StringView;
+
+    void set_impersonate_action_prompt(StringView prompt);
+
+    [[nodiscard]]
+    auto choice_prompt_cspan() -> StringView;
+
+    void set_choice_prompt(StringView prompt);
+
+    [[nodiscard]]
     auto header_prompt_cspan() const -> StringView;
 
     void set_header_prompt(StringView header_prompt);
@@ -92,6 +103,8 @@ namespace khaos
 
     void create_new_project(StringView name, const Path& path);
 
+    void import_new_project(const Path& path);
+
     void load_project(const Path& path);
 
     void save_project();
@@ -103,31 +116,40 @@ namespace khaos
 
     auto active_journey_cref() const -> const Journey&;
 
-    void send_user_input(StringView label);
+    void add_message(Role role, StringView label);
+
+    void run_task_completion();
 
     void save_app_settings();
 
+    [[nodiscard]]
+    auto has_active_completion_task() const -> b8;
+
     gpu::TextureID background_texture_id;
+
+    void on_new_frame();
+
+    [[nodiscard]]
+    auto get_game_state() const -> GameState;
 
   private:
     Path storage_path_;
     Path app_setting_path_;
     Path prompt_format_path_;
     Path sampler_path_;
-    Vector<ProjectMetadata> project_metadatas_;
     Option<Project> active_project_;
     Path active_project_path_;
     Path active_project_filepath_ = Path::From(""_str);
     Vector<PromptFormat> prompt_formats_;
     Vector<Sampler> samplers_;
 
-    String api_url_;
-    u32 context_token_count_;
-    u32 response_token_count_;
+    AppSetting app_setting_;
     u32 active_prompt_format_index_;
     u32 active_sampler_index_;
 
     Option<Journey> active_journey_;
+    GameState game_state_ = GameState::WAITING_USER_RESPONSE;
+    TextCompletionSystem text_completion_system_;
 
     void sort_format_settings();
     void save_setting_to_file(const PromptFormat& setting);

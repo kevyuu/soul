@@ -1,4 +1,4 @@
-#include "panels/menu_bar.h"
+#include "ui/menu_bar.h"
 #include "core/type.h"
 
 #include "core/panic.h"

@@ -1,8 +1,8 @@
 #include "store.h"
+#include "text_completion_system.h"
 #include "type.h"
 
 #include "core/array.h"
-#include "core/log.h"
 
 #include "gpu/gpu.h"
 
@@ -21,87 +21,111 @@ namespace khaos
         prompt_format_path_(storage_path_ / "prompt_format_settings"_str),
         sampler_path_(storage_path_ / "sampler_settings"_str),
         active_project_path_(Path::From(""_str)),
-        api_url_("http://127.0.0.1:5000"_str),
-        context_token_count_(16384),
-        response_token_count_(250),
         active_prompt_format_index_(0),
         active_sampler_index_(0),
         gpu_system_(gpu_system)
   {
     static const auto PROMPT_FORMAT_SETTINGS = Array{
       PromptFormat{
-        .name             = "Llama 3"_str,
-        .header_prefix    = "<|begin_of_text|><|start_header_id|>system<|end_header_id|>"_str,
-        .header_suffix    = "<|eot_id|>"_str,
-        .user_prefix      = "<|start_header_id|>user<|end_header_id|>"_str,
-        .user_suffix      = "<|eot_id|>"_str,
-        .assistant_prefix = "<|start_header_id|>assistant<|end_header_id|>"_str,
-        .assistant_suffix = "<|eot_id|>"_str,
-        .system_prefix    = "<|start_header_id|>system<|end_header_id|>"_str,
-        .system_suffix    = "<|eot_id|>"_str,
+        .name = "Llama 3"_str,
+        .parameter =
+          {
+            .header_prefix    = "<|begin_of_text|><|start_header_id|>system<|end_header_id|>"_str,
+            .header_suffix    = "<|eot_id|>"_str,
+            .user_prefix      = "<|start_header_id|>user<|end_header_id|>"_str,
+            .user_suffix      = "<|eot_id|>"_str,
+            .assistant_prefix = "<|start_header_id|>assistant<|end_header_id|>"_str,
+            .assistant_suffix = "<|eot_id|>"_str,
+            .system_prefix    = "<|start_header_id|>system<|end_header_id|>"_str,
+            .system_suffix    = "<|eot_id|>"_str,
+          },
       },
       PromptFormat{
-        .name             = "ChatML"_str,
-        .header_prefix    = "<|im_start|>system"_str,
-        .header_suffix    = "<|im_end|>"_str,
-        .user_prefix      = "<|im_start|>user"_str,
-        .user_suffix      = "<|im_end|>"_str,
-        .assistant_prefix = "<|im_start|>assistant"_str,
-        .assistant_suffix = "<|im_end|>"_str,
-        .system_prefix    = "<|im_start|>system"_str,
-        .system_suffix    = "<|im_end|>"_str,
+        .name = "ChatML"_str,
+        .parameter =
+          {
+            .header_prefix    = "<|im_start|>system"_str,
+            .header_suffix    = "<|im_end|>"_str,
+            .user_prefix      = "<|im_start|>user"_str,
+            .user_suffix      = "<|im_end|>"_str,
+            .assistant_prefix = "<|im_start|>assistant"_str,
+            .assistant_suffix = "<|im_end|>"_str,
+            .system_prefix    = "<|im_start|>system"_str,
+            .system_suffix    = "<|im_end|>"_str,
+          },
       },
     };
 
     static const auto SAMPLER_SETTINGS = Array{
       Sampler{
-        .name               = "Big O"_str,
-        .temperature        = 0.87,
-        .top_p              = 0.99,
-        .top_k              = 85,
-        .repetition_penalty = 1.01,
-        .typical_p          = 0.68,
-        .tfs                = 0.68,
+        .name = "Big O"_str,
+        .parameter =
+          {
+            .temperature        = 0.87,
+            .top_p              = 0.99,
+            .top_k              = 85,
+            .repetition_penalty = 1.01,
+            .typical_p          = 0.68,
+            .tfs                = 0.68,
+          },
       },
       Sampler{
-        .name      = "Debug-deterministic"_str,
-        .top_k     = 1,
-        .do_sample = false,
+        .name = "Debug-deterministic"_str,
+        .parameter =
+          {
+            .top_k     = 1,
+            .do_sample = false,
+          },
       },
       Sampler{
-        .name               = "Divine Intellect"_str,
-        .temperature        = 1.31,
-        .top_p              = 0.14,
-        .top_k              = 49,
-        .repetition_penalty = 1.17,
+        .name = "Divine Intellect"_str,
+        .parameter =
+          {
+            .temperature        = 1.31,
+            .top_p              = 0.14,
+            .top_k              = 49,
+            .repetition_penalty = 1.17,
+          },
       },
       Sampler{
-        .name               = "Midnight Enighma"_str,
-        .temperature        = 0.98,
-        .top_p              = 0.37,
-        .top_k              = 100,
-        .repetition_penalty = 1.18,
+        .name = "Midnight Enighma"_str,
+        .parameter =
+          {
+            .temperature        = 0.98,
+            .top_p              = 0.37,
+            .top_k              = 100,
+            .repetition_penalty = 1.18,
+          },
       },
       Sampler{
-        .name               = "Shortwave"_str,
-        .temperature        = 1.53,
-        .top_p              = 0.64,
-        .top_k              = 33,
-        .repetition_penalty = 1.07,
+        .name = "Shortwave"_str,
+        .parameter =
+          {
+            .temperature        = 1.53,
+            .top_p              = 0.64,
+            .top_k              = 33,
+            .repetition_penalty = 1.07,
+          },
       },
       Sampler{
-        .name               = "simple-1"_str,
-        .temperature        = 0.7,
-        .top_p              = 0.9,
-        .top_k              = 20,
-        .repetition_penalty = 1.15,
+        .name = "simple-1"_str,
+        .parameter =
+          {
+            .temperature        = 0.7,
+            .top_p              = 0.9,
+            .top_k              = 20,
+            .repetition_penalty = 1.15,
+          },
       },
       Sampler{
-        .name               = "Yara"_str,
-        .temperature        = 0.82,
-        .top_p              = 0.21,
-        .top_k              = 72,
-        .repetition_penalty = 1.19,
+        .name = "Yara"_str,
+        .parameter =
+          {
+            .temperature        = 0.82,
+            .top_p              = 0.21,
+            .top_k              = 72,
+            .repetition_penalty = 1.19,
+          },
       },
     };
 
@@ -150,12 +174,9 @@ namespace khaos
     }
 
     {
-      String app_json_string = get_file_content(app_setting_path_);
-      auto app_setting       = from_json_string<AppSetting>(app_json_string.cspan());
-      api_url_               = std::move(app_setting.api_url);
-      context_token_count_   = app_setting.context_token_count;
-      response_token_count_  = app_setting.response_token_count;
-      project_metadatas_     = std::move(app_setting.project_metadatas);
+      String app_json_string         = get_file_content(app_setting_path_);
+      auto app_setting               = from_json_string<AppSetting>(app_json_string.cspan());
+      app_setting_.project_metadatas = std::move(app_setting.project_metadatas);
       select_prompt_format(app_setting.active_prompt_format.cspan());
       select_sampler(app_setting.active_sampler.cspan());
     }
@@ -164,12 +185,12 @@ namespace khaos
   [[nodiscard]]
   auto Store::api_url_string_view() const -> StringView
   {
-    return api_url_.cspan();
+    return app_setting_.api_url.cspan();
   }
 
   void Store::set_api_url(StringView api_url)
   {
-    api_url_.assign(api_url);
+    app_setting_.api_url.assign(api_url);
   }
 
   auto Store::prompt_formats_cspan() const -> Span<const PromptFormat*>
@@ -194,7 +215,6 @@ namespace khaos
       for (u32 format_i = 0; format_i < prompt_formats_.size(); format_i++)
       {
         const auto& setting = prompt_formats_[format_i];
-        SOUL_LOG_INFO("Setting name : {}, Name : {}", setting.name.cspan(), name);
         if (setting.name.cspan() == name)
         {
           return format_i;
@@ -203,11 +223,14 @@ namespace khaos
       unreachable();
       return 0;
     }();
+    app_setting_.active_prompt_format.assign(name);
   }
 
   void Store::select_prompt_format(u32 index)
   {
     active_prompt_format_index_ = index;
+    app_setting_.active_prompt_format.assign(
+      prompt_formats_[active_prompt_format_index_].name.cspan());
   }
 
   void Store::update_prompt_format(const PromptFormat& setting)
@@ -252,7 +275,9 @@ namespace khaos
   void Store::save_setting_to_file(const PromptFormat& setting)
   {
     const auto filename = String::Format("{}.json", setting.name);
-    write_to_file(prompt_format_path_ / filename.cspan(), setting.to_json_string().cspan());
+    JsonDoc doc;
+    doc.create_root_object(setting);
+    write_to_file(prompt_format_path_ / filename.cspan(), doc.dump().cspan());
   }
 
   auto Store::samplers_cspan() const -> Span<const Sampler*>
@@ -285,11 +310,13 @@ namespace khaos
       unreachable();
       return 0;
     }();
+    app_setting_.active_sampler.assign(samplers_[active_sampler_index_].name.cspan());
   }
 
   void Store::select_sampler(u32 index)
   {
     active_sampler_index_ = index;
+    app_setting_.active_sampler.assign(samplers_[active_sampler_index_].name.cspan());
   }
 
   void Store::update_sampler(const Sampler& setting)
@@ -317,6 +344,30 @@ namespace khaos
     delete_file(sampler_path_ / filename.cspan());
     samplers_.remove(active_sampler_index_);
     sort_sampler_settings();
+  }
+
+  [[nodiscard]]
+  auto Store::impersonate_action_prompt_cspan() -> StringView
+  {
+    return app_setting_.impersonate_action_prompt.cspan();
+  }
+
+  void Store::set_impersonate_action_prompt(StringView prompt)
+  {
+    app_setting_.impersonate_action_prompt.assign(prompt);
+    save_app_settings();
+  }
+
+  [[nodiscard]]
+  auto Store::choice_prompt_cspan() -> StringView
+  {
+    return app_setting_.choice_prompt.cspan();
+  }
+
+  void Store::set_choice_prompt(StringView prompt)
+  {
+    app_setting_.choice_prompt.assign(prompt);
+    save_app_settings();
   }
 
   [[nodiscard]]
@@ -355,7 +406,7 @@ namespace khaos
 
   auto Store::project_metadatas_cspan() const -> Span<const ProjectMetadata*>
   {
-    return project_metadatas_.cspan();
+    return app_setting_.project_metadatas.cspan();
   }
 
   void Store::create_new_project(StringView name, const Path& path)
@@ -365,14 +416,23 @@ namespace khaos
     const String json_string     = doc.dump();
     const auto project_directory = path / name;
     const auto filename          = String::Format("{}.kosmos", name);
-    project_metadatas_.push_back(ProjectMetadata{
+    app_setting_.project_metadatas.push_back(ProjectMetadata{
       .name = String::From(name),
       .path = project_directory / filename.cspan(),
     });
     std::filesystem::create_directory(project_directory);
-    write_to_file(project_metadatas_.back().path, json_string.cspan());
+    write_to_file(app_setting_.project_metadatas.back().path, json_string.cspan());
     save_app_settings();
-    load_project(project_metadatas_.back().path);
+    load_project(app_setting_.project_metadatas.back().path);
+  }
+
+  void Store::import_new_project(const Path& path)
+  {
+    app_setting_.project_metadatas.push_back(ProjectMetadata{
+      .name = String::From(path.stem().string().data()),
+      .path = path.clone(),
+    });
+    save_app_settings();
   }
 
   void Store::load_project(const Path& path)
@@ -408,9 +468,37 @@ namespace khaos
     active_journey_.some_ref().messages.push_back(active_project_.some_ref().first_message.clone());
   }
 
+  void Store::add_message(Role role, StringView label)
+  {
+    active_journey_.some_ref().messages.push_back(Message{
+      .role    = role,
+      .content = String::From(label),
+    });
+  }
+
+  void Store::run_task_completion()
+  {
+    game_state_ = GameState::GENERATING_ASSISTANT_RESPONSE;
+    active_journey_.some_ref().messages.push_back(
+      Message{.role = Role::ASSISTANT, .content = String::From(""_str)});
+    const auto messages = active_journey_cref().messages.cspan();
+    SOUL_LOG_INFO(
+      "Repetition penalty : {}, {}",
+      active_sampler_cref().name,
+      active_sampler_cref().parameter.repetition_penalty);
+    text_completion_system_.run(TextCompletionTask{
+      .api_url                 = app_setting_.api_url.clone(),
+      .header_prompt           = active_project_.some_ref().header_prompt.clone(),
+      .messages                = u64span(messages.begin(), messages.size() - 1),
+      .prompt_format_parameter = active_prompt_format_cref().parameter.clone(),
+      .sampler_parameter       = active_sampler_cref().parameter.clone(),
+      .grammar_string          = String::From(""_str),
+      .max_token_count         = app_setting_.response_token_count,
+    });
+  }
+
   auto Store::load_texture(const Path& path) -> gpu::TextureID
   {
-    SOUL_LOG_INFO("Load texture : {}", path.string());
     const auto& image_data          = ImageData::FromFile(path, 4);
     const gpu::TextureFormat format = [&]
     {
@@ -463,15 +551,35 @@ namespace khaos
   void Store::save_app_settings()
   {
     JsonDoc doc;
-    JsonObjectRef ref = doc.create_root_empty_object();
-    ref.add("api_url"_str, api_url_.cspan());
-    ref.add("context_token_count"_str, context_token_count_);
-    ref.add("response_token_count"_str, response_token_count_);
-    ref.add("active_prompt_format"_str, prompt_formats_[active_prompt_format_index_].name.cspan());
-    ref.add("active_sampler"_str, samplers_[active_sampler_index_].name.cspan());
-    ref.add("project_metadatas"_str, doc.create_array(project_metadatas_.cspan()));
+    JsonObjectRef ref      = doc.create_root_object(app_setting_);
     const auto json_string = doc.dump();
     write_to_file(app_setting_path_, json_string.cspan());
+  }
+
+  auto Store::has_active_completion_task() const -> b8
+  {
+    return text_completion_system_.is_any_pending_response();
+  }
+
+  void Store::on_new_frame()
+  {
+    if (game_state_ == GameState::GENERATING_ASSISTANT_RESPONSE)
+    {
+      if (text_completion_system_.is_any_pending_response())
+      {
+        auto& active_journey = active_journey_.some_ref();
+        auto& messages       = active_journey.messages;
+        text_completion_system_.consume(&messages.back().content);
+      } else
+      {
+        game_state_ = GameState::WAITING_USER_RESPONSE;
+      }
+    }
+  }
+
+  auto Store::get_game_state() const -> GameState
+  {
+    return game_state_;
   }
 
   void Store::sort_sampler_settings()
@@ -489,26 +597,28 @@ namespace khaos
   void Store::save_setting_to_file(const Sampler& setting)
   {
     const auto filename = String::Format("{}.json", setting.name);
-    write_to_file(sampler_path_ / filename.cspan(), setting.to_json_string().cspan());
+    JsonDoc doc;
+    doc.create_root_object(setting);
+    write_to_file(sampler_path_ / filename.cspan(), doc.dump().cspan());
   }
 
   auto Store::get_context_token_count() const -> u32
   {
-    return context_token_count_;
+    return app_setting_.context_token_count;
   }
 
   void Store::set_context_token_count(u32 token_count)
   {
-    context_token_count_ = token_count;
+    app_setting_.context_token_count = token_count;
   }
 
   auto Store::get_response_token_count() const -> u32
   {
-    return response_token_count_;
+    return app_setting_.response_token_count;
   }
 
   void Store::set_response_token_count(u32 token_count)
   {
-    response_token_count_ = token_count;
+    app_setting_.response_token_count = token_count;
   }
 } // namespace khaos

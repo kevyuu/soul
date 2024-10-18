@@ -1,6 +1,6 @@
 #pragma once
 
-#include "panels/new_project_popup.h"
+#include "ui/new_project_popup.h"
 
 #include "core/not_null.h"
 

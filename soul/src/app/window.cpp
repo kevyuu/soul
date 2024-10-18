@@ -7,10 +7,11 @@
 #include "core/panic.h"
 #include "core/path.h"
 #include "core/string.h"
-#include "core/string_util.h"
 
 #include "runtime/runtime.h"
 #include "runtime/scope_allocator.h"
+
+#include "misc/string_util.h"
 
 #include "gpu/wsi.h"
 
@@ -505,7 +506,8 @@ namespace soul::app
   {
     runtime::ScopeAllocator scope_allocator(
       "soul::app::set_window_title"_str, runtime::get_temp_allocator());
-    const char* title_cstr = get_or_create_cstr(title, ptrof(scope_allocator));
+    String cstr_buffer     = String(&scope_allocator);
+    const char* title_cstr = into_c_str(title, &cstr_buffer);
     glfwSetWindowTitle(glfw_window_, title_cstr);
   }
 

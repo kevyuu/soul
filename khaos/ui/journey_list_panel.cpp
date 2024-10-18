@@ -1,4 +1,4 @@
-#include "panels/journey_list_panel.h"
+#include "ui/journey_list_panel.h"
 #include "store.h"
 
 #include "app/gui.h"

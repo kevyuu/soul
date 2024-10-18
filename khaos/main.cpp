@@ -1,5 +1,6 @@
 #include "app/app.h"
 
+#include "memory/allocators/malloc_allocator.h"
 #include "store.h"
 #include "view.h"
 
@@ -7,7 +8,13 @@ namespace soul
 {
   auto get_default_allocator() -> memory::Allocator*
   {
-    return runtime::get_context_allocator();
+    static memory::MallocAllocator s_malloc_allocator("Non-Worker Malloc Allocator"_str);
+
+    if (runtime::is_worker_thread())
+    {
+      return runtime::get_context_allocator();
+    }
+    return &s_malloc_allocator;
   }
 
 } // namespace soul
@@ -26,6 +33,7 @@ namespace khaos
     void on_render_frame(NotNull<gpu::RenderGraph*> /*render_graph*/) override
     {
       app::Gui& gui = gui_ref();
+      store_.on_new_frame();
       view_.render(&gui, &store_);
     }
 

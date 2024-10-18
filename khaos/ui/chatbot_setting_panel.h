@@ -28,6 +28,8 @@ namespace khaos
     String new_prompt_format_name_;
     Sampler edit_sampler_;
     String new_sampler_name_;
+    String impersonate_action_prompt_;
+    String choice_prompt_;
 
     void render_prompt_formatting_widget(NotNull<soul::app::Gui*> gui, Store* store);
     void render_sampler_setting(NotNull<soul::app::Gui*> gui, Store* store);
