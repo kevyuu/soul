@@ -64,9 +64,9 @@ struct Attribute
 };
 
 [shader("closesthit")]
-void rchit_main(inout ColorPayload p, in float2 attribs)
+void rchit_main(inout ColorPayload p, in BuiltInTriangleIntersectionAttributes attribs)
 {
-	const float3 barycentrics = float3(1.0f - attribs.x - attribs.y, attribs.x, attribs.y);
+	const float3 barycentrics = float3(1.0f - attribs.barycentrics.x - attribs.barycentrics.y, attribs.barycentrics.x, attribs.barycentrics.y);
 
   RTObjScene scene = get_buffer<RTObjScene>(push_constant.scene_descriptor_id, 0);
   RTObjDesc gpu_obj_desc = get_buffer_array<RTObjDesc>(scene.gpu_obj_buffer_descriptor_id, InstanceID());
