@@ -35,14 +35,14 @@ namespace khaos
   auto soul_op_build_json(JsonDoc* doc, const PromptFormatParameter& parameter) -> JsonObjectRef
   {
     auto json_ref = doc->create_empty_object();
-    json_ref.add("header_prefix"_str, parameter.header_prefix.cspan());
-    json_ref.add("header_suffix"_str, parameter.header_suffix.cspan());
-    json_ref.add("user_prefix"_str, parameter.user_prefix.cspan());
-    json_ref.add("user_suffix"_str, parameter.user_suffix.cspan());
-    json_ref.add("assistant_prefix"_str, parameter.assistant_prefix.cspan());
-    json_ref.add("assistant_suffix"_str, parameter.assistant_suffix.cspan());
-    json_ref.add("system_prefix"_str, parameter.system_prefix.cspan());
-    json_ref.add("system_suffix"_str, parameter.system_suffix.cspan());
+    json_ref.add("header_prefix"_str, parameter.header_prefix.cview());
+    json_ref.add("header_suffix"_str, parameter.header_suffix.cview());
+    json_ref.add("user_prefix"_str, parameter.user_prefix.cview());
+    json_ref.add("user_suffix"_str, parameter.user_suffix.cview());
+    json_ref.add("assistant_prefix"_str, parameter.assistant_prefix.cview());
+    json_ref.add("assistant_suffix"_str, parameter.assistant_suffix.cview());
+    json_ref.add("system_prefix"_str, parameter.system_prefix.cview());
+    json_ref.add("system_suffix"_str, parameter.system_suffix.cview());
     return json_ref;
   }
 
@@ -63,7 +63,7 @@ namespace khaos
   auto soul_op_build_json(JsonDoc* doc, const PromptFormat& prompt_format) -> JsonObjectRef
   {
     auto json_ref = doc->create_empty_object();
-    json_ref.add("name"_str, prompt_format.name.cspan());
+    json_ref.add("name"_str, prompt_format.name.cview());
     json_ref.add("parameter"_str, doc->create_object(prompt_format.parameter));
     return json_ref;
   }
@@ -88,7 +88,7 @@ namespace khaos
       .no_repeat_ngram_size       = no_repeat_ngram_size,
       .smoothing_factor           = smoothing_factor,
       .smoothing_curve            = smoothing_curve,
-      .dry_multipler              = dry_multipler,
+      .dry_multiplier             = dry_multiplier,
       .dry_base                   = dry_base,
       .dry_allowed_length         = dry_allowed_length,
       .dry_sequence_breakers      = dry_sequence_breakers.clone(),
@@ -129,7 +129,7 @@ namespace khaos
     no_repeat_ngram_size       = other.no_repeat_ngram_size;
     smoothing_factor           = other.smoothing_factor;
     smoothing_curve            = other.smoothing_curve;
-    dry_multipler              = other.dry_multipler;
+    dry_multiplier             = other.dry_multiplier;
     dry_base                   = other.dry_base;
     dry_allowed_length         = other.dry_allowed_length;
     dry_sequence_breakers.clone_from(dry_sequence_breakers);
@@ -184,10 +184,10 @@ namespace khaos
     json_ref.add("no_repeat_ngram_size"_str, parameter.no_repeat_ngram_size);
     json_ref.add("smoothing_factor"_str, parameter.smoothing_factor);
     json_ref.add("smoothing_curve"_str, parameter.smoothing_curve);
-    json_ref.add("dry_multipler"_str, parameter.dry_multipler);
+    json_ref.add("dry_multipler"_str, parameter.dry_multiplier);
     json_ref.add("dry_base"_str, parameter.dry_base);
     json_ref.add("dry_allowed_length"_str, parameter.dry_allowed_length);
-    json_ref.add("dry_sequence_breakers"_str, parameter.dry_sequence_breakers.cspan());
+    json_ref.add("dry_sequence_breakers"_str, parameter.dry_sequence_breakers.cview());
     json_ref.add("dynamic_temperature"_str, parameter.dynamic_temperature);
     json_ref.add("dynatemp_low"_str, parameter.dynatemp_low);
     json_ref.add("dynatemp_high"_str, parameter.dynatemp_high);
@@ -202,14 +202,14 @@ namespace khaos
     json_ref.add("skip_special_tokens"_str, parameter.skip_special_tokens);
     json_ref.add("temperature_last"_str, parameter.temperature_last);
     json_ref.add("seed"_str, parameter.seed);
-    json_ref.add("custom_token_bans"_str, parameter.custom_token_bans.cspan());
+    json_ref.add("custom_token_bans"_str, parameter.custom_token_bans.cview());
     return json_ref;
   }
 
   auto soul_op_build_json(JsonDoc* doc, const Sampler& sampler) -> JsonObjectRef
   {
     auto json_ref = doc->create_empty_object();
-    json_ref.add("name"_str, sampler.name.cspan());
+    json_ref.add("name"_str, sampler.name.cview());
     json_ref.add("parameter"_str, doc->create_object(sampler.parameter));
     return json_ref;
   }
@@ -217,7 +217,7 @@ namespace khaos
   auto soul_op_build_json(JsonDoc* doc, const ProjectMetadata& project_metadata) -> JsonObjectRef
   {
     auto json_ref = doc->create_empty_object();
-    json_ref.add("name"_str, project_metadata.name.cspan());
+    json_ref.add("name"_str, project_metadata.name.cview());
     const auto std_string = project_metadata.path.string();
     json_ref.add("path"_str, StringView(std_string.c_str()));
     return json_ref;
@@ -227,7 +227,9 @@ namespace khaos
   {
     auto json_ref = doc->create_empty_object();
     json_ref.add("role"_str, ROLE_LABELS[message.role]);
-    json_ref.add("content"_str, message.content.cspan());
+    json_ref.add("label"_str, message.label.cview());
+    json_ref.add("content"_str, message.content.cview());
+    json_ref.add("flags"_str, message.flags.to_i32());
     return json_ref;
   }
 
@@ -238,24 +240,10 @@ namespace khaos
     return json_ref;
   }
 
-  auto soul_op_build_json(JsonDoc* doc, const AppSetting& setting) -> JsonObjectRef
-  {
-    auto json_ref = doc->create_empty_object();
-    json_ref.add("api_url"_str, setting.api_url.cspan());
-    json_ref.add("context_token_count"_str, setting.context_token_count);
-    json_ref.add("response_token_count"_str, setting.response_token_count);
-    json_ref.add("active_prompt_format"_str, setting.active_prompt_format.cspan());
-    json_ref.add("active_sampler"_str, setting.active_sampler.cspan());
-    json_ref.add("project_metadatas"_str, doc->create_array(setting.project_metadatas.cspan()));
-    return json_ref;
-  }
-
   auto soul_op_build_json(JsonDoc* doc, const Project& project) -> JsonObjectRef
   {
     auto json_ref = doc->create_empty_object();
-    json_ref.add("name"_str, project.name.cspan());
-    json_ref.add("header_prompt"_str, project.header_prompt.cspan());
-    json_ref.add("first_message"_str, doc->create_object(project.first_message));
+    json_ref.add("name"_str, project.name.cview());
     return json_ref;
   }
 
@@ -285,7 +273,7 @@ auto soul_op_construct_from_json<khaos::SamplerParameter>(JsonReadRef val_ref)
   parameter.no_repeat_ngram_size       = val_ref.ref("no_repeat_ngram_size"_str).as_i32();
   parameter.smoothing_factor           = val_ref.ref("smoothing_factor"_str).as_f32();
   parameter.smoothing_curve            = val_ref.ref("smoothing_curve"_str).as_f32();
-  parameter.dry_multipler              = val_ref.ref("dry_multipler"_str).as_f32();
+  parameter.dry_multiplier             = val_ref.ref("dry_multipler"_str).as_f32();
   parameter.dry_base                   = val_ref.ref("dry_base"_str).as_f32();
   parameter.dry_allowed_length         = val_ref.ref("dry_allowed_length"_str).as_i32();
   parameter.dry_sequence_breakers =
@@ -331,7 +319,9 @@ auto soul_op_construct_from_json<Message>(JsonReadRef val_ref) -> Message
 {
   return Message{
     .role    = ROLE_LABELS.find_first_key_with_val(val_ref.ref("role"_str).as_string_view()),
+    .label   = String::From(val_ref.ref("label"_str).as_string_view()),
     .content = String::From(val_ref.ref("content"_str).as_string_view()),
+    .flags   = MessageFlags::FromU64(val_ref.ref("flags"_str).as_u64()),
   };
 }
 
@@ -344,32 +334,6 @@ auto soul_op_construct_from_json<Journey>(JsonReadRef val_ref) -> Journey
     .messages  = val_ref.ref("messages"_str).into_vector<Message>(),
   };
   return journey;
-}
-
-template <>
-auto soul_op_construct_from_json<Project>(JsonReadRef val_ref) -> Project
-{
-  auto project = Project{
-    .name          = String::From(val_ref.ref("name"_str).as_string_view()),
-    .header_prompt = String::From(val_ref.ref("header_prompt"_str).as_string_view()),
-    .first_message = soul_op_construct_from_json<Message>(val_ref.ref("first_message"_str)),
-    .journeys      = val_ref.ref("journeys"_str).into_vector<Journey>(),
-  };
-  return project;
-}
-
-template <>
-auto soul_op_construct_from_json<AppSetting>(JsonReadRef val_ref) -> AppSetting
-{
-  auto setting = AppSetting{
-    .api_url              = String::From(val_ref.ref("api_url"_str).as_string_view()),
-    .context_token_count  = val_ref.ref("context_token_count"_str).as_u32(),
-    .response_token_count = val_ref.ref("response_token_count"_str).as_u32(),
-    .active_prompt_format = String::From(val_ref.ref("active_prompt_format"_str).as_string_view()),
-    .active_sampler       = String::From(val_ref.ref("active_sampler"_str).as_string_view()),
-    .project_metadatas    = val_ref.ref("project_metadatas"_str).into_vector<ProjectMetadata>(),
-  };
-  return setting;
 }
 
 template <>

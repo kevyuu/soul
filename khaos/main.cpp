@@ -1,7 +1,13 @@
 #include "app/app.h"
 
+#include "core/vector.h"
+#include "core/path.h"
 #include "memory/allocators/malloc_allocator.h"
-#include "store.h"
+#include "gpu/render_graph.h"
+#include "runtime/runtime.h"
+
+#include "store/store.h"
+
 #include "view.h"
 
 namespace soul
@@ -23,11 +29,18 @@ using namespace soul;
 
 namespace khaos
 {
-  class ArdentgineApp : public soul::app::App
+  class KhaosApp : public soul::app::App
   {
   private:
   public:
-    ArdentgineApp() : App("Khaos"_str), store_(storage_path_cref(), &gpu_system_ref()) {};
+    explicit KhaosApp(const Option<Path>& project_path)
+        : App("Khaos"_str), store_(storage_path_cref(), &gpu_system_ref())
+    {
+      if (project_path.is_some())
+      {
+        store_.load_project(project_path.some_ref());
+      }
+    }
 
   private:
     void on_render_frame(NotNull<gpu::RenderGraph*> /*render_graph*/) override
@@ -43,9 +56,16 @@ namespace khaos
 
 } // namespace khaos
 
-auto main() -> int
+auto main(i32 argc, char** argv) -> int
 {
-  auto app = khaos::ArdentgineApp();
+  Option<Path> path = nilopt;
+  if (argc > 1)
+  {
+    path = Path::From(StringView(argv[1]));
+  }
+
+  auto app = khaos::KhaosApp(Path::From("C:/Users/kevin/Dev/irresistible"_str));
   app.run();
+
   return 0;
 }

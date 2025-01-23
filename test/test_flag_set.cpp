@@ -537,18 +537,18 @@ TEST(TestFlagSetFindIf, TestFlagSetFindIf)
 
 TEST(TestFlagSetToUint, TestFlagSetToUint)
 {
-  SOUL_TEST_ASSERT_EQ(Uint8FlagSet({}).to_uint32(), 0);
-  SOUL_TEST_ASSERT_EQ(Uint8FlagSet({Uint8TestEnum::ONE, Uint8TestEnum::THREE}).to_uint32(), 5);
-  SOUL_TEST_ASSERT_EQ(Uint32FlagSet({Uint32TestEnum::ONE, Uint32TestEnum::THREE}).to_uint32(), 5);
-  SOUL_TEST_ASSERT_EQ(Uint64FlagSet({Uint64TestEnum::ONE, Uint64TestEnum::THREE}).to_uint32(), 5);
+  SOUL_TEST_ASSERT_EQ(Uint8FlagSet({}).to_u32(), 0);
+  SOUL_TEST_ASSERT_EQ(Uint8FlagSet({Uint8TestEnum::ONE, Uint8TestEnum::THREE}).to_u32(), 5);
+  SOUL_TEST_ASSERT_EQ(Uint32FlagSet({Uint32TestEnum::ONE, Uint32TestEnum::THREE}).to_u32(), 5);
+  SOUL_TEST_ASSERT_EQ(Uint64FlagSet({Uint64TestEnum::ONE, Uint64TestEnum::THREE}).to_u32(), 5);
 
-  SOUL_TEST_ASSERT_EQ(Uint8FlagSet({}).to_uint64(), 0u);
-  SOUL_TEST_ASSERT_EQ(Uint8FlagSet({Uint8TestEnum::ONE, Uint8TestEnum::THREE}).to_uint64(), 5u);
-  SOUL_TEST_ASSERT_EQ(Uint32FlagSet({Uint32TestEnum::ONE, Uint32TestEnum::THREE}).to_uint64(), 5u);
-  SOUL_TEST_ASSERT_EQ(Uint64FlagSet({Uint64TestEnum::ONE, Uint64TestEnum::THREE}).to_uint64(), 5u);
+  SOUL_TEST_ASSERT_EQ(Uint8FlagSet({}).to_u64(), 0u);
+  SOUL_TEST_ASSERT_EQ(Uint8FlagSet({Uint8TestEnum::ONE, Uint8TestEnum::THREE}).to_u64(), 5u);
+  SOUL_TEST_ASSERT_EQ(Uint32FlagSet({Uint32TestEnum::ONE, Uint32TestEnum::THREE}).to_u64(), 5u);
+  SOUL_TEST_ASSERT_EQ(Uint64FlagSet({Uint64TestEnum::ONE, Uint64TestEnum::THREE}).to_u64(), 5u);
 
   // test fail compilation. Uncomment tests below, expected to generate compilation error since
   // the LargeUint64TestEnum::COUNT exceeded the width of the u32
   // SOUL_TEST_ASSERT_EQ(LargeUint64FlagSet({ LargeUint64TestEnum::ONE, LargeUint64TestEnum::THREE
-  // }).to_uint32(), 5u);
+  // }).to_u32(), 5u);
 }

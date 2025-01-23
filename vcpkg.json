@@ -1,24 +1,25 @@
 {
   "name": "soul",
   "version": "0.0.1",
+  "builtin-baseline": "b322364f06308bdd24823f9d8f03fe0cc86fd46f",
   "dependencies": [
+    "argparse",
+    "benchmark",
+    "cpp-httplib",
+    "curl",
     {
       "name": "glfw3",
       "version>=": "3.3.7"
-    }, 
+    },
+    "gtest",
+    "pkgconf",
     {
       "name": "tracy",
       "version>=": "0.10.0"
     },
-    "directxtk",
-    "cpp-httplib",
-    "vulkan-memory-allocator",
     "volk",
-    "argparse",
-    "gtest",
-    "benchmark",
+    "vulkan-memory-allocator",
     "yyjson",
-    "curl"
-  ],
-  "builtin-baseline": "adb391bd2cb05fdaef1ccef375dd50d998f01cc0"
+    "physfs"
+  ]
 }

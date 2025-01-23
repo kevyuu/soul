@@ -30,7 +30,7 @@ namespace renderlab
           }))
     {
 
-      gui->text(String::Format("FPS : {}", gui->get_frame_rate()).cspan());
+      gui->text(String::Format("FPS : {}", gui->get_frame_rate()).cview());
 
       const vec2f32 window_size = gui->get_window_size();
       const auto scene_viewport = store_->scene_ref().get_viewport();

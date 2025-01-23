@@ -57,7 +57,7 @@ namespace renderlab
 
       const b8 browse_gltf_file = gui->button("Browse##gltf"_str);
       gui->same_line();
-      gui->input_text("GLTF File"_str, gltf_file_path_.span());
+      gui->input_text("GLTF File"_str, &gltf_file_path_);
 
       if (browse_gltf_file)
       {
@@ -67,7 +67,7 @@ namespace renderlab
 
       if (gui->button("Ok"_str, vec2f32(120, 0)))
       {
-        store_->import(Path::From(gltf_file_path_.cspan()));
+        store_->import(Path::From(gltf_file_path_.cview()));
         gui->close_current_popup();
       }
 

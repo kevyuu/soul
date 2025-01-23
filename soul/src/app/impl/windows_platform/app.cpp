@@ -19,7 +19,7 @@ namespace soul::app
     WideCharToMultiByte(CP_UTF8, 0, roaming_file_path, -1, output, length, nullptr, nullptr);
     storage_path_ = Path::From(StringView(output, strlen(output)));
     delete[] output;
-    storage_path_ /= name_.cspan();
+    storage_path_ /= name_.cview();
 
     if (!std::filesystem::exists(storage_path_))
     {

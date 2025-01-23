@@ -1,6 +1,7 @@
 #pragma once
 
 #include "core/flag_map.h"
+#include "core/flag_set.h"
 #include "core/path.h"
 #include "core/string.h"
 #include "core/vector.h"
@@ -17,6 +18,44 @@ namespace khaos
     Path path;
 
     friend auto soul_op_build_json(JsonDoc* doc, const ProjectMetadata& metadata) -> JsonObjectRef;
+  };
+
+  struct PromptFormatParameter
+  {
+    String header_prefix = ""_str;
+    String header_suffix = ""_str;
+
+    String user_prefix = ""_str;
+    String user_suffix = ""_str;
+
+    String assistant_prefix = ""_str;
+    String assistant_suffix = ""_str;
+
+    String system_prefix = ""_str;
+    String system_suffix = ""_str;
+
+    [[nodiscard]]
+    auto clone() const -> PromptFormatParameter;
+
+    void clone_from(const PromptFormatParameter& other);
+
+    friend auto soul_op_build_json(JsonDoc* doc, const PromptFormatParameter& parameter)
+      -> JsonObjectRef;
+  };
+
+  struct PromptFormat
+  {
+    String name = ""_str;
+
+    PromptFormatParameter parameter;
+
+    [[nodiscard]]
+    auto clone() const -> PromptFormat;
+
+    void clone_from(const PromptFormat& other);
+
+    friend auto soul_op_build_json(JsonDoc* doc, const PromptFormat& prompt_format)
+      -> JsonObjectRef;
   };
 
   struct SamplerParameter
@@ -38,7 +77,7 @@ namespace khaos
     i32 no_repeat_ngram_size       = 0;
     f32 smoothing_factor           = 0;
     f32 smoothing_curve            = 1;
-    f32 dry_multipler              = 0;
+    f32 dry_multiplier             = 0;
     f32 dry_base                   = 1.75_f32;
     i32 dry_allowed_length         = 2;
     String dry_sequence_breakers   = R"("\n", ":", "\"", "*")"_str;
@@ -80,42 +119,10 @@ namespace khaos
     friend auto soul_op_build_json(JsonDoc* doc, const Sampler& sampler) -> JsonObjectRef;
   };
 
-  struct PromptFormatParameter
+  struct Persona
   {
-    String header_prefix = ""_str;
-    String header_suffix = ""_str;
-
-    String user_prefix = ""_str;
-    String user_suffix = ""_str;
-
-    String assistant_prefix = ""_str;
-    String assistant_suffix = ""_str;
-
-    String system_prefix = ""_str;
-    String system_suffix = ""_str;
-
-    [[nodiscard]]
-    auto clone() const -> PromptFormatParameter;
-
-    void clone_from(const PromptFormatParameter& other);
-
-    friend auto soul_op_build_json(JsonDoc* doc, const PromptFormatParameter& parameter)
-      -> JsonObjectRef;
-  };
-
-  struct PromptFormat
-  {
-    String name = ""_str;
-
-    PromptFormatParameter parameter;
-
-    [[nodiscard]]
-    auto clone() const -> PromptFormat;
-
-    void clone_from(const PromptFormat& other);
-
-    friend auto soul_op_build_json(JsonDoc* doc, const PromptFormat& prompt_format)
-      -> JsonObjectRef;
+    String name        = ""_str;
+    String description = ""_str;
   };
 
   enum class Role : u8
@@ -125,29 +132,44 @@ namespace khaos
     ASSISTANT,
     COUNT
   };
+
   static constexpr FlagMap<Role, CompStr> ROLE_LABELS = {
     "SYSTEM"_str,
     "USER"_str,
     "ASSISTANT"_str,
   };
 
+  enum class MessageFlag : u8
+  {
+    INVISIBLE_TO_TEXTGEN,
+    INVISIBLE_TO_USER,
+    COUNT
+  };
+  using MessageFlags = FlagSet<MessageFlag>;
+
   struct Message
   {
     Role role;
+    String label;
     String content;
+    MessageFlags flags;
 
     auto clone() const -> Message
     {
       return Message{
         .role    = role,
+        .label   = label.clone(),
         .content = content.clone(),
+        .flags   = flags,
       };
     }
 
     void clone_from(const Message& other)
     {
       role = other.role;
+      label.clone_from(other.label);
       content.clone_from(other.content);
+      flags = other.flags;
     }
 
     friend auto soul_op_build_json(JsonDoc* doc, const Message& message) -> JsonObjectRef;
@@ -165,22 +187,49 @@ namespace khaos
   struct Project
   {
     String name;
-    String header_prompt;
-    Message first_message = {Role::ASSISTANT, String::From(""_str)};
+    Path path;
     Vector<Journey> journeys;
 
     friend auto soul_op_build_json(JsonDoc* doc, const Project& project) -> JsonObjectRef;
   };
 
+  enum class TokenizerType : u8
+  {
+    CLAUDE,
+    COMMAND_R,
+    DEEPSEEK,
+    LLAMA3,
+    NEMO,
+    QWEN2,
+    YI,
+    COUNT
+  };
+
+  static constexpr FlagMap<TokenizerType, CompStr> TOKENIZER_TYPE_LABELS = {
+    "Claude"_str,
+    "Command-R"_str,
+    "Deepseek"_str,
+    "Llama3"_str,
+    "Nemo"_str,
+    "Qwen2"_str,
+    "Yi"_str,
+  };
+
+  struct ChatbotSetting
+  {
+    String api_url                 = R"(http://127.0.0.1:5001)"_str;
+    u32 context_token_count        = 16384;
+    u32 response_token_count       = 250;
+    u32 active_prompt_format_index = 0;
+    u32 active_sampler_index       = 0;
+    TokenizerType tokenizer_type   = TokenizerType::CLAUDE;
+  };
+
   struct AppSetting
   {
-    String api_url                   = R"(http://127.0.0.1:5000)"_str;
-    u32 context_token_count          = 16384;
-    u32 response_token_count         = 250;
-    String active_prompt_format      = "Llama 3"_str;
-    String active_sampler            = "Big O"_str;
-    String impersonate_action_prompt = ""_str;
-    String choice_prompt             = ""_str;
+    ChatbotSetting chatbot_setting;
+
+    Vector<Sampler> samplers;
     Vector<ProjectMetadata> project_metadatas;
 
     friend auto soul_op_build_json(JsonDoc* doc, const AppSetting& setting) -> JsonObjectRef;
@@ -189,10 +238,7 @@ namespace khaos
   enum class GameState
   {
     WAITING_USER_RESPONSE,
-    WAITING_USER_CHOICE,
     GENERATING_ASSISTANT_RESPONSE,
-    GENERATING_CHOICES,
-    GENERATING_USER_RESPONSE,
     COUNT
   };
 
@@ -214,9 +260,6 @@ auto soul_op_construct_from_json<khaos::Message>(JsonReadRef val_ref) -> khaos::
 
 template <>
 auto soul_op_construct_from_json<khaos::Journey>(JsonReadRef val_ref) -> khaos::Journey;
-
-template <>
-auto soul_op_construct_from_json<khaos::Project>(JsonReadRef val_ref) -> khaos::Project;
 
 template <>
 auto soul_op_construct_from_json<khaos::AppSetting>(JsonReadRef val_ref) -> khaos::AppSetting;

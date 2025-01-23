@@ -56,12 +56,12 @@ namespace soul
       template <usize IBlockCount = BlockCountV, ts_bit_block IBlockType = BlockType>
         requires(IBlockCount == 1 && sizeof(BlockType) <= 4)
       [[nodiscard]]
-      constexpr auto to_uint32() const -> u32;
+      constexpr auto to_u32() const -> u32;
 
       template <usize IBlockCount = BlockCountV, ts_bit_block IBlockType = BlockType>
         requires(IBlockCount == 1 && sizeof(BlockType) <= 8)
       [[nodiscard]]
-      constexpr auto to_uint64() const -> u64;
+      constexpr auto to_u64() const -> u64;
 
       Array<BlockType, BlockCountV> blocks_ = {};
 
@@ -131,7 +131,7 @@ namespace soul
     template <size_t BlockCountV, ts_bit_block BlockType>
     template <usize IBlockCountV, ts_bit_block IBlockType>
       requires(IBlockCountV == 1 && sizeof(BlockType) <= 4)
-    constexpr auto BitsetImpl<BlockCountV, BlockType>::to_uint32() const -> u32
+    constexpr auto BitsetImpl<BlockCountV, BlockType>::to_u32() const -> u32
     {
       return blocks_[0];
     }
@@ -139,7 +139,7 @@ namespace soul
     template <size_t BlockCountV, ts_bit_block BlockType>
     template <usize IBlockCountV, ts_bit_block IBlockType>
       requires(IBlockCountV == 1 && sizeof(BlockType) <= 8)
-    constexpr auto BitsetImpl<BlockCountV, BlockType>::to_uint64() const -> u64
+    constexpr auto BitsetImpl<BlockCountV, BlockType>::to_u64() const -> u64
     {
       return blocks_[0];
     }
@@ -412,6 +412,13 @@ namespace soul
     using value_type     = b8;
     using reference_type = BitRef<BlockType>;
 
+    static constexpr auto FromU64(u64 val) -> this_type
+    {
+      this_type result;
+      result.blocks_[0] = val;
+      return result;
+    }
+
     constexpr auto operator[](usize index) const -> value_type;
 
     constexpr auto operator[](usize index) -> reference_type;
@@ -580,24 +587,24 @@ namespace soul
 
   template <usize BitCount, ts_bit_block BlockType>
   constexpr auto operator&(
-    const Bitset<BitCount, BlockType>& lhs,
-    const Bitset<BitCount, BlockType>& rhs) -> Bitset<BitCount, BlockType>
+    const Bitset<BitCount, BlockType>& lhs, const Bitset<BitCount, BlockType>& rhs)
+    -> Bitset<BitCount, BlockType>
   {
     return Bitset<BitCount, BlockType>(lhs).operator&=(rhs);
   }
 
   template <usize BitCount, ts_bit_block BlockType>
   constexpr auto operator|(
-    const Bitset<BitCount, BlockType>& lhs,
-    const Bitset<BitCount, BlockType>& rhs) -> Bitset<BitCount, BlockType>
+    const Bitset<BitCount, BlockType>& lhs, const Bitset<BitCount, BlockType>& rhs)
+    -> Bitset<BitCount, BlockType>
   {
     return Bitset<BitCount, BlockType>(lhs).operator|=(rhs);
   }
 
   template <usize BitCount, ts_bit_block BlockType>
   constexpr auto operator^(
-    const Bitset<BitCount, BlockType>& lhs,
-    const Bitset<BitCount, BlockType>& rhs) -> Bitset<BitCount, BlockType>
+    const Bitset<BitCount, BlockType>& lhs, const Bitset<BitCount, BlockType>& rhs)
+    -> Bitset<BitCount, BlockType>
   {
     return Bitset<BitCount, BlockType>(lhs).operator^=(rhs);
   }

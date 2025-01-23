@@ -263,9 +263,8 @@ namespace soul::gpu
     };
 
     auto pick_surface_format(
-      VkPhysicalDevice physical_device,
-      VkSurfaceKHR surface,
-      b8 use_srgb_swapchain) -> VkSurfaceFormatKHR
+      VkPhysicalDevice physical_device, VkSurfaceKHR surface, b8 use_srgb_swapchain)
+      -> VkSurfaceFormatKHR
     {
       runtime::ScopeAllocator<> scope_allocator("GPU::System::init::pickSurfaceFormat"_str);
       SOUL_LOG_INFO("Picking surface format.");
@@ -1192,13 +1191,14 @@ namespace soul::gpu
 
   void System::shutdown()
   {
+    vkDeviceWaitIdle(_db.device);
     for (auto& frame_context : _db.frame_contexts)
     {
       frame_context.command_pools.shutdown();
     }
-    vkDeviceWaitIdle(_db.device);
-    vkDestroyDevice(_db.device, nullptr);
+
     vkDestroyInstance(_db.instance, nullptr);
+    vkDestroyDevice(_db.device, nullptr);
   }
 
   auto System::get_queue_data_from_queue_flags(QueueFlags flags) const -> QueueData
@@ -1472,7 +1472,7 @@ namespace soul::gpu
 
   auto System::texture_name_view(TextureID texture_id) const -> StringView
   {
-    return texture_cref(texture_id).name.cspan();
+    return texture_cref(texture_id).name.cview();
   }
 
   auto System::get_blas_size_requirement(const BlasBuildDesc& build_desc) -> usize
@@ -2935,8 +2935,8 @@ namespace soul::gpu
   }
 
   auto System::get_as_build_size_info(
-    const VkAccelerationStructureBuildGeometryInfoKHR& build_info,
-    const u32* max_primitives_counts) -> VkAccelerationStructureBuildSizesInfoKHR
+    const VkAccelerationStructureBuildGeometryInfoKHR& build_info, const u32* max_primitives_counts)
+    -> VkAccelerationStructureBuildSizesInfoKHR
   {
     VkAccelerationStructureBuildSizesInfoKHR size_info = {
       .sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_SIZES_INFO_KHR};
@@ -3713,9 +3713,8 @@ namespace soul::gpu
   }
 
   auto CommandPools::request_secondary_command_buffer(
-    VkRenderPass render_pass,
-    const uint32_t subpass,
-    VkFramebuffer framebuffer) -> SecondaryCommandBuffer
+    VkRenderPass render_pass, const uint32_t subpass, VkFramebuffer framebuffer)
+    -> SecondaryCommandBuffer
   {
     const auto cmd_buffer = secondary_pools_[runtime::get_thread_id()].request();
     const VkCommandBufferInheritanceInfo inheritance_info = {
@@ -4398,7 +4397,7 @@ namespace soul::gpu
       : instance_id(instance_id),
         instance_mask(instance_mask),
         sbt_offset(sbt_offset),
-        flags(flags.to_uint32()),
+        flags(flags.to_u32()),
         blas_gpu_address(blas_gpu_address)
   {
     const auto vk_transform = in_transform;

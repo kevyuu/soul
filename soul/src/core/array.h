@@ -86,12 +86,10 @@ namespace soul
     constexpr auto back() const noexcept -> const_reference;
 
     [[nodiscard]]
-    constexpr auto
-    operator[](usize idx) -> reference;
+    constexpr auto operator[](usize idx) -> reference;
 
     [[nodiscard]]
-    constexpr auto
-    operator[](usize idx) const -> const_reference;
+    constexpr auto operator[](usize idx) const -> const_reference;
 
     [[nodiscard]]
     constexpr auto size() const -> usize;
@@ -207,7 +205,7 @@ namespace soul
   {
     for (usize i = 0; i < ArrSizeV; i++)
     {
-      list[i].clone_from(other.buffer[i]);
+      list[i].clone_from(other.list[i]);
     }
   }
 
@@ -428,15 +426,13 @@ namespace soul
     }
 
     [[nodiscard]]
-    constexpr auto
-    operator[](usize /* idx */) -> reference
+    constexpr auto operator[](usize /* idx */) -> reference
     {
       return *data();
     }
 
     [[nodiscard]]
-    constexpr auto
-    operator[](usize /* idx */) const -> const_reference
+    constexpr auto operator[](usize /* idx */) const -> const_reference
     {
       return *data();
     }

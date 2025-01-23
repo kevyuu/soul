@@ -1,5 +1,5 @@
 #include "ui/journey_list_panel.h"
-#include "store.h"
+#include "store/store.h"
 
 #include "app/gui.h"
 #include "app/icons.h"

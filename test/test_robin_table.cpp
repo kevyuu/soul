@@ -84,7 +84,7 @@ auto verify_equal(const TableT& lhs, const TableT& rhs)
   SOUL_TEST_ASSERT_EQ(lhs.size(), rhs.size());
   const auto sort_fn = [](const TestEntry& a, const TestEntry& b)
   {
-    return std::ranges::lexicographical_compare(a.name.cspan(), b.name.cspan());
+    return std::ranges::lexicographical_compare(a.name.cview(), b.name.cview());
   };
 
   for (const auto& entry : lhs)
@@ -131,7 +131,7 @@ auto test_construction_from_array(Array<TestEntry, ArrSizeV>&& entries)
     entry_vector,
     [](const TestEntry& a, const TestEntry& b)
     {
-      return std::ranges::lexicographical_compare(a.name.cspan(), b.name.cspan());
+      return std::ranges::lexicographical_compare(a.name.cview(), b.name.cview());
     });
 
   const auto test_table = TestTable::From(entries | soul::views::move<TestEntry>());
@@ -150,7 +150,7 @@ auto test_construction_from_array(Array<TestEntry, ArrSizeV>&& entries)
     table_entries,
     [](const TestEntry& a, const TestEntry& b)
     {
-      return std::ranges::lexicographical_compare(a.name.cspan(), b.name.cspan());
+      return std::ranges::lexicographical_compare(a.name.cview(), b.name.cview());
     });
   SOUL_TEST_ASSERT_EQ(entry_vector, table_entries);
 }

@@ -438,17 +438,17 @@ TEST(TestBitSetFindIf, TestBitSetFindIf)
 
 TEST(TestBitsetToUint, TestBitsetToUint)
 {
-  SOUL_TEST_ASSERT_EQ(generate_bitset<10>({}).to_uint32(), 0);
-  SOUL_TEST_ASSERT_EQ(generate_bitset<10>({0, 9}).to_uint32(), 513);
-  SOUL_TEST_ASSERT_EQ(generate_bitset<32>({0, 9}).to_uint32(), 513);
+  SOUL_TEST_ASSERT_EQ(generate_bitset<10>({}).to_u32(), 0);
+  SOUL_TEST_ASSERT_EQ(generate_bitset<10>({0, 9}).to_u32(), 513);
+  SOUL_TEST_ASSERT_EQ(generate_bitset<32>({0, 9}).to_u32(), 513);
 
-  SOUL_TEST_ASSERT_EQ(generate_bitset<10>({}).to_uint64(), 0u);
-  SOUL_TEST_ASSERT_EQ(generate_bitset<10>({0, 9}).to_uint64(), 513u);
-  SOUL_TEST_ASSERT_EQ(generate_bitset<33>({0, 9}).to_uint64(), 513u);
-  SOUL_TEST_ASSERT_EQ(generate_bitset<64>({0, 9, 34}).to_uint64(), 17179869697u);
+  SOUL_TEST_ASSERT_EQ(generate_bitset<10>({}).to_u64(), 0u);
+  SOUL_TEST_ASSERT_EQ(generate_bitset<10>({0, 9}).to_u64(), 513u);
+  SOUL_TEST_ASSERT_EQ(generate_bitset<33>({0, 9}).to_u64(), 513u);
+  SOUL_TEST_ASSERT_EQ(generate_bitset<64>({0, 9, 34}).to_u64(), 17179869697u);
 
   // test fail compilation. Uncomment tests below, expected to generate compilation error since
   // the bitcount exceeded the width of the uint
-  // SOUL_TEST_ASSERT_EQ(generate_bitset<40>({ 0, 4 }).to_uint32(), 17);
-  // SOUL_TEST_ASSERT_EQ(generate_bitset<100>({ 0, 3 }).to_uint64(), 9);
+  // SOUL_TEST_ASSERT_EQ(generate_bitset<40>({ 0, 4 }).to_u32(), 17);
+  // SOUL_TEST_ASSERT_EQ(generate_bitset<100>({ 0, 3 }).to_u64(), 9);
 }

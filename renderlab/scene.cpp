@@ -284,7 +284,7 @@ namespace renderlab
 
   auto Scene::get_entity_name(EntityId entity_id) const -> StringView
   {
-    return entity_manager_.name_ref(entity_id).cspan();
+    return entity_manager_.name_ref(entity_id).cview();
   }
 
   auto Scene::entity_world_transform_ref(EntityId entity_id) const -> const mat4f32&

@@ -74,45 +74,42 @@ namespace soul
       other.state_ = State::VALUELESS;
     }
 
-    constexpr auto operator=(const Result& other) noexcept -> Result&
-      requires(can_result_trivial_copy_v)
-    = default;
+    constexpr auto operator=(const Result& other) noexcept
+      -> Result& requires(can_result_trivial_copy_v) = default;
 
-    constexpr auto operator=(Result&& other) noexcept -> Result&
-      requires(can_result_trivial_move_v)
-    = default;
+    constexpr auto operator=(Result&& other) noexcept
+      -> Result& requires(can_result_trivial_move_v) = default;
 
-    constexpr auto operator=(Result&& other) noexcept -> Result&
-      requires(can_result_nontrivial_move_v)
-    {
-      SOUL_ASSERT(0, other.state_ != State::VALUELESS, "Cannot move from a valueless object");
+    constexpr auto operator=(Result&& other) noexcept
+      -> Result& requires(can_result_nontrivial_move_v) {
+        SOUL_ASSERT(0, other.state_ != State::VALUELESS, "Cannot move from a valueless object");
 
-      if (state_ == other.state_)
-      {
-        if (state_ == State::OK)
+        if (state_ == other.state_)
         {
-          ok_val_ = std::move(other.ok_val_);
+          if (state_ == State::OK)
+          {
+            ok_val_ = std::move(other.ok_val_);
+          } else
+          {
+            err_val_ = std::move(other.err_val_);
+          }
+          other.cleanup_for_not_valueless();
         } else
         {
-          err_val_ = std::move(other.err_val_);
+          cleanup_for_not_valueless();
+          state_ = other.state_;
+          if (other.state_ == State::OK)
+          {
+            relocate_at(&ok_val_, std::move(other.ok_val_));
+          } else if (other.state_ == State::ERR)
+          {
+            relocate_at(&err_val_, std::move(other.err_val_));
+          }
         }
-        other.cleanup_for_not_valueless();
-      } else
-      {
-        cleanup_for_not_valueless();
-        state_ = other.state_;
-        if (other.state_ == State::OK)
-        {
-          relocate_at(&ok_val_, std::move(other.ok_val_));
-        } else if (other.state_ == State::ERR)
-        {
-          relocate_at(&err_val_, std::move(other.err_val_));
-        }
-      }
-      other.state_ = State::VALUELESS;
+        other.state_ = State::VALUELESS;
 
-      return *this;
-    }
+        return *this;
+      }
 
     constexpr ~Result() noexcept
       requires(can_result_trivial_destruct_v)
@@ -252,7 +249,7 @@ namespace soul
       {
         return ok_val_;
       }
-      return default_val;
+      return std::move(default_val);
     }
 
     [[nodiscard]]
@@ -262,7 +259,7 @@ namespace soul
       {
         return std::move(ok_val_);
       }
-      return default_val;
+      return std::move(default_val);
     }
 
     template <ts_fn<OkT> Fn>
@@ -538,9 +535,7 @@ namespace soul
       }
     }
 
-    constexpr auto operator=(const Result& other) noexcept -> Result&
-      requires(can_result_clone_v)
-    {
+    constexpr auto operator=(const Result& other) noexcept -> Result& requires(can_result_clone_v) {
       SOUL_ASSERT(0, other.state_ != State::VALUELESS, "Cannot copy from valueless object");
       if (state_ == other.state_)
       {

@@ -616,7 +616,7 @@ namespace soul::gpu
     [[nodiscard]]
     auto name_view() const -> StringView
     {
-      return name_.cspan();
+      return name_.cview();
     }
 
     [[nodiscard]]

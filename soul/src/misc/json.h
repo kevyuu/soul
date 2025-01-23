@@ -131,6 +131,34 @@ namespace soul
     yyjson_val* val_ptr_;
   };
 
+  class JsonReadDoc
+  {
+  public:
+    JsonReadDoc(const JsonReadDoc&)                    = delete;
+    JsonReadDoc(JsonReadDoc&&)                         = default;
+    auto operator=(const JsonReadDoc&) -> JsonReadDoc& = delete;
+    auto operator=(JsonReadDoc&&) -> JsonReadDoc&      = default;
+
+    explicit JsonReadDoc(StringView json_text)
+        : doc_(yyjson_read(json_text.begin(), json_text.size(), 0))
+    {
+      SOUL_ASSERT(0, doc_ != nullptr);
+    }
+
+    ~JsonReadDoc()
+    {
+      yyjson_doc_free(doc_);
+    }
+
+    auto get_root_ref() const -> JsonReadRef
+    {
+      return JsonReadRef(yyjson_doc_get_root(doc_));
+    }
+
+  private:
+    yyjson_doc* doc_;
+  };
+
   class JsonRef
   {
   public:
@@ -387,12 +415,8 @@ namespace soul
   template <typename T>
   auto from_json_string(StringView json_str) -> T
   {
-    yyjson_doc* doc = yyjson_read(json_str.begin(), json_str.size(), 0);
-    SOUL_ASSERT(0, doc != nullptr);
-    yyjson_val* root = yyjson_doc_get_root(doc);
-    T result         = soul_op_construct_from_json<T>(JsonReadRef(root));
-    yyjson_doc_free(doc);
-    return result;
+    JsonReadDoc doc(json_str);
+    return soul_op_construct_from_json<T>(doc.get_root_ref());
   }
 
   template <typename T>
@@ -408,7 +432,7 @@ namespace soul
 
   inline auto soul_op_build_json(JsonDoc* doc, const String& str) -> JsonRef
   {
-    return doc->create_string(str.cspan());
+    return doc->create_string(str.cview());
   }
 
 } // namespace soul

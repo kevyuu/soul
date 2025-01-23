@@ -202,7 +202,7 @@ namespace renderlab
       {
         const auto node_idx      = selected_node_idx_.unwrap();
         const auto& channel_name = selected_field_name_.some_ref();
-        return node_outputs_[node_idx].textures[channel_name.cspan()];
+        return node_outputs_[node_idx].textures[channel_name.cview()];
       } else
       {
         return gpu::TextureNodeID();
@@ -280,7 +280,7 @@ namespace renderlab
   {
     for (const auto& context : render_node_contexts_)
     {
-      if (gui->collapsing_header(context.name.cspan()))
+      if (gui->collapsing_header(context.name.cview()))
       {
         context.node->on_gui_render(gui);
       }
@@ -289,7 +289,7 @@ namespace renderlab
     const StringView node_combo_str =
       !selected_node_idx_.is_some()
         ? ""_str
-        : render_node_contexts_[selected_node_idx_.some_ref()].name.cspan();
+        : render_node_contexts_[selected_node_idx_.some_ref()].name.cview();
 
     if (gui->begin_combo("Node"_str, node_combo_str))
     {
@@ -302,7 +302,7 @@ namespace renderlab
             return idx == node_i;
           });
 
-        if (gui->selectable(context.name.cspan(), is_selected))
+        if (gui->selectable(context.name.cview(), is_selected))
         {
           selected_node_idx_   = node_i;
           selected_field_name_ = nilopt;
@@ -316,7 +316,7 @@ namespace renderlab
     }
 
     const StringView output_combo_str =
-      selected_field_name_.is_some() ? selected_field_name_.some_ref().cspan() : ""_str;
+      selected_field_name_.is_some() ? selected_field_name_.some_ref().cview() : ""_str;
     if (gui->begin_combo("Output"_str, output_combo_str))
     {
       const NotNull<const RenderNode*> selected_node =

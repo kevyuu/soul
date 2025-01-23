@@ -56,10 +56,11 @@ namespace renderlab
     };
 
     const gpu::ShaderTableDesc shader_table_desc = {
-      .program_id   = ray_trace_program_id_,
-      .raygen_group = {.entry_point = 0},
-      .miss_groups  = u32cspan(miss_groups.data(), miss_groups.size()),
-      .hit_groups   = u32cspan(&hit_group, 1),
+      .program_id          = ray_trace_program_id_,
+      .raygen_group        = {.entry_point = 0},
+      .miss_groups         = u32cspan(miss_groups.data(), miss_groups.size()),
+      .hit_groups          = u32cspan(&hit_group, 1),
+      .max_recursion_depth = 2,
     };
     shader_table_id_ =
       gpu_system_->create_shader_table("DDGI Ray Trace Shader Table"_str, shader_table_desc);
@@ -664,9 +665,9 @@ namespace renderlab
       probe_placement_dirty_ = true;
     }
     gui->separator_text("Probe dimension : "_str);
-    gui->text(String::Format("Grid Step : {}", volume_.grid_step).cspan());
-    gui->text(String::Format("Probe Counts : {}", volume_.probe_counts).cspan());
-    gui->text(String::Format("Grid Start Position : {}", volume_.grid_start_position).cspan());
+    gui->text(String::Format("Grid Step : {}", volume_.grid_step).cview());
+    gui->text(String::Format("Probe Counts : {}", volume_.probe_counts).cview());
+    gui->text(String::Format("Grid Start Position : {}", volume_.grid_start_position).cview());
 
     gui->separator_text("Overlay Setting : "_str);
     gui->checkbox("Show Overlay"_str, &show_overlay_);

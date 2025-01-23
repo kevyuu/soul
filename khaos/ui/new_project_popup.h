@@ -34,8 +34,5 @@ namespace khaos
     b8 show_empty_name_error_       = false;
     b8 show_directory_not_exists_   = false;
     b8 show_project_already_exists_ = false;
-
-    void render_prompt_formatting_widget(NotNull<soul::app::Gui*> gui, Store* store);
-    void render_sampler_setting(NotNull<soul::app::Gui*> gui, Store* store);
   };
 } // namespace khaos

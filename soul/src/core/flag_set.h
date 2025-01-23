@@ -32,9 +32,16 @@ namespace soul
   class FlagSet
   {
   public:
-    using flag_type                   = Flag;
-    static constexpr usize FLAG_COUNT = to_underlying(Flag::COUNT);
-    using store_type                  = Bitset<FLAG_COUNT>;
+    using flag_type                  = Flag;
+    static constexpr auto FLAG_COUNT = to_underlying(Flag::COUNT);
+    using store_type                 = Bitset<FLAG_COUNT>;
+
+    static constexpr auto FromU64(u64 val) -> FlagSet
+    {
+      FlagSet flag_set;
+      flag_set.flags_ = store_type::FromU64(val);
+      return flag_set;
+    }
 
     // Default constructor (all 0s)
     constexpr FlagSet() noexcept = default;
@@ -112,12 +119,12 @@ namespace soul
     template <usize IFlagCount = FLAG_COUNT>
       requires(IFlagCount <= 32)
     [[nodiscard]]
-    constexpr auto to_uint32() const -> u32;
+    constexpr auto to_u32() const -> u32;
 
     template <usize IFlagCount = FLAG_COUNT>
       requires(IFlagCount <= 64)
     [[nodiscard]]
-    constexpr auto to_uint64() const -> u64;
+    constexpr auto to_u64() const -> u64;
 
     template <impl::dst_flag DstFlags, usize N>
       requires(N == to_underlying(Flag::COUNT))
@@ -137,7 +144,8 @@ namespace soul
 
     constexpr auto flags_from_init_list(std::initializer_list<flag_type> init_list) -> store_type;
 
-    static constexpr usize MASK = (1u << FLAG_COUNT) - 1;
+#pragma warning(suppress : 4293)
+    static constexpr usize MASK = (u64(1) << FLAG_COUNT) - 1;
   };
 
   template <ts_flag Flag>
@@ -196,17 +204,17 @@ namespace soul
   template <ts_flag Flag>
   template <usize IFlagCount>
     requires(IFlagCount <= 32)
-  constexpr auto FlagSet<Flag>::to_uint32() const -> u32
+  constexpr auto FlagSet<Flag>::to_u32() const -> u32
   {
-    return flags_.to_uint32();
+    return flags_.to_u32();
   }
 
   template <ts_flag Flag>
   template <usize IFlagCount>
     requires(IFlagCount <= 64)
-  constexpr auto FlagSet<Flag>::to_uint64() const -> u64
+  constexpr auto FlagSet<Flag>::to_u64() const -> u64
   {
-    return flags_.to_uint64();
+    return flags_.to_u64();
   }
 
   template <ts_flag Flag>

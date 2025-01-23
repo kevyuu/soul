@@ -14,6 +14,8 @@ namespace khaos
 
     void push(StringView message);
     void consume(NotNull<String*> dst);
+    void clear();
+    auto cview() const -> StringView;
     auto size() const -> usize;
 
   private:

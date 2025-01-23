@@ -3,8 +3,9 @@
 #include "misc/filesystem.h"
 
 #include <cstdio>
+#include <filesystem>
 
-namespace soul
+namespace soul::fs
 {
   auto get_file_content(const Path& path, memory::Allocator* allocator) -> String
   {
@@ -22,14 +23,13 @@ namespace soul
 
     const auto read_count = fread(result.data(), 1, size, file);
 
-    SOUL_LOG_INFO("File Content : {}", result);
     err = fclose(file);
     SOUL_ASSERT(0, err == 0);
 
     return result;
   }
 
-  void write_to_file(const Path& path, StringView string)
+  void write_file(const Path& path, StringView string)
   {
     SOUL_ASSERT(0, string.is_null_terminated());
 
@@ -44,10 +44,25 @@ namespace soul
     SOUL_ASSERT(0, err == 0);
   }
 
+  auto copy_file(const Path& from_path, const Path& to_path) -> b8
+  {
+    return std::filesystem::copy_file(from_path, to_path);
+  }
+
   void delete_file(const Path& path)
   {
     const auto err = remove(path.string().c_str());
     SOUL_ASSERT(0, err == 0);
   }
 
-} // namespace soul
+  auto exists(const Path& path) -> b8
+  {
+    return std::filesystem::exists(path);
+  }
+
+  auto is_directory(const Path& path) -> b8
+  {
+    return std::filesystem::is_directory(path);
+  }
+
+} // namespace soul::fs

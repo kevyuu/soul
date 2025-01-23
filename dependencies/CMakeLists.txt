@@ -3,6 +3,10 @@ cmake_minimum_required(VERSION 3.21)
 add_subdirectory(dxc)
 add_subdirectory(slang)
 add_subdirectory(NVTX/c)
+add_subdirectory(LuaJIT)
+
+add_subdirectory(tokenizers-cpp)
+target_include_directories(tokenizers_cpp PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/tokenizers-cpp/include)
 
 # Imgui
 set(IMGUI_SOURCES

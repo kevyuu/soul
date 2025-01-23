@@ -1,5 +1,5 @@
 #include "ui/project_selection_panel.h"
-#include "store.h"
+#include "store/store.h"
 
 #include "app/gui.h"
 
@@ -54,7 +54,7 @@ namespace khaos
           gui->table_next_row();
           gui->table_next_column();
           gui->begin_group();
-          gui->text(project_metadata.name.cspan());
+          gui->text(project_metadata.name.cview());
           gui->text_colored(
             StringView(project_metadata.path.string().c_str()), vec4f32(0.6, 0.6, 0.6, 1.0), 14);
           gui->end_group();

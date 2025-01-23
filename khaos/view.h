@@ -1,8 +1,8 @@
 #pragma once
 
-#include "ui/chatbot_setting_panel.h"
-#include "ui/game_panel.h"
-#include "ui/game_setting_panel.h"
+#include "ui/app_setting_view.h"
+#include "ui/chat_view.h"
+#include "ui/game_view.h"
 #include "ui/journey_list_panel.h"
 #include "ui/menu_bar.h"
 #include "ui/project_selection_panel.h"
@@ -23,10 +23,9 @@ namespace khaos
   class View
   {
   private:
-    MenuBar menu_bar_;
-    ChatbotSettingPanel connection_panel_;
-    GamePanel game_panel_;
-    GameSettingPanel game_setting_panel_;
+    ui::MenuBar menu_bar_;
+    ui::GameView game_view_;
+    ui::ChatView chat_view_;
     ProjectSelectionPanel project_selection_panel_;
     JourneyListPanel journey_list_panel_;
 

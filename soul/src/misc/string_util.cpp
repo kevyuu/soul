@@ -1,13 +1,21 @@
-#include "misc/string_util.h"
 #include "core/string_view.h"
 
-namespace soul
+#include "misc/string_util.h"
+
+#include <string_view>
+
+namespace soul::str
 {
   namespace
   {
     auto is_whitespace_character(char c) -> b8
     {
       return c == ' ' || c == '\t' || c == '\n';
+    }
+
+    auto to_std(StringView str_view) -> std::string_view
+    {
+      return std::string_view(str_view.data(), str_view.size());
     }
   } // namespace
 
@@ -28,7 +36,7 @@ namespace soul
     const auto size = str_view.size();
     for (usize char_i = 0; char_i < size; char_i++)
     {
-      if (!is_whitespace_character(str_view[size - char_i]))
+      if (!is_whitespace_character(str_view[size - char_i - 1]))
       {
         return StringView(str_view.data(), size - char_i);
       }
@@ -98,4 +106,45 @@ namespace soul
       return str->c_str();
     }
   }
-} // namespace soul
+
+  auto replace_char(
+    StringView text, char from_char, char to_char, NotNull<memory::Allocator*> allocator) -> String
+  {
+    auto result = String::WithCapacity(text.size() + 1, allocator);
+
+    for (i32 char_i = 0; char_i < text.size(); char_i++)
+    {
+      if (text[char_i] == from_char)
+      {
+        result.push_back(to_char);
+      } else
+      {
+        result.push_back(text[char_i]);
+      }
+    }
+
+    return result;
+  }
+
+  auto replace_substr(
+    StringView text,
+    StringView from_substr,
+    StringView to_substr,
+    NotNull<memory::Allocator*> allocator) -> String
+  {
+    const auto std_str_view = to_std(text);
+    String result(allocator);
+    u64 find_start_pos = 0;
+    u64 find_pos       = std_str_view.find(to_std(from_substr), find_start_pos);
+    while (find_pos != std::string_view::npos)
+    {
+      result.append(StringView(text.data() + find_start_pos, find_pos - find_start_pos));
+      result.append(to_substr);
+      find_start_pos = find_pos + from_substr.size();
+      find_pos       = std_str_view.find(to_std(from_substr), find_start_pos);
+    }
+    result.append(StringView(text.data() + find_start_pos, text.size() - find_start_pos));
+    return result;
+  }
+
+} // namespace soul::str

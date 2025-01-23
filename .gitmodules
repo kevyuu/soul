@@ -10,3 +10,6 @@
 [submodule "dependencies/imgui"]
 	path = dependencies/imgui
 	url = https://github.com/kevyuu/imgui
+[submodule "dependencies/tokenizers-cpp"]
+	path = dependencies/tokenizers-cpp
+	url = https://github.com/mlc-ai/tokenizers-cpp

@@ -1,10 +1,11 @@
 #pragma once
 
+#include "core/config.h"
 #include "core/option.h"
 #include "core/string.h"
 #include "core/string_view.h"
 
-namespace soul
+namespace soul::str
 {
   auto trim_start(StringView str_view) -> StringView;
   auto trim_end(StringView str_view) -> StringView;
@@ -36,4 +37,16 @@ namespace soul
       fn(line_i, StringView(text.data() + start_cursor, text.size() - start_cursor));
     }
   }
-} // namespace soul
+
+  auto replace_char(
+    StringView text,
+    char from,
+    char to,
+    NotNull<memory::Allocator*> allocator = get_default_allocator()) -> String;
+
+  auto replace_substr(
+    StringView text,
+    StringView from,
+    StringView to,
+    NotNull<memory::Allocator*> allocator = get_default_allocator()) -> String;
+} // namespace soul::str

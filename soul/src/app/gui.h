@@ -166,12 +166,15 @@ namespace soul::app
     };
     using WindowFlags                                = FlagSet<WindowFlag>;
     static constexpr WindowFlags WINDOW_FLAGS_NO_NAV = {
-      WindowFlag::NO_NAV_INPUTS, WindowFlag::NO_NAV_INPUTS};
-    static constexpr WindowFlags WINDOW_FALGS_NO_DECORATION = {
+      WindowFlag::NO_NAV_INPUTS,
+      WindowFlag::NO_NAV_INPUTS,
+    };
+    static constexpr WindowFlags WINDOW_FLAGS_NO_DECORATION = {
       WindowFlag::NO_TITLE_BAR,
       WindowFlag::NO_RESIZE,
       WindowFlag::NO_SCROLLBAR,
-      WindowFlag::NO_COLLAPSE};
+      WindowFlag::NO_COLLAPSE,
+    };
     static constexpr WindowFlags WINDOW_FLAGS_NO_INPUTS = {
       WindowFlag::NO_MOUSE_INPUTS,
       WindowFlag::NO_NAV_INPUTS,
@@ -328,7 +331,33 @@ namespace soul::app
       WindowFlags flags      = {},
       LayoutCond layout_cond = LayoutCond::FIRST_USE_EVER) -> b8;
 
+    auto begin_window(
+      StringView label,
+      NotNull<b8*> is_open,
+      vec2f32 size,
+      vec2f32 pos            = {0, 0},
+      WindowFlags flags      = {},
+      LayoutCond layout_cond = LayoutCond::FIRST_USE_EVER) -> b8;
+
     void end_window();
+
+    template <typename RenderFn>
+    auto window_scope(
+      RenderFn render_fn,
+      StringView label,
+      vec2f32 size,
+      vec2f32 pos            = {0, 0},
+      WindowFlags flags      = {},
+      LayoutCond layout_cond = LayoutCond::FIRST_USE_EVER) -> b8
+    {
+      const auto is_open = begin_window(label, size, pos, flags, layout_cond);
+      if (is_open)
+      {
+        render_fn(this);
+      }
+      end_window();
+      return is_open;
+    }
 
     enum class ChildWindowFlag : u8
     {
@@ -523,7 +552,7 @@ namespace soul::app
 
     auto input_text_multiline(StringView label, String* text, vec2f32 size = vec2f32(0, 0)) -> b8;
 
-    auto input_text_multiline_full_width(StringView label, String* text, f32 height) -> b8;
+    auto input_text_multiline_full_width(StringView label, String* text, f32 height = 120) -> b8;
 
     auto input_text(StringView label, Span<char*> buffer) -> b8;
 
@@ -568,6 +597,9 @@ namespace soul::app
     auto slider_i32(StringView label, NotNull<i32*> val, i32 min, i32 max, SliderFlags flags = {})
       -> b8;
 
+    auto slider_u32(StringView label, NotNull<u32*> val, u32 min, u32 max, SliderFlags flags = {})
+      -> b8;
+
     auto slider_f32(
       StringView label, NotNull<f32*> val, f32 v_min, f32 v_max, SliderFlags flags = {}) -> b8;
 
@@ -598,7 +630,8 @@ namespace soul::app
     // ----------------------------------------------------------------------------
     auto begin_popup(StringView label) -> b8;
 
-    auto begin_popup_modal(StringView label) -> b8;
+    auto begin_popup_modal(StringView label, b8* is_open = nullptr, WindowFlags window_flags = {})
+      -> b8;
 
     void end_popup();
 
@@ -710,6 +743,43 @@ namespace soul::app
     void table_headers_row();
 
     void table_angled_headers_row();
+    // ----------------------------------------------------------------------------
+    // Widgets: Tab
+    // ----------------------------------------------------------------------------
+    enum class TabBarFlag : u8
+    {
+      REORDERABLE,
+      AUTO_SELECT_NEW_TABS,
+      TAB_LIST_POPUP_BUTTON,
+      NO_CLOSE_WITH_MIDDLE_MOUSE_BUTTON,
+      NO_TAB_LIST_SCROLLING_BUTTONS,
+      NO_TOOLTIP,
+      DRAW_SELECTED_OVERLINE,
+      FITTING_POLICY_RESIZE_DOWN,
+      FITTING_POLICY_SCROLL,
+      COUNT,
+    };
+    using TabBarFlags = FlagSet<TabBarFlag>;
+
+    enum class TabItemFlag : u8
+    {
+      UNSAVED_DOCUMENT,
+      SET_SELECTED,
+      NO_CLOSE_WITH_MIDDLE_MOUSE_BUTTON,
+      NO_PUSH_ID,
+      NO_TOOLTIP,
+      NO_REORDER,
+      LEADING,
+      TRAILING,
+      NO_ASSUMED_CLOSURE,
+      COUNT
+    };
+    using TabItemFlags = FlagSet<TabItemFlag>;
+
+    auto begin_tab_bar(StringView label, TabBarFlags flags = {}) -> b8;
+    void end_tab_bar();
+    auto begin_tab_item(StringView label, b8* is_open = nullptr, TabItemFlags flags = {}) -> b8;
+    void end_tab_item();
 
     // ----------------------------------------------------------------------------
     // Widgets: Color
@@ -760,17 +830,6 @@ namespace soul::app
 
     void tree_pop();
 
-    // ----------------------------------------------------------------------------
-    // TabBar
-    // ----------------------------------------------------------------------------
-    auto begin_tab_bar(StringView label) -> b8;
-
-    void end_tab_bar();
-
-    auto begin_tab_item(StringView label) -> b8;
-
-    void end_tab_item();
-
     auto collapsing_header(StringView label) -> b8;
 
     void show_demo_window();
@@ -811,6 +870,21 @@ namespace soul::app
     void begin_disabled(b8 disable);
 
     void end_disabled();
+
+    // ----------------------------------------------------------------------------
+    // Window Scrolling Functions
+    // ----------------------------------------------------------------------------
+
+    auto get_scroll_x() -> f32;
+    auto get_scroll_y() -> f32;
+    void set_scroll_x(f32 scroll_x);
+    void set_scroll_y(f32 scroll_y);
+    auto get_scroll_max_x() -> f32;
+    auto get_scroll_max_y() -> f32;
+    void set_scroll_here_x(f32 center_x_ratio = 0.5f);
+    void set_scroll_here_y(f32 center_y_ratio = 0.5f);
+    void set_scroll_from_pos_x(f32 local_x, f32 center_x_ratio = 0.5f);
+    void set_scroll_from_pos_y(f32 local_y, f32 center_y_ratio = 0.5f);
 
     // ----------------------------------------------------------------------------
     // Window Utilities and Query Functions

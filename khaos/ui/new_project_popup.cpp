@@ -1,5 +1,5 @@
 #include "new_project_popup.h"
-#include "store.h"
+#include "store/store.h"
 
 #include "app/gui.h"
 
@@ -61,12 +61,12 @@ namespace khaos
         } else if (!std::filesystem::is_directory(path))
         {
           show_directory_not_exists_ = true;
-        } else if (std::filesystem::is_directory(path / name_.cspan()))
+        } else if (std::filesystem::is_directory(path / name_.cview()))
         {
           show_project_already_exists_ = true;
         } else
         {
-          store->create_new_project(name_.cspan(), Path::From(StringView(path_.c_str())));
+          // store->create_new_project(name_.cview(), Path::From(StringView(path_.c_str())));
         }
       }
       gui->same_line();

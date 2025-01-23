@@ -55,11 +55,9 @@ namespace soul
     auto remove(PoolID id) -> void;
 
     [[nodiscard]]
-    auto
-    operator[](PoolID id) -> reference;
+    auto operator[](PoolID id) -> reference;
     [[nodiscard]]
-    auto
-    operator[](PoolID id) const -> const_reference;
+    auto operator[](PoolID id) const -> const_reference;
 
     [[nodiscard]]
     auto ptr(PoolID id) -> pointer;
@@ -123,7 +121,7 @@ namespace soul
   template <typename T, memory::allocator_type AllocatorType>
   Pool<T, AllocatorType>::Pool(const Pool& other)
       : allocator_(other.allocator_),
-        bit_vector_(other.bit_vector_),
+        bit_vector_(other.bit_vector_.clone()),
         buffer_(nullptr),
         size_(other.size_),
         free_list_(other.free_list_)
@@ -135,7 +133,7 @@ namespace soul
   template <typename T, memory::allocator_type AllocatorType>
   Pool<T, AllocatorType>::Pool(const Pool& other, AllocatorType& allocator)
       : allocator_(allocator),
-        bit_vector_(other.bit_vector_),
+        bit_vector_(other.bit_vector_.clone()),
         buffer_(nullptr),
         size_(other.size_),
         free_list_(other.free_list_)

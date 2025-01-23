@@ -1,5 +1,4 @@
 #include <numeric>
-
 #include <volk.h>
 
 #include "core/compiler.h"
@@ -10,6 +9,7 @@
 #include "gpu/render_graph.h"
 #include "gpu/render_graph_registry.h"
 #include "gpu/system.h"
+#include "gpu/type.h"
 
 #include "gpu/impl/vulkan/enum_mapping.h"
 #include "gpu/impl/vulkan/render_compiler.h"
@@ -238,7 +238,7 @@ namespace soul::gpu::impl
       SOUL_LOG_RG_EXEC(">> >> Reader :");
       for (const auto reader_pass_node_id : resource_node.readers)
       {
-        SOUL_ASSERT(reader_pass_node_id.is_valid(), "Must be valid pass node");
+        SOUL_ASSERT(0, reader_pass_node_id.is_valid(), "Must be valid pass node");
         SOUL_LOG_RG_EXEC(
           "---- {}", render_graph_->get_pass_nodes()[reader_pass_node_id.id]->get_name());
       }
@@ -320,7 +320,7 @@ namespace soul::gpu::impl
       texture_info.view             = texture_view_infos_.data() + view_offset;
       texture_info.mip_levels       = internal_textures[texture_info_idx].mip_levels;
       texture_info.layers           = internal_textures[texture_info_idx].layer_count;
-      texture_info.name             = internal_textures[texture_info_idx].name.cspan();
+      texture_info.name             = internal_textures[texture_info_idx].name.cview();
       view_offset += texture_info.get_view_count();
     }
 

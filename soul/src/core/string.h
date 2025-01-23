@@ -180,9 +180,8 @@ namespace soul
     template <typename... Args>
     [[nodiscard]]
     static constexpr auto ReservedFormat(
-      NotNull<AllocatorT*> allocator,
-      std::format_string<Args...> fmt,
-      Args&&... args) -> BasicString
+      NotNull<AllocatorT*> allocator, std::format_string<Args...> fmt, Args&&... args)
+      -> BasicString
     {
       return BasicString(
         Construct::reserved_format, allocator, std::move(fmt), std::forward<Args>(args)...);
@@ -190,8 +189,8 @@ namespace soul
 
     [[nodiscard]]
     static constexpr auto From(
-      NotNull<const char*> str,
-      NotNull<AllocatorT*> allocator = get_default_allocator()) -> BasicString
+      NotNull<const char*> str, NotNull<AllocatorT*> allocator = get_default_allocator())
+      -> BasicString
     {
       return BasicString(Construct::from, StringView{str, strlen(str)}, allocator);
     }
@@ -205,8 +204,8 @@ namespace soul
 
     [[nodiscard]]
     static constexpr auto UnsharedFrom(
-      NotNull<const char*> str,
-      NotNull<AllocatorT*> allocator = get_default_allocator()) -> BasicString
+      NotNull<const char*> str, NotNull<AllocatorT*> allocator = get_default_allocator())
+      -> BasicString
     {
       return BasicString(Construct::unshared_from, StringView{str, strlen(str)}, allocator);
     }
@@ -381,26 +380,32 @@ namespace soul
     [[nodiscard]]
     constexpr auto c_str() const -> const_pointer
     {
-      return data();
+      if (is_using_stack_storage())
+      {
+        return storage_.buffer;
+      } else
+      {
+        return storage_.data;
+      }
     }
 
     template <ts_unsigned_integral SpanSizeT = usize>
     [[nodiscard]]
-    constexpr auto span() -> Span<pointer>
+    constexpr auto view() -> Span<pointer>
     {
       return {data(), cast<SpanSizeT>(size())};
     }
 
     template <ts_unsigned_integral SpanSizeT = usize>
     [[nodiscard]]
-    constexpr auto span() const -> Span<const_pointer>
+    constexpr auto view() const -> Span<const_pointer>
     {
       return {data(), cast<SpanSizeT>(size())};
     }
 
     template <ts_unsigned_integral SpanSizeT = usize>
     [[nodiscard]]
-    constexpr auto cspan() const -> Span<const_pointer>
+    constexpr auto cview() const -> Span<const_pointer>
     {
       return {data(), cast<SpanSizeT>(size())};
     }
@@ -481,7 +486,7 @@ namespace soul
       data()[0] = '\0';
     }
 
-    constexpr BasicString(Construct::Vformat /*tag*/, std::string_view fmt, std::format_args args)
+    BasicString(Construct::Vformat /*tag*/, std::string_view fmt, std::format_args args)
         : allocator_(get_default_allocator())
     {
       data()[0] = '\0';
@@ -709,7 +714,7 @@ namespace soul
 
     friend constexpr void soul_op_hash_combine(auto& hasher, const BasicString& val)
     {
-      hasher.combine_span(val.cspan());
+      hasher.combine_span(val.cview());
     }
   };
 

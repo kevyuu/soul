@@ -20,6 +20,16 @@ namespace khaos
     buffer_.clear();
   }
 
+  void StreamingBuffer::clear()
+  {
+    return buffer_.clear();
+  }
+
+  auto StreamingBuffer::cview() const -> StringView
+  {
+    return buffer_.cview(); 
+  }
+
   auto StreamingBuffer::size() const -> usize
   {
     std::lock_guard guard(mutex_);

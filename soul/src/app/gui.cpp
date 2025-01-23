@@ -1067,7 +1067,29 @@ namespace soul::app
     const b8 open = ImGui::Begin(label, nullptr, flags.to_i32());
     if (open)
     {
-      ImGui::PushItemWidth(-130.0f);
+      ImGui::PushItemWidth(-250.0f);
+    }
+    return open;
+  }
+
+  auto Gui::begin_window(
+    StringView label,
+    NotNull<b8*> is_open,
+    vec2f32 size,
+    vec2f32 pos,
+    WindowFlags flags,
+    LayoutCond layout_cond) -> b8
+  {
+    const auto imgui_pos =
+      ImVec2(f32(pos.x) * impl_->scale_factor, f32(pos.y) * impl_->scale_factor);
+    const auto imgui_size =
+      ImVec2(f32(size.x) * impl_->scale_factor, f32(size.y) * impl_->scale_factor);
+    ImGui::SetNextWindowSize(imgui_size, into_imgui_cond(layout_cond));
+    ImGui::SetNextWindowPos(imgui_pos, into_imgui_cond(layout_cond));
+    const b8 open = ImGui::Begin(label, is_open.get(), flags.to_i32());
+    if (open)
+    {
+      ImGui::PushItemWidth(-250.0f);
     }
     return open;
   }
@@ -1078,10 +1100,8 @@ namespace soul::app
   }
 
   auto Gui::begin_child_window(
-    StringView label,
-    vec2f32 size,
-    ChildWindowFlags child_window_flags,
-    WindowFlags window_flags) -> b8
+    StringView label, vec2f32 size, ChildWindowFlags child_window_flags, WindowFlags window_flags)
+    -> b8
   {
     return ImGui::BeginChild(label, size, child_window_flags.to_i32(), window_flags.to_i32());
   }
@@ -1190,7 +1210,7 @@ namespace soul::app
 
   auto Gui::calc_item_width() -> f32
   {
-    ImGui::CalcItemWidth();
+    return ImGui::CalcItemWidth();
   }
 
   void Gui::push_text_wrap_pos(f32 wrap_local_pos_x)
@@ -1712,6 +1732,16 @@ namespace soul::app
     return ImGui::SliderInt(label, val.get(), min, max, "%d", into_imgui_slider_flags(flags));
   }
 
+  auto Gui::slider_u32(StringView label, NotNull<u32*> val, u32 min, u32 max, SliderFlags flags)
+    -> b8
+  {
+    i32 i32_val = *(val.get());
+    auto is_changed =
+      ImGui::SliderInt(label, &i32_val, min, max, "%d", into_imgui_slider_flags(flags));
+    *val = i32_val;
+    return is_changed;
+  }
+
   auto Gui::slider_f32(StringView label, NotNull<f32*> val, f32 v_min, f32 v_max, SliderFlags flags)
     -> b8
   {
@@ -1776,9 +1806,9 @@ namespace soul::app
     return ImGui::BeginPopup(label);
   }
 
-  auto Gui::begin_popup_modal(StringView label) -> b8
+  auto Gui::begin_popup_modal(StringView label, b8* is_open, WindowFlags flags) -> b8
   {
-    return ImGui::BeginPopupModal(label, nullptr, ImGuiWindowFlags_AlwaysAutoResize);
+    return ImGui::BeginPopupModal(label, is_open, flags.to_i32());
   }
 
   void Gui::end_popup()
@@ -1850,6 +1880,30 @@ namespace soul::app
   void Gui::table_angled_headers_row()
   {
     ImGui::TableAngledHeadersRow();
+  }
+
+  // ----------------------------------------------------------------------------
+  // Widgets: Tab
+  // ----------------------------------------------------------------------------
+
+  auto Gui::begin_tab_bar(StringView label, TabBarFlags flags) -> b8
+  {
+    return ImGui::BeginTabBar(label, flags.to_i32());
+  }
+
+  void Gui::end_tab_bar()
+  {
+    return ImGui::EndTabBar();
+  }
+
+  auto Gui::begin_tab_item(StringView label, b8* is_open, TabItemFlags flags) -> b8
+  {
+    return ImGui::BeginTabItem(label, is_open, flags.to_i32());
+  }
+
+  void Gui::end_tab_item()
+  {
+    return ImGui::EndTabItem();
   }
 
   // ----------------------------------------------------------------------------
@@ -1969,29 +2023,6 @@ namespace soul::app
     ImGui::TreePop();
   }
 
-  // ----------------------------------------------------------------------------
-  // TabBar
-  // ----------------------------------------------------------------------------
-  auto Gui::begin_tab_bar(StringView label) -> b8
-  {
-    return ImGui::BeginTabBar(label);
-  }
-
-  void Gui::end_tab_bar()
-  {
-    ImGui::EndTabBar();
-  }
-
-  auto Gui::begin_tab_item(StringView label) -> b8
-  {
-    return ImGui::BeginTabItem(label);
-  }
-
-  void Gui::end_tab_item()
-  {
-    ImGui::EndTabItem();
-  }
-
   auto Gui::collapsing_header(StringView label) -> b8
   {
     return ImGui::CollapsingHeader(label);
@@ -2064,6 +2095,59 @@ namespace soul::app
   void Gui::end_disabled()
   {
     ImGui::EndDisabled();
+  }
+
+  // ----------------------------------------------------------------------------
+  // Window Scrolling Functions
+  // ----------------------------------------------------------------------------
+
+  auto Gui::get_scroll_x() -> f32
+  {
+    return ImGui::GetScrollX();
+  }
+
+  auto Gui::get_scroll_y() -> f32
+  {
+    return ImGui::GetScrollY();
+  }
+
+  void Gui::set_scroll_x(f32 scroll_x)
+  {
+    ImGui::SetScrollX(scroll_x);
+  }
+
+  void Gui::set_scroll_y(f32 scroll_y)
+  {
+    ImGui::SetScrollY(scroll_y);
+  }
+
+  auto Gui::get_scroll_max_x() -> f32
+  {
+    return ImGui::GetScrollMaxX();
+  }
+
+  auto Gui::get_scroll_max_y() -> f32
+  {
+    return ImGui::GetScrollMaxY();
+  }
+
+  void Gui::set_scroll_here_x(f32 center_x_ratio)
+  {
+    ImGui::SetScrollHereX(center_x_ratio);
+  }
+
+  void Gui::set_scroll_here_y(f32 center_y_ratio) {
+    ImGui::SetScrollHereY(center_y_ratio);
+  }
+
+  void Gui::set_scroll_from_pos_x(f32 local_x, f32 center_x_ratio)
+  {
+    ImGui::SetScrollFromPosX(local_x, center_x_ratio);
+  }
+
+  void Gui::set_scroll_from_pos_y(f32 local_y, f32 center_y_ratio)
+  {
+    ImGui::SetScrollFromPosY(local_y, center_y_ratio);
   }
 
   // ----------------------------------------------------------------------------
@@ -2186,10 +2270,8 @@ namespace soul::app
   }
 
   auto Gui::open_file_dialog(
-    StringView name,
-    const Path& initial_path,
-    StringView filter_name,
-    StringView filter_extensions) -> Option<Path>
+    StringView name, const Path& initial_path, StringView filter_name, StringView filter_extensions)
+    -> Option<Path>
   {
     const auto result = pfd::open_file(
                           std::string(name.begin(), name.end()),

@@ -429,7 +429,7 @@ namespace soul::gpu::impl
   using Semaphore = Variant<BinarySemaphore*, TimelineSemaphore>;
 
   [[nodiscard]]
-  inline auto is_semaphore_valid(Semaphore semaphore) -> b8
+  inline auto is_semaphore_valid(const Semaphore& semaphore) -> b8
   {
     return semaphore.visit(VisitorSet{
       [](BinarySemaphore* semaphore)
@@ -444,7 +444,7 @@ namespace soul::gpu::impl
   }
 
   [[nodiscard]]
-  inline auto is_semaphore_null(Semaphore semaphore) -> b8
+  inline auto is_semaphore_null(const Semaphore& semaphore) -> b8
   {
     return semaphore.visit(VisitorSet{
       [](BinarySemaphore* semaphore)
@@ -592,9 +592,8 @@ namespace soul::gpu::impl
 
     auto request_command_buffer(QueueType queue_type) -> PrimaryCommandBuffer;
     auto request_secondary_command_buffer(
-      VkRenderPass render_pass,
-      uint32_t subpass,
-      VkFramebuffer framebuffer) -> SecondaryCommandBuffer;
+      VkRenderPass render_pass, uint32_t subpass, VkFramebuffer framebuffer)
+      -> SecondaryCommandBuffer;
 
   private:
     memory::Allocator* allocator_;

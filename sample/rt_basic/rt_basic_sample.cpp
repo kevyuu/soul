@@ -551,10 +551,11 @@ public:
 
     const gpu::RTTriangleHitGroup hit_group      = {.closest_hit_entry_point = 3};
     const gpu::ShaderTableDesc shader_table_desc = {
-      .program_id   = program_id_,
-      .raygen_group = {.entry_point = 0},
-      .miss_groups  = u32cspan(miss_groups.data(), miss_groups.size()),
-      .hit_groups   = u32cspan(&hit_group, 1),
+      .program_id          = program_id_,
+      .raygen_group        = {.entry_point = 0},
+      .miss_groups         = u32cspan(miss_groups.data(), miss_groups.size()),
+      .hit_groups          = u32cspan(&hit_group, 1),
+      .max_recursion_depth = 2,
     };
     shader_table_id_ = gpu_system_->create_shader_table("Shader Table"_str, shader_table_desc);
 

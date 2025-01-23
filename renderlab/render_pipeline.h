@@ -103,7 +103,7 @@ namespace renderlab
     {
       for (const auto& context : render_node_contexts_)
       {
-        fn(*context.node, context.name.cspan());
+        fn(*context.node, context.name.cview());
       }
     }
 
